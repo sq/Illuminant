@@ -19,6 +19,8 @@ namespace TestGame {
         LightingEnvironment Environment;
         LightingRenderer Renderer;
 
+        bool ShowOutlines, ShowLights;
+
         bool Dragging;
         Vector2 DragStart;
 
@@ -90,9 +92,9 @@ namespace TestGame {
                 )
             });
 
-            const int spiralCount = 2048;
-            float spiralRadius = 0, spiralRadiusStep = 0.20f;
-            float spiralAngle = 0, spiralAngleStep = (float)(Math.PI / (spiralCount / 24));
+            const int spiralCount = 10240;
+            float spiralRadius = 0, spiralRadiusStep = 360f / spiralCount;
+            float spiralAngle = 0, spiralAngleStep = (float)(Math.PI / (spiralCount / 36f));
             Vector2 previous = default(Vector2);
 
             for (int i = 0; i < spiralCount; i++, spiralAngle += spiralAngleStep, spiralRadius += spiralRadiusStep) {
@@ -112,6 +114,9 @@ namespace TestGame {
         }
 
         protected override void Update (GameTime gameTime) {
+            var ks = Keyboard.GetState();
+            ShowOutlines = ks.IsKeyDown(Keys.O);
+
             var ms = Mouse.GetState();
             var mousePos = new Vector2(ms.X, ms.Y);
 
@@ -151,8 +156,8 @@ namespace TestGame {
 
             Renderer.RenderLighting(frame, 1);
 
-            if (false)
-                Renderer.RenderOutlines(frame, 2, false);
+            if (ShowOutlines)
+                Renderer.RenderOutlines(frame, 2, ShowLights);
         }
     }
 }

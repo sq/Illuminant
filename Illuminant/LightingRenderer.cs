@@ -5,17 +5,33 @@ using System.Text;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
+using Squared.Game;
 using Squared.Render;
+using Squared.Util;
 
 namespace Squared.Illuminant {
     public class LightingRenderer : IDisposable {
+        public class CachedSector : IDisposable {
+            public Pair<int> SectorIndex;
+            public int FrameIndex;
+            public DynamicVertexBuffer ObstructionVertexBuffer;
+            public DynamicIndexBuffer ObstructionIndexBuffer;
+            public int VertexCount, IndexCount, PrimitiveCount;
+
+            public void Dispose () {
+                if (ObstructionVertexBuffer != null)
+                    ObstructionVertexBuffer.Dispose();
+                if (ObstructionIndexBuffer != null)
+                    ObstructionIndexBuffer.Dispose();
+            }
+        }
+
         public readonly DefaultMaterialSet Materials;
         public readonly Squared.Render.EffectMaterial ShadowMaterialInner;
         public readonly Material DebugOutlines, Shadow, PointLight, ClearStencil;
+        public readonly DepthStencilState PointLightStencil, ShadowStencil;
 
-        private DynamicVertexBuffer ObstructionVertexBuffer;
-        private DynamicIndexBuffer ObstructionIndexBuffer;
-
+        private readonly Dictionary<Pair<int>, CachedSector> SectorCache = new Dictionary<Pair<int>, CachedSector>(new IntPairComparer());
         private Rectangle StoredScissorRect;
 
         public static readonly short[] ShadowIndices;
@@ -50,6 +66,15 @@ namespace Squared.Illuminant {
                 new Action<DeviceManager>[0]
             ));
 
+            PointLightStencil = new DepthStencilState {
+                DepthBufferEnable = false,
+                StencilEnable = true,
+                StencilFunction = CompareFunction.Equal,
+                StencilPass = StencilOperation.Keep,
+                StencilFail = StencilOperation.Keep,
+                ReferenceStencil = 1
+            };
+
             materials.Add(PointLight = new DelegateMaterial(
                 new Squared.Render.EffectMaterial(
                     content.Load<Effect>("Illumination"), "PointLight"
@@ -58,14 +83,7 @@ namespace Squared.Illuminant {
                     (Action<DeviceManager>)(
                         (dm) => {
                             dm.Device.BlendState = BlendState.Additive;
-                            dm.Device.DepthStencilState = new DepthStencilState {
-                                DepthBufferEnable = false,
-                                StencilEnable = true,
-                                StencilFunction = CompareFunction.Equal,
-                                StencilPass = StencilOperation.Keep,
-                                StencilFail = StencilOperation.Keep,
-                                ReferenceStencil = 1
-                            };
+                            dm.Device.DepthStencilState = PointLightStencil;
                             dm.Device.RasterizerState = RasterizerState.CullNone;
                         }
                     )
@@ -77,6 +95,14 @@ namespace Squared.Illuminant {
                 }
             ));
 
+            ShadowStencil = new DepthStencilState {
+                DepthBufferEnable = false,
+                StencilEnable = true,
+                StencilFunction = CompareFunction.Never,
+                StencilPass = StencilOperation.Keep,
+                StencilFail = StencilOperation.Zero
+            };
+
             materials.Add(Shadow = new DelegateMaterial(
                 ShadowMaterialInner = new Squared.Render.EffectMaterial(
                     content.Load<Effect>("Illumination"), "Shadow"
@@ -85,13 +111,7 @@ namespace Squared.Illuminant {
                     (Action<DeviceManager>)(
                         (dm) => {
                             dm.Device.BlendState = BlendState.Opaque;
-                            dm.Device.DepthStencilState = new DepthStencilState {
-                                DepthBufferEnable = false,
-                                StencilEnable = true,
-                                StencilFunction = CompareFunction.Never,
-                                StencilPass = StencilOperation.Keep,
-                                StencilFail = StencilOperation.Zero
-                            };
+                            dm.Device.DepthStencilState = ShadowStencil;
                             dm.Device.RasterizerState = RasterizerState.CullNone;
                         }
                     )
@@ -104,16 +124,20 @@ namespace Squared.Illuminant {
             ));
 
             Environment = environment;
+
+            // Reduce garbage created by BufferPool<>.Allocate when creating cached sectors
+            BufferPool<ShadowVertex>.MaxBufferSize = 1024 * 16;
+            BufferPool<short>.MaxBufferSize = 1024 * 32;
         }
 
         public void Dispose () {
-            if (ObstructionVertexBuffer != null)
-                ObstructionVertexBuffer.Dispose();
-            if (ObstructionIndexBuffer != null)
-                ObstructionIndexBuffer.Dispose();
+            foreach (var cachedSector in SectorCache.Values)
+                cachedSector.Dispose();
 
-            ObstructionVertexBuffer = null;
-            ObstructionIndexBuffer = null;
+            SectorCache.Clear();
+
+            PointLightStencil.Dispose();
+            ShadowStencil.Dispose();
         }
 
         private void StoreScissorRect (DeviceManager device) {
@@ -148,35 +172,46 @@ namespace Squared.Illuminant {
             device.Device.ScissorRectangle = GetScissorRectForLightSource(ls);
         }
 
-        private void FillObstructionBuffers (Frame frame) {
-            var vertexCount = Environment.Obstructions.Count * 4;
-            var indexCount = Environment.Obstructions.Count * 6;
+        private CachedSector GetCachedSector (Frame frame, Pair<int> sectorIndex) {
+            CachedSector result;
+            if (!SectorCache.TryGetValue(sectorIndex, out result))
+                SectorCache.Add(sectorIndex, result = new CachedSector {
+                    SectorIndex = sectorIndex
+                });
 
-            if ((ObstructionVertexBuffer != null) && (ObstructionVertexBuffer.VertexCount < vertexCount)) {
-                ObstructionVertexBuffer.Dispose();
-                ObstructionVertexBuffer = null;
+            if (result.FrameIndex == frame.Index)
+                return result;
+
+            var sector = Environment.Obstructions[sectorIndex];
+
+            result.PrimitiveCount = sector.Count * 2;
+            result.VertexCount = sector.Count * 4;
+            result.IndexCount = sector.Count * 6;
+
+            if ((result.ObstructionVertexBuffer != null) && (result.ObstructionVertexBuffer.VertexCount < result.VertexCount)) {
+                result.ObstructionVertexBuffer.Dispose();
+                result.ObstructionVertexBuffer = null;
             }
 
-            if ((ObstructionIndexBuffer != null) && (ObstructionIndexBuffer.IndexCount < indexCount)) {
-                ObstructionIndexBuffer.Dispose();
-                ObstructionIndexBuffer = null;
+            if ((result.ObstructionIndexBuffer != null) && (result.ObstructionIndexBuffer.IndexCount < result.IndexCount)) {
+                result.ObstructionIndexBuffer.Dispose();
+                result.ObstructionIndexBuffer = null;
             }
 
-            if (ObstructionVertexBuffer == null)
-                ObstructionVertexBuffer = new DynamicVertexBuffer(frame.RenderManager.DeviceManager.Device, (new ShadowVertex().VertexDeclaration), vertexCount, BufferUsage.WriteOnly);
+            if (result.ObstructionVertexBuffer == null)
+                result.ObstructionVertexBuffer = new DynamicVertexBuffer(frame.RenderManager.DeviceManager.Device, (new ShadowVertex().VertexDeclaration), result.VertexCount, BufferUsage.WriteOnly);
 
-            if (ObstructionIndexBuffer == null)
-                ObstructionIndexBuffer = new DynamicIndexBuffer(frame.RenderManager.DeviceManager.Device, IndexElementSize.SixteenBits, indexCount, BufferUsage.WriteOnly);
+            if (result.ObstructionIndexBuffer == null)
+                result.ObstructionIndexBuffer = new DynamicIndexBuffer(frame.RenderManager.DeviceManager.Device, IndexElementSize.SixteenBits, result.IndexCount, BufferUsage.WriteOnly);
 
-            var obstructionVertices = frame.RenderManager.GetArrayAllocator<ShadowVertex>().Allocate(vertexCount);
-            var obstructionIndices = frame.RenderManager.GetArrayAllocator<short>().Allocate(indexCount);
+            using (var va = BufferPool<ShadowVertex>.Allocate(result.VertexCount))
+            using (var ia = BufferPool<short>.Allocate(result.IndexCount)) {
+                var vb = va.Data;
+                var ib = ia.Data;
 
-            {
-                var vb = obstructionVertices.Buffer;
-                var ib = obstructionIndices.Buffer;
-
-                for (var i = 0; i < Environment.Obstructions.Count; i++) {
-                    var obstruction = Environment.Obstructions[i];
+                int i = 0;
+                foreach (var itemInfo in sector) {
+                    var obstruction = itemInfo.Item;
                     ShadowVertex vertex;
                     int vertexOffset = i * 4;
                     int indexOffset = i * 6;
@@ -195,27 +230,38 @@ namespace Squared.Illuminant {
 
                     for (var j = 0; j < ShadowIndices.Length; j++)
                         ib[indexOffset + j] = (short)(vertexOffset + ShadowIndices[j]);
+
+                    i += 1;
                 }
 
-                ObstructionVertexBuffer.SetData(vb, 0, vertexCount, SetDataOptions.Discard);
-                ObstructionIndexBuffer.SetData(ib, 0, indexCount, SetDataOptions.Discard);
+                result.ObstructionVertexBuffer.SetData(vb, 0, result.VertexCount, SetDataOptions.Discard);
+                result.ObstructionIndexBuffer.SetData(ib, 0, result.IndexCount, SetDataOptions.Discard);
             }
+
+            result.FrameIndex = frame.Index;
+
+            return result;
         }
 
         public void RenderLighting (Frame frame, int layer) {
-            FillObstructionBuffers(frame);
-
             using (var resultGroup = BatchGroup.New(frame, layer, before: StoreScissorRect, after: RestoreScissorRect))
             for (var i = 0; i < Environment.LightSources.Count; i++) {
                 using (var lightGroup = BatchGroup.New(resultGroup, i)) {
                     var lightSource = Environment.LightSources[i];
+                    var lightBounds = new Bounds(lightSource.Position - new Vector2(lightSource.RampEnd), lightSource.Position + new Vector2(lightSource.RampEnd));
 
                     ClearBatch.AddNew(lightGroup, 0, ClearStencil, clearStencil: 1);
 
                     using (var nb = NativeBatch.New(lightGroup, 1, Shadow, ShadowBatchSetup, lightSource)) {
-                        nb.Add(new NativeDrawCall(
-                            PrimitiveType.TriangleList, ObstructionVertexBuffer, 0, ObstructionIndexBuffer, 0, 0, Environment.Obstructions.Count * 4, 0, Environment.Obstructions.Count * 2
-                        ));
+                        SpatialCollection<LightObstruction>.Sector currentSector;
+                        using (var e = Environment.Obstructions.GetSectorsFromBounds(lightBounds))
+                        while (e.GetNext(out currentSector)) {
+                            var cachedSector = GetCachedSector(frame, currentSector.Index);
+
+                            nb.Add(new NativeDrawCall(
+                                PrimitiveType.TriangleList, cachedSector.ObstructionVertexBuffer, 0, cachedSector.ObstructionIndexBuffer, 0, 0, cachedSector.VertexCount, 0, cachedSector.PrimitiveCount
+                            ));
+                        }
                     }
 
                     using (var pb = PrimitiveBatch<PointLightVertex>.New(lightGroup, 2, PointLight, IlluminationBatchSetup, lightSource))

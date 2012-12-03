@@ -100,9 +100,17 @@
     <Compile Include="Vertices.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Upstream\Fracture\Squared\GameLib\Squared.Game.csproj">
+      <Project>{36463AEE-E309-43A6-BCFA-A69944390AF0}</Project>
+      <Name>Squared.Game</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Upstream\Fracture\Squared\RenderLib\Squared.Render.csproj">
       <Project>{FE871F18-FD35-4124-AF8F-0021C9D4BA29}</Project>
       <Name>Squared.Render</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Upstream\Fracture\Squared\Util\Squared.Util.csproj">
+      <Project>{D7F549CF-E0A6-491C-A78C-ECAB590BB2A7}</Project>
+      <Name>Squared.Util</Name>
     </ProjectReference>
     <ProjectReference Include="IlluminantContent\IlluminantContent.contentproj">
       <Project>{7ACF41C8-1040-4567-9257-CBCF3AD6B431}</Project>
