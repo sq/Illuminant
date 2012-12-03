@@ -9,6 +9,7 @@ using Squared.Render;
 
 namespace Squared.Illuminant {
     public class LightingRenderer {
+        public readonly Squared.Render.EffectMaterial ShadowMaterialInner;
         public readonly Material DebugOutlines, Shadow, PointLight, ClearStencil;
 
         public static readonly short[] ShadowIndices;
@@ -69,7 +70,7 @@ namespace Squared.Illuminant {
             ));
 
             materials.Add(Shadow = new DelegateMaterial(
-                new Squared.Render.EffectMaterial(
+                ShadowMaterialInner = new Squared.Render.EffectMaterial(
                     content.Load<Effect>("Illumination"), "Shadow"
                 ),
                 new[] {
@@ -97,7 +98,45 @@ namespace Squared.Illuminant {
             Environment = environment;
         }
 
+        private void ShadowMaterialSetup (object lightSource) {
+            var ls = (LightSource)lightSource;
+            ShadowMaterialInner.Effect.Parameters["LightCenter"].SetValue(ls.Position);
+        }
+
         public void RenderLighting (Frame frame, int layer) {
+            var vertexCount = Environment.Obstructions.Count * 4;
+            var indexCount = Environment.Obstructions.Count * 6;
+
+            var obstructionVertices = frame.RenderManager.GetArrayAllocator<ShadowVertex>().Allocate(vertexCount);
+            var obstructionIndices = frame.RenderManager.GetArrayAllocator<short>().Allocate(indexCount);
+
+            {
+                var vb = obstructionVertices.Buffer;
+                var ib = obstructionIndices.Buffer;
+
+                for (var i = 0; i < Environment.Obstructions.Count; i++) {
+                    var obstruction = Environment.Obstructions[i];
+                    ShadowVertex vertex;
+                    int vertexOffset = i * 4;
+                    int indexOffset = i * 6;
+
+                    vertex.A = obstruction.A;
+                    vertex.B = obstruction.B;
+
+                    vertex.CornerIndex = 0;
+                    vb[vertexOffset + 0] = vertex;
+                    vertex.CornerIndex = 1;
+                    vb[vertexOffset + 1] = vertex;
+                    vertex.CornerIndex = 2;
+                    vb[vertexOffset + 2] = vertex;
+                    vertex.CornerIndex = 3;
+                    vb[vertexOffset + 3] = vertex;
+
+                    for (var j = 0; j < ShadowIndices.Length; j++)
+                        ib[indexOffset + j] = (short)(vertexOffset + ShadowIndices[j]);
+                }
+            }
+
             using (var resultGroup = BatchGroup.New(frame, layer))
             for (var i = 0; i < Environment.LightSources.Count; i++) {
                 using (var lightGroup = BatchGroup.New(resultGroup, i)) {
@@ -105,26 +144,10 @@ namespace Squared.Illuminant {
 
                     ClearBatch.AddNew(lightGroup, 0, ClearStencil, clearStencil: 1);
 
-                    var vertexCount = Environment.Obstructions.Count * 4;
-
-                    using (var pb = PrimitiveBatch<ShadowVertex>.New(lightGroup, 1, Shadow))
-                    using (var buffer = pb.CreateBuffer(vertexCount)) {
-                        ShadowVertex vertex;
-
-                        foreach (var obstruction in Environment.Obstructions) {
-                            var writer = buffer.GetWriter(4);
-
-                            vertex.A = obstruction.A;
-                            vertex.B = obstruction.B;
-                            vertex.Light = lightSource.Position;
-
-                            for (var j = 0; j < 4; j++) {
-                                vertex.CornerIndex = j;
-                                writer.Write(ref vertex);
-                            }
-
-                            pb.Add(writer.GetDrawCall(PrimitiveType.TriangleList, ShadowIndices, 0, ShadowIndices.Length));
-                        }
+                    using (var pb = PrimitiveBatch<ShadowVertex>.New(lightGroup, 1, Shadow, ShadowMaterialSetup, lightSource)) {
+                        pb.Add(new PrimitiveDrawCall<ShadowVertex>(
+                            PrimitiveType.TriangleList, obstructionVertices.Buffer, 0, vertexCount, obstructionIndices.Buffer, 0, Environment.Obstructions.Count * 2
+                        ));
                     }
 
                     using (var pb = PrimitiveBatch<PointLightVertex>.New(lightGroup, 2, PointLight))

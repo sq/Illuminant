@@ -3,6 +3,10 @@ shared float2 ViewportPosition;
 
 shared float4x4 ProjectionMatrix;
 
+uniform float2 LightCenter;
+
+const float ShadowLength = 99999;
+
 float4 ApplyTransform (float2 position2d) {
     float2 localPosition = ((position2d - ViewportPosition) * ViewportScale);
     return mul(float4(localPosition.xy, 0, 1), ProjectionMatrix);
@@ -34,12 +38,9 @@ void PointLightPixelShader(
     result = float4(color.r * opacity, color.g * opacity, color.b * opacity, opacity);
 }
 
-const float shadowLength = 99999;
-
 void ShadowVertexShader(
     in float2 a : POSITION0,
     in float2 b : POSITION1,
-    in float2 light : POSITION2,
     in int cornerIndex : BLENDINDICES,
     out float4 result : POSITION0
 ) {
@@ -50,16 +51,16 @@ void ShadowVertexShader(
         direction = float2(0, 0);
     } else if (cornerIndex == 1) {
         origin = a;
-        direction = normalize(a - light);
+        direction = normalize(a - LightCenter);
     } else if (cornerIndex == 2) {
         origin = b;
         direction = float2(0, 0);
     } else {
         origin = b;
-        direction = normalize(b - light);
+        direction = normalize(b - LightCenter);
     }
 
-    result = ApplyTransform(origin + (direction * shadowLength));
+    result = ApplyTransform(origin + (direction * ShadowLength));
 }
 
 void ShadowPixelShader(
