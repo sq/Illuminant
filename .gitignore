@@ -1,5 +1,12 @@
 _ReSharper.*
 *.user
 *.suo
-*/obj/x86
-*/bin/x86
+*.cachefile
+Illuminant/obj
+Illuminant/bin
+Illuminant/IlluminantContent/obj
+Illuminant/IlluminantContent/bin
+TestGame/TestGame/obj
+TestGame/TestGame/bin
+TestGame/TestGameContent/obj
+TestGame/TestGameContent/bin
