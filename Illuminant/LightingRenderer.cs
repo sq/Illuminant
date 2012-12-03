@@ -9,6 +9,7 @@ using Squared.Render;
 
 namespace Squared.Illuminant {
     public class LightingRenderer {
+        public readonly DefaultMaterialSet Materials;
         public readonly Squared.Render.EffectMaterial ShadowMaterialInner;
         public readonly Material DebugOutlines, Shadow, PointLight, ClearStencil;
 
@@ -32,10 +33,12 @@ namespace Squared.Illuminant {
         }
 
         public LightingRenderer (ContentManager content, DefaultMaterialSet materials, LightingEnvironment environment) {
+            Materials = materials;
+
             ClearStencil = materials.Clear;
 
             materials.Add(DebugOutlines = new DelegateMaterial(
-                materials.ScreenSpaceGeometry,
+                materials.WorldSpaceGeometry,
                 new[] {
                     (Action<DeviceManager>)(
                         (dm) => dm.Device.BlendState = BlendState.AlphaBlend
@@ -110,10 +113,10 @@ namespace Squared.Illuminant {
 
         private Rectangle GetScissorRectForLightSource (LightSource ls) {
             var scissor = new Rectangle(
-                (int)Math.Floor(ls.Position.X - ls.RampEnd),
-                (int)Math.Floor(ls.Position.Y - ls.RampEnd),
-                (int)Math.Ceiling(ls.RampEnd * 2),
-                (int)Math.Ceiling(ls.RampEnd * 2)
+                (int)Math.Floor((ls.Position.X - ls.RampEnd - Materials.ViewportPosition.X) * Materials.ViewportScale.X),
+                (int)Math.Floor((ls.Position.Y - ls.RampEnd - Materials.ViewportPosition.Y) * Materials.ViewportScale.Y),
+                (int)Math.Ceiling(ls.RampEnd * 2 * Materials.ViewportScale.X),
+                (int)Math.Ceiling(ls.RampEnd * 2 * Materials.ViewportScale.Y)
             );
 
             return Rectangle.Intersect(scissor, StoredScissorRect);

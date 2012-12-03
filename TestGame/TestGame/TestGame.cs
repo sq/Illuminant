@@ -115,6 +115,8 @@ namespace TestGame {
             var ms = Mouse.GetState();
             var mousePos = new Vector2(ms.X, ms.Y);
 
+            Materials.ViewportScale = new Vector2((float)(1.0 + (ms.ScrollWheelValue / 500f)));
+
             var angle = gameTime.TotalGameTime.TotalSeconds * 2f;
             const float radius = 200f;
 
