@@ -27,10 +27,11 @@ namespace Squared.Illuminant {
         }
 
         public readonly DefaultMaterialSet Materials;
-        public readonly Squared.Render.EffectMaterial ShadowMaterialInner;
+        public readonly Squared.Render.EffectMaterial ShadowMaterialInner, PointLightMaterialInner;
         public readonly Material DebugOutlines, Shadow, PointLight, ClearStencil, ScreenSpaceLightmappedBitmap, WorldSpaceLightmappedBitmap;
         public readonly DepthStencilState PointLightStencil, ShadowStencil;
         public readonly BlendState SubtractiveBlend, MaxBlend, MinBlend;
+        public readonly RasterizerState ScissorOnly;
 
         private readonly Dictionary<Pair<int>, CachedSector> SectorCache = new Dictionary<Pair<int>, CachedSector>(new IntPairComparer());
         private Rectangle StoredScissorRect;
@@ -77,20 +78,21 @@ namespace Squared.Illuminant {
             };
 
             materials.Add(PointLight = new DelegateMaterial(
-                new Squared.Render.EffectMaterial(
+                PointLightMaterialInner = new Squared.Render.EffectMaterial(
                     content.Load<Effect>("Illumination"), "PointLight"
                 ),
                 new[] {
                     (Action<DeviceManager>)(
                         (dm) => {
                             dm.Device.DepthStencilState = PointLightStencil;
-                            dm.Device.RasterizerState = RasterizerState.CullNone;
+                            dm.Device.RasterizerState = ScissorOnly;
                         }
                     )
                 },
                 new[] {
                     (Action<DeviceManager>)(
-                        (dm) => dm.Device.DepthStencilState = DepthStencilState.None
+                        (dm) => 
+                            dm.Device.DepthStencilState = DepthStencilState.None
                     )
                 }
             ));
@@ -112,13 +114,14 @@ namespace Squared.Illuminant {
                         (dm) => {
                             dm.Device.BlendState = BlendState.Opaque;
                             dm.Device.DepthStencilState = ShadowStencil;
-                            dm.Device.RasterizerState = RasterizerState.CullNone;
+                            dm.Device.RasterizerState = ScissorOnly;
                         }
                     )
                 },
                 new[] {
                     (Action<DeviceManager>)(
-                        (dm) => dm.Device.DepthStencilState = DepthStencilState.None
+                        (dm) => 
+                            dm.Device.DepthStencilState = DepthStencilState.None
                     )
                 }
             ));
@@ -178,6 +181,11 @@ namespace Squared.Illuminant {
                 ColorSourceBlend = Blend.One
             };
 
+            ScissorOnly = new RasterizerState {
+                CullMode = CullMode.None,
+                ScissorTestEnable = true
+            };
+
             Environment = environment;
 
             // Reduce garbage created by BufferPool<>.Allocate when creating cached sectors
@@ -204,14 +212,27 @@ namespace Squared.Illuminant {
         }
 
         private Rectangle GetScissorRectForLightSource (LightSource ls) {
-            var scissor = new Rectangle(
-                (int)Math.Floor((ls.Position.X - ls.RampEnd - Materials.ViewportPosition.X) * Materials.ViewportScale.X),
-                (int)Math.Floor((ls.Position.Y - ls.RampEnd - Materials.ViewportPosition.Y) * Materials.ViewportScale.Y),
-                (int)Math.Ceiling(ls.RampEnd * 2 * Materials.ViewportScale.X),
-                (int)Math.Ceiling(ls.RampEnd * 2 * Materials.ViewportScale.Y)
-            );
+            Rectangle scissor;
 
-            return Rectangle.Intersect(scissor, StoredScissorRect);
+            if (ls.ClipRegion.HasValue) {
+                var clipRegion = ls.ClipRegion.Value;
+                scissor = new Rectangle(
+                    (int)Math.Floor(clipRegion.TopLeft.X),
+                    (int)Math.Floor(clipRegion.TopLeft.Y),
+                    (int)Math.Ceiling(clipRegion.Size.X * Materials.ViewportScale.X),
+                    (int)Math.Ceiling(clipRegion.Size.Y * Materials.ViewportScale.X)
+                );
+            } else {
+                scissor = new Rectangle(
+                    (int)Math.Floor((ls.Position.X - ls.RampEnd - Materials.ViewportPosition.X) * Materials.ViewportScale.X),
+                    (int)Math.Floor((ls.Position.Y - ls.RampEnd - Materials.ViewportPosition.Y) * Materials.ViewportScale.Y),
+                    (int)Math.Ceiling(ls.RampEnd * 2 * Materials.ViewportScale.X),
+                    (int)Math.Ceiling(ls.RampEnd * 2 * Materials.ViewportScale.Y)
+                );
+            }
+
+            var result = Rectangle.Intersect(scissor, StoredScissorRect);
+            return result;
         }
 
         private void IlluminationBatchSetup (DeviceManager device, object lightSource) {
@@ -229,6 +250,9 @@ namespace Squared.Illuminant {
                 case LightSourceMode.Alpha:
                     device.Device.BlendState = BlendState.AlphaBlend;
                     break;
+                case LightSourceMode.Replace:
+                    device.Device.BlendState = BlendState.Opaque;
+                    break;
                 case LightSourceMode.Max:
                     device.Device.BlendState = MaxBlend;
                     break;
@@ -238,6 +262,8 @@ namespace Squared.Illuminant {
                 default:
                     throw new ArgumentOutOfRangeException("Mode");
             }
+
+            PointLightMaterialInner.Effect.Parameters["LightNeutralColor"].SetValue(ls.NeutralColor);
         }
 
         private void ShadowBatchSetup (DeviceManager device, object lightSource) {

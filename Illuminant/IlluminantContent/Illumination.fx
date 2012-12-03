@@ -3,6 +3,7 @@ shared float2 ViewportPosition;
 
 shared float4x4 ProjectionMatrix;
 
+uniform float4 LightNeutralColor;
 uniform float2 LightCenter;
 
 const float ShadowLength = 99999;
@@ -34,8 +35,9 @@ void PointLightPixelShader(
     float distance = length(worldPosition - lightCenter) - ramp.x;
     float distanceOpacity = 1 - clamp(distance / (ramp.y - ramp.x), 0, 1);
 
-    float opacity = color.a * distanceOpacity;
-    result = float4(color.r * opacity, color.g * opacity, color.b * opacity, opacity);
+    float opacity = color.a;
+    float4 lightColorActual = float4(color.r * opacity, color.g * opacity, color.b * opacity, opacity);
+    result = lerp(LightNeutralColor, lightColorActual, distanceOpacity);
 }
 
 void ShadowVertexShader(
