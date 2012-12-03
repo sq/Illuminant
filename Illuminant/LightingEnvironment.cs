@@ -6,7 +6,11 @@ using Squared.Game;
 
 namespace Squared.Illuminant {
     public class LightingEnvironment {
+        // If you have very detailed obstruction geometry, set this lower to reduce GPU load.
+        // For coarse geometry you might want to set this higher to reduce CPU load and memory usage.
+        public static float DefaultSubdivision = 128f;
+
         public readonly List<LightSource> LightSources = new List<LightSource>();
-        public readonly SpatialCollection<LightObstruction> Obstructions = new SpatialCollection<LightObstruction>(128f);
+        public readonly SpatialCollection<LightObstruction> Obstructions = new SpatialCollection<LightObstruction>(DefaultSubdivision);
     }
 }
