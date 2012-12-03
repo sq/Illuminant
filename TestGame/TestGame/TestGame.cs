@@ -29,7 +29,7 @@ namespace TestGame {
             Graphics.PreferredBackBufferWidth = 1280;
             Graphics.PreferredBackBufferHeight = 720;
             Graphics.SynchronizeWithVerticalRetrace = true;
-            Graphics.PreferMultiSampling = true;
+            Graphics.PreferMultiSampling = false;
 
             Content.RootDirectory = "Content";
 
@@ -89,6 +89,26 @@ namespace TestGame {
                     new Vector2(256, 256)
                 )
             });
+
+            const int spiralCount = 2048;
+            float spiralRadius = 0, spiralRadiusStep = 0.20f;
+            float spiralAngle = 0, spiralAngleStep = (float)(Math.PI / (spiralCount / 24));
+            Vector2 previous = default(Vector2);
+
+            for (int i = 0; i < spiralCount; i++, spiralAngle += spiralAngleStep, spiralRadius += spiralRadiusStep) {
+                var current = new Vector2(
+                    (float)(Math.Cos(spiralAngle) * spiralRadius) + (Graphics.PreferredBackBufferWidth / 2f),
+                    (float)(Math.Sin(spiralAngle) * spiralRadius) + (Graphics.PreferredBackBufferHeight / 2f)
+                );
+
+                if (i > 0) {
+                    Environment.Obstructions.Add(new LightObstruction(
+                        previous, current
+                    ));
+                }
+
+                previous = current;
+            }
         }
 
         protected override void Update (GameTime gameTime) {
@@ -129,7 +149,8 @@ namespace TestGame {
 
             Renderer.RenderLighting(frame, 1);
 
-            Renderer.RenderOutlines(frame, 2, false);
+            if (false)
+                Renderer.RenderOutlines(frame, 2, false);
         }
     }
 }

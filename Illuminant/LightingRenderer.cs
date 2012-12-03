@@ -12,6 +12,8 @@ namespace Squared.Illuminant {
         public readonly Squared.Render.EffectMaterial ShadowMaterialInner;
         public readonly Material DebugOutlines, Shadow, PointLight, ClearStencil;
 
+        private Rectangle StoredScissorRect;
+
         public static readonly short[] ShadowIndices;
         public static readonly short[] PointLightIndices;
 
@@ -98,9 +100,36 @@ namespace Squared.Illuminant {
             Environment = environment;
         }
 
-        private void ShadowMaterialSetup (object lightSource) {
+        private void StoreScissorRect (DeviceManager device) {
+            StoredScissorRect = device.Device.ScissorRectangle;
+        }
+
+        private void RestoreScissorRect (DeviceManager device) {
+            device.Device.ScissorRectangle = StoredScissorRect;
+        }
+
+        private Rectangle GetScissorRectForLightSource (LightSource ls) {
+            var scissor = new Rectangle(
+                (int)Math.Floor(ls.Position.X - ls.RampEnd),
+                (int)Math.Floor(ls.Position.Y - ls.RampEnd),
+                (int)Math.Ceiling(ls.RampEnd * 2),
+                (int)Math.Ceiling(ls.RampEnd * 2)
+            );
+
+            return Rectangle.Intersect(scissor, StoredScissorRect);
+        }
+
+        private void IlluminationBatchSetup (DeviceManager device, object lightSource) {
             var ls = (LightSource)lightSource;
+
+            device.Device.ScissorRectangle = GetScissorRectForLightSource(ls);
+        }
+
+        private void ShadowBatchSetup (DeviceManager device, object lightSource) {
+            var ls = (LightSource)lightSource;
+
             ShadowMaterialInner.Effect.Parameters["LightCenter"].SetValue(ls.Position);
+            device.Device.ScissorRectangle = GetScissorRectForLightSource(ls);
         }
 
         public void RenderLighting (Frame frame, int layer) {
@@ -137,20 +166,20 @@ namespace Squared.Illuminant {
                 }
             }
 
-            using (var resultGroup = BatchGroup.New(frame, layer))
+            using (var resultGroup = BatchGroup.New(frame, layer, before: StoreScissorRect, after: RestoreScissorRect))
             for (var i = 0; i < Environment.LightSources.Count; i++) {
                 using (var lightGroup = BatchGroup.New(resultGroup, i)) {
                     var lightSource = Environment.LightSources[i];
 
                     ClearBatch.AddNew(lightGroup, 0, ClearStencil, clearStencil: 1);
 
-                    using (var pb = PrimitiveBatch<ShadowVertex>.New(lightGroup, 1, Shadow, ShadowMaterialSetup, lightSource)) {
+                    using (var pb = PrimitiveBatch<ShadowVertex>.New(lightGroup, 1, Shadow, ShadowBatchSetup, lightSource)) {
                         pb.Add(new PrimitiveDrawCall<ShadowVertex>(
                             PrimitiveType.TriangleList, obstructionVertices.Buffer, 0, vertexCount, obstructionIndices.Buffer, 0, Environment.Obstructions.Count * 2
                         ));
                     }
 
-                    using (var pb = PrimitiveBatch<PointLightVertex>.New(lightGroup, 2, PointLight))
+                    using (var pb = PrimitiveBatch<PointLightVertex>.New(lightGroup, 2, PointLight, IlluminationBatchSetup, lightSource))
                     using (var buffer = pb.CreateBuffer(4)) {
                         var writer = buffer.GetWriter(4);
                         PointLightVertex vertex;
