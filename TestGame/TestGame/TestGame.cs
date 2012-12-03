@@ -21,6 +21,7 @@ namespace TestGame {
 
         public TestGame () {
             Graphics = new GraphicsDeviceManager(this);
+            Graphics.PreferredDepthStencilFormat = DepthFormat.Depth24Stencil8;
             Graphics.PreferredBackBufferWidth = 1280;
             Graphics.PreferredBackBufferHeight = 720;
             Graphics.SynchronizeWithVerticalRetrace = true;
@@ -50,14 +51,21 @@ namespace TestGame {
 
             Environment.LightSources.Add(new LightSource {
                 Position = new Vector2(64, 64),
-                Color = new Vector4(1, 0, 0, 1),
+                Color = new Vector4(0.66f, 0, 0, 1),
                 RampStart = 20,
                 RampEnd = 160
             });
 
             Environment.LightSources.Add(new LightSource {
                 Position = new Vector2(64, 64),
-                Color = new Vector4(0, 0, 1, 0.66f),
+                Color = new Vector4(0, 0, 0.66f, 1),
+                RampStart = 40,
+                RampEnd = 250
+            });
+
+            Environment.LightSources.Add(new LightSource {
+                Position = new Vector2(64, 64),
+                Color = new Vector4(0, 0.66f, 0, 1),
                 RampStart = 40,
                 RampEnd = 250
             });
@@ -78,6 +86,10 @@ namespace TestGame {
                 new LightObstruction(
                     new Vector2(16, 256),
                     new Vector2(256, 256)
+                ),
+                new LightObstruction(
+                    new Vector2(256, 16),
+                    new Vector2(512, 256)
                 )
             });
         }
@@ -87,16 +99,21 @@ namespace TestGame {
             var mousePos = new Vector2(ms.X, ms.Y);
 
             var angle = gameTime.TotalGameTime.TotalSeconds * 2f;
-            const float radius = 32f;
+            const float radius = 64f;
 
             Environment.LightSources[0].Position = mousePos;
-            Environment.LightSources[1].Position = mousePos + new Vector2((float)Math.Cos(angle) * radius, (float)Math.Sin(angle) * radius);
+
+            if (Environment.LightSources.Count > 1)
+                Environment.LightSources[1].Position = mousePos + new Vector2((float)Math.Cos(angle) * radius, (float)Math.Sin(angle) * radius);
+
+            if (Environment.LightSources.Count > 2)
+                Environment.LightSources[2].Position = mousePos + new Vector2((float)Math.Cos(angle + 1f) * radius, (float)Math.Sin(angle + 1f) * radius);
 
             base.Update(gameTime);
         }
 
         public override void Draw (GameTime gameTime, Frame frame) {
-            ClearBatch.AddNew(frame, 0, Color.Black, Materials.Clear);
+            ClearBatch.AddNew(frame, 0, Materials.Clear, clearColor: Color.Black);
 
             Renderer.RenderLighting(frame, 1);
 

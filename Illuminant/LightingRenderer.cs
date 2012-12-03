@@ -9,7 +9,7 @@ using Squared.Render;
 
 namespace Squared.Illuminant {
     public class LightingRenderer {
-        public readonly Material DebugOutlines, Shadow;
+        public readonly Material DebugOutlines, Shadow, Illumination, ClearStencil;
 
         public static readonly short[] ShadowIndices;
 
@@ -23,6 +23,8 @@ namespace Squared.Illuminant {
         }
 
         public LightingRenderer (ContentManager content, DefaultMaterialSet materials, LightingEnvironment environment) {
+            ClearStencil = materials.Clear;
+
             materials.Add(DebugOutlines = new DelegateMaterial(
                 materials.ScreenSpaceGeometry,
                 new[] {
@@ -33,6 +35,31 @@ namespace Squared.Illuminant {
                 new Action<DeviceManager>[0]
             ));
 
+            materials.Add(Illumination = new DelegateMaterial(
+                materials.ScreenSpaceGeometry,
+                new[] {
+                    (Action<DeviceManager>)(
+                        (dm) => {
+                            dm.Device.BlendState = BlendState.Additive;
+                            dm.Device.DepthStencilState = new DepthStencilState {
+                                DepthBufferEnable = false,
+                                StencilEnable = true,
+                                StencilFunction = CompareFunction.Equal,
+                                StencilPass = StencilOperation.Keep,
+                                StencilFail = StencilOperation.Keep,
+                                ReferenceStencil = 1
+                            };
+                            dm.Device.RasterizerState = RasterizerState.CullNone;
+                        }
+                    )
+                },
+                new[] {
+                    (Action<DeviceManager>)(
+                        (dm) => dm.Device.DepthStencilState = DepthStencilState.None
+                    )
+                }
+            ));
+
             materials.Add(Shadow = new DelegateMaterial(
                 new Squared.Render.EffectMaterial(
                     content.Load<Effect>("Illumination"), "Shadow"
@@ -40,12 +67,23 @@ namespace Squared.Illuminant {
                 new[] {
                     (Action<DeviceManager>)(
                         (dm) => {
-                            dm.Device.BlendState = BlendState.AlphaBlend;
+                            dm.Device.BlendState = BlendState.Opaque;
+                            dm.Device.DepthStencilState = new DepthStencilState {
+                                DepthBufferEnable = false,
+                                StencilEnable = true,
+                                StencilFunction = CompareFunction.Never,
+                                StencilPass = StencilOperation.Keep,
+                                StencilFail = StencilOperation.Zero
+                            };
                             dm.Device.RasterizerState = RasterizerState.CullNone;
                         }
                     )
                 },
-                new Action<DeviceManager>[0]
+                new[] {
+                    (Action<DeviceManager>)(
+                        (dm) => dm.Device.DepthStencilState = DepthStencilState.None
+                    )
+                }
             ));
 
             Environment = environment;
@@ -57,13 +95,7 @@ namespace Squared.Illuminant {
                 using (var lightGroup = BatchGroup.New(resultGroup, i)) {
                     var lightSource = Environment.LightSources[i];
 
-                    var c1 = new Color(lightSource.Color.X, lightSource.Color.Y, lightSource.Color.Z, lightSource.Color.W);
-                    var c2 = c1 * 0;
-
-                    using (var gb = GeometryBatch<VertexPositionColor>.New(lightGroup, 0, DebugOutlines)) {
-                        gb.AddFilledRing(lightSource.Position, 0, lightSource.RampStart, c1, c1);
-                        gb.AddFilledRing(lightSource.Position, lightSource.RampStart, lightSource.RampEnd, c1, c2);
-                    }
+                    ClearBatch.AddNew(lightGroup, 0, ClearStencil, clearStencil: 1);
 
                     ShadowVertex vertex;
                     var vertexCount = Environment.Obstructions.Count * 4;
@@ -84,6 +116,14 @@ namespace Squared.Illuminant {
 
                             pb.Add(writer.GetDrawCall(PrimitiveType.TriangleList, ShadowIndices, 0, 6));
                         }
+                    }
+
+                    var c1 = new Color(lightSource.Color.X, lightSource.Color.Y, lightSource.Color.Z, lightSource.Color.W);
+                    var c2 = c1 * 0;
+
+                    using (var gb = GeometryBatch<VertexPositionColor>.New(lightGroup, 2, Illumination)) {
+                        gb.AddFilledRing(lightSource.Position, 0, lightSource.RampStart, c1, c1);
+                        gb.AddFilledRing(lightSource.Position, lightSource.RampStart, lightSource.RampEnd, c1, c2);
                     }
                 }
             }

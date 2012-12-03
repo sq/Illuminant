@@ -53,7 +53,7 @@ void ShadowVertexShader(
 void ShadowPixelShader(
     out float4 color : COLOR0
 ) {
-    color = float4(0, 0, 0, 1);
+    color = float4(0, 0, 0, 0);
 }
 
 technique Shadow {
