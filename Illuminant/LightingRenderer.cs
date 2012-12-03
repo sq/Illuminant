@@ -28,8 +28,9 @@ namespace Squared.Illuminant {
 
         public readonly DefaultMaterialSet Materials;
         public readonly Squared.Render.EffectMaterial ShadowMaterialInner;
-        public readonly Material DebugOutlines, Shadow, PointLight, ClearStencil;
+        public readonly Material DebugOutlines, Shadow, PointLight, ClearStencil, ScreenSpaceLightmappedBitmap, WorldSpaceLightmappedBitmap;
         public readonly DepthStencilState PointLightStencil, ShadowStencil;
+        public readonly BlendState SubtractiveBlend, MaxBlend, MinBlend;
 
         private readonly Dictionary<Pair<int>, CachedSector> SectorCache = new Dictionary<Pair<int>, CachedSector>(new IntPairComparer());
         private Rectangle StoredScissorRect;
@@ -82,7 +83,6 @@ namespace Squared.Illuminant {
                 new[] {
                     (Action<DeviceManager>)(
                         (dm) => {
-                            dm.Device.BlendState = BlendState.Additive;
                             dm.Device.DepthStencilState = PointLightStencil;
                             dm.Device.RasterizerState = RasterizerState.CullNone;
                         }
@@ -122,6 +122,61 @@ namespace Squared.Illuminant {
                     )
                 }
             ));
+
+            materials.Add(ScreenSpaceLightmappedBitmap = new DelegateMaterial(
+                new Squared.Render.EffectMaterial(
+                    content.Load<Effect>("SquaredBitmapShader"), "ScreenSpaceLightmappedBitmap"
+                ),
+                new[] {
+                    (Action<DeviceManager>)(
+                        (dm) => {
+                            dm.Device.BlendState = BlendState.AlphaBlend;
+                        }
+                    )
+                },
+                new Action<DeviceManager>[0]
+            ));
+
+            materials.Add(WorldSpaceLightmappedBitmap = new DelegateMaterial(
+                new Squared.Render.EffectMaterial(
+                    content.Load<Effect>("SquaredBitmapShader"), "WorldSpaceLightmappedBitmap"
+                ),
+                new[] {
+                    (Action<DeviceManager>)(
+                        (dm) => {
+                            dm.Device.BlendState = BlendState.AlphaBlend;
+                        }
+                    )
+                },
+                new Action<DeviceManager>[0]
+            ));
+
+            SubtractiveBlend = new BlendState {
+                AlphaBlendFunction = BlendFunction.Add,
+                AlphaDestinationBlend = Blend.One,
+                AlphaSourceBlend = Blend.One,
+                ColorBlendFunction = BlendFunction.Subtract,
+                ColorDestinationBlend = Blend.One,
+                ColorSourceBlend = Blend.One
+            };
+
+            MaxBlend = new BlendState {
+                AlphaBlendFunction = BlendFunction.Add,
+                AlphaDestinationBlend = Blend.One,
+                AlphaSourceBlend = Blend.One,
+                ColorBlendFunction = BlendFunction.Max,
+                ColorDestinationBlend = Blend.One,
+                ColorSourceBlend = Blend.One
+            };
+
+            MinBlend = new BlendState {
+                AlphaBlendFunction = BlendFunction.Add,
+                AlphaDestinationBlend = Blend.One,
+                AlphaSourceBlend = Blend.One,
+                ColorBlendFunction = BlendFunction.Min,
+                ColorDestinationBlend = Blend.One,
+                ColorSourceBlend = Blend.One
+            };
 
             Environment = environment;
 
@@ -163,6 +218,26 @@ namespace Squared.Illuminant {
             var ls = (LightSource)lightSource;
 
             device.Device.ScissorRectangle = GetScissorRectForLightSource(ls);
+
+            switch (ls.Mode) {
+                case LightSourceMode.Additive:
+                    device.Device.BlendState = BlendState.Additive;
+                    break;
+                case LightSourceMode.Subtractive:
+                    device.Device.BlendState = SubtractiveBlend;
+                    break;
+                case LightSourceMode.Alpha:
+                    device.Device.BlendState = BlendState.AlphaBlend;
+                    break;
+                case LightSourceMode.Max:
+                    device.Device.BlendState = MaxBlend;
+                    break;
+                case LightSourceMode.Min:
+                    device.Device.BlendState = MinBlend;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException("Mode");
+            }
         }
 
         private void ShadowBatchSetup (DeviceManager device, object lightSource) {
@@ -243,8 +318,8 @@ namespace Squared.Illuminant {
             return result;
         }
 
-        public void RenderLighting (Frame frame, int layer) {
-            using (var resultGroup = BatchGroup.New(frame, layer, before: StoreScissorRect, after: RestoreScissorRect))
+        public void RenderLighting (Frame frame, IBatchContainer container, int layer) {
+            using (var resultGroup = BatchGroup.New(container, layer, before: StoreScissorRect, after: RestoreScissorRect))
             for (var i = 0; i < Environment.LightSources.Count; i++) {
                 using (var lightGroup = BatchGroup.New(resultGroup, i)) {
                     var lightSource = Environment.LightSources[i];

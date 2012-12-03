@@ -8,6 +8,7 @@ using Microsoft.Xna.Framework.GamerServices;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Media;
+using Squared.Game;
 using Squared.Illuminant;
 using Squared.Render;
 
@@ -16,20 +17,36 @@ namespace TestGame {
         GraphicsDeviceManager Graphics;
         DefaultMaterialSet Materials;
 
-        LightingEnvironment Environment;
-        LightingRenderer Renderer;
+        LightingEnvironment ForegroundEnvironment, BackgroundEnvironment;
+        LightingRenderer ForegroundRenderer, BackgroundRenderer;
 
-        bool ShowOutlines, ShowLights;
+        Texture2D[] Layers = new Texture2D[5];
+        RenderTarget2D BackgroundLightmap, ForegroundLightmap;
 
-        bool Dragging;
-        Vector2 DragStart;
+        bool[,] ForegroundTiles = new bool[,] {
+            { true, true, true, true, true, false, true, true, true },
+            { true, true, false, true, true, false, true, true, false },
+            { true, true, false, false, false, false, false, true, false },
+            { true, true, true, true, false, false, false, false, false },
+            { true, true, true, true, false, false, true, true, false },
+            { true, true, true, true, true, false, true, true, false },
+            { true, true, true, true, false, false, true, true, false },
+            { true, true, false, true, true, false, true, true, false },
+            { true, true, false, false, false, false, false, true, false }
+        };
+
+        bool ShowOutlines, ShowLightmap;
+
+        float ViewScale = 1;
+
+        LightObstruction Dragging = null;
 
         public TestGame () {
             Graphics = new GraphicsDeviceManager(this);
             Graphics.PreferredBackBufferFormat = SurfaceFormat.Color;
             Graphics.PreferredDepthStencilFormat = DepthFormat.Depth24Stencil8;
-            Graphics.PreferredBackBufferWidth = 1280;
-            Graphics.PreferredBackBufferHeight = 720;
+            Graphics.PreferredBackBufferWidth = 1257;
+            Graphics.PreferredBackBufferHeight = 1250;
             Graphics.SynchronizeWithVerticalRetrace = true;
             Graphics.PreferMultiSampling = false;
 
@@ -37,6 +54,63 @@ namespace TestGame {
 
             UseThreadedDraw = true;
             IsFixedTimeStep = false;
+        }
+
+        private void AddTorch (float x, float y) {
+            var torch = new LightSource {
+                Mode = LightSourceMode.Alpha,
+                Position = new Vector2(x, y),
+                Color = new Vector4(255 / 255.0f, 158 / 255.0f, 0f, 0.8f),
+                RampStart = 40,
+                RampEnd = 350
+            };
+
+            ForegroundEnvironment.LightSources.Add(torch);
+        }
+
+        private void AddAmbientLight (float x, float y) {
+            var ambient = new LightSource {
+                Mode = LightSourceMode.Max,
+                Position = new Vector2(x, y),
+                Color = new Vector4(1, 1, 1, 0.45f),
+                RampStart = 2000,
+                RampEnd = 2500
+            };
+
+            BackgroundEnvironment.LightSources.Add(ambient);
+        }
+
+        private void GenerateObstructionsFromTiles () {
+            const float xOffset = 38, yOffset = 34;
+            const float xTileSize = 128, yTileSize = 128;
+
+            for (var y = 0; y < ForegroundTiles.GetLength(0); y++) {
+                float yPos = (y * yTileSize) + yOffset;
+                for (var x = 0; x < ForegroundTiles.GetLength(1); x++) {
+                    float xPos = (x * xTileSize) + xOffset;
+
+                    if (!ForegroundTiles[y, x])
+                        continue;
+
+                    var bounds = new Bounds(
+                        new Vector2(xPos, yPos),
+                        new Vector2(xPos + xTileSize, yPos + yTileSize)
+                    );
+
+                    BackgroundEnvironment.Obstructions.Add(new LightObstruction(
+                        bounds.TopLeft, bounds.TopRight
+                    ));
+                    BackgroundEnvironment.Obstructions.Add(new LightObstruction(
+                        bounds.TopRight, bounds.BottomRight
+                    ));
+                    BackgroundEnvironment.Obstructions.Add(new LightObstruction(
+                        bounds.BottomRight, bounds.BottomLeft
+                    ));
+                    BackgroundEnvironment.Obstructions.Add(new LightObstruction(
+                        bounds.BottomLeft, bounds.TopLeft
+                    ));
+                }
+            }
         }
 
         protected override void LoadContent () {
@@ -52,115 +126,119 @@ namespace TestGame {
                 )
             };
 
+            BackgroundLightmap = new RenderTarget2D(
+                GraphicsDevice, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight, false, 
+                SurfaceFormat.Color, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.DiscardContents
+            );
+
+            ForegroundLightmap = new RenderTarget2D(
+                GraphicsDevice, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight, false,
+                SurfaceFormat.Color, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.DiscardContents
+            );
+
             // Since the spiral is very detailed
             LightingEnvironment.DefaultSubdivision = 128f;
 
-            Environment = new LightingEnvironment();
-            Renderer = new LightingRenderer(Content, Materials, Environment);
+            BackgroundEnvironment = new LightingEnvironment();
+            ForegroundEnvironment = new LightingEnvironment();
 
-            Environment.LightSources.Add(new LightSource {
-                Position = new Vector2(64, 64),
-                Color = new Vector4(0.6f, 0.6f, 0.6f, 1),
-                RampStart = 40,
-                RampEnd = 256
-            });
+            BackgroundRenderer = new LightingRenderer(Content, Materials, BackgroundEnvironment);
+            ForegroundRenderer = new LightingRenderer(Content, Materials, ForegroundEnvironment);
 
-            var rng = new Random();
-            for (var i = 0; i < 33; i++) {
-                const float opacity = 0.7f;
-                Environment.LightSources.Add(new LightSource {
-                    Position = new Vector2(64, 64),
-                    Color = new Vector4((float)rng.NextDouble(), (float)rng.NextDouble(), (float)rng.NextDouble(), opacity),
-                    RampStart = 10,
-                    RampEnd = 120
-                });
+            for (float x = -200; x < 1400; x += 200) {
+                AddAmbientLight(x, -200);
             }
 
-            Environment.Obstructions.AddRange(new[] {
-                new LightObstruction(
-                    new Vector2(16, 16),
-                    new Vector2(256, 16)
-                ),
-                new LightObstruction(
-                    new Vector2(16, 16),
-                    new Vector2(16, 256)
-                ),
-                new LightObstruction(
-                    new Vector2(256, 16),
-                    new Vector2(256, 256)
-                ),
-                new LightObstruction(
-                    new Vector2(16, 256),
-                    new Vector2(256, 256)
-                )
-            });
+            AddTorch(102, 132);
+            AddTorch(869, 132);
+            AddTorch(102, 646);
+            AddTorch(869, 645);
 
-            const int spiralCount = 2048;
-            float spiralRadius = 0, spiralRadiusStep = 360f / spiralCount;
-            float spiralAngle = 0, spiralAngleStep = (float)(Math.PI / (spiralCount / 36f));
-            Vector2 previous = default(Vector2);
+            GenerateObstructionsFromTiles();
 
-            for (int i = 0; i < spiralCount; i++, spiralAngle += spiralAngleStep, spiralRadius += spiralRadiusStep) {
-                var current = new Vector2(
-                    (float)(Math.Cos(spiralAngle) * spiralRadius) + (Graphics.PreferredBackBufferWidth / 2f),
-                    (float)(Math.Sin(spiralAngle) * spiralRadius) + (Graphics.PreferredBackBufferHeight / 2f)
-                );
-
-                if (i > 0) {
-                    Environment.Obstructions.Add(new LightObstruction(
-                        previous, current
-                    ));
-                }
-
-                previous = current;
-            }
+            Layers[0] = Content.Load<Texture2D>("layers_bg");
+            Layers[1] = Content.Load<Texture2D>("layers_bricks");
+            Layers[2] = Content.Load<Texture2D>("layers_fg");
+            Layers[3] = Content.Load<Texture2D>("layers_chars");
+            Layers[4] = Content.Load<Texture2D>("layers_torches");
         }
 
         protected override void Update (GameTime gameTime) {
             var ks = Keyboard.GetState();
             ShowOutlines = ks.IsKeyDown(Keys.O);
+            ShowLightmap = ks.IsKeyDown(Keys.L);
 
             var ms = Mouse.GetState();
-            var mousePos = new Vector2(ms.X, ms.Y);
-
-            Materials.ViewportScale = new Vector2((float)(1.0 + (ms.ScrollWheelValue / 500f)));
-
-            var angle = gameTime.TotalGameTime.TotalSeconds * 2f;
-            const float radius = 200f;
-
-            Environment.LightSources[0].Position = mousePos;
-
-            float stepOffset = (float)((Math.PI * 2) / (Environment.LightSources.Count - 1));
-            float offset = 0;
-            for (int i = 1; i < Environment.LightSources.Count; i++, offset += stepOffset) {
-                float localRadius = (float)(radius + (radius * Math.Sin(offset * 4f) * 0.5f));
-                Environment.LightSources[i].Position = mousePos + new Vector2((float)Math.Cos(angle + offset) * localRadius, (float)Math.Sin(angle + offset) * localRadius);
-            }
+            IsMouseVisible = true;
+            ViewScale = (float)(1.0 + (ms.ScrollWheelValue / 500f));
+            var mousePos = new Vector2(ms.X, ms.Y) / ViewScale;
 
             if (ms.LeftButton == ButtonState.Pressed) {
-                if (!Dragging) {
-                    Dragging = true;
-                    DragStart = mousePos;
+                if (Dragging == null) {
+                    BackgroundEnvironment.Obstructions.Add(Dragging = new LightObstruction(mousePos, mousePos));
+                } else {
+                    Dragging.B = mousePos;
                 }
             } else {
-                if (Dragging) {
-                    Environment.Obstructions.Add(new LightObstruction(
-                        DragStart, mousePos
-                    ));
-                    Dragging = false;
+                if (Dragging != null) {
+                    Dragging.B = mousePos;
+                    Dragging = null;
                 }
             }
 
             base.Update(gameTime);
         }
 
+        private void ResetViewScale (DeviceManager device) {
+            Materials.ViewportScale = new Vector2(1, 1);
+            Materials.ApplyShaderVariables();
+        }
+
+        private void ApplyViewScale (DeviceManager device) {
+            Materials.ViewportScale = new Vector2(ViewScale);
+            Materials.ApplyShaderVariables();
+        }
+
         public override void Draw (GameTime gameTime, Frame frame) {
-            ClearBatch.AddNew(frame, 0, Materials.Clear, clearColor: Color.Black);
+            using (var generateLightmapBatch = BatchGroup.New(frame, 0, ResetViewScale, ApplyViewScale)) {
+                SetRenderTargetBatch.AddNew(generateLightmapBatch, 0, BackgroundLightmap);
+                ClearBatch.AddNew(generateLightmapBatch, 1, Materials.Clear, clearColor: new Color(16, 16, 16, 255));
+                BackgroundRenderer.RenderLighting(frame, generateLightmapBatch, 2);
+                ForegroundRenderer.RenderLighting(frame, generateLightmapBatch, 3);
+                SetRenderTargetBatch.AddNew(generateLightmapBatch, 4, null);
+            }
 
-            Renderer.RenderLighting(frame, 1);
+            using (var generateLightmapBatch2 = BatchGroup.New(frame, 1, ResetViewScale, ApplyViewScale)) {
+                SetRenderTargetBatch.AddNew(generateLightmapBatch2, 0, ForegroundLightmap);
+                ClearBatch.AddNew(generateLightmapBatch2, 1, Materials.Clear, clearColor: new Color(127, 127, 127, 255));
+                ForegroundRenderer.RenderLighting(frame, generateLightmapBatch2, 2);
+                SetRenderTargetBatch.AddNew(generateLightmapBatch2, 3, null);
+            }
 
-            if (ShowOutlines)
-                Renderer.RenderOutlines(frame, 2, ShowLights);
+            ClearBatch.AddNew(frame, 2, Materials.Clear, clearColor: Color.Black);
+
+            using (var bb = BitmapBatch.New(frame, 3, BackgroundRenderer.WorldSpaceLightmappedBitmap)) {
+                for (var i = 0; i < 2; i++) {
+                    var layer = Layers[i];
+                    var dc = new BitmapDrawCall(layer, Vector2.Zero);
+                    dc.Textures.Texture2 = BackgroundLightmap;
+                    dc.SortKey = i;
+                    bb.Add(dc);
+                }
+            }
+
+            using (var bb = BitmapBatch.New(frame, 4, BackgroundRenderer.WorldSpaceLightmappedBitmap)) {
+                for (var i = 2; i < Layers.Length; i++) {
+                    var layer = Layers[i];
+                    var dc = new BitmapDrawCall(layer, Vector2.Zero);
+                    dc.Textures.Texture2 = ForegroundLightmap;
+                    dc.SortKey = i;
+                    bb.Add(dc);
+                }
+            }
+
+            if (ShowOutlines || (Dragging != null))
+                BackgroundRenderer.RenderOutlines(frame, 5, true);
         }
     }
 }

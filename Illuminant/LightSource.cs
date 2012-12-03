@@ -6,8 +6,17 @@ using Microsoft.Xna.Framework;
 
 namespace Squared.Illuminant {
     public class LightSource {
+        public LightSourceMode Mode = LightSourceMode.Additive;
         public Vector2 Position;
         public Vector4 Color;
         public float RampStart, RampEnd;
+    }
+
+    public enum LightSourceMode {
+        Additive,
+        Subtractive,
+        Alpha,
+        Max,
+        Min
     }
 }
