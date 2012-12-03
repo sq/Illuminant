@@ -9,15 +9,21 @@ using Squared.Render;
 
 namespace Squared.Illuminant {
     public class LightingRenderer {
-        public readonly Material DebugOutlines, Shadow, Illumination, ClearStencil;
+        public readonly Material DebugOutlines, Shadow, PointLight, ClearStencil;
 
         public static readonly short[] ShadowIndices;
+        public static readonly short[] PointLightIndices;
 
         public LightingEnvironment Environment;
 
         static LightingRenderer () {
             ShadowIndices = new short[] {
                 0, 1, 2,
+                1, 2, 3
+            };
+
+            PointLightIndices = new short[] {
+                0, 1, 3,
                 1, 2, 3
             };
         }
@@ -35,8 +41,10 @@ namespace Squared.Illuminant {
                 new Action<DeviceManager>[0]
             ));
 
-            materials.Add(Illumination = new DelegateMaterial(
-                materials.ScreenSpaceGeometry,
+            materials.Add(PointLight = new DelegateMaterial(
+                new Squared.Render.EffectMaterial(
+                    content.Load<Effect>("Illumination"), "PointLight"
+                ),
                 new[] {
                     (Action<DeviceManager>)(
                         (dm) => {
@@ -97,11 +105,12 @@ namespace Squared.Illuminant {
 
                     ClearBatch.AddNew(lightGroup, 0, ClearStencil, clearStencil: 1);
 
-                    ShadowVertex vertex;
                     var vertexCount = Environment.Obstructions.Count * 4;
 
                     using (var pb = PrimitiveBatch<ShadowVertex>.New(lightGroup, 1, Shadow))
                     using (var buffer = pb.CreateBuffer(vertexCount)) {
+                        ShadowVertex vertex;
+
                         foreach (var obstruction in Environment.Obstructions) {
                             var writer = buffer.GetWriter(4);
 
@@ -114,28 +123,57 @@ namespace Squared.Illuminant {
                                 writer.Write(ref vertex);
                             }
 
-                            pb.Add(writer.GetDrawCall(PrimitiveType.TriangleList, ShadowIndices, 0, 6));
+                            pb.Add(writer.GetDrawCall(PrimitiveType.TriangleList, ShadowIndices, 0, ShadowIndices.Length));
                         }
                     }
 
-                    var c1 = new Color(lightSource.Color.X, lightSource.Color.Y, lightSource.Color.Z, lightSource.Color.W);
-                    var c2 = c1 * 0;
+                    using (var pb = PrimitiveBatch<PointLightVertex>.New(lightGroup, 2, PointLight))
+                    using (var buffer = pb.CreateBuffer(4)) {
+                        var writer = buffer.GetWriter(4);
+                        PointLightVertex vertex;
 
-                    using (var gb = GeometryBatch<VertexPositionColor>.New(lightGroup, 2, Illumination)) {
-                        gb.AddFilledRing(lightSource.Position, 0, lightSource.RampStart, c1, c1);
-                        gb.AddFilledRing(lightSource.Position, lightSource.RampStart, lightSource.RampEnd, c1, c2);
+                        vertex.LightCenter = lightSource.Position;
+                        vertex.Color = lightSource.Color;
+                        vertex.Ramp = new Vector2(lightSource.RampStart, lightSource.RampEnd);
+
+                        vertex.Position = new Vector2(
+                            lightSource.Position.X - lightSource.RampEnd, 
+                            lightSource.Position.Y - lightSource.RampEnd
+                        );
+                        writer.Write(ref vertex);
+
+                        vertex.Position = new Vector2(
+                            lightSource.Position.X + lightSource.RampEnd,
+                            lightSource.Position.Y - lightSource.RampEnd
+                        );
+                        writer.Write(ref vertex);
+
+                        vertex.Position = new Vector2(
+                            lightSource.Position.X + lightSource.RampEnd,
+                            lightSource.Position.Y + lightSource.RampEnd
+                        );
+                        writer.Write(ref vertex);
+
+                        vertex.Position = new Vector2(
+                            lightSource.Position.X - lightSource.RampEnd,
+                            lightSource.Position.Y + lightSource.RampEnd
+                        );
+                        writer.Write(ref vertex);
+
+                        pb.Add(writer.GetDrawCall(PrimitiveType.TriangleList, PointLightIndices, 0, PointLightIndices.Length));
                     }
                 }
             }
         }
 
-        public void RenderOutlines (Frame frame, int layer) {
+        public void RenderOutlines (Frame frame, int layer, bool showLights) {
             using (var group = BatchGroup.New(frame, layer)) {
                 using (var gb = GeometryBatch<VertexPositionColor>.New(group, 0, DebugOutlines)) {
                     foreach (var lo in Environment.Obstructions)
                         gb.AddLine(lo.A, lo.B, Color.White);
                 }
 
+                if (showLights)
                 for (var i = 0; i < Environment.LightSources.Count; i++) {
                     var lightSource = Environment.LightSources[i];
 

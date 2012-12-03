@@ -19,13 +19,17 @@ namespace TestGame {
         LightingEnvironment Environment;
         LightingRenderer Renderer;
 
+        bool Dragging;
+        Vector2 DragStart;
+
         public TestGame () {
             Graphics = new GraphicsDeviceManager(this);
+            Graphics.PreferredBackBufferFormat = SurfaceFormat.Color;
             Graphics.PreferredDepthStencilFormat = DepthFormat.Depth24Stencil8;
             Graphics.PreferredBackBufferWidth = 1280;
             Graphics.PreferredBackBufferHeight = 720;
             Graphics.SynchronizeWithVerticalRetrace = true;
-            Graphics.PreferMultiSampling = true;
+            Graphics.PreferMultiSampling = false;
 
             Content.RootDirectory = "Content";
 
@@ -51,24 +55,21 @@ namespace TestGame {
 
             Environment.LightSources.Add(new LightSource {
                 Position = new Vector2(64, 64),
-                Color = new Vector4(0.66f, 0, 0, 1),
-                RampStart = 20,
-                RampEnd = 160
+                Color = new Vector4(0.6f, 0.6f, 0.6f, 1),
+                RampStart = 40,
+                RampEnd = 256
             });
 
-            Environment.LightSources.Add(new LightSource {
-                Position = new Vector2(64, 64),
-                Color = new Vector4(0, 0, 0.66f, 1),
-                RampStart = 40,
-                RampEnd = 250
-            });
-
-            Environment.LightSources.Add(new LightSource {
-                Position = new Vector2(64, 64),
-                Color = new Vector4(0, 0.66f, 0, 1),
-                RampStart = 40,
-                RampEnd = 250
-            });
+            var rng = new Random();
+            for (var i = 0; i < 65; i++) {
+                const float opacity = 0.6f;
+                Environment.LightSources.Add(new LightSource {
+                    Position = new Vector2(64, 64),
+                    Color = new Vector4((float)rng.NextDouble(), (float)rng.NextDouble(), (float)rng.NextDouble(), opacity),
+                    RampStart = 10,
+                    RampEnd = 120
+                });
+            }
 
             Environment.Obstructions.AddRange(new[] {
                 new LightObstruction(
@@ -86,10 +87,6 @@ namespace TestGame {
                 new LightObstruction(
                     new Vector2(16, 256),
                     new Vector2(256, 256)
-                ),
-                new LightObstruction(
-                    new Vector2(256, 16),
-                    new Vector2(512, 256)
                 )
             });
         }
@@ -99,15 +96,30 @@ namespace TestGame {
             var mousePos = new Vector2(ms.X, ms.Y);
 
             var angle = gameTime.TotalGameTime.TotalSeconds * 2f;
-            const float radius = 64f;
+            const float radius = 200f;
 
             Environment.LightSources[0].Position = mousePos;
 
-            if (Environment.LightSources.Count > 1)
-                Environment.LightSources[1].Position = mousePos + new Vector2((float)Math.Cos(angle) * radius, (float)Math.Sin(angle) * radius);
+            float stepOffset = (float)((Math.PI * 2) / (Environment.LightSources.Count - 1));
+            float offset = 0;
+            for (int i = 1; i < Environment.LightSources.Count; i++, offset += stepOffset) {
+                float localRadius = (float)(radius + (radius * Math.Sin(offset * 4f) * 0.5f));
+                Environment.LightSources[i].Position = mousePos + new Vector2((float)Math.Cos(angle + offset) * localRadius, (float)Math.Sin(angle + offset) * localRadius);
+            }
 
-            if (Environment.LightSources.Count > 2)
-                Environment.LightSources[2].Position = mousePos + new Vector2((float)Math.Cos(angle + 1f) * radius, (float)Math.Sin(angle + 1f) * radius);
+            if (ms.LeftButton == ButtonState.Pressed) {
+                if (!Dragging) {
+                    Dragging = true;
+                    DragStart = mousePos;
+                }
+            } else {
+                if (Dragging) {
+                    Environment.Obstructions.Add(new LightObstruction(
+                        DragStart, mousePos
+                    ));
+                    Dragging = false;
+                }
+            }
 
             base.Update(gameTime);
         }
@@ -117,7 +129,7 @@ namespace TestGame {
 
             Renderer.RenderLighting(frame, 1);
 
-            Renderer.RenderOutlines(frame, 2);
+            Renderer.RenderOutlines(frame, 2, false);
         }
     }
 }
