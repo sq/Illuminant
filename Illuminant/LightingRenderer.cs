@@ -8,10 +8,13 @@ using Microsoft.Xna.Framework.Graphics;
 using Squared.Render;
 
 namespace Squared.Illuminant {
-    public class LightingRenderer {
+    public class LightingRenderer : IDisposable {
         public readonly DefaultMaterialSet Materials;
         public readonly Squared.Render.EffectMaterial ShadowMaterialInner;
         public readonly Material DebugOutlines, Shadow, PointLight, ClearStencil;
+
+        private DynamicVertexBuffer ObstructionVertexBuffer;
+        private DynamicIndexBuffer ObstructionIndexBuffer;
 
         private Rectangle StoredScissorRect;
 
@@ -103,6 +106,16 @@ namespace Squared.Illuminant {
             Environment = environment;
         }
 
+        public void Dispose () {
+            if (ObstructionVertexBuffer != null)
+                ObstructionVertexBuffer.Dispose();
+            if (ObstructionIndexBuffer != null)
+                ObstructionIndexBuffer.Dispose();
+
+            ObstructionVertexBuffer = null;
+            ObstructionIndexBuffer = null;
+        }
+
         private void StoreScissorRect (DeviceManager device) {
             StoredScissorRect = device.Device.ScissorRectangle;
         }
@@ -135,9 +148,25 @@ namespace Squared.Illuminant {
             device.Device.ScissorRectangle = GetScissorRectForLightSource(ls);
         }
 
-        public void RenderLighting (Frame frame, int layer) {
+        private void FillObstructionBuffers (Frame frame) {
             var vertexCount = Environment.Obstructions.Count * 4;
             var indexCount = Environment.Obstructions.Count * 6;
+
+            if ((ObstructionVertexBuffer != null) && (ObstructionVertexBuffer.VertexCount < vertexCount)) {
+                ObstructionVertexBuffer.Dispose();
+                ObstructionVertexBuffer = null;
+            }
+
+            if ((ObstructionIndexBuffer != null) && (ObstructionIndexBuffer.IndexCount < indexCount)) {
+                ObstructionIndexBuffer.Dispose();
+                ObstructionIndexBuffer = null;
+            }
+
+            if (ObstructionVertexBuffer == null)
+                ObstructionVertexBuffer = new DynamicVertexBuffer(frame.RenderManager.DeviceManager.Device, (new ShadowVertex().VertexDeclaration), vertexCount, BufferUsage.WriteOnly);
+
+            if (ObstructionIndexBuffer == null)
+                ObstructionIndexBuffer = new DynamicIndexBuffer(frame.RenderManager.DeviceManager.Device, IndexElementSize.SixteenBits, indexCount, BufferUsage.WriteOnly);
 
             var obstructionVertices = frame.RenderManager.GetArrayAllocator<ShadowVertex>().Allocate(vertexCount);
             var obstructionIndices = frame.RenderManager.GetArrayAllocator<short>().Allocate(indexCount);
@@ -167,7 +196,14 @@ namespace Squared.Illuminant {
                     for (var j = 0; j < ShadowIndices.Length; j++)
                         ib[indexOffset + j] = (short)(vertexOffset + ShadowIndices[j]);
                 }
+
+                ObstructionVertexBuffer.SetData(vb, 0, vertexCount, SetDataOptions.Discard);
+                ObstructionIndexBuffer.SetData(ib, 0, indexCount, SetDataOptions.Discard);
             }
+        }
+
+        public void RenderLighting (Frame frame, int layer) {
+            FillObstructionBuffers(frame);
 
             using (var resultGroup = BatchGroup.New(frame, layer, before: StoreScissorRect, after: RestoreScissorRect))
             for (var i = 0; i < Environment.LightSources.Count; i++) {
@@ -176,9 +212,9 @@ namespace Squared.Illuminant {
 
                     ClearBatch.AddNew(lightGroup, 0, ClearStencil, clearStencil: 1);
 
-                    using (var pb = PrimitiveBatch<ShadowVertex>.New(lightGroup, 1, Shadow, ShadowBatchSetup, lightSource)) {
-                        pb.Add(new PrimitiveDrawCall<ShadowVertex>(
-                            PrimitiveType.TriangleList, obstructionVertices.Buffer, 0, vertexCount, obstructionIndices.Buffer, 0, Environment.Obstructions.Count * 2
+                    using (var nb = NativeBatch.New(lightGroup, 1, Shadow, ShadowBatchSetup, lightSource)) {
+                        nb.Add(new NativeDrawCall(
+                            PrimitiveType.TriangleList, ObstructionVertexBuffer, 0, ObstructionIndexBuffer, 0, 0, Environment.Obstructions.Count * 4, 0, Environment.Obstructions.Count * 2
                         ));
                     }
 
