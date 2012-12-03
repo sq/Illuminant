@@ -52,6 +52,9 @@ namespace TestGame {
                 )
             };
 
+            // Since the spiral is very detailed
+            LightingEnvironment.DefaultSubdivision = 128f;
+
             Environment = new LightingEnvironment();
             Renderer = new LightingRenderer(Content, Materials, Environment);
 
@@ -63,8 +66,8 @@ namespace TestGame {
             });
 
             var rng = new Random();
-            for (var i = 0; i < 65; i++) {
-                const float opacity = 0.6f;
+            for (var i = 0; i < 33; i++) {
+                const float opacity = 0.7f;
                 Environment.LightSources.Add(new LightSource {
                     Position = new Vector2(64, 64),
                     Color = new Vector4((float)rng.NextDouble(), (float)rng.NextDouble(), (float)rng.NextDouble(), opacity),
@@ -92,7 +95,7 @@ namespace TestGame {
                 )
             });
 
-            const int spiralCount = 10240;
+            const int spiralCount = 2048;
             float spiralRadius = 0, spiralRadiusStep = 360f / spiralCount;
             float spiralAngle = 0, spiralAngleStep = (float)(Math.PI / (spiralCount / 36f));
             Vector2 previous = default(Vector2);
