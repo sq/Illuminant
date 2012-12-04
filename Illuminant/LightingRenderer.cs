@@ -158,7 +158,7 @@ namespace Squared.Illuminant {
                 AlphaBlendFunction = BlendFunction.Add,
                 AlphaDestinationBlend = Blend.One,
                 AlphaSourceBlend = Blend.One,
-                ColorBlendFunction = BlendFunction.Subtract,
+                ColorBlendFunction = BlendFunction.ReverseSubtract,
                 ColorDestinationBlend = Blend.One,
                 ColorSourceBlend = Blend.One
             };
@@ -215,12 +215,13 @@ namespace Squared.Illuminant {
             Rectangle scissor;
 
             if (ls.ClipRegion.HasValue) {
+                // FIXME: ViewportPosition
                 var clipRegion = ls.ClipRegion.Value;
                 scissor = new Rectangle(
-                    (int)Math.Floor(clipRegion.TopLeft.X),
-                    (int)Math.Floor(clipRegion.TopLeft.Y),
+                    (int)Math.Floor(clipRegion.TopLeft.X * Materials.ViewportScale.X),
+                    (int)Math.Floor(clipRegion.TopLeft.Y * Materials.ViewportScale.Y),
                     (int)Math.Ceiling(clipRegion.Size.X * Materials.ViewportScale.X),
-                    (int)Math.Ceiling(clipRegion.Size.Y * Materials.ViewportScale.X)
+                    (int)Math.Ceiling(clipRegion.Size.Y * Materials.ViewportScale.Y)
                 );
             } else {
                 scissor = new Rectangle(
