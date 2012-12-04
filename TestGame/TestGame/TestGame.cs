@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
@@ -45,6 +46,7 @@ namespace TestGame {
 
         bool ShowOutlines, ShowLightmap, ShowAOShadow = true, ShowBrickSpecular = true;
 
+        const int LightmapMultisampleCount = 0;
         float LightmapScale = 1f;
 
         LightObstruction Dragging = null;
@@ -275,6 +277,12 @@ namespace TestGame {
                 }
             }
 
+            if (false)
+            Console.WriteLine(
+                "BeginDraw = {0:000.000}ms Draw = {1:000.000}ms EndDraw = {2:000.000}ms",
+                PreviousFrameTiming.BeginDraw.TotalMilliseconds, PreviousFrameTiming.Draw.TotalMilliseconds, PreviousFrameTiming.EndDraw.TotalMilliseconds
+            );
+
             base.Update(gameTime);
         }
 
@@ -299,12 +307,12 @@ namespace TestGame {
 
                 BackgroundLightmap = new RenderTarget2D(
                     GraphicsDevice, scaledWidth, scaledHeight, false,
-                    SurfaceFormat.Color, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.DiscardContents
+                    SurfaceFormat.Color, DepthFormat.Depth24Stencil8, LightmapMultisampleCount, RenderTargetUsage.DiscardContents
                 );
 
                 ForegroundLightmap = new RenderTarget2D(
                     GraphicsDevice, scaledWidth, scaledHeight, false,
-                    SurfaceFormat.Color, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.DiscardContents
+                    SurfaceFormat.Color, DepthFormat.Depth24Stencil8, LightmapMultisampleCount, RenderTargetUsage.DiscardContents
                 );
 
                 AOShadowScratch = new RenderTarget2D(
