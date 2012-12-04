@@ -18,6 +18,7 @@ namespace TestGame {
         DefaultMaterialSet Materials;
         GaussianBlurMaterialSet BlurMaterials;
 
+        DelegateMaterial AdditiveBitmapMaterial;
         DelegateMaterial MaskedForegroundMaterial;
         DelegateMaterial AOShadowMaterial;
         LightingEnvironment ForegroundEnvironment, BackgroundEnvironment;
@@ -41,7 +42,7 @@ namespace TestGame {
             { true, true, false, false, false, false, false, true, false }
         };
 
-        bool ShowOutlines, ShowLightmap, ShowAOShadow = true;
+        bool ShowOutlines, ShowLightmap, ShowAOShadow = true, ShowBrickSpecular = true;
 
         LightObstruction Dragging = null;
 
@@ -205,6 +206,14 @@ namespace TestGame {
 
             BricksLightMask = Content.Load<Texture2D>("layers_bricks_lightmask");
 
+            AdditiveBitmapMaterial = new DelegateMaterial(
+                Materials.ScreenSpaceBitmap,
+                new Action<DeviceManager>[] {
+                    (dm) => dm.Device.BlendState = BlendState.Additive
+                },
+                new Action<DeviceManager>[0]
+            );
+
             MaskedForegroundMaterial = new DelegateMaterial(
                 ForegroundRenderer.ScreenSpaceLightmappedBitmap,
                 new Action<DeviceManager>[] {
@@ -231,6 +240,8 @@ namespace TestGame {
                 ShowLightmap = !ShowLightmap;
             if (ks.IsKeyDown(Keys.A) && !PreviousKeyboardState.IsKeyDown(Keys.A))
                 ShowAOShadow = !ShowAOShadow;
+            if (ks.IsKeyDown(Keys.B) && !PreviousKeyboardState.IsKeyDown(Keys.B))
+                ShowBrickSpecular = !ShowBrickSpecular;
 
             PreviousKeyboardState = ks;
 
@@ -362,7 +373,7 @@ namespace TestGame {
 
                 BackgroundRenderer.RenderLighting(frame, backgroundLightGroup, 2);
 
-                using (var foregroundLightBatch = BitmapBatch.New(backgroundLightGroup, 3, MaskedForegroundMaterial)) {
+                using (var foregroundLightBatch = BitmapBatch.New(backgroundLightGroup, 3, ShowBrickSpecular ? MaskedForegroundMaterial : AdditiveBitmapMaterial)) {
                     var dc = new BitmapDrawCall(
                         ForegroundLightmap, Vector2.Zero
                     );
