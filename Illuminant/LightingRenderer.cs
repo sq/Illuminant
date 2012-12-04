@@ -71,6 +71,7 @@ namespace Squared.Illuminant {
             PointLightStencil = new DepthStencilState {
                 DepthBufferEnable = false,
                 StencilEnable = true,
+                StencilWriteMask = 0,
                 StencilFunction = CompareFunction.Equal,
                 StencilPass = StencilOperation.Keep,
                 StencilFail = StencilOperation.Keep,
@@ -100,6 +101,7 @@ namespace Squared.Illuminant {
             ShadowStencil = new DepthStencilState {
                 DepthBufferEnable = false,
                 StencilEnable = true,
+                StencilWriteMask = Int32.MaxValue,
                 StencilFunction = CompareFunction.Never,
                 StencilPass = StencilOperation.Zero,
                 StencilFail = StencilOperation.Replace,
@@ -204,11 +206,11 @@ namespace Squared.Illuminant {
             ShadowStencil.Dispose();
         }
 
-        private void StoreScissorRect (DeviceManager device) {
+        private void StoreScissorRect (DeviceManager device, object userData) {
             StoredScissorRect = device.Device.ScissorRectangle;
         }
 
-        private void RestoreScissorRect (DeviceManager device) {
+        private void RestoreScissorRect (DeviceManager device, object userData) {
             device.Device.ScissorRectangle = StoredScissorRect;
         }
 
@@ -237,10 +239,14 @@ namespace Squared.Illuminant {
             return result;
         }
 
-        private void IlluminationBatchSetup (DeviceManager device, object lightSource) {
+        private void ApplyScissorForLightSource (DeviceManager device, object lightSource) {
             var ls = (LightSource)lightSource;
 
             device.Device.ScissorRectangle = GetScissorRectForLightSource(ls);
+        }
+
+        private void IlluminationBatchSetup (DeviceManager device, object lightSource) {
+            var ls = (LightSource)lightSource;
 
             switch (ls.Mode) {
                 case LightSourceMode.Additive:
@@ -272,7 +278,6 @@ namespace Squared.Illuminant {
             var ls = (LightSource)lightSource;
 
             ShadowMaterialInner.Effect.Parameters["LightCenter"].SetValue(ls.Position);
-            device.Device.ScissorRectangle = GetScissorRectForLightSource(ls);
         }
 
         private CachedSector GetCachedSector (Frame frame, Pair<int> sectorIndex) {
@@ -349,8 +354,9 @@ namespace Squared.Illuminant {
         public void RenderLighting (Frame frame, IBatchContainer container, int layer) {
             using (var resultGroup = BatchGroup.New(container, layer, before: StoreScissorRect, after: RestoreScissorRect))
             for (var i = 0; i < Environment.LightSources.Count; i++) {
-                using (var lightGroup = BatchGroup.New(resultGroup, i)) {
-                    var lightSource = Environment.LightSources[i];
+                var lightSource = Environment.LightSources[i];
+
+                using (var lightGroup = BatchGroup.New(resultGroup, i, before: ApplyScissorForLightSource, userData: lightSource)) {
                     var lightBounds = new Bounds(lightSource.Position - new Vector2(lightSource.RampEnd), lightSource.Position + new Vector2(lightSource.RampEnd));
 
                     ClearBatch.AddNew(lightGroup, 0, ClearStencil, clearStencil: 0);
@@ -360,6 +366,8 @@ namespace Squared.Illuminant {
                         using (var e = Environment.Obstructions.GetSectorsFromBounds(lightBounds))
                         while (e.GetNext(out currentSector)) {
                             var cachedSector = GetCachedSector(frame, currentSector.Index);
+                            if (cachedSector.VertexCount <= 0)
+                                continue;
 
                             nb.Add(new NativeDrawCall(
                                 PrimitiveType.TriangleList, cachedSector.ObstructionVertexBuffer, 0, cachedSector.ObstructionIndexBuffer, 0, 0, cachedSector.VertexCount, 0, cachedSector.PrimitiveCount

@@ -243,16 +243,6 @@ namespace TestGame {
             base.Update(gameTime);
         }
 
-        private void ApplyViewScale (DeviceManager device) {
-            Materials.ViewportScale = new Vector2(1, 1);
-            Materials.ApplyShaderVariables();
-        }
-
-        private void ApplyLightmapScale (DeviceManager device) {
-            Materials.ViewportScale = new Vector2(1, 1);
-            Materials.ApplyShaderVariables();
-        }
-
         private void MakeLightmapTextures () {
             int width = Graphics.PreferredBackBufferWidth;
             int height = Graphics.PreferredBackBufferHeight;
@@ -294,14 +284,14 @@ namespace TestGame {
         public override void Draw (GameTime gameTime, Frame frame) {
             MakeLightmapTextures();
 
-            using (var bricksLightGroup = BatchGroup.New(frame, 0, ApplyLightmapScale, ApplyViewScale)) {
+            using (var bricksLightGroup = BatchGroup.New(frame, 0)) {
                 SetRenderTargetBatch.AddNew(bricksLightGroup, 0, ForegroundLightmap);
                 ClearBatch.AddNew(bricksLightGroup, 1, Materials.Clear, clearColor: new Color(0, 0, 0, 255), clearZ: 0, clearStencil: 0);
                 ForegroundRenderer.RenderLighting(frame, bricksLightGroup, 2);
                 SetRenderTargetBatch.AddNew(bricksLightGroup, 3, null);
             }
 
-            using (var aoShadowFirstPassGroup = BatchGroup.New(frame, 1, ApplyLightmapScale, ApplyViewScale)) {
+            using (var aoShadowFirstPassGroup = BatchGroup.New(frame, 1)) {
                 SetRenderTargetBatch.AddNew(aoShadowFirstPassGroup, 0, AOShadowScratch);
                 ClearBatch.AddNew(aoShadowFirstPassGroup, 1, Materials.Clear, clearColor: Color.Transparent);
 
@@ -320,7 +310,7 @@ namespace TestGame {
                 SetRenderTargetBatch.AddNew(aoShadowFirstPassGroup, 3, null);
             }
 
-            using (var backgroundLightGroup = BatchGroup.New(frame, 3, ApplyLightmapScale, ApplyViewScale)) {
+            using (var backgroundLightGroup = BatchGroup.New(frame, 3)) {
                 SetRenderTargetBatch.AddNew(backgroundLightGroup, 0, BackgroundLightmap);
                 ClearBatch.AddNew(backgroundLightGroup, 1, Materials.Clear, clearColor: new Color(40, 40, 40, 255), clearZ: 0, clearStencil: 0);
 
@@ -347,7 +337,7 @@ namespace TestGame {
                 SetRenderTargetBatch.AddNew(backgroundLightGroup, 5, null);
             }
 
-            using (var foregroundLightGroup = BatchGroup.New(frame, 5, ApplyLightmapScale, ApplyViewScale)) {
+            using (var foregroundLightGroup = BatchGroup.New(frame, 5)) {
                 SetRenderTargetBatch.AddNew(foregroundLightGroup, 0, ForegroundLightmap);
                 ClearBatch.AddNew(foregroundLightGroup, 1, Materials.Clear, clearColor: new Color(127, 127, 127, 255), clearZ: 0, clearStencil: 0);
                 ForegroundRenderer.RenderLighting(frame, foregroundLightGroup, 2);
