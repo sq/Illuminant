@@ -28,7 +28,7 @@ namespace Squared.Illuminant {
 
         public readonly DefaultMaterialSet Materials;
         public readonly Squared.Render.EffectMaterial ShadowMaterialInner, PointLightMaterialInner;
-        public readonly Material DebugOutlines, Shadow, PointLight, ClearStencil, ScreenSpaceLightmappedBitmap, WorldSpaceLightmappedBitmap;
+        public readonly Material DebugOutlines, Shadow, PointLight, ClearStencil;
         public readonly DepthStencilState PointLightStencil, ShadowStencil;
         public readonly BlendState SubtractiveBlend, MaxBlend, MinBlend;
         public readonly RasterizerState ScissorOnly;
@@ -127,34 +127,6 @@ namespace Squared.Illuminant {
                             dm.Device.DepthStencilState = DepthStencilState.None
                     )
                 }
-            ));
-
-            materials.Add(ScreenSpaceLightmappedBitmap = new DelegateMaterial(
-                new Squared.Render.EffectMaterial(
-                    content.Load<Effect>("SquaredBitmapShader"), "ScreenSpaceLightmappedBitmap"
-                ),
-                new[] {
-                    (Action<DeviceManager>)(
-                        (dm) => {
-                            dm.Device.BlendState = BlendState.AlphaBlend;
-                        }
-                    )
-                },
-                new Action<DeviceManager>[0]
-            ));
-
-            materials.Add(WorldSpaceLightmappedBitmap = new DelegateMaterial(
-                new Squared.Render.EffectMaterial(
-                    content.Load<Effect>("SquaredBitmapShader"), "WorldSpaceLightmappedBitmap"
-                ),
-                new[] {
-                    (Action<DeviceManager>)(
-                        (dm) => {
-                            dm.Device.BlendState = BlendState.AlphaBlend;
-                        }
-                    )
-                },
-                new Action<DeviceManager>[0]
             ));
 
             SubtractiveBlend = new BlendState {
