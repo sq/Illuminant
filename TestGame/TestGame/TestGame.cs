@@ -351,7 +351,8 @@ namespace TestGame {
                 }
             }
 
-            using (var bricksLightGroup = BatchGroup.New(frame, 2)) {
+            if (ShowBrickSpecular)
+                using (var bricksLightGroup = BatchGroup.New(frame, 2)) {
                 SetRenderTargetBatch.AddNew(bricksLightGroup, 0, ForegroundLightmap);
                 ClearBatch.AddNew(bricksLightGroup, 1, Materials.Clear, clearColor: new Color(0, 0, 0, 255), clearZ: 0, clearStencil: 0);
                 ForegroundRenderer.RenderLighting(frame, bricksLightGroup, 2);
@@ -373,12 +374,16 @@ namespace TestGame {
 
                 BackgroundRenderer.RenderLighting(frame, backgroundLightGroup, 2);
 
-                using (var foregroundLightBatch = BitmapBatch.New(backgroundLightGroup, 3, ShowBrickSpecular ? MaskedForegroundMaterial : AdditiveBitmapMaterial)) {
-                    var dc = new BitmapDrawCall(
-                        ForegroundLightmap, Vector2.Zero
-                    );
-                    dc.Textures.Texture2 = BricksLightMask;
-                    foregroundLightBatch.Add(dc);
+                if (ShowBrickSpecular) {
+                    using (var foregroundLightBatch = BitmapBatch.New(backgroundLightGroup, 3, MaskedForegroundMaterial)) {
+                        var dc = new BitmapDrawCall(
+                            ForegroundLightmap, Vector2.Zero
+                        );
+                        dc.Textures.Texture2 = BricksLightMask;
+                        foregroundLightBatch.Add(dc);
+                    }
+                } else {
+                    ForegroundRenderer.RenderLighting(frame, backgroundLightGroup, 3);
                 }
 
                 if (ShowAOShadow)
