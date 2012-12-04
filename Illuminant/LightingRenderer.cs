@@ -74,7 +74,7 @@ namespace Squared.Illuminant {
                 StencilFunction = CompareFunction.Equal,
                 StencilPass = StencilOperation.Keep,
                 StencilFail = StencilOperation.Keep,
-                ReferenceStencil = 1
+                ReferenceStencil = 0
             };
 
             materials.Add(PointLight = new DelegateMaterial(
@@ -101,8 +101,9 @@ namespace Squared.Illuminant {
                 DepthBufferEnable = false,
                 StencilEnable = true,
                 StencilFunction = CompareFunction.Never,
-                StencilPass = StencilOperation.Keep,
-                StencilFail = StencilOperation.Zero
+                StencilPass = StencilOperation.Zero,
+                StencilFail = StencilOperation.Replace,
+                ReferenceStencil = 1
             };
 
             materials.Add(Shadow = new DelegateMaterial(
@@ -352,7 +353,7 @@ namespace Squared.Illuminant {
                     var lightSource = Environment.LightSources[i];
                     var lightBounds = new Bounds(lightSource.Position - new Vector2(lightSource.RampEnd), lightSource.Position + new Vector2(lightSource.RampEnd));
 
-                    ClearBatch.AddNew(lightGroup, 0, ClearStencil, clearStencil: 1);
+                    ClearBatch.AddNew(lightGroup, 0, ClearStencil, clearStencil: 0);
 
                     using (var nb = NativeBatch.New(lightGroup, 1, Shadow, ShadowBatchSetup, lightSource)) {
                         SpatialCollection<LightObstruction>.Sector currentSector;

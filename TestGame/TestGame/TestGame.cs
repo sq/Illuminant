@@ -50,7 +50,7 @@ namespace TestGame {
             Graphics.PreferredDepthStencilFormat = DepthFormat.Depth24Stencil8;
             Graphics.PreferredBackBufferWidth = 1257;
             Graphics.PreferredBackBufferHeight = 1250;
-            Graphics.SynchronizeWithVerticalRetrace = true;
+            Graphics.SynchronizeWithVerticalRetrace = false;
             Graphics.PreferMultiSampling = false;
 
             Content.RootDirectory = "Content";
@@ -154,8 +154,7 @@ namespace TestGame {
 
             BlurMaterials = new GaussianBlurMaterialSet(Materials, Content);
 
-            // Since the spiral is very detailed
-            LightingEnvironment.DefaultSubdivision = 128f;
+            LightingEnvironment.DefaultSubdivision = 512f;
 
             BackgroundEnvironment = new LightingEnvironment();
             ForegroundEnvironment = new LightingEnvironment();
@@ -297,7 +296,7 @@ namespace TestGame {
 
             using (var bricksLightGroup = BatchGroup.New(frame, 0, ApplyLightmapScale, ApplyViewScale)) {
                 SetRenderTargetBatch.AddNew(bricksLightGroup, 0, ForegroundLightmap);
-                ClearBatch.AddNew(bricksLightGroup, 1, Materials.Clear, clearColor: new Color(0, 0, 0, 255));
+                ClearBatch.AddNew(bricksLightGroup, 1, Materials.Clear, clearColor: new Color(0, 0, 0, 255), clearZ: 0, clearStencil: 0);
                 ForegroundRenderer.RenderLighting(frame, bricksLightGroup, 2);
                 SetRenderTargetBatch.AddNew(bricksLightGroup, 3, null);
             }
@@ -323,7 +322,7 @@ namespace TestGame {
 
             using (var backgroundLightGroup = BatchGroup.New(frame, 3, ApplyLightmapScale, ApplyViewScale)) {
                 SetRenderTargetBatch.AddNew(backgroundLightGroup, 0, BackgroundLightmap);
-                ClearBatch.AddNew(backgroundLightGroup, 1, Materials.Clear, clearColor: new Color(40, 40, 40, 255));
+                ClearBatch.AddNew(backgroundLightGroup, 1, Materials.Clear, clearColor: new Color(40, 40, 40, 255), clearZ: 0, clearStencil: 0);
 
                 BackgroundRenderer.RenderLighting(frame, backgroundLightGroup, 2);
 
@@ -350,12 +349,12 @@ namespace TestGame {
 
             using (var foregroundLightGroup = BatchGroup.New(frame, 5, ApplyLightmapScale, ApplyViewScale)) {
                 SetRenderTargetBatch.AddNew(foregroundLightGroup, 0, ForegroundLightmap);
-                ClearBatch.AddNew(foregroundLightGroup, 1, Materials.Clear, clearColor: new Color(127, 127, 127, 255));
+                ClearBatch.AddNew(foregroundLightGroup, 1, Materials.Clear, clearColor: new Color(127, 127, 127, 255), clearZ: 0, clearStencil: 0);
                 ForegroundRenderer.RenderLighting(frame, foregroundLightGroup, 2);
                 SetRenderTargetBatch.AddNew(foregroundLightGroup, 3, null);
             }
 
-            ClearBatch.AddNew(frame, 7, Materials.Clear, clearColor: Color.Black);
+            ClearBatch.AddNew(frame, 7, Materials.Clear, clearColor: Color.Black, clearZ: 0, clearStencil: 0);
 
             if (!ShowLightmap)
             using (var bb = BitmapBatch.New(frame, 9, BackgroundRenderer.WorldSpaceLightmappedBitmap)) {
