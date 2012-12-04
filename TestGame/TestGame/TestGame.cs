@@ -311,7 +311,11 @@ namespace TestGame {
                         Layers[1], Vector2.Zero
                     );
                     dc.MultiplyColor = Color.Black;
-                    bb.Add(dc);
+
+                    for (var i = 1; i < 3; i++) {
+                        dc.Texture = Layers[i];
+                        bb.Add(dc);
+                    }
                 }
 
                 SetRenderTargetBatch.AddNew(aoShadowFirstPassGroup, 3, null);
@@ -338,10 +342,7 @@ namespace TestGame {
                     dc.MultiplyColor = Color.Black;
                     dc.AddColor = Color.White;
 
-                    for (var i = 1; i < 3; i++) {
-                        dc.Texture = Layers[i];
-                        aoShadowBatch.Add(dc);
-                    }
+                    aoShadowBatch.Add(dc);
                 }
 
                 SetRenderTargetBatch.AddNew(backgroundLightGroup, 5, null);
