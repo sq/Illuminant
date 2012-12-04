@@ -324,16 +324,16 @@ namespace Squared.Illuminant {
                     int vertexOffset = i * 4;
                     int indexOffset = i * 6;
 
-                    vertex.A = obstruction.A;
-                    vertex.B = obstruction.B;
-
-                    vertex.CornerIndex = 0;
+                    vertex.Position = obstruction.A;
+                    vertex.PairIndex = 0;
                     vb[vertexOffset + 0] = vertex;
-                    vertex.CornerIndex = 1;
+                    vertex.PairIndex = 1;
                     vb[vertexOffset + 1] = vertex;
-                    vertex.CornerIndex = 2;
+
+                    vertex.Position = obstruction.B;
+                    vertex.PairIndex = 0;
                     vb[vertexOffset + 2] = vertex;
-                    vertex.CornerIndex = 3;
+                    vertex.PairIndex = 1;
                     vb[vertexOffset + 3] = vertex;
 
                     for (var j = 0; j < ShadowIndices.Length; j++)

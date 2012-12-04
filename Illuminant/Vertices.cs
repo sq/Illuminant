@@ -9,16 +9,15 @@ using Microsoft.Xna.Framework.Graphics;
 namespace Squared.Illuminant {
     [StructLayout(LayoutKind.Sequential, Pack=0)]
     public struct ShadowVertex : IVertexType {
-        public Vector2 A, B;
-        public float CornerIndex;
+        public Vector2 Position;
+        public float PairIndex;
 
         public static VertexDeclaration _VertexDeclaration;
 
         static ShadowVertex () {
             _VertexDeclaration = new VertexDeclaration(
                 new VertexElement(0, VertexElementFormat.Vector2, VertexElementUsage.Position, 0),
-                new VertexElement(4 * 2, VertexElementFormat.Vector2, VertexElementUsage.Position, 1),
-                new VertexElement(4 * 4, VertexElementFormat.Single, VertexElementUsage.BlendIndices, 0)
+                new VertexElement(4 * 2, VertexElementFormat.Single, VertexElementUsage.BlendIndices, 0)
             );
         }
 

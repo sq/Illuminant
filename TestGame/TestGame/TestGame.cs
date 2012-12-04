@@ -26,6 +26,7 @@ namespace TestGame {
         Texture2D[] Layers = new Texture2D[4];
         Texture2D BricksLightMask;
         RenderTarget2D BackgroundLightmap, ForegroundLightmap;
+        RenderTarget2D Background, Foreground;
         RenderTarget2D AOShadowScratch;
 
         bool[,] ForegroundTiles = new bool[,] {
@@ -40,9 +41,11 @@ namespace TestGame {
             { true, true, false, false, false, false, false, true, false }
         };
 
-        bool ShowOutlines, ShowLightmap;
+        bool ShowOutlines, ShowLightmap, ShowAOShadow = true;
 
         LightObstruction Dragging = null;
+
+        KeyboardState PreviousKeyboardState;
 
         public TestGame () {
             Graphics = new GraphicsDeviceManager(this);
@@ -57,6 +60,8 @@ namespace TestGame {
 
             UseThreadedDraw = true;
             IsFixedTimeStep = false;
+
+            PreviousKeyboardState = Keyboard.GetState();
         }
 
         private void AddTorch (float x, float y) {
@@ -219,8 +224,15 @@ namespace TestGame {
 
         protected override void Update (GameTime gameTime) {
             var ks = Keyboard.GetState();
-            ShowOutlines = ks.IsKeyDown(Keys.O);
-            ShowLightmap = ks.IsKeyDown(Keys.L);
+
+            if (ks.IsKeyDown(Keys.O) && !PreviousKeyboardState.IsKeyDown(Keys.O))
+                ShowOutlines = !ShowOutlines;
+            if (ks.IsKeyDown(Keys.L) && !PreviousKeyboardState.IsKeyDown(Keys.L))
+                ShowLightmap = !ShowLightmap;
+            if (ks.IsKeyDown(Keys.A) && !PreviousKeyboardState.IsKeyDown(Keys.A))
+                ShowAOShadow = !ShowAOShadow;
+
+            PreviousKeyboardState = ks;
 
             var ms = Mouse.GetState();
             IsMouseVisible = true;
@@ -261,6 +273,12 @@ namespace TestGame {
 
                 if (AOShadowScratch != null)
                     AOShadowScratch.Dispose();
+
+                if (Foreground != null)
+                    Foreground.Dispose();
+
+                if (Background != null)
+                    Background.Dispose();
             } else {
                 return;
             }
@@ -279,38 +297,66 @@ namespace TestGame {
                 GraphicsDevice, width, height, true,
                 SurfaceFormat.Alpha8, DepthFormat.None, 0, RenderTargetUsage.DiscardContents
             );
+
+            Background = new RenderTarget2D(
+                GraphicsDevice, width, height, false,
+                SurfaceFormat.Color, DepthFormat.None, 0, RenderTargetUsage.DiscardContents
+            );
+
+            Foreground = new RenderTarget2D(
+                GraphicsDevice, width, height, true,
+                SurfaceFormat.Color, DepthFormat.None, 0, RenderTargetUsage.DiscardContents
+            );
         }
 
         public override void Draw (GameTime gameTime, Frame frame) {
             MakeLightmapTextures();
 
-            using (var bricksLightGroup = BatchGroup.New(frame, 0)) {
+            using (var backgroundGroup = BatchGroup.New(frame, 0)) {
+                SetRenderTargetBatch.AddNew(backgroundGroup, 0, Background);
+                ClearBatch.AddNew(backgroundGroup, 1, Materials.Clear, clearColor: Color.Transparent);
+
+                using (var bb = BitmapBatch.New(backgroundGroup, 2, Materials.WorldSpaceBitmap)) {
+                    for (var i = 0; i < 1; i++) {
+                        var layer = Layers[i];
+                        var dc = new BitmapDrawCall(layer, Vector2.Zero);
+                        dc.SortKey = i;
+                        bb.Add(dc);
+                    }
+                }
+            }
+
+            using (var foregroundGroup = BatchGroup.New(frame, 1)) {
+                SetRenderTargetBatch.AddNew(foregroundGroup, 0, Foreground);
+                ClearBatch.AddNew(foregroundGroup, 1, Materials.Clear, clearColor: Color.Transparent);
+
+                using (var bb = BitmapBatch.New(foregroundGroup, 2, Materials.WorldSpaceBitmap)) {
+                    for (var i = 1; i < Layers.Length; i++) {
+                        var layer = Layers[i];
+                        var dc = new BitmapDrawCall(layer, Vector2.Zero);
+                        dc.SortKey = i;
+                        bb.Add(dc);
+                    }
+                }
+            }
+
+            using (var bricksLightGroup = BatchGroup.New(frame, 2)) {
                 SetRenderTargetBatch.AddNew(bricksLightGroup, 0, ForegroundLightmap);
                 ClearBatch.AddNew(bricksLightGroup, 1, Materials.Clear, clearColor: new Color(0, 0, 0, 255), clearZ: 0, clearStencil: 0);
                 ForegroundRenderer.RenderLighting(frame, bricksLightGroup, 2);
-                SetRenderTargetBatch.AddNew(bricksLightGroup, 3, null);
             }
 
-            using (var aoShadowFirstPassGroup = BatchGroup.New(frame, 1)) {
+            if (ShowAOShadow)
+            using (var aoShadowFirstPassGroup = BatchGroup.New(frame, 3)) {
                 SetRenderTargetBatch.AddNew(aoShadowFirstPassGroup, 0, AOShadowScratch);
                 ClearBatch.AddNew(aoShadowFirstPassGroup, 1, Materials.Clear, clearColor: Color.Transparent);
 
                 using (var bb = BitmapBatch.New(aoShadowFirstPassGroup, 2, BlurMaterials.ScreenSpaceHorizontalGaussianBlur5Tap)) {
-                    var dc = new BitmapDrawCall(
-                        Layers[1], Vector2.Zero
-                    );
-                    dc.MultiplyColor = Color.Black;
-
-                    for (var i = 1; i < 3; i++) {
-                        dc.Texture = Layers[i];
-                        bb.Add(dc);
-                    }
+                    bb.Add(new BitmapDrawCall(Foreground, Vector2.Zero));
                 }
-
-                SetRenderTargetBatch.AddNew(aoShadowFirstPassGroup, 3, null);
             }
 
-            using (var backgroundLightGroup = BatchGroup.New(frame, 3)) {
+            using (var backgroundLightGroup = BatchGroup.New(frame, 4)) {
                 SetRenderTargetBatch.AddNew(backgroundLightGroup, 0, BackgroundLightmap);
                 ClearBatch.AddNew(backgroundLightGroup, 1, Materials.Clear, clearColor: new Color(40, 40, 40, 255), clearZ: 0, clearStencil: 0);
 
@@ -324,6 +370,7 @@ namespace TestGame {
                     foregroundLightBatch.Add(dc);
                 }
 
+                if (ShowAOShadow)
                 using (var aoShadowBatch = BitmapBatch.New(backgroundLightGroup, 4, AOShadowMaterial)) {
                     var dc = new BitmapDrawCall(
                         AOShadowScratch, new Vector2(0, 4)
@@ -333,50 +380,40 @@ namespace TestGame {
 
                     aoShadowBatch.Add(dc);
                 }
-
-                SetRenderTargetBatch.AddNew(backgroundLightGroup, 5, null);
             }
 
             using (var foregroundLightGroup = BatchGroup.New(frame, 5)) {
                 SetRenderTargetBatch.AddNew(foregroundLightGroup, 0, ForegroundLightmap);
                 ClearBatch.AddNew(foregroundLightGroup, 1, Materials.Clear, clearColor: new Color(127, 127, 127, 255), clearZ: 0, clearStencil: 0);
                 ForegroundRenderer.RenderLighting(frame, foregroundLightGroup, 2);
-                SetRenderTargetBatch.AddNew(foregroundLightGroup, 3, null);
             }
 
-            ClearBatch.AddNew(frame, 7, Materials.Clear, clearColor: Color.Black, clearZ: 0, clearStencil: 0);
-
-            if (!ShowLightmap)
-            using (var bb = BitmapBatch.New(frame, 9, BackgroundRenderer.WorldSpaceLightmappedBitmap)) {
-                for (var i = 0; i < 1; i++) {
-                    var layer = Layers[i];
-                    var dc = new BitmapDrawCall(layer, Vector2.Zero);
-                    dc.Textures.Texture2 = BackgroundLightmap;
-                    dc.SortKey = i;
-                    bb.Add(dc);
-                }
-            }
+            SetRenderTargetBatch.AddNew(frame, 49, null);
+            ClearBatch.AddNew(frame, 50, Materials.Clear, clearColor: Color.Black, clearZ: 0, clearStencil: 0);
 
             if (ShowLightmap) {
-                using (var bb = BitmapBatch.New(frame, 11, Materials.WorldSpaceBitmap)) {
+                using (var bb = BitmapBatch.New(frame, 55, Materials.WorldSpaceBitmap)) {
                     var dc = new BitmapDrawCall(BackgroundLightmap, Vector2.Zero);
                     bb.Add(dc);
                 }
-            }
+            } else {
+                using (var bb = BitmapBatch.New(frame, 55, BackgroundRenderer.WorldSpaceLightmappedBitmap)) {
+                    var dc = new BitmapDrawCall(Background, Vector2.Zero);
+                    dc.Textures.Texture2 = BackgroundLightmap;
+                    dc.SortKey = 0;
 
-            if (!ShowLightmap)
-            using (var bb = BitmapBatch.New(frame, 15, BackgroundRenderer.WorldSpaceLightmappedBitmap)) {
-                for (var i = 1; i < Layers.Length; i++) {
-                    var layer = Layers[i];
-                    var dc = new BitmapDrawCall(layer, Vector2.Zero);
+                    bb.Add(dc);
+
+                    dc.Textures.Texture1 = Foreground;
                     dc.Textures.Texture2 = ForegroundLightmap;
-                    dc.SortKey = i;
+                    dc.SortKey = 1;
+
                     bb.Add(dc);
                 }
             }
 
             if (ShowOutlines || (Dragging != null))
-                BackgroundRenderer.RenderOutlines(frame, 15, true);
+                BackgroundRenderer.RenderOutlines(frame, 59, true);
         }
     }
 }

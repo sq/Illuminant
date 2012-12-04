@@ -41,28 +41,19 @@ void PointLightPixelShader(
 }
 
 void ShadowVertexShader(
-    in float2 a : POSITION0,
-    in float2 b : POSITION1,
-    in int cornerIndex : BLENDINDICES,
+    in float2 position : POSITION0,
+    in float pairIndex : BLENDINDICES,
     out float4 result : POSITION0
 ) {
-    float2 origin, direction;
+    float2 direction;
 
-    if (cornerIndex == 0) {
-        origin = a;
-        direction = float2(0, 0);
-    } else if (cornerIndex == 1) {
-        origin = a;
-        direction = normalize(a - LightCenter);
-    } else if (cornerIndex == 2) {
-        origin = b;
+    if (pairIndex == 0) {
         direction = float2(0, 0);
     } else {
-        origin = b;
-        direction = normalize(b - LightCenter);
+        direction = normalize(position - LightCenter);
     }
 
-    result = ApplyTransform(origin + (direction * ShadowLength));
+    result = ApplyTransform(position + (direction * ShadowLength));
 }
 
 void ShadowPixelShader(
