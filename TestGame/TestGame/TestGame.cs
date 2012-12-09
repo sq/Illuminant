@@ -47,7 +47,8 @@ namespace TestGame {
         bool ShowOutlines, ShowLightmap, ShowAOShadow = true, ShowBrickSpecular = true;
 
         const int LightmapMultisampleCount = 0;
-        float LightmapScale = 1f;
+        const float BaseLightmapScale = 1f;
+        float LightmapScale;
 
         LightObstruction Dragging = null;
 
@@ -258,7 +259,7 @@ namespace TestGame {
             var ms = Mouse.GetState();
             IsMouseVisible = true;
 
-            LightmapScale = 1f + (ms.ScrollWheelValue / 200f);
+            LightmapScale = BaseLightmapScale + (ms.ScrollWheelValue / 200f);
             if (LightmapScale < 1f)
                 LightmapScale = 1f;
 
@@ -344,8 +345,7 @@ namespace TestGame {
                 0, 1
             );
 
-            using (var backgroundGroup = BatchGroup.New(frame, 0)) {
-                SetRenderTargetBatch.AddNew(backgroundGroup, 0, Background);
+            using (var backgroundGroup = BatchGroup.ForRenderTarget(frame, 0, Background)) {
                 ClearBatch.AddNew(backgroundGroup, 1, ScreenMaterials.Clear, clearColor: Color.Transparent);
 
                 using (var bb = BitmapBatch.New(backgroundGroup, 2, ScreenMaterials.WorldSpaceBitmap)) {
@@ -358,8 +358,7 @@ namespace TestGame {
                 }
             }
 
-            using (var foregroundGroup = BatchGroup.New(frame, 1)) {
-                SetRenderTargetBatch.AddNew(foregroundGroup, 0, Foreground);
+            using (var foregroundGroup = BatchGroup.ForRenderTarget(frame, 1, Foreground)) {
                 ClearBatch.AddNew(foregroundGroup, 1, ScreenMaterials.Clear, clearColor: Color.Transparent);
 
                 using (var bb = BitmapBatch.New(foregroundGroup, 2, ScreenMaterials.WorldSpaceBitmap)) {
@@ -373,15 +372,13 @@ namespace TestGame {
             }
 
             if (ShowBrickSpecular)
-                using (var bricksLightGroup = BatchGroup.New(frame, 2)) {
-                SetRenderTargetBatch.AddNew(bricksLightGroup, 0, ForegroundLightmap);
+            using (var bricksLightGroup = BatchGroup.ForRenderTarget(frame, 2, ForegroundLightmap)) {
                 ClearBatch.AddNew(bricksLightGroup, 1, LightmapMaterials.Clear, clearColor: new Color(0, 0, 0, 255), clearZ: 0, clearStencil: 0);
                 ForegroundRenderer.RenderLighting(frame, bricksLightGroup, 2);
             }
 
             if (ShowAOShadow)
-            using (var aoShadowFirstPassGroup = BatchGroup.New(frame, 3)) {
-                SetRenderTargetBatch.AddNew(aoShadowFirstPassGroup, 0, AOShadowScratch);
+            using (var aoShadowFirstPassGroup = BatchGroup.ForRenderTarget(frame, 3, AOShadowScratch)) {
                 ClearBatch.AddNew(aoShadowFirstPassGroup, 1, LightmapMaterials.Clear, clearColor: Color.Transparent);
 
                 using (var bb = BitmapBatch.New(aoShadowFirstPassGroup, 2, BlurMaterials.ScreenSpaceHorizontalGaussianBlur5Tap)) {
@@ -389,8 +386,7 @@ namespace TestGame {
                 }
             }
 
-            using (var backgroundLightGroup = BatchGroup.New(frame, 4)) {
-                SetRenderTargetBatch.AddNew(backgroundLightGroup, 0, BackgroundLightmap);
+            using (var backgroundLightGroup = BatchGroup.ForRenderTarget(frame, 4, BackgroundLightmap)) {
                 ClearBatch.AddNew(backgroundLightGroup, 1, LightmapMaterials.Clear, clearColor: new Color(40, 40, 40, 255), clearZ: 0, clearStencil: 0);
 
                 BackgroundRenderer.RenderLighting(frame, backgroundLightGroup, 2);
@@ -419,8 +415,7 @@ namespace TestGame {
                 }
             }
 
-            using (var foregroundLightGroup = BatchGroup.New(frame, 5)) {
-                SetRenderTargetBatch.AddNew(foregroundLightGroup, 0, ForegroundLightmap);
+            using (var foregroundLightGroup = BatchGroup.ForRenderTarget(frame, 5, ForegroundLightmap)) {
                 ClearBatch.AddNew(foregroundLightGroup, 1, LightmapMaterials.Clear, clearColor: new Color(127, 127, 127, 255), clearZ: 0, clearStencil: 0);
                 ForegroundRenderer.RenderLighting(frame, foregroundLightGroup, 2);
             }
