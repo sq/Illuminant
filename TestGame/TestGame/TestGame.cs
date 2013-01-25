@@ -12,6 +12,7 @@ using Microsoft.Xna.Framework.Media;
 using Squared.Game;
 using Squared.Illuminant;
 using Squared.Render;
+using Squared.Render.Convenience;
 
 namespace TestGame {
     public class TestGame : MultithreadedGame {
@@ -217,29 +218,11 @@ namespace TestGame {
 
             BricksLightMask = Content.Load<Texture2D>("layers_bricks_lightmask");
 
-            AdditiveBitmapMaterial = new DelegateMaterial(
-                LightmapMaterials.ScreenSpaceBitmap,
-                new Action<DeviceManager>[] {
-                    (dm) => dm.Device.BlendState = BlendState.Additive
-                },
-                new Action<DeviceManager>[0]
-            );
+            AdditiveBitmapMaterial = LightmapMaterials.ScreenSpaceBitmap.SetStates(blendState: BlendState.Additive);
 
-            MaskedForegroundMaterial = new DelegateMaterial(
-                LightmapLightmapRenderingMaterials.ScreenSpaceLightmappedBitmap,
-                new Action<DeviceManager>[] {
-                    (dm) => dm.Device.BlendState = BlendState.Additive
-                },
-                new Action<DeviceManager>[0]
-            );
+            MaskedForegroundMaterial = LightmapLightmapRenderingMaterials.ScreenSpaceLightmappedBitmap.SetStates(blendState: BlendState.Additive);
 
-            AOShadowMaterial = new DelegateMaterial(
-                BlurMaterials.ScreenSpaceVerticalGaussianBlur5Tap,
-                new Action<DeviceManager>[] {
-                    (dm) => dm.Device.BlendState = BackgroundRenderer.SubtractiveBlend
-                },
-                new Action<DeviceManager>[0]
-            );
+            AOShadowMaterial = BlurMaterials.ScreenSpaceVerticalGaussianBlur5Tap.SetStates(blendState: RenderStates.SubtractiveBlend);
         }
 
         protected override void Update (GameTime gameTime) {

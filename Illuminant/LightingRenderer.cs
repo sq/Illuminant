@@ -7,6 +7,7 @@ using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Squared.Game;
 using Squared.Render;
+using Squared.Render.Convenience;
 using Squared.Util;
 
 namespace Squared.Illuminant {
@@ -30,8 +31,6 @@ namespace Squared.Illuminant {
         public readonly Squared.Render.EffectMaterial ShadowMaterialInner, PointLightMaterialInner;
         public readonly Material DebugOutlines, Shadow, PointLight, ClearStencil;
         public readonly DepthStencilState PointLightStencil, ShadowStencil;
-        public readonly BlendState SubtractiveBlend, MaxBlend, MinBlend;
-        public readonly RasterizerState ScissorOnly;
 
         private readonly Dictionary<Pair<int>, CachedSector> SectorCache = new Dictionary<Pair<int>, CachedSector>(new IntPairComparer());
         private Rectangle StoredScissorRect;
@@ -58,15 +57,11 @@ namespace Squared.Illuminant {
 
             ClearStencil = materials.Clear;
 
-            materials.Add(DebugOutlines = new DelegateMaterial(
-                materials.WorldSpaceGeometry,
-                new[] {
-                    (Action<DeviceManager>)(
-                        (dm) => dm.Device.BlendState = BlendState.AlphaBlend
-                    )
-                },
-                new Action<DeviceManager>[0]
-            ));
+            materials.Add(
+                DebugOutlines = materials.WorldSpaceGeometry.SetStates(
+                    blendState: BlendState.AlphaBlend
+                )
+            );
 
             PointLightStencil = new DepthStencilState {
                 DepthBufferEnable = false,
@@ -83,17 +78,13 @@ namespace Squared.Illuminant {
                     content.Load<Effect>("Illumination"), "PointLight"
                 ),
                 new[] {
-                    (Action<DeviceManager>)(
-                        (dm) => {
-                            dm.Device.DepthStencilState = PointLightStencil;
-                            dm.Device.RasterizerState = ScissorOnly;
-                        }
+                    MaterialUtil.MakeDelegate(
+                        rasterizerState: RenderStates.ScissorOnly, depthStencilState: PointLightStencil
                     )
                 },
                 new[] {
-                    (Action<DeviceManager>)(
-                        (dm) => 
-                            dm.Device.DepthStencilState = DepthStencilState.None
+                    MaterialUtil.MakeDelegate(
+                        rasterizerState: RasterizerState.CullNone, depthStencilState: DepthStencilState.None
                     )
                 }
             ));
@@ -113,54 +104,19 @@ namespace Squared.Illuminant {
                     content.Load<Effect>("Illumination"), "Shadow"
                 ),
                 new[] {
-                    (Action<DeviceManager>)(
-                        (dm) => {
-                            dm.Device.BlendState = BlendState.Opaque;
-                            dm.Device.DepthStencilState = ShadowStencil;
-                            dm.Device.RasterizerState = ScissorOnly;
-                        }
+                    MaterialUtil.MakeDelegate(
+                        rasterizerState: RenderStates.ScissorOnly,
+                        depthStencilState: ShadowStencil,
+                        blendState: BlendState.Opaque
                     )
                 },
                 new[] {
-                    (Action<DeviceManager>)(
-                        (dm) => 
-                            dm.Device.DepthStencilState = DepthStencilState.None
+                    MaterialUtil.MakeDelegate(
+                        rasterizerState: RasterizerState.CullNone, depthStencilState: DepthStencilState.None
                     )
                 }
             ));
-
-            SubtractiveBlend = new BlendState {
-                AlphaBlendFunction = BlendFunction.Add,
-                AlphaDestinationBlend = Blend.One,
-                AlphaSourceBlend = Blend.One,
-                ColorBlendFunction = BlendFunction.ReverseSubtract,
-                ColorDestinationBlend = Blend.One,
-                ColorSourceBlend = Blend.One
-            };
-
-            MaxBlend = new BlendState {
-                AlphaBlendFunction = BlendFunction.Add,
-                AlphaDestinationBlend = Blend.One,
-                AlphaSourceBlend = Blend.One,
-                ColorBlendFunction = BlendFunction.Max,
-                ColorDestinationBlend = Blend.One,
-                ColorSourceBlend = Blend.One
-            };
-
-            MinBlend = new BlendState {
-                AlphaBlendFunction = BlendFunction.Add,
-                AlphaDestinationBlend = Blend.One,
-                AlphaSourceBlend = Blend.One,
-                ColorBlendFunction = BlendFunction.Min,
-                ColorDestinationBlend = Blend.One,
-                ColorSourceBlend = Blend.One
-            };
-
-            ScissorOnly = new RasterizerState {
-                CullMode = CullMode.None,
-                ScissorTestEnable = true
-            };
-
+            
             Environment = environment;
 
             // Reduce garbage created by BufferPool<>.Allocate when creating cached sectors
@@ -225,7 +181,7 @@ namespace Squared.Illuminant {
                     device.Device.BlendState = BlendState.Additive;
                     break;
                 case LightSourceMode.Subtractive:
-                    device.Device.BlendState = SubtractiveBlend;
+                    device.Device.BlendState = RenderStates.SubtractiveBlend;
                     break;
                 case LightSourceMode.Alpha:
                     device.Device.BlendState = BlendState.AlphaBlend;
@@ -234,10 +190,10 @@ namespace Squared.Illuminant {
                     device.Device.BlendState = BlendState.Opaque;
                     break;
                 case LightSourceMode.Max:
-                    device.Device.BlendState = MaxBlend;
+                    device.Device.BlendState = RenderStates.MaxBlend;
                     break;
                 case LightSourceMode.Min:
-                    device.Device.BlendState = MinBlend;
+                    device.Device.BlendState = RenderStates.MinBlend;
                     break;
                 default:
                     throw new ArgumentOutOfRangeException("Mode");
