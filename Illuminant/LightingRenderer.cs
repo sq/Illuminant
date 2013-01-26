@@ -310,6 +310,7 @@ namespace Squared.Illuminant {
 
                         vertex.LightCenter = lightSource.Position;
                         vertex.Color = lightSource.Color;
+                        vertex.Color *= lightSource.Opacity;
                         vertex.Ramp = new Vector2(lightSource.RampStart, lightSource.RampEnd);
 
                         vertex.Position = new Vector2(
@@ -342,11 +343,11 @@ namespace Squared.Illuminant {
             }
         }
 
-        public void RenderOutlines (Frame frame, int layer, bool showLights) {
-            using (var group = BatchGroup.New(frame, layer)) {
+        public void RenderOutlines (IBatchContainer container, int layer, bool showLights) {
+            using (var group = BatchGroup.New(container, layer)) {
                 using (var gb = GeometryBatch<VertexPositionColor>.New(group, 0, DebugOutlines)) {
                     foreach (var lo in Environment.Obstructions)
-                        gb.AddLine(lo.A, lo.B, Color.White);
+                        gb.AddLine(lo.A, lo.B, Color.DarkGray * 0.4f);
                 }
 
                 if (showLights)

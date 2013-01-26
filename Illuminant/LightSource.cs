@@ -10,11 +10,13 @@ namespace Squared.Illuminant {
         public LightSourceMode Mode = LightSourceMode.Additive;
         public Vector2 Position;
         // The color of the light's illumination.
-        public Vector4 Color;
+        public Vector4 Color = Vector4.One;
         // The color the light ramps down to. You can use this to approximate ambient light when using LightSourceMode.Max/Min/Replace.
-        public Vector4 NeutralColor;
-        public float RampStart, RampEnd;
-        public Bounds? ClipRegion;
+        public Vector4 NeutralColor = Vector4.Zero;
+        public float RampStart = 0, RampEnd = 1;
+        public Bounds? ClipRegion = null;
+        // A separate opacity factor that you can use to easily fade lights in/out.
+        public float Opacity = 1.0f;
     }
 
     public enum LightSourceMode {
