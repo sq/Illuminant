@@ -51,7 +51,7 @@ namespace TestGame {
         const float BaseLightmapScale = 1f;
         float LightmapScale;
 
-        LightObstruction Dragging = null;
+        LightObstructionLine Dragging = null;
 
         KeyboardState PreviousKeyboardState;
 
@@ -98,33 +98,20 @@ namespace TestGame {
             BackgroundEnvironment.LightSources.Add(ambient);
         }
 
-        private IEnumerable<LightObstruction> MakeRoundedBox (Bounds bounds, float rounding) {
+        private LightObstructionLineStrip MakeRoundedBox (Bounds bounds, float rounding) {
             var xo = new Vector2(rounding, 0);
             var yo = new Vector2(0, rounding);
 
-            yield return new LightObstruction(
-                bounds.TopLeft + xo, bounds.TopRight - xo
-            );
-            yield return new LightObstruction(
-                bounds.TopRight - xo, bounds.TopRight + yo
-            );
-            yield return new LightObstruction(
-                bounds.TopRight + yo, bounds.BottomRight - yo
-            );
-            yield return new LightObstruction(
-                bounds.BottomRight - yo, bounds.BottomRight - xo
-            );
-            yield return new LightObstruction(
-                bounds.BottomRight - xo, bounds.BottomLeft + xo
-            );
-            yield return new LightObstruction(
-                bounds.BottomLeft + xo, bounds.BottomLeft - yo
-            );
-            yield return new LightObstruction(
-                bounds.BottomLeft - yo, bounds.TopLeft + yo
-            );
-            yield return new LightObstruction(
-                bounds.TopLeft + yo, bounds.TopLeft + xo
+            return new LightObstructionLineStrip(
+                bounds.TopLeft + xo, 
+                bounds.TopRight - xo,
+                bounds.TopRight + yo,
+                bounds.BottomRight - yo,
+                bounds.BottomRight - xo,
+                bounds.BottomLeft + xo,
+                bounds.BottomLeft - yo,
+                bounds.TopLeft + yo,
+                bounds.TopLeft + xo
             );
         }
 
@@ -145,7 +132,7 @@ namespace TestGame {
                         new Vector2(xPos + xTileSize, yPos + yTileSize)
                     );
 
-                    BackgroundEnvironment.Obstructions.AddRange(
+                    BackgroundEnvironment.Obstructions.Add(
                         MakeRoundedBox(bounds, 8)
                     );
                 }
@@ -250,7 +237,7 @@ namespace TestGame {
 
             if (ms.LeftButton == ButtonState.Pressed) {
                 if (Dragging == null) {
-                    BackgroundEnvironment.Obstructions.Add(Dragging = new LightObstruction(mousePos, mousePos));
+                    BackgroundEnvironment.Obstructions.Add(Dragging = new LightObstructionLine(mousePos, mousePos));
                 } else {
                     Dragging.B = mousePos;
                 }

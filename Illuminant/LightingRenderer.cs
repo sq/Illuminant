@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using Microsoft.Xna.Framework;
@@ -12,6 +13,66 @@ using Squared.Util;
 
 namespace Squared.Illuminant {
     public class LightingRenderer : IDisposable {
+        private class ArrayLineWriter : ILineWriter {
+            private int _Count = 0;
+            private ShadowVertex[] VertexBuffer;
+            private short[] IndexBuffer;
+
+            public void Write (Vector2 a, Vector2 b) {
+                ShadowVertex vertex;
+                int vertexOffset = _Count * 4;
+                int indexOffset = _Count * 6;
+
+                vertex.Position = a;
+                vertex.PairIndex = 0;
+                VertexBuffer[vertexOffset + 0] = vertex;
+                vertex.PairIndex = 1;
+                VertexBuffer[vertexOffset + 1] = vertex;
+
+                vertex.Position = b;
+                vertex.PairIndex = 0;
+                VertexBuffer[vertexOffset + 2] = vertex;
+                vertex.PairIndex = 1;
+                VertexBuffer[vertexOffset + 3] = vertex;
+
+                for (var j = 0; j < ShadowIndices.Length; j++)
+                    IndexBuffer[indexOffset + j] = (short)(vertexOffset + ShadowIndices[j]);
+
+                _Count += 1;
+            }
+
+            public int LinesWritten {
+                get {
+                    return _Count;
+                }
+            }
+
+            internal int Finish () {
+                int result = _Count;
+
+                _Count = -1;
+                VertexBuffer = null;
+                IndexBuffer = null;
+
+                return result;
+            }
+
+            internal void SetOutput (ShadowVertex[] vertexBuffer, short[] indexBuffer) {
+                _Count = 0;
+                VertexBuffer = vertexBuffer;
+                IndexBuffer = indexBuffer;
+            }
+        }
+
+        private class VisualizerLineWriter : ILineWriter {
+            public GeometryBatch<VertexPositionColor> Batch;
+            public Color Color;
+
+            public void Write (Vector2 a, Vector2 b) {
+                Batch.AddLine(a, b, Color);
+            }
+        }
+
         public class CachedSector : IDisposable {
             public Pair<int> SectorIndex;
             public int FrameIndex;
@@ -31,6 +92,9 @@ namespace Squared.Illuminant {
         public readonly Squared.Render.EffectMaterial ShadowMaterialInner, PointLightMaterialInner;
         public readonly Material DebugOutlines, Shadow, PointLight, ClearStencil;
         public readonly DepthStencilState PointLightStencil, ShadowStencil;
+
+        private readonly ArrayLineWriter ArrayLineWriterInstance = new ArrayLineWriter();
+        private readonly VisualizerLineWriter VisualizerLineWriterInstance = new VisualizerLineWriter();
 
         private readonly Dictionary<Pair<int>, CachedSector> SectorCache = new Dictionary<Pair<int>, CachedSector>(new IntPairComparer());
         private Rectangle StoredScissorRect;
@@ -220,9 +284,13 @@ namespace Squared.Illuminant {
 
             var sector = Environment.Obstructions[sectorIndex];
 
-            result.PrimitiveCount = sector.Count * 2;
-            result.VertexCount = sector.Count * 4;
-            result.IndexCount = sector.Count * 6;
+            int lineCount = 0;
+            foreach (var item in sector)
+                lineCount += item.Item.LineCount;
+
+            result.PrimitiveCount = lineCount * 2;
+            result.VertexCount = lineCount * 4;
+            result.IndexCount = lineCount * 6;
 
             if ((result.ObstructionVertexBuffer != null) && (result.ObstructionVertexBuffer.VertexCount < result.VertexCount)) {
                 result.ObstructionVertexBuffer.Dispose();
@@ -245,30 +313,14 @@ namespace Squared.Illuminant {
                 var vb = va.Data;
                 var ib = ia.Data;
 
-                int i = 0;
-                foreach (var itemInfo in sector) {
-                    var obstruction = itemInfo.Item;
-                    ShadowVertex vertex;
-                    int vertexOffset = i * 4;
-                    int indexOffset = i * 6;
+                ArrayLineWriterInstance.SetOutput(vb, ib);
 
-                    vertex.Position = obstruction.A;
-                    vertex.PairIndex = 0;
-                    vb[vertexOffset + 0] = vertex;
-                    vertex.PairIndex = 1;
-                    vb[vertexOffset + 1] = vertex;
+                foreach (var itemInfo in sector)
+                    itemInfo.Item.GenerateLines(ArrayLineWriterInstance);
 
-                    vertex.Position = obstruction.B;
-                    vertex.PairIndex = 0;
-                    vb[vertexOffset + 2] = vertex;
-                    vertex.PairIndex = 1;
-                    vb[vertexOffset + 3] = vertex;
-
-                    for (var j = 0; j < ShadowIndices.Length; j++)
-                        ib[indexOffset + j] = (short)(vertexOffset + ShadowIndices[j]);
-
-                    i += 1;
-                }
+                var linesWritten = ArrayLineWriterInstance.Finish();
+                if (linesWritten != lineCount)
+                    throw new InvalidDataException("GenerateLines didn't generate enough lines based on LineCount");
 
                 result.ObstructionVertexBuffer.SetData(vb, 0, result.VertexCount, SetDataOptions.Discard);
                 result.ObstructionIndexBuffer.SetData(ib, 0, result.IndexCount, SetDataOptions.Discard);
@@ -290,7 +342,7 @@ namespace Squared.Illuminant {
                     ClearBatch.AddNew(lightGroup, 0, ClearStencil, clearStencil: 0);
 
                     using (var nb = NativeBatch.New(lightGroup, 1, Shadow, ShadowBatchSetup, lightSource)) {
-                        SpatialCollection<LightObstruction>.Sector currentSector;
+                        SpatialCollection<LightObstructionBase>.Sector currentSector;
                         using (var e = Environment.Obstructions.GetSectorsFromBounds(lightBounds))
                         while (e.GetNext(out currentSector)) {
                             var cachedSector = GetCachedSector(frame, currentSector.Index);
@@ -343,18 +395,23 @@ namespace Squared.Illuminant {
             }
         }
 
-        public void RenderOutlines (IBatchContainer container, int layer, bool showLights) {
+        public void RenderOutlines (IBatchContainer container, int layer, bool showLights, Color? lineColor = null, Color? lightColor = null) {
             using (var group = BatchGroup.New(container, layer)) {
                 using (var gb = GeometryBatch<VertexPositionColor>.New(group, 0, DebugOutlines)) {
+                    VisualizerLineWriterInstance.Batch = gb;
+                    VisualizerLineWriterInstance.Color = lineColor.GetValueOrDefault(Color.White);
+
                     foreach (var lo in Environment.Obstructions)
-                        gb.AddLine(lo.A, lo.B, Color.DarkGray * 0.4f);
+                        lo.GenerateLines(VisualizerLineWriterInstance);
+
+                    VisualizerLineWriterInstance.Batch = null;
                 }
 
                 if (showLights)
                 for (var i = 0; i < Environment.LightSources.Count; i++) {
                     var lightSource = Environment.LightSources[i];
 
-                    var cMax = new Color(1f, 1f, 1f, 1f);
+                    var cMax = lightColor.GetValueOrDefault(Color.White);
                     var cMin = cMax * 0.25f;
 
                     using (var gb = GeometryBatch<VertexPositionColor>.New(group, i + 1, DebugOutlines)) {

@@ -11,6 +11,6 @@ namespace Squared.Illuminant {
         public static float DefaultSubdivision = 128f;
 
         public readonly List<LightSource> LightSources = new List<LightSource>();
-        public readonly SpatialCollection<LightObstruction> Obstructions = new SpatialCollection<LightObstruction>(DefaultSubdivision);
+        public readonly SpatialCollection<LightObstructionBase> Obstructions = new SpatialCollection<LightObstructionBase>(DefaultSubdivision);
     }
 }
