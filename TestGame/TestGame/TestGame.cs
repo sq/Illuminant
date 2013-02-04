@@ -18,8 +18,6 @@ namespace TestGame {
     public class TestGame : MultithreadedGame {
         GraphicsDeviceManager Graphics;
         DefaultMaterialSet ScreenMaterials, LightmapMaterials;
-        GaussianBlurMaterialSet BlurMaterials;
-        LightmapMaterialSet ScreenLightmapRenderingMaterals, LightmapLightmapRenderingMaterials;
 
         DelegateMaterial AdditiveBitmapMaterial;
         DelegateMaterial MaskedForegroundMaterial;
@@ -142,7 +140,7 @@ namespace TestGame {
         protected override void LoadContent () {
             base.LoadContent();
 
-            ScreenMaterials = new DefaultMaterialSet(Content) {
+            ScreenMaterials = new DefaultMaterialSet(Services) {
                 ViewportScale = new Vector2(1, 1),
                 ViewportPosition = new Vector2(0, 0),
                 ProjectionMatrix = Matrix.CreateOrthographicOffCenter(
@@ -152,12 +150,7 @@ namespace TestGame {
                 )
             };
 
-            LightmapMaterials = new DefaultMaterialSet(Content);
-
-            BlurMaterials = new GaussianBlurMaterialSet(LightmapMaterials, Content);
-
-            ScreenLightmapRenderingMaterals = new LightmapMaterialSet(ScreenMaterials, Content);
-            LightmapLightmapRenderingMaterials = new LightmapMaterialSet(LightmapMaterials, Content);
+            LightmapMaterials = new DefaultMaterialSet(Services);
 
             LightingEnvironment.DefaultSubdivision = 512f;
 
@@ -207,9 +200,9 @@ namespace TestGame {
 
             AdditiveBitmapMaterial = LightmapMaterials.ScreenSpaceBitmap.SetStates(blendState: BlendState.Additive);
 
-            MaskedForegroundMaterial = LightmapLightmapRenderingMaterials.ScreenSpaceLightmappedBitmap.SetStates(blendState: BlendState.Additive);
+            MaskedForegroundMaterial = LightmapMaterials.ScreenSpaceLightmappedBitmap.SetStates(blendState: BlendState.Additive);
 
-            AOShadowMaterial = BlurMaterials.ScreenSpaceVerticalGaussianBlur5Tap.SetStates(blendState: RenderStates.SubtractiveBlend);
+            AOShadowMaterial = ScreenMaterials.ScreenSpaceVerticalGaussianBlur5Tap.SetStates(blendState: RenderStates.SubtractiveBlend);
         }
 
         protected override void Update (GameTime gameTime) {
@@ -351,7 +344,7 @@ namespace TestGame {
             using (var aoShadowFirstPassGroup = BatchGroup.ForRenderTarget(frame, 3, AOShadowScratch)) {
                 ClearBatch.AddNew(aoShadowFirstPassGroup, 1, LightmapMaterials.Clear, clearColor: Color.Transparent);
 
-                using (var bb = BitmapBatch.New(aoShadowFirstPassGroup, 2, BlurMaterials.ScreenSpaceHorizontalGaussianBlur5Tap)) {
+                using (var bb = BitmapBatch.New(aoShadowFirstPassGroup, 2, ScreenMaterials.ScreenSpaceHorizontalGaussianBlur5Tap)) {
                     bb.Add(new BitmapDrawCall(Foreground, Vector2.Zero, 1f / LightmapScale));
                 }
             }
@@ -399,7 +392,7 @@ namespace TestGame {
                     bb.Add(dc);
                 }
             } else {
-                using (var bb = BitmapBatch.New(frame, 55, ScreenLightmapRenderingMaterals.WorldSpaceLightmappedBitmap)) {
+                using (var bb = BitmapBatch.New(frame, 55, LightmapMaterials.WorldSpaceLightmappedBitmap)) {
                     var dc = new BitmapDrawCall(Background, Vector2.Zero);
                     dc.Textures.Texture2 = BackgroundLightmap;
                     dc.SortKey = 0;
