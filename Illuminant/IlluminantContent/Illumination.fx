@@ -2,6 +2,7 @@ shared float2 ViewportScale;
 shared float2 ViewportPosition;
 
 shared float4x4 ProjectionMatrix;
+shared float4x4 ModelViewMatrix;
 
 uniform float4 LightNeutralColor;
 uniform float2 LightCenter;
@@ -10,7 +11,7 @@ const float ShadowLength = 99999;
 
 float4 ApplyTransform (float2 position2d) {
     float2 localPosition = ((position2d - ViewportPosition) * ViewportScale);
-    return mul(float4(localPosition.xy, 0, 1), ProjectionMatrix);
+    return mul(mul(float4(localPosition.xy, 0, 1), ModelViewMatrix), ProjectionMatrix);
 }
 
 void PointLightVertexShader(

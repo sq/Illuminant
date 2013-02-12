@@ -65,7 +65,7 @@ namespace Squared.Illuminant {
         }
 
         private class VisualizerLineWriter : ILineWriter {
-            public GeometryBatch<VertexPositionColor> Batch;
+            public GeometryBatch Batch;
             public Color Color;
 
             public void Write (Vector2 a, Vector2 b) {
@@ -96,6 +96,7 @@ namespace Squared.Illuminant {
         private readonly ArrayLineWriter ArrayLineWriterInstance = new ArrayLineWriter();
         private readonly VisualizerLineWriter VisualizerLineWriterInstance = new VisualizerLineWriter();
 
+        private PointLightVertex[] PointLightVertices = new PointLightVertex[128];
         private readonly Dictionary<Pair<int>, CachedSector> SectorCache = new Dictionary<Pair<int>, CachedSector>(new IntPairComparer());
         private Rectangle StoredScissorRect;
 
@@ -332,6 +333,13 @@ namespace Squared.Illuminant {
         }
 
         public void RenderLighting (Frame frame, IBatchContainer container, int layer) {
+            // FIXME
+            var pointLightVertexCount = Environment.LightSources.Count * 4;
+            if (PointLightVertices.Length < pointLightVertexCount)
+                PointLightVertices = new PointLightVertex[1 << (int)Math.Ceiling(Math.Log(pointLightVertexCount, 2))];
+
+            var vertexOffset = 0;
+
             using (var resultGroup = BatchGroup.New(container, layer, before: StoreScissorRect, after: RestoreScissorRect))
             for (var i = 0; i < Environment.LightSources.Count; i++) {
                 var lightSource = Environment.LightSources[i];
@@ -355,9 +363,7 @@ namespace Squared.Illuminant {
                         }
                     }
 
-                    using (var pb = PrimitiveBatch<PointLightVertex>.New(lightGroup, 2, PointLight, IlluminationBatchSetup, lightSource))
-                    using (var buffer = pb.CreateBuffer(4)) {
-                        var writer = buffer.GetWriter(4);
+                    using (var pb = PrimitiveBatch<PointLightVertex>.New(lightGroup, 2, PointLight, IlluminationBatchSetup, lightSource)) {
                         PointLightVertex vertex;
 
                         vertex.LightCenter = lightSource.Position;
@@ -369,27 +375,29 @@ namespace Squared.Illuminant {
                             lightSource.Position.X - lightSource.RampEnd, 
                             lightSource.Position.Y - lightSource.RampEnd
                         );
-                        writer.Write(ref vertex);
+                        PointLightVertices[vertexOffset++] = vertex;
 
                         vertex.Position = new Vector2(
                             lightSource.Position.X + lightSource.RampEnd,
                             lightSource.Position.Y - lightSource.RampEnd
                         );
-                        writer.Write(ref vertex);
+                        PointLightVertices[vertexOffset++] = vertex;
 
                         vertex.Position = new Vector2(
                             lightSource.Position.X + lightSource.RampEnd,
                             lightSource.Position.Y + lightSource.RampEnd
                         );
-                        writer.Write(ref vertex);
+                        PointLightVertices[vertexOffset++] = vertex;
 
                         vertex.Position = new Vector2(
                             lightSource.Position.X - lightSource.RampEnd,
                             lightSource.Position.Y + lightSource.RampEnd
                         );
-                        writer.Write(ref vertex);
+                        PointLightVertices[vertexOffset++] = vertex;
 
-                        pb.Add(writer.GetDrawCall(PrimitiveType.TriangleList, PointLightIndices, 0, PointLightIndices.Length));
+                        pb.Add(new PrimitiveDrawCall<PointLightVertex>(
+                            PrimitiveType.TriangleList, PointLightVertices, vertexOffset - 4, 4, PointLightIndices, 0, 2
+                        ));
                     }
                 }
             }
@@ -397,7 +405,7 @@ namespace Squared.Illuminant {
 
         public void RenderOutlines (IBatchContainer container, int layer, bool showLights, Color? lineColor = null, Color? lightColor = null) {
             using (var group = BatchGroup.New(container, layer)) {
-                using (var gb = GeometryBatch<VertexPositionColor>.New(group, 0, DebugOutlines)) {
+                using (var gb = GeometryBatch.New(group, 0, DebugOutlines)) {
                     VisualizerLineWriterInstance.Batch = gb;
                     VisualizerLineWriterInstance.Color = lineColor.GetValueOrDefault(Color.White);
 
@@ -414,7 +422,7 @@ namespace Squared.Illuminant {
                     var cMax = lightColor.GetValueOrDefault(Color.White);
                     var cMin = cMax * 0.25f;
 
-                    using (var gb = GeometryBatch<VertexPositionColor>.New(group, i + 1, DebugOutlines)) {
+                    using (var gb = GeometryBatch.New(group, i + 1, DebugOutlines)) {
                         gb.AddFilledRing(lightSource.Position, 0f, 2f, cMax, cMax);
                         gb.AddFilledRing(lightSource.Position, lightSource.RampStart - 1f, lightSource.RampStart + 1f, cMax, cMax);
                         gb.AddFilledRing(lightSource.Position, lightSource.RampEnd - 1f, lightSource.RampEnd + 1f, cMin, cMin);
