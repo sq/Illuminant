@@ -7,7 +7,7 @@ shared float4x4 ModelViewMatrix;
 uniform float4 LightNeutralColor;
 uniform float2 LightCenter;
 
-const float ShadowLength = 99999;
+uniform float ShadowLength;
 
 float4 ApplyTransform (float2 position2d) {
     float2 localPosition = ((position2d - ViewportPosition) * ViewportScale);

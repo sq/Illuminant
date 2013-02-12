@@ -271,6 +271,7 @@ namespace Squared.Illuminant {
             var ls = (LightSource)lightSource;
 
             ShadowMaterialInner.Effect.Parameters["LightCenter"].SetValue(ls.Position);
+            ShadowMaterialInner.Effect.Parameters["ShadowLength"].SetValue(ls.RampEnd * 2f);
         }
 
         private CachedSector GetCachedSector (Frame frame, Pair<int> sectorIndex) {
