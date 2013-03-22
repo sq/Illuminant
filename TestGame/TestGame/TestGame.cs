@@ -43,7 +43,7 @@ namespace TestGame {
             { true, true, false, false, false, false, false, true, false }
         };
 
-        bool ShowOutlines, ShowLightmap, ShowAOShadow = true, ShowBrickSpecular = true;
+        bool ShowOutlines, ShowLightmap, ShowAOShadow = false, ShowBrickSpecular = false;
 
         const int LightmapMultisampleCount = 0;
         const float BaseLightmapScale = 1f;
@@ -359,7 +359,7 @@ namespace TestGame {
                         var dc = new BitmapDrawCall(
                             ForegroundLightmap, Vector2.Zero
                         );
-                        dc.Textures.Texture2 = BricksLightMask;
+                        dc.Textures = new TextureSet(dc.Textures.Texture1, BricksLightMask);
                         foregroundLightBatch.Add(dc);
                     }
                 } else {
@@ -394,13 +394,12 @@ namespace TestGame {
             } else {
                 using (var bb = BitmapBatch.New(frame, 55, LightmapMaterials.WorldSpaceLightmappedBitmap)) {
                     var dc = new BitmapDrawCall(Background, Vector2.Zero);
-                    dc.Textures.Texture2 = BackgroundLightmap;
+                    dc.Textures = new TextureSet(Background, BackgroundLightmap);
                     dc.SortKey = 0;
 
                     bb.Add(dc);
 
-                    dc.Textures.Texture1 = Foreground;
-                    dc.Textures.Texture2 = ForegroundLightmap;
+                    dc.Textures = new TextureSet(Foreground, ForegroundLightmap);
                     dc.SortKey = 1;
 
                     bb.Add(dc);

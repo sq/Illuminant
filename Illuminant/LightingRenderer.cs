@@ -88,6 +88,18 @@ namespace Squared.Illuminant {
             }
         }
 
+        private class LightSourceComparer : IComparer<LightSource> {
+            public int Compare (LightSource lhs, LightSource rhs) {
+                int result = lhs.Mode.GetHashCode().CompareTo(rhs.Mode.GetHashCode());
+                if (result == 0)
+                    result = lhs.NeutralColor.GetHashCode().CompareTo(rhs.NeutralColor.GetHashCode());
+                if (result == 0)
+                    result = (lhs.ClipRegion.HasValue ? 1 : 0).CompareTo(rhs.ClipRegion.HasValue ? 1 : 0);
+
+                return result;
+            }
+        }
+
         public readonly DefaultMaterialSet Materials;
         public readonly Squared.Render.EffectMaterial ShadowMaterialInner, PointLightMaterialInner;
         public readonly Material DebugOutlines, Shadow, PointLight, ClearStencil;
@@ -95,9 +107,11 @@ namespace Squared.Illuminant {
 
         private readonly ArrayLineWriter ArrayLineWriterInstance = new ArrayLineWriter();
         private readonly VisualizerLineWriter VisualizerLineWriterInstance = new VisualizerLineWriter();
+        private readonly LightSourceComparer LightSourceComparerInstance = new LightSourceComparer();
 
         private PointLightVertex[] PointLightVertices = new PointLightVertex[128];
         private readonly Dictionary<Pair<int>, CachedSector> SectorCache = new Dictionary<Pair<int>, CachedSector>(new IntPairComparer());
+        private readonly UnorderedList<PrimitiveDrawCall<PointLightVertex>> PointLightBatchBuffer = new UnorderedList<PrimitiveDrawCall<PointLightVertex>>(64);
         private Rectangle StoredScissorRect;
 
         public static readonly short[] ShadowIndices;
@@ -232,12 +246,6 @@ namespace Squared.Illuminant {
             return result;
         }
 
-        private void ApplyScissorForLightSource (DeviceManager device, object lightSource) {
-            var ls = (LightSource)lightSource;
-
-            device.Device.ScissorRectangle = GetScissorRectForLightSource(ls);
-        }
-
         private void IlluminationBatchSetup (DeviceManager device, object lightSource) {
             var ls = (LightSource)lightSource;
 
@@ -265,6 +273,8 @@ namespace Squared.Illuminant {
             }
 
             PointLightMaterialInner.Effect.Parameters["LightNeutralColor"].SetValue(ls.NeutralColor);
+
+            device.Device.ScissorRectangle = StoredScissorRect;
         }
 
         private void ShadowBatchSetup (DeviceManager device, object lightSource) {
@@ -272,6 +282,8 @@ namespace Squared.Illuminant {
 
             ShadowMaterialInner.Effect.Parameters["LightCenter"].SetValue(ls.Position);
             ShadowMaterialInner.Effect.Parameters["ShadowLength"].SetValue(ls.RampEnd * 2f);
+
+            device.Device.ScissorRectangle = GetScissorRectForLightSource(ls);
         }
 
         private CachedSector GetCachedSector (Frame frame, Pair<int> sectorIndex) {
@@ -341,72 +353,120 @@ namespace Squared.Illuminant {
 
             var needStencilClear = true;
             var vertexOffset = 0;
+            LightSource batchFirstLightSource = null;
+            BatchGroup currentLightGroup = null;
 
-            using (var resultGroup = BatchGroup.New(container, layer, before: StoreScissorRect, after: RestoreScissorRect))
-            for (var i = 0; i < Environment.LightSources.Count; i++) {
-                var lightSource = Environment.LightSources[i];
+            int layerIndex = 0;
 
-                using (var lightGroup = BatchGroup.New(resultGroup, i, before: ApplyScissorForLightSource, userData: lightSource)) {
+            using (var sortedLights = BufferPool<LightSource>.Allocate(Environment.LightSources.Count))
+            using (var resultGroup = BatchGroup.New(container, layer, before: StoreScissorRect, after: RestoreScissorRect)) {
+                var lightCount = Environment.LightSources.Count;
+                Environment.LightSources.CopyTo(sortedLights.Data);
+                Array.Sort(sortedLights.Data, 0, lightCount, LightSourceComparerInstance);
+
+                PointLightBatchBuffer.EnsureCapacity(lightCount);
+
+                int lightGroupIndex = 1;
+
+                for (var i = 0; i < lightCount; i++) {
+                    var lightSource = sortedLights.Data[i];
+
+                    if (batchFirstLightSource != null) {
+                        var needFlush =
+                            (needStencilClear) ||
+                            (batchFirstLightSource.ClipRegion.HasValue != lightSource.ClipRegion.HasValue) ||
+                            (batchFirstLightSource.NeutralColor != lightSource.NeutralColor) ||
+                            (batchFirstLightSource.Mode != lightSource.Mode);
+
+                        if (needFlush)
+                            FlushPointLightBatch(ref currentLightGroup, ref batchFirstLightSource, ref layerIndex);
+                    }
+
+                    if (batchFirstLightSource == null)
+                        batchFirstLightSource = lightSource;
+                    if (currentLightGroup == null)
+                        currentLightGroup = BatchGroup.New(resultGroup, lightGroupIndex++, before: RestoreScissorRect);
+
                     var lightBounds = new Bounds(lightSource.Position - new Vector2(lightSource.RampEnd), lightSource.Position + new Vector2(lightSource.RampEnd));
 
+                    Bounds clippedLightBounds;
+                    if (lightSource.ClipRegion.HasValue) {
+                        var clipBounds = lightSource.ClipRegion.Value;
+                        if (!lightBounds.Intersection(ref lightBounds, ref clipBounds, out clippedLightBounds))
+                            continue;
+                    } else {
+                        clippedLightBounds = lightBounds;
+                    }
+
                     if (needStencilClear) {
-                        ClearBatch.AddNew(lightGroup, 0, ClearStencil, clearStencil: 0);
+                        ClearBatch.AddNew(currentLightGroup, layerIndex++, ClearStencil, clearStencil: 0);
                         needStencilClear = false;
                     }
 
-                    using (var nb = NativeBatch.New(lightGroup, 1, Shadow, ShadowBatchSetup, lightSource)) {
-                        SpatialCollection<LightObstructionBase>.Sector currentSector;
-                        using (var e = Environment.Obstructions.GetSectorsFromBounds(lightBounds))
-                        while (e.GetNext(out currentSector)) {
-                            var cachedSector = GetCachedSector(frame, currentSector.Index);
-                            if (cachedSector.VertexCount <= 0)
-                                continue;
+                    NativeBatch stencilBatch = null;
+                    SpatialCollection<LightObstructionBase>.Sector currentSector;
+                    using (var e = Environment.Obstructions.GetSectorsFromBounds(lightBounds))
+                    while (e.GetNext(out currentSector)) {
+                        var cachedSector = GetCachedSector(frame, currentSector.Index);
+                        if (cachedSector.VertexCount <= 0)
+                            continue;
 
-                            nb.Add(new NativeDrawCall(
-                                PrimitiveType.TriangleList, cachedSector.ObstructionVertexBuffer, 0, cachedSector.ObstructionIndexBuffer, 0, 0, cachedSector.VertexCount, 0, cachedSector.PrimitiveCount
-                            ));
+                        if (stencilBatch == null) {
+                            stencilBatch = NativeBatch.New(currentLightGroup, layerIndex++, Shadow, ShadowBatchSetup, lightSource);
+                            stencilBatch.Dispose();
                             needStencilClear = true;
                         }
-                    }
 
-                    using (var pb = PrimitiveBatch<PointLightVertex>.New(lightGroup, 2, PointLight, IlluminationBatchSetup, lightSource)) {
-                        PointLightVertex vertex;
-
-                        vertex.LightCenter = lightSource.Position;
-                        vertex.Color = lightSource.Color;
-                        vertex.Color *= lightSource.Opacity;
-                        vertex.Ramp = new Vector2(lightSource.RampStart, lightSource.RampEnd);
-
-                        vertex.Position = new Vector2(
-                            lightSource.Position.X - lightSource.RampEnd, 
-                            lightSource.Position.Y - lightSource.RampEnd
-                        );
-                        PointLightVertices[vertexOffset++] = vertex;
-
-                        vertex.Position = new Vector2(
-                            lightSource.Position.X + lightSource.RampEnd,
-                            lightSource.Position.Y - lightSource.RampEnd
-                        );
-                        PointLightVertices[vertexOffset++] = vertex;
-
-                        vertex.Position = new Vector2(
-                            lightSource.Position.X + lightSource.RampEnd,
-                            lightSource.Position.Y + lightSource.RampEnd
-                        );
-                        PointLightVertices[vertexOffset++] = vertex;
-
-                        vertex.Position = new Vector2(
-                            lightSource.Position.X - lightSource.RampEnd,
-                            lightSource.Position.Y + lightSource.RampEnd
-                        );
-                        PointLightVertices[vertexOffset++] = vertex;
-
-                        pb.Add(new PrimitiveDrawCall<PointLightVertex>(
-                            PrimitiveType.TriangleList, PointLightVertices, vertexOffset - 4, 4, PointLightIndices, 0, 2
+                        stencilBatch.Add(new NativeDrawCall(
+                            PrimitiveType.TriangleList, cachedSector.ObstructionVertexBuffer, 0, cachedSector.ObstructionIndexBuffer, 0, 0, cachedSector.VertexCount, 0, cachedSector.PrimitiveCount
                         ));
                     }
+
+                    PointLightVertex vertex;
+
+                    vertex.LightCenter = lightSource.Position;
+                    vertex.Color = lightSource.Color;
+                    vertex.Color *= lightSource.Opacity;
+                    vertex.Ramp = new Vector2(lightSource.RampStart, lightSource.RampEnd);
+
+                    vertex.Position = clippedLightBounds.TopLeft;
+                    PointLightVertices[vertexOffset++] = vertex;
+
+                    vertex.Position = clippedLightBounds.TopRight;
+                    PointLightVertices[vertexOffset++] = vertex;
+
+                    vertex.Position = clippedLightBounds.BottomRight;
+                    PointLightVertices[vertexOffset++] = vertex;
+
+                    vertex.Position = clippedLightBounds.BottomLeft;
+                    PointLightVertices[vertexOffset++] = vertex;
+
+                    var pointLightDrawCall = new PrimitiveDrawCall<PointLightVertex>(
+                        PrimitiveType.TriangleList, PointLightVertices, vertexOffset - 4, 4, PointLightIndices, 0, 2
+                    );
+                    PointLightBatchBuffer.Add(pointLightDrawCall);
                 }
+
+                FlushPointLightBatch(ref currentLightGroup, ref batchFirstLightSource, ref layerIndex);
             }
+        }
+
+        private void FlushPointLightBatch (ref BatchGroup lightGroup, ref LightSource batchFirstLightSource, ref int layerIndex) {
+            if (lightGroup == null)
+                return;
+
+            using (var pb = PrimitiveBatch<PointLightVertex>.New(lightGroup, layerIndex++, PointLight, IlluminationBatchSetup, batchFirstLightSource)) {
+                PrimitiveDrawCall<PointLightVertex> drawCall;
+
+                using (var e = PointLightBatchBuffer.GetEnumerator())
+                while (e.GetNext(out drawCall))
+                    pb.Add(ref drawCall);
+            }
+
+            lightGroup.Dispose();
+            lightGroup = null;
+            batchFirstLightSource = null;
+            PointLightBatchBuffer.Clear();
         }
 
         public void RenderOutlines (IBatchContainer container, int layer, bool showLights, Color? lineColor = null, Color? lightColor = null) {
