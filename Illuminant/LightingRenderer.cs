@@ -100,6 +100,10 @@ namespace Squared.Illuminant {
             }
         }
 
+        private struct PointLightRecord {
+            public int VertexOffset, IndexOffset, VertexCount, IndexCount;
+        }
+
         public readonly DefaultMaterialSet Materials;
         public readonly Squared.Render.EffectMaterial ShadowMaterialInner, PointLightMaterialInner;
         public readonly Material DebugOutlines, Shadow, PointLight, ClearStencil;
@@ -110,23 +114,18 @@ namespace Squared.Illuminant {
         private readonly LightSourceComparer LightSourceComparerInstance = new LightSourceComparer();
 
         private PointLightVertex[] PointLightVertices = new PointLightVertex[128];
+        private short[] PointLightIndices = null;
         private readonly Dictionary<Pair<int>, CachedSector> SectorCache = new Dictionary<Pair<int>, CachedSector>(new IntPairComparer());
-        private readonly UnorderedList<PrimitiveDrawCall<PointLightVertex>> PointLightBatchBuffer = new UnorderedList<PrimitiveDrawCall<PointLightVertex>>(64);
+        private readonly List<PointLightRecord> PointLightBatchBuffer = new List<PointLightRecord>(128);
         private Rectangle StoredScissorRect;
 
         public static readonly short[] ShadowIndices;
-        public static readonly short[] PointLightIndices;
 
         public LightingEnvironment Environment;
 
         static LightingRenderer () {
             ShadowIndices = new short[] {
                 0, 1, 2,
-                1, 2, 3
-            };
-
-            PointLightIndices = new short[] {
-                0, 1, 3,
                 1, 2, 3
             };
         }
@@ -348,11 +347,28 @@ namespace Squared.Illuminant {
         public void RenderLighting (Frame frame, IBatchContainer container, int layer) {
             // FIXME
             var pointLightVertexCount = Environment.LightSources.Count * 4;
+            var pointLightIndexCount = Environment.LightSources.Count * 6;
             if (PointLightVertices.Length < pointLightVertexCount)
                 PointLightVertices = new PointLightVertex[1 << (int)Math.Ceiling(Math.Log(pointLightVertexCount, 2))];
 
+            if ((PointLightIndices == null) || (PointLightIndices.Length < pointLightIndexCount)) {
+                PointLightIndices = new short[pointLightIndexCount];
+
+                int i = 0, j = 0;
+                while (i < pointLightIndexCount) {
+                    PointLightIndices[i++] = (short)(j + 0);
+                    PointLightIndices[i++] = (short)(j + 1);
+                    PointLightIndices[i++] = (short)(j + 3);
+                    PointLightIndices[i++] = (short)(j + 1);
+                    PointLightIndices[i++] = (short)(j + 2);
+                    PointLightIndices[i++] = (short)(j + 3);
+
+                    j += 4;
+                }
+            }
+
             var needStencilClear = true;
-            var vertexOffset = 0;
+            int vertexOffset = 0, indexOffset = 0;
             LightSource batchFirstLightSource = null;
             BatchGroup currentLightGroup = null;
 
@@ -363,8 +379,6 @@ namespace Squared.Illuminant {
                 var lightCount = Environment.LightSources.Count;
                 Environment.LightSources.CopyTo(sortedLights.Data);
                 Array.Sort(sortedLights.Data, 0, lightCount, LightSourceComparerInstance);
-
-                PointLightBatchBuffer.EnsureCapacity(lightCount);
 
                 int lightGroupIndex = 1;
 
@@ -378,8 +392,10 @@ namespace Squared.Illuminant {
                             (batchFirstLightSource.NeutralColor != lightSource.NeutralColor) ||
                             (batchFirstLightSource.Mode != lightSource.Mode);
 
-                        if (needFlush)
+                        if (needFlush) {
                             FlushPointLightBatch(ref currentLightGroup, ref batchFirstLightSource, ref layerIndex);
+                            indexOffset = 0;
+                        }
                     }
 
                     if (batchFirstLightSource == null)
@@ -441,10 +457,31 @@ namespace Squared.Illuminant {
                     vertex.Position = clippedLightBounds.BottomLeft;
                     PointLightVertices[vertexOffset++] = vertex;
 
-                    var pointLightDrawCall = new PrimitiveDrawCall<PointLightVertex>(
-                        PrimitiveType.TriangleList, PointLightVertices, vertexOffset - 4, 4, PointLightIndices, 0, 2
-                    );
-                    PointLightBatchBuffer.Add(pointLightDrawCall);
+                    var newRecord = new PointLightRecord {
+                        VertexOffset = vertexOffset - 4,
+                        IndexOffset = indexOffset,
+                        VertexCount = 4,
+                        IndexCount = 6
+                    };
+
+                    if (PointLightBatchBuffer.Count > 0) {
+                        var oldRecord = PointLightBatchBuffer[PointLightBatchBuffer.Count - 1];
+
+                        if (
+                            (newRecord.VertexOffset == oldRecord.VertexOffset + oldRecord.VertexCount) &&
+                            (newRecord.IndexOffset == oldRecord.IndexOffset + oldRecord.IndexCount)
+                        ) {
+                            oldRecord.VertexCount += newRecord.VertexCount;
+                            oldRecord.IndexCount += newRecord.IndexCount;
+                            PointLightBatchBuffer[PointLightBatchBuffer.Count - 1] = oldRecord;
+                        } else {
+                            PointLightBatchBuffer.Add(newRecord);
+                        }
+                    } else {
+                        PointLightBatchBuffer.Add(newRecord);
+                    }
+
+                    indexOffset += 6;
                 }
 
                 FlushPointLightBatch(ref currentLightGroup, ref batchFirstLightSource, ref layerIndex);
@@ -456,11 +493,12 @@ namespace Squared.Illuminant {
                 return;
 
             using (var pb = PrimitiveBatch<PointLightVertex>.New(lightGroup, layerIndex++, PointLight, IlluminationBatchSetup, batchFirstLightSource)) {
-                PrimitiveDrawCall<PointLightVertex> drawCall;
-
-                using (var e = PointLightBatchBuffer.GetEnumerator())
-                while (e.GetNext(out drawCall))
-                    pb.Add(ref drawCall);
+                foreach (var record in PointLightBatchBuffer) {
+                    var pointLightDrawCall = new PrimitiveDrawCall<PointLightVertex>(
+                        PrimitiveType.TriangleList, PointLightVertices, record.VertexOffset, record.VertexCount, PointLightIndices, record.IndexOffset, record.IndexCount / 3
+                    );
+                    pb.Add(pointLightDrawCall);
+                }
             }
 
             lightGroup.Dispose();
