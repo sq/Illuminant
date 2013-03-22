@@ -339,6 +339,7 @@ namespace Squared.Illuminant {
             if (PointLightVertices.Length < pointLightVertexCount)
                 PointLightVertices = new PointLightVertex[1 << (int)Math.Ceiling(Math.Log(pointLightVertexCount, 2))];
 
+            var needStencilClear = true;
             var vertexOffset = 0;
 
             using (var resultGroup = BatchGroup.New(container, layer, before: StoreScissorRect, after: RestoreScissorRect))
@@ -348,7 +349,10 @@ namespace Squared.Illuminant {
                 using (var lightGroup = BatchGroup.New(resultGroup, i, before: ApplyScissorForLightSource, userData: lightSource)) {
                     var lightBounds = new Bounds(lightSource.Position - new Vector2(lightSource.RampEnd), lightSource.Position + new Vector2(lightSource.RampEnd));
 
-                    ClearBatch.AddNew(lightGroup, 0, ClearStencil, clearStencil: 0);
+                    if (needStencilClear) {
+                        ClearBatch.AddNew(lightGroup, 0, ClearStencil, clearStencil: 0);
+                        needStencilClear = false;
+                    }
 
                     using (var nb = NativeBatch.New(lightGroup, 1, Shadow, ShadowBatchSetup, lightSource)) {
                         SpatialCollection<LightObstructionBase>.Sector currentSector;
@@ -361,6 +365,7 @@ namespace Squared.Illuminant {
                             nb.Add(new NativeDrawCall(
                                 PrimitiveType.TriangleList, cachedSector.ObstructionVertexBuffer, 0, cachedSector.ObstructionIndexBuffer, 0, 0, cachedSector.VertexCount, 0, cachedSector.PrimitiveCount
                             ));
+                            needStencilClear = true;
                         }
                     }
 
