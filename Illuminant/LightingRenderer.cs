@@ -104,6 +104,10 @@ namespace Squared.Illuminant {
             public int VertexOffset, IndexOffset, VertexCount, IndexCount;
         }
 
+        // HACK: If your projection matrix and your actual viewport/RT don't match in dimensions, you need to set this to compensate. :/
+        // Scissor rects are fussy.
+        public float ClipRegionScale = 1f;
+
         public readonly DefaultMaterialSet Materials;
         public readonly Squared.Render.EffectMaterial ShadowMaterialInner, PointLightMaterialInner;
         public readonly Material DebugOutlines, Shadow, PointLight, ClearStencil;
@@ -220,26 +224,34 @@ namespace Squared.Illuminant {
             device.Device.ScissorRectangle = StoredScissorRect;
         }
 
-        private Rectangle GetScissorRectForLightSource (LightSource ls) {
-            Rectangle scissor;
+        private Rectangle GetScissorRectForLightSource (DeviceManager device, LightSource ls) {
+            Bounds scissorBounds;
+
+            // FIXME: Replace this with a use of the material set's modelview/projection matrix and device
+            //  viewport to 'project' the clip region to scissor coordinates?
+            var scale = new Vector2(
+                Materials.ViewportScale.X * ClipRegionScale,
+                Materials.ViewportScale.Y * ClipRegionScale
+            );
 
             if (ls.ClipRegion.HasValue) {
-                // FIXME: ViewportPosition
-                var clipRegion = ls.ClipRegion.Value;
-                scissor = new Rectangle(
-                    (int)Math.Floor(clipRegion.TopLeft.X * Materials.ViewportScale.X),
-                    (int)Math.Floor(clipRegion.TopLeft.Y * Materials.ViewportScale.Y),
-                    (int)Math.Ceiling(clipRegion.Size.X * Materials.ViewportScale.X),
-                    (int)Math.Ceiling(clipRegion.Size.Y * Materials.ViewportScale.Y)
+                scissorBounds = new Bounds(
+                    (ls.ClipRegion.Value.TopLeft - Materials.ViewportPosition) * scale,
+                    (ls.ClipRegion.Value.BottomRight - Materials.ViewportPosition) * scale
                 );
             } else {
-                scissor = new Rectangle(
-                    (int)Math.Floor((ls.Position.X - ls.RampEnd - Materials.ViewportPosition.X) * Materials.ViewportScale.X),
-                    (int)Math.Floor((ls.Position.Y - ls.RampEnd - Materials.ViewportPosition.Y) * Materials.ViewportScale.Y),
-                    (int)Math.Ceiling(ls.RampEnd * 2 * Materials.ViewportScale.X),
-                    (int)Math.Ceiling(ls.RampEnd * 2 * Materials.ViewportScale.Y)
+                scissorBounds = new Bounds(
+                    (ls.Position - new Vector2(ls.RampEnd) - Materials.ViewportPosition) * scale,
+                    (ls.Position + new Vector2(ls.RampEnd) - Materials.ViewportPosition) * scale
                 );
             }
+
+            var scissor = new Rectangle(
+                (int)Math.Floor(scissorBounds.TopLeft.X),
+                (int)Math.Floor(scissorBounds.TopLeft.Y),
+                (int)Math.Ceiling(scissorBounds.Size.X),
+                (int)Math.Ceiling(scissorBounds.Size.Y)
+            );
 
             var result = Rectangle.Intersect(scissor, StoredScissorRect);
             return result;
@@ -282,7 +294,7 @@ namespace Squared.Illuminant {
             ShadowMaterialInner.Effect.Parameters["LightCenter"].SetValue(ls.Position);
             ShadowMaterialInner.Effect.Parameters["ShadowLength"].SetValue(ls.RampEnd * 2f);
 
-            device.Device.ScissorRectangle = GetScissorRectForLightSource(ls);
+            device.Device.ScissorRectangle = GetScissorRectForLightSource(device, ls);
         }
 
         private CachedSector GetCachedSector (Frame frame, Pair<int> sectorIndex) {
