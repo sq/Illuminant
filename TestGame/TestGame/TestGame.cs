@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Linq.Expressions;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Content;
@@ -13,6 +14,7 @@ using Squared.Game;
 using Squared.Illuminant;
 using Squared.Render;
 using Squared.Render.Convenience;
+using Squared.Util;
 
 namespace TestGame {
     public class TestGame : MultithreadedGame {
@@ -30,6 +32,11 @@ namespace TestGame {
         RenderTarget2D BackgroundLightmap, ForegroundLightmap;
         RenderTarget2D Background, Foreground;
         RenderTarget2D AOShadowScratch;
+
+        Random SparkRNG = new Random();
+
+        ParticleRenderer ParticleRenderer;
+        ParticleSystem<Spark> Sparks;
 
         bool[,] ForegroundTiles = new bool[,] {
             { true, true, true, true, true, false, true, true, true },
@@ -49,6 +56,8 @@ namespace TestGame {
         const float BaseLightmapScale = 1f;
         float LightmapScale;
 
+        readonly List<LightSource> Torches = new List<LightSource>();
+
         LightObstructionLine Dragging = null;
 
         KeyboardState PreviousKeyboardState;
@@ -59,7 +68,7 @@ namespace TestGame {
             Graphics.PreferredDepthStencilFormat = DepthFormat.Depth24Stencil8;
             Graphics.PreferredBackBufferWidth = 1257;
             Graphics.PreferredBackBufferHeight = 1250;
-            Graphics.SynchronizeWithVerticalRetrace = false;
+            Graphics.SynchronizeWithVerticalRetrace = true;
             Graphics.PreferMultiSampling = false;
 
             Content.RootDirectory = "Content";
@@ -79,6 +88,7 @@ namespace TestGame {
                 RampEnd = 250
             };
 
+            Torches.Add(torch);
             ForegroundEnvironment.LightSources.Add(torch);
         }
 
@@ -203,6 +213,17 @@ namespace TestGame {
             MaskedForegroundMaterial = LightmapMaterials.ScreenSpaceLightmappedBitmap.SetStates(blendState: BlendState.Additive);
 
             AOShadowMaterial = ScreenMaterials.ScreenSpaceVerticalGaussianBlur5Tap.SetStates(blendState: RenderStates.SubtractiveBlend);
+
+            ParticleRenderer = new ParticleRenderer(LightmapMaterials);
+
+            Spark.Texture = Content.Load<Texture2D>("spark");
+
+            ParticleRenderer.Systems.Add(Sparks = new ParticleSystem<Spark>(
+                new DotNetTimeProvider(),
+                Spark.Update,
+                Spark.Render,
+                Spark.GetPosition
+            ));
         }
 
         protected override void Update (GameTime gameTime) {
@@ -246,6 +267,15 @@ namespace TestGame {
                 "BeginDraw = {0:000.000}ms Draw = {1:000.000}ms EndDraw = {2:000.000}ms",
                 PreviousFrameTiming.BeginDraw.TotalMilliseconds, PreviousFrameTiming.Draw.TotalMilliseconds, PreviousFrameTiming.EndDraw.TotalMilliseconds
             );
+
+            foreach (var torch in Torches) {
+                const int sparkSpawnCount = 4;
+
+                for (var i = 0; i < sparkSpawnCount; i++)
+                    Sparks.Particles.Add(new Spark(Sparks, torch.Position));
+            }
+
+            Sparks.Update();
 
             base.Update(gameTime);
         }
@@ -408,6 +438,74 @@ namespace TestGame {
 
             if (ShowOutlines || (Dragging != null))
                 BackgroundRenderer.RenderOutlines(frame, 59, true);
+
+            ParticleRenderer.Draw(frame, 60);
+        }
+    }
+
+    public struct Spark {
+        public static readonly long Duration = TimeSpan.FromSeconds(2.5).Ticks;
+        public const float HalfPI = (float)(Math.PI / 2);
+        public const float Gravity = 0.08f;
+        public const float MaxFallRate = 4f;
+
+        public static readonly Color HotColor = new Color(255, 225, 142);
+        public static readonly Color ColdColor = new Color(63, 33, 13);
+
+        public static Texture2D Texture;
+
+        public long SpawnedWhen;
+        public Vector2 Position, PreviousPosition;
+        public Vector2 Velocity;
+
+        public Spark (ParticleSystem<Spark> system, Vector2 position) {
+            SpawnedWhen = system.LastUpdateTime.Ticks;
+            Position = PreviousPosition = position;
+            Velocity = new Vector2(system.RNG.NextFloat(-2f, 2f), system.RNG.NextFloat(1f, -2f));
+        }
+
+        public static Vector2 ApplyGravity (Vector2 velocity) {
+            velocity.Y += Gravity;
+            var length = velocity.Length();
+            velocity /= length;
+            return velocity * Math.Min(length, MaxFallRate);
+        }
+
+        public static Spark Update (ParticleSystem<Spark>.ParticleUpdateArgs args) {
+            var oldParticle = args.Particle;
+
+            var elapsed = args.Now.Ticks - oldParticle.SpawnedWhen;
+            if (elapsed > Duration)
+                args.Destroy();
+
+            return new Spark {
+                PreviousPosition = oldParticle.Position,
+                Position = oldParticle.Position + oldParticle.Velocity,
+                Velocity = ApplyGravity(oldParticle.Velocity),
+                SpawnedWhen = oldParticle.SpawnedWhen
+            };
+        }
+
+        public static void Render (ParticleSystem<Spark>.ParticleRenderArgs args) {
+            var delta = args.Particle.Position - args.Particle.PreviousPosition;
+            var length = delta.Length();
+            var angle = (float)(Math.Atan2(delta.Y, delta.X) - HalfPI);
+
+            var elapsed = args.Now.Ticks - args.Particle.SpawnedWhen;
+            var age = (float)elapsed / Duration;
+            var lerpFactor = MathHelper.Clamp(age * 1.4f, 0, 1);
+
+            args.ImperativeRenderer.Draw(
+                Texture, args.Particle.Position, 
+                rotation: angle,
+                scale: new Vector2(0.25f, MathHelper.Clamp(length / 5f, 0.05f, 1.75f)),
+                multiplyColor: Color.Lerp(HotColor, ColdColor, lerpFactor) * (1 - age),
+                blendState: BlendState.Additive
+            );
+        }
+
+        public static Vector2 GetPosition (ref Spark spark) {
+            return spark.Position;
         }
     }
 }

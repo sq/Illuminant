@@ -126,6 +126,10 @@
       <Project>{FE871F18-FD35-4124-AF8F-0021C9D4BA29}</Project>
       <Name>Squared.Render</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\Upstream\Fracture\Squared\Util\Squared.Util.csproj">
+      <Project>{D7F549CF-E0A6-491C-A78C-ECAB590BB2A7}</Project>
+      <Name>Squared.Util</Name>
+    </ProjectReference>
     <ProjectReference Include="..\TestGameContent\TestGameContent.contentproj">
       <Name>TestGameContent</Name>
       <XnaReferenceType>Content</XnaReferenceType>
