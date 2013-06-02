@@ -221,8 +221,7 @@ namespace TestGame {
             ParticleRenderer.Systems.Add(Sparks = new ParticleSystem<Spark>(
                 new DotNetTimeProvider(),
                 Spark.Update,
-                Spark.Render,
-                Spark.GetPosition
+                Spark.Render
             ));
         }
 
@@ -444,7 +443,7 @@ namespace TestGame {
     }
 
     public struct Spark {
-        public static readonly long Duration = TimeSpan.FromSeconds(2.5).Ticks;
+        public static readonly int DurationInFrames = (int)(60 * 2.5);
         public const float HalfPI = (float)(Math.PI / 2);
         public const float Gravity = 0.08f;
         public const float MaxFallRate = 4f;
@@ -454,13 +453,13 @@ namespace TestGame {
 
         public static Texture2D Texture;
 
-        public long SpawnedWhen;
+        public int FramesLeft;
         public Vector2 Position, PreviousPosition;
         public Vector2 Velocity;
 
         public Spark (ParticleSystem<Spark> system, Vector2 position) {
-            SpawnedWhen = system.LastUpdateTime.Ticks;
             Position = PreviousPosition = position;
+            FramesLeft = system.RNG.Next(DurationInFrames - 4, DurationInFrames + 4);
             Velocity = new Vector2(system.RNG.NextFloat(-2f, 2f), system.RNG.NextFloat(1f, -2f));
         }
 
@@ -471,37 +470,47 @@ namespace TestGame {
             return velocity * Math.Min(length, MaxFallRate);
         }
 
-        public static Spark Update (ParticleSystem<Spark>.ParticleUpdateArgs args) {
-            var oldParticle = args.Particle;
+        public static void Update (ParticleSystem<Spark>.ParticleUpdateArgs args) {
+            Spark particle;
 
-            var elapsed = args.Now.Ticks - oldParticle.SpawnedWhen;
-            if (elapsed > Duration)
-                args.Destroy();
+            using (var e = args.Particles.GetEnumerator())
+            while (e.GetNext(out particle)) {
+                if (particle.FramesLeft <= 0) {
+                    e.RemoveCurrent();
+                    continue;
+                }
 
-            return new Spark {
-                PreviousPosition = oldParticle.Position,
-                Position = oldParticle.Position + oldParticle.Velocity,
-                Velocity = ApplyGravity(oldParticle.Velocity),
-                SpawnedWhen = oldParticle.SpawnedWhen
-            };
+                particle.FramesLeft -= 1;
+                particle.PreviousPosition = particle.Position;
+                particle.Position += particle.Velocity;
+                particle.Velocity = ApplyGravity(particle.Velocity);
+
+                e.SetCurrent(ref particle);
+            }
         }
 
         public static void Render (ParticleSystem<Spark>.ParticleRenderArgs args) {
-            var delta = args.Particle.Position - args.Particle.PreviousPosition;
-            var length = delta.Length();
-            var angle = (float)(Math.Atan2(delta.Y, delta.X) - HalfPI);
+            Spark particle;
 
-            var elapsed = args.Now.Ticks - args.Particle.SpawnedWhen;
-            var age = (float)elapsed / Duration;
-            var lerpFactor = MathHelper.Clamp(age * 1.4f, 0, 1);
+            float fDurationInFrames = DurationInFrames;
 
-            args.ImperativeRenderer.Draw(
-                Texture, args.Particle.Position, 
-                rotation: angle,
-                scale: new Vector2(0.25f, MathHelper.Clamp(length / 5f, 0.05f, 1.75f)),
-                multiplyColor: Color.Lerp(HotColor, ColdColor, lerpFactor) * (1 - age),
-                blendState: BlendState.Additive
-            );
+            using (var e = args.Particles.GetEnumerator())
+            while (e.GetNext(out particle)) {
+                var delta = particle.Position - particle.PreviousPosition;
+                var length = delta.Length();
+                var angle = (float)(Math.Atan2(delta.Y, delta.X) - HalfPI);
+
+                var lifeLeft = MathHelper.Clamp(particle.FramesLeft / fDurationInFrames, 0, 1);
+                var lerpFactor = MathHelper.Clamp((1 - lifeLeft) * 1.4f, 0, 1);
+
+                args.ImperativeRenderer.Draw(
+                    Texture, particle.Position, 
+                    rotation: angle,
+                    scale: new Vector2(0.25f, MathHelper.Clamp(length / 5f, 0.05f, 1.75f)),
+                    multiplyColor: Color.Lerp(HotColor, ColdColor, lerpFactor) * lifeLeft,
+                    blendState: BlendState.Additive
+                );
+            }
         }
 
         public static Vector2 GetPosition (ref Spark spark) {

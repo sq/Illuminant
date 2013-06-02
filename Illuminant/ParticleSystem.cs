@@ -33,7 +33,7 @@ namespace Squared.Illuminant {
         }
 
         public abstract class ParticleArgsBase {
-            public T Particle;
+            public ParticleCollection Particles;
             public Time PreviousTime, Now;
 
             internal void SetTime (ITimeProvider timeProvider) {
@@ -57,18 +57,12 @@ namespace Squared.Illuminant {
         }
 
         public class ParticleUpdateArgs : ParticleArgsBase {
-            internal bool _Destroy;
-
-            public void Destroy () {
-                _Destroy = true;
-            }
         }
 
         public class ParticleCollection : UnorderedList<T> {
         }
 
-        public readonly GetPositionDelegate GetPosition;
-        public readonly Func<ParticleUpdateArgs, T> Updater;
+        public readonly Action<ParticleUpdateArgs> Updater;
         public readonly Action<ParticleRenderArgs> Renderer;
 
         public readonly ITimeProvider TimeProvider;
@@ -83,42 +77,30 @@ namespace Squared.Illuminant {
 
         public ParticleSystem (
             ITimeProvider timeProvider,
-            Func<ParticleUpdateArgs, T> updater,
-            Action<ParticleRenderArgs> renderer,
-            GetPositionDelegate getPosition
+            Action<ParticleUpdateArgs> updater,
+            Action<ParticleRenderArgs> renderer
         ) {
             TimeProvider = timeProvider;
 
             Updater = updater;
             Renderer = renderer;
-            GetPosition = getPosition;
         }
 
         public void Update () {
+            UpdateArgs.Particles = Particles;
             UpdateArgs.SetTime(TimeProvider);
 
-            using (var e = Particles.GetEnumerator())
-            while (e.GetNext(out UpdateArgs.Particle)) {
-                var newParticle = Updater(UpdateArgs);
-
-                if (UpdateArgs._Destroy) {
-                    UpdateArgs._Destroy = false;
-                    e.RemoveCurrent();
-                } else {
-                    e.SetCurrent(ref newParticle);
-                }
-            }
+            Updater(UpdateArgs);
 
             LastUpdateTime = UpdateArgs.Now;
         }
 
         public void Draw (ParticleRenderer renderer, IBatchContainer container, int layer) {
+            RenderArgs.Particles = Particles;
             RenderArgs.SetTime(TimeProvider);
             RenderArgs.SetContainer(renderer.Materials, container, layer);
 
-            using (var e = Particles.GetEnumerator())
-            while (e.GetNext(out RenderArgs.Particle))
-                Renderer(RenderArgs);
+            Renderer(RenderArgs);
         }
     }
 }
