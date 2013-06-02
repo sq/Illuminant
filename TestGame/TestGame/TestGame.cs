@@ -226,38 +226,40 @@ namespace TestGame {
         }
 
         protected override void Update (GameTime gameTime) {
-            var ks = Keyboard.GetState();
+            if (IsActive) {
+                var ks = Keyboard.GetState();
 
-            if (ks.IsKeyDown(Keys.O) && !PreviousKeyboardState.IsKeyDown(Keys.O))
-                ShowOutlines = !ShowOutlines;
-            if (ks.IsKeyDown(Keys.L) && !PreviousKeyboardState.IsKeyDown(Keys.L))
-                ShowLightmap = !ShowLightmap;
-            if (ks.IsKeyDown(Keys.A) && !PreviousKeyboardState.IsKeyDown(Keys.A))
-                ShowAOShadow = !ShowAOShadow;
-            if (ks.IsKeyDown(Keys.B) && !PreviousKeyboardState.IsKeyDown(Keys.B))
-                ShowBrickSpecular = !ShowBrickSpecular;
+                if (ks.IsKeyDown(Keys.O) && !PreviousKeyboardState.IsKeyDown(Keys.O))
+                    ShowOutlines = !ShowOutlines;
+                if (ks.IsKeyDown(Keys.L) && !PreviousKeyboardState.IsKeyDown(Keys.L))
+                    ShowLightmap = !ShowLightmap;
+                if (ks.IsKeyDown(Keys.A) && !PreviousKeyboardState.IsKeyDown(Keys.A))
+                    ShowAOShadow = !ShowAOShadow;
+                if (ks.IsKeyDown(Keys.B) && !PreviousKeyboardState.IsKeyDown(Keys.B))
+                    ShowBrickSpecular = !ShowBrickSpecular;
 
-            PreviousKeyboardState = ks;
+                PreviousKeyboardState = ks;
 
-            var ms = Mouse.GetState();
-            IsMouseVisible = true;
+                var ms = Mouse.GetState();
+                IsMouseVisible = true;
 
-            LightmapScale = BaseLightmapScale + (ms.ScrollWheelValue / 200f);
-            if (LightmapScale < 1f)
-                LightmapScale = 1f;
+                LightmapScale = BaseLightmapScale + (ms.ScrollWheelValue / 200f);
+                if (LightmapScale < 1f)
+                    LightmapScale = 1f;
 
-            var mousePos = new Vector2(ms.X, ms.Y);
+                var mousePos = new Vector2(ms.X, ms.Y);
 
-            if (ms.LeftButton == ButtonState.Pressed) {
-                if (Dragging == null) {
-                    BackgroundEnvironment.Obstructions.Add(Dragging = new LightObstructionLine(mousePos, mousePos));
+                if (ms.LeftButton == ButtonState.Pressed) {
+                    if (Dragging == null) {
+                        BackgroundEnvironment.Obstructions.Add(Dragging = new LightObstructionLine(mousePos, mousePos));
+                    } else {
+                        Dragging.B = mousePos;
+                    }
                 } else {
-                    Dragging.B = mousePos;
-                }
-            } else {
-                if (Dragging != null) {
-                    Dragging.B = mousePos;
-                    Dragging = null;
+                    if (Dragging != null) {
+                        Dragging.B = mousePos;
+                        Dragging = null;
+                    }
                 }
             }
 
