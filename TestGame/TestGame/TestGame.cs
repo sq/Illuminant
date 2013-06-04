@@ -221,12 +221,14 @@ namespace TestGame {
 
             Spark.Texture = Content.Load<Texture2D>("spark");
 
-            ParticleRenderer.Systems.Add(Sparks = new ParticleSystem<Spark>(
-                new DotNetTimeProvider(),
-                new SparkUpdater(BackgroundEnvironment).Update,
-                Spark.Render,
-                Spark.GetPosition
-            ));
+            ParticleRenderer.Systems = new[] {
+                Sparks = new ParticleSystem<Spark>(
+                    new DotNetTimeProvider(),
+                    new SparkUpdater(BackgroundEnvironment).Update,
+                    Spark.Render,
+                    Spark.GetPosition
+                )
+            };
         }
 
         protected override void Update (GameTime gameTime) {

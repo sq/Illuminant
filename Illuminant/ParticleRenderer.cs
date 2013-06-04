@@ -10,13 +10,12 @@ using Squared.Render;
 namespace Squared.Illuminant {
     public class ParticleRenderer {
         public readonly DefaultMaterialSet Materials;
-
-        public readonly List<IParticleSystem> Systems = new List<IParticleSystem>();
-
+        public IEnumerable<IParticleSystem> Systems;
         public Bounds Viewport;
 
         public ParticleRenderer (DefaultMaterialSet materials) {
             Materials = materials;
+            Systems = new IParticleSystem[0];
         }
 
         public void Draw (IBatchContainer container, int layer = 0) {
