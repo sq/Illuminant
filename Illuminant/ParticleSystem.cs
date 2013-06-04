@@ -14,9 +14,22 @@ namespace Squared.Illuminant {
         void Draw (ParticleRenderer renderer, IBatchContainer container, int layer);
     }
 
-    public class ParticleSystem<T> : IParticleSystem
-        where T : struct 
+    public interface IParticle<T>
+        where T : struct, IParticle<T> 
     {
+        void InitializeSystem (
+            object userData,
+            out ParticleSystem<T>.UpdateDelegate updater, 
+            out ParticleSystem<T>.RenderDelegate renderer, 
+            out ParticleSystem<T>.GetPositionDelegate getPosition
+        ); 
+    }
+
+    public class ParticleSystem<T> : IParticleSystem
+        where T : struct, IParticle<T>
+    {
+        public delegate void UpdateDelegate (ParticleUpdateArgs args);
+        public delegate void RenderDelegate (ParticleRenderArgs args);
         public delegate Vector2 GetPositionDelegate (ref T particle);
 
         public struct Time {
@@ -107,8 +120,8 @@ namespace Squared.Illuminant {
             }
         }
 
-        public readonly Action<ParticleUpdateArgs> Updater;
-        public readonly Action<ParticleRenderArgs> Renderer;
+        public readonly UpdateDelegate Updater;
+        public readonly RenderDelegate Renderer;
         public readonly GetPositionDelegate GetPosition;
 
         public readonly ITimeProvider TimeProvider;
@@ -121,17 +134,11 @@ namespace Squared.Illuminant {
         public Time LastUpdateTime;
         public Random RNG = new Random();
 
-        public ParticleSystem (
-            ITimeProvider timeProvider,
-            Action<ParticleUpdateArgs> updater,
-            Action<ParticleRenderArgs> renderer,
-            GetPositionDelegate getPosition
-        ) {
+        public ParticleSystem (ITimeProvider timeProvider, object userData = null) {
             TimeProvider = timeProvider;
 
-            Updater = updater;
-            Renderer = renderer;
-            GetPosition = getPosition;
+            var temporaryInstance = Activator.CreateInstance<T>();
+            temporaryInstance.InitializeSystem(userData, out Updater, out Renderer, out GetPosition);
 
             Particles = new SpatialPartition<ParticleCollection>(128.0f, (index) => new ParticleCollection(index, Particles.GetSectorBounds(index)));
 

@@ -224,9 +224,7 @@ namespace TestGame {
             ParticleRenderer.Systems = new[] {
                 Sparks = new ParticleSystem<Spark>(
                     new DotNetTimeProvider(),
-                    new SparkUpdater(BackgroundEnvironment).Update,
-                    Spark.Render,
-                    Spark.GetPosition
+                    BackgroundEnvironment
                 )
             };
         }
@@ -267,6 +265,12 @@ namespace TestGame {
                         Dragging = null;
                     }
                 }
+
+                const int sparkSpawnCount = 8;
+                var sparkSpawnPosition = mousePos;
+
+                for (var i = 0; i < sparkSpawnCount; i++)
+                    Sparks.Add(new Spark(Sparks, sparkSpawnPosition));
             }
 
             if (false)
@@ -274,12 +278,6 @@ namespace TestGame {
                 "BeginDraw = {0:000.000}ms Draw = {1:000.000}ms EndDraw = {2:000.000}ms",
                 PreviousFrameTiming.BeginDraw.TotalMilliseconds, PreviousFrameTiming.Draw.TotalMilliseconds, PreviousFrameTiming.EndDraw.TotalMilliseconds
             );
-
-            const int sparkSpawnCount = 8;
-            var sparkSpawnPosition = new Vector2(680, 320);
-
-            for (var i = 0; i < sparkSpawnCount; i++)
-                Sparks.Add(new Spark(Sparks, sparkSpawnPosition));
 
             Sparks.Update();
 
@@ -428,13 +426,20 @@ namespace TestGame {
                     bb.Add(dc);
                 }
             } else {
-                using (var bb = BitmapBatch.New(frame, 55, LightmapMaterials.WorldSpaceLightmappedBitmap)) {
-                    var dc = new BitmapDrawCall(Background, Vector2.Zero);
+                var dc = new BitmapDrawCall(Background, Vector2.Zero);
+
+                var material = LightmapMaterials.Get(LightmapMaterials.WorldSpaceLightmappedBitmap, blendState: BlendState.AlphaBlend);
+
+                using (var bb = BitmapBatch.New(frame, 55, material)) {
                     dc.Textures = new TextureSet(Background, BackgroundLightmap);
                     dc.SortKey = 0;
 
                     bb.Add(dc);
+                }
 
+                ParticleRenderer.Draw(frame, 56);
+
+                using (var bb = BitmapBatch.New(frame, 57, material)) {
                     dc.Textures = new TextureSet(Foreground, ForegroundLightmap);
                     dc.SortKey = 1;
 
@@ -444,12 +449,10 @@ namespace TestGame {
 
             if (ShowOutlines || (Dragging != null))
                 BackgroundRenderer.RenderOutlines(frame, 59, true);
-
-            ParticleRenderer.Draw(frame, 60);
         }
     }
 
-    public struct Spark {
+    public struct Spark : IParticle<Spark> {
         public static readonly int DurationInFrames = (int)(60 * 3.25);
         public const float HalfPI = (float)(Math.PI / 2);
         public const float Gravity = 0.075f;
@@ -502,6 +505,18 @@ namespace TestGame {
 
         public static Vector2 GetPosition (ref Spark spark) {
             return spark.Position;
+        }
+
+        public void InitializeSystem (
+            object userData,
+            out ParticleSystem<Spark>.UpdateDelegate updater, 
+            out ParticleSystem<Spark>.RenderDelegate renderer, 
+            out ParticleSystem<Spark>.GetPositionDelegate getPosition
+        ) {
+            var environment = (LightingEnvironment)userData;
+            updater = new SparkUpdater(environment).Update;
+            renderer = Spark.Render;
+            getPosition = Spark.GetPosition;
         }
     }
 
