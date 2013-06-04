@@ -11,7 +11,9 @@ using Squared.Util;
 
 namespace Squared.Illuminant {
     public interface IParticleSystem {
+        void Update ();
         void Draw (ParticleRenderer renderer, IBatchContainer container, int layer);
+        void Clear ();
     }
 
     public interface IParticle<T>
@@ -197,6 +199,10 @@ namespace Squared.Illuminant {
             var sector = Particles.GetSectorFromIndex(sectorIndex, true);
 
             sector.Add(ref particle);
+        }
+
+        public void Clear () {
+            Particles.Clear();
         }
     }
 }
