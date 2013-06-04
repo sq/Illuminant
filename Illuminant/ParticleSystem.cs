@@ -84,10 +84,8 @@ namespace Squared.Illuminant {
             /// This ensures that particle partitioning keeps working.
             /// </summary>
             public void ParticleMoved (ref T particle, ref Vector2 oldPosition, ref Vector2 newPosition) {
-                var newIndex = System.Particles.GetIndexFromPoint(newPosition);
-
-                // Move the particle to a new sector
-                if (!newIndex.Equals(SectorIndex)) {
+                if (!SectorBounds.Contains(ref newPosition)) {
+                    var newIndex = System.Particles.GetIndexFromPoint(newPosition);
                     Enumerator.RemoveCurrent();
                     var newSector = System.Particles.GetSectorFromIndex(newIndex, true);
                     newSector.Add(ref particle);
@@ -165,8 +163,6 @@ namespace Squared.Illuminant {
         protected void DrawSector (ParticleCollection sector) {
             if (sector.Count == 0)
                 return;
-
-            RenderArgs.ImperativeRenderer.OutlineRectangle(Particles.GetSectorBounds(sector.Index), Color.White);
 
             RenderArgs.SetSector(sector);
             Renderer(RenderArgs);

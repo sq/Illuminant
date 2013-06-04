@@ -32,7 +32,7 @@ namespace TestGame {
         RenderTarget2D BackgroundLightmap, ForegroundLightmap;
         RenderTarget2D Background, Foreground;
         RenderTarget2D AOShadowScratch;
-
+        
         Random SparkRNG = new Random();
 
         ParticleRenderer ParticleRenderer;
@@ -69,6 +69,7 @@ namespace TestGame {
             Graphics.PreferredBackBufferWidth = 1257;
             Graphics.PreferredBackBufferHeight = 1250;
             Graphics.SynchronizeWithVerticalRetrace = true;
+            // Graphics.SynchronizeWithVerticalRetrace = false;
             Graphics.PreferMultiSampling = false;
 
             Content.RootDirectory = "Content";
@@ -222,7 +223,7 @@ namespace TestGame {
 
             ParticleRenderer.Systems.Add(Sparks = new ParticleSystem<Spark>(
                 new DotNetTimeProvider(),
-                Spark.Update,
+                new SparkUpdater(BackgroundEnvironment).Update,
                 Spark.Render,
                 Spark.GetPosition
             ));
@@ -474,24 +475,6 @@ namespace TestGame {
             return velocity * Math.Min(length, MaxFallRate);
         }
 
-        public static void Update (ParticleSystem<Spark>.ParticleUpdateArgs args) {
-            Spark particle;
-
-            while (args.Enumerator.GetNext(out particle)) {
-                if (particle.FramesLeft <= 0) {
-                    args.Enumerator.RemoveCurrent();
-                    continue;
-                }
-
-                particle.FramesLeft -= 1;
-                particle.PreviousPosition = particle.Position;
-                particle.Position += particle.Velocity;
-                particle.Velocity = ApplyGravity(particle.Velocity);
-
-                args.ParticleMoved(ref particle, ref particle.PreviousPosition, ref particle.Position);
-            }
-        }
-
         public static void Render (ParticleSystem<Spark>.ParticleRenderArgs args) {
             Spark particle;
 
@@ -506,7 +489,7 @@ namespace TestGame {
                 var lerpFactor = MathHelper.Clamp((1 - lifeLeft) * 1.4f, 0, 1);
 
                 args.ImperativeRenderer.Draw(
-                    Texture, particle.Position, 
+                    Texture, particle.PreviousPosition, 
                     rotation: angle,
                     scale: new Vector2(0.25f, MathHelper.Clamp(length / 5f, 0.05f, 1.75f)),
                     multiplyColor: Color.Lerp(HotColor, ColdColor, lerpFactor) * lifeLeft,
@@ -517,6 +500,66 @@ namespace TestGame {
 
         public static Vector2 GetPosition (ref Spark spark) {
             return spark.Position;
+        }
+    }
+
+    public class SparkUpdater {
+        public readonly LightingEnvironment LightingEnvironment;
+        private readonly ListLineWriter LineWriter;
+
+        public SparkUpdater (LightingEnvironment lightingEnvironment) {
+            LightingEnvironment = lightingEnvironment;
+            LineWriter = new ListLineWriter();
+        }
+
+        public void Update (ParticleSystem<Spark>.ParticleUpdateArgs args) {
+            Spark particle;
+
+            LineWriter.Reset();
+            LightingEnvironment.EnumerateObstructionLinesInBounds(args.SectorBounds, LineWriter);
+
+            var lines = LineWriter.Lines.GetBuffer();
+            var lineCount = LineWriter.Lines.Count;
+
+            while (args.Enumerator.GetNext(out particle)) {
+                if (particle.FramesLeft <= 0) {
+                    args.Enumerator.RemoveCurrent();
+                    continue;
+                }
+
+                particle.FramesLeft -= 1;
+                particle.PreviousPosition = particle.Position;
+                particle.Position += particle.Velocity;
+
+                float distance;
+                bool intersected = false;
+
+                for (var i = 0; i < lineCount; i++) {
+                    var line = lines[i];
+
+                    if (Geometry.DoLinesIntersect(particle.PreviousPosition, particle.Position, line.A, line.B, out distance)) {
+                        var normal = line.B - line.A;
+                        normal.Normalize();
+                        normal = normal.Perpendicular();
+
+                        // HACK: Fudge factor :(
+                        var actualDistanceTravelled = (distance * 0.9f);
+                        var intersection = particle.PreviousPosition + (particle.Velocity * actualDistanceTravelled);
+                        particle.Position = intersection;
+
+                        var oldVelocity = particle.Velocity;
+                        Vector2.Reflect(ref oldVelocity, ref normal, out particle.Velocity);
+
+                        intersected = true;
+                        break;
+                    }
+                }
+
+                if (!intersected)
+                    particle.Velocity = Spark.ApplyGravity(particle.Velocity);
+
+                args.ParticleMoved(ref particle, ref particle.PreviousPosition, ref particle.Position);
+            }
         }
     }
 }
