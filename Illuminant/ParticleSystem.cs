@@ -33,12 +33,26 @@ namespace Squared.Illuminant {
         }
 
         public abstract class ParticleArgsBase {
-            public ParticleCollection Particles;
+            public readonly ParticleSystem<T> System;
+
+            public Pair<int> SectorIndex;
+            public Bounds SectorBounds;
+            public ParticleCollection.Enumerator Enumerator;
             public Time PreviousTime, Now;
+
+            public ParticleArgsBase (ParticleSystem<T> system) {
+                System = system;
+            }
 
             internal void SetTime (ITimeProvider timeProvider) {
                 PreviousTime = Now;
                 Now = new Time(timeProvider);
+            }
+
+            internal void SetSector (ParticleCollection sector) {
+                SectorIndex = sector.Index;
+                SectorBounds = sector.Bounds;
+                Enumerator = sector.GetEnumerator();
             }
         }
 
@@ -50,6 +64,10 @@ namespace Squared.Illuminant {
 
             public ImperativeRenderer ImperativeRenderer;
 
+            public ParticleRenderArgs (ParticleSystem<T> system)
+                : base(system) {
+            }
+
             internal void SetContainer (DefaultMaterialSet materials, IBatchContainer container, int layer) {
                 Container = container;
                 ImperativeRenderer = new ImperativeRenderer(container, materials, layer);
@@ -57,20 +75,50 @@ namespace Squared.Illuminant {
         }
 
         public class ParticleUpdateArgs : ParticleArgsBase {
+            public ParticleUpdateArgs (ParticleSystem<T> system)
+                : base(system) {
+            }
+
+            /// <summary>
+            /// If you have moved the particle, call this instead of Enumerator.SetCurrent to update it.
+            /// This ensures that particle partitioning keeps working.
+            /// </summary>
+            public void ParticleMoved (ref T particle, ref Vector2 oldPosition, ref Vector2 newPosition) {
+                var newIndex = System.Particles.GetIndexFromPoint(newPosition);
+
+                // Move the particle to a new sector
+                if (!newIndex.Equals(SectorIndex)) {
+                    Enumerator.RemoveCurrent();
+                    var newSector = System.Particles.GetSectorFromIndex(newIndex, true);
+                    newSector.Add(ref particle);
+                } else {
+                    Enumerator.SetCurrent(ref particle);
+                }
+            }
         }
 
-        public class ParticleCollection : UnorderedList<T> {
+        public class ParticleCollection : UnorderedList<T>, ISpatialPartitionSector {
+            public readonly Pair<int> Index;
+            public readonly Bounds Bounds;
+
+            public ParticleCollection (Pair<int> index, Bounds bounds)
+                : base() {
+
+                Index = index;
+                Bounds = bounds;
+            }
         }
 
         public readonly Action<ParticleUpdateArgs> Updater;
         public readonly Action<ParticleRenderArgs> Renderer;
+        public readonly GetPositionDelegate GetPosition;
 
         public readonly ITimeProvider TimeProvider;
 
-        public readonly ParticleCollection Particles = new ParticleCollection();
+        public readonly SpatialPartition<ParticleCollection> Particles;
 
-        private readonly ParticleUpdateArgs UpdateArgs = new ParticleUpdateArgs();
-        private readonly ParticleRenderArgs RenderArgs = new ParticleRenderArgs();
+        private readonly ParticleUpdateArgs UpdateArgs;
+        private readonly ParticleRenderArgs RenderArgs;
 
         public Time LastUpdateTime;
         public Random RNG = new Random();
@@ -78,29 +126,74 @@ namespace Squared.Illuminant {
         public ParticleSystem (
             ITimeProvider timeProvider,
             Action<ParticleUpdateArgs> updater,
-            Action<ParticleRenderArgs> renderer
+            Action<ParticleRenderArgs> renderer,
+            GetPositionDelegate getPosition
         ) {
             TimeProvider = timeProvider;
 
             Updater = updater;
             Renderer = renderer;
+            GetPosition = getPosition;
+
+            Particles = new SpatialPartition<ParticleCollection>(128.0f, (index) => new ParticleCollection(index, Particles.GetSectorBounds(index)));
+
+            UpdateArgs = new ParticleUpdateArgs(this);
+            RenderArgs = new ParticleRenderArgs(this);
+        }
+
+        protected void UpdateSector (ParticleCollection sector) {
+            if (sector.Count == 0)
+                return;
+
+            UpdateArgs.SetSector(sector);
+            Updater(UpdateArgs);
+            UpdateArgs.Enumerator.Dispose();
         }
 
         public void Update () {
-            UpdateArgs.Particles = Particles;
             UpdateArgs.SetTime(TimeProvider);
 
-            Updater(UpdateArgs);
+            ParticleCollection sector;
+
+            using (var e = Particles.GetSectorsFromBounds(Particles.Extent, false))
+            while (e.GetNext(out sector))
+                UpdateSector(sector);
 
             LastUpdateTime = UpdateArgs.Now;
         }
 
+        protected void DrawSector (ParticleCollection sector) {
+            if (sector.Count == 0)
+                return;
+
+            RenderArgs.ImperativeRenderer.OutlineRectangle(Particles.GetSectorBounds(sector.Index), Color.White);
+
+            RenderArgs.SetSector(sector);
+            Renderer(RenderArgs);
+            RenderArgs.Enumerator.Dispose();
+        }
+
         public void Draw (ParticleRenderer renderer, IBatchContainer container, int layer) {
-            RenderArgs.Particles = Particles;
             RenderArgs.SetTime(TimeProvider);
             RenderArgs.SetContainer(renderer.Materials, container, layer);
 
-            Renderer(RenderArgs);
+            ParticleCollection sector;
+
+            using (var e = Particles.GetSectorsFromBounds(renderer.Viewport, false))
+            while (e.GetNext(out sector))
+                DrawSector(sector);
+        }
+
+        public void Add (T particle) {
+            Add(ref particle);
+        }
+
+        public void Add (ref T particle) {
+            var position = GetPosition(ref particle);
+            var sectorIndex = Particles.GetIndexFromPoint(position);
+            var sector = Particles.GetSectorFromIndex(sectorIndex, true);
+
+            sector.Add(ref particle);
         }
     }
 }

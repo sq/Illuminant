@@ -13,7 +13,6 @@ namespace Squared.Illuminant {
 
         public readonly List<IParticleSystem> Systems = new List<IParticleSystem>();
 
-        public Vector2 ScreenPosition;
         public Bounds Viewport;
 
         public ParticleRenderer (DefaultMaterialSet materials) {

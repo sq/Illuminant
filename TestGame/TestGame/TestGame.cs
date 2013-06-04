@@ -214,14 +214,17 @@ namespace TestGame {
 
             AOShadowMaterial = ScreenMaterials.ScreenSpaceVerticalGaussianBlur5Tap.SetStates(blendState: RenderStates.SubtractiveBlend);
 
-            ParticleRenderer = new ParticleRenderer(LightmapMaterials);
+            ParticleRenderer = new ParticleRenderer(LightmapMaterials) {
+                Viewport = new Bounds(Vector2.Zero, new Vector2(Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight))
+            };
 
             Spark.Texture = Content.Load<Texture2D>("spark");
 
             ParticleRenderer.Systems.Add(Sparks = new ParticleSystem<Spark>(
                 new DotNetTimeProvider(),
                 Spark.Update,
-                Spark.Render
+                Spark.Render,
+                Spark.GetPosition
             ));
         }
 
@@ -269,12 +272,11 @@ namespace TestGame {
                 PreviousFrameTiming.BeginDraw.TotalMilliseconds, PreviousFrameTiming.Draw.TotalMilliseconds, PreviousFrameTiming.EndDraw.TotalMilliseconds
             );
 
-            foreach (var torch in Torches) {
-                const int sparkSpawnCount = 4;
+            const int sparkSpawnCount = 8;
+            var sparkSpawnPosition = new Vector2(680, 320);
 
-                for (var i = 0; i < sparkSpawnCount; i++)
-                    Sparks.Particles.Add(new Spark(Sparks, torch.Position));
-            }
+            for (var i = 0; i < sparkSpawnCount; i++)
+                Sparks.Add(new Spark(Sparks, sparkSpawnPosition));
 
             Sparks.Update();
 
@@ -445,9 +447,9 @@ namespace TestGame {
     }
 
     public struct Spark {
-        public static readonly int DurationInFrames = (int)(60 * 2.5);
+        public static readonly int DurationInFrames = (int)(60 * 3.25);
         public const float HalfPI = (float)(Math.PI / 2);
-        public const float Gravity = 0.08f;
+        public const float Gravity = 0.075f;
         public const float MaxFallRate = 4f;
 
         public static readonly Color HotColor = new Color(255, 225, 142);
@@ -462,7 +464,7 @@ namespace TestGame {
         public Spark (ParticleSystem<Spark> system, Vector2 position) {
             Position = PreviousPosition = position;
             FramesLeft = system.RNG.Next(DurationInFrames - 4, DurationInFrames + 4);
-            Velocity = new Vector2(system.RNG.NextFloat(-2f, 2f), system.RNG.NextFloat(1f, -2f));
+            Velocity = new Vector2(system.RNG.NextFloat(-2f, 2f), system.RNG.NextFloat(-3.5f, 1.5f));
         }
 
         public static Vector2 ApplyGravity (Vector2 velocity) {
@@ -475,10 +477,9 @@ namespace TestGame {
         public static void Update (ParticleSystem<Spark>.ParticleUpdateArgs args) {
             Spark particle;
 
-            using (var e = args.Particles.GetEnumerator())
-            while (e.GetNext(out particle)) {
+            while (args.Enumerator.GetNext(out particle)) {
                 if (particle.FramesLeft <= 0) {
-                    e.RemoveCurrent();
+                    args.Enumerator.RemoveCurrent();
                     continue;
                 }
 
@@ -487,7 +488,7 @@ namespace TestGame {
                 particle.Position += particle.Velocity;
                 particle.Velocity = ApplyGravity(particle.Velocity);
 
-                e.SetCurrent(ref particle);
+                args.ParticleMoved(ref particle, ref particle.PreviousPosition, ref particle.Position);
             }
         }
 
@@ -496,8 +497,7 @@ namespace TestGame {
 
             float fDurationInFrames = DurationInFrames;
 
-            using (var e = args.Particles.GetEnumerator())
-            while (e.GetNext(out particle)) {
+            while (args.Enumerator.GetNext(out particle)) {
                 var delta = particle.Position - particle.PreviousPosition;
                 var length = delta.Length();
                 var angle = (float)(Math.Atan2(delta.Y, delta.X) - HalfPI);
