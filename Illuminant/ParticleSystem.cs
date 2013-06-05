@@ -14,6 +14,7 @@ namespace Squared.Illuminant {
         void Update ();
         void Draw (ParticleRenderer renderer, IBatchContainer container, int layer);
         void Clear ();
+        int Count { get; }
     }
 
     public interface IParticle<T>
