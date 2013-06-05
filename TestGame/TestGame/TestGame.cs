@@ -230,6 +230,9 @@ namespace TestGame {
         }
 
         protected override void Update (GameTime gameTime) {
+            Sparks.CapacityLimit = 2048;
+            Sparks.RemoveParticlesWhenCapacityReached = true;
+
             if (IsActive) {
                 var ks = Keyboard.GetState();
 
@@ -266,7 +269,7 @@ namespace TestGame {
                     }
                 }
 
-                const int sparkSpawnCount = 8;
+                const int sparkSpawnCount = 32;
                 var sparkSpawnPosition = mousePos;
 
                 for (var i = 0; i < sparkSpawnCount; i++)
@@ -280,6 +283,8 @@ namespace TestGame {
             );
 
             Sparks.Update();
+
+            Console.WriteLine("Particles: {0:000000} ({1:0000} removed by limit)", Sparks.Count, Sparks.ParticlesRemovedByLimit);
 
             base.Update(gameTime);
         }
@@ -453,7 +458,7 @@ namespace TestGame {
     }
 
     public struct Spark : IParticle<Spark> {
-        public static readonly int DurationInFrames = (int)(60 * 3.25);
+        public static readonly int DurationInFrames = (int)(60 * 2.75);
         public const float HalfPI = (float)(Math.PI / 2);
         public const float Gravity = 0.075f;
         public const float MaxFallRate = 4f;
@@ -497,7 +502,7 @@ namespace TestGame {
                     Texture, particle.PreviousPosition, 
                     rotation: angle,
                     scale: new Vector2(0.25f, MathHelper.Clamp(length / 5f, 0.05f, 1.75f)),
-                    multiplyColor: Color.Lerp(HotColor, ColdColor, lerpFactor) * lifeLeft,
+                    multiplyColor: Color.Lerp(HotColor, ColdColor, lerpFactor) * ((lifeLeft * 0.85f) + 0.15f),
                     blendState: BlendState.Additive
                 );
             }

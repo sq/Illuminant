@@ -102,7 +102,16 @@ namespace Squared.Illuminant {
                 if (!SectorBounds.Contains(ref newPosition)) {
                     var newIndex = System.Particles.GetIndexFromPoint(newPosition);
                     Enumerator.RemoveCurrent();
+
                     var newSector = System.Particles.GetSectorFromIndex(newIndex, true);
+                    if (newSector.Count > System.SectorCapacityLimit) {
+                        System._ParticlesRemovedByLimit += 1;
+
+                        if (System.RemoveParticlesWhenCapacityReached)
+                            newSector.RemoveAt(System.RNG.Next(0, newSector.Count));
+                        else
+                            return;
+                    }
                     newSector.Add(ref particle);
                 } else {
                     Enumerator.SetCurrent(ref particle);
@@ -122,6 +131,10 @@ namespace Squared.Illuminant {
             }
         }
 
+        public bool RemoveParticlesWhenCapacityReached;
+        public int? CapacityLimit;
+        public int? SectorCapacityLimit;
+
         public readonly UpdateDelegate Updater;
         public readonly RenderDelegate Renderer;
         public readonly GetPositionDelegate GetPosition;
@@ -132,6 +145,10 @@ namespace Squared.Illuminant {
 
         private readonly ParticleUpdateArgs UpdateArgs;
         private readonly ParticleRenderArgs RenderArgs;
+
+        private readonly UnorderedList<ParticleCollection> _SectorsFromLastUpdate = new UnorderedList<ParticleCollection>();
+        private int _PreviousCount, _Count;
+        private int _ParticlesRemovedByLimit;
 
         public Time LastUpdateTime;
         public Random RNG = new Random();
@@ -152,19 +169,35 @@ namespace Squared.Illuminant {
             if (sector.Count == 0)
                 return;
 
+            _SectorsFromLastUpdate.Add(sector);
+
             UpdateArgs.SetSector(sector);
             Updater(UpdateArgs);
             UpdateArgs.Enumerator.Dispose();
         }
 
         public void Update () {
+            if (CapacityLimit.HasValue && CapacityLimit.Value < 1)
+                throw new ArgumentOutOfRangeException("CapacityLimit");
+            if (SectorCapacityLimit.HasValue && SectorCapacityLimit.Value < 1)
+                throw new ArgumentOutOfRangeException("SectorCapacityLimit");
+
+            _SectorsFromLastUpdate.Clear();
+
             UpdateArgs.SetTime(TimeProvider);
 
             ParticleCollection sector;
 
+            var newCount = 0;
+
             using (var e = Particles.GetSectorsFromBounds(Particles.Extent, false))
-            while (e.GetNext(out sector))
+            while (e.GetNext(out sector)) {
                 UpdateSector(sector);
+                newCount += sector.Count;
+            }
+
+            _PreviousCount = _Count;
+            _Count = newCount;
 
             LastUpdateTime = UpdateArgs.Now;
         }
@@ -187,22 +220,82 @@ namespace Squared.Illuminant {
             using (var e = Particles.GetSectorsFromBounds(renderer.Viewport, false))
             while (e.GetNext(out sector))
                 DrawSector(sector);
+
+            _ParticlesRemovedByLimit = 0;
         }
 
-        public void Add (T particle) {
-            Add(ref particle);
+        public bool Add (T particle) {
+            return Add(ref particle);
         }
 
-        public void Add (ref T particle) {
+        public bool Add (ref T particle) {
+            if (CapacityLimit.HasValue && _Count >= CapacityLimit.Value) {
+                _ParticlesRemovedByLimit += 1;
+
+                if (!RemoveParticlesWhenCapacityReached || !RemoveRandomParticle(null))
+                    return false;
+            }
+
             var position = GetPosition(ref particle);
             var sectorIndex = Particles.GetIndexFromPoint(position);
             var sector = Particles.GetSectorFromIndex(sectorIndex, true);
 
+            if (SectorCapacityLimit.HasValue && sector.Count >= SectorCapacityLimit.Value) {
+                _ParticlesRemovedByLimit += 1;
+
+                if (!RemoveParticlesWhenCapacityReached || !RemoveRandomParticle(sector))
+                    return false;
+            }
+
             sector.Add(ref particle);
+            _Count += 1;
+            return true;
+        }
+
+        public bool RemoveRandomParticle (ParticleCollection sector) {
+            // If no sector is provided to remove from, semirandomly pick a sector from the last update.
+            if (sector == null) {
+                if (_SectorsFromLastUpdate.Count == 0)
+                    return false;
+
+                var index = RNG.Next(0, _SectorsFromLastUpdate.Count);
+                sector = _SectorsFromLastUpdate.GetBuffer()[index];
+            }
+
+            if (sector.Count == 0)
+                return false;
+
+            var particleIndex = RNG.Next(0, sector.Count);
+            sector.RemoveAt(particleIndex);
+
+            return true;
         }
 
         public void Clear () {
             Particles.Clear();
+            _SectorsFromLastUpdate.Clear();
+            _Count = 0;
+        }
+
+        public int ParticlesRemovedByLimit {
+            get {
+                return _ParticlesRemovedByLimit;
+            }
+        }
+
+        public int PreviousCount {
+            get {
+                return _PreviousCount;
+            }
+        }
+
+        /// <summary>
+        /// As of most recent call to Update.
+        /// </summary>
+        public int Count {
+            get {
+                return _Count;
+            }
         }
     }
 }
