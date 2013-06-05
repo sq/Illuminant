@@ -24,7 +24,8 @@ namespace Squared.Illuminant {
             object userData,
             out ParticleSystem<T>.UpdateDelegate updater, 
             out ParticleSystem<T>.RenderDelegate renderer, 
-            out ParticleSystem<T>.GetPositionDelegate getPosition
+            out ParticleSystem<T>.GetPositionDelegate getPosition,
+            ParticleSystem<T> system
         ); 
     }
 
@@ -157,13 +158,13 @@ namespace Squared.Illuminant {
         public ParticleSystem (ITimeProvider timeProvider, object userData = null) {
             TimeProvider = timeProvider;
 
-            var temporaryInstance = Activator.CreateInstance<T>();
-            temporaryInstance.InitializeSystem(userData, out Updater, out Renderer, out GetPosition);
-
             Particles = new SpatialPartition<ParticleCollection>(128.0f, (index) => new ParticleCollection(index, Particles.GetSectorBounds(index)));
 
             UpdateArgs = new ParticleUpdateArgs(this);
             RenderArgs = new ParticleRenderArgs(this);
+
+            var temporaryInstance = Activator.CreateInstance<T>();
+            temporaryInstance.InitializeSystem(userData, out Updater, out Renderer, out GetPosition, this);
         }
 
         protected void UpdateSector (ParticleCollection sector) {

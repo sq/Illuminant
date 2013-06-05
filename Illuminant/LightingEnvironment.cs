@@ -24,7 +24,7 @@ namespace Squared.Illuminant {
         }
     }
 
-    public class ListLineWriter : ILineWriter {
+    public class CroppedListLineWriter : ILineWriter {
         public struct Line {
             public readonly Vector2 A, B;
 
@@ -34,9 +34,22 @@ namespace Squared.Illuminant {
             }
         }
 
+        public Bounds? CropBounds;
         public readonly UnorderedList<Line> Lines = new UnorderedList<Line>();
 
         public void Write (Vector2 a, Vector2 b) {
+            if (CropBounds.HasValue) {
+                // constructor doesn't get inlined here :(
+                Bounds lineBounds;
+                lineBounds.TopLeft.X = Math.Min(a.X, b.X);
+                lineBounds.TopLeft.Y = Math.Min(a.Y, b.Y);
+                lineBounds.BottomRight.X = Math.Max(a.X, b.X);
+                lineBounds.BottomRight.Y = Math.Max(a.Y, b.Y);
+
+                if (!CropBounds.Value.Intersects(lineBounds))
+                    return;
+            }
+
             Lines.Add(new Line(a, b));
         }
 
