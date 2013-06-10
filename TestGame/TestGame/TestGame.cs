@@ -516,7 +516,8 @@ namespace TestGame {
             object userData,
             out ParticleSystem<Spark>.UpdateDelegate updater, 
             out ParticleSystem<Spark>.RenderDelegate renderer, 
-            out ParticleSystem<Spark>.GetPositionDelegate getPosition
+            out ParticleSystem<Spark>.GetPositionDelegate getPosition,
+            ParticleSystem<Spark> system
         ) {
             var environment = (LightingEnvironment)userData;
             updater = new SparkUpdater(environment).Update;
@@ -527,11 +528,11 @@ namespace TestGame {
 
     public class SparkUpdater {
         public readonly LightingEnvironment LightingEnvironment;
-        private readonly ListLineWriter LineWriter;
+        private readonly CroppedListLineWriter LineWriter;
 
         public SparkUpdater (LightingEnvironment lightingEnvironment) {
             LightingEnvironment = lightingEnvironment;
-            LineWriter = new ListLineWriter();
+            LineWriter = new CroppedListLineWriter();
         }
 
         public void Update (ParticleSystem<Spark>.ParticleUpdateArgs args) {

@@ -10,6 +10,8 @@ namespace Squared.Illuminant {
         public LightSourceMode Mode = LightSourceMode.Additive;
         public Vector2 Position;
         // The color of the light's illumination.
+        // Note that this color is a Vector4 so that you can use HDR (greater than one) lighting values.
+        // Alpha is *not* premultiplied (maybe it should be?)
         public Vector4 Color = Vector4.One;
         // The color the light ramps down to. You can use this to approximate ambient light when using LightSourceMode.Max/Min/Replace.
         public Vector4 NeutralColor = Vector4.Zero;

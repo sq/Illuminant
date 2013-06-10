@@ -92,6 +92,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="LightReceiver.cs" />
     <Compile Include="LightingRenderer.cs" />
     <Compile Include="LightingEnvironment.cs" />
     <Compile Include="LightObstruction.cs" />

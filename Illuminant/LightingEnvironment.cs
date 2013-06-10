@@ -13,6 +13,7 @@ namespace Squared.Illuminant {
         public static float DefaultSubdivision = 128f;
 
         public readonly List<LightSource> LightSources = new List<LightSource>();
+        public readonly List<LightReceiver> LightReceivers = new List<LightReceiver>();
         public readonly SpatialCollection<LightObstructionBase> Obstructions = new SpatialCollection<LightObstructionBase>(DefaultSubdivision);
 
         public void EnumerateObstructionLinesInBounds (Bounds bounds, ILineWriter output) {
@@ -21,6 +22,14 @@ namespace Squared.Illuminant {
             using (var e = Obstructions.GetItemsFromBounds(bounds, false))
             while (e.GetNext(out ii))
                 ii.Item.GenerateLines(output);
+        }
+
+        /// <summary>
+        /// Updates all the lighting environment's receivers based on the current positions of light sources and obstructions.
+        /// </summary>
+        public void UpdateReceivers () {
+            foreach (var receiver in LightReceivers)
+                receiver.Update(this);
         }
     }
 
