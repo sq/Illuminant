@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using Squared.Game;
 using Squared.Illuminant;
 using Squared.Render;
 
@@ -11,15 +13,43 @@ namespace TestGame.Scenes {
     public class LightingTest : Scene {
         DefaultMaterialSet LightmapMaterials;
 
+        LightReceiver[] Receivers;
+
         LightingEnvironment Environment;
         LightingRenderer Renderer;
 
+        RenderTarget2D Lightmap;
+
         public readonly List<LightSource> Lights = new List<LightSource>();
+
+        bool ShowOutlines = true;
 
         LightObstructionLine Dragging = null;
 
         public LightingTest (TestGame game, int width, int height)
             : base(game, width, height) {
+        }
+
+        private void CreateRenderTargets () {
+            int scaledWidth = (int)Width;
+            int scaledHeight = (int)Height;
+
+            const int multisampleCount = 0;
+
+            if (scaledWidth < 4)
+                scaledWidth = 4;
+            if (scaledHeight < 4)
+                scaledHeight = 4;
+
+            if ((Lightmap == null) || (scaledWidth != Lightmap.Width) || (scaledHeight != Lightmap.Height)) {
+                if (Lightmap != null)
+                    Lightmap.Dispose();
+
+                Lightmap = new RenderTarget2D(
+                    Game.GraphicsDevice, scaledWidth, scaledHeight, false,
+                    SurfaceFormat.Rgba64, DepthFormat.Depth24Stencil8, multisampleCount, RenderTargetUsage.DiscardContents
+                );
+            }
         }
 
         public override void LoadContent () {
@@ -34,13 +64,13 @@ namespace TestGame.Scenes {
 
             Environment.LightSources.Add(new LightSource {
                 Position = new Vector2(64, 64),
-                Color = new Vector4(0.6f, 0.6f, 0.6f, 1),
+                Color = new Vector4(1f, 1f, 1f, 1),
                 RampStart = 40,
                 RampEnd = 256
             });
 
             var rng = new Random();
-            for (var i = 0; i < 6; i++) {
+            for (var i = 0; i < 33; i++) {
                 const float opacity = 0.7f;
                 Environment.LightSources.Add(new LightSource {
                     Position = new Vector2(64, 64),
@@ -59,6 +89,13 @@ namespace TestGame.Scenes {
                     new Vector2(16, 16)
                 )
             );
+
+            Receivers = new[] {
+                Environment.AddLightReceiver(new Vector2(64, 64)),
+                Environment.AddLightReceiver(new Vector2(192, 192)),
+                Environment.AddLightReceiver(new Vector2(64, 192)),
+                Environment.AddLightReceiver(new Vector2(192, 64))
+            };
 
             const int spiralCount = 2048;
             float spiralRadius = 0, spiralRadiusStep = 360f / spiralCount;
@@ -91,14 +128,40 @@ namespace TestGame.Scenes {
                 0, 1
             );
 
-            ClearBatch.AddNew(frame, 0, LightmapMaterials.Clear, clearColor: new Color(0, 0, 0, 255), clearZ: 0, clearStencil: 0);
+            CreateRenderTargets();
 
-            Renderer.RenderLighting(frame, frame, 1);
-            Renderer.RenderOutlines(frame, 2, true);
+            using (var bg = BatchGroup.ForRenderTarget(frame, -1, Lightmap)) {
+                ClearBatch.AddNew(bg, 0, LightmapMaterials.Clear, clearColor: Color.Black, clearZ: 0, clearStencil: 0);
+
+                Renderer.RenderLighting(frame, bg, 1, intensityScale: 1 / 10f);
+            };
+
+            ClearBatch.AddNew(frame, 0, Game.ScreenMaterials.Clear, clearColor: Color.Black);
+
+            using (var bb = BitmapBatch.New(frame, 1, Game.ScreenMaterials.Get(Game.ScreenMaterials.ScreenSpaceBitmap, blendState: BlendState.Opaque)))
+                bb.Add(new BitmapDrawCall(Lightmap, Vector2.Zero));
+
+            if (ShowOutlines)
+                Renderer.RenderOutlines(frame, 2, true);
+
+            using (var gb = GeometryBatch.New(frame, 3, Game.ScreenMaterials.Get(Game.ScreenMaterials.ScreenSpaceGeometry, blendState: BlendState.Opaque)))
+            for (var i = 0; i < Receivers.Length; i++) {
+                var r = Receivers[i];
+                var size = new Vector2(8, 8);
+                var bounds = new Bounds(r.Position - size, r.Position + size);
+                var color = new Color(r.ReceivedLight.X, r.ReceivedLight.Y, r.ReceivedLight.Z, 1.0f) * r.ReceivedLight.W;
+
+                // Console.WriteLine("Receiver {0} at {1}: {2}", i, r.Position, r.ReceivedLight);
+
+                gb.AddFilledQuad(bounds, color);
+            }
         }
 
         public override void Update (GameTime gameTime) {
             if (Game.IsActive) {
+                if (Game.KeyboardState.IsKeyDown(Keys.O) && !Game.PreviousKeyboardState.IsKeyDown(Keys.O))
+                    ShowOutlines = !ShowOutlines;
+
                 var ms = Mouse.GetState();
                 Game.IsMouseVisible = true;
 
@@ -129,6 +192,8 @@ namespace TestGame.Scenes {
                     }
                 }
             }
+
+            Environment.UpdateReceivers();
         }
     }
 }

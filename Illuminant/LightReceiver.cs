@@ -7,7 +7,8 @@ using Squared.Game;
 
 namespace Squared.Illuminant {
     public class LightReceiver {
-        public readonly HashSet<LightSource> IgnoredLights = new HashSet<LightSource>();
+        // It's OK to replace this with a shared set used by multiple receivers.
+        public HashSet<LightSource> IgnoredLights = new HashSet<LightSource>();
 
         public Vector2 Position;
 
@@ -23,30 +24,9 @@ namespace Squared.Illuminant {
         }
 
         internal void Update (LightingEnvironment environment) {
-            var result = Vector4.Zero;
-
-            // TODO: spatially group light sources so that the receiver update has less work to do? Probably not necessary for low receiver counts.
-            foreach (var light in environment.LightSources) {
-                var lightColor = light.Color;
-                var deltaFromLight = (Position - light.Position);
-                var distanceFromLight = deltaFromLight.Length();
-
-                var lightColorScaled = light.Color;
-                // Premultiply by alpha here so that things add up correctly. We'll have to reverse this at the end.
-                lightColorScaled *= MathHelper.Clamp((distanceFromLight - light.RampStart) / (light.RampEnd - light.RampStart), 0f, 1f);
-
-                // TODO: Skip light sources with an obstruction between the light source and the receiver.
-
-                result += lightColorScaled;
-            }
-
-            // Reverse the premultiplication, because we want to match LightSource.LightColor.
-            var unpremultiplyFactor = 1.0f / result.W;
-            result.X *= unpremultiplyFactor;
-            result.Y *= unpremultiplyFactor;
-            result.Z *= unpremultiplyFactor;
-
-            ReceivedLight = result;
+            ReceivedLight = environment.ComputeReceivedLightAtPosition(
+                Position, IgnoredLights
+            );
         }
     }
 }

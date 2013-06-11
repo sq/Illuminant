@@ -262,7 +262,7 @@ namespace Squared.Illuminant {
 
             switch (ls.Mode) {
                 case LightSourceMode.Additive:
-                    device.Device.BlendState = BlendState.Additive;
+                    device.Device.BlendState = RenderStates.AdditiveBlend;
                     break;
                 case LightSourceMode.Subtractive:
                     device.Device.BlendState = RenderStates.SubtractiveBlend;
@@ -362,7 +362,14 @@ namespace Squared.Illuminant {
             return result;
         }
 
-        public void RenderLighting (Frame frame, IBatchContainer container, int layer) {
+        /// <summary>
+        /// Renders all light sources into the target batch container on the specified layer.
+        /// </summary>
+        /// <param name="frame">Necessary for bookkeeping.</param>
+        /// <param name="container">The batch container to render lighting into.</param>
+        /// <param name="layer">The layer to render lighting into.</param>
+        /// <param name="intensityScale">A factor to scale the intensity of all light sources. You can use this to rescale the intensity of light values for HDR.</param>
+        public void RenderLighting (Frame frame, IBatchContainer container, int layer, float intensityScale = 1.0f) {
             // FIXME
             var pointLightVertexCount = Environment.LightSources.Count * 4;
             var pointLightIndexCount = Environment.LightSources.Count * 6;
@@ -460,7 +467,7 @@ namespace Squared.Illuminant {
 
                     vertex.LightCenter = lightSource.Position;
                     vertex.Color = lightSource.Color;
-                    vertex.Color *= lightSource.Opacity;
+                    vertex.Color.W *= (lightSource.Opacity * intensityScale);
                     vertex.Ramp = new Vector2(lightSource.RampStart, lightSource.RampEnd);
 
                     vertex.Position = clippedLightBounds.TopLeft;

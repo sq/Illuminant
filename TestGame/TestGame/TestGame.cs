@@ -48,6 +48,8 @@ namespace TestGame {
                 new Goat(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new LightingTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
             };
+
+            ActiveSceneIndex = 1;
         }
 
         protected override void LoadContent () {
