@@ -109,8 +109,10 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Particles.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Program.cs" />
+    <Compile Include="Scenes\Goat.cs" />
     <Compile Include="TestGame.cs" />
   </ItemGroup>
   <ItemGroup>
