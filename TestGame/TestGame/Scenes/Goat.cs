@@ -367,15 +367,13 @@ namespace TestGame.Scenes {
             Sparks.RemoveParticlesWhenCapacityReached = true;
 
             if (Game.IsActive) {
-                var ks = Game.KeyboardState;
-
-                if (ks.IsKeyDown(Keys.O) && !Game.PreviousKeyboardState.IsKeyDown(Keys.O))
+                if (KeyWasPressed(Keys.O))
                     ShowOutlines = !ShowOutlines;
-                if (ks.IsKeyDown(Keys.L) && !Game.PreviousKeyboardState.IsKeyDown(Keys.L))
+                if (KeyWasPressed(Keys.L))
                     ShowLightmap = !ShowLightmap;
-                if (ks.IsKeyDown(Keys.A) && !Game.PreviousKeyboardState.IsKeyDown(Keys.A))
+                if (KeyWasPressed(Keys.A))
                     ShowAOShadow = !ShowAOShadow;
-                if (ks.IsKeyDown(Keys.B) && !Game.PreviousKeyboardState.IsKeyDown(Keys.B))
+                if (KeyWasPressed(Keys.B))
                     ShowBrickSpecular = !ShowBrickSpecular;
 
                 var ms = Mouse.GetState();

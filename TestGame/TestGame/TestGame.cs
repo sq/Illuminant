@@ -106,5 +106,9 @@ namespace TestGame {
         public abstract void LoadContent ();
         public abstract void Draw (Frame frame);
         public abstract void Update (GameTime gameTime);
+
+        protected bool KeyWasPressed (Keys key) {
+            return Game.KeyboardState.IsKeyDown(key) && Game.PreviousKeyboardState.IsKeyUp(key);
+        }
     }
 }

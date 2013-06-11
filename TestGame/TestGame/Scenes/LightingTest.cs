@@ -26,6 +26,11 @@ namespace TestGame.Scenes {
 
         LightObstructionLine Dragging = null;
 
+        private float MaximumLuminance = 4.5f;
+        private float AverageLuminance = 0.1f;
+        private float MiddleGray = 0.6f;
+        private float MagnitudeScale = 5f;
+
         public LightingTest (TestGame game, int width, int height)
             : base(game, width, height) {
         }
@@ -118,6 +123,10 @@ namespace TestGame.Scenes {
             }
         }
 
+        private void SetGammaCompressionParameters (DeviceManager device, object userData) {
+            Renderer.IlluminantMaterials.SetGammaCompressionParameters(MagnitudeScale, MiddleGray, AverageLuminance, MaximumLuminance);
+        }
+
         public override void Draw (Squared.Render.Frame frame) {
             const float LightmapScale = 1f;
 
@@ -130,15 +139,18 @@ namespace TestGame.Scenes {
 
             CreateRenderTargets();
 
-            using (var bg = BatchGroup.ForRenderTarget(frame, -1, Lightmap)) {
+            using (var bg = BatchGroup.ForRenderTarget(frame, -1, Lightmap, after: SetGammaCompressionParameters)) {
                 ClearBatch.AddNew(bg, 0, LightmapMaterials.Clear, clearColor: Color.Black, clearZ: 0, clearStencil: 0);
 
-                Renderer.RenderLighting(frame, bg, 1, intensityScale: 1 / 10f);
+                Renderer.RenderLighting(frame, bg, 1, intensityScale: 1 / MagnitudeScale);
             };
 
             ClearBatch.AddNew(frame, 0, Game.ScreenMaterials.Clear, clearColor: Color.Black);
 
-            using (var bb = BitmapBatch.New(frame, 1, Game.ScreenMaterials.Get(Game.ScreenMaterials.ScreenSpaceBitmap, blendState: BlendState.Opaque)))
+            using (var bb = BitmapBatch.New(
+                frame, 1, 
+                Game.ScreenMaterials.Get(Renderer.IlluminantMaterials.ScreenSpaceGammaCompressedBitmap, blendState: BlendState.Opaque)
+            ))
                 bb.Add(new BitmapDrawCall(Lightmap, Vector2.Zero));
 
             if (ShowOutlines)
@@ -159,7 +171,24 @@ namespace TestGame.Scenes {
 
         public override void Update (GameTime gameTime) {
             if (Game.IsActive) {
-                if (Game.KeyboardState.IsKeyDown(Keys.O) && !Game.PreviousKeyboardState.IsKeyDown(Keys.O))
+                const float step = 0.1f;
+
+                if (KeyWasPressed(Keys.Q))
+                    MiddleGray -= step;
+                else if (KeyWasPressed(Keys.W))
+                    MiddleGray += step;
+
+                if (KeyWasPressed(Keys.A))
+                    AverageLuminance -= step;
+                else if (KeyWasPressed(Keys.S))
+                    AverageLuminance += step;
+
+                if (MiddleGray < 0)
+                    MiddleGray = 0;
+                if (AverageLuminance < 0)
+                    AverageLuminance = 0;
+
+                if (KeyWasPressed(Keys.O))
                     ShowOutlines = !ShowOutlines;
 
                 var ms = Mouse.GetState();

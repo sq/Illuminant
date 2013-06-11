@@ -109,8 +109,8 @@ namespace Squared.Illuminant {
         public float ClipRegionScale = 1f;
 
         public readonly DefaultMaterialSet Materials;
+        public readonly IlluminantMaterials IlluminantMaterials;
         public readonly Squared.Render.EffectMaterial ShadowMaterialInner, PointLightMaterialInner;
-        public readonly Material DebugOutlines, Shadow, PointLight, ClearStencil;
         public readonly DepthStencilState PointLightStencil, ShadowStencil;
 
         private readonly ArrayLineWriter ArrayLineWriterInstance = new ArrayLineWriter();
@@ -137,10 +137,12 @@ namespace Squared.Illuminant {
         public LightingRenderer (ContentManager content, DefaultMaterialSet materials, LightingEnvironment environment) {
             Materials = materials;
 
-            ClearStencil = materials.Clear;
+            IlluminantMaterials = new IlluminantMaterials(materials);
+
+            IlluminantMaterials.ClearStencil = materials.Clear;
 
             materials.Add(
-                DebugOutlines = materials.WorldSpaceGeometry.SetStates(
+                IlluminantMaterials.DebugOutlines = materials.WorldSpaceGeometry.SetStates(
                     blendState: BlendState.AlphaBlend
                 )
             );
@@ -155,7 +157,7 @@ namespace Squared.Illuminant {
                 ReferenceStencil = 0
             };
 
-            materials.Add(PointLight = new DelegateMaterial(
+            materials.Add(IlluminantMaterials.PointLight = new DelegateMaterial(
                 PointLightMaterialInner = new Squared.Render.EffectMaterial(
                     content.Load<Effect>("Illumination"), "PointLight"
                 ),
@@ -181,7 +183,7 @@ namespace Squared.Illuminant {
                 ReferenceStencil = 1
             };
 
-            materials.Add(Shadow = new DelegateMaterial(
+            materials.Add(IlluminantMaterials.Shadow = new DelegateMaterial(
                 ShadowMaterialInner = new Squared.Render.EffectMaterial(
                     content.Load<Effect>("Illumination"), "Shadow"
                 ),
@@ -197,6 +199,14 @@ namespace Squared.Illuminant {
                         rasterizerState: RasterizerState.CullNone, depthStencilState: DepthStencilState.None
                     )
                 }
+            ));
+
+            materials.Add(IlluminantMaterials.ScreenSpaceGammaCompressedBitmap = new Squared.Render.EffectMaterial(
+                content.Load<Effect>("HDRBitmap"), "ScreenSpaceGammaCompressedBitmap"
+            ));
+
+            materials.Add(IlluminantMaterials.WorldSpaceGammaCompressedBitmap = new Squared.Render.EffectMaterial(
+                content.Load<Effect>("HDRBitmap"), "WorldSpaceGammaCompressedBitmap"
             ));
             
             Environment = environment;
@@ -440,7 +450,7 @@ namespace Squared.Illuminant {
                     }
 
                     if (needStencilClear) {
-                        ClearBatch.AddNew(currentLightGroup, layerIndex++, ClearStencil, clearStencil: 0);
+                        ClearBatch.AddNew(currentLightGroup, layerIndex++, IlluminantMaterials.ClearStencil, clearStencil: 0);
                         needStencilClear = false;
                     }
 
@@ -453,7 +463,7 @@ namespace Squared.Illuminant {
                             continue;
 
                         if (stencilBatch == null) {
-                            stencilBatch = NativeBatch.New(currentLightGroup, layerIndex++, Shadow, ShadowBatchSetup, lightSource);
+                            stencilBatch = NativeBatch.New(currentLightGroup, layerIndex++, IlluminantMaterials.Shadow, ShadowBatchSetup, lightSource);
                             stencilBatch.Dispose();
                             needStencilClear = true;
                         }
@@ -517,7 +527,7 @@ namespace Squared.Illuminant {
             if (lightGroup == null)
                 return;
 
-            using (var pb = PrimitiveBatch<PointLightVertex>.New(lightGroup, layerIndex++, PointLight, IlluminationBatchSetup, batchFirstLightSource)) {
+            using (var pb = PrimitiveBatch<PointLightVertex>.New(lightGroup, layerIndex++, IlluminantMaterials.PointLight, IlluminationBatchSetup, batchFirstLightSource)) {
                 foreach (var record in PointLightBatchBuffer) {
                     var pointLightDrawCall = new PrimitiveDrawCall<PointLightVertex>(
                         PrimitiveType.TriangleList, PointLightVertices, record.VertexOffset, record.VertexCount, PointLightIndices, record.IndexOffset, record.IndexCount / 3
@@ -534,7 +544,7 @@ namespace Squared.Illuminant {
 
         public void RenderOutlines (IBatchContainer container, int layer, bool showLights, Color? lineColor = null, Color? lightColor = null) {
             using (var group = BatchGroup.New(container, layer)) {
-                using (var gb = GeometryBatch.New(group, 0, DebugOutlines)) {
+                using (var gb = GeometryBatch.New(group, 0, IlluminantMaterials.DebugOutlines)) {
                     VisualizerLineWriterInstance.Batch = gb;
                     VisualizerLineWriterInstance.Color = lineColor.GetValueOrDefault(Color.White);
 
@@ -551,12 +561,53 @@ namespace Squared.Illuminant {
                     var cMax = lightColor.GetValueOrDefault(Color.White);
                     var cMin = cMax * 0.25f;
 
-                    using (var gb = GeometryBatch.New(group, i + 1, DebugOutlines)) {
+                    using (var gb = GeometryBatch.New(group, i + 1, IlluminantMaterials.DebugOutlines)) {
                         gb.AddFilledRing(lightSource.Position, 0f, 2f, cMax, cMax);
                         gb.AddFilledRing(lightSource.Position, lightSource.RampStart - 1f, lightSource.RampStart + 1f, cMax, cMax);
                         gb.AddFilledRing(lightSource.Position, lightSource.RampEnd - 1f, lightSource.RampEnd + 1f, cMin, cMin);
                     }
                 }
+            }
+        }
+    }
+
+    public class IlluminantMaterials {
+        public readonly DefaultMaterialSet MaterialSet;
+
+        public Material DebugOutlines, Shadow, PointLight, ClearStencil;
+        public Squared.Render.EffectMaterial ScreenSpaceGammaCompressedBitmap, WorldSpaceGammaCompressedBitmap;
+
+        internal readonly Effect[] EffectsToSetGammaCompressionParametersOn;
+
+        internal IlluminantMaterials (DefaultMaterialSet materialSet) {
+            MaterialSet = materialSet;
+
+            EffectsToSetGammaCompressionParametersOn = new Effect[2];
+        }
+
+        /// <summary>
+        /// Updates the gamma compression parameters for the gamma compressed bitmap materials. You should call this in batch setup when using the materials.
+        /// </summary>
+        /// <param name="inverseScaleFactor">If you scaled down the intensity of your light sources for HDR rendering, use this to invert the scale. All other parameters are applied to the resulting scaled value.</param>
+        /// <param name="middleGray">I don't know what this does. Impossible to find a paper that actually describes this formula. :/ Try 0.6.</param>
+        /// <param name="averageLuminance">The average luminance of the entire scene. You can compute this by scaling the entire scene down or using light receivers.</param>
+        /// <param name="maximumLuminance">The maximum luminance. Luminance values above this threshold will remain above 1.0 after gamma compression.</param>
+        public void SetGammaCompressionParameters (float inverseScaleFactor, float middleGray, float averageLuminance, float maximumLuminance) {
+            const float min = 1 / 256f;
+            const float max = 99999f;
+
+            middleGray = MathHelper.Clamp(middleGray, 0.0f, max);
+            averageLuminance = MathHelper.Clamp(averageLuminance, min, max);
+            maximumLuminance = MathHelper.Clamp(maximumLuminance, min, max);
+
+            EffectsToSetGammaCompressionParametersOn[0] = ScreenSpaceGammaCompressedBitmap.Effect;
+            EffectsToSetGammaCompressionParametersOn[1] = WorldSpaceGammaCompressedBitmap.Effect;
+
+            foreach (var effect in EffectsToSetGammaCompressionParametersOn) {
+                effect.Parameters["InverseScaleFactor"].SetValue(inverseScaleFactor);
+                effect.Parameters["MiddleGray"].SetValue(middleGray);
+                effect.Parameters["AverageLuminance"].SetValue(averageLuminance);
+                effect.Parameters["MaximumLuminanceSquared"].SetValue(maximumLuminance * maximumLuminance);
             }
         }
     }
