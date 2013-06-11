@@ -292,9 +292,12 @@ namespace Squared.Illuminant {
             var ls = (LightSource)lightSource;
 
             ShadowMaterialInner.Effect.Parameters["LightCenter"].SetValue(ls.Position);
+            
+            // FIXME: Figure out why the derived computation for this in the shader doesn't work.
+            // ShadowMaterialInner.Effect.Parameters["ShadowLength"].SetValue(ls.RampEnd * 2);
 
-            // FIXME: Figure out how to accurately compute this value.
-            const float shadowLength = 999999f;
+            // HACK: 10k pixels should be more than enough
+            const float shadowLength = 9999f;
             ShadowMaterialInner.Effect.Parameters["ShadowLength"].SetValue(shadowLength);
 
             device.Device.ScissorRectangle = GetScissorRectForLightSource(device, ls);

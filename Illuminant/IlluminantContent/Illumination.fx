@@ -7,7 +7,7 @@ shared float4x4 ModelViewMatrix;
 uniform float4 LightNeutralColor;
 uniform float2 LightCenter;
 
-uniform float ShadowLength;
+uniform float2 ShadowLength;
 
 float4 ApplyTransform (float2 position2d) {
     float2 localPosition = ((position2d - ViewportPosition) * ViewportScale);
@@ -54,7 +54,14 @@ void ShadowVertexShader(
         direction = normalize(position - LightCenter);
     }
 
-    result = ApplyTransform(position + (direction * ShadowLength));
+    // FIXME: Why isn't this right?
+    /*
+    float shadowLengthScaled =
+        ShadowLength * max(1 / abs(direction.x), 1 / abs(direction.y));
+    */
+    float shadowLengthScaled = ShadowLength;
+
+    result = ApplyTransform(position + (direction * shadowLengthScaled));
 }
 
 void ShadowPixelShader(
