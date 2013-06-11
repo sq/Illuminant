@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -28,9 +29,12 @@ namespace TestGame.Scenes {
 
         private readonly List<float> LuminanceSamples = new List<float>();
 
-        private float MaximumLuminance = 4.5f;
-        private float LuminanceScaler = 1.5f;
-        private float MaximumMeasuredLuminance;
+        private readonly List<float> RollingAverageSamples = new List<float>();
+
+        public const int RollingLength = 100;
+
+        private float MaximumLuminance = 5.0f;
+        private float LuminanceScaler = 8.25f;
         private float AverageLuminance = 0.1f;
         private float MiddleGray = 0.6f;
         private float MagnitudeScale = 5f;
@@ -79,13 +83,13 @@ namespace TestGame.Scenes {
             });
 
             var rng = new Random();
-            for (var i = 0; i < 33; i++) {
-                const float opacity = 0.7f;
+            for (var i = 0; i < 25; i++) {
+
                 Environment.LightSources.Add(new LightSource {
                     Position = new Vector2(64, 64),
-                    Color = new Vector4((float)rng.NextDouble(), (float)rng.NextDouble(), (float)rng.NextDouble(), opacity),
-                    RampStart = 10,
-                    RampEnd = 120
+                    Color = new Vector4((float)rng.NextDouble(), (float)rng.NextDouble(), (float)rng.NextDouble(), 1.0f),
+                    RampStart = rng.NextFloat(8, 20),
+                    RampEnd = rng.NextFloat(100, 140)
                 });
             }
 
@@ -106,8 +110,8 @@ namespace TestGame.Scenes {
                 Environment.AddLightReceiver(new Vector2(192, 64))
             };
 
-            const int spiralCount = 2048;
-            float spiralRadius = 0, spiralRadiusStep = 360f / spiralCount;
+            const int spiralCount = 1800;
+            float spiralRadius = 0, spiralRadiusStep = 330f / spiralCount;
             float spiralAngle = 0, spiralAngleStep = (float)(Math.PI / (spiralCount / 36f));
             Vector2 previous = default(Vector2);
 
@@ -128,26 +132,39 @@ namespace TestGame.Scenes {
         }
 
         private void ComputeAverageLuminance () {
+            const int stepSize = 20;
+            const float stepSizeF = stepSize;
+            int numSteps = Height / stepSize;
+            const float offsetStep = stepSizeF * 4;
+
             LuminanceSamples.Clear();
-            MaximumMeasuredLuminance = 0;
 
-            const float step = 32f;
+            Parallel.For(
+                0, numSteps,
+                () => new List<float>(),
+                (yStep, state, samples) => {
+                    float y = yStep * stepSizeF;
+                    float xOffset = (y % offsetStep) / 8f;
+                    float localWidth = Width + xOffset;
 
-            Vector2 position;
+                    for (Vector2 position = new Vector2(xOffset, y); position.X < localWidth; position.X += stepSizeF) {
+                        var sample = Environment.ComputeReceivedLightAtPosition(position);
+                        var sampleLuminance = (sample.X * 0.299f) + (sample.Y * 0.587f) + (sample.Z * 0.114f);
 
-            for (position.Y = 0; position.Y < Height; position.Y += step) {
-                for (position.X = 0; position.X < Width; position.X += step) {
-                    var sample = Environment.ComputeReceivedLightAtPosition(position);
-                    var sampleLuminance = (sample.X * 0.299f) + (sample.Y * 0.587f) + (sample.Z * 0.114f);
+                        samples.Add(sampleLuminance);
+                    }
 
-                    LuminanceSamples.Add(sampleLuminance);
-                    MaximumMeasuredLuminance = Math.Max(MaximumMeasuredLuminance, sampleLuminance);
+                    return samples;
+                },
+                (samples) => {
+                    lock (LuminanceSamples)
+                        LuminanceSamples.AddRange(samples);
                 }
-            }
+            );
 
             LuminanceSamples.Sort();
 
-            int outliersToSkip = (LuminanceSamples.Count * 5) / 100;
+            int outliersToSkip = (LuminanceSamples.Count * 4) / 100;
 
             float accumulator = 0;
             int count = 0;
@@ -158,10 +175,11 @@ namespace TestGame.Scenes {
             }
 
             AverageLuminance = (accumulator / count) * LuminanceScaler;
-        }
 
-        private void SetGammaCompressionParameters (DeviceManager device, object userData) {
-            Renderer.IlluminantMaterials.SetGammaCompressionParameters(MagnitudeScale, MiddleGray, AverageLuminance, MaximumLuminance);
+            RollingAverageSamples.Add(AverageLuminance);
+
+            if (RollingAverageSamples.Count > RollingLength)
+                RollingAverageSamples.RemoveAt(0);
         }
 
         public override void Draw (Squared.Render.Frame frame) {
@@ -176,7 +194,15 @@ namespace TestGame.Scenes {
 
             CreateRenderTargets();
 
-            using (var bg = BatchGroup.ForRenderTarget(frame, -1, Lightmap, after: SetGammaCompressionParameters)) {
+            var args = new float[] {
+                MagnitudeScale, MiddleGray, AppliedAverageLuminance, MaximumLuminance
+            };
+
+            using (var bg = BatchGroup.ForRenderTarget(
+                frame, -1, Lightmap,
+                (dm, _) =>
+                    Renderer.IlluminantMaterials.SetGammaCompressionParameters(args[0], args[1], args[2], args[3])
+            )) {
                 ClearBatch.AddNew(bg, 0, LightmapMaterials.Clear, clearColor: Color.Black, clearZ: 0, clearStencil: 0);
 
                 Renderer.RenderLighting(frame, bg, 1, intensityScale: 1 / MagnitudeScale);
@@ -233,8 +259,8 @@ namespace TestGame.Scenes {
 
                 var mousePos = new Vector2(ms.X, ms.Y);
 
-                var angle = gameTime.TotalGameTime.TotalSeconds * 2f;
-                const float radius = 200f;
+                var angle = gameTime.TotalGameTime.TotalSeconds * 0.125f;
+                const float radius = 225f;
 
                 Environment.LightSources[0].Position = mousePos;
 
@@ -264,8 +290,19 @@ namespace TestGame.Scenes {
             ComputeAverageLuminance();
         }
 
+        public float AppliedAverageLuminance {
+            get {
+                return RollingAverageSamples.Average();
+            }
+        }
+
         public override string Status {
-            get { return String.Format("Luminance Avg=({0:00.000} / {2:0.00}) Max={1:00.000}", AverageLuminance, MaximumMeasuredLuminance, LuminanceScaler); }
+            get { 
+                return String.Format(
+                    "Current Avg={0:00.00} | Applied Avg={1:00.00} | Scaler = {2:000.0}",
+                    AverageLuminance, AppliedAverageLuminance, LuminanceScaler
+                ); 
+            }
         }
     }
 }
