@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using Microsoft.Xna.Framework;
 using Squared.Game;
 using Squared.Util;
@@ -20,8 +21,21 @@ namespace Squared.Illuminant {
             SpatialCollection<LightObstructionBase>.ItemInfo ii;
 
             using (var e = Obstructions.GetItemsFromBounds(bounds, false))
-            while (e.GetNext(out ii))
+            while (e.GetNext(out ii)) {
                 ii.Item.GenerateLines(output);
+            }
+        }
+
+        public void EnumerateObstructionLinesInBounds (Bounds bounds, ILineWriter output, ref bool cancel) {
+            SpatialCollection<LightObstructionBase>.ItemInfo ii;
+
+            using (var e = Obstructions.GetItemsFromBounds(bounds, false))
+            while (e.GetNext(out ii)) {
+                ii.Item.GenerateLines(output);
+
+                if (cancel)
+                    return;
+            }
         }
 
         /// <param name="position">The position.</param>
@@ -59,15 +73,28 @@ namespace Squared.Illuminant {
         /// <returns>The total amount of light received at the location (note that the result is not premultiplied, much like LightSource.Color)</returns>
         public Vector4 ComputeReceivedLightAtPosition (Vector2 position, HashSet<LightSource> ignoredLights = null) {
             var result = Vector4.Zero;
+            var receivedLightIntersectionTester = new ReceivedLightIntersectionTester();
 
             // TODO: spatially group light sources so that the receiver update has less work to do? Probably not necessary for low receiver counts.
+
             foreach (var light in LightSources) {
                 if ((ignoredLights != null) && ignoredLights.Contains(light))
                     continue;
 
-                var lightColor = light.Color;
                 var deltaFromLight = (position - light.Position);
                 var distanceFromLight = deltaFromLight.Length();
+                if (distanceFromLight > light.RampEnd)
+                    continue;
+
+                var bounds = new Bounds(
+                    light.Position, position
+                );
+                receivedLightIntersectionTester.Reset(position, light.Position);
+                EnumerateObstructionLinesInBounds(bounds, receivedLightIntersectionTester, ref receivedLightIntersectionTester.FoundIntersection);
+
+                if (receivedLightIntersectionTester.FoundIntersection)
+                    continue;
+
                 var distanceScale = 1f - MathHelper.Clamp((distanceFromLight - light.RampStart) / (light.RampEnd - light.RampStart), 0f, 1f);
 
                 var lightColorScaled = light.Color;
@@ -80,10 +107,12 @@ namespace Squared.Illuminant {
             }
 
             // Reverse the premultiplication, because we want to match LightSource.Color.
-            var unpremultiplyFactor = 1.0f / result.W;
-            result.X *= unpremultiplyFactor;
-            result.Y *= unpremultiplyFactor;
-            result.Z *= unpremultiplyFactor;
+            if (result.W > 0) {
+                var unpremultiplyFactor = 1.0f / result.W;
+                result.X *= unpremultiplyFactor;
+                result.Y *= unpremultiplyFactor;
+                result.Z *= unpremultiplyFactor;
+            }
 
             return result;
         }
@@ -120,6 +149,21 @@ namespace Squared.Illuminant {
 
         public void Reset () {
             Lines.Clear();
+        }
+    }
+
+    internal class ReceivedLightIntersectionTester : ILineWriter {
+        public Vector2 ReceiverPosition, LightPosition;
+        public bool FoundIntersection;
+
+        public void Reset (Vector2 receiverPosition, Vector2 lightPosition) {
+            ReceiverPosition = receiverPosition;
+            LightPosition = lightPosition;
+            FoundIntersection = false;
+        }
+
+        public void Write (Vector2 a, Vector2 b) {
+            FoundIntersection = Geometry.DoLinesIntersect(a, b, LightPosition, ReceiverPosition);
         }
     }
 }

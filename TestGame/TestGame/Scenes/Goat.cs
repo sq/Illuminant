@@ -406,8 +406,12 @@ namespace TestGame.Scenes {
             }
 
             Sparks.Update();
+        }
 
-            // Console.WriteLine("Particles: {0:000000} ({1:0000} removed by limit)", Sparks.Count, Sparks.ParticlesRemovedByLimit);
+        public override string Status {
+            get {
+                return String.Format("Particles: {0:000000} ({1:0000} removed by limit)", Sparks.Count, Sparks.ParticlesRemovedByLimit);
+            }
         }
     }
 }

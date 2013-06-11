@@ -26,7 +26,11 @@ namespace TestGame.Scenes {
 
         LightObstructionLine Dragging = null;
 
+        private readonly List<float> LuminanceSamples = new List<float>();
+
         private float MaximumLuminance = 4.5f;
+        private float LuminanceScaler = 1.5f;
+        private float MaximumMeasuredLuminance;
         private float AverageLuminance = 0.1f;
         private float MiddleGray = 0.6f;
         private float MagnitudeScale = 5f;
@@ -123,6 +127,39 @@ namespace TestGame.Scenes {
             }
         }
 
+        private void ComputeAverageLuminance () {
+            LuminanceSamples.Clear();
+            MaximumMeasuredLuminance = 0;
+
+            const float step = 32f;
+
+            Vector2 position;
+
+            for (position.Y = 0; position.Y < Height; position.Y += step) {
+                for (position.X = 0; position.X < Width; position.X += step) {
+                    var sample = Environment.ComputeReceivedLightAtPosition(position);
+                    var sampleLuminance = (sample.X * 0.299f) + (sample.Y * 0.587f) + (sample.Z * 0.114f);
+
+                    LuminanceSamples.Add(sampleLuminance);
+                    MaximumMeasuredLuminance = Math.Max(MaximumMeasuredLuminance, sampleLuminance);
+                }
+            }
+
+            LuminanceSamples.Sort();
+
+            int outliersToSkip = (LuminanceSamples.Count * 5) / 100;
+
+            float accumulator = 0;
+            int count = 0;
+
+            for (int i = outliersToSkip, e = Math.Max(LuminanceSamples.Count - outliersToSkip - 1, 0); i < e; i++) {
+                accumulator += LuminanceSamples[i];
+                count += 1;
+            }
+
+            AverageLuminance = (accumulator / count) * LuminanceScaler;
+        }
+
         private void SetGammaCompressionParameters (DeviceManager device, object userData) {
             Renderer.IlluminantMaterials.SetGammaCompressionParameters(MagnitudeScale, MiddleGray, AverageLuminance, MaximumLuminance);
         }
@@ -179,14 +216,14 @@ namespace TestGame.Scenes {
                     MiddleGray += step;
 
                 if (KeyWasPressed(Keys.A))
-                    AverageLuminance -= step;
+                    LuminanceScaler -= step;
                 else if (KeyWasPressed(Keys.S))
-                    AverageLuminance += step;
+                    LuminanceScaler += step;
 
                 if (MiddleGray < 0)
                     MiddleGray = 0;
-                if (AverageLuminance < 0)
-                    AverageLuminance = 0;
+                if (LuminanceScaler < 0)
+                    LuminanceScaler = 0;
 
                 if (KeyWasPressed(Keys.O))
                     ShowOutlines = !ShowOutlines;
@@ -223,6 +260,12 @@ namespace TestGame.Scenes {
             }
 
             Environment.UpdateReceivers();
+
+            ComputeAverageLuminance();
+        }
+
+        public override string Status {
+            get { return String.Format("Luminance Avg=({0:00.000} / {2:0.00}) Max={1:00.000}", AverageLuminance, MaximumMeasuredLuminance, LuminanceScaler); }
         }
     }
 }

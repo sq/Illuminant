@@ -77,11 +77,11 @@ namespace TestGame {
                     ActiveSceneIndex = Arithmetic.Wrap(ActiveSceneIndex - 1, 0, Scenes.Length - 1);
                 else if (KeyboardState.IsKeyDown(Keys.OemCloseBrackets) && !PreviousKeyboardState.IsKeyDown(Keys.OemCloseBrackets))
                     ActiveSceneIndex = Arithmetic.Wrap(ActiveSceneIndex + 1, 0, Scenes.Length - 1);
-
-                Window.Title = String.Format("Scene {0}: {1}", ActiveSceneIndex, Scenes[ActiveSceneIndex].GetType().Name);
             }
 
             Scenes[ActiveSceneIndex].Update(gameTime);
+
+            Window.Title = String.Format("Scene {0}: {1} {2}", ActiveSceneIndex, Scenes[ActiveSceneIndex].GetType().Name, Scenes[ActiveSceneIndex].Status);
 
             PreviousKeyboardState = KeyboardState;
 
@@ -110,5 +110,7 @@ namespace TestGame {
         protected bool KeyWasPressed (Keys key) {
             return Game.KeyboardState.IsKeyDown(key) && Game.PreviousKeyboardState.IsKeyUp(key);
         }
+
+        public abstract string Status { get; }
     }
 }
