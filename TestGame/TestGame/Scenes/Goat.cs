@@ -362,12 +362,12 @@ namespace TestGame.Scenes {
                 BackgroundRenderer.RenderOutlines(frame, 59, true);
         }
 
-        public override void Update () {
+        public override void Update (GameTime gameTime) {
             Sparks.CapacityLimit = 2048;
             Sparks.RemoveParticlesWhenCapacityReached = true;
 
             if (Game.IsActive) {
-                var ks = Keyboard.GetState();
+                var ks = Game.KeyboardState;
 
                 if (ks.IsKeyDown(Keys.O) && !Game.PreviousKeyboardState.IsKeyDown(Keys.O))
                     ShowOutlines = !ShowOutlines;
@@ -377,8 +377,6 @@ namespace TestGame.Scenes {
                     ShowAOShadow = !ShowAOShadow;
                 if (ks.IsKeyDown(Keys.B) && !Game.PreviousKeyboardState.IsKeyDown(Keys.B))
                     ShowBrickSpecular = !ShowBrickSpecular;
-
-                Game.PreviousKeyboardState = ks;
 
                 var ms = Mouse.GetState();
                 Game.IsMouseVisible = true;

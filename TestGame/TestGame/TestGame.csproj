@@ -113,6 +113,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Scenes\Goat.cs" />
+    <Compile Include="Scenes\LightingTest.cs" />
     <Compile Include="TestGame.cs" />
   </ItemGroup>
   <ItemGroup>

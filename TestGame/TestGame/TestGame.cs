@@ -22,7 +22,7 @@ namespace TestGame {
         public GraphicsDeviceManager Graphics;
         public DefaultMaterialSet ScreenMaterials;
 
-        public KeyboardState PreviousKeyboardState;
+        public KeyboardState PreviousKeyboardState, KeyboardState;
 
         public readonly Scene[] Scenes;
         public int ActiveSceneIndex = 0;
@@ -44,8 +44,9 @@ namespace TestGame {
 
             PreviousKeyboardState = Keyboard.GetState();
 
-            Scenes = new[] {
-                new Goat(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
+            Scenes = new Scene[] {
+                new Goat(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
+                new LightingTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
             };
         }
 
@@ -67,7 +68,20 @@ namespace TestGame {
         }
 
         protected override void Update (GameTime gameTime) {
-            Scenes[ActiveSceneIndex].Update();
+            KeyboardState = Keyboard.GetState();
+
+            if (IsActive) {
+                if (KeyboardState.IsKeyDown(Keys.OemOpenBrackets) && !PreviousKeyboardState.IsKeyDown(Keys.OemOpenBrackets))
+                    ActiveSceneIndex = Arithmetic.Wrap(ActiveSceneIndex - 1, 0, Scenes.Length - 1);
+                else if (KeyboardState.IsKeyDown(Keys.OemCloseBrackets) && !PreviousKeyboardState.IsKeyDown(Keys.OemCloseBrackets))
+                    ActiveSceneIndex = Arithmetic.Wrap(ActiveSceneIndex + 1, 0, Scenes.Length - 1);
+
+                Window.Title = String.Format("Scene {0}: {1}", ActiveSceneIndex, Scenes[ActiveSceneIndex].GetType().Name);
+            }
+
+            Scenes[ActiveSceneIndex].Update(gameTime);
+
+            PreviousKeyboardState = KeyboardState;
 
             base.Update(gameTime);
         }
@@ -89,6 +103,6 @@ namespace TestGame {
 
         public abstract void LoadContent ();
         public abstract void Draw (Frame frame);
-        public abstract void Update ();
+        public abstract void Update (GameTime gameTime);
     }
 }
