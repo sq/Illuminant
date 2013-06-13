@@ -90,7 +90,9 @@ namespace Squared.Illuminant {
 
         private class LightSourceComparer : IComparer<LightSource> {
             public int Compare (LightSource lhs, LightSource rhs) {
-                int result = lhs.Mode.GetHashCode().CompareTo(rhs.Mode.GetHashCode());
+                int result = lhs.Mode.CompareTo(rhs.Mode);
+                if (result == 0)
+                    result = lhs.RampMode.CompareTo(rhs.RampMode);
                 if (result == 0)
                     result = lhs.NeutralColor.GetHashCode().CompareTo(rhs.NeutralColor.GetHashCode());
                 if (result == 0)
@@ -110,7 +112,7 @@ namespace Squared.Illuminant {
 
         public readonly DefaultMaterialSet Materials;
         public readonly IlluminantMaterials IlluminantMaterials;
-        public readonly Squared.Render.EffectMaterial ShadowMaterialInner, PointLightMaterialInner;
+        public readonly Squared.Render.EffectMaterial ShadowMaterialInner, PointLightMaterialInner1, PointLightMaterialInner2;
         public readonly DepthStencilState PointLightStencil, ShadowStencil;
 
         private readonly ArrayLineWriter ArrayLineWriterInstance = new ArrayLineWriter();
@@ -157,9 +159,25 @@ namespace Squared.Illuminant {
                 ReferenceStencil = 0
             };
 
-            materials.Add(IlluminantMaterials.PointLight = new DelegateMaterial(
-                PointLightMaterialInner = new Squared.Render.EffectMaterial(
-                    content.Load<Effect>("Illumination"), "PointLight"
+            materials.Add(IlluminantMaterials.PointLightExponential = new DelegateMaterial(
+                PointLightMaterialInner1 = new Squared.Render.EffectMaterial(
+                    content.Load<Effect>("Illumination"), "PointLightExponentialRamp"
+                ),
+                new[] {
+                    MaterialUtil.MakeDelegate(
+                        rasterizerState: RenderStates.ScissorOnly, depthStencilState: PointLightStencil
+                    )
+                },
+                new[] {
+                    MaterialUtil.MakeDelegate(
+                        rasterizerState: RasterizerState.CullNone, depthStencilState: DepthStencilState.None
+                    )
+                }
+            ));
+
+            materials.Add(IlluminantMaterials.PointLightLinear = new DelegateMaterial(
+                PointLightMaterialInner2 = new Squared.Render.EffectMaterial(
+                    content.Load<Effect>("Illumination"), "PointLightLinearRamp"
                 ),
                 new[] {
                     MaterialUtil.MakeDelegate(
@@ -293,7 +311,8 @@ namespace Squared.Illuminant {
                     throw new ArgumentOutOfRangeException("Mode");
             }
 
-            PointLightMaterialInner.Effect.Parameters["LightNeutralColor"].SetValue(ls.NeutralColor);
+            PointLightMaterialInner1.Effect.Parameters["LightNeutralColor"].SetValue(ls.NeutralColor);
+            PointLightMaterialInner2.Effect.Parameters["LightNeutralColor"].SetValue(ls.NeutralColor);
 
             device.Device.ScissorRectangle = StoredScissorRect;
         }
@@ -425,7 +444,8 @@ namespace Squared.Illuminant {
                             (needStencilClear) ||
                             (batchFirstLightSource.ClipRegion.HasValue != lightSource.ClipRegion.HasValue) ||
                             (batchFirstLightSource.NeutralColor != lightSource.NeutralColor) ||
-                            (batchFirstLightSource.Mode != lightSource.Mode);
+                            (batchFirstLightSource.Mode != lightSource.Mode) ||
+                            (batchFirstLightSource.RampMode != lightSource.RampMode);
 
                         if (needFlush) {
                             FlushPointLightBatch(ref currentLightGroup, ref batchFirstLightSource, ref layerIndex);
@@ -527,7 +547,11 @@ namespace Squared.Illuminant {
             if (lightGroup == null)
                 return;
 
-            using (var pb = PrimitiveBatch<PointLightVertex>.New(lightGroup, layerIndex++, IlluminantMaterials.PointLight, IlluminationBatchSetup, batchFirstLightSource)) {
+            var material = batchFirstLightSource.RampMode == LightSourceRampMode.Linear
+                ? IlluminantMaterials.PointLightLinear
+                : IlluminantMaterials.PointLightExponential;
+
+            using (var pb = PrimitiveBatch<PointLightVertex>.New(lightGroup, layerIndex++, material, IlluminationBatchSetup, batchFirstLightSource)) {
                 foreach (var record in PointLightBatchBuffer) {
                     var pointLightDrawCall = new PrimitiveDrawCall<PointLightVertex>(
                         PrimitiveType.TriangleList, PointLightVertices, record.VertexOffset, record.VertexCount, PointLightIndices, record.IndexOffset, record.IndexCount / 3
@@ -574,7 +598,7 @@ namespace Squared.Illuminant {
     public class IlluminantMaterials {
         public readonly DefaultMaterialSet MaterialSet;
 
-        public Material DebugOutlines, Shadow, PointLight, ClearStencil;
+        public Material DebugOutlines, Shadow, PointLightLinear, PointLightExponential, ClearStencil;
         public Squared.Render.EffectMaterial ScreenSpaceGammaCompressedBitmap, WorldSpaceGammaCompressedBitmap;
 
         internal readonly Effect[] EffectsToSetGammaCompressionParametersOn;

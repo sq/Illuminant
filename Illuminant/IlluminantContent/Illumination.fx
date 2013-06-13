@@ -26,7 +26,7 @@ void PointLightVertexShader(
     result = ApplyTransform(position);
 }
 
-void PointLightPixelShader(
+void PointLightPixelShaderLinear(
     in float2 worldPosition: TEXCOORD2,
     in float2 lightCenter : TEXCOORD0,
     in float2 ramp : TEXCOORD1, // start, end
@@ -35,6 +35,22 @@ void PointLightPixelShader(
 ) {
     float distance = length(worldPosition - lightCenter) - ramp.x;
     float distanceOpacity = 1 - clamp(distance / (ramp.y - ramp.x), 0, 1);
+
+    float opacity = color.a;
+    float4 lightColorActual = float4(color.r * opacity, color.g * opacity, color.b * opacity, opacity);
+    result = lerp(LightNeutralColor, lightColorActual, distanceOpacity);
+}
+
+void PointLightPixelShaderExponential(
+    in float2 worldPosition: TEXCOORD2,
+    in float2 lightCenter : TEXCOORD0,
+    in float2 ramp : TEXCOORD1, // start, end
+    in float4 color : COLOR0,
+    out float4 result : COLOR0
+) {
+    float distance = length(worldPosition - lightCenter) - ramp.x;
+    float distanceOpacity = 1 - clamp(distance / (ramp.y - ramp.x), 0, 1);
+    distanceOpacity *= distanceOpacity;
 
     float opacity = color.a;
     float4 lightColorActual = float4(color.r * opacity, color.g * opacity, color.b * opacity, opacity);
@@ -78,10 +94,18 @@ technique Shadow {
     }
 }
 
-technique PointLight {
+technique PointLightLinearRamp {
     pass P0
     {
         vertexShader = compile vs_2_0 PointLightVertexShader();
-        pixelShader = compile ps_2_0 PointLightPixelShader();
+        pixelShader = compile ps_2_0 PointLightPixelShaderLinear();
+    }
+}
+
+technique PointLightExponentialRamp {
+    pass P0
+    {
+        vertexShader = compile vs_2_0 PointLightVertexShader();
+        pixelShader = compile ps_2_0 PointLightPixelShaderExponential();
     }
 }

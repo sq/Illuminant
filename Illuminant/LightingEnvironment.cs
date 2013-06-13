@@ -41,16 +41,11 @@ namespace Squared.Illuminant {
         /// <param name="position">The position.</param>
         /// <param name="ignoredLights">A set of lights to ignore, if any. If this value is a HashSet of LightSources it will be used directly, otherwise the sequence is copied.</param>
         /// <returns>The created receiver</returns>
-        public LightReceiver AddLightReceiver (Vector2 position, IEnumerable<LightSource> ignoredLights = null) {
+        public LightReceiver AddLightReceiver (Vector2 position, LightIgnorePredicate lightIgnorePredicate = null) {
             var result = new LightReceiver {
-                Position = position
+                Position = position,
+                LightIgnorePredicate = lightIgnorePredicate
             };
-
-            var hs = ignoredLights as HashSet<LightSource>;
-            if (hs != null)
-                result.IgnoredLights = hs;
-            else if (ignoredLights != null)
-                result.IgnoredLights = new HashSet<LightSource>(ignoredLights);
 
             LightReceivers.Add(result);
 
@@ -69,16 +64,16 @@ namespace Squared.Illuminant {
         /// Computes the amount of light received at a given position in the environment.
         /// </summary>
         /// <param name="position">The position.</param>
-        /// <param name="ignoredLights">A set of lights, if any, that should be ignored when computing received light. Useful if you want to measure incoming light at the position of a light source or ignore certain light sources.</param>
+        /// <param name="lightIgnorePredicate">A predicate that returns true if a light source should be ignored.</param>
         /// <returns>The total amount of light received at the location (note that the result is not premultiplied, much like LightSource.Color)</returns>
-        public Vector4 ComputeReceivedLightAtPosition (Vector2 position, HashSet<LightSource> ignoredLights = null) {
+        public Vector4 ComputeReceivedLightAtPosition (Vector2 position, LightIgnorePredicate lightIgnorePredicate = null) {
             var result = Vector4.Zero;
             var receivedLightIntersectionTester = new ReceivedLightIntersectionTester();
 
             // TODO: spatially group light sources so that the receiver update has less work to do? Probably not necessary for low receiver counts.
 
             foreach (var light in LightSources) {
-                if ((ignoredLights != null) && ignoredLights.Contains(light))
+                if ((lightIgnorePredicate != null) && lightIgnorePredicate(light))
                     continue;
 
                 var deltaFromLight = (position - light.Position);
@@ -96,6 +91,8 @@ namespace Squared.Illuminant {
                     continue;
 
                 var distanceScale = 1f - MathHelper.Clamp((distanceFromLight - light.RampStart) / (light.RampEnd - light.RampStart), 0f, 1f);
+                if (light.RampMode == LightSourceRampMode.Exponential)
+                    distanceScale *= distanceScale;
 
                 var lightColorScaled = light.Color;
                 // Premultiply by alpha here so that things add up correctly. We'll have to reverse this at the end.
@@ -115,6 +112,12 @@ namespace Squared.Illuminant {
             }
 
             return result;
+        }
+
+        public void Clear () {
+            Obstructions.Clear();
+            LightSources.Clear();
+            LightReceivers.Clear();
         }
     }
 

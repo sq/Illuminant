@@ -6,9 +6,15 @@ using Microsoft.Xna.Framework;
 using Squared.Game;
 
 namespace Squared.Illuminant {
+    /// <summary>
+    /// Called per light source to determine whether to collect light from that source.
+    /// </summary>
+    /// <param name="lightSource">The light source.</param>
+    /// <returns>True to ignore the light source, false to collect light.</returns>
+    public delegate bool LightIgnorePredicate (LightSource lightSource);
+
     public class LightReceiver {
-        // It's OK to replace this with a shared set used by multiple receivers.
-        public HashSet<LightSource> IgnoredLights = new HashSet<LightSource>();
+        public LightIgnorePredicate LightIgnorePredicate;
 
         public Vector2 Position;
 
@@ -25,7 +31,7 @@ namespace Squared.Illuminant {
 
         internal void Update (LightingEnvironment environment) {
             ReceivedLight = environment.ComputeReceivedLightAtPosition(
-                Position, IgnoredLights
+                Position, LightIgnorePredicate
             );
         }
     }

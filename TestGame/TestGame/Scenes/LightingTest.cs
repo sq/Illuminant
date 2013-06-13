@@ -78,8 +78,8 @@ namespace TestGame.Scenes {
             Environment.LightSources.Add(new LightSource {
                 Position = new Vector2(64, 64),
                 Color = new Vector4(1f, 1f, 1f, 1),
-                RampStart = 40,
-                RampEnd = 256
+                RampStart = 50,
+                RampEnd = 275,
             });
 
             var rng = new Random();
@@ -87,9 +87,10 @@ namespace TestGame.Scenes {
 
                 Environment.LightSources.Add(new LightSource {
                     Position = new Vector2(64, 64),
-                    Color = new Vector4((float)rng.NextDouble(), (float)rng.NextDouble(), (float)rng.NextDouble(), 1.0f),
-                    RampStart = rng.NextFloat(8, 20),
-                    RampEnd = rng.NextFloat(100, 140)
+                    Color = new Vector4((float)rng.NextDouble(0.1f, 1.0f), (float)rng.NextDouble(0.1f, 1.0f), (float)rng.NextDouble(0.1f, 1.0f), 1.0f),
+                    RampStart = rng.NextFloat(24, 40),
+                    RampEnd = rng.NextFloat(140, 160),
+                    RampMode = LightSourceRampMode.Exponential
                 });
             }
 
