@@ -430,13 +430,17 @@ namespace Squared.Illuminant {
 
             using (var sortedLights = BufferPool<LightSource>.Allocate(Environment.LightSources.Count))
             using (var resultGroup = BatchGroup.New(container, layer, before: StoreScissorRect, after: RestoreScissorRect)) {
+                int i = 0;
                 var lightCount = Environment.LightSources.Count;
-                Environment.LightSources.CopyTo(sortedLights.Data);
+
+                foreach (var lightSource in Environment.LightSources)
+                    sortedLights.Data[i++] = lightSource;
+
                 Array.Sort(sortedLights.Data, 0, lightCount, LightSourceComparerInstance);
 
                 int lightGroupIndex = 1;
 
-                for (var i = 0; i < lightCount; i++) {
+                for (i = 0; i < lightCount; i++) {
                     var lightSource = sortedLights.Data[i];
 
                     if (batchFirstLightSource != null) {
@@ -578,10 +582,10 @@ namespace Squared.Illuminant {
                     VisualizerLineWriterInstance.Batch = null;
                 }
 
-                if (showLights)
-                for (var i = 0; i < Environment.LightSources.Count; i++) {
-                    var lightSource = Environment.LightSources[i];
+                int i = 0;
 
+                if (showLights)
+                foreach (var lightSource in Environment.LightSources) {
                     var cMax = lightColor.GetValueOrDefault(Color.White);
                     var cMin = cMax * 0.25f;
 
@@ -590,6 +594,8 @@ namespace Squared.Illuminant {
                         gb.AddFilledRing(lightSource.Position, lightSource.RampStart - 1f, lightSource.RampStart + 1f, cMax, cMax);
                         gb.AddFilledRing(lightSource.Position, lightSource.RampEnd - 1f, lightSource.RampEnd + 1f, cMin, cMin);
                     }
+
+                    i += 1;
                 }
             }
         }

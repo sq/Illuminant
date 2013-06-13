@@ -46,7 +46,8 @@ namespace TestGame {
 
             Scenes = new Scene[] {
                 new Goat(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new LightingTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
+                new LightingTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
+                new ReceiverTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
             };
 
             ActiveSceneIndex = 1;

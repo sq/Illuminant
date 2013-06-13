@@ -13,7 +13,7 @@ namespace Squared.Illuminant {
         // For coarse geometry you might want to set this higher to reduce CPU load and memory usage.
         public static float DefaultSubdivision = 128f;
 
-        public readonly List<LightSource> LightSources = new List<LightSource>();
+        public readonly SpatialCollection<LightSource> LightSources = new SpatialCollection<LightSource>(DefaultSubdivision);
         public readonly List<LightReceiver> LightReceivers = new List<LightReceiver>();
         public readonly SpatialCollection<LightObstructionBase> Obstructions = new SpatialCollection<LightObstructionBase>(DefaultSubdivision);
 
@@ -69,10 +69,14 @@ namespace Squared.Illuminant {
         public Vector4 ComputeReceivedLightAtPosition (Vector2 position, LightIgnorePredicate lightIgnorePredicate = null) {
             var result = Vector4.Zero;
             var receivedLightIntersectionTester = new ReceivedLightIntersectionTester();
+            SpatialCollection<LightSource>.ItemInfo ii;
 
             // TODO: spatially group light sources so that the receiver update has less work to do? Probably not necessary for low receiver counts.
 
-            foreach (var light in LightSources) {
+            using (var e = LightSources.GetItemsFromBounds(new Bounds(position, position), false))
+            while (e.GetNext(out ii)) {
+                var light = ii.Item;
+
                 if ((lightIgnorePredicate != null) && lightIgnorePredicate(light))
                     continue;
 
@@ -97,8 +101,6 @@ namespace Squared.Illuminant {
                 var lightColorScaled = light.Color;
                 // Premultiply by alpha here so that things add up correctly. We'll have to reverse this at the end.
                 lightColorScaled *= distanceScale;
-
-                // TODO: Skip light sources with an obstruction between the light source and the receiver.
 
                 result += lightColorScaled;
             }
@@ -166,7 +168,7 @@ namespace Squared.Illuminant {
         }
 
         public void Write (Vector2 a, Vector2 b) {
-            FoundIntersection = Geometry.DoLinesIntersect(a, b, LightPosition, ReceiverPosition);
+            FoundIntersection |= Geometry.DoLinesIntersect(a, b, LightPosition, ReceiverPosition);
         }
     }
 }

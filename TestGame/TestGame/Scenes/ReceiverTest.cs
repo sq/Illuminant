@@ -12,8 +12,10 @@ using Squared.Illuminant;
 using Squared.Render;
 
 namespace TestGame.Scenes {
-    public class LightingTest : Scene {
+    public class ReceiverTest : Scene {
         DefaultMaterialSet LightmapMaterials;
+
+        LightReceiver[] Receivers;
 
         LightingEnvironment Environment;
         LightingRenderer Renderer;
@@ -26,20 +28,7 @@ namespace TestGame.Scenes {
 
         LightObstructionLine Dragging = null;
 
-        private readonly List<float> LuminanceSamples = new List<float>();
-
-        private readonly List<long> TickCountSamples = new List<long>();
-        private readonly List<float> RollingAverageSamples = new List<float>();
-
-        public const int RollingLength = 100;
-
-        private float MaximumLuminance = 5.0f;
-        private float LuminanceScaler = 8.25f;
-        private float AverageLuminance = 0.1f;
-        private float MiddleGray = 0.6f;
-        private float MagnitudeScale = 5f;
-
-        public LightingTest (TestGame game, int width, int height)
+        public ReceiverTest (TestGame game, int width, int height)
             : base(game, width, height) {
         }
 
@@ -86,7 +75,7 @@ namespace TestGame.Scenes {
             Environment.LightSources.Add(light);
 
             var rng = new Random(1234);
-            for (var i = 0; i < 25; i++) {
+            for (var i = 0; i < 4; i++) {
                 light = new LightSource {
                     Position = new Vector2(64, 64),
                     Color = new Vector4((float)rng.NextDouble(0.1f, 1.0f), (float)rng.NextDouble(0.1f, 1.0f), (float)rng.NextDouble(0.1f, 1.0f), 1.0f),
@@ -98,6 +87,23 @@ namespace TestGame.Scenes {
                 Lights.Add(light);
                 Environment.LightSources.Add(light);
             }
+
+            Environment.Obstructions.Add(
+                new LightObstructionLineStrip(
+                    new Vector2(16, 16),
+                    new Vector2(256, 16),
+                    new Vector2(256, 256),
+                    new Vector2(16, 256),
+                    new Vector2(16, 16)
+                )
+            );
+
+            Receivers = new[] {
+                Environment.AddLightReceiver(new Vector2(64, 64)),
+                Environment.AddLightReceiver(new Vector2(192, 192)),
+                Environment.AddLightReceiver(new Vector2(64, 192)),
+                Environment.AddLightReceiver(new Vector2(192, 64))
+            };
 
             const int spiralCount = 1800;
             float spiralRadius = 0, spiralRadiusStep = 330f / spiralCount;
@@ -120,65 +126,6 @@ namespace TestGame.Scenes {
             }
         }
 
-        private void ComputeAverageLuminance () {
-            const int stepSize = 20;
-            const float stepSizeF = stepSize;
-            int numSteps = Height / stepSize;
-            const float offsetStep = stepSizeF * 4;
-
-            LuminanceSamples.Clear();
-
-            var tp = new Squared.Util.Win32TimeProvider();
-            long startTicks = tp.Ticks;
-
-            Parallel.For(
-                0, numSteps,
-                () => new List<float>(),
-                (yStep, state, samples) => {
-                    float y = yStep * stepSizeF;
-                    float xOffset = (y % offsetStep) / 8f;
-                    float localWidth = Width + xOffset;
-
-                    for (Vector2 position = new Vector2(xOffset, y); position.X < localWidth; position.X += stepSizeF) {
-                        var sample = Environment.ComputeReceivedLightAtPosition(position);
-                        var sampleLuminance = (sample.X * 0.299f) + (sample.Y * 0.587f) + (sample.Z * 0.114f);
-
-                        samples.Add(sampleLuminance);
-                    }
-
-
-                    return samples;
-                },
-                (samples) => {
-                    lock (LuminanceSamples)
-                        LuminanceSamples.AddRange(samples);
-                }
-            );
-
-            long endTicks = tp.Ticks;
-            TickCountSamples.Add(endTicks - startTicks);
-            if (TickCountSamples.Count > RollingLength)
-                TickCountSamples.RemoveAt(0);
-
-            LuminanceSamples.Sort();
-
-            int outliersToSkip = (LuminanceSamples.Count * 4) / 100;
-
-            float accumulator = 0;
-            int count = 0;
-
-            for (int i = outliersToSkip, e = Math.Max(LuminanceSamples.Count - outliersToSkip - 1, 0); i < e; i++) {
-                accumulator += LuminanceSamples[i];
-                count += 1;
-            }
-
-            AverageLuminance = (accumulator / count) * LuminanceScaler;
-
-            RollingAverageSamples.Add(AverageLuminance);
-
-            if (RollingAverageSamples.Count > RollingLength)
-                RollingAverageSamples.RemoveAt(0);
-        }
 
         public override void Draw (Squared.Render.Frame frame) {
             const float LightmapScale = 1f;
@@ -190,53 +137,28 @@ namespace TestGame.Scenes {
                 0, 1
             );
 
-            CreateRenderTargets();
-
-            var args = new float[] {
-                MagnitudeScale, MiddleGray, AppliedAverageLuminance, MaximumLuminance
-            };
-
-            using (var bg = BatchGroup.ForRenderTarget(
-                frame, -1, Lightmap,
-                (dm, _) =>
-                    Renderer.IlluminantMaterials.SetGammaCompressionParameters(args[0], args[1], args[2], args[3])
-            )) {
-                ClearBatch.AddNew(bg, 0, LightmapMaterials.Clear, clearColor: Color.Black, clearZ: 0, clearStencil: 0);
-
-                Renderer.RenderLighting(frame, bg, 1, intensityScale: 1 / MagnitudeScale);
-            };
-
             ClearBatch.AddNew(frame, 0, Game.ScreenMaterials.Clear, clearColor: Color.Black);
 
-            using (var bb = BitmapBatch.New(
-                frame, 1, 
-                Game.ScreenMaterials.Get(Renderer.IlluminantMaterials.ScreenSpaceGammaCompressedBitmap, blendState: BlendState.Opaque)
-            ))
-                bb.Add(new BitmapDrawCall(Lightmap, Vector2.Zero));
+            Renderer.RenderLighting(frame, frame, 1);
 
             if (ShowOutlines)
                 Renderer.RenderOutlines(frame, 2, true);
+
+            using (var gb = GeometryBatch.New(frame, 3, Game.ScreenMaterials.Get(Game.ScreenMaterials.ScreenSpaceGeometry, blendState: BlendState.Opaque)))
+            for (var i = 0; i < Receivers.Length; i++) {
+                var r = Receivers[i];
+                var size = new Vector2(8, 8);
+                var bounds = new Bounds(r.Position - size, r.Position + size);
+                var color = new Color(r.ReceivedLight.X, r.ReceivedLight.Y, r.ReceivedLight.Z, 1.0f) * r.ReceivedLight.W;
+
+                // Console.WriteLine("Receiver {0} at {1}: {2}", i, r.Position, r.ReceivedLight);
+
+                gb.AddFilledQuad(bounds, color);
+            }
         }
 
         public override void Update (GameTime gameTime) {
             if (Game.IsActive) {
-                const float step = 0.1f;
-
-                if (KeyWasPressed(Keys.Q))
-                    MiddleGray -= step;
-                else if (KeyWasPressed(Keys.W))
-                    MiddleGray += step;
-
-                if (KeyWasPressed(Keys.A))
-                    LuminanceScaler -= step;
-                else if (KeyWasPressed(Keys.S))
-                    LuminanceScaler += step;
-
-                if (MiddleGray < 0)
-                    MiddleGray = 0;
-                if (LuminanceScaler < 0)
-                    LuminanceScaler = 0;
-
                 if (KeyWasPressed(Keys.O))
                     ShowOutlines = !ShowOutlines;
 
@@ -245,7 +167,7 @@ namespace TestGame.Scenes {
 
                 var mousePos = new Vector2(ms.X, ms.Y);
 
-                var angle = gameTime.TotalGameTime.TotalSeconds * 0.125f;
+                var angle = gameTime.TotalGameTime.TotalSeconds * 0.0125f;
                 const float radius = 225f;
 
                 Lights[0].Position = mousePos;
@@ -272,23 +194,10 @@ namespace TestGame.Scenes {
             }
 
             Environment.UpdateReceivers();
-
-            ComputeAverageLuminance();
-        }
-
-        public float AppliedAverageLuminance {
-            get {
-                return RollingAverageSamples.Average();
-            }
         }
 
         public override string Status {
-            get { 
-                return String.Format(
-                    "Current Avg={0:00.00} | Applied Avg={1:00.00} | Scaler = {2:000.0} | MS/lighting update = {3:000.00}",
-                    AverageLuminance, AppliedAverageLuminance, LuminanceScaler, TimeSpan.FromTicks((long)TickCountSamples.Average()).TotalMilliseconds
-                ); 
-            }
+            get { return ""; }
         }
     }
 }
