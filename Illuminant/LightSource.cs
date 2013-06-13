@@ -9,6 +9,8 @@ using Squared.Util;
 namespace Squared.Illuminant {
     public class LightSource : IHasBounds, ISpatialCollectionChild {
         private readonly HashSet<WeakReference> Parents = new HashSet<WeakReference>();
+      
+        public object UserData;
 
         private Vector2 _Position;
         private Bounds _Bounds;
