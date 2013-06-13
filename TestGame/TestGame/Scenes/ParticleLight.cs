@@ -12,25 +12,22 @@ using Squared.Render.Convenience;
 using Squared.Util;
 
 namespace TestGame.Scenes {
-    public class Goat : Scene {
+    public class ParticleLight : Scene {
         DefaultMaterialSet LightmapMaterials;
 
-        DelegateMaterial AdditiveBitmapMaterial;
         DelegateMaterial MaskedForegroundMaterial;
-        DelegateMaterial AOShadowMaterial;
         LightingEnvironment ForegroundEnvironment, BackgroundEnvironment;
         LightingRenderer ForegroundRenderer, BackgroundRenderer;
 
         Texture2D[] Layers = new Texture2D[4];
-        Texture2D BricksLightMask;
         RenderTarget2D BackgroundLightmap, ForegroundLightmap;
         RenderTarget2D Background, Foreground;
-        RenderTarget2D AOShadowScratch;
 
         Random SparkRNG = new Random();
 
         ParticleRenderer ParticleRenderer;
         ParticleSystem<Spark> Sparks;
+        ParticleLightManager<Spark> SparkLights;
 
         bool[,] ForegroundTiles = new bool[,] {
             { true, true, true, true, true, false, true, true, true },
@@ -44,31 +41,16 @@ namespace TestGame.Scenes {
             { true, true, false, false, false, false, false, true, false }
         };
 
-        bool ShowOutlines, ShowLightmap, ShowAOShadow = false, ShowBrickSpecular = false;
+        bool ShowOutlines, ShowLightmap;
 
         const int LightmapMultisampleCount = 0;
         const float BaseLightmapScale = 1f;
         float LightmapScale;
 
-        readonly List<LightSource> Torches = new List<LightSource>();
-
         LightObstructionLine Dragging = null;
 
-        public Goat (TestGame game, int width, int height)
+        public ParticleLight (TestGame game, int width, int height)
             : base(game, width, height) {
-        }
-
-        private void AddTorch (float x, float y) {
-            var torch = new LightSource {
-                Mode = LightSourceMode.Alpha,
-                Position = new Vector2(x, y),
-                Color = new Vector4(235 / 255.0f, 95 / 255.0f, 15 / 255f, 0.9f),
-                RampStart = 80,
-                RampEnd = 250
-            };
-
-            Torches.Add(torch);
-            ForegroundEnvironment.LightSources.Add(torch);
         }
 
         private void AddAmbientLight (float x, float y, Bounds? clipBounds = null) {
@@ -142,9 +124,6 @@ namespace TestGame.Scenes {
                 if (ForegroundLightmap != null)
                     ForegroundLightmap.Dispose();
 
-                if (AOShadowScratch != null)
-                    AOShadowScratch.Dispose();
-
                 BackgroundLightmap = new RenderTarget2D(
                     Game.GraphicsDevice, scaledWidth, scaledHeight, false,
                     SurfaceFormat.Color, DepthFormat.Depth24Stencil8, LightmapMultisampleCount, RenderTargetUsage.DiscardContents
@@ -153,11 +132,6 @@ namespace TestGame.Scenes {
                 ForegroundLightmap = new RenderTarget2D(
                     Game.GraphicsDevice, scaledWidth, scaledHeight, false,
                     SurfaceFormat.Color, DepthFormat.Depth24Stencil8, LightmapMultisampleCount, RenderTargetUsage.DiscardContents
-                );
-
-                AOShadowScratch = new RenderTarget2D(
-                    Game.GraphicsDevice, scaledWidth, scaledHeight, true,
-                    SurfaceFormat.Alpha8, DepthFormat.None, 0, RenderTargetUsage.DiscardContents
                 );
             }
 
@@ -209,11 +183,6 @@ namespace TestGame.Scenes {
                 new Vector2(1257, 1250)
             ));
 
-            AddTorch(102, 132);
-            AddTorch(869, 132);
-            AddTorch(102, 646);
-            AddTorch(869, 645);
-
             GenerateObstructionsFromTiles();
 
             Layers[0] = Game.Content.Load<Texture2D>("layers_bg");
@@ -221,13 +190,7 @@ namespace TestGame.Scenes {
             Layers[2] = Game.Content.Load<Texture2D>("layers_chars");
             Layers[3] = Game.Content.Load<Texture2D>("layers_torches");
 
-            BricksLightMask = Game.Content.Load<Texture2D>("layers_bricks_lightmask");
-
-            AdditiveBitmapMaterial = LightmapMaterials.ScreenSpaceBitmap.SetStates(blendState: BlendState.Additive);
-
             MaskedForegroundMaterial = LightmapMaterials.ScreenSpaceLightmappedBitmap.SetStates(blendState: BlendState.Additive);
-
-            AOShadowMaterial = Game.ScreenMaterials.ScreenSpaceVerticalGaussianBlur5Tap.SetStates(blendState: RenderStates.SubtractiveBlend);
 
             ParticleRenderer = new ParticleRenderer(LightmapMaterials) {
                 Viewport = new Bounds(Vector2.Zero, new Vector2(Width, Height))
@@ -241,6 +204,52 @@ namespace TestGame.Scenes {
                     BackgroundEnvironment
                 )
             };
+
+            SparkLights = new ParticleLightManager<Spark>(
+                Sparks, 
+                new[] { BackgroundEnvironment, ForegroundEnvironment },
+                UpdateSectorLight
+            );
+        }
+
+        protected void UpdateSectorLight (ParticleSystem<Spark>.ParticleCollection particles, LightSource lightSource) {
+            int particleCount = 0;
+
+            int rAccumulator = 0, gAccumulator = 0, bAccumulator = 0, aAccumulator = 0;
+            Vector2 positionAccumulator = Vector2.Zero;
+
+            Spark particle;
+
+            using (var e = particles.GetEnumerator())
+            while (e.GetNext(out particle)) {
+                particleCount += 1;
+
+                positionAccumulator += particle.Position;
+                var particleColor = particle.GetColor();
+
+                rAccumulator += particleColor.R;
+                gAccumulator += particleColor.G;
+                bAccumulator += particleColor.B;
+                aAccumulator += particleColor.A;
+            }
+
+            lightSource.Position = (positionAccumulator / particleCount);
+
+            float fParticleCount255 = particleCount * 255.0f;
+            // FIXME: Need to unpremultiply
+            lightSource.Color = new Vector4(
+                rAccumulator / fParticleCount255,
+                gAccumulator / fParticleCount255,
+                bAccumulator / fParticleCount255,
+                aAccumulator / fParticleCount255
+            );
+
+            lightSource.Color.W *= MathHelper.Clamp(particleCount / 20f, 0.1f, 1.0f) * 0.55f;
+
+            lightSource.RampStart = 24 + MathHelper.Clamp(particleCount * 0.25f, 0, 24);
+            lightSource.RampEnd = lightSource.RampStart + 32 + MathHelper.Clamp(particleCount * 0.5f, 0, 48);
+
+            lightSource.RampMode = LightSourceRampMode.Exponential;
         }
 
         public override void Draw (Squared.Render.Frame frame) {
@@ -279,52 +288,13 @@ namespace TestGame.Scenes {
                 }
             }
 
-            if (ShowBrickSpecular)
-                using (var bricksLightGroup = BatchGroup.ForRenderTarget(frame, 2, ForegroundLightmap)) {
-                    ClearBatch.AddNew(bricksLightGroup, 1, LightmapMaterials.Clear, clearColor: new Color(0, 0, 0, 255), clearZ: 0, clearStencil: 0);
-                    ForegroundRenderer.RenderLighting(frame, bricksLightGroup, 2);
-                }
-
-            if (ShowAOShadow)
-                using (var aoShadowFirstPassGroup = BatchGroup.ForRenderTarget(frame, 3, AOShadowScratch)) {
-                    ClearBatch.AddNew(aoShadowFirstPassGroup, 1, LightmapMaterials.Clear, clearColor: Color.Transparent);
-
-                    using (var bb = BitmapBatch.New(aoShadowFirstPassGroup, 2, Game.ScreenMaterials.ScreenSpaceHorizontalGaussianBlur5Tap)) {
-                        bb.Add(new BitmapDrawCall(Foreground, Vector2.Zero, 1f / LightmapScale));
-                    }
-                }
-
             using (var backgroundLightGroup = BatchGroup.ForRenderTarget(frame, 4, BackgroundLightmap)) {
-                ClearBatch.AddNew(backgroundLightGroup, 1, LightmapMaterials.Clear, clearColor: new Color(40, 40, 40, 255), clearZ: 0, clearStencil: 0);
-
+                ClearBatch.AddNew(backgroundLightGroup, 1, LightmapMaterials.Clear, clearColor: new Color(32, 32, 32, 255), clearZ: 0, clearStencil: 0);
                 BackgroundRenderer.RenderLighting(frame, backgroundLightGroup, 2);
-
-                if (ShowBrickSpecular) {
-                    using (var foregroundLightBatch = BitmapBatch.New(backgroundLightGroup, 3, MaskedForegroundMaterial)) {
-                        var dc = new BitmapDrawCall(
-                            ForegroundLightmap, Vector2.Zero
-                        );
-                        dc.Textures = new TextureSet(dc.Textures.Texture1, BricksLightMask);
-                        foregroundLightBatch.Add(dc);
-                    }
-                } else {
-                    ForegroundRenderer.RenderLighting(frame, backgroundLightGroup, 3);
-                }
-
-                if (ShowAOShadow)
-                    using (var aoShadowBatch = BitmapBatch.New(backgroundLightGroup, 4, AOShadowMaterial)) {
-                        var dc = new BitmapDrawCall(
-                            AOShadowScratch, new Vector2(0, 4)
-                        );
-                        dc.MultiplyColor = Color.Black;
-                        dc.AddColor = Color.White;
-
-                        aoShadowBatch.Add(dc);
-                    }
             }
 
             using (var foregroundLightGroup = BatchGroup.ForRenderTarget(frame, 5, ForegroundLightmap)) {
-                ClearBatch.AddNew(foregroundLightGroup, 1, LightmapMaterials.Clear, clearColor: new Color(127, 127, 127, 255), clearZ: 0, clearStencil: 0);
+                ClearBatch.AddNew(foregroundLightGroup, 1, LightmapMaterials.Clear, clearColor: new Color(96, 96, 96, 255), clearZ: 0, clearStencil: 0);
                 ForegroundRenderer.RenderLighting(frame, foregroundLightGroup, 2);
             }
 
@@ -336,6 +306,8 @@ namespace TestGame.Scenes {
                     var dc = new BitmapDrawCall(BackgroundLightmap, Vector2.Zero, LightmapScale);
                     bb.Add(dc);
                 }
+
+                ParticleRenderer.Draw(frame, 56);
             } else {
                 var dc = new BitmapDrawCall(Background, Vector2.Zero);
 
@@ -371,10 +343,6 @@ namespace TestGame.Scenes {
                     ShowOutlines = !ShowOutlines;
                 if (KeyWasPressed(Keys.L))
                     ShowLightmap = !ShowLightmap;
-                if (KeyWasPressed(Keys.A))
-                    ShowAOShadow = !ShowAOShadow;
-                if (KeyWasPressed(Keys.B))
-                    ShowBrickSpecular = !ShowBrickSpecular;
 
                 var ms = Mouse.GetState();
                 Game.IsMouseVisible = true;
@@ -398,14 +366,15 @@ namespace TestGame.Scenes {
                     }
                 }
 
-                const int sparkSpawnCount = 32;
+                const int sparkSpawnCount = 24;
                 var sparkSpawnPosition = mousePos;
 
                 for (var i = 0; i < sparkSpawnCount; i++)
-                    Sparks.Add(new Spark(Sparks, sparkSpawnPosition));
+                    Sparks.Add(new Spark(Sparks, sparkSpawnPosition, 3));
             }
 
             Sparks.Update();
+            SparkLights.Update();
         }
 
         public override string Status {

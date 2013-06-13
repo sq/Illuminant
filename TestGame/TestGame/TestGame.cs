@@ -48,9 +48,10 @@ namespace TestGame {
                 new Goat(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new LightingTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new ReceiverTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
+                new ParticleLight(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
             };
 
-            ActiveSceneIndex = 1;
+            ActiveSceneIndex = 3;
         }
 
         protected override void LoadContent () {

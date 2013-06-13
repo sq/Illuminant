@@ -298,9 +298,6 @@ namespace Squared.Illuminant {
                 case LightSourceMode.Alpha:
                     device.Device.BlendState = BlendState.AlphaBlend;
                     break;
-                case LightSourceMode.Replace:
-                    device.Device.BlendState = BlendState.Opaque;
-                    break;
                 case LightSourceMode.Max:
                     device.Device.BlendState = RenderStates.MaxBlend;
                     break;

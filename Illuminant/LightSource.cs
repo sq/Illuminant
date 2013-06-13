@@ -90,7 +90,6 @@ namespace Squared.Illuminant {
         Additive,
         Subtractive,
         Alpha,
-        Replace,
         Max,
         Min
     }

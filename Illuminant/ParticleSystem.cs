@@ -155,10 +155,13 @@ namespace Squared.Illuminant {
         public Time LastUpdateTime;
         public Random RNG = new Random();
 
-        public ParticleSystem (ITimeProvider timeProvider, object userData = null) {
-            TimeProvider = timeProvider;
+        public readonly float Subdivision;
 
-            Particles = new SpatialPartition<ParticleCollection>(128.0f, (index) => new ParticleCollection(index, Particles.GetSectorBounds(index)));
+        public ParticleSystem (ITimeProvider timeProvider, object userData = null, float subdivision = 128.0f) {
+            TimeProvider = timeProvider;
+            Subdivision = subdivision;
+
+            Particles = new SpatialPartition<ParticleCollection>(Subdivision, (index) => new ParticleCollection(index, Particles.GetSectorBounds(index)));
 
             UpdateArgs = new ParticleUpdateArgs(this);
             RenderArgs = new ParticleRenderArgs(this);
@@ -188,12 +191,8 @@ namespace Squared.Illuminant {
 
             UpdateArgs.SetTime(TimeProvider);
 
-            ParticleCollection sector;
-
             var newCount = 0;
-
-            using (var e = Particles.GetSectorsFromBounds(Particles.Extent, false))
-            while (e.GetNext(out sector)) {
+            foreach (var sector in Particles.Sectors) {
                 UpdateSector(sector);
                 newCount += sector.Count;
             }

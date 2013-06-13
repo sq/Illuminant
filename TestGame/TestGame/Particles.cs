@@ -10,9 +10,11 @@ using Squared.Illuminant;
 namespace TestGame {
     public struct Spark : IParticle<Spark> {
         public static readonly int DurationInFrames = (int)(60 * 2.75);
+        static readonly float fDurationInFrames = DurationInFrames;
+
         public const float HalfPI = (float)(Math.PI / 2);
         public const float Gravity = 0.075f;
-        public const float MaxFallRate = 4f;
+        public const float MaxVelocity = 4f;
 
         public static readonly Color HotColor = new Color(255, 225, 142);
         public static readonly Color ColdColor = new Color(63, 33, 13);
@@ -23,37 +25,38 @@ namespace TestGame {
         public Vector2 Position, PreviousPosition;
         public Vector2 Velocity;
 
-        public Spark (ParticleSystem<Spark> system, Vector2 position) {
+        public Spark (ParticleSystem<Spark> system, Vector2 position, float velocityMagnitude = 1.0f) {
             Position = PreviousPosition = position;
             FramesLeft = system.RNG.Next(DurationInFrames - 4, DurationInFrames + 4);
-            Velocity = new Vector2(system.RNG.NextFloat(-2f, 2f), system.RNG.NextFloat(-3.5f, 1.5f));
+            Velocity = new Vector2(system.RNG.NextFloat(-2f, 2f) * velocityMagnitude, system.RNG.NextFloat(-3.5f, 1.5f) * velocityMagnitude);
         }
 
         public static Vector2 ApplyGravity (Vector2 velocity) {
             velocity.Y += Gravity;
             var length = velocity.Length();
             velocity /= length;
-            return velocity * Math.Min(length, MaxFallRate);
+            return velocity * Math.Min(length, MaxVelocity);
+        }
+
+        public Color GetColor () {
+            var lifeLeft = MathHelper.Clamp(FramesLeft / fDurationInFrames, 0, 1);
+            var lerpFactor = MathHelper.Clamp((1 - lifeLeft) * 1.4f, 0, 1);
+            return Color.Lerp(HotColor, ColdColor, lerpFactor) * ((lifeLeft * 0.85f) + 0.15f);
         }
 
         public static void Render (ParticleSystem<Spark>.ParticleRenderArgs args) {
             Spark particle;
-
-            float fDurationInFrames = DurationInFrames;
 
             while (args.Enumerator.GetNext(out particle)) {
                 var delta = particle.Position - particle.PreviousPosition;
                 var length = delta.Length();
                 var angle = (float)(Math.Atan2(delta.Y, delta.X) - HalfPI);
 
-                var lifeLeft = MathHelper.Clamp(particle.FramesLeft / fDurationInFrames, 0, 1);
-                var lerpFactor = MathHelper.Clamp((1 - lifeLeft) * 1.4f, 0, 1);
-
                 args.ImperativeRenderer.Draw(
                     Texture, particle.PreviousPosition,
                     rotation: angle,
                     scale: new Vector2(0.25f, MathHelper.Clamp(length / 5f, 0.05f, 1.75f)),
-                    multiplyColor: Color.Lerp(HotColor, ColdColor, lerpFactor) * ((lifeLeft * 0.85f) + 0.15f),
+                    multiplyColor: particle.GetColor(),
                     blendState: BlendState.Additive
                 );
             }
