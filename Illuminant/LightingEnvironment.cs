@@ -80,6 +80,9 @@ namespace Squared.Illuminant {
                 if ((lightIgnorePredicate != null) && lightIgnorePredicate(light))
                     continue;
 
+                if (light.Opacity <= 0f)
+                    continue;
+
                 var deltaFromLight = (position - light.Position);
                 var distanceFromLight = deltaFromLight.Length();
                 if (distanceFromLight > light.RampEnd)
@@ -100,7 +103,7 @@ namespace Squared.Illuminant {
 
                 var lightColorScaled = light.Color;
                 // Premultiply by alpha here so that things add up correctly. We'll have to reverse this at the end.
-                lightColorScaled *= distanceScale;
+                lightColorScaled *= (distanceScale * light.Opacity);
 
                 result += lightColorScaled;
             }
