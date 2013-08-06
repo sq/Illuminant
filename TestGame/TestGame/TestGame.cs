@@ -49,9 +49,10 @@ namespace TestGame {
                 new LightingTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new ReceiverTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new ParticleLight(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
+                new RampTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
             };
 
-            ActiveSceneIndex = 3;
+            ActiveSceneIndex = 4;
         }
 
         protected override void LoadContent () {

@@ -97,6 +97,10 @@ namespace Squared.Illuminant {
                     result = lhs.NeutralColor.GetHashCode().CompareTo(rhs.NeutralColor.GetHashCode());
                 if (result == 0)
                     result = (lhs.ClipRegion.HasValue ? 1 : 0).CompareTo(rhs.ClipRegion.HasValue ? 1 : 0);
+                if (result == 0)
+                    result = (lhs.RampTextureFilter.CompareTo(rhs.RampTextureFilter));
+                if (result == 0)
+                    result = (lhs._RampTextureID.CompareTo(rhs._RampTextureID));
 
                 return result;
             }
@@ -112,8 +116,11 @@ namespace Squared.Illuminant {
 
         public readonly DefaultMaterialSet Materials;
         public readonly IlluminantMaterials IlluminantMaterials;
-        public readonly Squared.Render.EffectMaterial ShadowMaterialInner, PointLightMaterialInner1, PointLightMaterialInner2;
+        public readonly Squared.Render.EffectMaterial ShadowMaterialInner;
+        public readonly Squared.Render.EffectMaterial[] PointLightMaterialsInner = new Squared.Render.EffectMaterial[4];
         public readonly DepthStencilState PointLightStencil, ShadowStencil;
+
+        private readonly Dictionary<TextureFilter, SamplerState> RampSamplerStates = new Dictionary<TextureFilter, SamplerState>();
 
         private readonly ArrayLineWriter ArrayLineWriterInstance = new ArrayLineWriter();
         private readonly VisualizerLineWriter VisualizerLineWriterInstance = new VisualizerLineWriter();
@@ -159,37 +166,42 @@ namespace Squared.Illuminant {
                 ReferenceStencil = 0
             };
 
-            materials.Add(IlluminantMaterials.PointLightExponential = new DelegateMaterial(
-                PointLightMaterialInner1 = new Squared.Render.EffectMaterial(
-                    content.Load<Effect>("Illumination"), "PointLightExponentialRamp"
-                ),
-                new[] {
+            {
+                var dBegin = new[] {
                     MaterialUtil.MakeDelegate(
                         rasterizerState: RenderStates.ScissorOnly, depthStencilState: PointLightStencil
                     )
-                },
-                new[] {
+                };
+                var dEnd = new[] {
                     MaterialUtil.MakeDelegate(
                         rasterizerState: RasterizerState.CullNone, depthStencilState: DepthStencilState.None
                     )
-                }
-            ));
+                };
 
-            materials.Add(IlluminantMaterials.PointLightLinear = new DelegateMaterial(
-                PointLightMaterialInner2 = new Squared.Render.EffectMaterial(
-                    content.Load<Effect>("Illumination"), "PointLightLinearRamp"
-                ),
-                new[] {
-                    MaterialUtil.MakeDelegate(
-                        rasterizerState: RenderStates.ScissorOnly, depthStencilState: PointLightStencil
-                    )
-                },
-                new[] {
-                    MaterialUtil.MakeDelegate(
-                        rasterizerState: RasterizerState.CullNone, depthStencilState: DepthStencilState.None
-                    )
-                }
-            ));
+                materials.Add(IlluminantMaterials.PointLightExponential = new DelegateMaterial(
+                    PointLightMaterialsInner[0] = new Squared.Render.EffectMaterial(
+                        content.Load<Effect>("Illumination"), "PointLightExponential"
+                    ), dBegin, dEnd
+                ));
+
+                materials.Add(IlluminantMaterials.PointLightLinear = new DelegateMaterial(
+                    PointLightMaterialsInner[1] = new Squared.Render.EffectMaterial(
+                        content.Load<Effect>("Illumination"), "PointLightLinear"
+                    ), dBegin, dEnd
+                ));
+
+                materials.Add(IlluminantMaterials.PointLightExponentialRampTexture = new DelegateMaterial(
+                    PointLightMaterialsInner[2] = new Squared.Render.EffectMaterial(
+                        content.Load<Effect>("Illumination"), "PointLightExponentialRampTexture"
+                    ), dBegin, dEnd
+                ));
+
+                materials.Add(IlluminantMaterials.PointLightLinearRampTexture = new DelegateMaterial(
+                    PointLightMaterialsInner[3] = new Squared.Render.EffectMaterial(
+                        content.Load<Effect>("Illumination"), "PointLightLinearRampTexture"
+                    ), dBegin, dEnd
+                ));
+            }
 
             ShadowStencil = new DepthStencilState {
                 DepthBufferEnable = false,
@@ -226,7 +238,7 @@ namespace Squared.Illuminant {
             materials.Add(IlluminantMaterials.WorldSpaceGammaCompressedBitmap = new Squared.Render.EffectMaterial(
                 content.Load<Effect>("HDRBitmap"), "WorldSpaceGammaCompressedBitmap"
             ));
-            
+
             Environment = environment;
 
             // Reduce garbage created by BufferPool<>.Allocate when creating cached sectors
@@ -308,9 +320,23 @@ namespace Squared.Illuminant {
                     throw new ArgumentOutOfRangeException("Mode");
             }
 
-            PointLightMaterialInner1.Effect.Parameters["LightNeutralColor"].SetValue(ls.NeutralColor);
-            PointLightMaterialInner2.Effect.Parameters["LightNeutralColor"].SetValue(ls.NeutralColor);
+            foreach (var mi in PointLightMaterialsInner) {
+                mi.Effect.Parameters["LightNeutralColor"].SetValue(ls.NeutralColor);
+                mi.Effect.Parameters["RampTexture"].SetValue(ls.RampTexture);
+            }
 
+            SamplerState ss;
+            lock (RampSamplerStates) {
+                if (!RampSamplerStates.TryGetValue(ls.RampTextureFilter, out ss))
+                    RampSamplerStates[ls.RampTextureFilter] = ss = new SamplerState {
+                        Filter = ls.RampTextureFilter,
+                        AddressU = TextureAddressMode.Clamp,
+                        AddressV = TextureAddressMode.Clamp,
+                        AddressW = TextureAddressMode.Clamp
+                    };
+            }
+
+            device.Device.SamplerStates[0] = ss;
             device.Device.ScissorRectangle = StoredScissorRect;
         }
 
@@ -446,7 +472,9 @@ namespace Squared.Illuminant {
                             (batchFirstLightSource.ClipRegion.HasValue != lightSource.ClipRegion.HasValue) ||
                             (batchFirstLightSource.NeutralColor != lightSource.NeutralColor) ||
                             (batchFirstLightSource.Mode != lightSource.Mode) ||
-                            (batchFirstLightSource.RampMode != lightSource.RampMode);
+                            (batchFirstLightSource.RampMode != lightSource.RampMode) ||
+                            (batchFirstLightSource.RampTexture != lightSource.RampTexture) ||
+                            (batchFirstLightSource.RampTextureFilter != lightSource.RampTextureFilter);
 
                         if (needFlush) {
                             FlushPointLightBatch(ref currentLightGroup, ref batchFirstLightSource, ref layerIndex);
@@ -548,9 +576,16 @@ namespace Squared.Illuminant {
             if (lightGroup == null)
                 return;
 
-            var material = batchFirstLightSource.RampMode == LightSourceRampMode.Linear
-                ? IlluminantMaterials.PointLightLinear
-                : IlluminantMaterials.PointLightExponential;
+            Material material;
+            if (batchFirstLightSource.RampTexture != null) {
+                material = batchFirstLightSource.RampMode == LightSourceRampMode.Linear
+                    ? IlluminantMaterials.PointLightLinearRampTexture
+                    : IlluminantMaterials.PointLightExponentialRampTexture;
+            } else {
+                material = batchFirstLightSource.RampMode == LightSourceRampMode.Linear
+                    ? IlluminantMaterials.PointLightLinear
+                    : IlluminantMaterials.PointLightExponential;
+            }
 
             using (var pb = PrimitiveBatch<PointLightVertex>.New(lightGroup, layerIndex++, material, IlluminationBatchSetup, batchFirstLightSource)) {
                 foreach (var record in PointLightBatchBuffer) {
@@ -601,7 +636,8 @@ namespace Squared.Illuminant {
     public class IlluminantMaterials {
         public readonly DefaultMaterialSet MaterialSet;
 
-        public Material DebugOutlines, Shadow, PointLightLinear, PointLightExponential, ClearStencil;
+        public Material DebugOutlines, Shadow, ClearStencil;
+        public Material PointLightLinear, PointLightExponential, PointLightLinearRampTexture, PointLightExponentialRampTexture;
         public Squared.Render.EffectMaterial ScreenSpaceGammaCompressedBitmap, WorldSpaceGammaCompressedBitmap;
 
         internal readonly Effect[] EffectsToSetGammaCompressionParametersOn;
