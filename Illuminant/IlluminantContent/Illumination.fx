@@ -1,8 +1,4 @@
-Texture2D RampTexture : register(t0);
-
-sampler RampTextureSampler : register(s0) {
-    Texture = (RampTexture);
-};
+#include "RampCommon.fxh"
 
 shared float2 ViewportScale;
 shared float2 ViewportPosition;
@@ -73,7 +69,7 @@ void PointLightPixelShaderLinearRampTexture(
     float distance = length(worldPosition - lightCenter) - ramp.x;
     float distanceOpacity = 1 - clamp(distance / (ramp.y - ramp.x), 0, 1);
 
-    distanceOpacity = tex2D(RampTextureSampler, float2(distanceOpacity, 0)).r;
+    distanceOpacity = RampLookup(distanceOpacity);
 
     float opacity = color.a;
     float4 lightColorActual = float4(color.r * opacity, color.g * opacity, color.b * opacity, opacity);
@@ -91,7 +87,7 @@ void PointLightPixelShaderExponentialRampTexture(
     float distanceOpacity = 1 - clamp(distance / (ramp.y - ramp.x), 0, 1);
     distanceOpacity *= distanceOpacity;
 
-    distanceOpacity = tex2D(RampTextureSampler, float2(distanceOpacity, 0)).r;
+    distanceOpacity = RampLookup(distanceOpacity);
 
     float opacity = color.a;
     float4 lightColorActual = float4(color.r * opacity, color.g * opacity, color.b * opacity, opacity);

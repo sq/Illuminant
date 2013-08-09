@@ -24,6 +24,8 @@ namespace TestGame.Scenes {
 
         LightObstructionLine Dragging = null;
 
+        Texture2D TestImage, RampTexture;
+
         public RampTest (TestGame game, int width, int height)
             : base(game, width, height) {
         }
@@ -55,7 +57,9 @@ namespace TestGame.Scenes {
 
             Environment = new LightingEnvironment();
 
-            var rampTexture = Game.Content.Load<Texture2D>("LightGradients");
+            TestImage = Game.Content.Load<Texture2D>("ramp_test_image");
+
+            RampTexture = Game.Content.Load<Texture2D>("LightGradients");
 
             Environment.LightSources.AddRange(new[] {
                 new LightSource {
@@ -66,27 +70,27 @@ namespace TestGame.Scenes {
                     RampMode = LightSourceRampMode.Linear
                 },
                 new LightSource {
-                    Position = new Vector2(512, 128),
+                    Position = new Vector2(400, 128),
                     Color = Vector4.One,
                     RampStart = 32,
                     RampEnd = 128,
                     RampMode = LightSourceRampMode.Exponential
                 },
                 new LightSource {
-                    Position = new Vector2(128, 512),
+                    Position = new Vector2(128, 400),
                     Color = Vector4.One,
                     RampStart = 32,
                     RampEnd = 128,
                     RampMode = LightSourceRampMode.Linear,
-                    RampTexture = rampTexture
+                    RampTexture = RampTexture
                 },
                 new LightSource {
-                    Position = new Vector2(512, 512),
+                    Position = new Vector2(400, 400),
                     Color = Vector4.One,
                     RampStart = 32,
                     RampEnd = 128,
                     RampMode = LightSourceRampMode.Exponential,
-                    RampTexture = rampTexture
+                    RampTexture = RampTexture
                 }
             });
 
@@ -106,6 +110,19 @@ namespace TestGame.Scenes {
             ClearBatch.AddNew(frame, 0, Game.ScreenMaterials.Clear, clearColor: Color.Black);
 
             Renderer.RenderLighting(frame, frame, 1);
+
+            using (var bg = BatchGroup.New(frame, 2)) {
+                var dc = new BitmapDrawCall(TestImage, new Vector2(0, 550), 0.55f);
+
+                using (var bb = BitmapBatch.New(bg, 0, Renderer.Materials.ScreenSpaceBitmap))
+                    bb.Add(ref dc);
+
+                dc.Position.X += 600;
+                dc.Textures = new TextureSet(dc.Texture, RampTexture);
+
+                using (var bb2 = BitmapBatch.New(bg, 1, Renderer.IlluminantMaterials.ScreenSpaceRampBitmap, samplerState2: SamplerState.LinearClamp))
+                    bb2.Add(ref dc);
+            }
 
             if (ShowOutlines)
                 Renderer.RenderOutlines(frame, 2, true);

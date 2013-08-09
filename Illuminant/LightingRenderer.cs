@@ -120,7 +120,7 @@ namespace Squared.Illuminant {
         public readonly Squared.Render.EffectMaterial[] PointLightMaterialsInner = new Squared.Render.EffectMaterial[4];
         public readonly DepthStencilState PointLightStencil, ShadowStencil;
 
-        private readonly Dictionary<TextureFilter, SamplerState> RampSamplerStates = new Dictionary<TextureFilter, SamplerState>();
+        private static readonly Dictionary<TextureFilter, SamplerState> RampSamplerStates = new Dictionary<TextureFilter, SamplerState>();
 
         private readonly ArrayLineWriter ArrayLineWriterInstance = new ArrayLineWriter();
         private readonly VisualizerLineWriter VisualizerLineWriterInstance = new VisualizerLineWriter();
@@ -239,6 +239,14 @@ namespace Squared.Illuminant {
                 content.Load<Effect>("HDRBitmap"), "WorldSpaceGammaCompressedBitmap"
             ));
 
+            materials.Add(IlluminantMaterials.ScreenSpaceRampBitmap = new Squared.Render.EffectMaterial(
+                content.Load<Effect>("RampBitmap"), "ScreenSpaceRampBitmap"
+            ));
+
+            materials.Add(IlluminantMaterials.WorldSpaceRampBitmap = new Squared.Render.EffectMaterial(
+                content.Load<Effect>("RampBitmap"), "WorldSpaceRampBitmap"
+            ));
+
             Environment = environment;
 
             // Reduce garbage created by BufferPool<>.Allocate when creating cached sectors
@@ -297,6 +305,21 @@ namespace Squared.Illuminant {
             return result;
         }
 
+        internal static SamplerState GetRampSamplerState (TextureFilter filter) {
+            SamplerState ss;
+            lock (RampSamplerStates) {
+                if (!RampSamplerStates.TryGetValue(filter, out ss))
+                    RampSamplerStates[filter] = ss = new SamplerState {
+                        Filter = filter,
+                        AddressU = TextureAddressMode.Clamp,
+                        AddressV = TextureAddressMode.Clamp,
+                        AddressW = TextureAddressMode.Clamp
+                    };
+            }
+
+            return ss;
+        }
+
         private void IlluminationBatchSetup (DeviceManager device, object lightSource) {
             var ls = (LightSource)lightSource;
 
@@ -325,18 +348,7 @@ namespace Squared.Illuminant {
                 mi.Effect.Parameters["RampTexture"].SetValue(ls.RampTexture);
             }
 
-            SamplerState ss;
-            lock (RampSamplerStates) {
-                if (!RampSamplerStates.TryGetValue(ls.RampTextureFilter, out ss))
-                    RampSamplerStates[ls.RampTextureFilter] = ss = new SamplerState {
-                        Filter = ls.RampTextureFilter,
-                        AddressU = TextureAddressMode.Clamp,
-                        AddressV = TextureAddressMode.Clamp,
-                        AddressW = TextureAddressMode.Clamp
-                    };
-            }
-
-            device.Device.SamplerStates[0] = ss;
+            device.Device.SamplerStates[1] = GetRampSamplerState(ls.RampTextureFilter);
             device.Device.ScissorRectangle = StoredScissorRect;
         }
 
@@ -639,13 +651,16 @@ namespace Squared.Illuminant {
         public Material DebugOutlines, Shadow, ClearStencil;
         public Material PointLightLinear, PointLightExponential, PointLightLinearRampTexture, PointLightExponentialRampTexture;
         public Squared.Render.EffectMaterial ScreenSpaceGammaCompressedBitmap, WorldSpaceGammaCompressedBitmap;
+        public Squared.Render.EffectMaterial ScreenSpaceRampBitmap, WorldSpaceRampBitmap;
 
         internal readonly Effect[] EffectsToSetGammaCompressionParametersOn;
+        internal readonly Effect[] EffectsToSetRampTextureOn;
 
         internal IlluminantMaterials (DefaultMaterialSet materialSet) {
             MaterialSet = materialSet;
 
             EffectsToSetGammaCompressionParametersOn = new Effect[2];
+            EffectsToSetRampTextureOn = new Effect[2];
         }
 
         /// <summary>
