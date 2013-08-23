@@ -239,6 +239,14 @@ namespace Squared.Illuminant {
                 content.Load<Effect>("HDRBitmap"), "WorldSpaceGammaCompressedBitmap"
             ));
 
+            materials.Add(IlluminantMaterials.ScreenSpaceToneMappedBitmap = new Squared.Render.EffectMaterial(
+                content.Load<Effect>("HDRBitmap"), "ScreenSpaceToneMappedBitmap"
+            ));
+
+            materials.Add(IlluminantMaterials.WorldSpaceToneMappedBitmap = new Squared.Render.EffectMaterial(
+                content.Load<Effect>("HDRBitmap"), "WorldSpaceToneMappedBitmap"
+            ));
+
             materials.Add(IlluminantMaterials.ScreenSpaceRampBitmap = new Squared.Render.EffectMaterial(
                 content.Load<Effect>("RampBitmap"), "ScreenSpaceRampBitmap"
             ));
@@ -651,15 +659,18 @@ namespace Squared.Illuminant {
         public Material DebugOutlines, Shadow, ClearStencil;
         public Material PointLightLinear, PointLightExponential, PointLightLinearRampTexture, PointLightExponentialRampTexture;
         public Squared.Render.EffectMaterial ScreenSpaceGammaCompressedBitmap, WorldSpaceGammaCompressedBitmap;
+        public Squared.Render.EffectMaterial ScreenSpaceToneMappedBitmap, WorldSpaceToneMappedBitmap;
         public Squared.Render.EffectMaterial ScreenSpaceRampBitmap, WorldSpaceRampBitmap;
 
         internal readonly Effect[] EffectsToSetGammaCompressionParametersOn;
+        internal readonly Effect[] EffectsToSetToneMappingParametersOn;
         internal readonly Effect[] EffectsToSetRampTextureOn;
 
         internal IlluminantMaterials (DefaultMaterialSet materialSet) {
             MaterialSet = materialSet;
 
             EffectsToSetGammaCompressionParametersOn = new Effect[2];
+            EffectsToSetToneMappingParametersOn = new Effect[2];
             EffectsToSetRampTextureOn = new Effect[2];
         }
 
@@ -686,6 +697,29 @@ namespace Squared.Illuminant {
                 effect.Parameters["MiddleGray"].SetValue(middleGray);
                 effect.Parameters["AverageLuminance"].SetValue(averageLuminance);
                 effect.Parameters["MaximumLuminanceSquared"].SetValue(maximumLuminance * maximumLuminance);
+            }
+        }
+
+        /// <summary>
+        /// Updates the tone mapping parameters for the tone mapped bitmap materials. You should call this in batch setup when using the materials.
+        /// </summary>
+        /// <param name="inverseScaleFactor">If you scaled down the intensity of your light sources for HDR rendering, use this to invert the scale. All other parameters are applied to the resulting scaled value.</param>
+        /// <param name="exposure">A factor to multiply incoming values to make them brighter or darker.</param>
+        /// <param name="whitePoint">The white point to set as the threshold above which any values become 1.0.</param>
+        public void SetToneMappingParameters (float inverseScaleFactor, float exposure, float whitePoint) {
+            const float min = 1 / 256f;
+            const float max = 99999f;
+
+            exposure = MathHelper.Clamp(exposure, min, max);
+            whitePoint = MathHelper.Clamp(whitePoint, min, max);
+
+            EffectsToSetToneMappingParametersOn[0] = ScreenSpaceToneMappedBitmap.Effect;
+            EffectsToSetToneMappingParametersOn[1] = WorldSpaceToneMappedBitmap.Effect;
+
+            foreach (var effect in EffectsToSetToneMappingParametersOn) {
+                effect.Parameters["InverseScaleFactor"].SetValue(inverseScaleFactor);
+                effect.Parameters["Exposure"].SetValue(exposure);
+                effect.Parameters["WhitePoint"].SetValue(whitePoint);
             }
         }
     }
