@@ -56,67 +56,13 @@ namespace Squared.Illuminant {
         /// Updates all the lighting environment's receivers based on the current positions of light sources and obstructions.
         /// </summary>
         public void UpdateReceivers () {
+            if (LightReceivers.Count == 0)
+                return;
+
+            var query = new LightingQuery(this);
+
             foreach (var receiver in LightReceivers)
-                receiver.Update(this);
-        }
-
-        /// <summary>
-        /// Computes the amount of light received at a given position in the environment.
-        /// </summary>
-        /// <param name="position">The position.</param>
-        /// <param name="lightIgnorePredicate">A predicate that returns true if a light source should be ignored.</param>
-        /// <returns>The total amount of light received at the location (note that the result is not premultiplied, much like LightSource.Color)</returns>
-        public Vector4 ComputeReceivedLightAtPosition (Vector2 position, LightIgnorePredicate lightIgnorePredicate = null) {
-            var result = Vector4.Zero;
-            var receivedLightIntersectionTester = new ReceivedLightIntersectionTester();
-            SpatialCollection<LightSource>.ItemInfo ii;
-
-            // TODO: spatially group light sources so that the receiver update has less work to do? Probably not necessary for low receiver counts.
-
-            using (var e = LightSources.GetItemsFromBounds(new Bounds(position, position), false))
-            while (e.GetNext(out ii)) {
-                var light = ii.Item;
-
-                if ((lightIgnorePredicate != null) && lightIgnorePredicate(light))
-                    continue;
-
-                if (light.Opacity <= 0f)
-                    continue;
-
-                var deltaFromLight = (position - light.Position);
-                var distanceFromLight = deltaFromLight.Length();
-                if (distanceFromLight > light.RampEnd)
-                    continue;
-
-                var bounds = new Bounds(
-                    light.Position, position
-                );
-                receivedLightIntersectionTester.Reset(position, light.Position);
-                EnumerateObstructionLinesInBounds(bounds, receivedLightIntersectionTester, ref receivedLightIntersectionTester.FoundIntersection);
-
-                if (receivedLightIntersectionTester.FoundIntersection)
-                    continue;
-
-                var distanceScale = 1f - MathHelper.Clamp((distanceFromLight - light.RampStart) / (light.RampEnd - light.RampStart), 0f, 1f);
-                if (light.RampMode == LightSourceRampMode.Exponential)
-                    distanceScale *= distanceScale;
-
-                var lightColorScaled = light.Color;
-                // Premultiply by alpha here so that things add up correctly. We'll have to reverse this at the end.
-                lightColorScaled *= (distanceScale * light.Opacity);
-
-                result += lightColorScaled;
-            }
-
-            // Reverse the premultiplication, because we want to match LightSource.Color.
-            if (result.W > 0) {
-                var unpremultiplyFactor = 1.0f / result.W;
-                result.X *= unpremultiplyFactor;
-                result.Y *= unpremultiplyFactor;
-                result.Z *= unpremultiplyFactor;
-            }
-
-            return result;
+                receiver.Update(query);
         }
 
         public void Clear () {

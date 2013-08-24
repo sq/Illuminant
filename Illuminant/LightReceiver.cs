@@ -29,8 +29,8 @@ namespace Squared.Illuminant {
             internal set;
         }
 
-        internal void Update (LightingEnvironment environment) {
-            ReceivedLight = environment.ComputeReceivedLightAtPosition(
+        internal void Update (LightingQuery query) {
+            ReceivedLight = query.ComputeReceivedLightAtPosition(
                 Position, LightIgnorePredicate
             );
         }

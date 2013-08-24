@@ -128,6 +128,8 @@ namespace TestGame.Scenes {
 
             LuminanceSamples.Clear();
 
+            var query = new LightingQuery(Environment);
+
             var tp = new Squared.Util.Win32TimeProvider();
             long startTicks = tp.Ticks;
 
@@ -140,7 +142,7 @@ namespace TestGame.Scenes {
                     float localWidth = Width + xOffset;
 
                     for (Vector2 position = new Vector2(xOffset, y); position.X < localWidth; position.X += stepSizeF) {
-                        var sample = Environment.ComputeReceivedLightAtPosition(position);
+                        var sample = query.ComputeReceivedLightAtPosition(position);
                         var sampleLuminance = (sample.X * 0.299f) + (sample.Y * 0.587f) + (sample.Z * 0.114f);
 
                         samples.Add(sampleLuminance);
