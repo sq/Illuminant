@@ -486,6 +486,9 @@ namespace Squared.Illuminant {
                 for (i = 0; i < lightCount; i++) {
                     var lightSource = sortedLights.Data[i];
 
+                    if (lightSource.Opacity <= 0)
+                        continue;
+
                     if (batchFirstLightSource != null) {
                         var needFlush =
                             (needStencilClear) ||
