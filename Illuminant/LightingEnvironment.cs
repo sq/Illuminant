@@ -59,7 +59,7 @@ namespace Squared.Illuminant {
             if (LightReceivers.Count == 0)
                 return;
 
-            var query = new LightingQuery(this);
+            var query = new LightingQuery(this, true);
 
             foreach (var receiver in LightReceivers)
                 receiver.Update(query);

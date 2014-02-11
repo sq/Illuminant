@@ -90,17 +90,29 @@ namespace Squared.Illuminant {
 
         private class LightSourceComparer : IComparer<LightSource> {
             public int Compare (LightSource lhs, LightSource rhs) {
-                int result = lhs.Mode.CompareTo(rhs.Mode);
+                int result = ((int)lhs.Mode).CompareTo(((int)rhs.Mode));
+
                 if (result == 0)
-                    result = lhs.RampMode.CompareTo(rhs.RampMode);
-                if (result == 0)
-                    result = lhs.NeutralColor.GetHashCode().CompareTo(rhs.NeutralColor.GetHashCode());
+                    result = ((int)lhs.RampMode).CompareTo(((int)rhs.RampMode));
+
+                if (result == 0) {
+                    result = lhs.NeutralColor.X.CompareTo(rhs.NeutralColor.X);
+                    if (result == 0)
+                        result = lhs.NeutralColor.Y.CompareTo(rhs.NeutralColor.Y);
+                    if (result == 0)
+                        result = lhs.NeutralColor.Z.CompareTo(rhs.NeutralColor.Z);
+                    if (result == 0)
+                        result = lhs.NeutralColor.W.CompareTo(rhs.NeutralColor.W);
+                }
+
                 if (result == 0)
                     result = (lhs.ClipRegion.HasValue ? 1 : 0).CompareTo(rhs.ClipRegion.HasValue ? 1 : 0);
+
                 if (result == 0)
-                    result = (lhs.RampTextureFilter.CompareTo(rhs.RampTextureFilter));
+                    result = ((int)lhs.RampTextureFilter).CompareTo((int)rhs.RampTextureFilter);
+
                 if (result == 0)
-                    result = (lhs._RampTextureID.CompareTo(rhs._RampTextureID));
+                    result = lhs._RampTextureID.CompareTo(rhs._RampTextureID);
 
                 return result;
             }
@@ -136,6 +148,8 @@ namespace Squared.Illuminant {
 
         public LightingEnvironment Environment;
 
+        private readonly Action<DeviceManager, object> StoreScissorRect, RestoreScissorRect, ShadowBatchSetup, IlluminationBatchSetup;
+
         static LightingRenderer () {
             ShadowIndices = new short[] {
                 0, 1, 2,
@@ -147,6 +161,11 @@ namespace Squared.Illuminant {
             Materials = materials;
 
             IlluminantMaterials = new IlluminantMaterials(materials);
+
+            StoreScissorRect = _StoreScissorRect;
+            RestoreScissorRect = _RestoreScissorRect;
+            ShadowBatchSetup = _ShadowBatchSetup;
+            IlluminationBatchSetup = _IlluminationBatchSetup;
 
             IlluminantMaterials.ClearStencil = materials.Clear;
 
@@ -178,6 +197,31 @@ namespace Squared.Illuminant {
                     )
                 };
 
+#if SDL2
+                materials.Add(IlluminantMaterials.PointLightExponential = new DelegateMaterial(
+                    PointLightMaterialsInner[0] = new Squared.Render.EffectMaterial(
+                        content.Load<Effect>("PointLightExponential"), "PointLightExponential"
+                    ), dBegin, dEnd
+                ));
+
+                materials.Add(IlluminantMaterials.PointLightLinear = new DelegateMaterial(
+                    PointLightMaterialsInner[1] = new Squared.Render.EffectMaterial(
+                        content.Load<Effect>("PointLightLinear"), "PointLightLinear"
+                    ), dBegin, dEnd
+                ));
+
+                materials.Add(IlluminantMaterials.PointLightExponentialRampTexture = new DelegateMaterial(
+                    PointLightMaterialsInner[2] = new Squared.Render.EffectMaterial(
+                        content.Load<Effect>("PointLightExponentialRampTexture"), "PointLightExponentialRampTexture"
+                    ), dBegin, dEnd
+                ));
+
+                materials.Add(IlluminantMaterials.PointLightLinearRampTexture = new DelegateMaterial(
+                    PointLightMaterialsInner[3] = new Squared.Render.EffectMaterial(
+                        content.Load<Effect>("PointLightLinearRampTexture"), "PointLightLinearRampTexture"
+                    ), dBegin, dEnd
+                ));
+#else
                 materials.Add(IlluminantMaterials.PointLightExponential = new DelegateMaterial(
                     PointLightMaterialsInner[0] = new Squared.Render.EffectMaterial(
                         content.Load<Effect>("Illumination"), "PointLightExponential"
@@ -201,6 +245,7 @@ namespace Squared.Illuminant {
                         content.Load<Effect>("Illumination"), "PointLightLinearRampTexture"
                     ), dBegin, dEnd
                 ));
+#endif
             }
 
             ShadowStencil = new DepthStencilState {
@@ -215,7 +260,11 @@ namespace Squared.Illuminant {
 
             materials.Add(IlluminantMaterials.Shadow = new DelegateMaterial(
                 ShadowMaterialInner = new Squared.Render.EffectMaterial(
+#if SDL2
+                    content.Load<Effect>("Shadow"), "Shadow"
+#else
                     content.Load<Effect>("Illumination"), "Shadow"
+#endif
                 ),
                 new[] {
                     MaterialUtil.MakeDelegate(
@@ -231,6 +280,23 @@ namespace Squared.Illuminant {
                 }
             ));
 
+#if SDL2
+            materials.Add(IlluminantMaterials.ScreenSpaceGammaCompressedBitmap = new Squared.Render.EffectMaterial(
+                content.Load<Effect>("ScreenSpaceGammaCompressedBitmap"), "ScreenSpaceGammaCompressedBitmap"
+            ));
+
+            materials.Add(IlluminantMaterials.WorldSpaceGammaCompressedBitmap = new Squared.Render.EffectMaterial(
+                content.Load<Effect>("WorldSpaceGammaCompressedBitmap"), "WorldSpaceGammaCompressedBitmap"
+            ));
+
+            materials.Add(IlluminantMaterials.ScreenSpaceToneMappedBitmap = new Squared.Render.EffectMaterial(
+                content.Load<Effect>("ScreenSpaceToneMappedBitmap"), "ScreenSpaceToneMappedBitmap"
+            ));
+
+            materials.Add(IlluminantMaterials.WorldSpaceToneMappedBitmap = new Squared.Render.EffectMaterial(
+                content.Load<Effect>("WorldSpaceToneMappedBitmap"), "WorldSpaceToneMappedBitmap"
+            ));
+#else
             materials.Add(IlluminantMaterials.ScreenSpaceGammaCompressedBitmap = new Squared.Render.EffectMaterial(
                 content.Load<Effect>("HDRBitmap"), "ScreenSpaceGammaCompressedBitmap"
             ));
@@ -254,6 +320,7 @@ namespace Squared.Illuminant {
             materials.Add(IlluminantMaterials.WorldSpaceRampBitmap = new Squared.Render.EffectMaterial(
                 content.Load<Effect>("RampBitmap"), "WorldSpaceRampBitmap"
             ));
+#endif
 
             Environment = environment;
 
@@ -272,11 +339,11 @@ namespace Squared.Illuminant {
             ShadowStencil.Dispose();
         }
 
-        private void StoreScissorRect (DeviceManager device, object userData) {
+        private void _StoreScissorRect (DeviceManager device, object userData) {
             StoredScissorRect = device.Device.ScissorRectangle;
         }
 
-        private void RestoreScissorRect (DeviceManager device, object userData) {
+        private void _RestoreScissorRect (DeviceManager device, object userData) {
             device.Device.ScissorRectangle = StoredScissorRect;
         }
 
@@ -328,7 +395,7 @@ namespace Squared.Illuminant {
             return ss;
         }
 
-        private void IlluminationBatchSetup (DeviceManager device, object lightSource) {
+        private void _IlluminationBatchSetup (DeviceManager device, object lightSource) {
             var ls = (LightSource)lightSource;
 
             switch (ls.Mode) {
@@ -353,6 +420,10 @@ namespace Squared.Illuminant {
 
             foreach (var mi in PointLightMaterialsInner) {
                 mi.Effect.Parameters["LightNeutralColor"].SetValue(ls.NeutralColor);
+#if SDL2
+                // Only the RampTexture techniques have this parameter -flibit
+                if (mi.Effect.Parameters["RampTexture"] != null)
+#endif
                 mi.Effect.Parameters["RampTexture"].SetValue(ls.RampTexture);
             }
 
@@ -360,7 +431,7 @@ namespace Squared.Illuminant {
             device.Device.ScissorRectangle = StoredScissorRect;
         }
 
-        private void ShadowBatchSetup (DeviceManager device, object lightSource) {
+        private void _ShadowBatchSetup (DeviceManager device, object lightSource) {
             var ls = (LightSource)lightSource;
 
             ShadowMaterialInner.Effect.Parameters["LightCenter"].SetValue(ls.Position);
@@ -663,7 +734,9 @@ namespace Squared.Illuminant {
         public Material PointLightLinear, PointLightExponential, PointLightLinearRampTexture, PointLightExponentialRampTexture;
         public Squared.Render.EffectMaterial ScreenSpaceGammaCompressedBitmap, WorldSpaceGammaCompressedBitmap;
         public Squared.Render.EffectMaterial ScreenSpaceToneMappedBitmap, WorldSpaceToneMappedBitmap;
+#if !SDL2
         public Squared.Render.EffectMaterial ScreenSpaceRampBitmap, WorldSpaceRampBitmap;
+#endif
 
         internal readonly Effect[] EffectsToSetGammaCompressionParametersOn;
         internal readonly Effect[] EffectsToSetToneMappingParametersOn;
