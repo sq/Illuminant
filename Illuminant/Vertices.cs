@@ -7,7 +7,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Squared.Illuminant {
-    [StructLayout(LayoutKind.Sequential, Pack=0)]
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct ShadowVertex : IVertexType {
         public Vector2 Position;
         public float PairIndex;
@@ -15,9 +15,11 @@ namespace Squared.Illuminant {
         public static VertexDeclaration _VertexDeclaration;
 
         static ShadowVertex () {
+            var tThis = typeof(ShadowVertex);
+
             _VertexDeclaration = new VertexDeclaration(
-                new VertexElement(0, VertexElementFormat.Vector2, VertexElementUsage.Position, 0),
-                new VertexElement(4 * 2, VertexElementFormat.Single, VertexElementUsage.BlendIndices, 0)
+                new VertexElement(Marshal.OffsetOf(tThis, "Position").ToInt32(), VertexElementFormat.Vector2, VertexElementUsage.Position, 0),
+                new VertexElement(Marshal.OffsetOf(tThis, "PairIndex").ToInt32(), VertexElementFormat.Single, VertexElementUsage.BlendIndices, 0)
             );
         }
 
@@ -28,7 +30,7 @@ namespace Squared.Illuminant {
         }
     }
 
-    [StructLayout(LayoutKind.Sequential, Pack = 0)]
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct PointLightVertex : IVertexType {
         public Vector2 Position, LightCenter, Ramp;
         public Vector4 Color;
@@ -36,11 +38,13 @@ namespace Squared.Illuminant {
         public static VertexDeclaration _VertexDeclaration;
 
         static PointLightVertex () {
+            var tThis = typeof(PointLightVertex);
+
             _VertexDeclaration = new VertexDeclaration(
-                new VertexElement(0, VertexElementFormat.Vector2, VertexElementUsage.Position, 0),
-                new VertexElement(4 * 2, VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 0),
-                new VertexElement(4 * 4, VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 1),
-                new VertexElement(4 * 6, VertexElementFormat.Vector4, VertexElementUsage.Color, 0)
+                new VertexElement(Marshal.OffsetOf(tThis, "Position").ToInt32(), VertexElementFormat.Vector2, VertexElementUsage.Position, 0),
+                new VertexElement(Marshal.OffsetOf(tThis, "LightCenter").ToInt32(), VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 0),
+                new VertexElement(Marshal.OffsetOf(tThis, "Ramp").ToInt32(), VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 1),
+                new VertexElement(Marshal.OffsetOf(tThis, "Color").ToInt32(), VertexElementFormat.Vector4, VertexElementUsage.Color, 0)
             );
         }
 
