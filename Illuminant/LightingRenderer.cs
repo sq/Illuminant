@@ -157,6 +157,9 @@ namespace Squared.Illuminant {
             };
         }
 
+        const int StencilTrue = 0xFF;
+        const int StencilFalse = 0x00;
+
         public LightingRenderer (ContentManager content, DefaultMaterialSet materials, LightingEnvironment environment) {
             Materials = materials;
 
@@ -167,7 +170,20 @@ namespace Squared.Illuminant {
             ShadowBatchSetup = _ShadowBatchSetup;
             IlluminationBatchSetup = _IlluminationBatchSetup;
 
-            IlluminantMaterials.ClearStencil = materials.Clear;
+            IlluminantMaterials.ClearStencil = materials.Get(
+                materials.Clear, 
+                rasterizerState: RasterizerState.CullNone, 
+                depthStencilState: new DepthStencilState {
+                    StencilEnable = true,
+                    StencilMask = StencilTrue,
+                    StencilWriteMask = StencilTrue,
+                    ReferenceStencil = StencilFalse,
+                    StencilFunction = CompareFunction.Always,
+                    StencilPass = StencilOperation.Replace,
+                    StencilFail = StencilOperation.Replace,
+                },
+                blendState: BlendState.Opaque
+            );
 
             materials.Add(
                 IlluminantMaterials.DebugOutlines = materials.WorldSpaceGeometry.SetStates(
@@ -175,14 +191,16 @@ namespace Squared.Illuminant {
                 )
             );
 
+            // If stencil == false, paint point light at this location
             PointLightStencil = new DepthStencilState {
                 DepthBufferEnable = false,
                 StencilEnable = true,
-                StencilWriteMask = 0,
+                StencilMask = StencilTrue,
+                StencilWriteMask = StencilFalse,
                 StencilFunction = CompareFunction.Equal,
                 StencilPass = StencilOperation.Keep,
                 StencilFail = StencilOperation.Keep,
-                ReferenceStencil = 0
+                ReferenceStencil = StencilFalse
             };
 
             {
@@ -248,14 +266,17 @@ namespace Squared.Illuminant {
 #endif
             }
 
+            // If stencil == false: set stencil to true.
+            // If stencil == true: leave stencil alone, don't paint this pixel
             ShadowStencil = new DepthStencilState {
                 DepthBufferEnable = false,
                 StencilEnable = true,
-                StencilWriteMask = Int32.MaxValue,
-                StencilFunction = CompareFunction.Never,
-                StencilPass = StencilOperation.Zero,
-                StencilFail = StencilOperation.Replace,
-                ReferenceStencil = 1
+                StencilMask = StencilTrue,
+                StencilWriteMask = StencilTrue,
+                StencilFunction = CompareFunction.NotEqual,
+                StencilPass = StencilOperation.Replace,
+                StencilFail = StencilOperation.Keep,
+                ReferenceStencil = StencilTrue
             };
 
             materials.Add(IlluminantMaterials.Shadow = new DelegateMaterial(
@@ -270,7 +291,7 @@ namespace Squared.Illuminant {
                     MaterialUtil.MakeDelegate(
                         rasterizerState: RenderStates.ScissorOnly,
                         depthStencilState: ShadowStencil,
-                        blendState: BlendState.Opaque
+                        blendState: RenderStates.DrawNone
                     )
                 },
                 new[] {
@@ -544,6 +565,8 @@ namespace Squared.Illuminant {
 
             using (var sortedLights = BufferPool<LightSource>.Allocate(Environment.LightSources.Count))
             using (var resultGroup = BatchGroup.New(container, layer, before: StoreScissorRect, after: RestoreScissorRect)) {
+                Render.Tracing.RenderTrace.Marker(resultGroup, -9999, String.Format("Frame {0:0000} : LightingRenderer {1:X4} : Begin", frame.Index, this.GetHashCode()));
+
                 int i = 0;
                 var lightCount = Environment.LightSources.Count;
 
@@ -571,6 +594,7 @@ namespace Squared.Illuminant {
                             (batchFirstLightSource.RampTextureFilter != lightSource.RampTextureFilter);
 
                         if (needFlush) {
+                            Render.Tracing.RenderTrace.Marker(currentLightGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Point Light Flush ({2} point(s))", frame.Index, this.GetHashCode(), PointLightBatchBuffer.Count);
                             FlushPointLightBatch(ref currentLightGroup, ref batchFirstLightSource, ref layerIndex);
                             indexOffset = 0;
                         }
@@ -593,7 +617,8 @@ namespace Squared.Illuminant {
                     }
 
                     if (needStencilClear) {
-                        ClearBatch.AddNew(currentLightGroup, layerIndex++, IlluminantMaterials.ClearStencil, clearStencil: 0);
+                        Render.Tracing.RenderTrace.Marker(currentLightGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Stencil Clear", frame.Index, this.GetHashCode());
+                        ClearBatch.AddNew(currentLightGroup, layerIndex++, IlluminantMaterials.ClearStencil, clearStencil: StencilFalse);
                         needStencilClear = false;
                     }
 
@@ -606,9 +631,13 @@ namespace Squared.Illuminant {
                             continue;
 
                         if (stencilBatch == null) {
+                            Render.Tracing.RenderTrace.Marker(currentLightGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Begin Stencil Shadow Batch", frame.Index, this.GetHashCode());
+
                             stencilBatch = NativeBatch.New(currentLightGroup, layerIndex++, IlluminantMaterials.Shadow, ShadowBatchSetup, lightSource);
                             stencilBatch.Dispose();
                             needStencilClear = true;
+
+                            Render.Tracing.RenderTrace.Marker(currentLightGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : End Stencil Shadow Batch", frame.Index, this.GetHashCode());
                         }
 
                         stencilBatch.Add(new NativeDrawCall(
@@ -662,7 +691,13 @@ namespace Squared.Illuminant {
                     indexOffset += 6;
                 }
 
-                FlushPointLightBatch(ref currentLightGroup, ref batchFirstLightSource, ref layerIndex);
+                if (PointLightBatchBuffer.Count > 0) {
+                    Render.Tracing.RenderTrace.Marker(currentLightGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Point Light Flush ({2} point(s))", frame.Index, this.GetHashCode(), PointLightBatchBuffer.Count);
+
+                    FlushPointLightBatch(ref currentLightGroup, ref batchFirstLightSource, ref layerIndex);
+                }
+
+                Render.Tracing.RenderTrace.Marker(resultGroup, 9999, "Frame {0:0000} : LightingRenderer {1:X4} : End", frame.Index, this.GetHashCode());
             }
         }
 
