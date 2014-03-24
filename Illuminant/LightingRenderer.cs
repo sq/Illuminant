@@ -95,6 +95,15 @@ namespace Squared.Illuminant {
                 if (result == 0)
                     result = ((int)lhs.RampMode).CompareTo(((int)rhs.RampMode));
 
+                if (result == 0)
+                    result = (lhs.ClipRegion.HasValue ? 1 : 0).CompareTo(rhs.ClipRegion.HasValue ? 1 : 0);
+
+                if (result == 0)
+                    result = lhs._RampTextureID.CompareTo(rhs._RampTextureID);
+
+                if (result == 0)
+                    result = ((int)lhs.RampTextureFilter).CompareTo((int)rhs.RampTextureFilter);
+
                 if (result == 0) {
                     result = lhs.NeutralColor.X.CompareTo(rhs.NeutralColor.X);
                     if (result == 0)
@@ -104,15 +113,6 @@ namespace Squared.Illuminant {
                     if (result == 0)
                         result = lhs.NeutralColor.W.CompareTo(rhs.NeutralColor.W);
                 }
-
-                if (result == 0)
-                    result = (lhs.ClipRegion.HasValue ? 1 : 0).CompareTo(rhs.ClipRegion.HasValue ? 1 : 0);
-
-                if (result == 0)
-                    result = ((int)lhs.RampTextureFilter).CompareTo((int)rhs.RampTextureFilter);
-
-                if (result == 0)
-                    result = lhs._RampTextureID.CompareTo(rhs._RampTextureID);
 
                 return result;
             }
@@ -127,6 +127,7 @@ namespace Squared.Illuminant {
         public float ClipRegionScale = 1f;
 
         public readonly DefaultMaterialSet Materials;
+        public readonly RenderCoordinator Coordinator;
         public readonly IlluminantMaterials IlluminantMaterials;
         public readonly Squared.Render.EffectMaterial ShadowMaterialInner;
         public readonly Squared.Render.EffectMaterial[] PointLightMaterialsInner = new Squared.Render.EffectMaterial[4];
@@ -160,8 +161,9 @@ namespace Squared.Illuminant {
         const int StencilTrue = 0xFF;
         const int StencilFalse = 0x00;
 
-        public LightingRenderer (ContentManager content, DefaultMaterialSet materials, LightingEnvironment environment) {
+        public LightingRenderer (ContentManager content, RenderCoordinator coordinator, DefaultMaterialSet materials, LightingEnvironment environment) {
             Materials = materials;
+            Coordinator = coordinator;
 
             IlluminantMaterials = new IlluminantMaterials(materials);
 
@@ -488,20 +490,28 @@ namespace Squared.Illuminant {
             result.IndexCount = lineCount * 6;
 
             if ((result.ObstructionVertexBuffer != null) && (result.ObstructionVertexBuffer.VertexCount < result.VertexCount)) {
-                result.ObstructionVertexBuffer.Dispose();
+                lock (Coordinator.CreateResourceLock)
+                    result.ObstructionVertexBuffer.Dispose();
+                
                 result.ObstructionVertexBuffer = null;
             }
 
             if ((result.ObstructionIndexBuffer != null) && (result.ObstructionIndexBuffer.IndexCount < result.IndexCount)) {
-                result.ObstructionIndexBuffer.Dispose();
+                lock (Coordinator.CreateResourceLock)
+                    result.ObstructionIndexBuffer.Dispose();
+                
                 result.ObstructionIndexBuffer = null;
             }
 
-            if (result.ObstructionVertexBuffer == null)
-                result.ObstructionVertexBuffer = new DynamicVertexBuffer(frame.RenderManager.DeviceManager.Device, (new ShadowVertex().VertexDeclaration), result.VertexCount, BufferUsage.WriteOnly);
+            if (result.ObstructionVertexBuffer == null) {
+                lock (Coordinator.CreateResourceLock)
+                    result.ObstructionVertexBuffer = new DynamicVertexBuffer(frame.RenderManager.DeviceManager.Device, (new ShadowVertex().VertexDeclaration), result.VertexCount, BufferUsage.WriteOnly);
+            }
 
-            if (result.ObstructionIndexBuffer == null)
-                result.ObstructionIndexBuffer = new DynamicIndexBuffer(frame.RenderManager.DeviceManager.Device, IndexElementSize.SixteenBits, result.IndexCount, BufferUsage.WriteOnly);
+            if (result.ObstructionIndexBuffer == null) {
+                lock (Coordinator.CreateResourceLock)
+                    result.ObstructionIndexBuffer = new DynamicIndexBuffer(frame.RenderManager.DeviceManager.Device, IndexElementSize.SixteenBits, result.IndexCount, BufferUsage.WriteOnly);
+            }
 
             using (var va = BufferPool<ShadowVertex>.Allocate(result.VertexCount))
             using (var ia = BufferPool<short>.Allocate(result.IndexCount)) {
@@ -517,8 +527,10 @@ namespace Squared.Illuminant {
                 if (linesWritten != lineCount)
                     throw new InvalidDataException("GenerateLines didn't generate enough lines based on LineCount");
 
-                result.ObstructionVertexBuffer.SetData(vb, 0, result.VertexCount, SetDataOptions.Discard);
-                result.ObstructionIndexBuffer.SetData(ib, 0, result.IndexCount, SetDataOptions.Discard);
+                lock (Coordinator.UseResourceLock) {
+                    result.ObstructionVertexBuffer.SetData(vb, 0, result.VertexCount, SetDataOptions.Discard);
+                    result.ObstructionIndexBuffer.SetData(ib, 0, result.IndexCount, SetDataOptions.Discard);
+                }
             }
 
             result.FrameIndex = frame.Index;
@@ -565,7 +577,7 @@ namespace Squared.Illuminant {
 
             using (var sortedLights = BufferPool<LightSource>.Allocate(Environment.LightSources.Count))
             using (var resultGroup = BatchGroup.New(container, layer, before: StoreScissorRect, after: RestoreScissorRect)) {
-                Render.Tracing.RenderTrace.Marker(resultGroup, -9999, String.Format("Frame {0:0000} : LightingRenderer {1:X4} : Begin", frame.Index, this.GetHashCode()));
+                Render.Tracing.RenderTrace.Marker(resultGroup, -9999, "Frame {0:0000} : LightingRenderer {1:X4} : Begin", frame.Index, this.GetHashCode());
 
                 int i = 0;
                 var lightCount = Environment.LightSources.Count;
