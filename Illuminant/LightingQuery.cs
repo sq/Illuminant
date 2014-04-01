@@ -11,6 +11,30 @@ using Squared.Util;
 
 namespace Squared.Illuminant {
     public class LightingQuery {
+        private struct LinesForLightSource : IDisposable {
+            public readonly LightSource LightSource;
+            public readonly ArraySegment<DeltaLine> Lines; 
+
+            private BufferPool<DeltaLine>.Buffer Buffer;
+
+            static LinesForLightSource () {
+                BufferPool<DeltaLine>.MaxPoolCount = 256;
+                BufferPool<DeltaLine>.MaxBufferSize = 2048;
+            }
+
+            public LinesForLightSource (LightSource lightSource, DeltaLineWriter lineWriter) {
+                LightSource = lightSource;
+                Buffer = BufferPool<DeltaLine>.Allocate(lineWriter.Lines.Count);
+
+                lineWriter.CopyTo(Buffer.Data, 0, lineWriter.Lines.Count);
+                Lines = new ArraySegment<DeltaLine>(Buffer.Data, 0, lineWriter.Lines.Count);
+            }
+
+            public void Dispose () {
+                Buffer.Dispose();
+            }
+        }
+
         private struct DeltaLine {
             public readonly float X1, Y1;
             public readonly float LengthX, LengthY;
@@ -34,6 +58,10 @@ namespace Squared.Illuminant {
                 Lines.Add(new DeltaLine(a, b));
             }
 
+            public void CopyTo (DeltaLine[] buffer, int offset, int count) {
+                Lines.CopyTo(buffer, offset, count);
+            }
+
             public void Reset () {
                 Lines.Clear();
             }
@@ -41,8 +69,8 @@ namespace Squared.Illuminant {
 
         public readonly LightingEnvironment Environment;
 
-        private readonly Dictionary<LightSource, DeltaLine[]> _ObstructionsByLight = 
-                new Dictionary<LightSource, DeltaLine[]>(new ReferenceComparer<LightSource>());
+        private readonly Dictionary<LightSource, ArraySegment<DeltaLine>> _ObstructionsByLight =
+                new Dictionary<LightSource, ArraySegment<DeltaLine>>(new ReferenceComparer<LightSource>());
 
         private static class UnorderedListPool<T> {
             const int Capacity = 4;
@@ -75,16 +103,19 @@ namespace Squared.Illuminant {
 
         private struct LineGeneratorContext : IDisposable {
             public readonly DeltaLineWriter LineWriter;
-            public readonly UnorderedList<KeyValuePair<LightSource, DeltaLine[]>> Queue;
+            public readonly UnorderedList<LinesForLightSource> Queue;
 
             public LineGeneratorContext (int initialCapacity) {
                 LineWriter = new DeltaLineWriter(UnorderedListPool<DeltaLine>.Allocate(initialCapacity));
-                Queue = UnorderedListPool<KeyValuePair<LightSource, DeltaLine[]>>.Allocate();
+                Queue = UnorderedListPool<LinesForLightSource>.Allocate();
             }
 
             public void Dispose () {
+                foreach (var lfls in Queue)
+                    lfls.Dispose();
+
                 UnorderedListPool<DeltaLine>.Free(LineWriter.Lines);
-                UnorderedListPool<KeyValuePair<LightSource, DeltaLine[]>>.Free(Queue);
+                UnorderedListPool<LinesForLightSource>.Free(Queue);
             }
         }
 
@@ -131,7 +162,7 @@ namespace Squared.Illuminant {
                     (ctx) => {
                         lock (_ObstructionsByLight)
                             foreach (var kvp in ctx.Queue)
-                                _ObstructionsByLight.Add(kvp.Key, kvp.Value);
+                                _ObstructionsByLight.Add(kvp.LightSource, kvp.Lines);
 
                         ctx.Dispose();
                     }
@@ -143,10 +174,8 @@ namespace Squared.Illuminant {
         private void GenerateLinesForLightSource (ref LineGeneratorContext context, LightSource lightSource) {
             Environment.EnumerateObstructionLinesInBounds(lightSource.Bounds, context.LineWriter);
 
+            context.Queue.Add(new LinesForLightSource(lightSource, context.LineWriter));
             context.LineWriter.Reset();
-            context.Queue.Add(new KeyValuePair<LightSource, DeltaLine[]>(
-                lightSource, context.LineWriter.Lines.ToArray()
-            ));
         }
 
         /// <summary>
@@ -209,13 +238,13 @@ namespace Squared.Illuminant {
 
         private static bool FindObstruction(
             Vector2 startA, Vector2 endA, 
-            DeltaLine[] lines
+            ArraySegment<DeltaLine> lines
         ) {
             var lengthAX = endA.X - startA.X;
             var lengthAY = endA.Y - startA.Y;
 
-            for (int i = 0, l = lines.Length; i < l; i++) {
-                var line = lines[i];
+            for (int i = 0, l = lines.Count; i < l; i++) {
+                var line = lines.Array[i + lines.Offset];
 
                 float q, d, xDelta, yDelta;
                 {
