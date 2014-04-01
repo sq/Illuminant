@@ -577,7 +577,8 @@ namespace Squared.Illuminant {
 
             using (var sortedLights = BufferPool<LightSource>.Allocate(Environment.LightSources.Count))
             using (var resultGroup = BatchGroup.New(container, layer, before: StoreScissorRect, after: RestoreScissorRect)) {
-                Render.Tracing.RenderTrace.Marker(resultGroup, -9999, "Frame {0:0000} : LightingRenderer {1:X4} : Begin", frame.Index, this.GetHashCode());
+                if (Render.Tracing.RenderTrace.EnableTracing)
+                    Render.Tracing.RenderTrace.Marker(resultGroup, -9999, "Frame {0:0000} : LightingRenderer {1:X4} : Begin", frame.Index, this.GetHashCode());
 
                 int i = 0;
                 var lightCount = Environment.LightSources.Count;
@@ -606,7 +607,8 @@ namespace Squared.Illuminant {
                             (batchFirstLightSource.RampTextureFilter != lightSource.RampTextureFilter);
 
                         if (needFlush) {
-                            Render.Tracing.RenderTrace.Marker(currentLightGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Point Light Flush ({2} point(s))", frame.Index, this.GetHashCode(), PointLightBatchBuffer.Count);
+                            if (Render.Tracing.RenderTrace.EnableTracing)
+                                Render.Tracing.RenderTrace.Marker(currentLightGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Point Light Flush ({2} point(s))", frame.Index, this.GetHashCode(), PointLightBatchBuffer.Count);
                             FlushPointLightBatch(ref currentLightGroup, ref batchFirstLightSource, ref layerIndex);
                             indexOffset = 0;
                         }
@@ -629,7 +631,8 @@ namespace Squared.Illuminant {
                     }
 
                     if (needStencilClear) {
-                        Render.Tracing.RenderTrace.Marker(currentLightGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Stencil Clear", frame.Index, this.GetHashCode());
+                        if (Render.Tracing.RenderTrace.EnableTracing)
+                            Render.Tracing.RenderTrace.Marker(currentLightGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Stencil Clear", frame.Index, this.GetHashCode());
                         ClearBatch.AddNew(currentLightGroup, layerIndex++, IlluminantMaterials.ClearStencil, clearStencil: StencilFalse);
                         needStencilClear = false;
                     }
@@ -643,13 +646,15 @@ namespace Squared.Illuminant {
                             continue;
 
                         if (stencilBatch == null) {
-                            Render.Tracing.RenderTrace.Marker(currentLightGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Begin Stencil Shadow Batch", frame.Index, this.GetHashCode());
+                            if (Render.Tracing.RenderTrace.EnableTracing)
+                                Render.Tracing.RenderTrace.Marker(currentLightGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Begin Stencil Shadow Batch", frame.Index, this.GetHashCode());
 
                             stencilBatch = NativeBatch.New(currentLightGroup, layerIndex++, IlluminantMaterials.Shadow, ShadowBatchSetup, lightSource);
                             stencilBatch.Dispose();
                             needStencilClear = true;
 
-                            Render.Tracing.RenderTrace.Marker(currentLightGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : End Stencil Shadow Batch", frame.Index, this.GetHashCode());
+                            if (Render.Tracing.RenderTrace.EnableTracing)
+                                Render.Tracing.RenderTrace.Marker(currentLightGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : End Stencil Shadow Batch", frame.Index, this.GetHashCode());
                         }
 
                         stencilBatch.Add(new NativeDrawCall(
@@ -704,12 +709,14 @@ namespace Squared.Illuminant {
                 }
 
                 if (PointLightBatchBuffer.Count > 0) {
-                    Render.Tracing.RenderTrace.Marker(currentLightGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Point Light Flush ({2} point(s))", frame.Index, this.GetHashCode(), PointLightBatchBuffer.Count);
+                    if (Render.Tracing.RenderTrace.EnableTracing)
+                        Render.Tracing.RenderTrace.Marker(currentLightGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Point Light Flush ({2} point(s))", frame.Index, this.GetHashCode(), PointLightBatchBuffer.Count);
 
                     FlushPointLightBatch(ref currentLightGroup, ref batchFirstLightSource, ref layerIndex);
                 }
 
-                Render.Tracing.RenderTrace.Marker(resultGroup, 9999, "Frame {0:0000} : LightingRenderer {1:X4} : End", frame.Index, this.GetHashCode());
+                if (Render.Tracing.RenderTrace.EnableTracing)
+                    Render.Tracing.RenderTrace.Marker(resultGroup, 9999, "Frame {0:0000} : LightingRenderer {1:X4} : End", frame.Index, this.GetHashCode());
             }
         }
 
