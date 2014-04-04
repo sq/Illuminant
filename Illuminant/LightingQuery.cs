@@ -47,14 +47,19 @@ namespace Squared.Illuminant {
             }
         }
 
-        private struct DeltaLineWriter : ILineWriter {
+        private class DeltaLineWriter : ILineWriter {
+            public Bounds? CropBounds;
             public readonly UnorderedList<DeltaLine> Lines;
 
             public DeltaLineWriter (UnorderedList<DeltaLine> buffer) {
                 Lines = buffer;
+                CropBounds = null;
             }
 
             public void Write (Vector2 a, Vector2 b) {
+                if (CropBounds.HasValue && Geometry.DoesLineIntersectRectangle(a, b, CropBounds.Value))
+                    return;
+
                 Lines.Add(new DeltaLine(a, b));
             }
 
@@ -71,6 +76,8 @@ namespace Squared.Illuminant {
 
         private readonly Dictionary<LightSource, ArraySegment<DeltaLine>> _ObstructionsByLight =
                 new Dictionary<LightSource, ArraySegment<DeltaLine>>(new ReferenceComparer<LightSource>());
+
+        private int IntersectionTestsLastFrame = 0;
 
         private static class UnorderedListPool<T> {
             const int Capacity = 4;
@@ -126,6 +133,13 @@ namespace Squared.Illuminant {
         }
 
         public void Update (bool parallelUpdate) {
+            /*
+            if (IntersectionTestsLastFrame > 0)
+                Debug.WriteLine("{0} intersection tests last frame", IntersectionTestsLastFrame);
+             */
+
+            IntersectionTestsLastFrame = 0;
+
             var options = new ParallelOptions();
             if (!parallelUpdate)
                 options.MaxDegreeOfParallelism = 1;
@@ -141,7 +155,7 @@ namespace Squared.Illuminant {
                 {
                     foreach (var kvp in ctx.Queue)
                     {
-                        _ObstructionsByLight.Add(kvp.Key, kvp.Value);
+                        _ObstructionsByLight.Add(kvp.LightSource, kvp.Lines);
                     }
                 }
                 ctx.Dispose();
@@ -172,7 +186,11 @@ namespace Squared.Illuminant {
         }
 
         private void GenerateLinesForLightSource (ref LineGeneratorContext context, LightSource lightSource) {
+            context.LineWriter.CropBounds = lightSource.Bounds;
+
             Environment.EnumerateObstructionLinesInBounds(lightSource.Bounds, context.LineWriter);
+
+            context.LineWriter.CropBounds = null;
 
             context.Queue.Add(new LinesForLightSource(lightSource, context.LineWriter));
             context.LineWriter.Reset();
@@ -184,8 +202,8 @@ namespace Squared.Illuminant {
         /// <param name="position">The position.</param>
         /// <param name="lightIgnorePredicate">A predicate that returns true if a light source should be ignored.</param>
         /// <returns>The total amount of light received at the location (note that the result is not premultiplied, much like LightSource.Color)</returns>
-        public Vector4 ComputeReceivedLightAtPosition (Vector2 position, LightIgnorePredicate lightIgnorePredicate = null) {
-            var result = Vector4.Zero;
+        public bool ComputeReceivedLightAtPosition (Vector2 position, out Vector4 result, LightIgnorePredicate lightIgnorePredicate = null) {
+            result = Vector4.Zero;
 
             // FIXME: This enumerates all lights in the scene, which might be more trouble than it's worth.
             // Using the itemboundsenumerator ended up being too expensive due to setup cost.
@@ -205,7 +223,11 @@ namespace Squared.Illuminant {
                 if ((lightIgnorePredicate != null) && lightIgnorePredicate(light))
                     continue;
 
-                var lines = _ObstructionsByLight[light];
+                ArraySegment<DeltaLine> lines;
+                if (!_ObstructionsByLight.TryGetValue(light, out lines))
+                    return false;
+
+                IntersectionTestsLastFrame += lines.Count;
 
                 if (FindObstruction(position, lightPosition, lines)) 
                     continue;
@@ -233,7 +255,7 @@ namespace Squared.Illuminant {
                 result.Z *= unpremultiplyFactor;
             }
 
-            return result;
+            return true;
         }
 
         private static bool FindObstruction(

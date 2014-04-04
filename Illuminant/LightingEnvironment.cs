@@ -22,6 +22,9 @@ namespace Squared.Illuminant {
 
             using (var e = Obstructions.GetItemsFromBounds(bounds, false))
             while (e.GetNext(out ii)) {
+                if (!ii.Bounds.Intersects(bounds))
+                    continue;
+
                 ii.Item.GenerateLines(output);
             }
         }
@@ -31,6 +34,9 @@ namespace Squared.Illuminant {
 
             using (var e = Obstructions.GetItemsFromBounds(bounds, false))
             while (e.GetNext(out ii)) {
+                if (!ii.Bounds.Intersects(bounds))
+                    continue;
+
                 ii.Item.GenerateLines(output);
 
                 if (cancel)

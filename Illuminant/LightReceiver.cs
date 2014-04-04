@@ -24,15 +24,20 @@ namespace Squared.Illuminant {
         /// Any light added by rendering outside of the environment (ambient lights, bitmap lights) is not included in the computation.
         /// This property is updated by LightingEnvironment.UpdateReceivers().
         /// </summary>
-        public Vector4 ReceivedLight {
+        public Vector4? ReceivedLight {
             get;
             internal set;
         }
 
         internal void Update (LightingQuery query) {
-            ReceivedLight = query.ComputeReceivedLightAtPosition(
-                Position, LightIgnorePredicate
-            );
+            Vector4 result;
+
+            if (query.ComputeReceivedLightAtPosition(
+                Position, out result, LightIgnorePredicate
+            ))
+                ReceivedLight = result;
+            else
+                ReceivedLight = null;
         }
     }
 }
