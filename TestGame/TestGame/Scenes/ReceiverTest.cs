@@ -62,7 +62,7 @@ namespace TestGame.Scenes {
 
             Environment = new LightingEnvironment();
 
-            Renderer = new LightingRenderer(Game.Content, LightmapMaterials, Environment);
+            Renderer = new LightingRenderer(Game.Content, Game.RenderCoordinator, LightmapMaterials, Environment);
 
             var light = new LightSource {
                 Position = new Vector2(64, 64),
@@ -147,9 +147,12 @@ namespace TestGame.Scenes {
             using (var gb = GeometryBatch.New(frame, 3, Game.ScreenMaterials.Get(Game.ScreenMaterials.ScreenSpaceGeometry, blendState: BlendState.Opaque)))
             for (var i = 0; i < Receivers.Length; i++) {
                 var r = Receivers[i];
+                if (!r.ReceivedLight.HasValue)
+                    continue;
+
                 var size = new Vector2(8, 8);
                 var bounds = new Bounds(r.Position - size, r.Position + size);
-                var color = new Color(r.ReceivedLight.X, r.ReceivedLight.Y, r.ReceivedLight.Z, 1.0f) * r.ReceivedLight.W;
+                var color = new Color(r.ReceivedLight.Value.X, r.ReceivedLight.Value.Y, r.ReceivedLight.Value.Z, 1.0f) * r.ReceivedLight.Value.W;
 
                 // Console.WriteLine("Receiver {0} at {1}: {2}", i, r.Position, r.ReceivedLight);
 

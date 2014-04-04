@@ -94,7 +94,7 @@ namespace TestGame.Scenes {
                 }
             });
 
-            Renderer = new LightingRenderer(Game.Content, LightmapMaterials, Environment);
+            Renderer = new LightingRenderer(Game.Content, Game.RenderCoordinator, LightmapMaterials, Environment);
         }
 
         public override void Draw (Squared.Render.Frame frame) {

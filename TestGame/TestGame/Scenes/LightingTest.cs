@@ -73,7 +73,7 @@ namespace TestGame.Scenes {
 
             Environment = new LightingEnvironment();
 
-            Renderer = new LightingRenderer(Game.Content, LightmapMaterials, Environment);
+            Renderer = new LightingRenderer(Game.Content, Game.RenderCoordinator, LightmapMaterials, Environment);
 
             var light = new LightSource {
                 Position = new Vector2(64, 64),
@@ -128,7 +128,7 @@ namespace TestGame.Scenes {
 
             LuminanceSamples.Clear();
 
-            var query = new LightingQuery(Environment);
+            var query = new LightingQuery(Environment, true);
 
             var tp = new Squared.Util.Win32TimeProvider();
             long startTicks = tp.Ticks;
@@ -140,12 +140,14 @@ namespace TestGame.Scenes {
                     float y = yStep * stepSizeF;
                     float xOffset = (y % offsetStep) / 8f;
                     float localWidth = Width + xOffset;
+                    Vector4 sample;
 
                     for (Vector2 position = new Vector2(xOffset, y); position.X < localWidth; position.X += stepSizeF) {
-                        var sample = query.ComputeReceivedLightAtPosition(position);
-                        var sampleLuminance = (sample.X * 0.299f) + (sample.Y * 0.587f) + (sample.Z * 0.114f);
+                        if (query.ComputeReceivedLightAtPosition(position, out sample)) {
+                            var sampleLuminance = (sample.X * 0.299f) + (sample.Y * 0.587f) + (sample.Z * 0.114f);
 
-                        samples.Add(sampleLuminance);
+                            samples.Add(sampleLuminance);
+                        }
                     }
 
 
