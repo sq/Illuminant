@@ -190,7 +190,7 @@ namespace Squared.Illuminant {
         private void GenerateLinesForLightSource (ref LineGeneratorContext context, LightSource lightSource) {
             context.LineWriter.CropBounds = lightSource.Bounds;
 
-            Environment.EnumerateObstructionLinesInBounds(lightSource.Bounds, context.LineWriter);
+            Environment.EnumerateObstructionLinesInBounds(lightSource.Bounds.XY, context.LineWriter);
 
             context.LineWriter.CropBounds = null;
 
@@ -261,44 +261,25 @@ namespace Squared.Illuminant {
         }
 
         private static bool FindObstruction(
-            Vector2 startA, Vector2 endA, 
+            Vector3 startA, Vector3 endA, 
             ArraySegment<DeltaLine> lines
         ) {
-            var lengthAX = endA.X - startA.X;
-            var lengthAY = endA.Y - startA.Y;
-
             for (int i = 0, l = lines.Count; i < l; i++) {
                 var line = lines.Array[i + lines.Offset];
 
-                float q, d, xDelta, yDelta;
-                {
-                    xDelta = (startA.X - line.X1);
-                    yDelta = (startA.Y - line.Y1);
-
-                    q = yDelta * line.LengthX - xDelta * line.LengthY;
-                    d = lengthAX * line.LengthY - lengthAY * line.LengthX;
-                }
-
-                if (d == 0.0f)
-                    continue;
-
-                {
-                    d = 1 / d;
-                    float r = q * d;
-
-                    if (r < 0.0f || r > 1.0f)
-                        continue;
-
-                    {
-                        var q2 = yDelta * lengthAX - xDelta * lengthAY;
-                        float s = q2 * d;
-
-                        if (s < 0.0f || s > 1.0f)
-                            continue;
-                    }
-
+                // FIXME: Unoptimized
+                if (
+                    Geometry.DoLinesIntersect(
+                        startA, endA,
+                        new Vector3(line.X1, line.Y1, line.Z1),
+                        new Vector3(
+                            line.X1 + line.LengthX,
+                            line.Y1 + line.LengthY,
+                            line.Z1 + line.LengthZ
+                        )
+                    )
+                )
                     return true;
-                }
             }
 
             return false;

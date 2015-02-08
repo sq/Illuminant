@@ -114,8 +114,12 @@ namespace TestGame {
                 for (var i = 0; i < lineCount; i++) {
                     var line = lines[i];
 
-                    if (Geometry.DoLinesIntersect(particle.PreviousPosition, particle.Position, line.A, line.B, out distance)) {
-                        var normal = line.B - line.A;
+                    // FIXME: Is this right?
+                    var a = new Vector2(line.A.X, line.A.Y);
+                    var b = new Vector2(line.B.X, line.B.Y);
+
+                    if (Geometry.DoLinesIntersect(particle.PreviousPosition, particle.Position, a, b, out distance)) {
+                        var normal = b - a;
                         normal.Normalize();
                         normal = normal.Perpendicular();
 

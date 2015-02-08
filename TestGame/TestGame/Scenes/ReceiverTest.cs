@@ -150,13 +150,13 @@ namespace TestGame.Scenes {
                 if (!r.ReceivedLight.HasValue)
                     continue;
 
-                var size = new Vector2(8, 8);
-                var bounds = new Bounds(r.Position - size, r.Position + size);
+                var size = new Vector3(8);
+                var bounds = new Bounds3(r.Position - size, r.Position + size);
                 var color = new Color(r.ReceivedLight.Value.X, r.ReceivedLight.Value.Y, r.ReceivedLight.Value.Z, 1.0f) * r.ReceivedLight.Value.W;
 
                 // Console.WriteLine("Receiver {0} at {1}: {2}", i, r.Position, r.ReceivedLight);
 
-                gb.AddFilledQuad(bounds, color);
+                gb.AddFilledQuad(bounds.XY, color);
             }
         }
 
