@@ -461,7 +461,7 @@ namespace Squared.Illuminant {
         private void _ShadowBatchSetup (DeviceManager device, object lightSource) {
             var ls = (LightSource)lightSource;
 
-            ShadowMaterialInner.Effect.Parameters["LightCenter"].SetValue(ls.Position);
+            ShadowMaterialInner.Effect.Parameters["LightCenter"].SetValue((Vector3)ls.Position);
             
             // FIXME: Figure out why the derived computation for this in the shader doesn't work.
             // ShadowMaterialInner.Effect.Parameters["ShadowLength"].SetValue(ls.RampEnd * 2);

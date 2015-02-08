@@ -7,9 +7,9 @@ shared float4x4 ProjectionMatrix;
 shared float4x4 ModelViewMatrix;
 
 uniform float4 LightNeutralColor;
-uniform float2 LightCenter;
+uniform float3 LightCenter;
 
-uniform float2 ShadowLength;
+uniform float3 ShadowLength;
 
 float4 ApplyTransform (float2 position2d) {
     float2 localPosition = ((position2d - ViewportPosition) * ViewportScale);
@@ -19,7 +19,7 @@ float4 ApplyTransform (float2 position2d) {
 void PointLightVertexShader(
     in float2 position : POSITION0,
     inout float4 color : COLOR0,
-    inout float2 lightCenter : TEXCOORD0,
+    inout float3 lightCenter : TEXCOORD0,
     inout float2 ramp : TEXCOORD1,
     out float2 worldPosition : TEXCOORD2,
     out float4 result : POSITION0
@@ -29,13 +29,14 @@ void PointLightVertexShader(
 }
 
 void PointLightPixelShaderLinear(
-    in float2 worldPosition: TEXCOORD2,
-    in float2 lightCenter : TEXCOORD0,
+    in float2 worldPosition : TEXCOORD2,
+    in float3 lightCenter : TEXCOORD0,
     in float2 ramp : TEXCOORD1, // start, end
     in float4 color : COLOR0,
     out float4 result : COLOR0
 ) {
-    float distance = length(worldPosition - lightCenter) - ramp.x;
+    // FIXME: What about z?
+    float distance = length(worldPosition - lightCenter.xy) - ramp.x;
     float distanceOpacity = 1 - clamp(distance / (ramp.y - ramp.x), 0, 1);
 
     float opacity = color.a;
@@ -44,13 +45,14 @@ void PointLightPixelShaderLinear(
 }
 
 void PointLightPixelShaderExponential(
-    in float2 worldPosition: TEXCOORD2,
-    in float2 lightCenter : TEXCOORD0,
+    in float2 worldPosition : TEXCOORD2,
+    in float3 lightCenter : TEXCOORD0,
     in float2 ramp : TEXCOORD1, // start, end
     in float4 color : COLOR0,
     out float4 result : COLOR0
 ) {
-    float distance = length(worldPosition - lightCenter) - ramp.x;
+    // FIXME: What about z?
+    float distance = length(worldPosition - lightCenter.xy) - ramp.x;
     float distanceOpacity = 1 - clamp(distance / (ramp.y - ramp.x), 0, 1);
     distanceOpacity *= distanceOpacity;
 
@@ -61,12 +63,13 @@ void PointLightPixelShaderExponential(
 
 void PointLightPixelShaderLinearRampTexture(
     in float2 worldPosition: TEXCOORD2,
-    in float2 lightCenter : TEXCOORD0,
+    in float3 lightCenter : TEXCOORD0,
     in float2 ramp : TEXCOORD1, // start, end
     in float4 color : COLOR0,
     out float4 result : COLOR0
 ) {
-    float distance = length(worldPosition - lightCenter) - ramp.x;
+    // FIXME: What about z?
+    float distance = length(worldPosition - lightCenter.xy) - ramp.x;
     float distanceOpacity = 1 - clamp(distance / (ramp.y - ramp.x), 0, 1);
 
     distanceOpacity = RampLookup(distanceOpacity);
@@ -78,12 +81,13 @@ void PointLightPixelShaderLinearRampTexture(
 
 void PointLightPixelShaderExponentialRampTexture(
     in float2 worldPosition: TEXCOORD2,
-    in float2 lightCenter : TEXCOORD0,
+    in float3 lightCenter : TEXCOORD0,
     in float2 ramp : TEXCOORD1, // start, end
     in float4 color : COLOR0,
     out float4 result : COLOR0
 ) {
-    float distance = length(worldPosition - lightCenter) - ramp.x;
+    // FIXME: What about z?
+    float distance = length(worldPosition - lightCenter.xy) - ramp.x;
     float distanceOpacity = 1 - clamp(distance / (ramp.y - ramp.x), 0, 1);
     distanceOpacity *= distanceOpacity;
 
@@ -95,14 +99,14 @@ void PointLightPixelShaderExponentialRampTexture(
 }
 
 void ShadowVertexShader(
-    in float2 position : POSITION0,
+    in float3 position : POSITION0,
     in float pairIndex : BLENDINDICES,
     out float4 result : POSITION0
 ) {
-    float2 direction;
+    float3 direction;
 
     if (pairIndex == 0) {
-        direction = float2(0, 0);
+        direction = float3(0, 0, 0);
     } else {
         direction = normalize(position - LightCenter);
     }
@@ -114,7 +118,9 @@ void ShadowVertexShader(
     */
     float shadowLengthScaled = ShadowLength;
 
-    result = ApplyTransform(position + (direction * shadowLengthScaled));
+    float3 untransformed = position + (direction * shadowLengthScaled);
+    // FIXME: What about Z?
+    result = ApplyTransform(untransformed.xy);
 }
 
 void ShadowPixelShader(
