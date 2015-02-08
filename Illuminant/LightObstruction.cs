@@ -24,7 +24,7 @@ namespace Squared.Illuminant {
         Bounds IHasBounds.Bounds {
             get { 
                 Bounds3 b3 = this.Bounds;
-                return new Bounds(new Vector2(b3.Minimum.X, b3.Minimum.Y), new Vector2(b3.Maximum.X, b3.Maximum.Y));
+                return b3.XY;
             }
         }
     }

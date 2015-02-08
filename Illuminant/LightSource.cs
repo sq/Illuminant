@@ -109,10 +109,7 @@ namespace Squared.Illuminant {
 
         Bounds IHasBounds.Bounds {
             get {
-                return new Bounds(
-                    new Vector2(_Bounds.Minimum.X, _Bounds.Minimum.Y),   
-                    new Vector2(_Bounds.Maximum.X, _Bounds.Maximum.Y)   
-                );
+                return _Bounds.XY;
             }
         }
     }

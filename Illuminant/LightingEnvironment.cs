@@ -17,7 +17,7 @@ namespace Squared.Illuminant {
         public readonly List<LightReceiver> LightReceivers = new List<LightReceiver>();
         public readonly SpatialCollection<LightObstructionBase> Obstructions = new SpatialCollection<LightObstructionBase>(DefaultSubdivision);
 
-        public void EnumerateObstructionLinesInBounds (Bounds bounds, ILineWriter output) {
+        public void EnumerateObstructionLinesInBounds (Bounds3 bounds, ILineWriter output) {
             SpatialCollection<LightObstructionBase>.ItemInfo ii;
 
             using (var e = Obstructions.GetItemsFromBounds(bounds, false))
@@ -29,7 +29,7 @@ namespace Squared.Illuminant {
             }
         }
 
-        public void EnumerateObstructionLinesInBounds (Bounds bounds, ILineWriter output, ref bool cancel) {
+        public void EnumerateObstructionLinesInBounds (Bounds3 bounds, ILineWriter output, ref bool cancel) {
             SpatialCollection<LightObstructionBase>.ItemInfo ii;
 
             using (var e = Obstructions.GetItemsFromBounds(bounds, false))

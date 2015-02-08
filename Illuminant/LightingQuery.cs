@@ -59,7 +59,7 @@ namespace Squared.Illuminant {
             }
 
             public void Write (LightPosition a, LightPosition b) {
-                if (CropBounds.HasValue && Geometry.DoesLineIntersectRectangle(a, b, CropBounds.Value))
+                if (CropBounds.HasValue && Geometry.DoesLineIntersectCube(a, b, CropBounds.Value))
                     return;
 
                 Lines.Add(new DeltaLine(a, b));
