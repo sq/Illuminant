@@ -36,19 +36,21 @@ namespace Squared.Illuminant {
         }
 
         private struct DeltaLine {
-            public readonly float X1, Y1;
-            public readonly float LengthX, LengthY;
+            public readonly float X1, Y1, Z1;
+            public readonly float LengthX, LengthY, LengthZ;
 
-            public DeltaLine (Vector2 a, Vector2 b) {
+            public DeltaLine (LightPosition a, LightPosition b) {
                 X1 = a.X;
                 Y1 = a.Y;
+                Z1 = a.Z;
                 LengthX = b.X - a.X;
                 LengthY = b.Y - a.Y;
+                LengthZ = b.Z - a.Z;
             }
         }
 
         private class DeltaLineWriter : ILineWriter {
-            public Bounds? CropBounds;
+            public Bounds3? CropBounds;
             public readonly UnorderedList<DeltaLine> Lines;
 
             public DeltaLineWriter (UnorderedList<DeltaLine> buffer) {
@@ -56,7 +58,7 @@ namespace Squared.Illuminant {
                 CropBounds = null;
             }
 
-            public void Write (Vector2 a, Vector2 b) {
+            public void Write (LightPosition a, LightPosition b) {
                 if (CropBounds.HasValue && Geometry.DoesLineIntersectRectangle(a, b, CropBounds.Value))
                     return;
 
@@ -202,7 +204,7 @@ namespace Squared.Illuminant {
         /// <param name="position">The position.</param>
         /// <param name="lightIgnorePredicate">A predicate that returns true if a light source should be ignored.</param>
         /// <returns>The total amount of light received at the location (note that the result is not premultiplied, much like LightSource.Color)</returns>
-        public bool ComputeReceivedLightAtPosition (Vector2 position, out Vector4 result, LightIgnorePredicate lightIgnorePredicate = null) {
+        public bool ComputeReceivedLightAtPosition (LightPosition position, out Vector4 result, LightIgnorePredicate lightIgnorePredicate = null) {
             result = Vector4.Zero;
 
             // FIXME: This enumerates all lights in the scene, which might be more trouble than it's worth.
@@ -215,7 +217,7 @@ namespace Squared.Illuminant {
                 float rampStart = light.RampStart, rampEnd = light.RampEnd;
                 var lightPosition = light.Position;
 
-                var deltaFromLight = (position - lightPosition);
+                var deltaFromLight = (position - (Vector3)lightPosition);
                 var distanceFromLightSquared = deltaFromLight.LengthSquared();
                 if (distanceFromLightSquared > (rampEnd * rampEnd))
                     continue;

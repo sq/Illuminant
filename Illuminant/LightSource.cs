@@ -13,14 +13,14 @@ namespace Squared.Illuminant {
       
         public object UserData;
 
-        private Vector2 _Position;
-        private Bounds _Bounds;
+        private LightPosition _Position;
+        private Bounds3 _Bounds;
         private float _RampEnd = 1;
         private Texture2D _RampTexture = null;
 
         internal int _RampTextureID;
 
-        public Vector2 Position {
+        public LightPosition Position {
             get {
                 return _Position;
             }
@@ -30,7 +30,7 @@ namespace Squared.Illuminant {
             }
         }
 
-        public Bounds Bounds {
+        public Bounds3 Bounds {
             get {
                 return _Bounds;
             }
@@ -85,8 +85,8 @@ namespace Squared.Illuminant {
         public TextureFilter RampTextureFilter = TextureFilter.Linear;
 
         void UpdateBounds () {
-            var sz = (Vector2.One * RampEnd);
-            _Bounds = new Bounds(
+            var sz = (Vector3.One * RampEnd);
+            _Bounds = new Bounds3(
                 _Position - sz,
                 _Position + sz
             );
@@ -105,6 +105,15 @@ namespace Squared.Illuminant {
 
         public void RemovedFromCollection (WeakReference collection) {
             Parents.Remove(collection);
+        }
+
+        Bounds IHasBounds.Bounds {
+            get {
+                return new Bounds(
+                    new Vector2(_Bounds.Minimum.X, _Bounds.Minimum.Y),   
+                    new Vector2(_Bounds.Maximum.X, _Bounds.Maximum.Y)   
+                );
+            }
         }
     }
 

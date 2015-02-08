@@ -16,7 +16,7 @@ namespace Squared.Illuminant {
     public class LightReceiver {
         public LightIgnorePredicate LightIgnorePredicate;
 
-        public Vector2 Position;
+        public LightPosition Position;
 
         /// <summary>
         /// The additive sum of all light received at this position from all light sources.

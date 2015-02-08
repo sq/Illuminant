@@ -18,7 +18,7 @@ namespace Squared.Illuminant {
             private ShadowVertex[] VertexBuffer;
             private short[] IndexBuffer;
 
-            public void Write (Vector2 a, Vector2 b) {
+            public void Write (LightPosition a, LightPosition b) {
                 ShadowVertex vertex;
                 int vertexOffset = _Count * 4;
                 int indexOffset = _Count * 6;
@@ -68,8 +68,12 @@ namespace Squared.Illuminant {
             public GeometryBatch Batch;
             public Color Color;
 
-            public void Write (Vector2 a, Vector2 b) {
-                Batch.AddLine(a, b, Color);
+            public void Write (LightPosition a, LightPosition b) {
+                Batch.AddLine(
+                    (Vector2)a, 
+                    (Vector2)b, 
+                    Color
+                );
             }
         }
 
@@ -387,8 +391,8 @@ namespace Squared.Illuminant {
                 );
             } else {
                 scissorBounds = new Bounds(
-                    (ls.Position - new Vector2(ls.RampEnd) - Materials.ViewportPosition) * scale,
-                    (ls.Position + new Vector2(ls.RampEnd) - Materials.ViewportPosition) * scale
+                    ((Vector2)ls.Position - new Vector2(ls.RampEnd) - Materials.ViewportPosition) * scale,
+                    ((Vector2)ls.Position + new Vector2(ls.RampEnd) - Materials.ViewportPosition) * scale
                 );
             }
 
@@ -619,7 +623,7 @@ namespace Squared.Illuminant {
                     if (currentLightGroup == null)
                         currentLightGroup = BatchGroup.New(resultGroup, lightGroupIndex++, before: RestoreScissorRect);
 
-                    var lightBounds = new Bounds(lightSource.Position - new Vector2(lightSource.RampEnd), lightSource.Position + new Vector2(lightSource.RampEnd));
+                    var lightBounds = new Bounds((Vector2)lightSource.Position - new Vector2(lightSource.RampEnd), (Vector2)lightSource.Position + new Vector2(lightSource.RampEnd));
 
                     Bounds clippedLightBounds;
                     if (lightSource.ClipRegion.HasValue) {
@@ -770,9 +774,9 @@ namespace Squared.Illuminant {
                     var cMin = cMax * 0.25f;
 
                     using (var gb = GeometryBatch.New(group, i + 1, IlluminantMaterials.DebugOutlines)) {
-                        gb.AddFilledRing(lightSource.Position, 0f, 2f, cMax, cMax);
-                        gb.AddFilledRing(lightSource.Position, lightSource.RampStart - 1f, lightSource.RampStart + 1f, cMax, cMax);
-                        gb.AddFilledRing(lightSource.Position, lightSource.RampEnd - 1f, lightSource.RampEnd + 1f, cMin, cMin);
+                        gb.AddFilledRing((Vector2)lightSource.Position, 0f, 2f, cMax, cMax);
+                        gb.AddFilledRing((Vector2)lightSource.Position, lightSource.RampStart - 1f, lightSource.RampStart + 1f, cMax, cMax);
+                        gb.AddFilledRing((Vector2)lightSource.Position, lightSource.RampEnd - 1f, lightSource.RampEnd + 1f, cMin, cMin);
                     }
 
                     i += 1;

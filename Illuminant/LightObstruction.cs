@@ -7,7 +7,7 @@ using Squared.Game;
 
 namespace Squared.Illuminant {
     public interface ILineWriter {
-        void Write (Vector2 a, Vector2 b);
+        void Write (LightPosition a, LightPosition b);
     }
 
     public abstract class LightObstructionBase : IHasBounds {
@@ -17,15 +17,22 @@ namespace Squared.Illuminant {
             get;
         }
 
-        public abstract Bounds Bounds {
+        public abstract Bounds3 Bounds {
             get;
+        }
+
+        Bounds IHasBounds.Bounds {
+            get { 
+                Bounds3 b3 = this.Bounds;
+                return new Bounds(new Vector2(b3.Minimum.X, b3.Minimum.Y), new Vector2(b3.Maximum.X, b3.Maximum.Y));
+            }
         }
     }
 
     public class LightObstructionLine : LightObstructionBase {
-        public Vector2 A, B;
+        public LightPosition A, B;
 
-        public LightObstructionLine (Vector2 a, Vector2 b) {
+        public LightObstructionLine (LightPosition a, LightPosition b) {
             A = a;
             B = b;
         }
@@ -38,19 +45,39 @@ namespace Squared.Illuminant {
             get { return 1; }
         }
 
-        public override Bounds Bounds {
-            get { return new Bounds(A, B); }
+        public override Bounds3 Bounds {
+            get { return new Bounds3(A, B); }
         }
     }
 
     public class LightObstructionLineStrip : LightObstructionBase {
-        public readonly Vector2[] Points;
+        public readonly LightPosition[] Points;
+        private readonly Bounds3 _Bounds;
 
-        public LightObstructionLineStrip (params Vector2[] points) {
+        public LightObstructionLineStrip (params LightPosition[] points) {
             if (points.Length < 2)
                 throw new ArgumentOutOfRangeException("points", "Need at least two points for a LineStrip");
 
             Points = points;
+
+            {
+                float minX = float.MaxValue, minY = float.MaxValue, minZ = float.MaxValue;
+                float maxX = float.MinValue, maxY = float.MinValue, maxZ = float.MinValue;
+
+                foreach (var point in points) {
+                    minX = Math.Min(minX, point.X);
+                    minY = Math.Min(minY, point.Y);
+                    minZ = Math.Min(minZ, point.Z);
+                    maxX = Math.Max(maxX, point.X);
+                    maxY = Math.Max(maxY, point.Y);
+                    maxZ = Math.Max(maxZ, point.Z);
+                }
+
+                _Bounds = new Bounds3 {
+                    Minimum = new Vector3(minX, minY, minZ),
+                    Maximum = new Vector3(maxX, maxY, maxZ)
+                };
+            }
         }
 
         public override void GenerateLines (ILineWriter output) {
@@ -62,8 +89,8 @@ namespace Squared.Illuminant {
             get { return Points.Length - 1; }
         }
 
-        public override Bounds Bounds {
-            get { return Bounds.FromPoints(Points); }
+        public override Bounds3 Bounds {
+            get { return _Bounds; }
         }
     }
 }

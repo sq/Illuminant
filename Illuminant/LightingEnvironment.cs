@@ -47,7 +47,7 @@ namespace Squared.Illuminant {
         /// <param name="position">The position.</param>
         /// <param name="ignoredLights">A set of lights to ignore, if any. If this value is a HashSet of LightSources it will be used directly, otherwise the sequence is copied.</param>
         /// <returns>The created receiver</returns>
-        public LightReceiver AddLightReceiver (Vector2 position, LightIgnorePredicate lightIgnorePredicate = null) {
+        public LightReceiver AddLightReceiver (LightPosition position, LightIgnorePredicate lightIgnorePredicate = null) {
             var result = new LightReceiver {
                 Position = position,
                 LightIgnorePredicate = lightIgnorePredicate
@@ -80,9 +80,9 @@ namespace Squared.Illuminant {
 
     public class CroppedListLineWriter : ILineWriter {
         public struct Line {
-            public readonly Vector2 A, B;
+            public readonly LightPosition A, B;
 
-            public Line (Vector2 a, Vector2 b) {
+            public Line (LightPosition a, LightPosition b) {
                 A = a; 
                 B = b;
             }
@@ -91,7 +91,7 @@ namespace Squared.Illuminant {
         public Bounds? CropBounds;
         public readonly UnorderedList<Line> Lines = new UnorderedList<Line>();
 
-        public void Write (Vector2 a, Vector2 b) {
+        public void Write (LightPosition a, LightPosition b) {
             if (CropBounds.HasValue) {
                 // constructor doesn't get inlined here :(
                 Bounds lineBounds;
@@ -113,16 +113,16 @@ namespace Squared.Illuminant {
     }
 
     internal class ReceivedLightIntersectionTester : ILineWriter {
-        public Vector2 ReceiverPosition, LightPosition;
+        public LightPosition ReceiverPosition, LightPosition;
         public bool FoundIntersection;
 
-        public void Reset (Vector2 receiverPosition, Vector2 lightPosition) {
+        public void Reset (LightPosition receiverPosition, LightPosition lightPosition) {
             ReceiverPosition = receiverPosition;
             LightPosition = lightPosition;
             FoundIntersection = false;
         }
 
-        public void Write (Vector2 a, Vector2 b) {
+        public void Write (LightPosition a, LightPosition b) {
             FoundIntersection |= Geometry.DoLinesIntersect(a, b, LightPosition, ReceiverPosition);
         }
     }
