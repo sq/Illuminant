@@ -11,6 +11,8 @@ uniform float3 LightCenter;
 
 uniform float3 ShadowLength;
 
+uniform float4 ClipPlanes[6];
+
 float4 ApplyTransform (float2 position2d) {
     float2 localPosition = ((position2d - ViewportPosition) * ViewportScale);
     return mul(mul(float4(localPosition.xy, 0, 1), ModelViewMatrix), ProjectionMatrix);

@@ -17,6 +17,32 @@ namespace Squared.Illuminant {
         public readonly List<LightReceiver> LightReceivers = new List<LightReceiver>();
         public readonly SpatialCollection<LightObstructionBase> Obstructions = new SpatialCollection<LightObstructionBase>(DefaultSubdivision);
 
+        // The 3D volume shadows are clipped to.
+        public Bounds3 ClipRegion;
+
+        public float GroundZ {
+            get {
+                return ClipRegion.Minimum.Z;
+            }
+        }
+
+        public float CeilingZ {
+            get {
+                return ClipRegion.Maximum.Z;
+            }
+        }
+
+        public LightingEnvironment () {
+            var huge = 99999f;
+
+            // Random default volume that doesn't constrain x/y and has low ceiling/ground,
+            //  but sufficient space for shadows at/around 0 Z to work right
+            ClipRegion = new Bounds3(
+                new Vector3(-huge, -huge, -1),
+                new Vector3(huge, huge, 1)
+            );
+        }
+
         public void EnumerateObstructionLinesInBounds (Bounds bounds, ILineWriter output) {
             SpatialCollection<LightObstructionBase>.ItemInfo ii;
 
