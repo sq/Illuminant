@@ -11,7 +11,8 @@ uniform float3 LightCenter;
 
 uniform float3 ShadowLength;
 
-uniform float4 ClipPlanes[6];
+#define NumClipPlanes 2
+uniform float4 ClipPlanes[NumClipPlanes];
 
 float4 ApplyTransform (float2 position2d) {
     float2 localPosition = ((position2d - ViewportPosition) * ViewportScale);
@@ -100,27 +101,48 @@ void PointLightPixelShaderExponentialRampTexture(
     result = lerp(LightNeutralColor, lightColorActual, distanceOpacity);
 }
 
+float rayDistanceToPlane(
+    float3 planeNormal, float planeDistance, float3 rayOrigin, float3 rayDirection
+) {
+    float denom = dot(planeNormal, rayDirection);
+
+    if (abs(denom) > 1e-6) {
+        float t = (planeDistance - dot(planeNormal, rayOrigin)) / denom;
+        if (t < 0)
+            return ShadowLength;
+        else
+            return t;
+    }
+
+    return ShadowLength;
+}
+
 void ShadowVertexShader(
     in float3 position : POSITION0,
     in float pairIndex : BLENDINDICES,
     out float4 result : POSITION0
 ) {
-    float3 direction;
-
     if (pairIndex == 0) {
-        direction = float3(0, 0, 0);
-    } else {
-        direction = normalize(position - LightCenter);
+        result = ApplyTransform(position.xy);
+        return;
     }
 
-    // FIXME: Why isn't this right?
-    /*
-    float shadowLengthScaled =
-        ShadowLength * max(1 / abs(direction.x), 1 / abs(direction.y));
-    */
-    float shadowLengthScaled = ShadowLength;
+    float3 direction = normalize(position - LightCenter);
 
-    float3 untransformed = position + (direction * shadowLengthScaled);
+    float maxDistance = ShadowLength;
+    
+    for (int i = 0; i < NumClipPlanes; i++) {
+        float4 plane = ClipPlanes[i];
+
+        float distance = rayDistanceToPlane(
+            plane.xyz, plane.w,
+            position.xyz, direction
+        );
+
+        maxDistance = min(maxDistance, distance);
+    }
+
+    float3 untransformed = position + (direction * maxDistance);
     // FIXME: What about Z?
     result = ApplyTransform(untransformed.xy);
 }
@@ -128,7 +150,7 @@ void ShadowVertexShader(
 void ShadowPixelShader(
     out float4 color : COLOR0
 ) {
-    color = float4(0, 0, 0, 0);
+    color = float4(1, 1, 1, 1);
 }
 
 technique Shadow {

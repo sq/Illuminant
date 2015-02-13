@@ -26,6 +26,8 @@ namespace TestGame.Scenes {
 
         LightObstructionLine Dragging = null;
 
+        float LightZ = 0;
+
         public ClipPlaneTest (TestGame game, int width, int height)
             : base(game, width, height) {
         }
@@ -73,13 +75,13 @@ namespace TestGame.Scenes {
             Environment.LightSources.Add(light);
 
             var rng = new Random(1234);
-            for (var i = 0; i < 25; i++) {
+            for (var i = 0; i < 6; i++) {
                 light = new LightSource {
-                    Position = new Vector2(64, 64),
+                    Position = new Vector3(64, 64, 0),
                     Color = new Vector4((float)rng.NextDouble(0.1f, 1.0f), (float)rng.NextDouble(0.1f, 1.0f), (float)rng.NextDouble(0.1f, 1.0f), 1.0f),
-                    RampStart = rng.NextFloat(24, 60),
-                    RampEnd = rng.NextFloat(130, 210),
-                    RampMode = LightSourceRampMode.Exponential
+                    RampStart = rng.NextFloat(32, 60),
+                    RampEnd = rng.NextFloat(160, 250),
+                    RampMode = LightSourceRampMode.Linear
                 };
 
                 Lights.Add(light);
@@ -88,7 +90,7 @@ namespace TestGame.Scenes {
 
             const int spiralCount = 1400;
             float spiralRadius = 0, spiralRadiusStep = 550f / spiralCount;
-            float spiralAngle = 0, spiralAngleStep = (float)(Math.PI / (spiralCount / 12f));
+            float spiralAngle = 0, spiralAngleStep = (float)(Math.PI / (spiralCount / 7f));
             Vector2 previous = default(Vector2);
 
             for (int i = 0; i < spiralCount; i++, spiralAngle += spiralAngleStep, spiralRadius += spiralRadiusStep) {
@@ -148,30 +150,28 @@ namespace TestGame.Scenes {
 
                 var ms = Mouse.GetState();
                 Game.IsMouseVisible = true;
+
+                LightZ = Squared.Util.Arithmetic.Clamp(ms.ScrollWheelValue / 3000f, Environment.GroundZ, Environment.CeilingZ);
                 
                 var mousePos = new Vector2(ms.X, ms.Y);
-                var mousePos3 = new Vector3(mousePos, 0);
-
-                var clipRegionSize = new Vector3(64, 64, 1);
-                var clipRegion = new Bounds3(
-                    mousePos3 - clipRegionSize,
-                    mousePos3 + clipRegionSize
-                );
-
-                Environment.ClipRegion = clipRegion;
 
                 var angle = gameTime.TotalGameTime.TotalSeconds * 0.125f;
                 const float radius = 320f;
 
-                var lightCenter = new Vector2(Width / 2, Height / 2);
+                var lightCenter = new Vector3(Width / 2, Height / 2, 0);
 
-                Lights[0].Position = lightCenter;
+                Lights[0].Position = new Vector3(mousePos, LightZ);
 
                 float stepOffset = (float)((Math.PI * 2) / (Environment.LightSources.Count - 1));
-                float offset = 0;
+                float offset = (float)(gameTime.TotalGameTime.TotalSeconds / 32 % 4);
                 for (int i = 1; i < Environment.LightSources.Count; i++, offset += stepOffset) {
                     float localRadius = (float)(radius + (radius * Math.Sin(offset * 4f) * 0.5f));
-                    Lights[i].Position = lightCenter + new Vector2((float)Math.Cos(angle + offset) * localRadius, (float)Math.Sin(angle + offset) * localRadius);
+
+                    Lights[i].Position = lightCenter + new Vector3(
+                        (float)Math.Cos(angle + offset) * localRadius, 
+                        (float)Math.Sin(angle + offset) * localRadius,
+                        Lights[i].Position.Z
+                    );
                 }
 
                 if (ms.LeftButton == ButtonState.Pressed) {
@@ -190,7 +190,7 @@ namespace TestGame.Scenes {
         }
 
         public override string Status {
-	        get { return ""; }
+	        get { return String.Format("Light Z = {0:0.000}", LightZ); }
         }
     }
 }

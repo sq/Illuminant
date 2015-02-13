@@ -542,20 +542,6 @@ namespace Squared.Illuminant {
             return result;
         }
 
-        private void ApplyClipVolume (Bounds3 volume) {
-            var planes = new [] {
-                // normalx, normaly, normalz, distance
-                new Vector4(Vector3.UnitX, volume.Minimum.X),
-                new Vector4(Vector3.UnitY, volume.Minimum.Y),
-                new Vector4(Vector3.UnitZ, volume.Minimum.Z),
-                new Vector4(-Vector3.UnitX, volume.Maximum.X),
-                new Vector4(-Vector3.UnitY, volume.Maximum.Y),
-                new Vector4(-Vector3.UnitZ, volume.Maximum.Z),
-            };
-
-            ShadowMaterialInner.Effect.Parameters["ClipPlanes"].SetValue(planes);
-        }
-
         /// <summary>
         /// Renders all light sources into the target batch container on the specified layer.
         /// </summary>
@@ -592,6 +578,14 @@ namespace Squared.Illuminant {
             BatchGroup currentLightGroup = null;
 
             int layerIndex = 0;
+
+            var planes = new[] {
+                // normalx, normaly, normalz, distance
+                new Vector4(-Vector3.UnitZ, -Environment.GroundZ),
+                new Vector4(Vector3.UnitZ, Environment.CeilingZ),
+            };
+
+            ShadowMaterialInner.Effect.Parameters["ClipPlanes"].SetValue(planes);
 
             using (var sortedLights = BufferPool<LightSource>.Allocate(Environment.LightSources.Count))
             using (var resultGroup = BatchGroup.New(container, layer, before: StoreScissorRect, after: RestoreScissorRect)) {
