@@ -49,6 +49,12 @@ namespace Squared.Illuminant {
             }
         }
 
+        public int LineCount {
+            get {
+                return Polygon.Count;
+            }
+        }
+
         public void GenerateLines (ILineWriter output) {
             for (var i = 0; i < Polygon.Count; i++) {
                 var e = Polygon.GetEdge(i);

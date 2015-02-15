@@ -515,10 +515,20 @@ namespace Squared.Illuminant {
             if (result.FrameIndex == frame.Index)
                 return result;
 
-            var sector = Environment.Obstructions[sectorIndex];
+            SpatialCollection<HeightVolume>.Sector heightSector;
+            SpatialCollection<LightObstructionBase>.Sector obsSector;
+
+            Environment.HeightVolumes.TryGetSector(sectorIndex, out heightSector);
+            Environment.Obstructions.TryGetSector(sectorIndex, out obsSector);
 
             int lineCount = 0;
-            foreach (var item in sector)
+
+            if (heightSector != null)
+            foreach (var item in heightSector)
+                lineCount += item.Item.LineCount;
+
+            if (obsSector != null)
+            foreach (var item in obsSector)
                 lineCount += item.Item.LineCount;
 
             result.PrimitiveCount = lineCount * 2;
@@ -556,7 +566,12 @@ namespace Squared.Illuminant {
 
                 ArrayLineWriterInstance.SetOutput(vb, ib);
 
-                foreach (var itemInfo in sector)
+                if (heightSector != null)
+                foreach (var itemInfo in heightSector)
+                    itemInfo.Item.GenerateLines(ArrayLineWriterInstance);
+
+                if (obsSector != null)
+                foreach (var itemInfo in obsSector)
                     itemInfo.Item.GenerateLines(ArrayLineWriterInstance);
 
                 var linesWritten = ArrayLineWriterInstance.Finish();
@@ -674,28 +689,29 @@ namespace Squared.Illuminant {
                     }
 
                     NativeBatch stencilBatch = null;
-                    SpatialCollection<LightObstructionBase>.Sector currentSector;
-                    using (var e = Environment.Obstructions.GetSectorsFromBounds(lightBounds))
-                    while (e.GetNext(out currentSector)) {
-                        var cachedSector = GetCachedSector(frame, currentSector.Index);
-                        if (cachedSector.VertexCount <= 0)
-                            continue;
 
-                        if (stencilBatch == null) {
-                            if (Render.Tracing.RenderTrace.EnableTracing)
-                                Render.Tracing.RenderTrace.Marker(currentLightGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Begin Stencil Shadow Batch", frame.Index, this.GetHashCode());
+                    {
+                        SpatialCollection<LightObstructionBase>.Sector currentSector;
+                        using (var e = Environment.Obstructions.GetSectorsFromBounds(lightBounds))
+                        while (e.GetNext(out currentSector)) {
+                            var cachedSector = GetCachedSector(frame, currentSector.Index);
+                            if (cachedSector.VertexCount <= 0)
+                                continue;
 
-                            stencilBatch = NativeBatch.New(currentLightGroup, layerIndex++, IlluminantMaterials.Shadow, ShadowBatchSetup, lightSource);
-                            stencilBatch.Dispose();
-                            needStencilClear = true;
-
-                            if (Render.Tracing.RenderTrace.EnableTracing)
-                                Render.Tracing.RenderTrace.Marker(currentLightGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : End Stencil Shadow Batch", frame.Index, this.GetHashCode());
+                            RenderLightingSector(frame, ref needStencilClear, currentLightGroup, ref layerIndex, lightSource, ref stencilBatch, cachedSector);
                         }
+                    }
 
-                        stencilBatch.Add(new NativeDrawCall(
-                            PrimitiveType.TriangleList, cachedSector.ObstructionVertexBuffer, 0, cachedSector.ObstructionIndexBuffer, 0, 0, cachedSector.VertexCount, 0, cachedSector.PrimitiveCount
-                        ));
+                    {
+                        SpatialCollection<HeightVolume>.Sector currentSector;
+                        using (var e = Environment.HeightVolumes.GetSectorsFromBounds(lightBounds))
+                        while (e.GetNext(out currentSector)) {
+                            var cachedSector = GetCachedSector(frame, currentSector.Index);
+                            if (cachedSector.VertexCount <= 0)
+                                continue;
+
+                            RenderLightingSector(frame, ref needStencilClear, currentLightGroup, ref layerIndex, lightSource, ref stencilBatch, cachedSector);
+                        }
                     }
 
                     PointLightVertex vertex;
@@ -754,6 +770,24 @@ namespace Squared.Illuminant {
                 if (Render.Tracing.RenderTrace.EnableTracing)
                     Render.Tracing.RenderTrace.Marker(resultGroup, 9999, "Frame {0:0000} : LightingRenderer {1:X4} : End", frame.Index, this.GetHashCode());
             }
+        }
+
+        private void RenderLightingSector (Frame frame, ref bool needStencilClear, BatchGroup currentLightGroup, ref int layerIndex, LightSource lightSource, ref NativeBatch stencilBatch, CachedSector cachedSector) {
+            if (stencilBatch == null) {
+                if (Render.Tracing.RenderTrace.EnableTracing)
+                    Render.Tracing.RenderTrace.Marker(currentLightGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Begin Stencil Shadow Batch", frame.Index, this.GetHashCode());
+
+                stencilBatch = NativeBatch.New(currentLightGroup, layerIndex++, IlluminantMaterials.Shadow, ShadowBatchSetup, lightSource);
+                stencilBatch.Dispose();
+                needStencilClear = true;
+
+                if (Render.Tracing.RenderTrace.EnableTracing)
+                    Render.Tracing.RenderTrace.Marker(currentLightGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : End Stencil Shadow Batch", frame.Index, this.GetHashCode());
+            }
+
+            stencilBatch.Add(new NativeDrawCall(
+                PrimitiveType.TriangleList, cachedSector.ObstructionVertexBuffer, 0, cachedSector.ObstructionIndexBuffer, 0, 0, cachedSector.VertexCount, 0, cachedSector.PrimitiveCount
+            ));
         }
 
         public void RenderHeightmap (Frame frame, IBatchContainer container, int layer) {
