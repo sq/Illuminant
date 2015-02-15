@@ -10,6 +10,13 @@ uniform float4 LightNeutralColor;
 uniform float3 LightCenter;
 
 uniform float3 ShadowLength;
+uniform float2 TerrainTextureTexelSize;
+
+Texture2D TerrainTexture : register(t2);
+
+sampler TerrainTextureSampler : register(s2) {
+    Texture = (TerrainTexture);
+};
 
 float4 ApplyTransform (float3 position) {
     float3 localPosition = ((position - float3(ViewportPosition.xy, 0)) * float3(ViewportScale, 1));
@@ -102,7 +109,8 @@ void PointLightPixelShaderExponentialRampTexture(
 void ShadowVertexShader(
     in float3  position  : POSITION0,
     in float   pairIndex : BLENDINDICES,
-    out float4 z         : TEXCOORD0,
+    out float  z         : TEXCOORD0,
+    out float2 terrainXy : TEXCOORD1,
     out float4 result    : POSITION0
 ) {
     float3 direction;
@@ -125,13 +133,20 @@ void ShadowVertexShader(
     // FIXME: Why do I have to strip Z????
     result = float4(transformed.x, transformed.y, 0, transformed.w);
     z = float4(untransformed.z, 0, 0, 0);
+    // FIXME: Position, scale
+    terrainXy = untransformed.xy * TerrainTextureTexelSize;
 }
 
 void ShadowPixelShader(
-    in  float4 z     : TEXCOORD0,
-    out float4 color : COLOR0
+    in  float  z         : TEXCOORD0,
+    in  float2 terrainXy : TEXCOORD1,
+    out float4 color     : COLOR0
 ) {
-    color = float4(z.x, 0.0, 0.0, 1);
+    float terrainZ = tex2D(TerrainTextureSampler, terrainXy).r;
+    if (z < terrainZ)
+        discard;
+
+    color = float4(z, 0, terrainZ, 1);
 }
 
 technique Shadow {

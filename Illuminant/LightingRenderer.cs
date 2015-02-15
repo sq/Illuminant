@@ -1,4 +1,6 @@
-﻿using System;
+﻿#define SHADOW_VIZ
+
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -80,6 +82,7 @@ namespace Squared.Illuminant {
         public class CachedSector : IDisposable {
             public Pair<int> SectorIndex;
             public int FrameIndex;
+            public bool Drawn;
             public DynamicVertexBuffer ObstructionVertexBuffer;
             public DynamicIndexBuffer ObstructionIndexBuffer;
             public int VertexCount, IndexCount, PrimitiveCount;
@@ -232,11 +235,13 @@ namespace Squared.Illuminant {
             {
                 var dBegin = new[] {
                     MaterialUtil.MakeDelegate(
-                        // HACK
-                        // rasterizerState: RenderStates.ScissorOnly, 
-                        // depthStencilState: PointLightStencil
+#if SHADOW_VIZ
                         rasterizerState: RasterizerState.CullNone,
                         depthStencilState: DepthStencilState.None
+#else
+                        rasterizerState: RenderStates.ScissorOnly, 
+                        depthStencilState: PointLightStencil
+#endif
                     )
                 };
                 var dEnd = new[] {
@@ -320,14 +325,15 @@ namespace Squared.Illuminant {
                 ),
                 new[] {
                     MaterialUtil.MakeDelegate(
-                        // HACK
-                        // rasterizerState : RenderStates.ScissorOnly,
-                        // depthStencilState: ShadowStencil,
-                        // blendState: RenderStates.DrawNone
-
+#if SHADOW_VIZ
                         rasterizerState: RasterizerState.CullNone, 
                         depthStencilState: DepthStencilState.None,
                         blendState: BlendState.Opaque
+#else
+                        rasterizerState : RenderStates.ScissorOnly,
+                        depthStencilState: ShadowStencil,
+                        blendState: RenderStates.DrawNone
+#endif
                     )
                 },
                 new[] {
@@ -589,6 +595,7 @@ namespace Squared.Illuminant {
             }
 
             result.FrameIndex = frame.Index;
+            result.Drawn = false;
 
             return result;
         }
@@ -629,6 +636,11 @@ namespace Squared.Illuminant {
             BatchGroup currentLightGroup = null;
 
             int layerIndex = 0;
+
+            ShadowMaterialInner.Effect.Parameters["TerrainTextureTexelSize"].SetValue(
+                new Vector2(1.0f / _TerrainDepthmap.Width, 1.0f / _TerrainDepthmap.Height)
+            );
+            ShadowMaterialInner.Effect.Parameters["TerrainTexture"].SetValue(_TerrainDepthmap);
 
             using (var sortedLights = BufferPool<LightSource>.Allocate(Environment.LightSources.Count))
             using (var resultGroup = BatchGroup.New(container, layer, before: StoreScissorRect, after: RestoreScissorRect)) {
@@ -688,9 +700,11 @@ namespace Squared.Illuminant {
                     if (needStencilClear) {
                         if (Render.Tracing.RenderTrace.EnableTracing)
                             Render.Tracing.RenderTrace.Marker(currentLightGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Stencil Clear", frame.Index, this.GetHashCode());
-                        // HACK
-                        // ClearBatch.AddNew(currentLightGroup, layerIndex++, IlluminantMaterials.ClearStencil, clearStencil: StencilFalse);
-                        // ClearBatch.AddNew(currentLightGroup, layerIndex++, Materials.Clear, clearColor: Color.Black, clearStencil: StencilFalse);
+#if SHADOW_VIZ
+                        ClearBatch.AddNew(currentLightGroup, layerIndex++, Materials.Clear, clearColor: Color.Black, clearStencil: StencilFalse);
+#else
+                        ClearBatch.AddNew(currentLightGroup, layerIndex++, IlluminantMaterials.ClearStencil, clearStencil: StencilFalse);
+#endif
                         needStencilClear = false;
                     }
 
@@ -779,6 +793,11 @@ namespace Squared.Illuminant {
         }
 
         private void RenderLightingSector (Frame frame, ref bool needStencilClear, BatchGroup currentLightGroup, ref int layerIndex, LightSource lightSource, ref NativeBatch stencilBatch, CachedSector cachedSector) {
+            if (cachedSector.Drawn)
+                return;
+
+            cachedSector.Drawn = true;
+
             if (stencilBatch == null) {
                 if (Render.Tracing.RenderTrace.EnableTracing)
                     Render.Tracing.RenderTrace.Marker(currentLightGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Begin Stencil Shadow Batch", frame.Index, this.GetHashCode());
