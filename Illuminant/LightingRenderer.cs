@@ -232,12 +232,17 @@ namespace Squared.Illuminant {
             {
                 var dBegin = new[] {
                     MaterialUtil.MakeDelegate(
-                        rasterizerState: RenderStates.ScissorOnly, depthStencilState: PointLightStencil
+                        // HACK
+                        // rasterizerState: RenderStates.ScissorOnly, 
+                        // depthStencilState: PointLightStencil
+                        rasterizerState: RasterizerState.CullNone,
+                        depthStencilState: DepthStencilState.None
                     )
                 };
                 var dEnd = new[] {
                     MaterialUtil.MakeDelegate(
-                        rasterizerState: RasterizerState.CullNone, depthStencilState: DepthStencilState.None
+                        rasterizerState: RasterizerState.CullNone, 
+                        depthStencilState: DepthStencilState.None
                     )
                 };
 
@@ -321,7 +326,7 @@ namespace Squared.Illuminant {
                         // blendState: RenderStates.DrawNone
 
                         rasterizerState: RasterizerState.CullNone, 
-                        depthStencilState: ShadowStencil,
+                        depthStencilState: DepthStencilState.None,
                         blendState: BlendState.Opaque
                     )
                 },
@@ -685,8 +690,7 @@ namespace Squared.Illuminant {
                             Render.Tracing.RenderTrace.Marker(currentLightGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Stencil Clear", frame.Index, this.GetHashCode());
                         // HACK
                         // ClearBatch.AddNew(currentLightGroup, layerIndex++, IlluminantMaterials.ClearStencil, clearStencil: StencilFalse);
-
-                        ClearBatch.AddNew(currentLightGroup, layerIndex++, Materials.Clear, clearColor: Color.DarkGray, clearStencil: StencilFalse);
+                        // ClearBatch.AddNew(currentLightGroup, layerIndex++, Materials.Clear, clearColor: Color.Black, clearStencil: StencilFalse);
                         needStencilClear = false;
                     }
 

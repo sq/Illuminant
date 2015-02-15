@@ -121,8 +121,9 @@ void ShadowVertexShader(
     float shadowLengthScaled = ShadowLength;
 
     float3 untransformed = position + (direction * shadowLengthScaled);
+    float4 transformed = ApplyTransform(untransformed);
     // FIXME: Why do I have to strip Z????
-    result = ApplyTransform(untransformed);
+    result = float4(transformed.x, transformed.y, 0, transformed.w);
     z = float4(untransformed.z, 0, 0, 0);
 }
 
