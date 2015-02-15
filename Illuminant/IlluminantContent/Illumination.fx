@@ -11,9 +11,9 @@ uniform float3 LightCenter;
 
 uniform float3 ShadowLength;
 
-float4 ApplyTransform (float2 position2d) {
-    float2 localPosition = ((position2d - ViewportPosition) * ViewportScale);
-    return mul(mul(float4(localPosition.xy, 0, 1), ModelViewMatrix), ProjectionMatrix);
+float4 ApplyTransform (float3 position) {
+    float3 localPosition = ((position - float3(ViewportPosition.xy, 0)) * float3(ViewportScale, 1));
+    return mul(mul(float4(localPosition.xyz, 1), ModelViewMatrix), ProjectionMatrix);
 }
 
 void PointLightVertexShader(
@@ -25,7 +25,8 @@ void PointLightVertexShader(
     out float4 result : POSITION0
 ) {
     worldPosition = position;
-    result = ApplyTransform(position);
+    // FIXME: Z
+    result = ApplyTransform(float3(position, lightCenter.z));
 }
 
 void PointLightPixelShaderLinear(
@@ -99,9 +100,10 @@ void PointLightPixelShaderExponentialRampTexture(
 }
 
 void ShadowVertexShader(
-    in float3 position : POSITION0,
-    in float pairIndex : BLENDINDICES,
-    out float4 result : POSITION0
+    in float3  position  : POSITION0,
+    in float   pairIndex : BLENDINDICES,
+    out float4 z         : TEXCOORD0,
+    out float4 result    : POSITION0
 ) {
     float3 direction;
 
@@ -119,14 +121,16 @@ void ShadowVertexShader(
     float shadowLengthScaled = ShadowLength;
 
     float3 untransformed = position + (direction * shadowLengthScaled);
-    // FIXME: What about Z?
-    result = ApplyTransform(untransformed.xy);
+    // FIXME: Why do I have to strip Z????
+    result = ApplyTransform(untransformed);
+    z = float4(untransformed.z, 0, 0, 0);
 }
 
 void ShadowPixelShader(
+    in  float4 z     : TEXCOORD0,
     out float4 color : COLOR0
 ) {
-    color = float4(0, 0, 0, 0);
+    color = float4(z.x, 0.0, 0.0, 1);
 }
 
 technique Shadow {

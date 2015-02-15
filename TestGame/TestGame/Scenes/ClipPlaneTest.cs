@@ -23,7 +23,7 @@ namespace TestGame.Scenes {
         public readonly List<LightSource> Lights = new List<LightSource>();
 
         bool ShowOutlines = true;
-        bool ShowTerrainDepth = true;
+        bool ShowTerrainDepth = false;
 
         LightObstructionLine Dragging = null;
 
@@ -50,7 +50,9 @@ namespace TestGame.Scenes {
 
                 Lightmap = new RenderTarget2D(
                     Game.GraphicsDevice, scaledWidth, scaledHeight, false,
-                    SurfaceFormat.Color, DepthFormat.Depth24Stencil8, multisampleCount, RenderTargetUsage.DiscardContents
+                    SurfaceFormat.Color, DepthFormat.Depth24Stencil8, multisampleCount, 
+                    // YUCK
+                    RenderTargetUsage.PreserveContents
                 );
             }
         }
@@ -76,7 +78,7 @@ namespace TestGame.Scenes {
             Environment.LightSources.Add(light);
 
             var rng = new Random(1234);
-            for (var i = 0; i < 6; i++) {
+            for (var i = 0; i < 0; i++) {
                 light = new LightSource {
                     Position = new Vector3(64, 64, 0),
                     Color = new Vector4((float)rng.NextDouble(0.1f, 1.0f), (float)rng.NextDouble(0.1f, 1.0f), (float)rng.NextDouble(0.1f, 1.0f), 1.0f),
@@ -150,7 +152,7 @@ namespace TestGame.Scenes {
             ))
                 bb.Add(new BitmapDrawCall(
                     ShowTerrainDepth
-                        ? Renderer.Depthmap
+                        ? Renderer.TerrainDepthmap
                         : Lightmap, Vector2.Zero
                 ));
 
@@ -164,13 +166,16 @@ namespace TestGame.Scenes {
 
                 if (KeyWasPressed(Keys.O))
                     ShowOutlines = !ShowOutlines;
-                if (KeyWasPressed(Keys.T))
+
+                if (KeyWasPressed(Keys.T)) {
                     ShowTerrainDepth = !ShowTerrainDepth;
+                }
 
                 var ms = Mouse.GetState();
                 Game.IsMouseVisible = true;
 
-                LightZ = Squared.Util.Arithmetic.PulseSine((float)gameTime.TotalGameTime.TotalSeconds * 0.66f, -1.0f, 1.0f);
+                const float minZ = 0f;
+                LightZ = Squared.Util.Arithmetic.PulseSine((float)gameTime.TotalGameTime.TotalSeconds * 0.66f, minZ, 1.0f);
                 
                 var mousePos = new Vector2(ms.X, ms.Y);
 

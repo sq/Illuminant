@@ -164,8 +164,7 @@ namespace Squared.Illuminant {
             };
         }
 
-        private readonly RenderTarget2D TerrainDepthmap;
-        private readonly RenderTarget2D ShadowDepthmap;
+        private readonly RenderTarget2D _TerrainDepthmap;
 
         const int StencilTrue = 0xFF;
         const int StencilFalse = 0x00;
@@ -191,12 +190,7 @@ namespace Squared.Illuminant {
                 // HACK for debugging visualization purposes
                 var fmt = SurfaceFormat.Rgba64;
 
-                TerrainDepthmap = new RenderTarget2D(
-                    coordinator.Device, maxWidth, maxHeight,
-                    false, fmt, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.DiscardContents
-                );
-
-                ShadowDepthmap = new RenderTarget2D(
+                _TerrainDepthmap = new RenderTarget2D(
                     coordinator.Device, maxWidth, maxHeight,
                     false, fmt, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.DiscardContents
                 );
@@ -321,9 +315,14 @@ namespace Squared.Illuminant {
                 ),
                 new[] {
                     MaterialUtil.MakeDelegate(
-                        rasterizerState: RenderStates.ScissorOnly,
+                        // HACK
+                        // rasterizerState : RenderStates.ScissorOnly,
+                        // depthStencilState: ShadowStencil,
+                        // blendState: RenderStates.DrawNone
+
+                        rasterizerState: RasterizerState.CullNone, 
                         depthStencilState: ShadowStencil,
-                        blendState: RenderStates.DrawNone
+                        blendState: BlendState.Opaque
                     )
                 },
                 new[] {
@@ -392,9 +391,9 @@ namespace Squared.Illuminant {
             ShadowStencil.Dispose();
         }
 
-        public Texture2D Depthmap {
+        public Texture2D TerrainDepthmap {
             get {
-                return TerrainDepthmap;
+                return _TerrainDepthmap;
             }
         }
 
@@ -684,7 +683,10 @@ namespace Squared.Illuminant {
                     if (needStencilClear) {
                         if (Render.Tracing.RenderTrace.EnableTracing)
                             Render.Tracing.RenderTrace.Marker(currentLightGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Stencil Clear", frame.Index, this.GetHashCode());
-                        ClearBatch.AddNew(currentLightGroup, layerIndex++, IlluminantMaterials.ClearStencil, clearStencil: StencilFalse);
+                        // HACK
+                        // ClearBatch.AddNew(currentLightGroup, layerIndex++, IlluminantMaterials.ClearStencil, clearStencil: StencilFalse);
+
+                        ClearBatch.AddNew(currentLightGroup, layerIndex++, Materials.Clear, clearColor: Color.DarkGray, clearStencil: StencilFalse);
                         needStencilClear = false;
                     }
 
@@ -791,7 +793,7 @@ namespace Squared.Illuminant {
         }
 
         public void RenderHeightmap (Frame frame, IBatchContainer container, int layer) {
-            using (var group = BatchGroup.ForRenderTarget(container, layer, TerrainDepthmap)) {
+            using (var group = BatchGroup.ForRenderTarget(container, layer, _TerrainDepthmap)) {
                 ClearBatch.AddNew(
                     group, 0, Materials.Clear, 
                     // FIXME: We should write GroundZ to the color channel!!!
