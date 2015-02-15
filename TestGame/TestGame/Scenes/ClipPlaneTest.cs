@@ -37,7 +37,7 @@ namespace TestGame.Scenes {
             int scaledWidth = (int)Width;
             int scaledHeight = (int)Height;
 
-            const int multisampleCount = 0;
+            const int multisampleCount = 4;
 
             if (scaledWidth < 4)
                 scaledWidth = 4;
@@ -70,8 +70,8 @@ namespace TestGame.Scenes {
             var light = new LightSource {
                 Position = new Vector2(64, 64),
                 Color = new Vector4(1f, 1f, 1f, 1),
-                RampStart = 50,
-                RampEnd = 225,
+                RampStart = 33,
+                RampEnd = 350,
             };
 
             Lights.Add(light);
@@ -91,7 +91,7 @@ namespace TestGame.Scenes {
                 Environment.LightSources.Add(light);
             }
 
-            const float angleStep = (float)(Math.PI / 16);
+            const float angleStep = (float)(Math.PI / 128);
             const int   heightTiers = 5;
             const float minHeight = 0f;
             const float maxHeight = 1f;
@@ -100,7 +100,7 @@ namespace TestGame.Scenes {
 
             var points = new List<Vector2>();
 
-            for (float h = minHeight, r = 0.9f, hs = (maxHeight - minHeight) / heightTiers, rs = -r / (heightTiers + 1); h <= maxHeight; h += hs, r += rs) {
+            for (float r = 0.9f, hs = (maxHeight - minHeight) / heightTiers, rs = -r / (heightTiers + 1), h = minHeight + hs; h <= maxHeight; h += hs, r += rs) {
                 points.Clear();
 
                 var rX = r * Width / 2f;
@@ -119,6 +119,14 @@ namespace TestGame.Scenes {
 
                 Environment.HeightVolumes.Add(volume);
             }
+
+            Environment.HeightVolumes.Add(new HeightVolume(
+                Polygon.FromBounds(new Bounds(
+                    new Vector2((Width * 0.5f) - 32f, 0f),
+                    new Vector2((Width * 0.5f) + 32f, Height)
+                )),
+                0.85f
+            ));
         }
         
         public override void Draw (Squared.Render.Frame frame) {
@@ -174,8 +182,9 @@ namespace TestGame.Scenes {
                 var ms = Mouse.GetState();
                 Game.IsMouseVisible = true;
 
-                const float minZ = 0f;
-                LightZ = Squared.Util.Arithmetic.PulseSine((float)gameTime.TotalGameTime.TotalSeconds * 0.66f, minZ, 1.0f);
+                // const float minZ = 0f, maxZ = 1.5f;
+                // LightZ = Squared.Util.Arithmetic.PulseSine((float)gameTime.TotalGameTime.TotalSeconds * 0.66f, minZ, maxZ);
+                LightZ = ms.ScrollWheelValue / 1024.0f;
                 
                 var mousePos = new Vector2(ms.X, ms.Y);
 
@@ -185,7 +194,7 @@ namespace TestGame.Scenes {
                 var lightCenter = new Vector3(Width / 2, Height / 2, 0);
 
                 Lights[0].Position = new Vector3(mousePos, LightZ);
-                Lights[0].RampEnd = 250f * (((1 - LightZ) * 0.25f) + 0.75f);
+                // Lights[0].RampEnd = 250f * (((1 - LightZ) * 0.25f) + 0.75f);
 
 
                 float stepOffset = (float)((Math.PI * 2) / (Environment.LightSources.Count - 1));

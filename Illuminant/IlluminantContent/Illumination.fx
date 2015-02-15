@@ -12,10 +12,12 @@ uniform float3 LightCenter;
 uniform float3 ShadowLength;
 uniform float2 TerrainTextureTexelSize;
 
-Texture2D TerrainTexture : register(t2);
-
+Texture2D TerrainTexture      : register(t2);
 sampler TerrainTextureSampler : register(s2) {
     Texture = (TerrainTexture);
+    MipFilter = LINEAR;
+    MinFilter = LINEAR;
+    MagFilter = LINEAR;
 };
 
 float4 ApplyTransform (float3 position) {
@@ -33,7 +35,8 @@ void PointLightVertexShader(
 ) {
     worldPosition = position;
     // FIXME: Z
-    result = ApplyTransform(float3(position, lightCenter.z));
+    float4 transformedPosition = ApplyTransform(float3(position, lightCenter.z));
+    result = float4(transformedPosition.xy, 0, transformedPosition.w);
 }
 
 void PointLightPixelShaderLinear(
@@ -41,8 +44,14 @@ void PointLightPixelShaderLinear(
     in float3 lightCenter : TEXCOORD0,
     in float2 ramp : TEXCOORD1, // start, end
     in float4 color : COLOR0,
+    in  float2 vpos : VPOS,
     out float4 result : COLOR0
 ) {
+    float2 terrainXy = vpos * TerrainTextureTexelSize;
+    float terrainZ = tex2D(TerrainTextureSampler, terrainXy).r;
+    if (lightCenter.z < terrainZ)
+        discard;
+
     // FIXME: What about z?
     float distance = length(worldPosition - lightCenter.xy) - ramp.x;
     float distanceOpacity = 1 - clamp(distance / (ramp.y - ramp.x), 0, 1);
@@ -57,8 +66,14 @@ void PointLightPixelShaderExponential(
     in float3 lightCenter : TEXCOORD0,
     in float2 ramp : TEXCOORD1, // start, end
     in float4 color : COLOR0,
+    in  float2 vpos : VPOS,
     out float4 result : COLOR0
 ) {
+    float2 terrainXy = vpos * TerrainTextureTexelSize;
+        float terrainZ = tex2D(TerrainTextureSampler, terrainXy).r;
+    if (lightCenter.z < terrainZ)
+        discard;
+
     // FIXME: What about z?
     float distance = length(worldPosition - lightCenter.xy) - ramp.x;
     float distanceOpacity = 1 - clamp(distance / (ramp.y - ramp.x), 0, 1);
@@ -74,8 +89,14 @@ void PointLightPixelShaderLinearRampTexture(
     in float3 lightCenter : TEXCOORD0,
     in float2 ramp : TEXCOORD1, // start, end
     in float4 color : COLOR0,
+    in  float2 vpos : VPOS,
     out float4 result : COLOR0
 ) {
+    float2 terrainXy = vpos * TerrainTextureTexelSize;
+        float terrainZ = tex2D(TerrainTextureSampler, terrainXy).r;
+    if (lightCenter.z < terrainZ)
+        discard;
+
     // FIXME: What about z?
     float distance = length(worldPosition - lightCenter.xy) - ramp.x;
     float distanceOpacity = 1 - clamp(distance / (ramp.y - ramp.x), 0, 1);
@@ -92,8 +113,14 @@ void PointLightPixelShaderExponentialRampTexture(
     in float3 lightCenter : TEXCOORD0,
     in float2 ramp : TEXCOORD1, // start, end
     in float4 color : COLOR0,
+    in  float2 vpos : VPOS,
     out float4 result : COLOR0
 ) {
+    float2 terrainXy = vpos * TerrainTextureTexelSize;
+        float terrainZ = tex2D(TerrainTextureSampler, terrainXy).r;
+    if (lightCenter.z < terrainZ)
+        discard;
+
     // FIXME: What about z?
     float distance = length(worldPosition - lightCenter.xy) - ramp.x;
     float distanceOpacity = 1 - clamp(distance / (ramp.y - ramp.x), 0, 1);
@@ -110,9 +137,14 @@ void ShadowVertexShader(
     in float3  position  : POSITION0,
     in float   pairIndex : BLENDINDICES,
     out float  z         : TEXCOORD0,
-    out float2 terrainXy : TEXCOORD1,
     out float4 result    : POSITION0
 ) {
+    if (position.z > LightCenter.z) {
+        result = float4(0, 0, 0, 0);
+        z = 0;
+        return;
+    }
+
     float3 direction;
 
     if (pairIndex == 0) {
@@ -133,15 +165,14 @@ void ShadowVertexShader(
     // FIXME: Why do I have to strip Z????
     result = float4(transformed.x, transformed.y, 0, transformed.w);
     z = float4(untransformed.z, 0, 0, 0);
-    // FIXME: Position, scale
-    terrainXy = untransformed.xy * TerrainTextureTexelSize;
 }
 
 void ShadowPixelShader(
     in  float  z         : TEXCOORD0,
-    in  float2 terrainXy : TEXCOORD1,
+    in  float2 vpos      : VPOS,
     out float4 color     : COLOR0
 ) {
+    float2 terrainXy = vpos * TerrainTextureTexelSize;
     float terrainZ = tex2D(TerrainTextureSampler, terrainXy).r;
     if (z < terrainZ)
         discard;
@@ -152,39 +183,39 @@ void ShadowPixelShader(
 technique Shadow {
     pass P0
     {
-        vertexShader = compile vs_2_0 ShadowVertexShader();
-        pixelShader = compile ps_2_0 ShadowPixelShader();
+        vertexShader = compile vs_3_0 ShadowVertexShader();
+        pixelShader = compile ps_3_0 ShadowPixelShader();
     }
 }
 
 technique PointLightLinear {
     pass P0
     {
-        vertexShader = compile vs_2_0 PointLightVertexShader();
-        pixelShader = compile ps_2_0 PointLightPixelShaderLinear();
+        vertexShader = compile vs_3_0 PointLightVertexShader();
+        pixelShader = compile ps_3_0 PointLightPixelShaderLinear();
     }
 }
 
 technique PointLightExponential {
     pass P0
     {
-        vertexShader = compile vs_2_0 PointLightVertexShader();
-        pixelShader = compile ps_2_0 PointLightPixelShaderExponential();
+        vertexShader = compile vs_3_0 PointLightVertexShader();
+        pixelShader = compile ps_3_0 PointLightPixelShaderExponential();
     }
 }
 
 technique PointLightLinearRampTexture {
     pass P0
     {
-        vertexShader = compile vs_2_0 PointLightVertexShader();
-        pixelShader = compile ps_2_0 PointLightPixelShaderLinearRampTexture();
+        vertexShader = compile vs_3_0 PointLightVertexShader();
+        pixelShader = compile ps_3_0 PointLightPixelShaderLinearRampTexture();
     }
 }
 
 technique PointLightExponentialRampTexture {
     pass P0
     {
-        vertexShader = compile vs_2_0 PointLightVertexShader();
-        pixelShader = compile ps_2_0 PointLightPixelShaderExponentialRampTexture();
+        vertexShader = compile vs_3_0 PointLightVertexShader();
+        pixelShader = compile ps_3_0 PointLightPixelShaderExponentialRampTexture();
     }
 }

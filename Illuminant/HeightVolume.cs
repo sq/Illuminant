@@ -9,7 +9,7 @@ using Squared.Game;
 namespace Squared.Illuminant {
     public class HeightVolume : IHasBounds {
         public readonly Polygon Polygon;
-        public float Height;
+        private float _Height;
 
         // HACK
         private VertexPositionColor[] _Mesh3D = null;
@@ -18,6 +18,18 @@ namespace Squared.Illuminant {
         public HeightVolume (Polygon polygon, float height = 0) {
             Polygon = polygon;
             Height = height;
+        }
+
+        public float Height {
+            get {
+                return _Height;
+            }
+            set {
+                if ((value < 0) || (value > 1))
+                    throw new ArgumentOutOfRangeException("value", "Heights must be [0-1] (lol, d3d9)");
+
+                _Height = value;
+            }
         }
 
         public Bounds Bounds {

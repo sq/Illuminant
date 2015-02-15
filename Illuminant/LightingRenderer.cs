@@ -1,4 +1,4 @@
-﻿#define SHADOW_VIZ
+﻿// #define SHADOW_VIZ
 
 using System;
 using System.Collections.Generic;
@@ -169,6 +169,8 @@ namespace Squared.Illuminant {
 
         private readonly RenderTarget2D _TerrainDepthmap;
 
+        private float ZOffset = 0, ZScale = 1;
+
         const int StencilTrue = 0xFF;
         const int StencilFalse = 0x00;
 
@@ -190,8 +192,9 @@ namespace Squared.Illuminant {
             MaximumRenderSize = new Pair<int>(maxWidth, maxHeight);
 
             lock (coordinator.CreateResourceLock) {
-                // HACK for debugging visualization purposes
-                var fmt = SurfaceFormat.Rgba64;
+                // FIXME: Not necessary because XNA's surface type validation is INSANE and completely broken
+                // var fmt = SurfaceFormat.Single;
+                var fmt = SurfaceFormat.Rg32;
 
                 _TerrainDepthmap = new RenderTarget2D(
                     coordinator.Device, maxWidth, maxHeight,
@@ -494,6 +497,10 @@ namespace Squared.Illuminant {
                 if (mi.Effect.Parameters["RampTexture"] != null)
 #endif
                 mi.Effect.Parameters["RampTexture"].SetValue(ls.RampTexture);
+
+                var tsize = new Vector2(1.0f / _TerrainDepthmap.Width, 1.0f / _TerrainDepthmap.Height);
+                mi.Effect.Parameters["TerrainTextureTexelSize"].SetValue(tsize);
+                mi.Effect.Parameters["TerrainTexture"].SetValue(_TerrainDepthmap);
             }
 
             device.Device.SamplerStates[1] = GetRampSamplerState(ls.RampTextureFilter);
@@ -513,6 +520,10 @@ namespace Squared.Illuminant {
             ShadowMaterialInner.Effect.Parameters["ShadowLength"].SetValue(shadowLength);
 
             device.Device.ScissorRectangle = GetScissorRectForLightSource(device, ls);
+
+            var tsize = new Vector2(1.0f / _TerrainDepthmap.Width, 1.0f / _TerrainDepthmap.Height);
+            ShadowMaterialInner.Effect.Parameters["TerrainTextureTexelSize"].SetValue(tsize);
+            ShadowMaterialInner.Effect.Parameters["TerrainTexture"].SetValue(_TerrainDepthmap);
         }
 
         private CachedSector GetCachedSector (Frame frame, Pair<int> sectorIndex) {
@@ -600,6 +611,19 @@ namespace Squared.Illuminant {
             return result;
         }
 
+        private void UpdateZRange () {
+            float minZ = Environment.GroundZ;
+            float maxZ = minZ;
+
+            foreach (var hv in Environment.HeightVolumes) {
+                minZ = Math.Min(minZ, hv.Height);
+                maxZ = Math.Max(maxZ, hv.Height);
+            }
+
+            ZOffset = -minZ;
+            ZScale = 1.0f / (maxZ - minZ);
+        }
+
         /// <summary>
         /// Renders all light sources into the target batch container on the specified layer.
         /// </summary>
@@ -608,6 +632,8 @@ namespace Squared.Illuminant {
         /// <param name="layer">The layer to render lighting into.</param>
         /// <param name="intensityScale">A factor to scale the intensity of all light sources. You can use this to rescale the intensity of light values for HDR.</param>
         public void RenderLighting (Frame frame, IBatchContainer container, int layer, float intensityScale = 1.0f) {
+            UpdateZRange();
+
             // FIXME
             var pointLightVertexCount = Environment.LightSources.Count * 4;
             var pointLightIndexCount = Environment.LightSources.Count * 6;
@@ -636,11 +662,6 @@ namespace Squared.Illuminant {
             BatchGroup currentLightGroup = null;
 
             int layerIndex = 0;
-
-            ShadowMaterialInner.Effect.Parameters["TerrainTextureTexelSize"].SetValue(
-                new Vector2(1.0f / _TerrainDepthmap.Width, 1.0f / _TerrainDepthmap.Height)
-            );
-            ShadowMaterialInner.Effect.Parameters["TerrainTexture"].SetValue(_TerrainDepthmap);
 
             using (var sortedLights = BufferPool<LightSource>.Allocate(Environment.LightSources.Count))
             using (var resultGroup = BatchGroup.New(container, layer, before: StoreScissorRect, after: RestoreScissorRect)) {
@@ -816,6 +837,8 @@ namespace Squared.Illuminant {
         }
 
         public void RenderHeightmap (Frame frame, IBatchContainer container, int layer) {
+            UpdateZRange();
+
             using (var group = BatchGroup.ForRenderTarget(container, layer, _TerrainDepthmap)) {
                 ClearBatch.AddNew(
                     group, 0, Materials.Clear, 
@@ -824,14 +847,14 @@ namespace Squared.Illuminant {
                 );
 
                 using (var pb = PrimitiveBatch<VertexPositionColor>.New(
-                    group, 0, Materials.ScreenSpaceGeometry, 
+                    group, 0, Materials.ScreenSpaceGeometry,
                     (dm, _) => {
-                        dm.Device.DepthStencilState = DepthStencilState.None;
                         dm.Device.RasterizerState = RasterizerState.CullNone;
                         dm.Device.BlendState = BlendState.Opaque;
                     }
                 ))
-                foreach (var hv in Environment.HeightVolumes) {
+                // Rasterize the height volumes in sequential order.
+                foreach (var hv in Environment.HeightVolumes.OrderBy(_ => _.Height)) {
                     var m = hv.Mesh3D;
 
                     pb.Add(new PrimitiveDrawCall<VertexPositionColor>(
@@ -876,11 +899,14 @@ namespace Squared.Illuminant {
             using (var group = BatchGroup.New(container, layer)) {
                 using (var gb = GeometryBatch.New(group, 0, IlluminantMaterials.DebugOutlines)) {
                     VisualizerLineWriterInstance.Batch = gb;
-                    VisualizerLineWriterInstance.Color = lineColor.GetValueOrDefault(Color.White);
 
-                    foreach (var hv in Environment.HeightVolumes)
+                    var lc = lineColor.GetValueOrDefault(Color.White);
+                    foreach (var hv in Environment.HeightVolumes) {
+                        VisualizerLineWriterInstance.Color = lc * hv.Height;
                         hv.GenerateLines(VisualizerLineWriterInstance);
+                    }
 
+                    VisualizerLineWriterInstance.Color = lineColor.GetValueOrDefault(Color.White);
                     foreach (var lo in Environment.Obstructions)
                         lo.GenerateLines(VisualizerLineWriterInstance);
 
@@ -919,14 +945,12 @@ namespace Squared.Illuminant {
 
         internal readonly Effect[] EffectsToSetGammaCompressionParametersOn;
         internal readonly Effect[] EffectsToSetToneMappingParametersOn;
-        internal readonly Effect[] EffectsToSetRampTextureOn;
 
         internal IlluminantMaterials (DefaultMaterialSet materialSet) {
             MaterialSet = materialSet;
 
             EffectsToSetGammaCompressionParametersOn = new Effect[2];
             EffectsToSetToneMappingParametersOn = new Effect[2];
-            EffectsToSetRampTextureOn = new Effect[2];
         }
 
         /// <summary>
