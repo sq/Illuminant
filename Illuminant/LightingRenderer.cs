@@ -819,6 +819,9 @@ namespace Squared.Illuminant {
                     VisualizerLineWriterInstance.Batch = gb;
                     VisualizerLineWriterInstance.Color = lineColor.GetValueOrDefault(Color.White);
 
+                    foreach (var hv in Environment.HeightVolumes)
+                        hv.GenerateLines(VisualizerLineWriterInstance);
+
                     foreach (var lo in Environment.Obstructions)
                         lo.GenerateLines(VisualizerLineWriterInstance);
 

@@ -21,29 +21,60 @@ namespace Squared.Illuminant {
         public float GroundZ = 0f;
 
         public void EnumerateObstructionLinesInBounds (Bounds bounds, ILineWriter output) {
-            SpatialCollection<LightObstructionBase>.ItemInfo ii;
+            {
+                SpatialCollection<HeightVolume>.ItemInfo ii;
 
-            using (var e = Obstructions.GetItemsFromBounds(bounds, false))
-            while (e.GetNext(out ii)) {
-                if (!ii.Bounds.Intersects(bounds))
-                    continue;
+                using (var e = HeightVolumes.GetItemsFromBounds(bounds, false))
+                while (e.GetNext(out ii)) {
+                    if (!ii.Bounds.Intersects(bounds))
+                        continue;
 
-                ii.Item.GenerateLines(output);
+                    ii.Item.GenerateLines(output);
+                }
+            }
+
+            {
+                SpatialCollection<LightObstructionBase>.ItemInfo ii;
+
+                using (var e = Obstructions.GetItemsFromBounds(bounds, false))
+                while (e.GetNext(out ii)) {
+                    if (!ii.Bounds.Intersects(bounds))
+                        continue;
+
+                    ii.Item.GenerateLines(output);
+                }
             }
         }
 
         public void EnumerateObstructionLinesInBounds (Bounds bounds, ILineWriter output, ref bool cancel) {
-            SpatialCollection<LightObstructionBase>.ItemInfo ii;
+            {
+                SpatialCollection<HeightVolume>.ItemInfo ii;
 
-            using (var e = Obstructions.GetItemsFromBounds(bounds, false))
-            while (e.GetNext(out ii)) {
-                if (!ii.Bounds.Intersects(bounds))
-                    continue;
+                using (var e = HeightVolumes.GetItemsFromBounds(bounds, false))
+                while (e.GetNext(out ii)) {
+                    if (!ii.Bounds.Intersects(bounds))
+                        continue;
 
-                ii.Item.GenerateLines(output);
+                    ii.Item.GenerateLines(output);
 
-                if (cancel)
-                    return;
+                    if (cancel)
+                        return;
+                }
+            }
+
+            {
+                SpatialCollection<LightObstructionBase>.ItemInfo ii;
+
+                using (var e = Obstructions.GetItemsFromBounds(bounds, false))
+                while (e.GetNext(out ii)) {
+                    if (!ii.Bounds.Intersects(bounds))
+                        continue;
+
+                    ii.Item.GenerateLines(output);
+
+                    if (cancel)
+                        return;
+                }
             }
         }
 

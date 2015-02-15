@@ -48,5 +48,16 @@ namespace Squared.Illuminant {
                 return _Mesh3D;
             }
         }
+
+        public void GenerateLines (ILineWriter output) {
+            for (var i = 0; i < Polygon.Count; i++) {
+                var e = Polygon.GetEdge(i);
+
+                output.Write(
+                    new LightPosition(e.Start.X, e.Start.Y, Height),
+                    new LightPosition(e.End.X, e.End.Y, Height)
+                );
+            }
+        }
     }
 }
