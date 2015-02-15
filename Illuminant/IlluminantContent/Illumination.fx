@@ -1,7 +1,6 @@
 #include "RampCommon.fxh"
 
-// HACK to eliminate black shadow artifacts around Z obstructions
-#define SMALL_SHADOW_THRESHOLD 0.5
+#define SMALL_SHADOW_THRESHOLD 0.90
 
 shared float2 ViewportScale;
 shared float2 ViewportPosition;
@@ -96,7 +95,7 @@ void PointLightPixelShaderLinearRampTexture(
     out float4 result : COLOR0
 ) {
     float2 terrainXy = vpos * TerrainTextureTexelSize;
-        float terrainZ = tex2D(TerrainTextureSampler, terrainXy).r;
+    float terrainZ = tex2D(TerrainTextureSampler, terrainXy).r;
     if (lightCenter.z < terrainZ)
         discard;
 
@@ -145,13 +144,20 @@ void ShadowVertexShader(
     float3 delta = normalize(position - LightCenter);
     float3 direction;
 
+    float shadowLengthScaled = ShadowLength;
+
     if (pairIndex == 0) {
         direction = float3(0, 0, 0);
     } else {
         direction = delta;
     }
-
-    float shadowLengthScaled = ShadowLength;
+    
+    /*
+    // This is ALMOST right
+    if (abs(delta.z) > SMALL_SHADOW_THRESHOLD) {
+        shadowLengthScaled = 0;
+    }
+    */
 
     float3 untransformed = position + (direction * shadowLengthScaled);
     float4 transformed = ApplyTransform(untransformed);

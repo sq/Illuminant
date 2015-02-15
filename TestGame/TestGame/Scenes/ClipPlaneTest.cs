@@ -79,9 +79,9 @@ namespace TestGame.Scenes {
             Environment.LightSources.Add(light);
 
             var rng = new Random(1234);
-            for (var i = 0; i < 6; i++) {
+            for (var i = 0; i < 12; i++) {
                 light = new LightSource {
-                    Position = new Vector3(64, 64, rng.NextFloat(0.2f, 2.0f)),
+                    Position = new Vector3(64, 64, rng.NextFloat(0.1f, 2.0f)),
                     Color = new Vector4((float)rng.NextDouble(0.1f, 1.0f), (float)rng.NextDouble(0.1f, 1.0f), (float)rng.NextDouble(0.1f, 1.0f), 1.0f),
                     RampStart = rng.NextFloat(32, 60),
                     RampEnd = rng.NextFloat(160, 250),
@@ -199,7 +199,7 @@ namespace TestGame.Scenes {
 
 
                 float stepOffset = (float)((Math.PI * 2) / (Environment.LightSources.Count - 1));
-                float offset = (float)(gameTime.TotalGameTime.TotalSeconds / 32 % 4);
+                float offset = (float)(gameTime.TotalGameTime.TotalSeconds / 16 % 4);
                 for (int i = 1; i < Environment.LightSources.Count; i++, offset += stepOffset) {
                     float localRadius = (float)(radius + (radius * Math.Sin(offset * 4f) * 0.5f));
 
