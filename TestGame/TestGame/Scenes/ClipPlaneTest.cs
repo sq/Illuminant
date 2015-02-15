@@ -89,24 +89,33 @@ namespace TestGame.Scenes {
                 Environment.LightSources.Add(light);
             }
 
-            const int spiralCount = 1400;
-            float spiralRadius = 0, spiralRadiusStep = 550f / spiralCount;
-            float spiralAngle = 0, spiralAngleStep = (float)(Math.PI / (spiralCount / 7f));
-            Vector2 previous = default(Vector2);
+            const float angleStep = (float)(Math.PI / 16);
+            const int   heightTiers = 5;
+            const float minHeight = 0f;
+            const float maxHeight = 1f;
 
-            for (int i = 0; i < spiralCount; i++, spiralAngle += spiralAngleStep, spiralRadius += spiralRadiusStep) {
-                var current = new Vector2(
-                    (float)(Math.Cos(spiralAngle) * spiralRadius) + (Width / 2f),
-                    (float)(Math.Sin(spiralAngle) * spiralRadius) + (Height / 2f)
-                );
+            Environment.GroundZ = 0;
 
-                if (i > 0) {
-                    Environment.Obstructions.Add(new LightObstructionLine(
-                        previous, current
+            var points = new List<Vector2>();
+
+            for (float h = minHeight, r = 0.9f, hs = (maxHeight - minHeight) / heightTiers, rs = -r / (heightTiers + 1); h <= maxHeight; h += hs, r += rs) {
+                points.Clear();
+
+                var rX = r * Width / 2f;
+                var rY = r * Height / 2f;
+                for (float a = 0, p2 = (float)(Math.PI * 2); a < p2; a += angleStep) {
+                    points.Add(new Vector2(
+                        ((float)Math.Cos(a) * rX) + (Width / 2f),
+                        ((float)Math.Sin(a) * rY) + (Height / 2f)                    
                     ));
                 }
 
-                previous = current;
+                var volume = new HeightVolume(
+                    new Polygon(points.ToArray()),
+                    h
+                );
+
+                Environment.HeightVolumes.Add(volume);
             }
         }
         
@@ -121,6 +130,8 @@ namespace TestGame.Scenes {
             );
 
             CreateRenderTargets();
+
+            Renderer.RenderHeightmap(frame, frame, -2);
 
             using (var bg = BatchGroup.ForRenderTarget(
                 frame, -1, Lightmap

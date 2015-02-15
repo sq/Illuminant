@@ -188,14 +188,17 @@ namespace Squared.Illuminant {
             MaximumRenderSize = new Pair<int>(maxWidth, maxHeight);
 
             lock (coordinator.CreateResourceLock) {
+                // HACK for debugging visualization purposes
+                var fmt = SurfaceFormat.Rgba64;
+
                 TerrainDepthmap = new RenderTarget2D(
                     coordinator.Device, maxWidth, maxHeight,
-                    false, SurfaceFormat.Single, DepthFormat.Depth24, 0, RenderTargetUsage.DiscardContents
+                    false, fmt, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.DiscardContents
                 );
 
                 ShadowDepthmap = new RenderTarget2D(
                     coordinator.Device, maxWidth, maxHeight,
-                    false, SurfaceFormat.Single, DepthFormat.Depth24, 0, RenderTargetUsage.DiscardContents
+                    false, fmt, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.DiscardContents
                 );
             }
 
@@ -750,6 +753,33 @@ namespace Squared.Illuminant {
 
                 if (Render.Tracing.RenderTrace.EnableTracing)
                     Render.Tracing.RenderTrace.Marker(resultGroup, 9999, "Frame {0:0000} : LightingRenderer {1:X4} : End", frame.Index, this.GetHashCode());
+            }
+        }
+
+        public void RenderHeightmap (Frame frame, IBatchContainer container, int layer) {
+            using (var group = BatchGroup.ForRenderTarget(container, layer, TerrainDepthmap)) {
+                ClearBatch.AddNew(
+                    group, 0, Materials.Clear, 
+                    // FIXME: We should write GroundZ to the color channel!!!
+                    Color.Transparent, Environment.GroundZ, 0
+                );
+
+                using (var pb = PrimitiveBatch<VertexPositionColor>.New(
+                    group, 0, Materials.ScreenSpaceGeometry, 
+                    (dm, _) => {
+                        dm.Device.DepthStencilState = DepthStencilState.None;
+                        dm.Device.RasterizerState = RasterizerState.CullNone;
+                        dm.Device.BlendState = BlendState.Opaque;
+                    }
+                ))
+                foreach (var hv in Environment.HeightVolumes) {
+                    var m = hv.Mesh3D;
+
+                    pb.Add(new PrimitiveDrawCall<VertexPositionColor>(
+                        PrimitiveType.TriangleList,
+                        m, 0, m.Length / 3
+                    ));
+                }
             }
         }
 
