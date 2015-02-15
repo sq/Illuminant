@@ -139,6 +139,7 @@ namespace TestGame.Scenes {
 
             ClearBatch.AddNew(frame, 0, Game.ScreenMaterials.Clear, clearColor: Color.Black);
 
+            Renderer.RenderHeightmap(frame, frame, -16);
             Renderer.RenderLighting(frame, frame, 1);
 
             if (ShowOutlines)

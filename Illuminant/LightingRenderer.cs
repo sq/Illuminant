@@ -82,7 +82,7 @@ namespace Squared.Illuminant {
         public class CachedSector : IDisposable {
             public Pair<int> SectorIndex;
             public int FrameIndex;
-            public bool Drawn;
+            public int DrawnIndex;
             public DynamicVertexBuffer ObstructionVertexBuffer;
             public DynamicIndexBuffer ObstructionIndexBuffer;
             public int VertexCount, IndexCount, PrimitiveCount;
@@ -606,7 +606,7 @@ namespace Squared.Illuminant {
             }
 
             result.FrameIndex = frame.Index;
-            result.Drawn = false;
+            result.DrawnIndex = -1;
 
             return result;
         }
@@ -739,7 +739,7 @@ namespace Squared.Illuminant {
                             if (cachedSector.VertexCount <= 0)
                                 continue;
 
-                            RenderLightingSector(frame, ref needStencilClear, currentLightGroup, ref layerIndex, lightSource, ref stencilBatch, cachedSector);
+                            RenderLightingSector(frame, ref needStencilClear, currentLightGroup, ref layerIndex, lightSource, ref stencilBatch, cachedSector, i + 1);
                         }
                     }
 
@@ -751,7 +751,7 @@ namespace Squared.Illuminant {
                             if (cachedSector.VertexCount <= 0)
                                 continue;
 
-                            RenderLightingSector(frame, ref needStencilClear, currentLightGroup, ref layerIndex, lightSource, ref stencilBatch, cachedSector);
+                            RenderLightingSector(frame, ref needStencilClear, currentLightGroup, ref layerIndex, lightSource, ref stencilBatch, cachedSector, i + 1);
                         }
                     }
 
@@ -813,11 +813,11 @@ namespace Squared.Illuminant {
             }
         }
 
-        private void RenderLightingSector (Frame frame, ref bool needStencilClear, BatchGroup currentLightGroup, ref int layerIndex, LightSource lightSource, ref NativeBatch stencilBatch, CachedSector cachedSector) {
-            if (cachedSector.Drawn)
+        private void RenderLightingSector (Frame frame, ref bool needStencilClear, BatchGroup currentLightGroup, ref int layerIndex, LightSource lightSource, ref NativeBatch stencilBatch, CachedSector cachedSector, int drawnIndex) {
+            if (cachedSector.DrawnIndex >= drawnIndex)
                 return;
 
-            cachedSector.Drawn = true;
+            cachedSector.DrawnIndex = drawnIndex;
 
             if (stencilBatch == null) {
                 if (Render.Tracing.RenderTrace.EnableTracing)

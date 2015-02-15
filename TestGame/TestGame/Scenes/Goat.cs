@@ -253,6 +253,9 @@ namespace TestGame.Scenes {
                 0, 1
             );
 
+            BackgroundRenderer.RenderHeightmap(frame, frame, -16);
+            ForegroundRenderer.RenderHeightmap(frame, frame, -16);
+
             using (var backgroundGroup = BatchGroup.ForRenderTarget(frame, 0, Background)) {
                 ClearBatch.AddNew(backgroundGroup, 1, Game.ScreenMaterials.Clear, clearColor: Color.Transparent);
 

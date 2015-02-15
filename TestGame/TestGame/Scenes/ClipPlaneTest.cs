@@ -37,7 +37,7 @@ namespace TestGame.Scenes {
             int scaledWidth = (int)Width;
             int scaledHeight = (int)Height;
 
-            const int multisampleCount = 4;
+            const int multisampleCount = 0;
 
             if (scaledWidth < 4)
                 scaledWidth = 4;
@@ -72,19 +72,20 @@ namespace TestGame.Scenes {
                 Color = new Vector4(1f, 1f, 1f, 1),
                 RampStart = 33,
                 RampEnd = 350,
+                RampMode = LightSourceRampMode.Exponential
             };
 
             Lights.Add(light);
             Environment.LightSources.Add(light);
 
             var rng = new Random(1234);
-            for (var i = 0; i < 0; i++) {
+            for (var i = 0; i < 6; i++) {
                 light = new LightSource {
-                    Position = new Vector3(64, 64, 0),
+                    Position = new Vector3(64, 64, rng.NextFloat(0.2f, 2.0f)),
                     Color = new Vector4((float)rng.NextDouble(0.1f, 1.0f), (float)rng.NextDouble(0.1f, 1.0f), (float)rng.NextDouble(0.1f, 1.0f), 1.0f),
                     RampStart = rng.NextFloat(32, 60),
                     RampEnd = rng.NextFloat(160, 250),
-                    RampMode = LightSourceRampMode.Linear
+                    RampMode = LightSourceRampMode.Exponential
                 };
 
                 Lights.Add(light);

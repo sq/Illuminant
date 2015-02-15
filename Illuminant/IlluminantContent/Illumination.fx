@@ -1,5 +1,8 @@
 #include "RampCommon.fxh"
 
+// HACK to eliminate black shadow artifacts around Z obstructions
+#define SMALL_SHADOW_THRESHOLD 0.5
+
 shared float2 ViewportScale;
 shared float2 ViewportPosition;
 
@@ -139,32 +142,22 @@ void ShadowVertexShader(
     out float  z         : TEXCOORD0,
     out float4 result    : POSITION0
 ) {
-    if (position.z > LightCenter.z) {
-        result = float4(0, 0, 0, 0);
-        z = 0;
-        return;
-    }
-
+    float3 delta = normalize(position - LightCenter);
     float3 direction;
 
     if (pairIndex == 0) {
         direction = float3(0, 0, 0);
     } else {
-        direction = normalize(position - LightCenter);
+        direction = delta;
     }
 
-    // FIXME: Why isn't this right?
-    /*
-    float shadowLengthScaled =
-        ShadowLength * max(1 / abs(direction.x), 1 / abs(direction.y));
-    */
     float shadowLengthScaled = ShadowLength;
 
     float3 untransformed = position + (direction * shadowLengthScaled);
     float4 transformed = ApplyTransform(untransformed);
     // FIXME: Why do I have to strip Z????
     result = float4(transformed.x, transformed.y, 0, transformed.w);
-    z = float4(untransformed.z, 0, 0, 0);
+    z = float4(untransformed.z, position.z, 0, 0);
 }
 
 void ShadowPixelShader(
@@ -174,10 +167,10 @@ void ShadowPixelShader(
 ) {
     float2 terrainXy = vpos * TerrainTextureTexelSize;
     float terrainZ = tex2D(TerrainTextureSampler, terrainXy).r;
-    if (z < terrainZ)
+    if (z.x < terrainZ)
         discard;
 
-    color = float4(z, 0, terrainZ, 1);
+    color = float4(z.x, 1, terrainZ, 1);
 }
 
 technique Shadow {

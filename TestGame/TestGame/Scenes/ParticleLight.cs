@@ -288,6 +288,9 @@ namespace TestGame.Scenes {
                 }
             }
 
+            BackgroundRenderer.RenderHeightmap(frame, frame, -16);
+            ForegroundRenderer.RenderHeightmap(frame, frame, -16);
+
             using (var backgroundLightGroup = BatchGroup.ForRenderTarget(frame, 4, BackgroundLightmap)) {
                 ClearBatch.AddNew(backgroundLightGroup, 1, LightmapMaterials.Clear, clearColor: new Color(32, 32, 32, 255), clearZ: 0, clearStencil: 0);
                 BackgroundRenderer.RenderLighting(frame, backgroundLightGroup, 2);

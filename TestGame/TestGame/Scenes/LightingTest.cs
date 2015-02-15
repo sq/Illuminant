@@ -200,6 +200,8 @@ namespace TestGame.Scenes {
                 MagnitudeScale, MiddleGray, AppliedAverageLuminance, MaximumLuminance
             };
 
+            Renderer.RenderHeightmap(frame, frame, -16);
+
             using (var bg = BatchGroup.ForRenderTarget(
                 frame, -1, Lightmap,
                 (dm, _) =>
