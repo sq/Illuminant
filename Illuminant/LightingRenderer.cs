@@ -149,6 +149,8 @@ namespace Squared.Illuminant {
         private readonly List<PointLightRecord> PointLightBatchBuffer = new List<PointLightRecord>(128);
         private Rectangle StoredScissorRect;
 
+        public readonly Pair<int> MaximumRenderSize;
+
         public static readonly short[] ShadowIndices;
 
         public LightingEnvironment Environment;
@@ -162,10 +164,17 @@ namespace Squared.Illuminant {
             };
         }
 
+        private readonly RenderTarget2D TerrainDepthmap;
+        private readonly RenderTarget2D ShadowDepthmap;
+
         const int StencilTrue = 0xFF;
         const int StencilFalse = 0x00;
 
-        public LightingRenderer (ContentManager content, RenderCoordinator coordinator, DefaultMaterialSet materials, LightingEnvironment environment) {
+        public LightingRenderer (
+            ContentManager content, RenderCoordinator coordinator, 
+            DefaultMaterialSet materials, LightingEnvironment environment,
+            int maxWidth, int maxHeight
+        ) {
             Materials = materials;
             Coordinator = coordinator;
 
@@ -175,6 +184,20 @@ namespace Squared.Illuminant {
             RestoreScissorRect = _RestoreScissorRect;
             ShadowBatchSetup = _ShadowBatchSetup;
             IlluminationBatchSetup = _IlluminationBatchSetup;
+
+            MaximumRenderSize = new Pair<int>(maxWidth, maxHeight);
+
+            lock (coordinator.CreateResourceLock) {
+                TerrainDepthmap = new RenderTarget2D(
+                    coordinator.Device, maxWidth, maxHeight,
+                    false, SurfaceFormat.Single, DepthFormat.Depth24, 0, RenderTargetUsage.DiscardContents
+                );
+
+                ShadowDepthmap = new RenderTarget2D(
+                    coordinator.Device, maxWidth, maxHeight,
+                    false, SurfaceFormat.Single, DepthFormat.Depth24, 0, RenderTargetUsage.DiscardContents
+                );
+            }
 
             IlluminantMaterials.ClearStencil = materials.Get(
                 materials.Clear, 
@@ -364,6 +387,12 @@ namespace Squared.Illuminant {
 
             PointLightStencil.Dispose();
             ShadowStencil.Dispose();
+        }
+
+        public Texture2D Depthmap {
+            get {
+                return TerrainDepthmap;
+            }
         }
 
         private void _StoreScissorRect (DeviceManager device, object userData) {
@@ -578,14 +607,6 @@ namespace Squared.Illuminant {
             BatchGroup currentLightGroup = null;
 
             int layerIndex = 0;
-
-            var planes = new[] {
-                // normalx, normaly, normalz, distance
-                new Vector4(-Vector3.UnitZ, -Environment.GroundZ),
-                new Vector4(Vector3.UnitZ, Environment.CeilingZ),
-            };
-
-            ShadowMaterialInner.Effect.Parameters["ClipPlanes"].SetValue(planes);
 
             using (var sortedLights = BufferPool<LightSource>.Allocate(Environment.LightSources.Count))
             using (var resultGroup = BatchGroup.New(container, layer, before: StoreScissorRect, after: RestoreScissorRect)) {

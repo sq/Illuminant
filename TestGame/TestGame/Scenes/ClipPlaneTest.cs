@@ -23,6 +23,7 @@ namespace TestGame.Scenes {
         public readonly List<LightSource> Lights = new List<LightSource>();
 
         bool ShowOutlines = true;
+        bool ShowTerrainDepth = true;
 
         LightObstructionLine Dragging = null;
 
@@ -62,13 +63,13 @@ namespace TestGame.Scenes {
 
             Environment = new LightingEnvironment();
 
-            Renderer = new LightingRenderer(Game.Content, Game.RenderCoordinator, LightmapMaterials, Environment);
+            Renderer = new LightingRenderer(Game.Content, Game.RenderCoordinator, LightmapMaterials, Environment, Width, Height);
 
             var light = new LightSource {
                 Position = new Vector2(64, 64),
                 Color = new Vector4(1f, 1f, 1f, 1),
                 RampStart = 50,
-                RampEnd = 275,
+                RampEnd = 225,
             };
 
             Lights.Add(light);
@@ -133,9 +134,14 @@ namespace TestGame.Scenes {
 
             using (var bb = BitmapBatch.New(
                 frame, 1,
-                Game.ScreenMaterials.Get(Game.ScreenMaterials.ScreenSpaceBitmap, blendState: BlendState.Opaque)
+                Game.ScreenMaterials.Get(Game.ScreenMaterials.ScreenSpaceBitmap, blendState: BlendState.Opaque),
+                samplerState: SamplerState.PointClamp
             ))
-                bb.Add(new BitmapDrawCall(Lightmap, Vector2.Zero));
+                bb.Add(new BitmapDrawCall(
+                    ShowTerrainDepth
+                        ? Renderer.Depthmap
+                        : Lightmap, Vector2.Zero
+                ));
 
             if (ShowOutlines)
                 Renderer.RenderOutlines(frame, 2, true);
@@ -147,11 +153,13 @@ namespace TestGame.Scenes {
 
                 if (KeyWasPressed(Keys.O))
                     ShowOutlines = !ShowOutlines;
+                if (KeyWasPressed(Keys.T))
+                    ShowTerrainDepth = !ShowTerrainDepth;
 
                 var ms = Mouse.GetState();
                 Game.IsMouseVisible = true;
 
-                LightZ = Squared.Util.Arithmetic.Clamp(ms.ScrollWheelValue / 3000f, Environment.GroundZ, Environment.CeilingZ);
+                LightZ = Squared.Util.Arithmetic.PulseSine((float)gameTime.TotalGameTime.TotalSeconds * 0.66f, -1.0f, 1.0f);
                 
                 var mousePos = new Vector2(ms.X, ms.Y);
 
@@ -161,6 +169,8 @@ namespace TestGame.Scenes {
                 var lightCenter = new Vector3(Width / 2, Height / 2, 0);
 
                 Lights[0].Position = new Vector3(mousePos, LightZ);
+                Lights[0].RampEnd = 250f * (((1 - LightZ) * 0.25f) + 0.75f);
+
 
                 float stepOffset = (float)((Math.PI * 2) / (Environment.LightSources.Count - 1));
                 float offset = (float)(gameTime.TotalGameTime.TotalSeconds / 32 % 4);
