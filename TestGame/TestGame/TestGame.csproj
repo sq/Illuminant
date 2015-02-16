@@ -112,6 +112,7 @@
     <Compile Include="Particles.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Program.cs" />
+    <Compile Include="Scenes\Soulcaster.cs" />
     <Compile Include="Scenes\ClipPlaneTest.cs" />
     <Compile Include="Scenes\RampTest.cs" />
     <Compile Include="Scenes\ParticleLight.cs" />

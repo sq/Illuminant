@@ -10,9 +10,10 @@ using Microsoft.Xna.Framework.Input;
 using Squared.Game;
 using Squared.Illuminant;
 using Squared.Render;
+using Squared.Render.Convenience;
 
 namespace TestGame.Scenes {
-    public class ClipPlaneTest : Scene {
+    public class SoulcasterTest : Scene {
         DefaultMaterialSet LightmapMaterials;
 
         LightingEnvironment Environment;
@@ -22,13 +23,13 @@ namespace TestGame.Scenes {
 
         public readonly List<LightSource> Lights = new List<LightSource>();
 
-        bool ShowOutlines = true;
+        Texture2D Background;
+
+        bool ShowOutlines = false;
         bool ShowTerrainDepth = false;
 
-        float LightZ = 0;
-
-        public ClipPlaneTest (TestGame game, int width, int height)
-            : base(game, width, height) {
+        public SoulcasterTest (TestGame game, int width, int height)
+            : base(game, 1024, 1024) {
         }
 
         private void CreateRenderTargets () {
@@ -55,6 +56,13 @@ namespace TestGame.Scenes {
             }
         }
 
+        void Rect (Vector2 a, Vector2 b, float h) {
+            Environment.HeightVolumes.Add(new HeightVolume(
+                Polygon.FromBounds(new Bounds(a, b)),
+                h
+            ));
+        }
+
         public override void LoadContent () {
             LightmapMaterials = new DefaultMaterialSet(Game.Services);
 
@@ -63,10 +71,12 @@ namespace TestGame.Scenes {
 
             Environment = new LightingEnvironment();
 
+            Background = Game.Content.Load<Texture2D>("sc3test");
+
             Renderer = new LightingRenderer(Game.Content, Game.RenderCoordinator, LightmapMaterials, Environment, Width, Height);
 
             var light = new LightSource {
-                Position = new Vector2(64, 64),
+                Position = new Vector3(64, 64, 0.7f),
                 Color = new Vector4(1f, 1f, 1f, 1),
                 RampStart = 33,
                 RampEnd = 350,
@@ -76,56 +86,13 @@ namespace TestGame.Scenes {
             Lights.Add(light);
             Environment.LightSources.Add(light);
 
-            var rng = new Random(1234);
-            for (var i = 0; i < 12; i++) {
-                light = new LightSource {
-                    Position = new Vector3(64, 64, rng.NextFloat(0.1f, 2.0f)),
-                    Color = new Vector4((float)rng.NextDouble(0.1f, 1.0f), (float)rng.NextDouble(0.1f, 1.0f), (float)rng.NextDouble(0.1f, 1.0f), 1.0f),
-                    RampStart = rng.NextFloat(32, 60),
-                    RampEnd = rng.NextFloat(160, 250),
-                    RampMode = LightSourceRampMode.Exponential
-                };
+            Rect(Vector2.Zero, new Vector2(Width, 610), 0.2f);
 
-                Lights.Add(light);
-                Environment.LightSources.Add(light);
-            }
+            Rect(new Vector2(34, 426), new Vector2(34 + 127, 579), 0.3f);
+            Rect(new Vector2(40, 361), new Vector2(158, 544), 0.6f);
+            Rect(new Vector2(40, 233), new Vector2(158, 361), 0.8f);
 
-            const float angleStep = (float)(Math.PI / 128);
-            const int   heightTiers = 5;
-            const float minHeight = 0f;
-            const float maxHeight = 1f;
-
-            Environment.GroundZ = 0;
-
-            var points = new List<Vector2>();
-
-            for (float r = 0.9f, hs = (maxHeight - minHeight) / heightTiers, rs = -r / (heightTiers + 1), h = minHeight + hs; h <= maxHeight; h += hs, r += rs) {
-                points.Clear();
-
-                var rX = r * Width / 2f;
-                var rY = r * Height / 2f;
-                for (float a = 0, p2 = (float)(Math.PI * 2); a < p2; a += angleStep) {
-                    points.Add(new Vector2(
-                        ((float)Math.Cos(a) * rX) + (Width / 2f),
-                        ((float)Math.Sin(a) * rY) + (Height / 2f)                    
-                    ));
-                }
-
-                var volume = new HeightVolume(
-                    new Polygon(points.ToArray()),
-                    h
-                );
-
-                Environment.HeightVolumes.Add(volume);
-            }
-
-            Environment.HeightVolumes.Add(new HeightVolume(
-                Polygon.FromBounds(new Bounds(
-                    new Vector2((Width * 0.5f) - 32f, 0f),
-                    new Vector2((Width * 0.5f) + 32f, Height)
-                )),
-                0.85f
-            ));
+            Rect(new Vector2(655, 426), new Vector2(655 + 127, 579), 0.3f);
         }
         
         public override void Draw (Squared.Render.Frame frame) {
@@ -158,10 +125,28 @@ namespace TestGame.Scenes {
                 samplerState: SamplerState.PointClamp
             ))
                 bb.Add(new BitmapDrawCall(
+                    Background, Vector2.Zero
+                ));
+
+            using (var bb = BitmapBatch.New(
+                frame, 2,
+                Game.ScreenMaterials.Get(
+                    ShowTerrainDepth
+                        ? Game.ScreenMaterials.ScreenSpaceBitmap
+                        : Game.ScreenMaterials.ScreenSpaceLightmappedBitmap,
+                    blendState: BlendState.AlphaBlend
+                ),
+                samplerState: SamplerState.PointClamp
+            )) {
+                var dc = new BitmapDrawCall(
                     ShowTerrainDepth
                         ? Renderer.TerrainDepthmap
-                        : Lightmap, Vector2.Zero
-                ));
+                        : Background,
+                    Vector2.Zero, Color.White * (ShowTerrainDepth ? 0.9f : 1.0f)
+                );
+                dc.Textures = new TextureSet(dc.Textures.Texture1, Lightmap);
+                bb.Add(dc);
+            }
 
             if (ShowOutlines)
                 Renderer.RenderOutlines(frame, 2, true);
@@ -174,44 +159,23 @@ namespace TestGame.Scenes {
                 if (KeyWasPressed(Keys.O))
                     ShowOutlines = !ShowOutlines;
 
-                if (KeyWasPressed(Keys.T)) {
+                if (KeyWasPressed(Keys.T))
                     ShowTerrainDepth = !ShowTerrainDepth;
-                }
 
                 var ms = Mouse.GetState();
                 Game.IsMouseVisible = true;
-
-                // const float minZ = 0f, maxZ = 1.5f;
-                // LightZ = Squared.Util.Arithmetic.PulseSine((float)gameTime.TotalGameTime.TotalSeconds * 0.66f, minZ, maxZ);
-                LightZ = ms.ScrollWheelValue / 1024.0f;
                 
-                var mousePos = new Vector2(ms.X, ms.Y);
+                var mousePos = new Vector3(ms.X, ms.Y, Lights[0].Position.Z);
 
                 var angle = gameTime.TotalGameTime.TotalSeconds * 0.125f;
                 const float radius = 320f;
 
-                var lightCenter = new Vector3(Width / 2, Height / 2, 0);
-
-                Lights[0].Position = new Vector3(mousePos, LightZ);
-                // Lights[0].RampEnd = 250f * (((1 - LightZ) * 0.25f) + 0.75f);
-
-
-                float stepOffset = (float)((Math.PI * 2) / (Environment.LightSources.Count - 1));
-                float offset = (float)(gameTime.TotalGameTime.TotalSeconds / 16 % 4);
-                for (int i = 1; i < Environment.LightSources.Count; i++, offset += stepOffset) {
-                    float localRadius = (float)(radius + (radius * Math.Sin(offset * 4f) * 0.5f));
-
-                    Lights[i].Position = lightCenter + new Vector3(
-                        (float)Math.Cos(angle + offset) * localRadius, 
-                        (float)Math.Sin(angle + offset) * localRadius,
-                        Lights[i].Position.Z
-                    );
-                }
+                Lights[0].Position = mousePos;
             }
         }
 
         public override string Status {
-	        get { return String.Format("Light Z = {0:0.000}", LightZ); }
+	        get { return ""; }
         }
     }
 }

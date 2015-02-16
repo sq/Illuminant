@@ -192,7 +192,7 @@ namespace Squared.Illuminant {
             MaximumRenderSize = new Pair<int>(maxWidth, maxHeight);
 
             lock (coordinator.CreateResourceLock) {
-                // FIXME: Not necessary because XNA's surface type validation is INSANE and completely broken
+                // FIXME: Not possible because XNA's surface type validation is INSANE and completely broken
                 // var fmt = SurfaceFormat.Single;
                 var fmt = SurfaceFormat.Rg32;
 
@@ -730,6 +730,8 @@ namespace Squared.Illuminant {
                     }
 
                     NativeBatch stencilBatch = null;
+
+                    // TODO: Rasterize the terrain map into the depth buffer and use depth to cull shadow fragments below the terrain
 
                     {
                         SpatialCollection<LightObstructionBase>.Sector currentSector;
