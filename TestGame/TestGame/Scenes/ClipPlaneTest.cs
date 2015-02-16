@@ -184,7 +184,7 @@ namespace TestGame.Scenes {
 
                 // const float minZ = 0f, maxZ = 1.5f;
                 // LightZ = Squared.Util.Arithmetic.PulseSine((float)gameTime.TotalGameTime.TotalSeconds * 0.66f, minZ, maxZ);
-                LightZ = ms.ScrollWheelValue / 1024.0f;
+                LightZ = ms.ScrollWheelValue / 2048.0f;
                 
                 var mousePos = new Vector2(ms.X, ms.Y);
 
@@ -201,11 +201,12 @@ namespace TestGame.Scenes {
                 float offset = (float)(gameTime.TotalGameTime.TotalSeconds / 16 % 4);
                 for (int i = 1; i < Environment.LightSources.Count; i++, offset += stepOffset) {
                     float localRadius = (float)(radius + (radius * Math.Sin(offset * 4f) * 0.5f));
+                    float zFromRadius = 1.25f + (localRadius * -1f / Width);
 
                     Lights[i].Position = lightCenter + new Vector3(
                         (float)Math.Cos(angle + offset) * localRadius, 
                         (float)Math.Sin(angle + offset) * localRadius,
-                        Lights[i].Position.Z
+                        zFromRadius
                     );
                 }
             }

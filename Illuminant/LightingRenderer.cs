@@ -861,6 +861,9 @@ namespace Squared.Illuminant {
             UpdateZRange();
 
             using (var group = BatchGroup.ForRenderTarget(container, layer, renderTarget ?? _TerrainDepthmap)) {
+                if (Render.Tracing.RenderTrace.EnableTracing)
+                    Render.Tracing.RenderTrace.Marker(group, -1, "Frame {0:0000} : LightingRenderer {1:X4} : Begin Heightmap", frame.Index, this.GetHashCode());
+
                 ClearBatch.AddNew(
                     group, 0, Materials.Clear, 
                     // FIXME: We should write GroundZ to the color channel!!!
@@ -868,7 +871,7 @@ namespace Squared.Illuminant {
                 );
 
                 using (var pb = PrimitiveBatch<VertexPositionColor>.New(
-                    group, 0, Materials.ScreenSpaceGeometry,
+                    group, 1, Materials.ScreenSpaceGeometry,
                     (dm, _) => {
                         dm.Device.RasterizerState = RasterizerState.CullNone;
                         dm.Device.BlendState = BlendState.Opaque;
@@ -883,6 +886,9 @@ namespace Squared.Illuminant {
                         m, 0, m.Length / 3
                     ));
                 }
+
+                if (Render.Tracing.RenderTrace.EnableTracing)
+                    Render.Tracing.RenderTrace.Marker(group, 2, "Frame {0:0000} : LightingRenderer {1:X4} : End Heightmap", frame.Index, this.GetHashCode());
             }
         }
 
