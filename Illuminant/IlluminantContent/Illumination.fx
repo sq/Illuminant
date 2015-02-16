@@ -151,6 +151,10 @@ void ShadowVertexShader(
     } else {
         direction = delta;
     }
+
+    // HACK: Suppress shadows from obstructions above lights
+    if (delta.z > 0)
+        shadowLengthScaled = 0;
     
     /*
     // This is ALMOST right

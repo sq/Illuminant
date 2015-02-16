@@ -111,7 +111,7 @@ namespace TestGame.Scenes {
                     ));
                 }
 
-                var volume = new HeightVolume(
+                var volume = new SimpleHeightVolume(
                     new Polygon(points.ToArray()),
                     h
                 );
@@ -119,7 +119,7 @@ namespace TestGame.Scenes {
                 Environment.HeightVolumes.Add(volume);
             }
 
-            Environment.HeightVolumes.Add(new HeightVolume(
+            Environment.HeightVolumes.Add(new SimpleHeightVolume(
                 Polygon.FromBounds(new Bounds(
                     new Vector2((Width * 0.5f) - 32f, 0f),
                     new Vector2((Width * 0.5f) + 32f, Height)

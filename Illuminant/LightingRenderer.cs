@@ -536,7 +536,7 @@ namespace Squared.Illuminant {
             if (result.FrameIndex == frame.Index)
                 return result;
 
-            SpatialCollection<HeightVolume>.Sector heightSector;
+            SpatialCollection<HeightVolumeBase>.Sector heightSector;
             SpatialCollection<LightObstructionBase>.Sector obsSector;
 
             Environment.HeightVolumes.TryGetSector(sectorIndex, out heightSector);
@@ -684,6 +684,24 @@ namespace Squared.Illuminant {
                     if (lightSource.Opacity <= 0)
                         continue;
 
+                    var lightBounds = new Bounds((Vector2)lightSource.Position - new Vector2(lightSource.RampEnd), (Vector2)lightSource.Position + new Vector2(lightSource.RampEnd));
+                    bool lightWithinVolume = false;
+
+                    // If the light is contained within a height volume that encompasses it in all 3 dimensions, cull it
+                    using (var e = Environment.HeightVolumes.GetItemsFromBounds(lightBounds))
+                    while (e.MoveNext()) {
+                        if (
+                            (e.Current.Item.Height > lightSource.Position.Z) &&
+                            Geometry.PointInPolygon((Vector2)lightSource.Position, e.Current.Item.Polygon)
+                        ) {
+                            lightWithinVolume = true;
+                            break;
+                        }
+                    }
+
+                    if (lightWithinVolume)
+                        continue;
+
                     if (batchFirstLightSource != null) {
                         var needFlush =
                             (needStencilClear) ||
@@ -706,8 +724,6 @@ namespace Squared.Illuminant {
                         batchFirstLightSource = lightSource;
                     if (currentLightGroup == null)
                         currentLightGroup = BatchGroup.New(resultGroup, lightGroupIndex++, before: RestoreScissorRect);
-
-                    var lightBounds = new Bounds((Vector2)lightSource.Position - new Vector2(lightSource.RampEnd), (Vector2)lightSource.Position + new Vector2(lightSource.RampEnd));
 
                     Bounds clippedLightBounds;
                     if (lightSource.ClipRegion.HasValue) {
@@ -746,7 +762,7 @@ namespace Squared.Illuminant {
                     }
 
                     {
-                        SpatialCollection<HeightVolume>.Sector currentSector;
+                        SpatialCollection<HeightVolumeBase>.Sector currentSector;
                         using (var e = Environment.HeightVolumes.GetSectorsFromBounds(lightBounds))
                         while (e.GetNext(out currentSector)) {
                             var cachedSector = GetCachedSector(frame, currentSector.Index);

@@ -56,11 +56,20 @@ namespace TestGame.Scenes {
             }
         }
 
-        void Rect (Vector2 a, Vector2 b, float h) {
-            Environment.HeightVolumes.Add(new HeightVolume(
+        HeightVolumeBase Rect (Vector2 a, Vector2 b, float hTL, float? hBR = null) {
+            var result = new WallHeightVolume(
                 Polygon.FromBounds(new Bounds(a, b)),
-                h
-            ));
+                hBR.GetValueOrDefault(hTL),
+                hTL
+            );
+            Environment.HeightVolumes.Add(result);
+            return result;
+        }
+
+        void Pillar (Vector2 tl, float bh) {
+            Rect(new Vector2(-6, 193) + tl, new Vector2(-6 + 127, 346) + tl, bh);
+            Rect(new Vector2(0, 128) + tl, new Vector2(118, 311) + tl, bh + 0.3f);
+            Rect(new Vector2(0, 0) + tl, new Vector2(118, 128) + tl, bh + 0.5f);
         }
 
         public override void LoadContent () {
@@ -87,12 +96,10 @@ namespace TestGame.Scenes {
             Environment.LightSources.Add(light);
 
             Rect(Vector2.Zero, new Vector2(Width, 610), 0.2f);
+            Rect(new Vector2(0, 610), new Vector2(Width, 630), 0.2f, 0.0f).IsObstruction = false;
 
-            Rect(new Vector2(34, 426), new Vector2(34 + 127, 579), 0.3f);
-            Rect(new Vector2(40, 361), new Vector2(158, 544), 0.6f);
-            Rect(new Vector2(40, 233), new Vector2(158, 361), 0.8f);
-
-            Rect(new Vector2(655, 426), new Vector2(655 + 127, 579), 0.3f);
+            Pillar(new Vector2(40, 233), 0.3f);
+            Pillar(new Vector2(662, 231), 0.3f);
         }
         
         public override void Draw (Squared.Render.Frame frame) {
