@@ -405,7 +405,7 @@ namespace Squared.Illuminant {
             ShadowStencil.Dispose();
         }
 
-        public Texture2D TerrainDepthmap {
+        public RenderTarget2D TerrainDepthmap {
             get {
                 return _TerrainDepthmap;
             }
@@ -501,6 +501,8 @@ namespace Squared.Illuminant {
                 var tsize = new Vector2(1.0f / _TerrainDepthmap.Width, 1.0f / _TerrainDepthmap.Height);
                 mi.Effect.Parameters["TerrainTextureTexelSize"].SetValue(tsize);
                 mi.Effect.Parameters["TerrainTexture"].SetValue(_TerrainDepthmap);
+
+                mi.Effect.Parameters["ZDistanceScale"].SetValue(Environment.ZDistanceScale);
             }
 
             device.Device.SamplerStates[1] = GetRampSamplerState(ls.RampTextureFilter);
@@ -691,6 +693,7 @@ namespace Squared.Illuminant {
                     using (var e = Environment.HeightVolumes.GetItemsFromBounds(lightBounds))
                     while (e.MoveNext()) {
                         if (
+                            e.Current.Item.IsObstruction && 
                             (e.Current.Item.Height > lightSource.Position.Z) &&
                             Geometry.PointInPolygon((Vector2)lightSource.Position, e.Current.Item.Polygon)
                         ) {
@@ -854,10 +857,10 @@ namespace Squared.Illuminant {
             ));
         }
 
-        public void RenderHeightmap (Frame frame, IBatchContainer container, int layer) {
+        public void RenderHeightmap (Frame frame, IBatchContainer container, int layer, RenderTarget2D renderTarget = null) {
             UpdateZRange();
 
-            using (var group = BatchGroup.ForRenderTarget(container, layer, _TerrainDepthmap)) {
+            using (var group = BatchGroup.ForRenderTarget(container, layer, renderTarget ?? _TerrainDepthmap)) {
                 ClearBatch.AddNew(
                     group, 0, Materials.Clear, 
                     // FIXME: We should write GroundZ to the color channel!!!

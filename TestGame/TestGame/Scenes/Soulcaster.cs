@@ -24,6 +24,7 @@ namespace TestGame.Scenes {
         public readonly List<LightSource> Lights = new List<LightSource>();
 
         Texture2D Background;
+        float LightZ;
 
         bool ShowOutlines = false;
         bool ShowTerrainDepth = false;
@@ -56,11 +57,9 @@ namespace TestGame.Scenes {
             }
         }
 
-        HeightVolumeBase Rect (Vector2 a, Vector2 b, float hTL, float? hBR = null) {
-            var result = new WallHeightVolume(
-                Polygon.FromBounds(new Bounds(a, b)),
-                hBR.GetValueOrDefault(hTL),
-                hTL
+        HeightVolumeBase Rect (Vector2 a, Vector2 b, float h) {
+            var result = new SimpleHeightVolume(
+                Polygon.FromBounds(new Bounds(a, b)), h
             );
             Environment.HeightVolumes.Add(result);
             return result;
@@ -68,8 +67,6 @@ namespace TestGame.Scenes {
 
         void Pillar (Vector2 tl, float bh) {
             Rect(new Vector2(-6, 193) + tl, new Vector2(-6 + 127, 346) + tl, bh);
-            Rect(new Vector2(0, 128) + tl, new Vector2(118, 311) + tl, bh + 0.3f);
-            Rect(new Vector2(0, 0) + tl, new Vector2(118, 128) + tl, bh + 0.5f);
         }
 
         public override void LoadContent () {
@@ -96,10 +93,11 @@ namespace TestGame.Scenes {
             Environment.LightSources.Add(light);
 
             Rect(Vector2.Zero, new Vector2(Width, 610), 0.2f);
-            Rect(new Vector2(0, 610), new Vector2(Width, 630), 0.2f, 0.0f).IsObstruction = false;
 
             Pillar(new Vector2(40, 233), 0.3f);
             Pillar(new Vector2(662, 231), 0.3f);
+
+            Environment.ZDistanceScale = 32;
         }
         
         public override void Draw (Squared.Render.Frame frame) {
@@ -171,8 +169,10 @@ namespace TestGame.Scenes {
 
                 var ms = Mouse.GetState();
                 Game.IsMouseVisible = true;
-                
-                var mousePos = new Vector3(ms.X, ms.Y, Lights[0].Position.Z);
+
+                LightZ = ms.ScrollWheelValue / 1024.0f;
+
+                var mousePos = new Vector3(ms.X, ms.Y, LightZ);
 
                 var angle = gameTime.TotalGameTime.TotalSeconds * 0.125f;
                 const float radius = 320f;
@@ -182,7 +182,7 @@ namespace TestGame.Scenes {
         }
 
         public override string Status {
-	        get { return ""; }
+            get { return String.Format("Light Z = {0:0.000}", LightZ); }
         }
     }
 }

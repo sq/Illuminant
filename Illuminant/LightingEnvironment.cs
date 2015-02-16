@@ -19,6 +19,7 @@ namespace Squared.Illuminant {
         public readonly SpatialCollection<HeightVolumeBase> HeightVolumes = new SpatialCollection<HeightVolumeBase>(DefaultSubdivision);
 
         public float GroundZ = 0f;
+        public float ZDistanceScale = 1f;
 
         public void EnumerateObstructionLinesInBounds (Bounds bounds, ILineWriter output) {
             {

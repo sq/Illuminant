@@ -11,6 +11,7 @@ shared float4x4 ModelViewMatrix;
 uniform float4 LightNeutralColor;
 uniform float3 LightCenter;
 
+uniform float  ZDistanceScale;
 uniform float3 ShadowLength;
 uniform float2 TerrainTextureTexelSize;
 
@@ -41,6 +42,27 @@ void PointLightVertexShader(
     result = float4(transformedPosition.xy, 0, transformedPosition.w);
 }
 
+float PointLightPixelCore(
+    in float2 worldPosition : TEXCOORD2,
+    in float3 lightCenter : TEXCOORD0,
+    in float2 ramp : TEXCOORD1, // start, end
+    in  float2 vpos : VPOS
+) {
+    float2 terrainXy = vpos * TerrainTextureTexelSize;
+    float  terrainZ  = tex2D(TerrainTextureSampler, terrainXy).r;
+
+    if (lightCenter.z < terrainZ)
+        discard;
+
+    // FIXME: What about z?
+    float3 shadedPixelPosition = float3(worldPosition.xy, terrainZ);
+    float3 distance3 = shadedPixelPosition - lightCenter;
+    distance3.z *= ZDistanceScale;
+
+    float  distance = length(distance3) - ramp.x;
+    return 1 - clamp(distance / (ramp.y - ramp.x), 0, 1);
+}
+
 void PointLightPixelShaderLinear(
     in float2 worldPosition : TEXCOORD2,
     in float3 lightCenter : TEXCOORD0,
@@ -49,14 +71,9 @@ void PointLightPixelShaderLinear(
     in  float2 vpos : VPOS,
     out float4 result : COLOR0
 ) {
-    float2 terrainXy = vpos * TerrainTextureTexelSize;
-    float terrainZ = tex2D(TerrainTextureSampler, terrainXy).r;
-    if (lightCenter.z < terrainZ)
-        discard;
-
-    // FIXME: What about z?
-    float distance = length(worldPosition - lightCenter.xy) - ramp.x;
-    float distanceOpacity = 1 - clamp(distance / (ramp.y - ramp.x), 0, 1);
+    float distanceOpacity = PointLightPixelCore(
+        worldPosition, lightCenter, ramp, vpos
+    );
 
     float opacity = color.a;
     float4 lightColorActual = float4(color.r * opacity, color.g * opacity, color.b * opacity, opacity);
@@ -71,14 +88,10 @@ void PointLightPixelShaderExponential(
     in  float2 vpos : VPOS,
     out float4 result : COLOR0
 ) {
-    float2 terrainXy = vpos * TerrainTextureTexelSize;
-        float terrainZ = tex2D(TerrainTextureSampler, terrainXy).r;
-    if (lightCenter.z < terrainZ)
-        discard;
+    float distanceOpacity = PointLightPixelCore(
+        worldPosition, lightCenter, ramp, vpos
+    );
 
-    // FIXME: What about z?
-    float distance = length(worldPosition - lightCenter.xy) - ramp.x;
-    float distanceOpacity = 1 - clamp(distance / (ramp.y - ramp.x), 0, 1);
     distanceOpacity *= distanceOpacity;
 
     float opacity = color.a;
@@ -94,14 +107,9 @@ void PointLightPixelShaderLinearRampTexture(
     in  float2 vpos : VPOS,
     out float4 result : COLOR0
 ) {
-    float2 terrainXy = vpos * TerrainTextureTexelSize;
-    float terrainZ = tex2D(TerrainTextureSampler, terrainXy).r;
-    if (lightCenter.z < terrainZ)
-        discard;
-
-    // FIXME: What about z?
-    float distance = length(worldPosition - lightCenter.xy) - ramp.x;
-    float distanceOpacity = 1 - clamp(distance / (ramp.y - ramp.x), 0, 1);
+    float distanceOpacity = PointLightPixelCore(
+        worldPosition, lightCenter, ramp, vpos
+    );
 
     distanceOpacity = RampLookup(distanceOpacity);
 
@@ -111,23 +119,18 @@ void PointLightPixelShaderLinearRampTexture(
 }
 
 void PointLightPixelShaderExponentialRampTexture(
-    in float2 worldPosition: TEXCOORD2,
+    in float2 worldPosition : TEXCOORD2,
     in float3 lightCenter : TEXCOORD0,
     in float2 ramp : TEXCOORD1, // start, end
     in float4 color : COLOR0,
     in  float2 vpos : VPOS,
     out float4 result : COLOR0
 ) {
-    float2 terrainXy = vpos * TerrainTextureTexelSize;
-        float terrainZ = tex2D(TerrainTextureSampler, terrainXy).r;
-    if (lightCenter.z < terrainZ)
-        discard;
+    float distanceOpacity = PointLightPixelCore(
+        worldPosition, lightCenter, ramp, vpos
+    );
 
-    // FIXME: What about z?
-    float distance = length(worldPosition - lightCenter.xy) - ramp.x;
-    float distanceOpacity = 1 - clamp(distance / (ramp.y - ramp.x), 0, 1);
     distanceOpacity *= distanceOpacity;
-
     distanceOpacity = RampLookup(distanceOpacity);
 
     float opacity = color.a;
@@ -153,8 +156,10 @@ void ShadowVertexShader(
     }
 
     // HACK: Suppress shadows from obstructions above lights
+    /*
     if (delta.z > 0)
         shadowLengthScaled = 0;
+    */
     
     /*
     // This is ALMOST right
