@@ -1,6 +1,8 @@
 #include "RampCommon.fxh"
 
-#define SMALL_SHADOW_THRESHOLD 0.90
+#define SHADOW_DEPTH_BIAS -0.10
+#define FILLRULE_NEGATIVE_OFFSET 0.0
+#define FILLRULE_POSITIVE_OFFSET 0.99
 
 shared float2 ViewportScale;
 shared float2 ViewportPosition;
@@ -144,18 +146,15 @@ void ShadowVertexShader(
     out float  z         : TEXCOORD0,
     out float4 result    : POSITION0
 ) {
-    float3 delta = normalize(position - LightCenter);
-    float3 direction;
-
-    float shadowLengthScaled = ShadowLength;
+    float3 direction = normalize(position - LightCenter);
+    float3 shadowLengthScaled = float3(ShadowLength.x, ShadowLength.x, ShadowLength.x);
 
     if (pairIndex == 0) {
-        direction = float3(0, 0, 0);
-    } else {
-        direction = delta;
+        shadowLengthScaled = float3(0, 0, 0);
     }
 
     // HACK: Suppress shadows from obstructions above lights
+    //   But we don't want to do this, because we're treating an obstruction as a wall from z=0 to z=obsz
     /*
     if (delta.z > 0)
         shadowLengthScaled = 0;
@@ -169,23 +168,33 @@ void ShadowVertexShader(
     */
 
     float3 untransformed = position + (direction * shadowLengthScaled);
-    float4 transformed = ApplyTransform(untransformed);
+    float3 directionSign = sign(direction);
+    float4 fillruleOffset = float4(
+        (clamp(directionSign.x,  0, 1) * FILLRULE_POSITIVE_OFFSET) +
+        (clamp(directionSign.x, -1, 0) * FILLRULE_NEGATIVE_OFFSET),
+        (clamp(directionSign.y,  0, 1) * FILLRULE_POSITIVE_OFFSET) +
+        (clamp(directionSign.y, -1, 0) * FILLRULE_NEGATIVE_OFFSET),
+        0, 0
+    );
+
+    float4 transformed = ApplyTransform(untransformed + fillruleOffset);
     // FIXME: Why do I have to strip Z????
     result = float4(transformed.x, transformed.y, 0, transformed.w);
     z = float4(untransformed.z, position.z, 0, 0);
 }
 
 void ShadowPixelShader(
-    in  float  z         : TEXCOORD0,
+    in  float  _z         : TEXCOORD0,
     in  float2 vpos      : VPOS,
     out float4 color     : COLOR0
 ) {
+    float z = _z.x + SHADOW_DEPTH_BIAS;
     float2 terrainXy = vpos * TerrainTextureTexelSize;
     float terrainZ = tex2D(TerrainTextureSampler, terrainXy).r;
-    if (z.x < terrainZ)
+    if (z < terrainZ)
         discard;
 
-    color = float4(z.x, 1, terrainZ, 1);
+    color = float4(z, 1, terrainZ, 1);
 }
 
 technique Shadow {

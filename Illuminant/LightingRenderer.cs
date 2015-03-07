@@ -880,11 +880,19 @@ namespace Squared.Illuminant {
                 // Rasterize the height volumes in sequential order.
                 foreach (var hv in Environment.HeightVolumes.OrderBy(_ => _.Height)) {
                     var m = hv.Mesh3D;
+                    var olm = hv.OutlineMesh3D;
 
                     pb.Add(new PrimitiveDrawCall<VertexPositionColor>(
                         PrimitiveType.TriangleList,
                         m, 0, m.Length / 3
                     ));
+
+                    /*
+                    pb.Add(new PrimitiveDrawCall<VertexPositionColor>(
+                        PrimitiveType.LineStrip,
+                        olm, 0, olm.Length - 1
+                    ));
+                     */
                 }
 
                 if (Render.Tracing.RenderTrace.EnableTracing)

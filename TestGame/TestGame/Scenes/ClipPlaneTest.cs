@@ -68,8 +68,8 @@ namespace TestGame.Scenes {
             var light = new LightSource {
                 Position = new Vector2(64, 64),
                 Color = new Vector4(1f, 1f, 1f, 1),
-                RampStart = 33,
-                RampEnd = 350,
+                RampStart = 400,
+                RampEnd = 800,
                 RampMode = LightSourceRampMode.Exponential
             };
 
