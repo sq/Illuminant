@@ -15,7 +15,6 @@ namespace Squared.Illuminant {
 
         // HACK
         protected VertexPositionColor[] _Mesh3D = null;
-        protected VertexPositionColor[] _OutlineMesh3D = null;
 
         protected HeightVolumeBase (Polygon polygon, float height = 0) {
             Polygon = polygon;
@@ -41,10 +40,6 @@ namespace Squared.Illuminant {
         }
 
         public abstract VertexPositionColor[] Mesh3D {
-            get;
-        }
-
-        public abstract VertexPositionColor[] OutlineMesh3D {
             get;
         }
 
@@ -85,28 +80,6 @@ namespace Squared.Illuminant {
                     _Mesh3D = (
                         from p in Geometry.Triangulate(Polygon) 
                         from v in p
-                        select new VertexPositionColor(
-                            new Vector3(v, Height), c                            
-                        )
-                    ).ToArray();
-                } else {
-                    for (var i = 0; i < _Mesh3D.Length; i++) {
-                        _Mesh3D[i].Position.Z = Height;
-                        _Mesh3D[i].Color = c;
-                    }
-                }
-
-                return _Mesh3D;
-            }
-        }
-
-        public override VertexPositionColor[] OutlineMesh3D {
-            get {
-                var c = new Color(Height, Height, Height, 1f);
-
-                if (_Mesh3D == null) {
-                    _Mesh3D = (
-                        from v in Polygon
                         select new VertexPositionColor(
                             new Vector3(v, Height), c                            
                         )
