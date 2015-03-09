@@ -1,6 +1,6 @@
 #include "RampCommon.fxh"
 
-#define SHADOW_DEPTH_BIAS -0.10
+#define SHADOW_DEPTH_BIAS -0.08
 #define FILLRULE_NEGATIVE_OFFSET 0.0
 #define FILLRULE_POSITIVE_OFFSET 0.99
 
