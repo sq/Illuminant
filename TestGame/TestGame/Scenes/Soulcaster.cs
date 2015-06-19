@@ -65,10 +65,31 @@ namespace TestGame.Scenes {
             return result;
         }
 
-        void Pillar (Vector2 tl) {
-            Rect(new Vector2( 4, 193) + tl, new Vector2( 0 + 109, 346) + tl, 0.0f, 0.68f);
-            Rect(new Vector2(-6, 193) + tl, new Vector2(-6 + 127, 346) + tl, 0.0f, 0.085f);
-            Rect(new Vector2(-6, 193) + tl, new Vector2(-6 + 127, 346) + tl, 0.6f, 0.09f);
+        HeightVolumeBase Ellipse (Vector2 center, float radiusX, float radiusY, float z1, float height) {
+            var numPoints = Math.Max(
+                16,
+                (int)Math.Ceiling((radiusX + radiusY) * 0.5f)
+            );
+
+            var pts = new Vector2[numPoints];
+            float radiusStep = (float)((Math.PI * 2) / numPoints);
+            float r = 0;
+
+            for (var i = 0; i < numPoints; i++, r += radiusStep)
+                pts[i] = new Vector2((float)Math.Cos(r) * radiusX, (float)Math.Sin(r) * radiusY) + center;
+            
+            var result = new SimpleHeightVolume(
+                new Polygon(pts),
+                z1, height
+            );
+            Environment.HeightVolumes.Add(result);
+            return result;
+        }
+
+        void Pillar (Vector2 center) {
+            Ellipse(center, 55f, 55f, 0.0f, 0.62f);
+            // Rect(new Vector2(-6, 223) + tl, new Vector2(-6 + 127, 346) + tl, 0.0f, 0.085f);
+            // Rect(new Vector2(-6, 223) + tl, new Vector2(-6 + 127, 346) + tl, 0.6f, 0.09f);
         }
 
         public override void LoadContent () {
@@ -100,10 +121,10 @@ namespace TestGame.Scenes {
             Lights.Add(light);
             Environment.LightSources.Add(light);
 
-            Rect(new Vector2(329, 360), new Vector2(Width, 394), 0f, 0.435f);
+            Rect(new Vector2(329, 337), new Vector2(Width, 394), 0f, 0.435f);
 
-            Pillar(new Vector2(40, 233));
-            Pillar(new Vector2(662, 231));
+            Pillar(new Vector2(96, 490));
+            Pillar(new Vector2(718, 490));
 
             Environment.ZDistanceScale = 64;
         }

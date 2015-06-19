@@ -97,7 +97,7 @@ namespace Squared.Illuminant {
         static SimpleHeightVolume () {
             _FrontFaceIndices = new short[2048 * 6];
 
-            for (int i = 0, j = 0; i < _FrontFaceIndices.Length; i += 6, j += 4) {
+            for (int i = 0, j = 0; i < _FrontFaceIndices.Length; i += 6, j += 2) {
                 short tl = (short)(j + 0), tr = (short)(j + 2);
                 short bl = (short)(j + 1), br = (short)(j + 3);
 
@@ -182,7 +182,7 @@ namespace Squared.Illuminant {
         public override ArraySegment<short> FrontFaceIndices {
             get {
                 var m3d = FrontFaceMesh3D;
-                return new ArraySegment<short>(_FrontFaceIndices, 0, (m3d.Count / 2) * 3);
+                return new ArraySegment<short>(_FrontFaceIndices, 0, ((m3d.Count / 2) - 1) * 6);
             }
         }
     }

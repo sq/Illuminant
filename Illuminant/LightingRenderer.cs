@@ -150,7 +150,7 @@ namespace Squared.Illuminant {
         public readonly IlluminantMaterials IlluminantMaterials;
         public readonly Squared.Render.EffectMaterial ShadowMaterialInner;
         public readonly Squared.Render.EffectMaterial[] PointLightMaterialsInner = new Squared.Render.EffectMaterial[4];
-        public readonly DepthStencilState PointLightStencil, ShadowStencil;
+        public readonly DepthStencilState PointLightStencil, ShadowStencil, FaceDepthStencilState;
 
         private static readonly Dictionary<TextureFilter, SamplerState> RampSamplerStates = new Dictionary<TextureFilter, SamplerState>();
 
@@ -242,6 +242,13 @@ namespace Squared.Illuminant {
                 ReferenceStencil = StencilFalse
             };
 
+            FaceDepthStencilState = new DepthStencilState {
+                StencilEnable = false,
+                DepthBufferEnable = true,
+                DepthBufferFunction = CompareFunction.GreaterEqual,
+                DepthBufferWriteEnable = true
+            };
+
             {
                 var dBegin = new[] {
                     MaterialUtil.MakeDelegate(
@@ -287,9 +294,15 @@ namespace Squared.Illuminant {
                 ));
 #endif
 
+                materials.Add(IlluminantMaterials.VolumeTopFace = new DelegateMaterial(
+                    new Squared.Render.EffectMaterial(
+                        content.Load<Effect>("VolumeFaces"), "VolumeTopFace"
+                    ), dBegin, dEnd
+                ));
+
                 materials.Add(IlluminantMaterials.VolumeFrontFace = new DelegateMaterial(
                     new Squared.Render.EffectMaterial(
-                        content.Load<Effect>("VolumeFrontFace"), "VolumeFrontFace"
+                        content.Load<Effect>("VolumeFaces"), "VolumeFrontFace"
                     ), dBegin, dEnd
                 ));
             }
@@ -834,17 +847,33 @@ namespace Squared.Illuminant {
             }
         }
 
-        const int FrontFaceMaxLights = 8;
+        const int FaceMaxLights = 8;
 
-        private Vector3[] _LightPositions     = new Vector3[FrontFaceMaxLights];
-        private Vector3[] _LightProperties    = new Vector3[FrontFaceMaxLights];
-        private Vector4[] _LightNeutralColors = new Vector4[FrontFaceMaxLights];
-        private Vector4[] _LightColors        = new Vector4[FrontFaceMaxLights];
+        private Vector3[] _LightPositions     = new Vector3[FaceMaxLights];
+        private Vector3[] _LightProperties    = new Vector3[FaceMaxLights];
+        private Vector4[] _LightNeutralColors = new Vector4[FaceMaxLights];
+        private Vector4[] _LightColors        = new Vector4[FaceMaxLights];
+
+        private void SetTwoPointFiveDParametersInner (EffectParameterCollection p) {
+            p["ZDistanceScale"]    .SetValue(Environment.ZDistanceScale);
+            p["ZToYMultiplier"]    .SetValue(Configuration.ZToYMultiplier);
+            p["LightPositions"]    .SetValue(_LightPositions);
+            p["LightProperties"]   .SetValue(_LightProperties);
+            p["LightNeutralColors"].SetValue(_LightNeutralColors);
+            p["LightColors"]       .SetValue(_LightColors);
+        }
+
+        private void SetTwoPointFiveDParameters (DeviceManager dm, object _) {
+            var frontFaceMaterial = ((Squared.Render.EffectMaterial)((DelegateMaterial)IlluminantMaterials.VolumeFrontFace).BaseMaterial);
+            var topFaceMaterial   = ((Squared.Render.EffectMaterial)((DelegateMaterial)IlluminantMaterials.VolumeTopFace).BaseMaterial);
+
+            SetTwoPointFiveDParametersInner(frontFaceMaterial.Effect.Parameters);
+            SetTwoPointFiveDParametersInner(topFaceMaterial  .Effect.Parameters);
+        }
 
         private int RenderTwoPointFiveD (int layerIndex, BatchGroup resultGroup) {
-            var frontFaceMaterial = ((Squared.Render.EffectMaterial)((DelegateMaterial)IlluminantMaterials.VolumeFrontFace).BaseMaterial);
-
             // FIXME: Support more than 8 lights
+            // FIXME: Allow volumes to cast shadows onto other volumes?
 
             int i = 0;
             foreach (var ls in Environment.LightSources) {
@@ -861,41 +890,53 @@ namespace Squared.Illuminant {
                 i += 1;
             }
 
-            for (; i < FrontFaceMaxLights; i++) {
+            for (; i < FaceMaxLights; i++) {
                 _LightPositions[i] = _LightProperties[i] = Vector3.Zero;
                 _LightColors[i] = _LightNeutralColors[i] = Vector4.Zero;                
             }
 
-            using (var pb = PrimitiveBatch<VertexPositionColor>.New(
+            ClearBatch.AddNew(
+                resultGroup, ++layerIndex, Materials.Clear, clearZ: 0f
+            );
+
+            using (var frontBatch = PrimitiveBatch<VertexPositionColor>.New(
                 resultGroup, ++layerIndex, Materials.Get(
                     IlluminantMaterials.VolumeFrontFace,
                     rasterizerState: RasterizerState.CullNone,
-                    depthStencilState: DepthStencilState.None,
+                    depthStencilState: FaceDepthStencilState,
                     blendState: BlendState.Opaque
                 ),
-                batchSetup: (dm, _) => {
-                    var p = frontFaceMaterial.Effect.Parameters;
-                    p["ZDistanceScale"]    .SetValue(Environment.ZDistanceScale);
-                    p["ZToYMultiplier"]    .SetValue(Configuration.ZToYMultiplier);
-                    p["LightPositions"]    .SetValue(_LightPositions);
-                    p["LightProperties"]   .SetValue(_LightProperties);
-                    p["LightNeutralColors"].SetValue(_LightNeutralColors);
-                    p["LightColors"]       .SetValue(_LightColors);
-                }
+                batchSetup: SetTwoPointFiveDParameters
+            ))
+            using (var topBatch = PrimitiveBatch<VertexPositionColor>.New(
+                resultGroup, ++layerIndex, Materials.Get(
+                    IlluminantMaterials.VolumeTopFace,
+                    rasterizerState: RasterizerState.CullNone,
+                    depthStencilState: FaceDepthStencilState,
+                    blendState: BlendState.Opaque
+                ),
+                batchSetup: SetTwoPointFiveDParameters
             )) {
                 foreach (var volume in Environment.HeightVolumes) {
-                    var m3d = volume.FrontFaceMesh3D;
-                    if (m3d.Count <= 0)
+                    var ffm3d = volume.FrontFaceMesh3D;
+                    if (ffm3d.Count <= 0)
                         continue;
 
                     var indices = volume.FrontFaceIndices;
                     if (indices.Count < 3)
                         continue;
 
-                    pb.Add(new PrimitiveDrawCall<VertexPositionColor>(
+                    frontBatch.Add(new PrimitiveDrawCall<VertexPositionColor>(
                         PrimitiveType.TriangleList,
-                        m3d.Array, m3d.Offset, m3d.Count,
+                        ffm3d.Array, ffm3d.Offset, ffm3d.Count,
                         indices.Array, indices.Offset, indices.Count / 3
+                    ));
+
+                    var m3d = volume.Mesh3D;
+
+                    topBatch.Add(new PrimitiveDrawCall<VertexPositionColor>(
+                        PrimitiveType.TriangleList,
+                        m3d, 0, m3d.Length / 3
                     ));
                 }
             }
@@ -1056,7 +1097,7 @@ namespace Squared.Illuminant {
 
         public Material DebugOutlines, Shadow, ClearStencil;
         public Material PointLightLinear, PointLightExponential, PointLightLinearRampTexture, PointLightExponentialRampTexture;
-        public Material VolumeFrontFace;
+        public Material VolumeFrontFace, VolumeTopFace;
         public Squared.Render.EffectMaterial ScreenSpaceGammaCompressedBitmap, WorldSpaceGammaCompressedBitmap;
         public Squared.Render.EffectMaterial ScreenSpaceToneMappedBitmap, WorldSpaceToneMappedBitmap;
 #if !SDL2

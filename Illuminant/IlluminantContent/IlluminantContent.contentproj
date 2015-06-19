@@ -64,8 +64,8 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="VolumeFrontFace.fx">
-      <Name>VolumeFrontFace</Name>
+    <Compile Include="VolumeFaces.fx">
+      <Name>VolumeFaces</Name>
       <Importer>EffectImporter</Importer>
       <Processor>EffectProcessor</Processor>
     </Compile>
