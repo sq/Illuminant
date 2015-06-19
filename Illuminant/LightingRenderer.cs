@@ -15,10 +15,11 @@ using Squared.Util;
 
 namespace Squared.Illuminant {
     public class RendererConfiguration {
-        public float ClipRegionScale = 1.0f;
-        public bool  TwoPointFiveD   = false;
-        public float ZOffset         = 0.0f;
-        public float ZScale          = 1.0f;
+        public float ClipRegionScale     = 1.0f;
+        public bool  TwoPointFiveD       = false;
+        public float ZToYMultiplier      = 1f;
+        public float ZOffset             = 0.0f;
+        public float ZScale              = 1.0f;
 
         public readonly Pair<int> MaximumRenderSize;
 
@@ -260,31 +261,6 @@ namespace Squared.Illuminant {
                     )
                 };
 
-#if SDL2
-                materials.Add(IlluminantMaterials.PointLightExponential = new DelegateMaterial(
-                    PointLightMaterialsInner[0] = new Squared.Render.EffectMaterial(
-                        content.Load<Effect>("PointLightExponential"), "PointLightExponential"
-                    ), dBegin, dEnd
-                ));
-
-                materials.Add(IlluminantMaterials.PointLightLinear = new DelegateMaterial(
-                    PointLightMaterialsInner[1] = new Squared.Render.EffectMaterial(
-                        content.Load<Effect>("PointLightLinear"), "PointLightLinear"
-                    ), dBegin, dEnd
-                ));
-
-                materials.Add(IlluminantMaterials.PointLightExponentialRampTexture = new DelegateMaterial(
-                    PointLightMaterialsInner[2] = new Squared.Render.EffectMaterial(
-                        content.Load<Effect>("PointLightExponentialRampTexture"), "PointLightExponentialRampTexture"
-                    ), dBegin, dEnd
-                ));
-
-                materials.Add(IlluminantMaterials.PointLightLinearRampTexture = new DelegateMaterial(
-                    PointLightMaterialsInner[3] = new Squared.Render.EffectMaterial(
-                        content.Load<Effect>("PointLightLinearRampTexture"), "PointLightLinearRampTexture"
-                    ), dBegin, dEnd
-                ));
-#else
                 materials.Add(IlluminantMaterials.PointLightExponential = new DelegateMaterial(
                     PointLightMaterialsInner[0] = new Squared.Render.EffectMaterial(
                         content.Load<Effect>("Illumination"), "PointLightExponential"
@@ -297,6 +273,7 @@ namespace Squared.Illuminant {
                     ), dBegin, dEnd
                 ));
 
+#if !SDL2
                 materials.Add(IlluminantMaterials.PointLightExponentialRampTexture = new DelegateMaterial(
                     PointLightMaterialsInner[2] = new Squared.Render.EffectMaterial(
                         content.Load<Effect>("Illumination"), "PointLightExponentialRampTexture"
@@ -309,6 +286,12 @@ namespace Squared.Illuminant {
                     ), dBegin, dEnd
                 ));
 #endif
+
+                materials.Add(IlluminantMaterials.VolumeFrontFace = new DelegateMaterial(
+                    new Squared.Render.EffectMaterial(
+                        content.Load<Effect>("VolumeFrontFace"), "VolumeFrontFace"
+                    ), dBegin, dEnd
+                ));
             }
 
             // If stencil == false: set stencil to true.
@@ -632,6 +615,15 @@ namespace Squared.Illuminant {
             Configuration.ZScale = 1.0f / (maxZ - minZ);
         }
 
+        PointLightVertex MakePointLightVertex (LightSource lightSource, float intensityScale) {
+            var vertex = new PointLightVertex();
+            vertex.LightCenter = lightSource.Position;
+            vertex.Color = lightSource.Color;
+            vertex.Color.W *= (lightSource.Opacity * intensityScale);
+            vertex.Ramp = new Vector2(lightSource.RampStart, lightSource.RampEnd);
+            return vertex;
+        }
+
         /// <summary>
         /// Renders all light sources into the target batch container on the specified layer.
         /// </summary>
@@ -782,12 +774,7 @@ namespace Squared.Illuminant {
                         }
                     }
 
-                    PointLightVertex vertex;
-
-                    vertex.LightCenter = lightSource.Position;
-                    vertex.Color = lightSource.Color;
-                    vertex.Color.W *= (lightSource.Opacity * intensityScale);
-                    vertex.Ramp = new Vector2(lightSource.RampStart, lightSource.RampEnd);
+                    var vertex = MakePointLightVertex(lightSource, intensityScale);
 
                     vertex.Position = clippedLightBounds.TopLeft;
                     PointLightVertices[vertexOffset++] = vertex;
@@ -833,6 +820,66 @@ namespace Squared.Illuminant {
                         Render.Tracing.RenderTrace.Marker(currentLightGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Point Light Flush ({2} point(s))", frame.Index, this.GetHashCode(), PointLightBatchBuffer.Count);
 
                     FlushPointLightBatch(ref currentLightGroup, ref batchFirstLightSource, ref layerIndex);
+                }
+
+                if (Configuration.TwoPointFiveD) {
+                    if (Render.Tracing.RenderTrace.EnableTracing)
+                        Render.Tracing.RenderTrace.Marker(resultGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Volume Front Faces", frame.Index, this.GetHashCode());
+
+                    var p = ((Squared.Render.EffectMaterial)((DelegateMaterial)IlluminantMaterials.VolumeFrontFace).BaseMaterial)
+                        .Effect.Parameters["ZToYMultiplier"];
+
+                    using (var pb = PrimitiveBatch<VertexPositionColor>.New(
+                        resultGroup, ++layerIndex, Materials.Get(
+                            IlluminantMaterials.VolumeFrontFace, 
+                            rasterizerState: RasterizerState.CullNone,
+                            depthStencilState: DepthStencilState.None,
+                            blendState: BlendState.Opaque
+                        ),
+                        batchSetup: (dm, _) => {
+                            p.SetValue(Configuration.ZToYMultiplier);
+                        }
+                    )) {
+                        foreach (var volume in Environment.HeightVolumes) {
+                            var m3d = volume.FrontFaceMesh3D;
+                            if (m3d.Count <= 0)
+                                continue;
+
+                            var indices = volume.FrontFaceIndices;
+                            if (indices.Count < 3)
+                                continue;
+
+                            pb.Add(new PrimitiveDrawCall<VertexPositionColor>(
+                                PrimitiveType.TriangleList,
+                                m3d.Array, m3d.Offset, m3d.Count,
+                                indices.Array, indices.Offset, indices.Count / 3
+                            ));
+                        }
+                    }
+
+                    // FIXME: Opaque light mask for the top of the volume
+                    /*
+                    using (var pb = PrimitiveBatch<VertexPositionColor>.New(
+                        resultGroup, ++layerIndex, Materials.Get(
+                            IlluminantMaterials.VolumeTopFace, 
+                            rasterizerState: RasterizerState.CullNone,
+                            depthStencilState: DepthStencilState.None,
+                            blendState: BlendState.Opaque
+                        ),
+                        batchSetup: (dm, _) => {
+                            p.SetValue(Configuration.ZToYMultiplier);
+                        }
+                    )) {
+                        foreach (var volume in Environment.HeightVolumes) {
+                            var indices = volume.FrontFaceIndices;
+
+                            pb.Add(new PrimitiveDrawCall<VertexPositionColor>(
+                                PrimitiveType.TriangleList,
+                                volume.Mesh3D, 0, volume.Mesh3D.Length, volume.Mesh3D.Length / 3
+                            ));
+                        }
+                    }
+                     */
                 }
 
                 if (Render.Tracing.RenderTrace.EnableTracing)
@@ -970,6 +1017,7 @@ namespace Squared.Illuminant {
 
         public Material DebugOutlines, Shadow, ClearStencil;
         public Material PointLightLinear, PointLightExponential, PointLightLinearRampTexture, PointLightExponentialRampTexture;
+        public Material VolumeFrontFace;
         public Squared.Render.EffectMaterial ScreenSpaceGammaCompressedBitmap, WorldSpaceGammaCompressedBitmap;
         public Squared.Render.EffectMaterial ScreenSpaceToneMappedBitmap, WorldSpaceToneMappedBitmap;
 #if !SDL2

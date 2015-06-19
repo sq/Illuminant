@@ -57,16 +57,18 @@ namespace TestGame.Scenes {
             }
         }
 
-        HeightVolumeBase Rect (Vector2 a, Vector2 b, float h) {
+        HeightVolumeBase Rect (Vector2 a, Vector2 b, float z1, float height) {
             var result = new SimpleHeightVolume(
-                Polygon.FromBounds(new Bounds(a, b)), h
+                Polygon.FromBounds(new Bounds(a, b)), z1, height 
             );
             Environment.HeightVolumes.Add(result);
             return result;
         }
 
-        void Pillar (Vector2 tl, float bh) {
-            Rect(new Vector2(-6, 193) + tl, new Vector2(-6 + 127, 346) + tl, bh);
+        void Pillar (Vector2 tl) {
+            Rect(new Vector2( 4, 193) + tl, new Vector2( 0 + 109, 346) + tl, 0.0f, 0.68f);
+            Rect(new Vector2(-6, 193) + tl, new Vector2(-6 + 127, 346) + tl, 0.0f, 0.085f);
+            Rect(new Vector2(-6, 193) + tl, new Vector2(-6 + 127, 346) + tl, 0.6f, 0.09f);
         }
 
         public override void LoadContent () {
@@ -81,7 +83,10 @@ namespace TestGame.Scenes {
 
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, LightmapMaterials, Environment, 
-                new RendererConfiguration(Width, Height)
+                new RendererConfiguration(Width, Height) {
+                    TwoPointFiveD = true,
+                    ZToYMultiplier = 320
+                }
             );
 
             var light = new LightSource {
@@ -95,10 +100,14 @@ namespace TestGame.Scenes {
             Lights.Add(light);
             Environment.LightSources.Add(light);
 
-            Rect(Vector2.Zero, new Vector2(Width, 610), 0.2f);
+            /*
+            Rect(Vector2.Zero, new Vector2(Width, 610), 0.1f);
+             */
 
-            Pillar(new Vector2(40, 233), 0.3f);
-            Pillar(new Vector2(662, 231), 0.3f);
+            Rect(new Vector2(329, 394), new Vector2(Width, 394), 0f, 0.435f);
+
+            Pillar(new Vector2(40, 233));
+            Pillar(new Vector2(662, 231));
 
             Environment.ZDistanceScale = 32;
         }
@@ -185,7 +194,7 @@ namespace TestGame.Scenes {
         }
 
         public override string Status {
-            get { return String.Format("Light Z = {0:0.000}", LightZ); }
+            get { return String.Format("Light Z = {0:0.000}; Mouse Pos = {1},{2}", LightZ, Lights[0].Position.X, Lights[0].Position.Y); }
         }
     }
 }
