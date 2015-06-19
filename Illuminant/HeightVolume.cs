@@ -145,7 +145,9 @@ namespace Squared.Illuminant {
                 var actualCount = 0;
 
                 for (int i = 0, j = 0; j < Polygon.Count; j += 1) {
+                    var priorEdge = Polygon.GetEdge(j - 1);
                     var edge = Polygon.GetEdge(j);
+                    var prior = priorEdge.Start;
                     var a = edge.Start;
                     var b = edge.End;
 
@@ -165,20 +167,29 @@ namespace Squared.Illuminant {
                     if (pA.HasValue || pB.HasValue)
                         continue;
 
-                    var normal = new Vector3((b - a).PerpendicularLeft(), 0);
-                    normal.Normalize();
+                    Vector3 aNormal, bNormal;
+                    
+                    // HACK: To produce sensible normals for horizontal surfaces. Blech.
+                    if (a.Y == b.Y) {
+                        aNormal = bNormal = new Vector3(0, 1, 0);
+                    } else {
+                        aNormal = new Vector3((a - prior).PerpendicularLeft(), 0);
+                        bNormal = new Vector3((b - a).PerpendicularLeft(), 0);
+                    }
+                    aNormal.Normalize();
+                    bNormal.Normalize();
 
                     var aTop    = new Vector3(a, h);
                     var aBottom = new Vector3(a, ZBase);
                     var bTop    = new Vector3(b, h);
                     var bBottom = new Vector3(b, ZBase);
 
-                    _FrontFaceMesh3D[i + 0] = new FrontFaceVertex(aTop,    normal);
-                    _FrontFaceMesh3D[i + 1] = new FrontFaceVertex(bTop,    normal);
-                    _FrontFaceMesh3D[i + 2] = new FrontFaceVertex(aBottom, normal);
-                    _FrontFaceMesh3D[i + 3] = new FrontFaceVertex(bTop,    normal);
-                    _FrontFaceMesh3D[i + 4] = new FrontFaceVertex(bBottom, normal);
-                    _FrontFaceMesh3D[i + 5] = new FrontFaceVertex(aBottom, normal);
+                    _FrontFaceMesh3D[i + 0] = new FrontFaceVertex(aTop,    aNormal);
+                    _FrontFaceMesh3D[i + 1] = new FrontFaceVertex(bTop,    bNormal);
+                    _FrontFaceMesh3D[i + 2] = new FrontFaceVertex(aBottom, aNormal);
+                    _FrontFaceMesh3D[i + 3] = new FrontFaceVertex(bTop,    bNormal);
+                    _FrontFaceMesh3D[i + 4] = new FrontFaceVertex(bBottom, bNormal);
+                    _FrontFaceMesh3D[i + 5] = new FrontFaceVertex(aBottom, aNormal);
 
                     i += 6;
                     actualCount += 6;

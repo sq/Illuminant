@@ -87,9 +87,11 @@ namespace TestGame.Scenes {
         }
 
         void Pillar (Vector2 center) {
-            Ellipse(center, 55f, 55f, 0.0f, 0.62f);
-            // Rect(new Vector2(-6, 223) + tl, new Vector2(-6 + 127, 346) + tl, 0.0f, 0.085f);
-            // Rect(new Vector2(-6, 223) + tl, new Vector2(-6 + 127, 346) + tl, 0.6f, 0.09f);
+            var baseSizeTL = new Vector2(62, 65);
+            var baseSizeBR = new Vector2(63, 60);
+            Ellipse(center, 55f, 45f, 0.0f, 0.69f);
+            Rect(center - baseSizeTL, center + baseSizeBR, 0.0f, 0.085f);
+            Rect(center - baseSizeTL, center + baseSizeBR, 0.60f, 0.09f);
         }
 
         public override void LoadContent () {
@@ -123,8 +125,8 @@ namespace TestGame.Scenes {
 
             Rect(new Vector2(329, 337), new Vector2(Width, 394), 0f, 0.435f);
 
-            Pillar(new Vector2(96, 490));
-            Pillar(new Vector2(718, 490));
+            Pillar(new Vector2(97, 520));
+            Pillar(new Vector2(719, 520));
 
             Environment.ZDistanceScale = 64;
         }

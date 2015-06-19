@@ -29,17 +29,19 @@ void FrontFacePixelShader (
 ) {
     color = float4(0, 0, 0, 0);
 
-    for (int i = 0; i < NUM_LIGHTS; i++) {
+    for (int i = 0; i < 1; i++) {
         // FIXME: What about z?
         float3 properties = LightProperties[i];
         float3 lightPosition = LightPositions[i];
         float  opacity = computeLightOpacity(worldPosition, lightPosition, properties.x, properties.y);
 
         float3 lightDirection = normalize(float3(worldPosition.xy - lightPosition.xy, 0));
-        float  lightDotNormal = dot(lightDirection, normal);
+        float  lightDotNormal = dot(-lightDirection, normal);
 
-        if (lightDotNormal > 0)
-            opacity *= 0;
+        // HACK: How do we get smooth ramping here without breaking pure horizontal walls?
+        float dotRamp = 1 - clamp(-lightDotNormal * 1.75, 0, 1);
+        opacity *= dotRamp;
+
         if (worldPosition.y >= lightPosition.y)
             opacity *= 0;
 

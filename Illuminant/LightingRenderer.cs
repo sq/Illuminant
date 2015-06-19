@@ -179,7 +179,8 @@ namespace Squared.Illuminant {
         public readonly IlluminantMaterials IlluminantMaterials;
         public readonly Squared.Render.EffectMaterial ShadowMaterialInner;
         public readonly Squared.Render.EffectMaterial[] PointLightMaterialsInner = new Squared.Render.EffectMaterial[4];
-        public readonly DepthStencilState PointLightStencil, ShadowStencil, FaceDepthStencilState;
+        public readonly DepthStencilState PointLightStencil, ShadowStencil;
+        public readonly DepthStencilState TopFaceDepthStencilState, FrontFaceDepthStencilState;
 
         private static readonly Dictionary<TextureFilter, SamplerState> RampSamplerStates = new Dictionary<TextureFilter, SamplerState>();
 
@@ -271,11 +272,18 @@ namespace Squared.Illuminant {
                 ReferenceStencil = StencilFalse
             };
 
-            FaceDepthStencilState = new DepthStencilState {
+            TopFaceDepthStencilState = new DepthStencilState {
                 StencilEnable = false,
                 DepthBufferEnable = true,
                 DepthBufferFunction = CompareFunction.GreaterEqual,
                 DepthBufferWriteEnable = true
+            };
+            
+            FrontFaceDepthStencilState = new DepthStencilState {
+                StencilEnable = false,
+                DepthBufferEnable = true,
+                DepthBufferFunction = CompareFunction.GreaterEqual,
+                DepthBufferWriteEnable = false
             };
 
             {
@@ -928,20 +936,20 @@ namespace Squared.Illuminant {
                 resultGroup, ++layerIndex, Materials.Clear, clearZ: 0f
             );
 
-            using (var frontBatch = PrimitiveBatch<FrontFaceVertex>.New(
-                resultGroup, ++layerIndex, Materials.Get(
-                    IlluminantMaterials.VolumeFrontFace,
-                    rasterizerState: RasterizerState.CullNone,
-                    depthStencilState: FaceDepthStencilState,
-                    blendState: BlendState.Opaque
-                ),
-                batchSetup: SetTwoPointFiveDParameters
-            ))
             using (var topBatch = PrimitiveBatch<VertexPositionColor>.New(
                 resultGroup, ++layerIndex, Materials.Get(
                     IlluminantMaterials.VolumeTopFace,
                     rasterizerState: RasterizerState.CullNone,
-                    depthStencilState: FaceDepthStencilState,
+                    depthStencilState: TopFaceDepthStencilState,
+                    blendState: BlendState.Opaque
+                ),
+                batchSetup: SetTwoPointFiveDParameters
+            ))
+            using (var frontBatch = PrimitiveBatch<FrontFaceVertex>.New(
+                resultGroup, ++layerIndex, Materials.Get(
+                    IlluminantMaterials.VolumeFrontFace,
+                    rasterizerState: RasterizerState.CullNone,
+                    depthStencilState: FrontFaceDepthStencilState,
                     blendState: BlendState.Opaque
                 ),
                 batchSetup: SetTwoPointFiveDParameters
