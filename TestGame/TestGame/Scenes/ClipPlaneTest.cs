@@ -63,7 +63,10 @@ namespace TestGame.Scenes {
 
             Environment = new LightingEnvironment();
 
-            Renderer = new LightingRenderer(Game.Content, Game.RenderCoordinator, LightmapMaterials, Environment, Width, Height);
+            Renderer = new LightingRenderer(
+                Game.Content, Game.RenderCoordinator, LightmapMaterials, Environment, 
+                new RendererConfiguration(Width, Height)
+            );
 
             var light = new LightSource {
                 Position = new Vector2(64, 64),

@@ -156,8 +156,14 @@ namespace TestGame.Scenes {
             BackgroundEnvironment = new LightingEnvironment();
             ForegroundEnvironment = new LightingEnvironment();
 
-            BackgroundRenderer = new LightingRenderer(Game.Content, Game.RenderCoordinator, LightmapMaterials, BackgroundEnvironment, Width, Height);
-            ForegroundRenderer = new LightingRenderer(Game.Content, Game.RenderCoordinator, LightmapMaterials, ForegroundEnvironment, Width, Height);
+            BackgroundRenderer = new LightingRenderer(
+                Game.Content, Game.RenderCoordinator, LightmapMaterials, BackgroundEnvironment, 
+                new RendererConfiguration(Width, Height)
+            );
+            ForegroundRenderer = new LightingRenderer(
+                Game.Content, Game.RenderCoordinator, LightmapMaterials, ForegroundEnvironment, 
+                new RendererConfiguration(Width, Height)
+            );
 
             // Add a global sun
             AddAmbientLight(746, -300);

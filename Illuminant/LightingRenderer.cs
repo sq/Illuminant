@@ -14,6 +14,19 @@ using Squared.Render.Convenience;
 using Squared.Util;
 
 namespace Squared.Illuminant {
+    public class RendererConfiguration {
+        public float ClipRegionScale = 1.0f;
+        public bool  TwoPointFiveD   = false;
+        public float ZOffset         = 0.0f;
+        public float ZScale          = 1.0f;
+
+        public readonly Pair<int> MaximumRenderSize;
+
+        public RendererConfiguration (int maxWidth, int maxHeight) {
+            MaximumRenderSize = new Pair<int>(maxWidth, maxHeight);
+        }
+    }
+
     public class LightingRenderer : IDisposable {
         private class ArrayLineWriter : ILineWriter {
             private int _Count = 0;
@@ -131,8 +144,6 @@ namespace Squared.Illuminant {
 
         // HACK: If your projection matrix and your actual viewport/RT don't match in dimensions, you need to set this to compensate. :/
         // Scissor rects are fussy.
-        public float ClipRegionScale = 1f;
-
         public readonly DefaultMaterialSet Materials;
         public readonly RenderCoordinator Coordinator;
         public readonly IlluminantMaterials IlluminantMaterials;
@@ -151,14 +162,17 @@ namespace Squared.Illuminant {
         private readonly Dictionary<Pair<int>, CachedSector> SectorCache = new Dictionary<Pair<int>, CachedSector>(new IntPairComparer());
         private readonly List<PointLightRecord> PointLightBatchBuffer = new List<PointLightRecord>(128);
         private Rectangle StoredScissorRect;
-
-        public readonly Pair<int> MaximumRenderSize;
-
+        private readonly RenderTarget2D _TerrainDepthmap;
         public static readonly short[] ShadowIndices;
 
         public LightingEnvironment Environment;
 
         private readonly Action<DeviceManager, object> StoreScissorRect, RestoreScissorRect, ShadowBatchSetup, IlluminationBatchSetup;
+
+        public readonly RendererConfiguration Configuration;
+
+        const int StencilTrue = 0xFF;
+        const int StencilFalse = 0x00;
 
         static LightingRenderer () {
             ShadowIndices = new short[] {
@@ -167,20 +181,14 @@ namespace Squared.Illuminant {
             };
         }
 
-        private readonly RenderTarget2D _TerrainDepthmap;
-
-        private float ZOffset = 0, ZScale = 1;
-
-        const int StencilTrue = 0xFF;
-        const int StencilFalse = 0x00;
-
         public LightingRenderer (
             ContentManager content, RenderCoordinator coordinator, 
             DefaultMaterialSet materials, LightingEnvironment environment,
-            int maxWidth, int maxHeight
+            RendererConfiguration configuration
         ) {
             Materials = materials;
             Coordinator = coordinator;
+            Configuration = configuration;
 
             IlluminantMaterials = new IlluminantMaterials(materials);
 
@@ -189,15 +197,13 @@ namespace Squared.Illuminant {
             ShadowBatchSetup = _ShadowBatchSetup;
             IlluminationBatchSetup = _IlluminationBatchSetup;
 
-            MaximumRenderSize = new Pair<int>(maxWidth, maxHeight);
-
             lock (coordinator.CreateResourceLock) {
                 // FIXME: Not possible because XNA's surface type validation is INSANE and completely broken
                 // var fmt = SurfaceFormat.Single;
                 var fmt = SurfaceFormat.Rg32;
 
                 _TerrainDepthmap = new RenderTarget2D(
-                    coordinator.Device, maxWidth, maxHeight,
+                    coordinator.Device, Configuration.MaximumRenderSize.First, Configuration.MaximumRenderSize.Second,
                     false, fmt, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.DiscardContents
                 );
             }
@@ -425,8 +431,8 @@ namespace Squared.Illuminant {
             // FIXME: Replace this with a use of the material set's modelview/projection matrix and device
             //  viewport to 'project' the clip region to scissor coordinates?
             var scale = new Vector2(
-                Materials.ViewportScale.X * ClipRegionScale,
-                Materials.ViewportScale.Y * ClipRegionScale
+                Materials.ViewportScale.X * Configuration.ClipRegionScale,
+                Materials.ViewportScale.Y * Configuration.ClipRegionScale
             );
 
             if (ls.ClipRegion.HasValue) {
@@ -622,8 +628,8 @@ namespace Squared.Illuminant {
                 maxZ = Math.Max(maxZ, hv.Height);
             }
 
-            ZOffset = -minZ;
-            ZScale = 1.0f / (maxZ - minZ);
+            Configuration.ZOffset = -minZ;
+            Configuration.ZScale = 1.0f / (maxZ - minZ);
         }
 
         /// <summary>
@@ -874,11 +880,11 @@ namespace Squared.Illuminant {
                     group, 1, Materials.ScreenSpaceGeometry,
                     (dm, _) => {
                         dm.Device.RasterizerState = RasterizerState.CullNone;
-                        dm.Device.BlendState = BlendState.Opaque;
+                        dm.Device.BlendState = RenderStates.MaxBlend;
                     }
                 ))
                 // Rasterize the height volumes in sequential order.
-                foreach (var hv in Environment.HeightVolumes.OrderBy(_ => _.Height)) {
+                foreach (var hv in Environment.HeightVolumes) {
                     var m = hv.Mesh3D;
 
                     pb.Add(new PrimitiveDrawCall<VertexPositionColor>(

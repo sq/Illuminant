@@ -79,7 +79,10 @@ namespace TestGame.Scenes {
 
             Background = Game.Content.Load<Texture2D>("sc3test");
 
-            Renderer = new LightingRenderer(Game.Content, Game.RenderCoordinator, LightmapMaterials, Environment, Width, Height);
+            Renderer = new LightingRenderer(
+                Game.Content, Game.RenderCoordinator, LightmapMaterials, Environment, 
+                new RendererConfiguration(Width, Height)
+            );
 
             var light = new LightSource {
                 Position = new Vector3(64, 64, 0.7f),
