@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
@@ -25,6 +26,34 @@ namespace Squared.Illuminant {
 
         public RendererConfiguration (int maxWidth, int maxHeight) {
             MaximumRenderSize = new Pair<int>(maxWidth, maxHeight);
+        }
+    }
+
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    public struct FrontFaceVertex : IVertexType {
+        public Vector3 Position;
+        public Vector3 Normal;
+
+        public static VertexDeclaration _VertexDeclaration;
+
+        static FrontFaceVertex () {
+            var tThis = typeof(FrontFaceVertex);
+
+            _VertexDeclaration = new VertexDeclaration(
+                new VertexElement(Marshal.OffsetOf(tThis, "Position").ToInt32(), VertexElementFormat.Vector3, VertexElementUsage.Position, 0),
+                new VertexElement(Marshal.OffsetOf(tThis, "Normal").ToInt32(), VertexElementFormat.Vector3, VertexElementUsage.Normal, 0)
+            );
+        }
+
+        public FrontFaceVertex (Vector3 position, Vector3 normal) {
+            Position = position;
+            Normal = normal;
+        }
+
+        public VertexDeclaration VertexDeclaration {
+            get {
+                return _VertexDeclaration;
+            }
         }
     }
 
@@ -899,7 +928,7 @@ namespace Squared.Illuminant {
                 resultGroup, ++layerIndex, Materials.Clear, clearZ: 0f
             );
 
-            using (var frontBatch = PrimitiveBatch<VertexPositionColor>.New(
+            using (var frontBatch = PrimitiveBatch<FrontFaceVertex>.New(
                 resultGroup, ++layerIndex, Materials.Get(
                     IlluminantMaterials.VolumeFrontFace,
                     rasterizerState: RasterizerState.CullNone,
@@ -922,14 +951,9 @@ namespace Squared.Illuminant {
                     if (ffm3d.Count <= 0)
                         continue;
 
-                    var indices = volume.FrontFaceIndices;
-                    if (indices.Count < 3)
-                        continue;
-
-                    frontBatch.Add(new PrimitiveDrawCall<VertexPositionColor>(
+                    frontBatch.Add(new PrimitiveDrawCall<FrontFaceVertex>(
                         PrimitiveType.TriangleList,
-                        ffm3d.Array, ffm3d.Offset, ffm3d.Count,
-                        indices.Array, indices.Offset, indices.Count / 3
+                        ffm3d.Array, ffm3d.Offset, ffm3d.Count / 3
                     ));
 
                     var m3d = volume.Mesh3D;

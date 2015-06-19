@@ -17,7 +17,7 @@ namespace Squared.Illuminant {
 
         // HACK
         protected VertexPositionColor[] _Mesh3D           = null;
-        protected VertexPositionColor[] _FrontFaceMesh3D  = null;
+        protected FrontFaceVertex[]     _FrontFaceMesh3D  = null;
 
         protected HeightVolumeBase (Polygon polygon, float zBase = 0, float height = 0) {
             Polygon = polygon;
@@ -59,11 +59,7 @@ namespace Squared.Illuminant {
             get;
         }
 
-        public abstract ArraySegment<VertexPositionColor> FrontFaceMesh3D {
-            get;
-        }
-
-        public abstract ArraySegment<short> FrontFaceIndices {
+        public abstract ArraySegment<FrontFaceVertex> FrontFaceMesh3D {
             get;
         }
 
@@ -138,51 +134,57 @@ namespace Squared.Illuminant {
             }
         }
 
-        public override ArraySegment<VertexPositionColor> FrontFaceMesh3D {
+        public override ArraySegment<FrontFaceVertex> FrontFaceMesh3D {
             get {
                 if (_FrontFaceMesh3D == null) {
-                    var count = (Polygon.Count * 2);
-                    _FrontFaceMesh3D = new VertexPositionColor[count];
+                    var count = (Polygon.Count * 6);
+                    _FrontFaceMesh3D = new FrontFaceVertex[count];
                 }
 
                 var h = ZBase + Height;
                 var actualCount = 0;
 
                 for (int i = 0, j = 0; j < Polygon.Count; j += 1) {
-                    var a = Polygon[j];
+                    var edge = Polygon.GetEdge(j);
+                    var a = edge.Start;
+                    var b = edge.End;
 
                     // GROSS HACK: Cull backfaces.
                     // We have no simple way to do this because we don't have winding information...
-                    var p = Geometry.LineIntersectPolygon(
+                    var pA = Geometry.LineIntersectPolygon(
                         a + new Vector2(0, 0.1f), 
                         a + new Vector2(0, 999f),
                         Polygon
                     );
+                    var pB = Geometry.LineIntersectPolygon(
+                        b + new Vector2(0, 0.1f), 
+                        b + new Vector2(0, 999f),
+                        Polygon
+                    );
 
-                    if (p.HasValue)
+                    if (pA.HasValue || pB.HasValue)
                         continue;
 
-                    _FrontFaceMesh3D[i] = new VertexPositionColor(
-                        new Vector3(a, h),
-                        Color.DimGray
-                    );
-                    _FrontFaceMesh3D[i + 1] = new VertexPositionColor(
-                        new Vector3(a, ZBase),
-                        Color.DimGray
-                    );
+                    var normal = new Vector3((b - a).PerpendicularLeft(), 0);
+                    normal.Normalize();
 
-                    i += 2;
-                    actualCount += 2;
+                    var aTop    = new Vector3(a, h);
+                    var aBottom = new Vector3(a, ZBase);
+                    var bTop    = new Vector3(b, h);
+                    var bBottom = new Vector3(b, ZBase);
+
+                    _FrontFaceMesh3D[i + 0] = new FrontFaceVertex(aTop,    normal);
+                    _FrontFaceMesh3D[i + 1] = new FrontFaceVertex(bTop,    normal);
+                    _FrontFaceMesh3D[i + 2] = new FrontFaceVertex(aBottom, normal);
+                    _FrontFaceMesh3D[i + 3] = new FrontFaceVertex(bTop,    normal);
+                    _FrontFaceMesh3D[i + 4] = new FrontFaceVertex(bBottom, normal);
+                    _FrontFaceMesh3D[i + 5] = new FrontFaceVertex(aBottom, normal);
+
+                    i += 6;
+                    actualCount += 6;
                 }
 
-                return new ArraySegment<VertexPositionColor>(_FrontFaceMesh3D, 0, actualCount);
-            }
-        }
-
-        public override ArraySegment<short> FrontFaceIndices {
-            get {
-                var m3d = FrontFaceMesh3D;
-                return new ArraySegment<short>(_FrontFaceIndices, 0, ((m3d.Count / 2) - 1) * 6);
+                return new ArraySegment<FrontFaceVertex>(_FrontFaceMesh3D, 0, actualCount);
             }
         }
     }

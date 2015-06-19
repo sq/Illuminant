@@ -11,9 +11,10 @@ uniform float4 LightColors       [NUM_LIGHTS];
 uniform float  ZToYMultiplier;
 
 void FrontFaceVertexShader (
-    in  float3 position       : POSITION0, // x, y, z
-    out float3 worldPosition : TEXCOORD0,
-    out float4 result        : POSITION0
+    in    float3 position      : POSITION0, // x, y, z
+    inout float3 normal        : NORMAL0,
+    out   float3 worldPosition : TEXCOORD0,
+    out   float4 result        : POSITION0
 ) {
     worldPosition = position.xyz;
     position.y -= ZToYMultiplier * position.z;
@@ -23,6 +24,7 @@ void FrontFaceVertexShader (
 
 void FrontFacePixelShader (
     inout float4 color : COLOR0,
+    in    float3 normal : NORMAL0,
     in    float3 worldPosition: TEXCOORD0
 ) {
     color = float4(0, 0, 0, 0);
@@ -33,6 +35,11 @@ void FrontFacePixelShader (
         float3 lightPosition = LightPositions[i];
         float  opacity = computeLightOpacity(worldPosition, lightPosition, properties.x, properties.y);
 
+        float3 lightDirection = normalize(float3(worldPosition.xy - lightPosition.xy, 0));
+        float  lightDotNormal = dot(lightDirection, normal);
+
+        if (lightDotNormal > 0)
+            opacity *= 0;
         if (worldPosition.y >= lightPosition.y)
             opacity *= 0;
 
@@ -46,9 +53,9 @@ void FrontFacePixelShader (
 }
 
 void TopFaceVertexShader(
-    in  float3 position       : POSITION0, // x, y, z
+    in  float3 position      : POSITION0, // x, y, z
     out float3 worldPosition : TEXCOORD0,
-    out float4 result : POSITION0
+    out float4 result        : POSITION0
 ) {
     worldPosition = position.xyz;
     position.y -= ZToYMultiplier * position.z;
