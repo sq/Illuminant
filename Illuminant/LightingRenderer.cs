@@ -826,65 +826,104 @@ namespace Squared.Illuminant {
                     if (Render.Tracing.RenderTrace.EnableTracing)
                         Render.Tracing.RenderTrace.Marker(resultGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Volume Front Faces", frame.Index, this.GetHashCode());
 
-                    var p = ((Squared.Render.EffectMaterial)((DelegateMaterial)IlluminantMaterials.VolumeFrontFace).BaseMaterial)
-                        .Effect.Parameters["ZToYMultiplier"];
-
-                    using (var pb = PrimitiveBatch<VertexPositionColor>.New(
-                        resultGroup, ++layerIndex, Materials.Get(
-                            IlluminantMaterials.VolumeFrontFace, 
-                            rasterizerState: RasterizerState.CullNone,
-                            depthStencilState: DepthStencilState.None,
-                            blendState: BlendState.Opaque
-                        ),
-                        batchSetup: (dm, _) => {
-                            p.SetValue(Configuration.ZToYMultiplier);
-                        }
-                    )) {
-                        foreach (var volume in Environment.HeightVolumes) {
-                            var m3d = volume.FrontFaceMesh3D;
-                            if (m3d.Count <= 0)
-                                continue;
-
-                            var indices = volume.FrontFaceIndices;
-                            if (indices.Count < 3)
-                                continue;
-
-                            pb.Add(new PrimitiveDrawCall<VertexPositionColor>(
-                                PrimitiveType.TriangleList,
-                                m3d.Array, m3d.Offset, m3d.Count,
-                                indices.Array, indices.Offset, indices.Count / 3
-                            ));
-                        }
-                    }
-
-                    // FIXME: Opaque light mask for the top of the volume
-                    /*
-                    using (var pb = PrimitiveBatch<VertexPositionColor>.New(
-                        resultGroup, ++layerIndex, Materials.Get(
-                            IlluminantMaterials.VolumeTopFace, 
-                            rasterizerState: RasterizerState.CullNone,
-                            depthStencilState: DepthStencilState.None,
-                            blendState: BlendState.Opaque
-                        ),
-                        batchSetup: (dm, _) => {
-                            p.SetValue(Configuration.ZToYMultiplier);
-                        }
-                    )) {
-                        foreach (var volume in Environment.HeightVolumes) {
-                            var indices = volume.FrontFaceIndices;
-
-                            pb.Add(new PrimitiveDrawCall<VertexPositionColor>(
-                                PrimitiveType.TriangleList,
-                                volume.Mesh3D, 0, volume.Mesh3D.Length, volume.Mesh3D.Length / 3
-                            ));
-                        }
-                    }
-                     */
+                    layerIndex = RenderTwoPointFiveD(layerIndex, resultGroup);
                 }
 
                 if (Render.Tracing.RenderTrace.EnableTracing)
                     Render.Tracing.RenderTrace.Marker(resultGroup, 9999, "Frame {0:0000} : LightingRenderer {1:X4} : End", frame.Index, this.GetHashCode());
             }
+        }
+
+        const int FrontFaceMaxLights = 8;
+
+        private Vector3[] _LightPositions     = new Vector3[FrontFaceMaxLights];
+        private Vector3[] _LightProperties    = new Vector3[FrontFaceMaxLights];
+        private Vector4[] _LightNeutralColors = new Vector4[FrontFaceMaxLights];
+        private Vector4[] _LightColors        = new Vector4[FrontFaceMaxLights];
+
+        private int RenderTwoPointFiveD (int layerIndex, BatchGroup resultGroup) {
+            var frontFaceMaterial = ((Squared.Render.EffectMaterial)((DelegateMaterial)IlluminantMaterials.VolumeFrontFace).BaseMaterial);
+
+            // FIXME: Support more than 8 lights
+
+            int i = 0;
+            foreach (var ls in Environment.LightSources) {
+                _LightPositions[i]     = ls.Position;
+                _LightNeutralColors[i] = ls.NeutralColor;
+                _LightColors[i]        = ls.Color;
+                _LightProperties[i]    = new Vector3(
+                    ls.RampStart, ls.RampEnd,
+                    (ls.RampMode == LightSourceRampMode.Exponential)
+                        ? 1
+                        : 0
+                );
+
+                i += 1;
+            }
+
+            for (; i < FrontFaceMaxLights; i++) {
+                _LightPositions[i] = _LightProperties[i] = Vector3.Zero;
+                _LightColors[i] = _LightNeutralColors[i] = Vector4.Zero;                
+            }
+
+            using (var pb = PrimitiveBatch<VertexPositionColor>.New(
+                resultGroup, ++layerIndex, Materials.Get(
+                    IlluminantMaterials.VolumeFrontFace,
+                    rasterizerState: RasterizerState.CullNone,
+                    depthStencilState: DepthStencilState.None,
+                    blendState: BlendState.Opaque
+                ),
+                batchSetup: (dm, _) => {
+                    var p = frontFaceMaterial.Effect.Parameters;
+                    p["ZDistanceScale"]    .SetValue(Environment.ZDistanceScale);
+                    p["ZToYMultiplier"]    .SetValue(Configuration.ZToYMultiplier);
+                    p["LightPositions"]    .SetValue(_LightPositions);
+                    p["LightProperties"]   .SetValue(_LightProperties);
+                    p["LightNeutralColors"].SetValue(_LightNeutralColors);
+                    p["LightColors"]       .SetValue(_LightColors);
+                }
+            )) {
+                foreach (var volume in Environment.HeightVolumes) {
+                    var m3d = volume.FrontFaceMesh3D;
+                    if (m3d.Count <= 0)
+                        continue;
+
+                    var indices = volume.FrontFaceIndices;
+                    if (indices.Count < 3)
+                        continue;
+
+                    pb.Add(new PrimitiveDrawCall<VertexPositionColor>(
+                        PrimitiveType.TriangleList,
+                        m3d.Array, m3d.Offset, m3d.Count,
+                        indices.Array, indices.Offset, indices.Count / 3
+                    ));
+                }
+            }
+
+            // FIXME: Opaque light mask for the top of the volume
+            /*
+            using (var pb = PrimitiveBatch<VertexPositionColor>.New(
+                resultGroup, ++layerIndex, Materials.Get(
+                    IlluminantMaterials.VolumeTopFace, 
+                    rasterizerState: RasterizerState.CullNone,
+                    depthStencilState: DepthStencilState.None,
+                    blendState: BlendState.Opaque
+                ),
+                batchSetup: (dm, _) => {
+                    p.SetValue(Configuration.ZToYMultiplier);
+                }
+            )) {
+                foreach (var volume in Environment.HeightVolumes) {
+                    var indices = volume.FrontFaceIndices;
+
+                    pb.Add(new PrimitiveDrawCall<VertexPositionColor>(
+                        PrimitiveType.TriangleList,
+                        volume.Mesh3D, 0, volume.Mesh3D.Length, volume.Mesh3D.Length / 3
+                    ));
+                }
+            }
+             */
+            return layerIndex;
         }
 
         private void RenderLightingSector (Frame frame, ref bool needStencilClear, BatchGroup currentLightGroup, ref int layerIndex, LightSource lightSource, ref NativeBatch stencilBatch, CachedSector cachedSector, int drawnIndex) {

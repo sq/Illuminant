@@ -91,7 +91,7 @@ namespace TestGame.Scenes {
 
             var light = new LightSource {
                 Position = new Vector3(64, 64, 0.7f),
-                Color = new Vector4(1f, 1f, 1f, 1),
+                Color = new Vector4(1f, 1f, 1f, 1f) * 0.66f,
                 RampStart = 33,
                 RampEnd = 350,
                 RampMode = LightSourceRampMode.Exponential
@@ -100,16 +100,12 @@ namespace TestGame.Scenes {
             Lights.Add(light);
             Environment.LightSources.Add(light);
 
-            /*
-            Rect(Vector2.Zero, new Vector2(Width, 610), 0.1f);
-             */
-
-            Rect(new Vector2(329, 394), new Vector2(Width, 394), 0f, 0.435f);
+            Rect(new Vector2(329, 360), new Vector2(Width, 394), 0f, 0.435f);
 
             Pillar(new Vector2(40, 233));
             Pillar(new Vector2(662, 231));
 
-            Environment.ZDistanceScale = 32;
+            Environment.ZDistanceScale = 64;
         }
         
         public override void Draw (Squared.Render.Frame frame) {
@@ -132,6 +128,13 @@ namespace TestGame.Scenes {
                 ClearBatch.AddNew(bg, 0, LightmapMaterials.Clear, clearColor: Color.Black, clearZ: 0, clearStencil: 0);
 
                 Renderer.RenderLighting(frame, bg, 1, intensityScale: 1);
+
+                // Ambient light
+                using (var gb = GeometryBatch.New(
+                    bg, 2, 
+                    Game.ScreenMaterials.Get(Game.ScreenMaterials.ScreenSpaceGeometry, blendState: BlendState.Additive)
+                ))
+                    gb.AddFilledQuad(Bounds.FromPositionAndSize(Vector2.Zero, Vector2.One * 9999), new Color(32, 32, 32, 255));
             };
 
             ClearBatch.AddNew(frame, 0, Game.ScreenMaterials.Clear, clearColor: Color.Black);

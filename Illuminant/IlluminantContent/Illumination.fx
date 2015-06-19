@@ -1,4 +1,4 @@
-#include "RampCommon.fxh"
+#include "LightCommon.fxh"
 
 #define SHADOW_DEPTH_BIAS -0.08
 #define FILLRULE_NEGATIVE_OFFSET 0.0
@@ -13,7 +13,6 @@ shared float4x4 ModelViewMatrix;
 uniform float4 LightNeutralColor;
 uniform float3 LightCenter;
 
-uniform float  ZDistanceScale;
 uniform float3 ShadowLength;
 uniform float2 TerrainTextureTexelSize;
 
@@ -58,11 +57,7 @@ float PointLightPixelCore(
 
     // FIXME: What about z?
     float3 shadedPixelPosition = float3(worldPosition.xy, terrainZ);
-    float3 distance3 = shadedPixelPosition - lightCenter;
-    distance3.z *= ZDistanceScale;
-
-    float  distance = length(distance3) - ramp.x;
-    return 1 - clamp(distance / (ramp.y - ramp.x), 0, 1);
+    return computeLightOpacity(shadedPixelPosition, lightCenter, ramp.x, ramp.y);
 }
 
 void PointLightPixelShaderLinear(
