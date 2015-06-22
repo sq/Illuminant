@@ -42,22 +42,18 @@ void FrontFacePixelShader (
     in    float3 worldPosition: TEXCOORD1
 ) {
     color = float4(0, 0, 0, 0);
-
+    
     for (int i = 0; i < NumLights; i++) {
         // FIXME: What about z?
         float3 properties = LightProperties[i];
         float3 lightPosition = LightPositions[i];
         float3 lightDirection = worldPosition - lightPosition;
-        color = float4((lightDirection / 128 + 1) * 0.5, 1.0);
-        break;
 
         float maxDistance = length(lightDirection);
         lightDirection = normalize(lightDirection);
 
         float  opacity = computeLightOpacity(worldPosition, lightPosition, properties.x, properties.y);
         
-        /*
-
         float  lightDotNormal = dot(-lightDirection, normal);
 
         // HACK: How do we get smooth ramping here without breaking pure horizontal walls?
@@ -66,6 +62,7 @@ void FrontFacePixelShader (
 
         opacity *= lerp(1, opacity, properties.z);
 
+        /*
         // Do a stochastic raycast between the light and the wall to determine
         //  whether the light is obstructed.
         // FIXME: This will cause flickering for small obstructions combined
@@ -79,9 +76,9 @@ void FrontFacePixelShader (
             float raycastStepRatePx = RAYCAST_INITIAL_STEP_PX;
             for (float castDistance = 0; castDistance < maxDistance; castDistance += raycastStepRatePx) {
                 float3 samplePosition = (lightPosition + (lightDirection * castDistance));
-                float  terrainZ       = tex2Dgrad(TerrainTextureSampler, samplePosition.xy * TerrainTextureTexelSize, 0, 0).r;
+                float2  terrainZ       = sampleTerrain(samplePosition);
 
-                if (terrainZ > samplePosition.z) {
+                if (terrainZ.y > samplePosition.z) {
                     obstructed = 1;
                 } else if (obstructed) {
                     seenUnobstructed = 1;
@@ -134,6 +131,9 @@ void TopFacePixelShader(
         float3 properties = LightProperties[i];
         float3 lightPosition = LightPositions[i];
         float  opacity = computeLightOpacity(worldPosition, lightPosition, properties.x, properties.y);
+
+        if (lightPosition.z < worldPosition.z)
+            continue;
 
         float3 lightDirection = normalize(float3(worldPosition.xy - lightPosition.xy, 0));
         float  lightDotNormal = dot(-lightDirection, normal);

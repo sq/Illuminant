@@ -110,20 +110,23 @@ namespace Squared.Illuminant {
 
         public override VertexPositionColor[] Mesh3D {
             get {
-                var h = ZBase + Height;
-                var c = new Color(h, h, h, 1f);
+                var h1 = ZBase;
+                var h2 = ZBase + Height;
+
+                // [minHeight, maxHeight]
+                var c = new Color(h1, h2, 0, 1f);
 
                 if (_Mesh3D == null) {
                     _Mesh3D = (
                         from p in Geometry.Triangulate(Polygon) 
                         from v in p
                         select new VertexPositionColor(
-                            new Vector3(v, h), c                            
+                            new Vector3(v, h2), c                            
                         )
                     ).ToArray();
                 } else {
                     for (var i = 0; i < _Mesh3D.Length; i++) {
-                        _Mesh3D[i].Position.Z = h;
+                        _Mesh3D[i].Position.Z = h2;
                         _Mesh3D[i].Color = c;
                     }
                 }

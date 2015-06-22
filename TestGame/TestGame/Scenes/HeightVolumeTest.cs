@@ -12,7 +12,7 @@ using Squared.Illuminant;
 using Squared.Render;
 
 namespace TestGame.Scenes {
-    public class ClipPlaneTest : Scene {
+    public class HeightVolumeTest : Scene {
         DefaultMaterialSet LightmapMaterials;
 
         LightingEnvironment Environment;
@@ -24,10 +24,11 @@ namespace TestGame.Scenes {
 
         bool ShowOutlines = true;
         bool ShowTerrainDepth = false;
+        bool TwoPointFiveD = false;
 
         float LightZ = 0;
 
-        public ClipPlaneTest (TestGame game, int width, int height)
+        public HeightVolumeTest (TestGame game, int width, int height)
             : base(game, width, height) {
         }
 
@@ -65,7 +66,9 @@ namespace TestGame.Scenes {
 
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, LightmapMaterials, Environment, 
-                new RendererConfiguration(Width, Height)
+                new RendererConfiguration(Width, Height) {
+                    ZToYMultiplier = 256
+                }
             );
 
             var light = new LightSource {
@@ -118,7 +121,7 @@ namespace TestGame.Scenes {
 
                 var volume = new SimpleHeightVolume(
                     new Polygon(points.ToArray()),
-                    h
+                    0.0f, h
                 );
 
                 Environment.HeightVolumes.Add(volume);
@@ -129,7 +132,7 @@ namespace TestGame.Scenes {
                     new Vector2((Width * 0.5f) - 32f, 0f),
                     new Vector2((Width * 0.5f) + 32f, Height)
                 )),
-                0.85f
+                0f, 0.85f
             ));
         }
         
@@ -142,6 +145,8 @@ namespace TestGame.Scenes {
                 Height, 0,
                 0, 1
             );
+
+            Renderer.Configuration.TwoPointFiveD = TwoPointFiveD;
 
             CreateRenderTargets();
 
@@ -179,9 +184,11 @@ namespace TestGame.Scenes {
                 if (KeyWasPressed(Keys.O))
                     ShowOutlines = !ShowOutlines;
 
-                if (KeyWasPressed(Keys.T)) {
+                if (KeyWasPressed(Keys.T))
                     ShowTerrainDepth = !ShowTerrainDepth;
-                }
+
+                if (KeyWasPressed(Keys.D2))
+                    TwoPointFiveD = !TwoPointFiveD;
 
                 var ms = Mouse.GetState();
                 Game.IsMouseVisible = true;

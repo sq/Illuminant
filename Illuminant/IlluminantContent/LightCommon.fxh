@@ -12,6 +12,25 @@ sampler TerrainTextureSampler : register(s2) {
     MagFilter = LINEAR;
 };
 
+// returns [min, max]
+float2 sampleTerrain(
+    float2 positionPx
+) {
+    float2 uv     = positionPx * TerrainTextureTexelSize;
+    float2 sample = tex2Dgrad(TerrainTextureSampler, uv, 0, 0).rg;
+    return sample;
+}
+
+int isLightInvisible(
+    float3 lightCenter
+) {
+    float2 terrainZ = sampleTerrain(lightCenter.xy);
+    return 
+        (lightCenter.z < 0) ||
+        ((lightCenter.z > terrainZ.x) && (lightCenter.z < terrainZ.y))
+    ;
+}
+
 float computeLightOpacity(
     float3 shadedPixelPosition, float3 lightCenter,
     float rampStart, float rampEnd

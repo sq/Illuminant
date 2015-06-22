@@ -50,7 +50,7 @@ namespace TestGame {
                 new ReceiverTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new ParticleLight(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new RampTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new ClipPlaneTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
+                new HeightVolumeTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new SoulcasterTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
             };
 

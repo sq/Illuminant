@@ -1,7 +1,7 @@
 #include "LightCommon.fxh"
 
-#define SHADOW_DEPTH_BIAS -0.08
-#define FILLRULE_NEGATIVE_OFFSET 0.0
+#define SHADOW_DEPTH_BIAS -0.01
+#define FILLRULE_NEGATIVE_OFFSET 0
 #define FILLRULE_POSITIVE_OFFSET 0.99
 
 shared float2 ViewportScale;
@@ -40,14 +40,13 @@ float PointLightPixelCore(
     in float2 ramp          : TEXCOORD1, // start, end
     in float2 vpos          : VPOS
 ) {
-    float2 terrainXy = vpos * TerrainTextureTexelSize;
-    float  terrainZ  = tex2Dgrad(TerrainTextureSampler, terrainXy, 0, 0).r;
+    float2 terrainZ = sampleTerrain(vpos);
 
-    if (lightCenter.z < terrainZ)
+    if (lightCenter.z < terrainZ.y)
         discard;
 
     // FIXME: What about z?
-    float3 shadedPixelPosition = float3(worldPosition.xy, terrainZ);
+    float3 shadedPixelPosition = float3(worldPosition.xy, terrainZ.y);
     return computeLightOpacity(shadedPixelPosition, lightCenter, ramp.x, ramp.y);
 }
 
@@ -139,20 +138,6 @@ void ShadowVertexShader(
         shadowLengthScaled = float3(0, 0, 0);
     }
 
-    // HACK: Suppress shadows from obstructions above lights
-    //   But we don't want to do this, because we're treating an obstruction as a wall from z=0 to z=obsz
-    /*
-    if (delta.z > 0)
-        shadowLengthScaled = 0;
-    */
-    
-    /*
-    // This is ALMOST right
-    if (abs(delta.z) > SMALL_SHADOW_THRESHOLD) {
-        shadowLengthScaled = 0;
-    }
-    */
-
     float3 untransformed = position + (direction * shadowLengthScaled);
     float3 directionSign = sign(direction);
     float4 fillruleOffset = float4(
@@ -175,12 +160,12 @@ void ShadowPixelShader(
     out float4 color     : COLOR0
 ) {
     float z = _z.x + SHADOW_DEPTH_BIAS;
-    float2 terrainXy = vpos * TerrainTextureTexelSize;
-    float terrainZ = tex2Dgrad(TerrainTextureSampler, terrainXy, 0, 0).r;
-    if (z < terrainZ)
+
+    float2 terrainZ = sampleTerrain(vpos);
+    if (z < terrainZ.y)
         discard;
 
-    color = float4(z, 1, terrainZ, 1);
+    color = float4(z, 1, terrainZ.y, 1);
 }
 
 technique Shadow {

@@ -184,6 +184,7 @@ namespace Squared.Illuminant {
         public readonly Squared.Render.EffectMaterial[] PointLightMaterialsInner = new Squared.Render.EffectMaterial[4];
         public readonly DepthStencilState PointLightStencil, ShadowStencil;
         public readonly DepthStencilState TopFaceDepthStencilState, FrontFaceDepthStencilState;
+        public readonly BlendState        HeightMin, HeightMax;
 
         private static readonly Dictionary<TextureFilter, SamplerState> RampSamplerStates = new Dictionary<TextureFilter, SamplerState>();
 
@@ -287,6 +288,20 @@ namespace Squared.Illuminant {
                 DepthBufferEnable = true,
                 DepthBufferFunction = CompareFunction.GreaterEqual,
                 DepthBufferWriteEnable = false
+            };
+
+            HeightMin = new BlendState {
+                ColorWriteChannels    = ColorWriteChannels.Red,
+                ColorBlendFunction    = BlendFunction.Min,
+                ColorSourceBlend      = Blend.One,
+                ColorDestinationBlend = Blend.One
+            };
+
+            HeightMax = new BlendState {
+                ColorWriteChannels    = ColorWriteChannels.Green,
+                ColorBlendFunction    = BlendFunction.Max,
+                ColorSourceBlend      = Blend.One,
+                ColorDestinationBlend = Blend.One
             };
 
             {
@@ -722,10 +737,15 @@ namespace Squared.Illuminant {
                     Render.Tracing.RenderTrace.Marker(resultGroup, -9999, "Frame {0:0000} : LightingRenderer {1:X4} : Begin", frame.Index, this.GetHashCode());
 
                 int i = 0;
-                var lightCount = Environment.LightSources.Count;
+                var lightCount = 0;
 
-                foreach (var lightSource in Environment.LightSources)
+                foreach (var lightSource in Environment.LightSources) {
+                    if (IsLightInvisible(lightSource))
+                        continue;
+
                     sortedLights.Data[i++] = lightSource;
+                    lightCount += 1;
+                }
 
                 Array.Sort(sortedLights.Data, 0, lightCount, LightSourceComparerInstance);
 
@@ -886,9 +906,24 @@ namespace Squared.Illuminant {
                     Render.Tracing.RenderTrace.Marker(resultGroup, 9999, "Frame {0:0000} : LightingRenderer {1:X4} : End", frame.Index, this.GetHashCode());
             }
         }
+        
+        private bool IsLightInvisible (LightSource ls) {
+            if (ls.Position.Z < Environment.GroundZ)
+                return true;
+
+            var posXy = new Vector2(ls.Position.X, ls.Position.Y);
+
+            return Environment.HeightVolumes.Any(
+                hv => 
+                    (hv.ZBase <= ls.Position.Z) &&
+                    ((hv.ZBase + hv.Height) >= ls.Position.Z) &&
+                    Geometry.PointInPolygon(posXy, hv.Polygon)
+            );
+        }
 
         const int FaceMaxLights = 12;
 
+        private int       _VisibleLightCount  = 0;
         private Vector3[] _LightPositions     = new Vector3[FaceMaxLights];
         private Vector3[] _LightProperties    = new Vector3[FaceMaxLights];
         private Vector4[] _LightNeutralColors = new Vector4[FaceMaxLights];
@@ -901,7 +936,7 @@ namespace Squared.Illuminant {
             p["LightProperties"]   .SetValue(_LightProperties);
             p["LightNeutralColors"].SetValue(_LightNeutralColors);
             p["LightColors"]       .SetValue(_LightColors);
-            p["NumLights"]         .SetValue(Environment.LightSources.Count);
+            p["NumLights"]         .SetValue(_VisibleLightCount);
 
             var tsize = new Vector2(1.0f / _TerrainDepthmap.Width, 1.0f / _TerrainDepthmap.Height);
             p["TerrainTextureTexelSize"].SetValue(tsize);
@@ -924,6 +959,8 @@ namespace Squared.Illuminant {
             foreach (var ls in Environment.LightSources) {
                 if (i >= FaceMaxLights)
                     break;
+                else if (IsLightInvisible(ls))
+                    continue;
 
                 _LightPositions[i]     = ls.Position;
                 _LightNeutralColors[i] = ls.NeutralColor;
@@ -937,6 +974,8 @@ namespace Squared.Illuminant {
 
                 i += 1;
             }
+
+            _VisibleLightCount = i;
 
             for (; i < FaceMaxLights; i++) {
                 _LightPositions[i] = _LightProperties[i] = Vector3.Zero;
@@ -984,29 +1023,6 @@ namespace Squared.Illuminant {
                 }
             }
 
-            // FIXME: Opaque light mask for the top of the volume
-            /*
-            using (var pb = PrimitiveBatch<VertexPositionColor>.New(
-                resultGroup, ++layerIndex, Materials.Get(
-                    IlluminantMaterials.VolumeTopFace, 
-                    rasterizerState: RasterizerState.CullNone,
-                    depthStencilState: DepthStencilState.None,
-                    blendState: BlendState.Opaque
-                ),
-                batchSetup: (dm, _) => {
-                    p.SetValue(Configuration.ZToYMultiplier);
-                }
-            )) {
-                foreach (var volume in Environment.HeightVolumes) {
-                    var indices = volume.FrontFaceIndices;
-
-                    pb.Add(new PrimitiveDrawCall<VertexPositionColor>(
-                        PrimitiveType.TriangleList,
-                        volume.Mesh3D, 0, volume.Mesh3D.Length, volume.Mesh3D.Length / 3
-                    ));
-                }
-            }
-             */
             return layerIndex;
         }
 
@@ -1042,22 +1058,34 @@ namespace Squared.Illuminant {
 
                 ClearBatch.AddNew(
                     group, 0, Materials.Clear, 
-                    // FIXME: We should write GroundZ to the color channel!!!
-                    Color.Transparent, Environment.GroundZ, 0
+                    new Color(1.0f, Environment.GroundZ, 0f, 1f), Environment.GroundZ, 0
                 );
 
-                using (var pb = PrimitiveBatch<VertexPositionColor>.New(
+                using (var minBatch = PrimitiveBatch<VertexPositionColor>.New(
                     group, 1, Materials.ScreenSpaceGeometry,
                     (dm, _) => {
                         dm.Device.RasterizerState = RasterizerState.CullNone;
-                        dm.Device.BlendState = RenderStates.MaxBlend;
+                        dm.Device.DepthStencilState = DepthStencilState.None;
+                        dm.Device.BlendState = HeightMin;
+                    }
+                ))
+                using (var maxBatch = PrimitiveBatch<VertexPositionColor>.New(
+                    group, 1, Materials.ScreenSpaceGeometry,
+                    (dm, _) => {
+                        dm.Device.RasterizerState = RasterizerState.CullNone;
+                        dm.Device.DepthStencilState = DepthStencilState.None;
+                        dm.Device.BlendState = HeightMax;
                     }
                 ))
                 // Rasterize the height volumes in sequential order.
                 foreach (var hv in Environment.HeightVolumes) {
                     var m = hv.Mesh3D;
 
-                    pb.Add(new PrimitiveDrawCall<VertexPositionColor>(
+                    minBatch.Add(new PrimitiveDrawCall<VertexPositionColor>(
+                        PrimitiveType.TriangleList,
+                        m, 0, m.Length / 3
+                    ));
+                    maxBatch.Add(new PrimitiveDrawCall<VertexPositionColor>(
                         PrimitiveType.TriangleList,
                         m, 0, m.Length / 3
                     ));

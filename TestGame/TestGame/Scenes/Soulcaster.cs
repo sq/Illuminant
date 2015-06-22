@@ -87,11 +87,15 @@ namespace TestGame.Scenes {
         }
 
         void Pillar (Vector2 center) {
+            const float totalHeight = 0.69f;
+            const float baseHeight  = 0.085f;
+            const float capHeight   = 0.09f;
+
             var baseSizeTL = new Vector2(62, 65);
             var baseSizeBR = new Vector2(64, 57);
-            Ellipse(center, 55f, 45f, 0.0f, 0.69f);
-            Rect(center - baseSizeTL, center + baseSizeBR, 0.0f, 0.085f);
-            Rect(center - baseSizeTL, center + baseSizeBR, 0.60f, 0.09f);
+            Ellipse(center, 55f, 45f, 0, totalHeight);
+            Rect(center - baseSizeTL, center + baseSizeBR, 0.0f, baseHeight);
+            Rect(center - baseSizeTL, center + baseSizeBR, totalHeight - capHeight, capHeight);
         }
 
         public override void LoadContent () {
@@ -128,7 +132,7 @@ namespace TestGame.Scenes {
             Pillar(new Vector2(97, 523));
             Pillar(new Vector2(719, 520));
 
-            Environment.ZDistanceScale = 64;
+            Environment.ZDistanceScale = 128;
         }
         
         public override void Draw (Squared.Render.Frame frame) {
