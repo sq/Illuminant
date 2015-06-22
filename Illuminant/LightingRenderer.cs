@@ -899,6 +899,10 @@ namespace Squared.Illuminant {
             p["LightNeutralColors"].SetValue(_LightNeutralColors);
             p["LightColors"]       .SetValue(_LightColors);
             p["NumLights"]         .SetValue(Environment.LightSources.Count);
+
+            var tsize = new Vector2(1.0f / _TerrainDepthmap.Width, 1.0f / _TerrainDepthmap.Height);
+            p["TerrainTextureTexelSize"].SetValue(tsize);
+            p["TerrainTexture"].SetValue(_TerrainDepthmap);
         }
 
         private void SetTwoPointFiveDParameters (DeviceManager dm, object _) {

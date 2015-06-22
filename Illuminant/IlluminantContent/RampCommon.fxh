@@ -6,5 +6,5 @@ sampler RampTextureSampler : register(s1) {
 };
 
 float RampLookup (float value) {
-    return tex2D(RampTextureSampler, float2(value, 0)).r;
+    return tex2Dgrad(RampTextureSampler, float2(value, 0), 0, 0).r;
 }

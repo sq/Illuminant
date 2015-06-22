@@ -14,15 +14,6 @@ uniform float4 LightNeutralColor;
 uniform float3 LightCenter;
 
 uniform float3 ShadowLength;
-uniform float2 TerrainTextureTexelSize;
-
-Texture2D TerrainTexture      : register(t2);
-sampler TerrainTextureSampler : register(s2) {
-    Texture = (TerrainTexture);
-    MipFilter = LINEAR;
-    MinFilter = LINEAR;
-    MagFilter = LINEAR;
-};
 
 float4 ApplyTransform (float3 position) {
     float3 localPosition = ((position - float3(ViewportPosition.xy, 0)) * float3(ViewportScale, 1));
@@ -45,12 +36,12 @@ void PointLightVertexShader(
 
 float PointLightPixelCore(
     in float2 worldPosition : TEXCOORD2,
-    in float3 lightCenter : TEXCOORD0,
-    in float2 ramp : TEXCOORD1, // start, end
-    in  float2 vpos : VPOS
+    in float3 lightCenter   : TEXCOORD0,
+    in float2 ramp          : TEXCOORD1, // start, end
+    in float2 vpos          : VPOS
 ) {
     float2 terrainXy = vpos * TerrainTextureTexelSize;
-    float  terrainZ  = tex2D(TerrainTextureSampler, terrainXy).r;
+    float  terrainZ  = tex2Dgrad(TerrainTextureSampler, terrainXy, 0, 0).r;
 
     if (lightCenter.z < terrainZ)
         discard;
@@ -185,7 +176,7 @@ void ShadowPixelShader(
 ) {
     float z = _z.x + SHADOW_DEPTH_BIAS;
     float2 terrainXy = vpos * TerrainTextureTexelSize;
-    float terrainZ = tex2D(TerrainTextureSampler, terrainXy).r;
+    float terrainZ = tex2Dgrad(TerrainTextureSampler, terrainXy, 0, 0).r;
     if (z < terrainZ)
         discard;
 

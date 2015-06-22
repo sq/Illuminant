@@ -19,7 +19,7 @@ void GammaCompressedPixelShader(
 	addColor.rgb *= addColor.a;
 	addColor.a = 0;
 
-	result = multiplyColor * (tex2D(TextureSampler, clamp(texCoord, texTL, texBR)) * InverseScaleFactor);
+	result = multiplyColor * (tex2Dgrad(TextureSampler, clamp(texCoord, texTL, texBR), 0, 0) * InverseScaleFactor);
 	result += (addColor * result.a);
 
     float resultLuminance = dot(result, RGBToLuminance);
@@ -34,8 +34,8 @@ technique WorldSpaceGammaCompressedBitmap
 {
     pass P0
     {
-        vertexShader = compile vs_1_1 WorldSpaceVertexShader();
-        pixelShader = compile ps_2_0 GammaCompressedPixelShader();
+        vertexShader = compile vs_3_0 WorldSpaceVertexShader();
+        pixelShader = compile ps_3_0 GammaCompressedPixelShader();
     }
 }
 
@@ -43,8 +43,8 @@ technique ScreenSpaceGammaCompressedBitmap
 {
     pass P0
     {
-        vertexShader = compile vs_1_1 ScreenSpaceVertexShader();
-        pixelShader = compile ps_2_0 GammaCompressedPixelShader();
+        vertexShader = compile vs_3_0 ScreenSpaceVertexShader();
+        pixelShader = compile ps_3_0 GammaCompressedPixelShader();
     }
 }
 
@@ -88,7 +88,7 @@ void ToneMappedPixelShader(
 	addColor.rgb *= addColor.a;
 	addColor.a = 0;
 
-	result = multiplyColor * (tex2D(TextureSampler, clamp(texCoord, texTL, texBR)) * InverseScaleFactor);
+	result = multiplyColor * (tex2Dgrad(TextureSampler, clamp(texCoord, texTL, texBR), 0, 0) * InverseScaleFactor);
 	result += (addColor * result.a);
 
     result = float4(Uncharted2Tonemap(result.rgb * Exposure) / Uncharted2Tonemap1(WhitePoint), result.a);
@@ -98,8 +98,8 @@ technique WorldSpaceToneMappedBitmap
 {
     pass P0
     {
-        vertexShader = compile vs_1_1 WorldSpaceVertexShader();
-        pixelShader = compile ps_2_0 ToneMappedPixelShader();
+        vertexShader = compile vs_3_0 WorldSpaceVertexShader();
+        pixelShader = compile ps_3_0 ToneMappedPixelShader();
     }
 }
 
@@ -107,7 +107,7 @@ technique ScreenSpaceToneMappedBitmap
 {
     pass P0
     {
-        vertexShader = compile vs_1_1 ScreenSpaceVertexShader();
-        pixelShader = compile ps_2_0 ToneMappedPixelShader();
+        vertexShader = compile vs_3_0 ScreenSpaceVertexShader();
+        pixelShader = compile ps_3_0 ToneMappedPixelShader();
     }
 }

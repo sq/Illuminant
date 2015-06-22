@@ -15,7 +15,7 @@ void RampPixelShader(
 	addColor.rgb *= addColor.a;
 	addColor.a = 0;
 
-    result = tex2D(TextureSampler, clamp(texCoord, texTL, texBR));
+    result = tex2Dgrad(TextureSampler, clamp(texCoord, texTL, texBR), 0, 0);
     float luminance = dot(result, RGBToLuminance);
     float rampFactor = RampLookup(luminance) / luminance;
 
@@ -27,8 +27,8 @@ technique WorldSpaceRampBitmap
 {
     pass P0
     {
-        vertexShader = compile vs_1_1 WorldSpaceVertexShader();
-        pixelShader = compile ps_2_0 RampPixelShader();
+        vertexShader = compile vs_3_0 WorldSpaceVertexShader();
+        pixelShader = compile ps_3_0 RampPixelShader();
     }
 }
 
@@ -36,7 +36,7 @@ technique ScreenSpaceRampBitmap
 {
     pass P0
     {
-        vertexShader = compile vs_1_1 ScreenSpaceVertexShader();
-        pixelShader = compile ps_2_0 RampPixelShader();
+        vertexShader = compile vs_3_0 ScreenSpaceVertexShader();
+        pixelShader = compile ps_3_0 RampPixelShader();
     }
 }

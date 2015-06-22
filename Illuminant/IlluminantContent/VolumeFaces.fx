@@ -2,6 +2,9 @@
 #include "LightCommon.fxh"
 
 #define MAX_LIGHTS 12
+#define NUM_RAYCAST_SAMPLES 16
+#define RAYCAST_STEP (1.0 / (NUM_RAYCAST_SAMPLES + 1))
+#define MIN_STEP_PX 2
 
 uniform float3 LightPositions    [MAX_LIGHTS];
 uniform float3 LightProperties   [MAX_LIGHTS]; // ramp_start, ramp_end, exponential
@@ -34,19 +37,44 @@ void FrontFacePixelShader (
         // FIXME: What about z?
         float3 properties = LightProperties[i];
         float3 lightPosition = LightPositions[i];
+        float3 lightDirection = float3(worldPosition.xy - lightPosition.xy, 0);
+
+        // Do a stochastic raycast between the light and the wall to determine
+        //  whether the light is obstructed.
+        // FIXME: This will cause flickering for small obstructions combined
+        //  with moving lights.
+        if ((length(lightDirection) * RAYCAST_STEP) >= MIN_STEP_PX) {
+            // HACK: Start from the wall instead of the light, and step until we find a non-occluded pixel.
+            // This handles degenerate geometry like the cylinder-inside-rectangle used to construct pillars
+            //  in the test scene.
+            float castDistance = 1 - (RAYCAST_STEP * 0.5);
+            int obstructed = 0;
+            int seenUnobstructed = 0;
+            for (int j = 0; j < NUM_RAYCAST_SAMPLES; j++, castDistance -= RAYCAST_STEP) {
+                float2 terrainXy = (lightPosition.xy + (lightDirection * castDistance)) * TerrainTextureTexelSize;
+                float  terrainZ  = tex2Dgrad(TerrainTextureSampler, terrainXy, 0, 0).r;
+
+                if (terrainZ > lightPosition.z) {
+                    if (seenUnobstructed) {
+                        obstructed = 1;
+                        break;
+                    }
+                } else {
+                    seenUnobstructed = 1;
+                }
+            }
+
+            if (obstructed)
+                break;
+        }
+
         float  opacity = computeLightOpacity(worldPosition, lightPosition, properties.x, properties.y);
 
-        float3 lightDirection = normalize(float3(worldPosition.xy - lightPosition.xy, 0));
-        float  lightDotNormal = dot(-lightDirection, normal);
+        float  lightDotNormal = dot(-normalize(lightDirection), normal);
 
         // HACK: How do we get smooth ramping here without breaking pure horizontal walls?
         float dotRamp = clamp((lightDotNormal + 0.45) * 1.9, 0, 1);
         opacity *= (dotRamp * dotRamp);
-
-        /*
-        if (worldPosition.y >= lightPosition.y)
-            opacity *= 0;
-            */
 
         opacity *= lerp(1, opacity, properties.z);
         float4 lightColor = lerp(LightNeutralColors[i], LightColors[i], opacity);

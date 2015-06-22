@@ -2,6 +2,16 @@
 
 uniform float  ZDistanceScale;
 
+uniform float2 TerrainTextureTexelSize;
+
+Texture2D TerrainTexture      : register(t2);
+sampler TerrainTextureSampler : register(s2) {
+    Texture = (TerrainTexture);
+    MipFilter = LINEAR;
+    MinFilter = LINEAR;
+    MagFilter = LINEAR;
+};
+
 float computeLightOpacity(
     float3 shadedPixelPosition, float3 lightCenter,
     float rampStart, float rampEnd
