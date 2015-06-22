@@ -1,14 +1,15 @@
 #include "..\..\Upstream\Fracture\Squared\RenderLib\Content\GeometryCommon.fxh"
 #include "LightCommon.fxh"
 
-#define NUM_LIGHTS 8
+#define MAX_LIGHTS 12
 
-uniform float3 LightPositions    [NUM_LIGHTS];
-uniform float3 LightProperties   [NUM_LIGHTS]; // ramp_start, ramp_end, exponential
-uniform float4 LightNeutralColors[NUM_LIGHTS];
-uniform float4 LightColors       [NUM_LIGHTS];
+uniform float3 LightPositions    [MAX_LIGHTS];
+uniform float3 LightProperties   [MAX_LIGHTS]; // ramp_start, ramp_end, exponential
+uniform float4 LightNeutralColors[MAX_LIGHTS];
+uniform float4 LightColors       [MAX_LIGHTS];
 
 uniform float  ZToYMultiplier;
+uniform int    NumLights;
 
 void FrontFaceVertexShader (
     in    float3 position      : POSITION0, // x, y, z
@@ -29,7 +30,7 @@ void FrontFacePixelShader (
 ) {
     color = float4(0, 0, 0, 0);
 
-    for (int i = 0; i < 1; i++) {
+    for (int i = 0; i < NumLights; i++) {
         // FIXME: What about z?
         float3 properties = LightProperties[i];
         float3 lightPosition = LightPositions[i];
@@ -39,11 +40,13 @@ void FrontFacePixelShader (
         float  lightDotNormal = dot(-lightDirection, normal);
 
         // HACK: How do we get smooth ramping here without breaking pure horizontal walls?
-        float dotRamp = 1 - clamp(-lightDotNormal * 1.75, 0, 1);
-        opacity *= dotRamp;
+        float dotRamp = clamp((lightDotNormal + 0.45) * 1.9, 0, 1);
+        opacity *= (dotRamp * dotRamp);
 
+        /*
         if (worldPosition.y >= lightPosition.y)
             opacity *= 0;
+            */
 
         opacity *= lerp(1, opacity, properties.z);
         float4 lightColor = lerp(LightNeutralColors[i], LightColors[i], opacity);
@@ -71,14 +74,25 @@ void TopFacePixelShader(
 ) {
     color = float4(0, 0, 0, 0);
 
-    for (int i = 0; i < NUM_LIGHTS; i++) {
+    float3 normal = float3(0, 0, 1);
+
+    for (int i = 0; i < NumLights; i++) {
         // FIXME: What about z?
         float3 properties = LightProperties[i];
         float3 lightPosition = LightPositions[i];
         float  opacity = computeLightOpacity(worldPosition, lightPosition, properties.x, properties.y);
 
+        float3 lightDirection = normalize(float3(worldPosition.xy - lightPosition.xy, 0));
+        float  lightDotNormal = dot(-lightDirection, normal);
+
+        // HACK: How do we get smooth ramping here without breaking pure horizontal walls?
+        float dotRamp = clamp((lightDotNormal + 0.45) * 1.9, 0, 1);
+        opacity *= (dotRamp * dotRamp);
+
+        /*
         if (worldPosition.z >= lightPosition.z)
             opacity *= 0;
+            */
 
         opacity *= lerp(1, opacity, properties.z);
         float4 lightColor = lerp(LightNeutralColors[i], LightColors[i], opacity);

@@ -884,7 +884,7 @@ namespace Squared.Illuminant {
             }
         }
 
-        const int FaceMaxLights = 8;
+        const int FaceMaxLights = 12;
 
         private Vector3[] _LightPositions     = new Vector3[FaceMaxLights];
         private Vector3[] _LightProperties    = new Vector3[FaceMaxLights];
@@ -898,6 +898,7 @@ namespace Squared.Illuminant {
             p["LightProperties"]   .SetValue(_LightProperties);
             p["LightNeutralColors"].SetValue(_LightNeutralColors);
             p["LightColors"]       .SetValue(_LightColors);
+            p["NumLights"]         .SetValue(Environment.LightSources.Count);
         }
 
         private void SetTwoPointFiveDParameters (DeviceManager dm, object _) {
@@ -909,11 +910,14 @@ namespace Squared.Illuminant {
         }
 
         private int RenderTwoPointFiveD (int layerIndex, BatchGroup resultGroup) {
-            // FIXME: Support more than 8 lights
+            // FIXME: Support more than 12 lights
             // FIXME: Allow volumes to cast shadows onto other volumes?
 
             int i = 0;
             foreach (var ls in Environment.LightSources) {
+                if (i >= FaceMaxLights)
+                    break;
+
                 _LightPositions[i]     = ls.Position;
                 _LightNeutralColors[i] = ls.NeutralColor;
                 _LightColors[i]        = ls.Color;
