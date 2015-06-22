@@ -211,8 +211,9 @@ namespace Squared.Illuminant {
 
         public readonly RendererConfiguration Configuration;
 
-        const int StencilTrue = 0xFF;
-        const int StencilFalse = 0x00;
+        const bool HighPrecisionTerrain = true;
+        const int  StencilTrue  = 0xFF;
+        const int  StencilFalse = 0x00;
 
         static LightingRenderer () {
             ShadowIndices = new short[] {
@@ -238,9 +239,11 @@ namespace Squared.Illuminant {
             IlluminationBatchSetup = _IlluminationBatchSetup;
 
             lock (coordinator.CreateResourceLock) {
-                // FIXME: Not possible because XNA's surface type validation is INSANE and completely broken
-                // var fmt = SurfaceFormat.Single;
-                var fmt = SurfaceFormat.Rg32;
+                // Can't use HalfVector2 because lol, xna =[
+                SurfaceFormat fmt =
+                    HighPrecisionTerrain
+                        ? SurfaceFormat.Rg32
+                        : SurfaceFormat.Color;
 
                 _TerrainDepthmap = new RenderTarget2D(
                     coordinator.Device, Configuration.MaximumRenderSize.First, Configuration.MaximumRenderSize.Second,
