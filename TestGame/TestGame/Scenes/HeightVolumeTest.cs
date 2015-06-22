@@ -74,8 +74,8 @@ namespace TestGame.Scenes {
                 Position = new Vector2(64, 64),
                 Color = new Vector4(1f, 1f, 1f, 1),
                 Opacity = 0.9f,
-                RampStart = 60,
-                RampEnd = 600,
+                RampStart = 100,
+                RampEnd = 700,
                 RampMode = LightSourceRampMode.Exponential
             };
 

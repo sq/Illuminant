@@ -211,6 +211,7 @@ namespace Squared.Illuminant {
 
         public readonly RendererConfiguration Configuration;
 
+        const int  HeightmapResolutionMultiplier = 1;
         const bool HighPrecisionTerrain = true;
         const int  StencilTrue  = 0xFF;
         const int  StencilFalse = 0x00;
@@ -246,7 +247,9 @@ namespace Squared.Illuminant {
                         : SurfaceFormat.Color;
 
                 _TerrainDepthmap = new RenderTarget2D(
-                    coordinator.Device, Configuration.MaximumRenderSize.First, Configuration.MaximumRenderSize.Second,
+                    coordinator.Device, 
+                    Configuration.MaximumRenderSize.First * HeightmapResolutionMultiplier, 
+                    Configuration.MaximumRenderSize.Second * HeightmapResolutionMultiplier,
                     false, fmt, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.DiscardContents
                 );
             }
@@ -563,7 +566,10 @@ namespace Squared.Illuminant {
 #endif
                 mi.Effect.Parameters["RampTexture"].SetValue(ls.RampTexture);
 
-                var tsize = new Vector2(1.0f / _TerrainDepthmap.Width, 1.0f / _TerrainDepthmap.Height);
+                var tsize = new Vector2(
+                    (float)HeightmapResolutionMultiplier / _TerrainDepthmap.Width, 
+                    (float)HeightmapResolutionMultiplier / _TerrainDepthmap.Height
+                );
                 mi.Effect.Parameters["TerrainTextureTexelSize"].SetValue(tsize);
                 mi.Effect.Parameters["TerrainTexture"].SetValue(_TerrainDepthmap);
 
@@ -602,7 +608,10 @@ namespace Squared.Illuminant {
 
             device.Device.ScissorRectangle = GetScissorRectForLightSource(device, ls);
 
-            var tsize = new Vector2(1.0f / _TerrainDepthmap.Width, 1.0f / _TerrainDepthmap.Height);
+            var tsize = new Vector2(
+                (float)HeightmapResolutionMultiplier / _TerrainDepthmap.Width, 
+                (float)HeightmapResolutionMultiplier / _TerrainDepthmap.Height
+            );
             ShadowMaterialInner.Effect.Parameters["TerrainTextureTexelSize"].SetValue(tsize);
             ShadowMaterialInner.Effect.Parameters["TerrainTexture"].SetValue(_TerrainDepthmap);
         }
@@ -970,7 +979,10 @@ namespace Squared.Illuminant {
             p["LightColors"]       .SetValue(_LightColors);
             p["NumLights"]         .SetValue(_VisibleLightCount);
 
-            var tsize = new Vector2(1.0f / _TerrainDepthmap.Width, 1.0f / _TerrainDepthmap.Height);
+            var tsize = new Vector2(
+                (float)HeightmapResolutionMultiplier / _TerrainDepthmap.Width, 
+                (float)HeightmapResolutionMultiplier / _TerrainDepthmap.Height
+            );
             p["TerrainTextureTexelSize"].SetValue(tsize);
             p["TerrainTexture"].SetValue(_TerrainDepthmap);
         }
