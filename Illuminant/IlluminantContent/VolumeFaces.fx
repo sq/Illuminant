@@ -5,10 +5,12 @@
 
 // Initially step at this rate while raycasting
 #define RAYCAST_INITIAL_STEP_PX 1.0
-// Increase step rate every step
-#define RAYCAST_STEP_GROWTH_FACTOR 1.3
+// Initial growth rate of step rate
+#define RAYCAST_INITIAL_STEP_GROWTH_FACTOR 1.1
+// Growth rate increases per step also
+#define RAYCAST_STEP_GROWTH_FACTOR_GROWTH_FACTOR 1.05
 // Never step more than this many pixels at a time
-#define RAYCAST_STEP_LIMIT_PX 32
+#define RAYCAST_STEP_LIMIT_PX 24
 // Never do a raycast when the light is closer to the wall than this
 #define RAYCAST_MIN_DISTANCE_PX 5
 // If the light contribution is lower than this, don't raycast
@@ -53,16 +55,15 @@ void FrontFacePixelShader (
         lightDirection = normalize(lightDirection);
 
         float  opacity = computeLightOpacity(worldPosition, lightPosition, properties.x, properties.y);
-        
+        // Conditional exponential ramp
+        opacity *= lerp(1, opacity, properties.z);
+
         float  lightDotNormal = dot(-lightDirection, normal);
 
         // HACK: How do we get smooth ramping here without breaking pure horizontal walls?
         float dotRamp = clamp((lightDotNormal + 0.45) * 1.9, 0, 1);
         opacity *= (dotRamp * dotRamp);
 
-        opacity *= lerp(1, opacity, properties.z);
-
-        /*
         // Do a stochastic raycast between the light and the wall to determine
         //  whether the light is obstructed.
         // FIXME: This will cause flickering for small obstructions combined
@@ -74,11 +75,18 @@ void FrontFacePixelShader (
             (opacity > RAYCAST_MIN_OPACITY)
         ) {
             float raycastStepRatePx = RAYCAST_INITIAL_STEP_PX;
+            float stepGrowthFactor  = RAYCAST_INITIAL_STEP_GROWTH_FACTOR;
+
             for (float castDistance = 0; castDistance < maxDistance; castDistance += raycastStepRatePx) {
                 float3 samplePosition = (lightPosition + (lightDirection * castDistance));
-                float2  terrainZ       = sampleTerrain(samplePosition);
+                float2 terrainZ       = sampleTerrain(samplePosition);
 
-                if (terrainZ.y > samplePosition.z) {
+                // Only obstruct the ray if it passes through the interior of the height volume.
+                // This allows volumes to float above the ground and look okay.
+                if (
+                    (terrainZ.x < samplePosition.z) &&
+                    (terrainZ.y > samplePosition.z)
+                ) {
                     obstructed = 1;
                 } else if (obstructed) {
                     seenUnobstructed = 1;
@@ -88,16 +96,15 @@ void FrontFacePixelShader (
                     break;
 
                 raycastStepRatePx = clamp(
-                    raycastStepRatePx * RAYCAST_STEP_GROWTH_FACTOR,
+                    raycastStepRatePx * stepGrowthFactor,
                     1, RAYCAST_STEP_LIMIT_PX
                 );
+                stepGrowthFactor *= RAYCAST_STEP_GROWTH_FACTOR_GROWTH_FACTOR;
             }
 
             if (obstructed && seenUnobstructed)
                 opacity = 0;
         }
-
-        */
 
         float4 lightColor = lerp(LightNeutralColors[i], LightColors[i], opacity);
 
@@ -130,24 +137,21 @@ void TopFacePixelShader(
         // FIXME: What about z?
         float3 properties = LightProperties[i];
         float3 lightPosition = LightPositions[i];
-        float  opacity = computeLightOpacity(worldPosition, lightPosition, properties.x, properties.y);
 
         if (lightPosition.z < worldPosition.z)
             continue;
+
+        float  opacity = computeLightOpacity(worldPosition, lightPosition, properties.x, properties.y);
+        // Conditional exponential ramp
+        opacity *= lerp(1, opacity, properties.z);
 
         float3 lightDirection = normalize(float3(worldPosition.xy - lightPosition.xy, 0));
         float  lightDotNormal = dot(-lightDirection, normal);
 
         // HACK: How do we get smooth ramping here without breaking pure horizontal walls?
         float dotRamp = clamp((lightDotNormal + 0.45) * 1.9, 0, 1);
-        opacity *= (dotRamp * dotRamp);
+        // opacity *= (dotRamp * dotRamp);
 
-        /*
-        if (worldPosition.z >= lightPosition.z)
-            opacity *= 0;
-            */
-
-        opacity *= lerp(1, opacity, properties.z);
         float4 lightColor = lerp(LightNeutralColors[i], LightColors[i], opacity);
 
         color += lightColor;

@@ -130,7 +130,7 @@ namespace TestGame.Scenes {
             Environment.HeightVolumes.Add(new SimpleHeightVolume(
                 Polygon.FromBounds(new Bounds(
                     new Vector2((Width * 0.5f) - 32f, 0f),
-                    new Vector2((Width * 0.5f) + 32f, Height)
+                    new Vector2((Width * 0.5f) + 32f, Height * 2)
                 )),
                 0f, 0.85f
             ));

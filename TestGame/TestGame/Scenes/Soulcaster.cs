@@ -118,9 +118,9 @@ namespace TestGame.Scenes {
 
             var light = new LightSource {
                 Position = new Vector3(64, 64, 0.7f),
-                Color = new Vector4(1f, 1f, 1f, 1f) * 0.66f,
-                RampStart = 33,
-                RampEnd = 350,
+                Color = new Vector4(1f, 1f, 1f, 1f) * 0.75f,
+                RampStart = 80,
+                RampEnd = 400,
                 RampMode = LightSourceRampMode.Exponential
             };
 
@@ -131,6 +131,9 @@ namespace TestGame.Scenes {
 
             Pillar(new Vector2(97, 523));
             Pillar(new Vector2(719, 520));
+
+            // Floating cylinder
+            Ellipse(new Vector2(420, 830), 40f, 40f, 0.33f, 0.20f);
 
             Environment.ZDistanceScale = 128;
         }
