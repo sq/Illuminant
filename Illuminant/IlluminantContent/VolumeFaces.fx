@@ -5,6 +5,7 @@
 
 #define EXPONENTIAL                1
 #define TOP_FACE_DOT_RAMP          0
+#define TOP_FACE_RAYCAST_SHADOWS   1
 #define FRONT_FACE_DOT_RAMP        1
 #define FRONT_FACE_RAYCAST_SHADOWS 1
 
@@ -41,6 +42,58 @@ void FrontFaceVertexShader (
     result.z = position.z;
 }
 
+float ComputeRaycastedShadowOpacity (
+    float3 lightPosition, float3 worldPosition, float opacity
+) {
+    float3 lightDirection = worldPosition - lightPosition;
+    float maxDistance = length(lightDirection);
+    lightDirection = normalize(lightDirection);
+
+    // Do a stochastic raycast between the light and the wall to determine
+    //  whether the light is obstructed.
+    // FIXME: This will cause flickering for small obstructions combined
+    //  with moving lights.
+    int seenUnobstructed = 0, obstructed = 0;
+    if (
+        (maxDistance >= RAYCAST_MIN_DISTANCE_PX) &&
+        (lightPosition.y > worldPosition.y) &&
+        (opacity > RAYCAST_MIN_OPACITY)
+    ) {
+        float raycastStepRatePx = RAYCAST_INITIAL_STEP_PX;
+        float stepGrowthFactor = RAYCAST_INITIAL_STEP_GROWTH_FACTOR;
+
+        for (float castDistance = 0; castDistance < maxDistance; castDistance += raycastStepRatePx) {
+            float3 samplePosition = (lightPosition + (lightDirection * castDistance));
+            float2 terrainZ = sampleTerrain(samplePosition);
+
+            // Only obstruct the ray if it passes through the interior of the height volume.
+            // This allows volumes to float above the ground and look okay.
+            if (
+                (terrainZ.x < samplePosition.z) &&
+                (terrainZ.y > samplePosition.z)
+            ) {
+                obstructed = 1;
+            } else if (obstructed) {
+                seenUnobstructed = 1;
+            }
+
+            if (obstructed && seenUnobstructed)
+                break;
+
+            raycastStepRatePx = clamp(
+                raycastStepRatePx * stepGrowthFactor,
+                1, RAYCAST_STEP_LIMIT_PX
+            );
+            stepGrowthFactor *= RAYCAST_STEP_GROWTH_FACTOR_GROWTH_FACTOR;
+        }
+
+        if (obstructed && seenUnobstructed)
+            opacity = 0;
+    }
+
+    return opacity;
+}
+
 void FrontFacePixelShader (
     inout float4 color : COLOR0,
     in    float3 normal : NORMAL0,
@@ -74,47 +127,7 @@ void FrontFacePixelShader (
 #endif
 
 #if FRONT_FACE_RAYCAST_SHADOWS        
-        // Do a stochastic raycast between the light and the wall to determine
-        //  whether the light is obstructed.
-        // FIXME: This will cause flickering for small obstructions combined
-        //  with moving lights.
-        int seenUnobstructed = 0, obstructed = 0;
-        if (
-            (maxDistance >= RAYCAST_MIN_DISTANCE_PX) &&
-            (lightPosition.y > worldPosition.y) &&
-            (opacity > RAYCAST_MIN_OPACITY)
-        ) {
-            float raycastStepRatePx = RAYCAST_INITIAL_STEP_PX;
-            float stepGrowthFactor  = RAYCAST_INITIAL_STEP_GROWTH_FACTOR;
-
-            for (float castDistance = 0; castDistance < maxDistance; castDistance += raycastStepRatePx) {
-                float3 samplePosition = (lightPosition + (lightDirection * castDistance));
-                float2 terrainZ       = sampleTerrain(samplePosition);
-
-                // Only obstruct the ray if it passes through the interior of the height volume.
-                // This allows volumes to float above the ground and look okay.
-                if (
-                    (terrainZ.x < samplePosition.z) &&
-                    (terrainZ.y > samplePosition.z)
-                ) {
-                    obstructed = 1;
-                } else if (obstructed) {
-                    seenUnobstructed = 1;
-                }
-
-                if (obstructed && seenUnobstructed)
-                    break;
-
-                raycastStepRatePx = clamp(
-                    raycastStepRatePx * stepGrowthFactor,
-                    1, RAYCAST_STEP_LIMIT_PX
-                );
-                stepGrowthFactor *= RAYCAST_STEP_GROWTH_FACTOR_GROWTH_FACTOR;
-            }
-
-            if (obstructed && seenUnobstructed)
-                opacity = 0;
-        }
+        opacity = ComputeRaycastedShadowOpacity(lightPosition, worldPosition, opacity);
 #endif
 
         float4 lightColor = lerp(LightNeutralColors[i], LightColors[i], opacity);
@@ -164,6 +177,10 @@ void TopFacePixelShader(
         // HACK: How do we get smooth ramping here without breaking pure horizontal walls?
         float dotRamp = clamp((lightDotNormal + 0.45) * 1.9, 0, 1);
         opacity *= (dotRamp * dotRamp);
+#endif
+
+#if TOP_FACE_RAYCAST_SHADOWS        
+        opacity = ComputeRaycastedShadowOpacity(lightPosition, worldPosition, opacity);
 #endif
 
         float4 lightColor = lerp(LightNeutralColors[i], LightColors[i], opacity);
