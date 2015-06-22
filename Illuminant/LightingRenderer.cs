@@ -65,18 +65,25 @@ namespace Squared.Illuminant {
             private ShadowVertex[] VertexBuffer;
             private short[] IndexBuffer;
 
-            public void Write (LightPosition a, LightPosition b) {
+            public void Write (
+                Vector2 a, Vector2 aHeights,
+                Vector2 b, Vector2 bHeights
+            ) {
                 ShadowVertex vertex;
                 int vertexOffset = _Count * 4;
                 int indexOffset = _Count * 6;
 
-                vertex.Position = a;
+                vertex.Position = new Vector3(a, aHeights.Y);
+                vertex.MinZ = aHeights.X;
+
                 vertex.PairIndex = 0;
                 VertexBuffer[vertexOffset + 0] = vertex;
                 vertex.PairIndex = 1;
                 VertexBuffer[vertexOffset + 1] = vertex;
 
-                vertex.Position = b;
+                vertex.Position = new Vector3(b, bHeights.Y);
+                vertex.MinZ = bHeights.X;
+
                 vertex.PairIndex = 0;
                 VertexBuffer[vertexOffset + 2] = vertex;
                 vertex.PairIndex = 1;
@@ -115,12 +122,11 @@ namespace Squared.Illuminant {
             public GeometryBatch Batch;
             public Color Color;
 
-            public void Write (LightPosition a, LightPosition b) {
-                Batch.AddLine(
-                    (Vector2)a, 
-                    (Vector2)b, 
-                    Color
-                );
+            public void Write (
+                Vector2 a, Vector2 aHeights,
+                Vector2 b, Vector2 bHeights
+            ) {
+                Batch.AddLine(a, b, Color);
             }
         }
 

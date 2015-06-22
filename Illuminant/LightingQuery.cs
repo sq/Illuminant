@@ -36,16 +36,18 @@ namespace Squared.Illuminant {
         }
 
         private struct DeltaLine {
-            public readonly float X1, Y1, Z1;
-            public readonly float LengthX, LengthY, LengthZ;
+            public readonly float X1, Y1;
+            public readonly float LengthX, LengthY;
 
-            public DeltaLine (LightPosition a, LightPosition b) {
+            public DeltaLine (
+                Vector2 a, Vector2 aHeights,
+                Vector2 b, Vector2 bHeights
+            ) {
+                // FIXME: Is this right?
                 X1 = a.X;
                 Y1 = a.Y;
-                Z1 = a.Z;
                 LengthX = b.X - a.X;
                 LengthY = b.Y - a.Y;
-                LengthZ = b.Z - a.Z;
             }
         }
 
@@ -58,11 +60,18 @@ namespace Squared.Illuminant {
                 CropBounds = null;
             }
 
-            public void Write (LightPosition a, LightPosition b) {
-                if (CropBounds.HasValue && Geometry.DoesLineIntersectCube(a, b, CropBounds.Value))
+            public void Write (
+                Vector2 a, Vector2 aHeights,
+                Vector2 b, Vector2 bHeights
+            ) {
+                // FIXME: This is probably wrong.
+                Vector3 _a = new Vector3(a, aHeights.Y);
+                Vector3 _b = new Vector3(b, bHeights.Y);
+
+                if (CropBounds.HasValue && Geometry.DoesLineIntersectCube(_a, _b, CropBounds.Value))
                     return;
 
-                Lines.Add(new DeltaLine(a, b));
+                Lines.Add(new DeltaLine(a, aHeights, b, bHeights));
             }
 
             public void CopyTo (DeltaLine[] buffer, int offset, int count) {
@@ -264,18 +273,21 @@ namespace Squared.Illuminant {
             Vector3 startA, Vector3 endA, 
             ArraySegment<DeltaLine> lines
         ) {
+            var _startA = new Vector2(startA.X, startA.Y);
+            var _endA   = new Vector2(endA.X, endA.Y);
+
             for (int i = 0, l = lines.Count; i < l; i++) {
                 var line = lines.Array[i + lines.Offset];
 
                 // FIXME: Unoptimized
+                // FIXME: Handle MinZ/MaxZ
                 if (
                     Geometry.DoLinesIntersect(
-                        startA, endA,
-                        new Vector3(line.X1, line.Y1, line.Z1),
-                        new Vector3(
+                        _startA, _endA,
+                        new Vector2(line.X1, line.Y1),
+                        new Vector2(
                             line.X1 + line.LengthX,
-                            line.Y1 + line.LengthY,
-                            line.Z1 + line.LengthZ
+                            line.Y1 + line.LengthY
                         )
                     )
                 )

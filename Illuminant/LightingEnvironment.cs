@@ -119,18 +119,21 @@ namespace Squared.Illuminant {
 
     public class CroppedListLineWriter : ILineWriter {
         public struct Line {
-            public readonly LightPosition A, B;
+            public readonly Vector2 A, B;
+            public readonly Vector2 AHeights, BHeights;
 
-            public Line (LightPosition a, LightPosition b) {
+            public Line (Vector2 a, Vector2 aHeights, Vector2 b, Vector2 bHeights) {
                 A = a; 
                 B = b;
+                AHeights = aHeights;
+                BHeights = bHeights;
             }
         }
 
         public Bounds? CropBounds;
         public readonly UnorderedList<Line> Lines = new UnorderedList<Line>();
 
-        public void Write (LightPosition a, LightPosition b) {
+        public void Write (Vector2 a, Vector2 aHeights, Vector2 b, Vector2 bHeights) {
             if (CropBounds.HasValue) {
                 // constructor doesn't get inlined here :(
                 Bounds lineBounds;
@@ -143,7 +146,7 @@ namespace Squared.Illuminant {
                     return;
             }
 
-            Lines.Add(new Line(a, b));
+            Lines.Add(new Line(a, aHeights, b, bHeights));
         }
 
         public void Reset () {
@@ -161,8 +164,15 @@ namespace Squared.Illuminant {
             FoundIntersection = false;
         }
 
-        public void Write (LightPosition a, LightPosition b) {
-            FoundIntersection |= Geometry.DoLinesIntersect(a, b, LightPosition, ReceiverPosition);
+        public void Write (
+            Vector2 a, Vector2 aHeights,
+            Vector2 b, Vector2 bHeights
+        ) {
+            // FIXME: This is probably wrong
+            var _a = new Vector3(a, aHeights.Y);
+            var _b = new Vector3(b, bHeights.Y);
+
+            FoundIntersection |= Geometry.DoLinesIntersect(_a, _b, LightPosition, ReceiverPosition);
         }
     }
 }

@@ -74,12 +74,14 @@ namespace Squared.Illuminant {
             if (!IsObstruction) 
                 return;
 
+            var heights = new Vector2(ZBase, ZBase + Height);
+
             for (var i = 0; i < Polygon.Count; i++) {
                 var e = Polygon.GetEdge(i);
 
                 output.Write(
-                    new LightPosition(e.Start.X, e.Start.Y, ZBase + Height),
-                    new LightPosition(e.End.X, e.End.Y, ZBase + Height)
+                    e.Start, heights,
+                    e.End, heights
                 );
             }
         }

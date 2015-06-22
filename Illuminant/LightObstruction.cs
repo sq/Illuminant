@@ -7,7 +7,10 @@ using Squared.Game;
 
 namespace Squared.Illuminant {
     public interface ILineWriter {
-        void Write (LightPosition a, LightPosition b);
+        void Write (
+            Vector2 a, Vector2 aHeights,
+            Vector2 b, Vector2 bHeights
+        );
     }
 
     public abstract class LightObstructionBase : IHasBounds {
@@ -38,7 +41,9 @@ namespace Squared.Illuminant {
         }
 
         public override void GenerateLines (ILineWriter output) {
-            output.Write(A, B);
+            var aHeights = new Vector2(0, A.Z);
+            var bHeights = new Vector2(0, B.Z);
+            output.Write((Vector2)A, aHeights, (Vector2)B, bHeights);
         }
 
         public override int LineCount {
@@ -81,8 +86,17 @@ namespace Squared.Illuminant {
         }
 
         public override void GenerateLines (ILineWriter output) {
-            for (var i = 1; i < Points.Length; i++)
-                output.Write(Points[i - 1], Points[i]);
+            for (var i = 1; i < Points.Length; i++) {
+                var a = Points[i - 1];
+                var aHeights = new Vector2(0, a.Z);
+                var b = Points[i];
+                var bHeights = new Vector2(0, b.Z);
+
+                output.Write(
+                    (Vector2)a, aHeights,
+                    (Vector2)b, bHeights
+                );
+            }
         }
 
         public override int LineCount {
