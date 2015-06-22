@@ -2,9 +2,17 @@
 #include "LightCommon.fxh"
 
 #define MAX_LIGHTS 12
-#define NUM_RAYCAST_SAMPLES 16
-#define RAYCAST_STEP (1.0 / (NUM_RAYCAST_SAMPLES + 1))
-#define MIN_STEP_PX 2
+
+// Initially step at this rate while raycasting
+#define RAYCAST_INITIAL_STEP_PX 1.0
+// Increase step rate every step
+#define RAYCAST_STEP_GROWTH_FACTOR 1.3
+// Never step more than this many pixels at a time
+#define RAYCAST_STEP_LIMIT_PX 32
+// Never do a raycast when the light is closer to the wall than this
+#define RAYCAST_MIN_DISTANCE_PX 5
+// If the light contribution is lower than this, don't raycast
+#define RAYCAST_MIN_OPACITY (1.0 / 255) * 4
 
 uniform float3 LightPositions    [MAX_LIGHTS];
 uniform float3 LightProperties   [MAX_LIGHTS]; // ramp_start, ramp_end, exponential
@@ -37,46 +45,55 @@ void FrontFacePixelShader (
         // FIXME: What about z?
         float3 properties = LightProperties[i];
         float3 lightPosition = LightPositions[i];
-        float3 lightDirection = float3(worldPosition.xy - lightPosition.xy, 0);
+        float3 lightDirection = worldPosition - lightPosition;
 
-        // Do a stochastic raycast between the light and the wall to determine
-        //  whether the light is obstructed.
-        // FIXME: This will cause flickering for small obstructions combined
-        //  with moving lights.
-        if ((length(lightDirection) * RAYCAST_STEP) >= MIN_STEP_PX) {
-            // HACK: Start from the wall instead of the light, and step until we find a non-occluded pixel.
-            // This handles degenerate geometry like the cylinder-inside-rectangle used to construct pillars
-            //  in the test scene.
-            float castDistance = 1 - (RAYCAST_STEP * 0.5);
-            int obstructed = 0;
-            int seenUnobstructed = 0;
-            for (int j = 0; j < NUM_RAYCAST_SAMPLES; j++, castDistance -= RAYCAST_STEP) {
-                float2 terrainXy = (lightPosition.xy + (lightDirection * castDistance)) * TerrainTextureTexelSize;
-                float  terrainZ  = tex2Dgrad(TerrainTextureSampler, terrainXy, 0, 0).r;
-
-                if (terrainZ > lightPosition.z) {
-                    if (seenUnobstructed) {
-                        obstructed = 1;
-                        break;
-                    }
-                } else {
-                    seenUnobstructed = 1;
-                }
-            }
-
-            if (obstructed)
-                break;
-        }
+        float maxDistance = length(lightDirection);
+        lightDirection = normalize(lightDirection);
 
         float  opacity = computeLightOpacity(worldPosition, lightPosition, properties.x, properties.y);
 
-        float  lightDotNormal = dot(-normalize(lightDirection), normal);
+        float  lightDotNormal = dot(-lightDirection, normal);
 
         // HACK: How do we get smooth ramping here without breaking pure horizontal walls?
         float dotRamp = clamp((lightDotNormal + 0.45) * 1.9, 0, 1);
         opacity *= (dotRamp * dotRamp);
 
         opacity *= lerp(1, opacity, properties.z);
+
+        // Do a stochastic raycast between the light and the wall to determine
+        //  whether the light is obstructed.
+        // FIXME: This will cause flickering for small obstructions combined
+        //  with moving lights.
+        int seenUnobstructed = 0, obstructed = 0;
+        if (
+            (maxDistance >= RAYCAST_MIN_DISTANCE_PX) &&
+            (lightPosition.y > worldPosition.y) &&
+            (opacity > RAYCAST_MIN_OPACITY)
+        ) {
+            float raycastStepRatePx = RAYCAST_INITIAL_STEP_PX;
+            for (float castDistance = 0; castDistance < maxDistance; castDistance += raycastStepRatePx) {
+                float3 samplePosition = (lightPosition + (lightDirection * castDistance));
+                    float  terrainZ = tex2Dgrad(TerrainTextureSampler, samplePosition.xy * TerrainTextureTexelSize, 0, 0).r;
+
+                if (terrainZ > samplePosition.z) {
+                    obstructed = 1;
+                } else if (obstructed) {
+                    seenUnobstructed = 1;
+                }
+
+                if (obstructed && seenUnobstructed)
+                    break;
+
+                raycastStepRatePx = clamp(
+                    raycastStepRatePx * RAYCAST_STEP_GROWTH_FACTOR,
+                    1, RAYCAST_STEP_LIMIT_PX
+                    );
+            }
+
+            if (obstructed && seenUnobstructed)
+                opacity = 0;
+        }
+
         float4 lightColor = lerp(LightNeutralColors[i], LightColors[i], opacity);
 
         color += lightColor;
