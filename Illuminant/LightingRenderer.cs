@@ -974,7 +974,6 @@ namespace Squared.Illuminant {
 
         private int RenderTwoPointFiveD (int layerIndex, BatchGroup resultGroup) {
             // FIXME: Support more than 12 lights
-            // FIXME: Allow volumes to cast shadows onto other volumes?
 
             int i = 0;
             foreach (var ls in Environment.LightSources) {

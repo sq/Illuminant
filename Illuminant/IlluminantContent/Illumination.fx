@@ -130,11 +130,16 @@ void PointLightPixelShaderExponentialRampTexture(
 void ShadowVertexShader(
     in float3  position  : POSITION0,
     in float   pairIndex : BLENDINDICES,
-    out float2 z         : TEXCOORD0,
+    in float   minZ      : TEXCOORD0,
+    out float4 z         : TEXCOORD0,
     out float4 result    : POSITION0
 ) {
+    float3 deltaMin = (float3(position.xy, minZ) - LightCenter);
     float3 delta = (position - LightCenter);
+
+    float3 directionMin = normalize(deltaMin);
     float3 direction = normalize(delta);
+
     float3 shadowLengthScaled = float3(ShadowLength.x, ShadowLength.x, ShadowLength.x);
 
     if (pairIndex == 0) {
@@ -142,6 +147,7 @@ void ShadowVertexShader(
     }
 
     float3 untransformed = position + (direction * shadowLengthScaled);
+    float  untransformedMinZ = minZ + (directionMin.z * shadowLengthScaled.z);
 
     float3 directionSign = sign(direction);
     float4 fillruleOffset = float4(
@@ -153,44 +159,39 @@ void ShadowVertexShader(
     );
 
     float4 transformed = ApplyTransform(untransformed + fillruleOffset);
+
     // FIXME: Why do I have to strip Z????
     result = float4(transformed.x, transformed.y, 0, transformed.w);
 
-    z = float2(position.z, untransformed.z);
+    z = float4(
+        minZ, position.z, untransformedMinZ, untransformed.z
+    );
 }
 
 void ShadowPixelShader(
-    in  float2 _z        : TEXCOORD0,
+    // startMinZ, startMaxZ, endMinZ, endMaxZ
+    in  float4 _z        : TEXCOORD0,
     in  float2 vpos      : VPOS,
     out float4 color     : COLOR0
 ) {
-    float startZ = _z.x;
-    float endZ   = _z.y + SHADOW_DEPTH_BIAS;
-
-    float2 terrainZ = sampleTerrain(vpos);
-
-    // this is a hack to ensure the portion of the shadow directly beneath
-    //  a floating height volume is still shadowed
-
-    // Is this pixel of the shadow ray underneath the height volume that cast the shadow?
-    int isDirectlyBeneathFloatingVolume = (startZ >= terrainZ.x);
-
-    // Is this pixel of the shadow ray beneath the terrain, and thus invisible?
-    int isBeneathTerrain                = (endZ <= terrainZ.y);
-
-    // Is this pixel lit due to foreshortening of the front side of the height volume?
-    int isForeshortened                 = (endZ < terrainZ.x);
+    float startMinZ = _z.x;
+    float startMaxZ = _z.y;
+    float endMinZ   = _z.z;
+    float endMaxZ   = _z.w + SHADOW_DEPTH_BIAS;
 
     /*
-    if (isForeshortened)
+    // If the light is below the obstruction, discard the shadow pixel
+    if (LightCenter.z < startMinZ)
         discard;
     */
 
-    if (isDirectlyBeneathFloatingVolume) {
-    } else {
-        if (isBeneathTerrain)
-            discard;
-    }
+    float2 terrainZ = sampleTerrain(vpos);
+
+    // Is this shadow pixel beneath the visible surface, and thus useless?
+    int isBeneathVisibleSurface = (endMaxZ < terrainZ.y);
+
+    if (isBeneathVisibleSurface)
+        discard;
 
     color = float4(1, 1, 1, 0);
 }
