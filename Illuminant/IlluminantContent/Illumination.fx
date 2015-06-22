@@ -42,13 +42,13 @@ float PointLightPixelCore(
 ) {
     float2 terrainZ = sampleTerrain(vpos);
 
-    /*
-    if (lightCenter.z < terrainZ.y)
-        discard;
-    */
+    float shadedZ = terrainZ.y;
+
+    if ((lightCenter.z < terrainZ.x) && (lightCenter.z < terrainZ.y))
+        shadedZ = GroundZ;
 
     // FIXME: What about z?
-    float3 shadedPixelPosition = float3(worldPosition.xy, terrainZ.y);
+    float3 shadedPixelPosition = float3(worldPosition.xy, shadedZ);
     return computeLightOpacity(shadedPixelPosition, lightCenter, ramp.x, ramp.y);
 }
 

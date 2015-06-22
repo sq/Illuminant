@@ -1,7 +1,8 @@
 #include "RampCommon.fxh"
 
-uniform float  ZDistanceScale;
-uniform float  ZToYMultiplier;
+uniform float GroundZ;
+uniform float ZDistanceScale;
+uniform float ZToYMultiplier;
 
 uniform float2 TerrainTextureTexelSize;
 

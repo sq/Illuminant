@@ -564,6 +564,7 @@ namespace Squared.Illuminant {
                 mi.Effect.Parameters["TerrainTextureTexelSize"].SetValue(tsize);
                 mi.Effect.Parameters["TerrainTexture"].SetValue(_TerrainDepthmap);
 
+                mi.Effect.Parameters["GroundZ"].SetValue(Environment.GroundZ);
                 mi.Effect.Parameters["ZDistanceScale"].SetValue(Environment.ZDistanceScale);
                 mi.Effect.Parameters["ZToYMultiplier"].SetValue(
                     Configuration.TwoPointFiveD
@@ -572,6 +573,7 @@ namespace Squared.Illuminant {
                 );
             }
 
+            ShadowMaterialInner.Effect.Parameters["GroundZ"].SetValue(Environment.GroundZ);
             ShadowMaterialInner.Effect.Parameters["ZDistanceScale"].SetValue(Environment.ZDistanceScale);
             ShadowMaterialInner.Effect.Parameters["ZToYMultiplier"].SetValue(
                 Configuration.TwoPointFiveD
@@ -952,6 +954,7 @@ namespace Squared.Illuminant {
         private Vector4[] _LightColors        = new Vector4[FaceMaxLights];
 
         private void SetTwoPointFiveDParametersInner (EffectParameterCollection p) {
+            p["GroundZ"]           .SetValue(Environment.GroundZ);
             p["ZDistanceScale"]    .SetValue(Environment.ZDistanceScale);
             p["ZToYMultiplier"]    .SetValue(
                 Configuration.TwoPointFiveD

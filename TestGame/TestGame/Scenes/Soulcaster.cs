@@ -26,8 +26,8 @@ namespace TestGame.Scenes {
         Texture2D Background;
         float LightZ;
 
-        bool ShowOutlines = false;
         bool ShowTerrainDepth = false;
+        bool ShowLightmap = false;
 
         public SoulcasterTest (TestGame game, int width, int height)
             : base(game, 1024, 1024) {
@@ -169,45 +169,53 @@ namespace TestGame.Scenes {
 
             ClearBatch.AddNew(frame, 0, Game.ScreenMaterials.Clear, clearColor: Color.Black);
 
-            using (var bb = BitmapBatch.New(
-                frame, 1,
-                Game.ScreenMaterials.Get(Game.ScreenMaterials.ScreenSpaceBitmap, blendState: BlendState.Opaque),
-                samplerState: SamplerState.PointClamp
-            ))
-                bb.Add(new BitmapDrawCall(
-                    Background, Vector2.Zero
-                ));
+            if (ShowLightmap) {
+                using (var bb = BitmapBatch.New(
+                    frame, 1,
+                    Game.ScreenMaterials.Get(Game.ScreenMaterials.ScreenSpaceBitmap, blendState: BlendState.Opaque),
+                    samplerState: SamplerState.PointClamp
+                ))
+                    bb.Add(new BitmapDrawCall(
+                        Lightmap, Vector2.Zero
+                    ));
+            } else {
+                using (var bb = BitmapBatch.New(
+                    frame, 1,
+                    Game.ScreenMaterials.Get(Game.ScreenMaterials.ScreenSpaceBitmap, blendState: BlendState.Opaque),
+                    samplerState: SamplerState.PointClamp
+                ))
+                    bb.Add(new BitmapDrawCall(
+                        Background, Vector2.Zero
+                    ));
 
-            using (var bb = BitmapBatch.New(
-                frame, 2,
-                Game.ScreenMaterials.Get(
-                    ShowTerrainDepth
-                        ? Game.ScreenMaterials.ScreenSpaceBitmap
-                        : Game.ScreenMaterials.ScreenSpaceLightmappedBitmap,
-                    blendState: BlendState.AlphaBlend
-                ),
-                samplerState: SamplerState.PointClamp
-            )) {
-                var dc = new BitmapDrawCall(
-                    ShowTerrainDepth
-                        ? Renderer.TerrainDepthmap
-                        : Background,
-                    Vector2.Zero, Color.White * (ShowTerrainDepth ? 0.7f : 1.0f)
-                );
-                dc.Textures = new TextureSet(dc.Textures.Texture1, Lightmap);
-                bb.Add(dc);
+                using (var bb = BitmapBatch.New(
+                    frame, 2,
+                    Game.ScreenMaterials.Get(
+                        ShowTerrainDepth
+                            ? Game.ScreenMaterials.ScreenSpaceBitmap
+                            : Game.ScreenMaterials.ScreenSpaceLightmappedBitmap,
+                        blendState: BlendState.AlphaBlend
+                    ),
+                    samplerState: SamplerState.PointClamp
+                )) {
+                    var dc = new BitmapDrawCall(
+                        ShowTerrainDepth
+                            ? Renderer.TerrainDepthmap
+                            : Background,
+                        Vector2.Zero, Color.White * (ShowTerrainDepth ? 0.7f : 1.0f)
+                    );
+                    dc.Textures = new TextureSet(dc.Textures.Texture1, Lightmap);
+                    bb.Add(dc);
+                }
             }
-
-            if (ShowOutlines)
-                Renderer.RenderOutlines(frame, 2, true);
         }
 
         public override void Update (GameTime gameTime) {
             if (Game.IsActive) {
                 const float step = 0.1f;
 
-                if (KeyWasPressed(Keys.O))
-                    ShowOutlines = !ShowOutlines;
+                if (KeyWasPressed(Keys.L))
+                    ShowLightmap = !ShowLightmap;
 
                 if (KeyWasPressed(Keys.T))
                     ShowTerrainDepth = !ShowTerrainDepth;
@@ -216,8 +224,13 @@ namespace TestGame.Scenes {
                 Game.IsMouseVisible = true;
 
                 var t = (float)gameTime.TotalGameTime.TotalSeconds * 0.3f;
+                t = 0;
+
                 LightZ = (ms.ScrollWheelValue / 1024.0f) + 
                     Squared.Util.Arithmetic.PulseExp(t, 0, 0.3f);
+
+                if (LightZ < 0)
+                    LightZ = 0;
 
                 var mousePos = new Vector3(ms.X, ms.Y, LightZ);
 
