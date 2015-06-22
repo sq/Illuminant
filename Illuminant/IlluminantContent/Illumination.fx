@@ -64,8 +64,7 @@ void PointLightPixelShaderLinear(
         worldPosition, lightCenter, ramp, vpos
     );
 
-    float opacity = color.a;
-    float4 lightColorActual = float4(color.r * opacity, color.g * opacity, color.b * opacity, opacity);
+    float4 lightColorActual = float4(color.rgb * color.a, color.a);
     result = lerp(LightNeutralColor, lightColorActual, distanceOpacity);
 }
 
@@ -83,8 +82,7 @@ void PointLightPixelShaderExponential(
 
     distanceOpacity *= distanceOpacity;
 
-    float opacity = color.a;
-    float4 lightColorActual = float4(color.r * opacity, color.g * opacity, color.b * opacity, opacity);
+    float4 lightColorActual = float4(color.rgb * color.a, color.a);
     result = lerp(LightNeutralColor, lightColorActual, distanceOpacity);
 }
 
@@ -102,8 +100,7 @@ void PointLightPixelShaderLinearRampTexture(
 
     distanceOpacity = RampLookup(distanceOpacity);
 
-    float opacity = color.a;
-    float4 lightColorActual = float4(color.r * opacity, color.g * opacity, color.b * opacity, opacity);
+    float4 lightColorActual = float4(color.rgb * color.a, color.a);
     result = lerp(LightNeutralColor, lightColorActual, distanceOpacity);
 }
 
@@ -122,8 +119,7 @@ void PointLightPixelShaderExponentialRampTexture(
     distanceOpacity *= distanceOpacity;
     distanceOpacity = RampLookup(distanceOpacity);
 
-    float opacity = color.a;
-    float4 lightColorActual = float4(color.r * opacity, color.g * opacity, color.b * opacity, opacity);
+    float4 lightColorActual = float4(color.rgb * color.a, color.a);
     result = lerp(LightNeutralColor, lightColorActual, distanceOpacity);
 }
 
@@ -143,6 +139,9 @@ void ShadowVertexShader(
     float3 shadowLengthScaled = float3(ShadowLength.x, ShadowLength.x, ShadowLength.x);
 
     if (pairIndex == 0) {
+        shadowLengthScaled = float3(0, 0, 0);
+    } else if (minZ > LightCenter.z) {
+        // Discard upward shadow volumes
         shadowLengthScaled = float3(0, 0, 0);
     }
 
@@ -178,12 +177,6 @@ void ShadowPixelShader(
     float startMaxZ = _z.y;
     float endMinZ   = _z.z;
     float endMaxZ   = _z.w + SHADOW_DEPTH_BIAS;
-
-    /*
-    // If the light is below the obstruction, discard the shadow pixel
-    if (LightCenter.z < startMinZ)
-        discard;
-    */
 
     float2 terrainZ = sampleTerrain(vpos);
 

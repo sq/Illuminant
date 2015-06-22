@@ -22,9 +22,10 @@ namespace TestGame.Scenes {
 
         public readonly List<LightSource> Lights = new List<LightSource>();
 
-        bool ShowOutlines = true;
-        bool ShowTerrainDepth = false;
-        bool TwoPointFiveD = false;
+        bool ShowOutlines       = false;
+        bool ShowTerrainDepth   = false;
+        bool TwoPointFiveD      = false;
+        bool ShowRotatingLights = false;
 
         float LightZ = 0;
 
@@ -189,6 +190,9 @@ namespace TestGame.Scenes {
                 if (KeyWasPressed(Keys.D2))
                     TwoPointFiveD = !TwoPointFiveD;
 
+                if (KeyWasPressed(Keys.R))
+                    ShowRotatingLights = !ShowRotatingLights;
+
                 var ms = Mouse.GetState();
                 Game.IsMouseVisible = true;
 
@@ -218,6 +222,7 @@ namespace TestGame.Scenes {
                         (float)Math.Sin(angle + offset) * localRadius,
                         zFromRadius
                     );
+                    Lights[i].Color.W = ShowRotatingLights ? 1.0f : 0.0f;
                 }
             }
         }

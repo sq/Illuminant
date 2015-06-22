@@ -930,12 +930,17 @@ namespace Squared.Illuminant {
 
             var posXy = new Vector2(ls.Position.X, ls.Position.Y);
 
-            return Environment.HeightVolumes.Any(
+            var isEnclosed = Environment.HeightVolumes.Any(
                 hv => 
                     (hv.ZBase <= ls.Position.Z) &&
                     ((hv.ZBase + hv.Height) >= ls.Position.Z) &&
                     Geometry.PointInPolygon(posXy, hv.Polygon)
             );
+
+            if (isEnclosed)
+                return true;
+
+            return false;
         }
 
         const int FaceMaxLights = 12;

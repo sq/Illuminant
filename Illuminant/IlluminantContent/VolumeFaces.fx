@@ -3,6 +3,11 @@
 
 #define MAX_LIGHTS 12
 
+#define EXPONENTIAL                1
+#define TOP_FACE_DOT_RAMP          0
+#define FRONT_FACE_DOT_RAMP        1
+#define FRONT_FACE_RAYCAST_SHADOWS 1
+
 // Initially step at this rate while raycasting
 #define RAYCAST_INITIAL_STEP_PX 1.0
 // Initial growth rate of step rate
@@ -42,8 +47,8 @@ void FrontFacePixelShader (
     in    float2 zRange : TEXCOORD0,
     in    float3 worldPosition: TEXCOORD1
 ) {
-    color = float4(0, 0, 0, 0);
-    
+    float3 accumulator = float3(0, 0, 0);
+
     for (int i = 0; i < NumLights; i++) {
         // FIXME: What about z?
         float3 properties = LightProperties[i];
@@ -54,15 +59,21 @@ void FrontFacePixelShader (
         lightDirection = normalize(lightDirection);
 
         float  opacity = computeLightOpacity(worldPosition, lightPosition, properties.x, properties.y);
+
+#if EXPONENTIAL
         // Conditional exponential ramp
         opacity *= lerp(1, opacity, properties.z);
+#endif
 
+#if FRONT_FACE_DOT_RAMP
         float  lightDotNormal = dot(-lightDirection, normal);
 
         // HACK: How do we get smooth ramping here without breaking pure horizontal walls?
-        float dotRamp = clamp((lightDotNormal + 0.45) * 1.9, 0, 1);
-        opacity *= (dotRamp * dotRamp);
+        float dotRamp = clamp((lightDotNormal + 0.5) * 2, 0, 1);
+        opacity *= dotRamp;
+#endif
 
+#if FRONT_FACE_RAYCAST_SHADOWS        
         // Do a stochastic raycast between the light and the wall to determine
         //  whether the light is obstructed.
         // FIXME: This will cause flickering for small obstructions combined
@@ -104,13 +115,13 @@ void FrontFacePixelShader (
             if (obstructed && seenUnobstructed)
                 opacity = 0;
         }
+#endif
 
         float4 lightColor = lerp(LightNeutralColors[i], LightColors[i], opacity);
-
-        color += lightColor;
+        accumulator += lightColor.rgb * lightColor.a;
     }
 
-    color.a = 1.0f;
+    color = float4(accumulator, 1.0);
 }
 
 void TopFaceVertexShader(
@@ -128,9 +139,8 @@ void TopFacePixelShader(
     inout float4 color : COLOR0,
     in    float3 worldPosition : TEXCOORD0
 ) {
-    color = float4(0, 0, 0, 0);
-
     float3 normal = float3(0, 0, 1);
+    float3 accumulator = float3(0, 0, 0);
 
     for (int i = 0; i < NumLights; i++) {
         // FIXME: What about z?
@@ -141,22 +151,26 @@ void TopFacePixelShader(
             continue;
 
         float  opacity = computeLightOpacity(worldPosition, lightPosition, properties.x, properties.y);
+
+#if EXPONENTIAL
         // Conditional exponential ramp
         opacity *= lerp(1, opacity, properties.z);
+#endif
 
+#if TOP_FACE_DOT_RAMP
         float3 lightDirection = normalize(float3(worldPosition.xy - lightPosition.xy, 0));
         float  lightDotNormal = dot(-lightDirection, normal);
 
         // HACK: How do we get smooth ramping here without breaking pure horizontal walls?
         float dotRamp = clamp((lightDotNormal + 0.45) * 1.9, 0, 1);
-        // opacity *= (dotRamp * dotRamp);
+        opacity *= (dotRamp * dotRamp);
+#endif
 
         float4 lightColor = lerp(LightNeutralColors[i], LightColors[i], opacity);
-
-        color += lightColor;
+        accumulator += lightColor.rgb * lightColor.a;
     }
 
-    color.a = 1.0f;
+    color = float4(accumulator, 1.0);
 }
 
 technique VolumeFrontFace
