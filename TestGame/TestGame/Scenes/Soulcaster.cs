@@ -215,12 +215,11 @@ namespace TestGame.Scenes {
                 var ms = Mouse.GetState();
                 Game.IsMouseVisible = true;
 
-                LightZ = ms.ScrollWheelValue / 1024.0f;
+                var t = (float)gameTime.TotalGameTime.TotalSeconds * 0.3f;
+                LightZ = (ms.ScrollWheelValue / 1024.0f) + 
+                    Squared.Util.Arithmetic.PulseExp(t, 0, 0.3f);
 
                 var mousePos = new Vector3(ms.X, ms.Y, LightZ);
-
-                var angle = gameTime.TotalGameTime.TotalSeconds * 0.125f;
-                const float radius = 320f;
 
                 Lights[0].Position = mousePos;
             }

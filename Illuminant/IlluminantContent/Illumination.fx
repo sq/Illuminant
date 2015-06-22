@@ -138,10 +138,7 @@ void ShadowVertexShader(
 
     float3 shadowLengthScaled = float3(ShadowLength.x, ShadowLength.x, ShadowLength.x);
 
-    if (pairIndex == 0) {
-        shadowLengthScaled = float3(0, 0, 0);
-    } else if (minZ > LightCenter.z) {
-        // Discard upward shadow volumes
+    if ((pairIndex == 0) || (minZ > LightCenter.z)) {
         shadowLengthScaled = float3(0, 0, 0);
     }
 
@@ -175,13 +172,13 @@ void ShadowPixelShader(
 ) {
     float startMinZ = _z.x;
     float startMaxZ = _z.y;
-    float endMinZ   = _z.z;
-    float endMaxZ   = _z.w + SHADOW_DEPTH_BIAS;
+    float thisMinZ  = _z.z;
+    float thisMaxZ  = _z.w + SHADOW_DEPTH_BIAS;
 
     float2 terrainZ = sampleTerrain(vpos);
 
     // Is this shadow pixel beneath the visible surface, and thus useless?
-    int isBeneathVisibleSurface = (endMaxZ < terrainZ.y);
+    int isBeneathVisibleSurface = (thisMaxZ < terrainZ.y);
 
     if (isBeneathVisibleSurface)
         discard;
