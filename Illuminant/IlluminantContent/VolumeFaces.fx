@@ -21,7 +21,6 @@ uniform float3 LightProperties   [MAX_LIGHTS]; // ramp_start, ramp_end, exponent
 uniform float4 LightNeutralColors[MAX_LIGHTS];
 uniform float4 LightColors       [MAX_LIGHTS];
 
-uniform float  ZToYMultiplier;
 uniform int    NumLights;
 
 void FrontFaceVertexShader (

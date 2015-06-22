@@ -42,8 +42,10 @@ float PointLightPixelCore(
 ) {
     float2 terrainZ = sampleTerrain(vpos);
 
+    /*
     if (lightCenter.z < terrainZ.y)
         discard;
+    */
 
     // FIXME: What about z?
     float3 shadedPixelPosition = float3(worldPosition.xy, terrainZ.y);
@@ -131,7 +133,8 @@ void ShadowVertexShader(
     out float  z         : TEXCOORD0,
     out float4 result    : POSITION0
 ) {
-    float3 direction = normalize(position - LightCenter);
+    float3 delta = (position - LightCenter);
+    float3 direction = normalize(delta);
     float3 shadowLengthScaled = float3(ShadowLength.x, ShadowLength.x, ShadowLength.x);
 
     if (pairIndex == 0) {
@@ -139,6 +142,7 @@ void ShadowVertexShader(
     }
 
     float3 untransformed = position + (direction * shadowLengthScaled);
+
     float3 directionSign = sign(direction);
     float4 fillruleOffset = float4(
         (clamp(directionSign.x,  0, 1) * FILLRULE_POSITIVE_OFFSET) +

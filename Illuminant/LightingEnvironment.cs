@@ -19,7 +19,11 @@ namespace Squared.Illuminant {
         public readonly SpatialCollection<HeightVolumeBase> HeightVolumes = new SpatialCollection<HeightVolumeBase>(DefaultSubdivision);
 
         public float GroundZ = 0f;
+
+        // Scaling factor for falloff based on Z (since Z is 0-1 instead of in pixels)
         public float ZDistanceScale = 1f;
+        // Offsets Y coordinates by (Z * -ZToYMultiplier) if TwoPointFiveD is enabled
+        public float ZToYMultiplier = 1f;
 
         public void EnumerateObstructionLinesInBounds (Bounds bounds, ILineWriter output) {
             {

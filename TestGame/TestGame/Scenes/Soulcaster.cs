@@ -111,8 +111,7 @@ namespace TestGame.Scenes {
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, LightmapMaterials, Environment, 
                 new RendererConfiguration(Width, Height) {
-                    TwoPointFiveD = true,
-                    ZToYMultiplier = 320
+                    TwoPointFiveD = true
                 }
             );
 
@@ -136,6 +135,7 @@ namespace TestGame.Scenes {
             Ellipse(new Vector2(420, 830), 40f, 40f, 0.33f, 0.20f);
 
             Environment.ZDistanceScale = 128;
+            Environment.ZToYMultiplier = 320;
         }
         
         public override void Draw (Squared.Render.Frame frame) {

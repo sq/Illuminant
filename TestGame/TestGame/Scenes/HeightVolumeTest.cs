@@ -66,9 +66,7 @@ namespace TestGame.Scenes {
 
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, LightmapMaterials, Environment, 
-                new RendererConfiguration(Width, Height) {
-                    ZToYMultiplier = 256
-                }
+                new RendererConfiguration(Width, Height)
             );
 
             var light = new LightSource {
@@ -104,6 +102,7 @@ namespace TestGame.Scenes {
 
             Environment.GroundZ = 0;
             Environment.ZDistanceScale = 128;
+            Environment.ZToYMultiplier = 200;
 
             var points = new List<Vector2>();
 

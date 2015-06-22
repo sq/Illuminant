@@ -18,7 +18,6 @@ namespace Squared.Illuminant {
     public class RendererConfiguration {
         public float ClipRegionScale     = 1.0f;
         public bool  TwoPointFiveD       = false;
-        public float ZToYMultiplier      = 1f;
         public float ZOffset             = 0.0f;
         public float ZScale              = 1.0f;
 
@@ -560,7 +559,19 @@ namespace Squared.Illuminant {
                 mi.Effect.Parameters["TerrainTexture"].SetValue(_TerrainDepthmap);
 
                 mi.Effect.Parameters["ZDistanceScale"].SetValue(Environment.ZDistanceScale);
+                mi.Effect.Parameters["ZToYMultiplier"].SetValue(
+                    Configuration.TwoPointFiveD
+                        ? Environment.ZToYMultiplier
+                        : 0.0f
+                );
             }
+
+            ShadowMaterialInner.Effect.Parameters["ZDistanceScale"].SetValue(Environment.ZDistanceScale);
+            ShadowMaterialInner.Effect.Parameters["ZToYMultiplier"].SetValue(
+                Configuration.TwoPointFiveD
+                    ? Environment.ZToYMultiplier
+                    : 0.0f
+            );
 
             device.Device.SamplerStates[1] = GetRampSamplerState(ls.RampTextureFilter);
             device.Device.ScissorRectangle = StoredScissorRect;
@@ -931,7 +942,11 @@ namespace Squared.Illuminant {
 
         private void SetTwoPointFiveDParametersInner (EffectParameterCollection p) {
             p["ZDistanceScale"]    .SetValue(Environment.ZDistanceScale);
-            p["ZToYMultiplier"]    .SetValue(Configuration.ZToYMultiplier);
+            p["ZToYMultiplier"]    .SetValue(
+                Configuration.TwoPointFiveD
+                    ? Environment.ZToYMultiplier
+                    : 0.0f
+            );
             p["LightPositions"]    .SetValue(_LightPositions);
             p["LightProperties"]   .SetValue(_LightProperties);
             p["LightNeutralColors"].SetValue(_LightNeutralColors);
