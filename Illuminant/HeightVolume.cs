@@ -59,9 +59,7 @@ namespace Squared.Illuminant {
             get;
         }
 
-        public abstract ArraySegment<FrontFaceVertex> FrontFaceMesh3D {
-            get;
-        }
+        public abstract ArraySegment<FrontFaceVertex> GetFrontFaceMesh3D ();
 
         public int LineCount {
             get {
@@ -134,69 +132,70 @@ namespace Squared.Illuminant {
             }
         }
 
-        public override ArraySegment<FrontFaceVertex> FrontFaceMesh3D {
-            get {
-                if (_FrontFaceMesh3D == null) {
-                    var count = (Polygon.Count * 6);
-                    _FrontFaceMesh3D = new FrontFaceVertex[count];
-                }
-
-                var h = ZBase + Height;
-                var actualCount = 0;
-
-                for (int i = 0, j = 0; j < Polygon.Count; j += 1) {
-                    var priorEdge = Polygon.GetEdge(j - 1);
-                    var edge = Polygon.GetEdge(j);
-                    var prior = priorEdge.Start;
-                    var a = edge.Start;
-                    var b = edge.End;
-
-                    // GROSS HACK: Cull backfaces.
-                    // We have no simple way to do this because we don't have winding information...
-                    var pA = Geometry.LineIntersectPolygon(
-                        a + new Vector2(0, 0.1f), 
-                        a + new Vector2(0, 999f),
-                        Polygon
-                    );
-                    var pB = Geometry.LineIntersectPolygon(
-                        b + new Vector2(0, 0.1f), 
-                        b + new Vector2(0, 999f),
-                        Polygon
-                    );
-
-                    if (pA.HasValue || pB.HasValue)
-                        continue;
-
-                    Vector3 aNormal, bNormal;
-                    
-                    // HACK: To produce sensible normals for horizontal surfaces. Blech.
-                    if (a.Y == b.Y) {
-                        aNormal = bNormal = new Vector3(0, 1, 0);
-                    } else {
-                        aNormal = new Vector3((a - prior).PerpendicularLeft(), 0);
-                        bNormal = new Vector3((b - a).PerpendicularLeft(), 0);
-                    }
-                    aNormal.Normalize();
-                    bNormal.Normalize();
-
-                    var aTop    = new Vector3(a, h);
-                    var aBottom = new Vector3(a, ZBase);
-                    var bTop    = new Vector3(b, h);
-                    var bBottom = new Vector3(b, ZBase);
-
-                    _FrontFaceMesh3D[i + 0] = new FrontFaceVertex(aTop,    aNormal);
-                    _FrontFaceMesh3D[i + 1] = new FrontFaceVertex(bTop,    bNormal);
-                    _FrontFaceMesh3D[i + 2] = new FrontFaceVertex(aBottom, aNormal);
-                    _FrontFaceMesh3D[i + 3] = new FrontFaceVertex(bTop,    bNormal);
-                    _FrontFaceMesh3D[i + 4] = new FrontFaceVertex(bBottom, bNormal);
-                    _FrontFaceMesh3D[i + 5] = new FrontFaceVertex(aBottom, aNormal);
-
-                    i += 6;
-                    actualCount += 6;
-                }
-
-                return new ArraySegment<FrontFaceVertex>(_FrontFaceMesh3D, 0, actualCount);
+        public override ArraySegment<FrontFaceVertex> GetFrontFaceMesh3D () {
+            if (_FrontFaceMesh3D == null) {
+                var count = (Polygon.Count * 6);
+                _FrontFaceMesh3D = new FrontFaceVertex[count];
             }
+
+            var h1 = ZBase;
+            var h2 = ZBase + Height;
+            var actualCount = 0;
+
+            var zRange = new Vector2(h1, h2);
+
+            for (int i = 0, j = 0; j < Polygon.Count; j += 1) {
+                var priorEdge = Polygon.GetEdge(j - 1);
+                var edge = Polygon.GetEdge(j);
+                var prior = priorEdge.Start;
+                var a = edge.Start;
+                var b = edge.End;
+
+                // GROSS HACK: Cull backfaces.
+                // We have no simple way to do this because we don't have winding information...
+                var pA = Geometry.LineIntersectPolygon(
+                    a + new Vector2(0, 0.1f), 
+                    a + new Vector2(0, 999f),
+                    Polygon
+                );
+                var pB = Geometry.LineIntersectPolygon(
+                    b + new Vector2(0, 0.1f), 
+                    b + new Vector2(0, 999f),
+                    Polygon
+                );
+
+                if (pA.HasValue || pB.HasValue)
+                    continue;
+
+                Vector3 aNormal, bNormal;
+                    
+                // HACK: To produce sensible normals for horizontal surfaces. Blech.
+                if (a.Y == b.Y) {
+                    aNormal = bNormal = new Vector3(0, 1, 0);
+                } else {
+                    aNormal = new Vector3((a - prior).PerpendicularLeft(), 0);
+                    bNormal = new Vector3((b - a).PerpendicularLeft(), 0);
+                }
+                aNormal.Normalize();
+                bNormal.Normalize();
+
+                var aTop    = new Vector3(a, h2);
+                var aBottom = new Vector3(a, h1);
+                var bTop    = new Vector3(b, h2);
+                var bBottom = new Vector3(b, h1);
+
+                _FrontFaceMesh3D[i + 0] = new FrontFaceVertex(aTop,    aNormal, zRange);
+                _FrontFaceMesh3D[i + 1] = new FrontFaceVertex(bTop,    bNormal, zRange);
+                _FrontFaceMesh3D[i + 2] = new FrontFaceVertex(aBottom, aNormal, zRange);
+                _FrontFaceMesh3D[i + 3] = new FrontFaceVertex(bTop,    bNormal, zRange);
+                _FrontFaceMesh3D[i + 4] = new FrontFaceVertex(bBottom, bNormal, zRange);
+                _FrontFaceMesh3D[i + 5] = new FrontFaceVertex(aBottom, aNormal, zRange);
+
+                i += 6;
+                actualCount += 6;
+            }
+
+            return new ArraySegment<FrontFaceVertex>(_FrontFaceMesh3D, 0, actualCount);
         }
     }
 }

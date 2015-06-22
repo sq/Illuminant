@@ -88,7 +88,7 @@ namespace TestGame.Scenes {
 
         void Pillar (Vector2 center) {
             var baseSizeTL = new Vector2(62, 65);
-            var baseSizeBR = new Vector2(63, 60);
+            var baseSizeBR = new Vector2(64, 57);
             Ellipse(center, 55f, 45f, 0.0f, 0.69f);
             Rect(center - baseSizeTL, center + baseSizeBR, 0.0f, 0.085f);
             Rect(center - baseSizeTL, center + baseSizeBR, 0.60f, 0.09f);
@@ -123,9 +123,9 @@ namespace TestGame.Scenes {
             Lights.Add(light);
             Environment.LightSources.Add(light);
 
-            Rect(new Vector2(329, 337), new Vector2(Width, 394), 0f, 0.435f);
+            Rect(new Vector2(330, 337), new Vector2(Width, 394), 0f, 0.435f);
 
-            Pillar(new Vector2(97, 520));
+            Pillar(new Vector2(97, 523));
             Pillar(new Vector2(719, 520));
 
             Environment.ZDistanceScale = 64;
@@ -185,7 +185,7 @@ namespace TestGame.Scenes {
                     ShowTerrainDepth
                         ? Renderer.TerrainDepthmap
                         : Background,
-                    Vector2.Zero, Color.White * (ShowTerrainDepth ? 0.9f : 1.0f)
+                    Vector2.Zero, Color.White * (ShowTerrainDepth ? 0.7f : 1.0f)
                 );
                 dc.Textures = new TextureSet(dc.Textures.Texture1, Lightmap);
                 bb.Add(dc);

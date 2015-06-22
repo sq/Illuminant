@@ -25,7 +25,8 @@ uniform int    NumLights;
 void FrontFaceVertexShader (
     in    float3 position      : POSITION0, // x, y, z
     inout float3 normal        : NORMAL0,
-    out   float3 worldPosition : TEXCOORD0,
+    inout float2 zRange        : TEXCOORD0,
+    out   float3 worldPosition : TEXCOORD1,
     out   float4 result        : POSITION0
 ) {
     worldPosition = position.xyz;
@@ -37,7 +38,8 @@ void FrontFaceVertexShader (
 void FrontFacePixelShader (
     inout float4 color : COLOR0,
     in    float3 normal : NORMAL0,
-    in    float3 worldPosition: TEXCOORD0
+    in    float2 zRange : TEXCOORD0,
+    in    float3 worldPosition: TEXCOORD1
 ) {
     color = float4(0, 0, 0, 0);
 
@@ -46,11 +48,15 @@ void FrontFacePixelShader (
         float3 properties = LightProperties[i];
         float3 lightPosition = LightPositions[i];
         float3 lightDirection = worldPosition - lightPosition;
+        color = float4((lightDirection / 128 + 1) * 0.5, 1.0);
+        break;
 
         float maxDistance = length(lightDirection);
         lightDirection = normalize(lightDirection);
 
         float  opacity = computeLightOpacity(worldPosition, lightPosition, properties.x, properties.y);
+        
+        /*
 
         float  lightDotNormal = dot(-lightDirection, normal);
 
@@ -73,7 +79,7 @@ void FrontFacePixelShader (
             float raycastStepRatePx = RAYCAST_INITIAL_STEP_PX;
             for (float castDistance = 0; castDistance < maxDistance; castDistance += raycastStepRatePx) {
                 float3 samplePosition = (lightPosition + (lightDirection * castDistance));
-                    float  terrainZ = tex2Dgrad(TerrainTextureSampler, samplePosition.xy * TerrainTextureTexelSize, 0, 0).r;
+                float  terrainZ       = tex2Dgrad(TerrainTextureSampler, samplePosition.xy * TerrainTextureTexelSize, 0, 0).r;
 
                 if (terrainZ > samplePosition.z) {
                     obstructed = 1;
@@ -87,12 +93,14 @@ void FrontFacePixelShader (
                 raycastStepRatePx = clamp(
                     raycastStepRatePx * RAYCAST_STEP_GROWTH_FACTOR,
                     1, RAYCAST_STEP_LIMIT_PX
-                    );
+                );
             }
 
             if (obstructed && seenUnobstructed)
                 opacity = 0;
         }
+
+        */
 
         float4 lightColor = lerp(LightNeutralColors[i], LightColors[i], opacity);
 

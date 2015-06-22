@@ -33,6 +33,7 @@ namespace Squared.Illuminant {
     public struct FrontFaceVertex : IVertexType {
         public Vector3 Position;
         public Vector3 Normal;
+        public Vector2 ZRange;
 
         public static VertexDeclaration _VertexDeclaration;
 
@@ -41,13 +42,15 @@ namespace Squared.Illuminant {
 
             _VertexDeclaration = new VertexDeclaration(
                 new VertexElement(Marshal.OffsetOf(tThis, "Position").ToInt32(), VertexElementFormat.Vector3, VertexElementUsage.Position, 0),
-                new VertexElement(Marshal.OffsetOf(tThis, "Normal").ToInt32(), VertexElementFormat.Vector3, VertexElementUsage.Normal, 0)
+                new VertexElement(Marshal.OffsetOf(tThis, "Normal").ToInt32(),   VertexElementFormat.Vector3, VertexElementUsage.Normal, 0),
+                new VertexElement(Marshal.OffsetOf(tThis, "ZRange").ToInt32(),   VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 0)
             );
         }
 
-        public FrontFaceVertex (Vector3 position, Vector3 normal) {
+        public FrontFaceVertex (Vector3 position, Vector3 normal, Vector2 zRange) {
             Position = position;
             Normal = normal;
+            ZRange = zRange;
         }
 
         public VertexDeclaration VertexDeclaration {
@@ -963,7 +966,7 @@ namespace Squared.Illuminant {
                 batchSetup: SetTwoPointFiveDParameters
             )) {
                 foreach (var volume in Environment.HeightVolumes) {
-                    var ffm3d = volume.FrontFaceMesh3D;
+                    var ffm3d = volume.GetFrontFaceMesh3D();
                     if (ffm3d.Count <= 0)
                         continue;
 
