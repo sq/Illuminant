@@ -27,7 +27,7 @@ namespace TestGame.Scenes {
         float LightZ;
 
         bool ShowTerrainDepth  = false;
-        bool ShowLightmap      = false;
+        bool ShowLightmap      = true;
         bool ShowDistanceField = false;
 
         public SoulcasterTest (TestGame game, int width, int height)
@@ -162,7 +162,7 @@ namespace TestGame.Scenes {
 
                 // Ambient light
                 using (var gb = GeometryBatch.New(
-                    bg, 2, 
+                    bg, 9999, 
                     Game.ScreenMaterials.Get(Game.ScreenMaterials.ScreenSpaceGeometry, blendState: BlendState.Additive)
                 ))
                     gb.AddFilledQuad(Bounds.FromPositionAndSize(Vector2.Zero, Vector2.One * 9999), new Color(32, 32, 32, 255));
@@ -182,39 +182,32 @@ namespace TestGame.Scenes {
             } else {
                 using (var bb = BitmapBatch.New(
                     frame, 1,
-                    Game.ScreenMaterials.Get(Game.ScreenMaterials.ScreenSpaceBitmap, blendState: BlendState.Opaque),
-                    samplerState: SamplerState.PointClamp
-                ))
-                    bb.Add(new BitmapDrawCall(
-                        Background, Vector2.Zero
-                    ));
-
-                using (var bb = BitmapBatch.New(
-                    frame, 2,
                     Game.ScreenMaterials.Get(
                         ShowTerrainDepth
                             ? Game.ScreenMaterials.ScreenSpaceBitmap
                             : Game.ScreenMaterials.ScreenSpaceLightmappedBitmap,
-                        blendState: BlendState.AlphaBlend
+                        blendState: BlendState.Opaque
                     ),
                     samplerState: SamplerState.PointClamp
                 )) {
                     var dc = new BitmapDrawCall(
-                        ShowTerrainDepth
-                            ? Renderer.TerrainDepthmap
-                            : Background,
-                        Vector2.Zero, Color.White * (ShowTerrainDepth ? 0.7f : 1.0f)
+                        Background, Vector2.Zero, Color.White * (ShowTerrainDepth ? 0.7f : 1.0f)
                     );
                     dc.Textures = new TextureSet(dc.Textures.Texture1, Lightmap);
                     bb.Add(dc);
                 }
 
-                if (ShowDistanceField)
-                using (var bb = BitmapBatch.New(
-                    frame, 3, Game.ScreenMaterials.ScreenSpaceBitmap,
-                    samplerState: SamplerState.PointClamp
-                ))
-                    bb.Add(new BitmapDrawCall(Renderer.DistanceField, Vector2.Zero));
+                if (ShowDistanceField || ShowTerrainDepth) {
+                    using (var bb = BitmapBatch.New(
+                        frame, 2, Game.ScreenMaterials.ScreenSpaceBitmap,
+                        samplerState: SamplerState.PointClamp                        
+                    ))
+                        bb.Add(new BitmapDrawCall(
+                            ShowTerrainDepth
+                                ? Renderer.TerrainDepthmap
+                                : Renderer.DistanceField, Vector2.Zero
+                        ));
+                }
             }
         }
 

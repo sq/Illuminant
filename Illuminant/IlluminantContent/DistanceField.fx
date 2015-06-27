@@ -1,7 +1,7 @@
 #include "..\..\Upstream\Fracture\Squared\RenderLib\Content\GeometryCommon.fxh"
 
 #define MAX_VERTICES   40
-#define DISTANCE_LIMIT 128 
+#define DISTANCE_LIMIT 128
 
 uniform float2 PixelSize;
 uniform float2 Vertices[MAX_VERTICES];
@@ -54,8 +54,6 @@ void EdgePixelShader (
             resultPointDistance = closestDistance;
         }
     }
-
-    discard;
 
     if (resultPointDistance >= DISTANCE_LIMIT)
         discard;
