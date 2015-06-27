@@ -1169,24 +1169,14 @@ namespace Squared.Illuminant {
             var parameters = IlluminantMaterials.DistanceFieldEdge.Effect.Parameters;
 
             int w = _DistanceField.Width, h = _DistanceField.Height;
-            var verts = new VertexPositionColor[] {
-                new VertexPositionColor(Vector3.Zero, Color.White),
-                new VertexPositionColor(new Vector3(w, 0, 0), Color.White),
-                new VertexPositionColor(new Vector3(w, h, 0), Color.White),
-                new VertexPositionColor(new Vector3(0, h, 0), Color.White)
-            };
             var indices = new short[] {
                 0, 1, 3, 1, 2, 3
             };
 
-            var dss = new DepthStencilState {
-                DepthBufferEnable = true,
-                DepthBufferWriteEnable = true,
-                DepthBufferFunction = CompareFunction.Less
-            };
+            const float distanceLimit = 64f;
 
             using (var group = BatchGroup.ForRenderTarget(resultGroup, layerIndex++, _DistanceField, (dm, _) => {
-                parameters["DistanceLimit"].SetValue(128f);
+                parameters["DistanceLimit"].SetValue(distanceLimit);
             })) {
                 if (Render.Tracing.RenderTrace.EnableTracing)
                     Render.Tracing.RenderTrace.Marker(group, -1, "LightingRenderer {1:X4} : Begin Distance Field", this.GetHashCode());
@@ -1201,14 +1191,23 @@ namespace Squared.Illuminant {
                 foreach (var hv in Environment.HeightVolumes) {
                     var p = hv.Polygon;
                     var m = hv.Mesh3D;
+                    var b = hv.Bounds.Expand(distanceLimit, distanceLimit);
+
+                    var verts = new VertexPositionColor[] {
+                        new VertexPositionColor(new Vector3(b.TopLeft, 0), Color.White),
+                        new VertexPositionColor(new Vector3(b.TopRight, 0), Color.White),
+                        new VertexPositionColor(new Vector3(b.BottomRight, 0), Color.White),
+                        new VertexPositionColor(new Vector3(b.BottomLeft, 0), Color.White)
+                    };
 
                     using (var edgeBatch = PrimitiveBatch<VertexPositionColor>.New(
                         group, i++, IlluminantMaterials.DistanceFieldEdge,
                         (dm, _) => {
                             dm.Device.BlendState        = BlendState.Opaque;
                             dm.Device.RasterizerState   = RasterizerState.CullNone;
-                            dm.Device.DepthStencilState = dss;
-                            parameters["NumVertices"].SetValue(Math.Min(48, p.Count));
+                            dm.Device.DepthStencilState = DepthStencilState.Default;
+
+                            parameters["NumVertices"].SetValue(Math.Min(40, p.Count));
                             parameters["Vertices"]   .SetValue(p.GetVertices());
                             IlluminantMaterials.DistanceFieldEdge.Flush();
                         }
