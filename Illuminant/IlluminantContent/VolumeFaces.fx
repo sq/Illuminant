@@ -4,24 +4,38 @@
 
 #define MAX_LIGHTS 12
 
-#define EXPONENTIAL                           1
+#define EXPONENTIAL                           0
 #define TOP_FACE_DOT_RAMP                     0
 #define TOP_FACE_RAYCAST_SHADOWS              1
 #define FRONT_FACE_DOT_RAMP                   1
 #define FRONT_FACE_RAYCAST_SHADOWS            1
 #define DISTANCE_FIELD_ACCELERATED_RAYCASTING 1
 
-// Maximum distance fuzziness for accelerated obstacle detection
-#define ACCELERATED_OBSTACLE_DISTANCE_LIMIT_PX 2.0
-// How far to skip each time
-#define ACCELERATED_SKIP_LENGTH_FACTOR 0.5
+#if DISTANCE_FIELD_ACCELERATED_RAYCASTING
 
-// Initially step at this rate while raycasting
-#define RAYCAST_INITIAL_STEP_PX 1.0
-// Initial growth rate of step rate
-#define RAYCAST_INITIAL_STEP_GROWTH_FACTOR 1.1
-// Growth rate increases per step also
-#define RAYCAST_STEP_GROWTH_FACTOR_GROWTH_FACTOR 1.05
+    // How far to skip each time
+    #define ACCELERATED_SKIP_LENGTH_FACTOR 0.99
+    // Minimum distance to skip (in pixels)
+    #define ACCELERATED_SKIP_LENGTH_MINIMUM 0.1
+
+    // Initially step at this rate while raycasting
+    #define RAYCAST_INITIAL_STEP_PX 0.5
+    // Initial growth rate of step rate
+    #define RAYCAST_INITIAL_STEP_GROWTH_FACTOR 1.01
+    // Growth rate increases per step also
+    #define RAYCAST_STEP_GROWTH_FACTOR_GROWTH_FACTOR 1.01
+
+#else
+
+    // Initially step at this rate while raycasting
+    #define RAYCAST_INITIAL_STEP_PX 1.0
+    // Initial growth rate of step rate
+    #define RAYCAST_INITIAL_STEP_GROWTH_FACTOR 1.1
+    // Growth rate increases per step also
+    #define RAYCAST_STEP_GROWTH_FACTOR_GROWTH_FACTOR 1.05
+
+#endif
+
 // Never step more than this many pixels at a time
 #define RAYCAST_STEP_LIMIT_PX 48
 // Never do a raycast when the light is closer to the wall than this
@@ -36,6 +50,7 @@ uniform float4 LightColors       [MAX_LIGHTS];
 
 uniform int    NumLights;
 
+uniform float2 CoordinateOffset, InverseCoordinateScale;
 uniform float2 DistanceFieldTextureTexelSize;
 
 Texture2D DistanceFieldTexture        : register(t3);
@@ -51,7 +66,8 @@ float2 sampleDistanceField(
     float2 positionPx
 ) {
     float2 uv = positionPx * DistanceFieldTextureTexelSize;
-    return tex2Dgrad(DistanceFieldTextureSampler, uv, 0, 0).rg;
+    float2 raw = tex2Dgrad(DistanceFieldTextureSampler, uv, 0, 0).rg;
+    return (raw * InverseCoordinateScale) - CoordinateOffset;
 }
 
 void FrontFaceVertexShader (
@@ -67,8 +83,8 @@ void FrontFaceVertexShader (
     result.z = position.z;
 }
 
-float ComputeRaycastedShadowOpacity (
-    float3 lightPosition, float3 worldPosition, float opacity
+float ComputeRaycastedShadowOcclusionSample (
+    float3 lightPosition, float3 worldPosition
 ) {
     float3 lightDirection = worldPosition - lightPosition;
     float maxDistance = length(lightDirection);
@@ -80,40 +96,14 @@ float ComputeRaycastedShadowOpacity (
     //  with moving lights.
     int seenUnobstructed = 0, obstructed = 0;
     if (
-        (maxDistance >= RAYCAST_MIN_DISTANCE_PX) &&
-        (lightPosition.y > worldPosition.y) &&
-        (opacity > RAYCAST_MIN_OPACITY)
+        (maxDistance >= RAYCAST_MIN_DISTANCE_PX)
     ) {
         float raycastStepRatePx = RAYCAST_INITIAL_STEP_PX;
         float stepGrowthFactor = RAYCAST_INITIAL_STEP_GROWTH_FACTOR;
-        float castDistance = 0;
+        float castDistance = 0.5;
 
         while (castDistance < maxDistance) {
             float3 samplePosition = (lightPosition + (lightDirection * castDistance));
-
-#if DISTANCE_FIELD_ACCELERATED_RAYCASTING
-            float2 nearestObstacle = sampleDistanceField(samplePosition.xy);
-            
-            // FIXME: A pixel in the distance field might not have any data.
-            float2 distanceToNearestObstacle = nearestObstacle - samplePosition.xy;
-
-            float  distanceAlongRay = closestPointOnEdgeAsFactor(nearestObstacle, lightPosition.xy, worldPosition.xy);
-            float3 nearestAlongRay = lightPosition + (lightDirection * distanceAlongRay);
-            float  distanceToFoundObstacle = length(nearestAlongRay.xy - nearestObstacle);
-
-            if (length(distanceToFoundObstacle) < ACCELERATED_OBSTACLE_DISTANCE_LIMIT_PX) {
-                samplePosition = nearestAlongRay;
-                castDistance = distanceAlongRay;
-            }
-            /*
-            } else {
-                // The nearest obstacle does not block our path. Skip forward.
-                castDistance += length(distanceToNearestObstacle) * ACCELERATED_SKIP_LENGTH_FACTOR;
-                continue;
-            }
-            */
-#endif
-                
             float2 terrainZ = sampleTerrain(samplePosition);
 
             // Only obstruct the ray if it passes through the interior of the height volume.
@@ -123,12 +113,26 @@ float ComputeRaycastedShadowOpacity (
                 (terrainZ.y > samplePosition.z)
             ) {
                 obstructed = 1;
-            } else if (obstructed) {
+            }
+            else if (obstructed) {
                 seenUnobstructed = 1;
             }
 
             if (obstructed && seenUnobstructed)
                 break;
+
+#if DISTANCE_FIELD_ACCELERATED_RAYCASTING
+            float2 nearestObstacle = sampleDistanceField(samplePosition.xy);
+            float2 vectorToNearestObstacle = nearestObstacle - samplePosition.xy;
+            if (dot(lightDirection.xy, vectorToNearestObstacle) >= 0) {
+                float skipDistance = length(vectorToNearestObstacle) * ACCELERATED_SKIP_LENGTH_FACTOR;
+
+                if (skipDistance >= ACCELERATED_SKIP_LENGTH_MINIMUM) {
+                    castDistance += skipDistance;
+                    continue;
+                }
+            }
+#endif
 
             raycastStepRatePx = clamp(
                 raycastStepRatePx * stepGrowthFactor,
@@ -140,10 +144,16 @@ float ComputeRaycastedShadowOpacity (
         }
 
         if (obstructed && seenUnobstructed)
-            opacity = 0;
+            return 1;
     }
 
-    return opacity;
+    return 0;
+}
+
+float ComputeRaycastedShadowOpacity (
+    float3 lightPosition, float3 worldPosition
+) {
+    return 1.0 - ComputeRaycastedShadowOcclusionSample(lightPosition, worldPosition);
 }
 
 void FrontFacePixelShader (
@@ -180,8 +190,8 @@ void FrontFacePixelShader (
         opacity *= dotRamp;
 #endif
 
-#if FRONT_FACE_RAYCAST_SHADOWS        
-        opacity = ComputeRaycastedShadowOpacity(lightPosition, worldPosition, opacity);
+#if FRONT_FACE_RAYCAST_SHADOWS
+        opacity *= ComputeRaycastedShadowOpacity(lightPosition, worldPosition);
 #endif
 
         float4 lightColor = lerp(LightNeutralColors[i], LightColors[i], opacity);
@@ -236,7 +246,7 @@ void TopFacePixelShader(
 #endif
 
 #if TOP_FACE_RAYCAST_SHADOWS        
-        opacity = ComputeRaycastedShadowOpacity(lightPosition, worldPosition, opacity);
+        opacity *= ComputeRaycastedShadowOpacity(lightPosition, worldPosition);
 #endif
 
         float4 lightColor = lerp(LightNeutralColors[i], LightColors[i], opacity);

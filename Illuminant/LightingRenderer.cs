@@ -979,6 +979,8 @@ namespace Squared.Illuminant {
         const int FaceMaxLights = 12;
 
         private Vector2   _CoordinateOffset, _CoordinateScale;
+        // HACK
+        private bool      _DistanceFieldReady = false;
 
         private int       _VisibleLightCount  = 0;
         private Vector3[] _LightPositions     = new Vector3[FaceMaxLights];
@@ -1009,6 +1011,9 @@ namespace Squared.Illuminant {
 
             p["DistanceFieldTextureTexelSize"].SetValue(tsize);
             p["DistanceFieldTexture"].SetValue(_DistanceField);
+
+            p["InverseCoordinateScale"].SetValue(new Vector2(1.0f / _CoordinateScale.X, 1.0f / _CoordinateScale.Y));
+            p["CoordinateOffset"].SetValue(_CoordinateOffset);
         }
 
         private void SetTwoPointFiveDParameters (DeviceManager dm, object _) {
@@ -1175,7 +1180,7 @@ namespace Squared.Illuminant {
                     Render.Tracing.RenderTrace.Marker(group, 2, "Frame {0:0000} : LightingRenderer {1:X4} : End Heightmap", frame.Index, this.GetHashCode());
             }
 
-            if (Configuration.TwoPointFiveD) {
+            if (Configuration.TwoPointFiveD && !_DistanceFieldReady) {
                 _CoordinateOffset = -minCoordinate;
                 _CoordinateScale = new Vector2(
                     1f / (maxCoordinate.X - minCoordinate.X),
@@ -1183,6 +1188,7 @@ namespace Squared.Illuminant {
                 );
 
                 RenderDistanceField(ref layer, container);
+                _DistanceFieldReady = true;
             }
         }
 

@@ -27,7 +27,7 @@ namespace TestGame.Scenes {
         float LightZ;
 
         bool ShowTerrainDepth  = false;
-        bool ShowLightmap      = true;
+        bool ShowLightmap      = false;
         bool ShowDistanceField = false;
 
         public SoulcasterTest (TestGame game, int width, int height)
