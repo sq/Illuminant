@@ -78,13 +78,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DistanceField.fx">
-      <Name>DistanceField</Name>
-      <Importer>EffectImporter</Importer>
-      <Processor>EffectProcessor</Processor>
-    </Compile>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="Common.fxh">
       <Name>Common</Name>
       <Importer>EffectImporter</Importer>

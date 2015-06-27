@@ -9,35 +9,15 @@
 #define TOP_FACE_RAYCAST_SHADOWS              1
 #define FRONT_FACE_DOT_RAMP                   1
 #define FRONT_FACE_RAYCAST_SHADOWS            1
-#define DISTANCE_FIELD_ACCELERATED_RAYCASTING 1
 
-#if DISTANCE_FIELD_ACCELERATED_RAYCASTING
-
-    // How far to skip each time
-    #define ACCELERATED_SKIP_LENGTH_FACTOR 0.99
-    // Minimum distance to skip (in pixels)
-    #define ACCELERATED_SKIP_LENGTH_MINIMUM 0.1
-
-    // Initially step at this rate while raycasting
-    #define RAYCAST_INITIAL_STEP_PX 0.5
-    // Initial growth rate of step rate
-    #define RAYCAST_INITIAL_STEP_GROWTH_FACTOR 1.01
-    // Growth rate increases per step also
-    #define RAYCAST_STEP_GROWTH_FACTOR_GROWTH_FACTOR 1.01
-
-#else
-
-    // Initially step at this rate while raycasting
-    #define RAYCAST_INITIAL_STEP_PX 1.0
-    // Initial growth rate of step rate
-    #define RAYCAST_INITIAL_STEP_GROWTH_FACTOR 1.1
-    // Growth rate increases per step also
-    #define RAYCAST_STEP_GROWTH_FACTOR_GROWTH_FACTOR 1.05
-
-#endif
-
+// Initially step at this rate while raycasting
+#define RAYCAST_INITIAL_STEP_PX 1.0
+// Initial growth rate of step rate
+#define RAYCAST_INITIAL_STEP_GROWTH_FACTOR 1.2
+// Growth rate increases per step also
+#define RAYCAST_STEP_GROWTH_FACTOR_GROWTH_FACTOR 1.1
 // Never step more than this many pixels at a time
-#define RAYCAST_STEP_LIMIT_PX 48
+#define RAYCAST_STEP_LIMIT_PX 24
 // Never do a raycast when the light is closer to the wall than this
 #define RAYCAST_MIN_DISTANCE_PX 4
 // If the light contribution is lower than this, don't raycast
@@ -49,26 +29,6 @@ uniform float4 LightNeutralColors[MAX_LIGHTS];
 uniform float4 LightColors       [MAX_LIGHTS];
 
 uniform int    NumLights;
-
-uniform float2 CoordinateOffset, InverseCoordinateScale;
-uniform float2 DistanceFieldTextureTexelSize;
-
-Texture2D DistanceFieldTexture        : register(t3);
-sampler   DistanceFieldTextureSampler : register(s3) {
-    Texture = (DistanceFieldTexture);
-    MipFilter = POINT;
-    MinFilter = POINT;
-    MagFilter = POINT;
-};
-
-// returns closest obstacle or zero
-float2 sampleDistanceField(
-    float2 positionPx
-) {
-    float2 uv = positionPx * DistanceFieldTextureTexelSize;
-    float2 raw = tex2Dgrad(DistanceFieldTextureSampler, uv, 0, 0).rg;
-    return (raw * InverseCoordinateScale) - CoordinateOffset;
-}
 
 void FrontFaceVertexShader (
     in    float3 position      : POSITION0, // x, y, z

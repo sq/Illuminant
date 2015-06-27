@@ -28,7 +28,6 @@ namespace TestGame.Scenes {
 
         bool ShowTerrainDepth  = false;
         bool ShowLightmap      = false;
-        bool ShowDistanceField = false;
 
         public SoulcasterTest (TestGame game, int width, int height)
             : base(game, 1024, 1024) {
@@ -197,7 +196,7 @@ namespace TestGame.Scenes {
                     bb.Add(dc);
                 }
 
-                if (ShowDistanceField || ShowTerrainDepth) {
+                if (ShowTerrainDepth) {
                     using (var bb = BitmapBatch.New(
                         frame, 2, Game.ScreenMaterials.Get(
                             Game.ScreenMaterials.ScreenSpaceBitmap,
@@ -206,9 +205,7 @@ namespace TestGame.Scenes {
                         samplerState: SamplerState.PointClamp                     
                     ))
                         bb.Add(new BitmapDrawCall(
-                            ShowTerrainDepth
-                                ? Renderer.TerrainDepthmap
-                                : Renderer.DistanceField, Vector2.Zero
+                            Renderer.TerrainDepthmap, Vector2.Zero
                         ));
                 }
             }
@@ -223,9 +220,6 @@ namespace TestGame.Scenes {
 
                 if (KeyWasPressed(Keys.T))
                     ShowTerrainDepth = !ShowTerrainDepth;
-
-                if (KeyWasPressed(Keys.D))
-                    ShowDistanceField = !ShowDistanceField;
 
                 var ms = Mouse.GetState();
                 Game.IsMouseVisible = true;
