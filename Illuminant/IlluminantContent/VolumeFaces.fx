@@ -1,24 +1,31 @@
 #include "..\..\Upstream\Fracture\Squared\RenderLib\Content\GeometryCommon.fxh"
 #include "LightCommon.fxh"
+#include "Common.fxh"
 
 #define MAX_LIGHTS 12
 
-#define EXPONENTIAL                1
-#define TOP_FACE_DOT_RAMP          0
-#define TOP_FACE_RAYCAST_SHADOWS   1
-#define FRONT_FACE_DOT_RAMP        1
-#define FRONT_FACE_RAYCAST_SHADOWS 1
+#define EXPONENTIAL                           1
+#define TOP_FACE_DOT_RAMP                     0
+#define TOP_FACE_RAYCAST_SHADOWS              1
+#define FRONT_FACE_DOT_RAMP                   1
+#define FRONT_FACE_RAYCAST_SHADOWS            1
+#define DISTANCE_FIELD_ACCELERATED_RAYCASTING 1
+
+// Maximum distance fuzziness for accelerated obstacle detection
+#define ACCELERATED_OBSTACLE_DISTANCE_LIMIT_PX 2.0
+// How far to skip each time
+#define ACCELERATED_SKIP_LENGTH_FACTOR 0.5
 
 // Initially step at this rate while raycasting
 #define RAYCAST_INITIAL_STEP_PX 1.0
 // Initial growth rate of step rate
-#define RAYCAST_INITIAL_STEP_GROWTH_FACTOR 1.1
+#define RAYCAST_INITIAL_STEP_GROWTH_FACTOR 1.70
 // Growth rate increases per step also
 #define RAYCAST_STEP_GROWTH_FACTOR_GROWTH_FACTOR 1.05
 // Never step more than this many pixels at a time
-#define RAYCAST_STEP_LIMIT_PX 24
+#define RAYCAST_STEP_LIMIT_PX 48
 // Never do a raycast when the light is closer to the wall than this
-#define RAYCAST_MIN_DISTANCE_PX 5
+#define RAYCAST_MIN_DISTANCE_PX 4
 // If the light contribution is lower than this, don't raycast
 #define RAYCAST_MIN_OPACITY (1.0 / 255) * 4
 
@@ -28,6 +35,24 @@ uniform float4 LightNeutralColors[MAX_LIGHTS];
 uniform float4 LightColors       [MAX_LIGHTS];
 
 uniform int    NumLights;
+
+uniform float2 DistanceFieldTextureTexelSize;
+
+Texture2D DistanceFieldTexture        : register(t3);
+sampler   DistanceFieldTextureSampler : register(s3) {
+    Texture = (DistanceFieldTexture);
+    MipFilter = POINT;
+    MinFilter = POINT;
+    MagFilter = POINT;
+};
+
+// returns closest obstacle or zero
+float2 sampleDistanceField(
+    float2 positionPx
+) {
+    float2 uv = positionPx * DistanceFieldTextureTexelSize;
+    return tex2Dgrad(DistanceFieldTextureSampler, uv, 0, 0).rg;
+}
 
 void FrontFaceVertexShader (
     in    float3 position      : POSITION0, // x, y, z
@@ -61,9 +86,31 @@ float ComputeRaycastedShadowOpacity (
     ) {
         float raycastStepRatePx = RAYCAST_INITIAL_STEP_PX;
         float stepGrowthFactor = RAYCAST_INITIAL_STEP_GROWTH_FACTOR;
+        float castDistance = 0;
 
-        for (float castDistance = 0; castDistance < maxDistance; castDistance += raycastStepRatePx) {
+        while (castDistance < maxDistance) {
             float3 samplePosition = (lightPosition + (lightDirection * castDistance));
+
+#if DISTANCE_FIELD_ACCELERATED_RAYCASTING
+            float2 nearestObstacle = sampleDistanceField(samplePosition);
+            
+            // FIXME: A pixel in the distance field might not have any data.
+            float2 distanceToNearestObstacle = nearestObstacle - samplePosition.xy;
+
+            float  distanceAlongRay = closestPointOnEdgeAsFactor(nearestObstacle, lightPosition.xy, worldPosition.xy);
+            float3 nearestAlongRay = lightPosition + (lightDirection * distanceAlongRay);
+            float  distanceToFoundObstacle = length(nearestAlongRay.xy - nearestObstacle);
+
+            if (length(distanceToFoundObstacle) < ACCELERATED_OBSTACLE_DISTANCE_LIMIT_PX) {
+                samplePosition = nearestAlongRay;
+                castDistance = distanceAlongRay;
+            } else {
+                // The nearest obstacle does not block our path. Skip forward.
+                castDistance += length(distanceToNearestObstacle) * ACCELERATED_SKIP_LENGTH_FACTOR;
+                continue;
+            }
+#endif
+                
             float2 terrainZ = sampleTerrain(samplePosition);
 
             // Only obstruct the ray if it passes through the interior of the height volume.
@@ -85,6 +132,11 @@ float ComputeRaycastedShadowOpacity (
                 1, RAYCAST_STEP_LIMIT_PX
             );
             stepGrowthFactor *= RAYCAST_STEP_GROWTH_FACTOR_GROWTH_FACTOR;
+
+#if DISTANCE_FIELD_ACCELERATED_RAYCASTING
+#else
+            castDistance += raycastStepRatePx;
+#endif
         }
 
         if (obstructed && seenUnobstructed)

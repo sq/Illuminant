@@ -259,7 +259,7 @@ namespace Squared.Illuminant {
                     coordinator.Device,
                     Configuration.MaximumRenderSize.First * HeightmapResolutionMultiplier, 
                     Configuration.MaximumRenderSize.Second * HeightmapResolutionMultiplier,
-                    false, SurfaceFormat.Vector4, DepthFormat.Depth24, 0, RenderTargetUsage.DiscardContents
+                    false, SurfaceFormat.Rg32, DepthFormat.Depth24, 0, RenderTargetUsage.DiscardContents
                 );
             }
 
@@ -1004,6 +1004,9 @@ namespace Squared.Illuminant {
             );
             p["TerrainTextureTexelSize"].SetValue(tsize);
             p["TerrainTexture"].SetValue(_TerrainDepthmap);
+
+            p["DistanceFieldTextureTexelSize"].SetValue(tsize);
+            p["DistanceFieldTexture"].SetValue(_DistanceField);
         }
 
         private void SetTwoPointFiveDParameters (DeviceManager dm, object _) {
@@ -1173,7 +1176,7 @@ namespace Squared.Illuminant {
                 0, 1, 3, 1, 2, 3
             };
 
-            const float distanceLimit = 64f;
+            const float distanceLimit = 512f;
 
             using (var group = BatchGroup.ForRenderTarget(resultGroup, layerIndex++, _DistanceField, (dm, _) => {
                 parameters["DistanceLimit"].SetValue(distanceLimit);

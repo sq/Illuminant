@@ -27,8 +27,8 @@ namespace TestGame.Scenes {
         float LightZ;
 
         bool ShowTerrainDepth  = false;
-        bool ShowLightmap      = false;
-        bool ShowDistanceField = true;
+        bool ShowLightmap      = true;
+        bool ShowDistanceField = false;
 
         public SoulcasterTest (TestGame game, int width, int height)
             : base(game, 1024, 1024) {
@@ -120,7 +120,7 @@ namespace TestGame.Scenes {
                 Position = new Vector3(64, 64, 0.7f),
                 Color = new Vector4(1f, 1f, 1f, 1f) * 0.75f,
                 RampStart = 80,
-                RampEnd = 400,
+                RampEnd = 560,
                 RampMode = LightSourceRampMode.Exponential
             };
 

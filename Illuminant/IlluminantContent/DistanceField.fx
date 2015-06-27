@@ -1,4 +1,5 @@
 #include "..\..\Upstream\Fracture\Squared\RenderLib\Content\GeometryCommon.fxh"
+#include "Common.fxh"
 
 #define MAX_VERTICES   40
 
@@ -6,19 +7,6 @@ uniform float2 PixelSize;
 uniform float2 Vertices[MAX_VERTICES];
 uniform float  DistanceLimit;
 uniform int    NumVertices;
-
-float2 ClosestPointOnEdge (
-    float2 pt, float2 edgeStart, float2 edgeEnd
-) {
-    float2 edgeDelta = edgeEnd - edgeStart;
-    float  edgeLength = length(edgeDelta);
-    edgeLength *= edgeLength;
-
-    float2 pointDelta = (pt - edgeStart) * edgeDelta;
-    float u = (pointDelta.x + pointDelta.y) / edgeLength;
-
-    return edgeStart + (edgeDelta * clamp(u, 0, 1));
-}
 
 void EdgeVertexShader (
     in    float3 position      : POSITION0, // x, y, z
@@ -45,7 +33,7 @@ void EdgePixelShader (
         if (i == NumVertices - 1)
             edgeB = Vertices[0];
 
-        float2 closest = ClosestPointOnEdge(self, edgeA, edgeB);
+        float2 closest = closestPointOnEdge(self, edgeA, edgeB);
         float2 closestDelta = self - closest;
         float  closestDistance = length(closestDelta);
 
@@ -59,14 +47,11 @@ void EdgePixelShader (
         discard;
 
     depth = resultPointDistance / DistanceLimit;
-    if (true)
-        color = float4(
-            resultPoint.x / 900,
-            resultPoint.y / 900,
-            0, 1
-        );
-    else
-        color = float4(depth, depth, depth, 1);
+    color = float4(
+        resultPoint.x,
+        resultPoint.y,
+        0, 1
+    );
 }
 
 technique Edge
