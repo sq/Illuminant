@@ -207,7 +207,7 @@ namespace Squared.Illuminant {
         private readonly RenderTarget2D _TerrainDepthmap;
         private readonly RenderTarget2D _DistanceField;
 
-        private readonly Action<DeviceManager, object> StoreScissorRect, RestoreScissorRect, ShadowBatchSetup, IlluminationBatchSetup;
+        private readonly Action<DeviceManager, object> BeginLightPass, EndLightPass, RestoreScissorRect, ShadowBatchSetup, IlluminationBatchSetup;
 
         public readonly RendererConfiguration Configuration;
         public LightingEnvironment Environment;
@@ -235,9 +235,10 @@ namespace Squared.Illuminant {
 
             IlluminantMaterials = new IlluminantMaterials(materials);
 
-            StoreScissorRect = _StoreScissorRect;
+            BeginLightPass     = _BeginLightPass;
+            EndLightPass       = _EndLightPass;
             RestoreScissorRect = _RestoreScissorRect;
-            ShadowBatchSetup = _ShadowBatchSetup;
+            ShadowBatchSetup   = _ShadowBatchSetup;
             IlluminationBatchSetup = _IlluminationBatchSetup;
 
             lock (coordinator.CreateResourceLock) {
@@ -490,12 +491,18 @@ namespace Squared.Illuminant {
             }
         }
 
-        private void _StoreScissorRect (DeviceManager device, object userData) {
+        private void _BeginLightPass (DeviceManager device, object userData) {
+            device.PushStates();
             StoredScissorRect = device.Device.ScissorRectangle;
         }
 
         private void _RestoreScissorRect (DeviceManager device, object userData) {
             device.Device.ScissorRectangle = StoredScissorRect;
+        }
+
+        private void _EndLightPass (DeviceManager device, object userData) {
+            device.Device.ScissorRectangle = StoredScissorRect;
+            device.PopStates();
         }
 
         private Rectangle GetScissorRectForLightSource (DeviceManager device, LightSource ls) {
@@ -774,7 +781,7 @@ namespace Squared.Illuminant {
             int layerIndex = 0;
 
             using (var sortedLights = BufferPool<LightSource>.Allocate(Environment.LightSources.Count))
-            using (var resultGroup = BatchGroup.New(container, layer, before: StoreScissorRect, after: RestoreScissorRect)) {
+            using (var resultGroup = BatchGroup.New(container, layer, before: BeginLightPass, after: EndLightPass)) {
                 if (Render.Tracing.RenderTrace.EnableTracing)
                     Render.Tracing.RenderTrace.Marker(resultGroup, -9999, "Frame {0:0000} : LightingRenderer {1:X4} : Begin", frame.Index, this.GetHashCode());
 
@@ -838,6 +845,7 @@ namespace Squared.Illuminant {
 
                     if (batchFirstLightSource == null)
                         batchFirstLightSource = lightSource;
+
                     if (currentLightGroup == null)
                         currentLightGroup = BatchGroup.New(resultGroup, lightGroupIndex++, before: RestoreScissorRect);
 
@@ -941,7 +949,7 @@ namespace Squared.Illuminant {
                     if (Render.Tracing.RenderTrace.EnableTracing)
                         Render.Tracing.RenderTrace.Marker(resultGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Volume Faces", frame.Index, this.GetHashCode());
 
-                    layerIndex = RenderTwoPointFiveD(layerIndex, resultGroup);
+                    RenderTwoPointFiveD(layerIndex, resultGroup);
                 }
 
                 if (Render.Tracing.RenderTrace.EnableTracing)
@@ -1006,7 +1014,7 @@ namespace Squared.Illuminant {
             SetTwoPointFiveDParametersInner(topFaceMaterial  .Effect.Parameters);
         }
 
-        private int RenderTwoPointFiveD (int layerIndex, BatchGroup resultGroup) {
+        private void RenderTwoPointFiveD (int layerIndex, BatchGroup resultGroup) {
             // FIXME: Support more than 12 lights
 
             int i = 0;
@@ -1036,48 +1044,52 @@ namespace Squared.Illuminant {
                 _LightColors[i] = _LightNeutralColors[i] = Vector4.Zero;                
             }
 
-            ClearBatch.AddNew(
-                resultGroup, ++layerIndex, Materials.Clear, clearZ: 0f
-            );
-
-            using (var topBatch = PrimitiveBatch<VertexPositionColor>.New(
-                resultGroup, ++layerIndex, Materials.Get(
-                    IlluminantMaterials.VolumeTopFace,                    
-                    depthStencilState: TopFaceDepthStencilState,
-                    rasterizerState: RasterizerState.CullNone,
-                    blendState: BlendState.Opaque
-                ),
-                batchSetup: SetTwoPointFiveDParameters
-            ))
-            using (var frontBatch = PrimitiveBatch<FrontFaceVertex>.New(
-                resultGroup, ++layerIndex, Materials.Get(
-                    IlluminantMaterials.VolumeFrontFace,
-                    depthStencilState: FrontFaceDepthStencilState,
-                    rasterizerState: RasterizerState.CullNone,
-                    blendState: BlendState.Opaque
-                ),
-                batchSetup: SetTwoPointFiveDParameters
+            using (var group = BatchGroup.New(
+                resultGroup, layerIndex,
+                before: (dm, _) => dm.PushStates(),
+                after: (dm, _) => dm.PopStates()
             )) {
-                foreach (var volume in Environment.HeightVolumes) {
-                    var ffm3d = volume.GetFrontFaceMesh3D();
-                    if (ffm3d.Count <= 0)
-                        continue;
+                ClearBatch.AddNew(
+                    group, 0, Materials.Clear, clearZ: 0f
+                );
 
-                    frontBatch.Add(new PrimitiveDrawCall<FrontFaceVertex>(
-                        PrimitiveType.TriangleList,
-                        ffm3d.Array, ffm3d.Offset, ffm3d.Count / 3
-                    ));
+                using (var topBatch = PrimitiveBatch<VertexPositionColor>.New(
+                    group, 1, Materials.Get(
+                        IlluminantMaterials.VolumeTopFace,                    
+                        depthStencilState: TopFaceDepthStencilState,
+                        rasterizerState: RasterizerState.CullNone,
+                        blendState: BlendState.Opaque
+                    ),
+                    batchSetup: SetTwoPointFiveDParameters
+                ))
+                using (var frontBatch = PrimitiveBatch<FrontFaceVertex>.New(
+                    group, 2, Materials.Get(
+                        IlluminantMaterials.VolumeFrontFace,
+                        depthStencilState: FrontFaceDepthStencilState,
+                        rasterizerState: RasterizerState.CullNone,
+                        blendState: BlendState.Opaque
+                    ),
+                    batchSetup: SetTwoPointFiveDParameters
+                )) {
+                    foreach (var volume in Environment.HeightVolumes) {
+                        var ffm3d = volume.GetFrontFaceMesh3D();
+                        if (ffm3d.Count <= 0)
+                            continue;
 
-                    var m3d = volume.Mesh3D;
+                        frontBatch.Add(new PrimitiveDrawCall<FrontFaceVertex>(
+                            PrimitiveType.TriangleList,
+                            ffm3d.Array, ffm3d.Offset, ffm3d.Count / 3
+                        ));
 
-                    topBatch.Add(new PrimitiveDrawCall<VertexPositionColor>(
-                        PrimitiveType.TriangleList,
-                        m3d, 0, m3d.Length / 3
-                    ));
+                        var m3d = volume.Mesh3D;
+
+                        topBatch.Add(new PrimitiveDrawCall<VertexPositionColor>(
+                            PrimitiveType.TriangleList,
+                            m3d, 0, m3d.Length / 3
+                        ));
+                    }
                 }
             }
-
-            return layerIndex;
         }
 
         private void RenderLightingSector (Frame frame, ref bool needStencilClear, BatchGroup currentLightGroup, ref int layerIndex, LightSource lightSource, ref NativeBatch stencilBatch, CachedSector cachedSector, int drawnIndex) {
@@ -1174,16 +1186,14 @@ namespace Squared.Illuminant {
             };
 
             using (var group = BatchGroup.ForRenderTarget(resultGroup, layerIndex++, _DistanceField, (dm, _) => {
-                parameters["PixelSize"].SetValue(new Vector2(
-                    1.0f / w, 1.0f / h
-                ));
+                parameters["DistanceLimit"].SetValue(128f);
             })) {
                 if (Render.Tracing.RenderTrace.EnableTracing)
                     Render.Tracing.RenderTrace.Marker(group, -1, "LightingRenderer {1:X4} : Begin Distance Field", this.GetHashCode());
 
                 ClearBatch.AddNew(
                     group, 0, Materials.Clear, 
-                    new Color(1f, 0f, 0f, 1f), clearZ: 1.0f
+                    Color.Transparent, clearZ: 1.0f
                 );
 
                 int i = 1;

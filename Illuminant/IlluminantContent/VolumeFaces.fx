@@ -5,9 +5,9 @@
 
 #define EXPONENTIAL                1
 #define TOP_FACE_DOT_RAMP          0
-#define TOP_FACE_RAYCAST_SHADOWS   0
+#define TOP_FACE_RAYCAST_SHADOWS   1
 #define FRONT_FACE_DOT_RAMP        1
-#define FRONT_FACE_RAYCAST_SHADOWS 0
+#define FRONT_FACE_RAYCAST_SHADOWS 1
 
 // Initially step at this rate while raycasting
 #define RAYCAST_INITIAL_STEP_PX 1.0

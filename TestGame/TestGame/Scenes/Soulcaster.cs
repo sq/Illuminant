@@ -27,8 +27,8 @@ namespace TestGame.Scenes {
         float LightZ;
 
         bool ShowTerrainDepth  = false;
-        bool ShowLightmap      = true;
-        bool ShowDistanceField = false;
+        bool ShowLightmap      = false;
+        bool ShowDistanceField = true;
 
         public SoulcasterTest (TestGame game, int width, int height)
             : base(game, 1024, 1024) {
@@ -199,8 +199,11 @@ namespace TestGame.Scenes {
 
                 if (ShowDistanceField || ShowTerrainDepth) {
                     using (var bb = BitmapBatch.New(
-                        frame, 2, Game.ScreenMaterials.ScreenSpaceBitmap,
-                        samplerState: SamplerState.PointClamp                        
+                        frame, 2, Game.ScreenMaterials.Get(
+                            Game.ScreenMaterials.ScreenSpaceBitmap,
+                            blendState: BlendState.AlphaBlend
+                        ),
+                        samplerState: SamplerState.PointClamp                     
                     ))
                         bb.Add(new BitmapDrawCall(
                             ShowTerrainDepth

@@ -1,10 +1,10 @@
 #include "..\..\Upstream\Fracture\Squared\RenderLib\Content\GeometryCommon.fxh"
 
 #define MAX_VERTICES   40
-#define DISTANCE_LIMIT 128
 
 uniform float2 PixelSize;
 uniform float2 Vertices[MAX_VERTICES];
+uniform float  DistanceLimit;
 uniform int    NumVertices;
 
 float2 ClosestPointOnEdge (
@@ -55,14 +55,14 @@ void EdgePixelShader (
         }
     }
 
-    if (resultPointDistance >= DISTANCE_LIMIT)
+    if (resultPointDistance >= DistanceLimit)
         discard;
 
-    depth = resultPointDistance / DISTANCE_LIMIT;
-    if (false)
+    depth = resultPointDistance / DistanceLimit;
+    if (true)
         color = float4(
-            resultPoint.x / 512,
-            resultPoint.y / 512,
+            resultPoint.x / 900,
+            resultPoint.y / 900,
             0, 1
         );
     else
