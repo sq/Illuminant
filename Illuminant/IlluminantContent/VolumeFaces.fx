@@ -112,6 +112,8 @@ void FrontFacePixelShader (
         lightDirection = normalize(lightDirection);
 
         float  opacity = computeLightOpacity(worldPosition, lightPosition, properties.x, properties.y);
+        if (opacity <= 0)
+            continue;
 
 #if EXPONENTIAL
         // Conditional exponential ramp
@@ -164,6 +166,8 @@ void TopFacePixelShader(
             continue;
 
         float  opacity = computeLightOpacity(worldPosition, lightPosition, properties.x, properties.y);
+        if (opacity <= 0)
+            continue;
 
 #if EXPONENTIAL
         // Conditional exponential ramp

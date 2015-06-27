@@ -191,6 +191,7 @@ namespace Squared.Illuminant {
         public readonly DepthStencilState TopFaceDepthStencilState, FrontFaceDepthStencilState;
         public readonly BlendState        HeightMin, HeightMax;
 
+        private static readonly short[] ShadowIndices;
         private static readonly Dictionary<TextureFilter, SamplerState> RampSamplerStates = new Dictionary<TextureFilter, SamplerState>();
 
         private readonly ArrayLineWriter ArrayLineWriterInstance = new ArrayLineWriter();
@@ -202,14 +203,14 @@ namespace Squared.Illuminant {
         private readonly Dictionary<Pair<int>, CachedSector> SectorCache = new Dictionary<Pair<int>, CachedSector>(new IntPairComparer());
         private readonly List<PointLightRecord> PointLightBatchBuffer = new List<PointLightRecord>(128);
         private Rectangle StoredScissorRect;
-        private readonly RenderTarget2D _TerrainDepthmap;
-        public static readonly short[] ShadowIndices;
 
-        public LightingEnvironment Environment;
+        private readonly RenderTarget2D _TerrainDepthmap;
+        private readonly RenderTarget2D _DistanceField;
 
         private readonly Action<DeviceManager, object> StoreScissorRect, RestoreScissorRect, ShadowBatchSetup, IlluminationBatchSetup;
 
         public readonly RendererConfiguration Configuration;
+        public LightingEnvironment Environment;
 
         const int  HeightmapResolutionMultiplier = 1;
         const bool HighPrecisionTerrain = true;
@@ -251,6 +252,13 @@ namespace Squared.Illuminant {
                     Configuration.MaximumRenderSize.First * HeightmapResolutionMultiplier, 
                     Configuration.MaximumRenderSize.Second * HeightmapResolutionMultiplier,
                     false, fmt, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.DiscardContents
+                );
+
+                _DistanceField = new RenderTarget2D(
+                    coordinator.Device,
+                    Configuration.MaximumRenderSize.First * HeightmapResolutionMultiplier, 
+                    Configuration.MaximumRenderSize.Second * HeightmapResolutionMultiplier,
+                    false, SurfaceFormat.Vector4, DepthFormat.Depth24, 0, RenderTargetUsage.DiscardContents
                 );
             }
 
@@ -360,17 +368,14 @@ namespace Squared.Illuminant {
                 ));
 #endif
 
-                materials.Add(IlluminantMaterials.VolumeTopFace = new DelegateMaterial(
-                    new Squared.Render.EffectMaterial(
-                        content.Load<Effect>("VolumeFaces"), "VolumeTopFace"
-                    ), dBegin, dEnd
-                ));
+                materials.Add(IlluminantMaterials.VolumeTopFace = 
+                    new Squared.Render.EffectMaterial(content.Load<Effect>("VolumeFaces"), "VolumeTopFace"));
 
-                materials.Add(IlluminantMaterials.VolumeFrontFace = new DelegateMaterial(
-                    new Squared.Render.EffectMaterial(
-                        content.Load<Effect>("VolumeFaces"), "VolumeFrontFace"
-                    ), dBegin, dEnd
-                ));
+                materials.Add(IlluminantMaterials.VolumeFrontFace = 
+                    new Squared.Render.EffectMaterial(content.Load<Effect>("VolumeFaces"), "VolumeFrontFace"));
+
+                materials.Add(IlluminantMaterials.DistanceFieldEdge = 
+                    new Squared.Render.EffectMaterial(content.Load<Effect>("DistanceField"), "Edge"));
             }
 
             // If stencil == false: set stencil to true.
@@ -476,6 +481,12 @@ namespace Squared.Illuminant {
         public RenderTarget2D TerrainDepthmap {
             get {
                 return _TerrainDepthmap;
+            }
+        }
+
+        public RenderTarget2D DistanceField {
+            get {
+                return _DistanceField;
             }
         }
 
@@ -988,8 +999,8 @@ namespace Squared.Illuminant {
         }
 
         private void SetTwoPointFiveDParameters (DeviceManager dm, object _) {
-            var frontFaceMaterial = ((Squared.Render.EffectMaterial)((DelegateMaterial)IlluminantMaterials.VolumeFrontFace).BaseMaterial);
-            var topFaceMaterial   = ((Squared.Render.EffectMaterial)((DelegateMaterial)IlluminantMaterials.VolumeTopFace).BaseMaterial);
+            var frontFaceMaterial = (Squared.Render.EffectMaterial)IlluminantMaterials.VolumeFrontFace;
+            var topFaceMaterial   = (Squared.Render.EffectMaterial)IlluminantMaterials.VolumeTopFace;
 
             SetTwoPointFiveDParametersInner(frontFaceMaterial.Effect.Parameters);
             SetTwoPointFiveDParametersInner(topFaceMaterial  .Effect.Parameters);
@@ -997,6 +1008,8 @@ namespace Squared.Illuminant {
 
         private int RenderTwoPointFiveD (int layerIndex, BatchGroup resultGroup) {
             // FIXME: Support more than 12 lights
+
+            RenderDistanceField(ref layerIndex, resultGroup);
 
             int i = 0;
             foreach (var ls in Environment.LightSources) {
@@ -1092,16 +1105,16 @@ namespace Squared.Illuminant {
             ));
         }
 
-        public void RenderHeightmap (Frame frame, IBatchContainer container, int layer, RenderTarget2D renderTarget = null) {
+        public void RenderHeightmap (Frame frame, IBatchContainer container, int layer) {
             UpdateZRange();
 
-            using (var group = BatchGroup.ForRenderTarget(container, layer, renderTarget ?? _TerrainDepthmap)) {
+            using (var group = BatchGroup.ForRenderTarget(container, layer, _TerrainDepthmap)) {
                 if (Render.Tracing.RenderTrace.EnableTracing)
                     Render.Tracing.RenderTrace.Marker(group, -1, "Frame {0:0000} : LightingRenderer {1:X4} : Begin Heightmap", frame.Index, this.GetHashCode());
 
                 ClearBatch.AddNew(
                     group, 0, Materials.Clear, 
-                    new Color(1.0f, Environment.GroundZ, 0f, 1f), Environment.GroundZ, 0
+                    new Color(1.0f, Environment.GroundZ, 0f, 1f)
                 );
 
                 using (var minBatch = PrimitiveBatch<VertexPositionColor>.New(
@@ -1136,6 +1149,68 @@ namespace Squared.Illuminant {
 
                 if (Render.Tracing.RenderTrace.EnableTracing)
                     Render.Tracing.RenderTrace.Marker(group, 2, "Frame {0:0000} : LightingRenderer {1:X4} : End Heightmap", frame.Index, this.GetHashCode());
+            }
+        }
+
+        private void RenderDistanceField (ref int layerIndex, BatchGroup resultGroup) {
+            return;
+            var parameters = IlluminantMaterials.DistanceFieldEdge.Effect.Parameters;
+
+            int w = _DistanceField.Width, h = _DistanceField.Height;
+            var verts = new VertexPositionColor[] {
+                new VertexPositionColor(Vector3.Zero, Color.White),
+                new VertexPositionColor(new Vector3(w, 0, 0), Color.White),
+                new VertexPositionColor(new Vector3(w, h, 0), Color.White),
+                new VertexPositionColor(new Vector3(0, h, 0), Color.White)
+            };
+            var indices = new short[] {
+                0, 1, 3, 1, 2, 3
+            };
+
+            var dss = new DepthStencilState {
+                DepthBufferEnable = false,
+                DepthBufferWriteEnable = true,
+                DepthBufferFunction = CompareFunction.Less
+            };
+
+            using (var group = BatchGroup.ForRenderTarget(resultGroup, layerIndex++, _DistanceField, (dm, _) => {
+                parameters["PixelSize"].SetValue(new Vector2(
+                    1.0f / w, 1.0f / h
+                ));
+                dm.Device.BlendState        = BlendState.Opaque;
+                dm.Device.RasterizerState   = RasterizerState.CullNone;
+                dm.Device.DepthStencilState = DepthStencilState.None;
+            })) {
+                if (Render.Tracing.RenderTrace.EnableTracing)
+                    Render.Tracing.RenderTrace.Marker(group, -1, "LightingRenderer {1:X4} : Begin Distance Field", this.GetHashCode());
+
+                ClearBatch.AddNew(
+                    group, 0, Materials.Clear, 
+                    new Color(1f, 0f, 0f, 1f), clearZ: 1.0f
+                );
+
+                int i = 1;
+                // Rasterize the height volumes in sequential order.
+                foreach (var hv in Environment.HeightVolumes) {
+                    var p = hv.Polygon;
+                    var m = hv.Mesh3D;
+
+                    using (var edgeBatch = PrimitiveBatch<VertexPositionColor>.New(
+                        group, i++, IlluminantMaterials.DistanceFieldEdge,
+                        (dm, _) => {
+                            parameters["NumVertices"].SetValue(Math.Min(48, p.Count));
+                            parameters["Vertices"]   .SetValue(p.GetVertices());
+                            dm.CurrentMaterial.Flush();
+                        }
+                    ))
+                        edgeBatch.Add(new PrimitiveDrawCall<VertexPositionColor>(
+                            PrimitiveType.TriangleList,
+                            verts, 0, verts.Length, indices, 0, indices.Length / 3
+                        ));
+                }
+
+                if (Render.Tracing.RenderTrace.EnableTracing)
+                    Render.Tracing.RenderTrace.Marker(group, 2, "LightingRenderer {1:X4} : End Distance Field", this.GetHashCode());
             }
         }
 
@@ -1211,7 +1286,8 @@ namespace Squared.Illuminant {
 
         public Material DebugOutlines, Shadow, ClearStencil;
         public Material PointLightLinear, PointLightExponential, PointLightLinearRampTexture, PointLightExponentialRampTexture;
-        public Material VolumeFrontFace, VolumeTopFace;
+        public Squared.Render.EffectMaterial VolumeFrontFace, VolumeTopFace;
+        public Squared.Render.EffectMaterial DistanceFieldEdge;
         public Squared.Render.EffectMaterial ScreenSpaceGammaCompressedBitmap, WorldSpaceGammaCompressedBitmap;
         public Squared.Render.EffectMaterial ScreenSpaceToneMappedBitmap, WorldSpaceToneMappedBitmap;
 #if !SDL2

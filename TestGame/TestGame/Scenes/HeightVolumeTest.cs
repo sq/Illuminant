@@ -96,7 +96,7 @@ namespace TestGame.Scenes {
                 Environment.LightSources.Add(light);
             }
 
-            const float angleStep = (float)(Math.PI / 128);
+            const float angleStep = (float)(Math.PI / 64);
             const int   heightTiers = 5;
             const float minHeight = 0f;
             const float maxHeight = 1f;
