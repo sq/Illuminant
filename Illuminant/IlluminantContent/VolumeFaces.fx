@@ -56,7 +56,8 @@ float ComputeRaycastedShadowOcclusionSample (
     //  with moving lights.
     int seenUnobstructed = 0, obstructed = 0;
     if (
-        (maxDistance >= RAYCAST_MIN_DISTANCE_PX)
+        (maxDistance >= RAYCAST_MIN_DISTANCE_PX) &&
+        (worldPosition.y < lightPosition.y)
     ) {
         float raycastStepRatePx = RAYCAST_INITIAL_STEP_PX;
         float stepGrowthFactor = RAYCAST_INITIAL_STEP_GROWTH_FACTOR;
