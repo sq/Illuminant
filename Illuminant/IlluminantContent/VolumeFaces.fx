@@ -19,7 +19,7 @@
 // Initially step at this rate while raycasting
 #define RAYCAST_INITIAL_STEP_PX 1.0
 // Initial growth rate of step rate
-#define RAYCAST_INITIAL_STEP_GROWTH_FACTOR 1.70
+#define RAYCAST_INITIAL_STEP_GROWTH_FACTOR 1.1
 // Growth rate increases per step also
 #define RAYCAST_STEP_GROWTH_FACTOR_GROWTH_FACTOR 1.05
 // Never step more than this many pixels at a time
@@ -92,7 +92,7 @@ float ComputeRaycastedShadowOpacity (
             float3 samplePosition = (lightPosition + (lightDirection * castDistance));
 
 #if DISTANCE_FIELD_ACCELERATED_RAYCASTING
-            float2 nearestObstacle = sampleDistanceField(samplePosition);
+            float2 nearestObstacle = sampleDistanceField(samplePosition.xy);
             
             // FIXME: A pixel in the distance field might not have any data.
             float2 distanceToNearestObstacle = nearestObstacle - samplePosition.xy;
@@ -104,11 +104,14 @@ float ComputeRaycastedShadowOpacity (
             if (length(distanceToFoundObstacle) < ACCELERATED_OBSTACLE_DISTANCE_LIMIT_PX) {
                 samplePosition = nearestAlongRay;
                 castDistance = distanceAlongRay;
+            }
+            /*
             } else {
                 // The nearest obstacle does not block our path. Skip forward.
                 castDistance += length(distanceToNearestObstacle) * ACCELERATED_SKIP_LENGTH_FACTOR;
                 continue;
             }
+            */
 #endif
                 
             float2 terrainZ = sampleTerrain(samplePosition);
@@ -133,10 +136,7 @@ float ComputeRaycastedShadowOpacity (
             );
             stepGrowthFactor *= RAYCAST_STEP_GROWTH_FACTOR_GROWTH_FACTOR;
 
-#if DISTANCE_FIELD_ACCELERATED_RAYCASTING
-#else
             castDistance += raycastStepRatePx;
-#endif
         }
 
         if (obstructed && seenUnobstructed)

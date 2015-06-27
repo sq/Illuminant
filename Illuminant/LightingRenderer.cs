@@ -978,6 +978,8 @@ namespace Squared.Illuminant {
 
         const int FaceMaxLights = 12;
 
+        private Vector2   _CoordinateOffset, _CoordinateScale;
+
         private int       _VisibleLightCount  = 0;
         private Vector3[] _LightPositions     = new Vector3[FaceMaxLights];
         private Vector3[] _LightProperties    = new Vector3[FaceMaxLights];
@@ -1121,6 +1123,9 @@ namespace Squared.Illuminant {
         public void RenderHeightmap (Frame frame, IBatchContainer container, int layer) {
             UpdateZRange();
 
+            Vector2 minCoordinate = new Vector2(999999, 999999);
+            Vector2 maxCoordinate = new Vector2(-999999, -999999);
+
             using (var group = BatchGroup.ForRenderTarget(container, layer, _TerrainDepthmap)) {
                 if (Render.Tracing.RenderTrace.EnableTracing)
                     Render.Tracing.RenderTrace.Marker(group, -1, "Frame {0:0000} : LightingRenderer {1:X4} : Begin Heightmap", frame.Index, this.GetHashCode());
@@ -1148,6 +1153,12 @@ namespace Squared.Illuminant {
                 ))
                 // Rasterize the height volumes in sequential order.
                 foreach (var hv in Environment.HeightVolumes) {
+                    var b = hv.Bounds;
+                    minCoordinate.X = Math.Min(minCoordinate.X, b.TopLeft.X);
+                    minCoordinate.Y = Math.Min(minCoordinate.Y, b.TopLeft.Y);
+                    maxCoordinate.X = Math.Max(maxCoordinate.X, b.BottomRight.X);
+                    maxCoordinate.Y = Math.Max(maxCoordinate.Y, b.BottomRight.Y);
+
                     var m = hv.Mesh3D;
 
                     minBatch.Add(new PrimitiveDrawCall<VertexPositionColor>(
@@ -1164,8 +1175,15 @@ namespace Squared.Illuminant {
                     Render.Tracing.RenderTrace.Marker(group, 2, "Frame {0:0000} : LightingRenderer {1:X4} : End Heightmap", frame.Index, this.GetHashCode());
             }
 
-            if (Configuration.TwoPointFiveD)
+            if (Configuration.TwoPointFiveD) {
+                _CoordinateOffset = -minCoordinate;
+                _CoordinateScale = new Vector2(
+                    1f / (maxCoordinate.X - minCoordinate.X),
+                    1f / (maxCoordinate.Y - minCoordinate.Y)
+                );
+
                 RenderDistanceField(ref layer, container);
+            }
         }
 
         private void RenderDistanceField (ref int layerIndex, IBatchContainer resultGroup) {
@@ -1180,6 +1198,8 @@ namespace Squared.Illuminant {
 
             using (var group = BatchGroup.ForRenderTarget(resultGroup, layerIndex++, _DistanceField, (dm, _) => {
                 parameters["DistanceLimit"].SetValue(distanceLimit);
+                parameters["CoordinateOffset"].SetValue(_CoordinateOffset);
+                parameters["CoordinateScale"].SetValue(_CoordinateScale);
             })) {
                 if (Render.Tracing.RenderTrace.EnableTracing)
                     Render.Tracing.RenderTrace.Marker(group, -1, "LightingRenderer {1:X4} : Begin Distance Field", this.GetHashCode());

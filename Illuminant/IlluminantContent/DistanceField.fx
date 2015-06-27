@@ -5,6 +5,7 @@
 
 uniform float2 PixelSize;
 uniform float2 Vertices[MAX_VERTICES];
+uniform float2 CoordinateOffset, CoordinateScale;
 uniform float  DistanceLimit;
 uniform int    NumVertices;
 
@@ -47,10 +48,10 @@ void EdgePixelShader (
         discard;
 
     depth = resultPointDistance / DistanceLimit;
+    float2 adjustedResult = (resultPoint + CoordinateOffset) * CoordinateScale;
+
     color = float4(
-        resultPoint.x,
-        resultPoint.y,
-        0, 1
+        adjustedResult.x, adjustedResult.y, 0, 1
     );
 }
 
