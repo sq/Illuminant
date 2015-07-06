@@ -156,8 +156,7 @@ namespace Squared.Illuminant {
                 options.MaxDegreeOfParallelism = 1;
 
             _ObstructionsByLight.Clear();
-#if SDL2
-            // Parallel is Satan -flibit
+#if SDL2 // Parallel is Satan -flibit
             foreach (LightSource ls in Environment.LightSources)
             {
                 LineGeneratorContext ctx = new LineGeneratorContext(Environment.Obstructions.Count * 2);

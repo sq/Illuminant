@@ -54,13 +54,13 @@
       <Project>{140FFD8A-4ECD-4BBC-AE81-FCC21F9ED36A}</Project>
       <Name>Squared.Render.SDL2</Name>
     </ProjectReference>
-    <ProjectReference Include="..\MonoGame\MonoGame.Framework\MonoGame.Framework.SDL2.csproj">
-      <Project>{35253CE1-C864-4CD3-8249-4D1319748E8F}</Project>
-      <Name>MonoGame.Framework.SDL2</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Squared\Util\Squared.Util.SDL2.csproj">
       <Project>{D3A95FBF-A1C5-45D0-839F-B155D7B10272}</Project>
       <Name>Squared.Util.SDL2</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\FNA\FNA.csproj">
+      <Project>{35253CE1-C864-4CD3-8249-4D1319748E8F}</Project>
+      <Name>FNA</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

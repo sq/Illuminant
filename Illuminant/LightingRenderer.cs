@@ -346,7 +346,6 @@ namespace Squared.Illuminant {
                     ), dBegin, dEnd
                 ));
 
-#if !SDL2
                 materials.Add(IlluminantMaterials.PointLightExponentialRampTexture = new DelegateMaterial(
                     PointLightMaterialsInner[2] = new Squared.Render.EffectMaterial(
                         content.Load<Effect>("Illumination"), "PointLightExponentialRampTexture"
@@ -358,7 +357,6 @@ namespace Squared.Illuminant {
                         content.Load<Effect>("Illumination"), "PointLightLinearRampTexture"
                     ), dBegin, dEnd
                 ));
-#endif
 
                 materials.Add(IlluminantMaterials.VolumeTopFace = new DelegateMaterial(
                     new Squared.Render.EffectMaterial(
@@ -388,11 +386,7 @@ namespace Squared.Illuminant {
 
             materials.Add(IlluminantMaterials.Shadow = new DelegateMaterial(
                 ShadowMaterialInner = new Squared.Render.EffectMaterial(
-#if SDL2
-                    content.Load<Effect>("Shadow"), "Shadow"
-#else
                     content.Load<Effect>("Illumination"), "Shadow"
-#endif
                 ),
                 new[] {
                     MaterialUtil.MakeDelegate(
@@ -414,23 +408,6 @@ namespace Squared.Illuminant {
                 }
             ));
 
-#if SDL2
-            materials.Add(IlluminantMaterials.ScreenSpaceGammaCompressedBitmap = new Squared.Render.EffectMaterial(
-                content.Load<Effect>("ScreenSpaceGammaCompressedBitmap"), "ScreenSpaceGammaCompressedBitmap"
-            ));
-
-            materials.Add(IlluminantMaterials.WorldSpaceGammaCompressedBitmap = new Squared.Render.EffectMaterial(
-                content.Load<Effect>("WorldSpaceGammaCompressedBitmap"), "WorldSpaceGammaCompressedBitmap"
-            ));
-
-            materials.Add(IlluminantMaterials.ScreenSpaceToneMappedBitmap = new Squared.Render.EffectMaterial(
-                content.Load<Effect>("ScreenSpaceToneMappedBitmap"), "ScreenSpaceToneMappedBitmap"
-            ));
-
-            materials.Add(IlluminantMaterials.WorldSpaceToneMappedBitmap = new Squared.Render.EffectMaterial(
-                content.Load<Effect>("WorldSpaceToneMappedBitmap"), "WorldSpaceToneMappedBitmap"
-            ));
-#else
             materials.Add(IlluminantMaterials.ScreenSpaceGammaCompressedBitmap = new Squared.Render.EffectMaterial(
                 content.Load<Effect>("HDRBitmap"), "ScreenSpaceGammaCompressedBitmap"
             ));
@@ -454,7 +431,6 @@ namespace Squared.Illuminant {
             materials.Add(IlluminantMaterials.WorldSpaceRampBitmap = new Squared.Render.EffectMaterial(
                 content.Load<Effect>("RampBitmap"), "WorldSpaceRampBitmap"
             ));
-#endif
 
             Environment = environment;
 
@@ -560,10 +536,6 @@ namespace Squared.Illuminant {
 
             foreach (var mi in PointLightMaterialsInner) {
                 mi.Effect.Parameters["LightNeutralColor"].SetValue(ls.NeutralColor);
-#if SDL2
-                // Only the RampTexture techniques have this parameter -flibit
-                if (mi.Effect.Parameters["RampTexture"] != null)
-#endif
                 mi.Effect.Parameters["RampTexture"].SetValue(ls.RampTexture);
 
                 var tsize = new Vector2(
@@ -1214,9 +1186,7 @@ namespace Squared.Illuminant {
         public Material VolumeFrontFace, VolumeTopFace;
         public Squared.Render.EffectMaterial ScreenSpaceGammaCompressedBitmap, WorldSpaceGammaCompressedBitmap;
         public Squared.Render.EffectMaterial ScreenSpaceToneMappedBitmap, WorldSpaceToneMappedBitmap;
-#if !SDL2
         public Squared.Render.EffectMaterial ScreenSpaceRampBitmap, WorldSpaceRampBitmap;
-#endif
 
         internal readonly Effect[] EffectsToSetGammaCompressionParametersOn;
         internal readonly Effect[] EffectsToSetToneMappingParametersOn;
