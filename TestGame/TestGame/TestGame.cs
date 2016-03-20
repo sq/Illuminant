@@ -45,16 +45,11 @@ namespace TestGame {
             PreviousKeyboardState = Keyboard.GetState();
 
             Scenes = new Scene[] {
-                new Goat(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new LightingTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new ReceiverTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new ParticleLight(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new RampTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new HeightVolumeTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new SoulcasterTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
             };
 
-            ActiveSceneIndex = 6;
+            ActiveSceneIndex = 0;
         }
 
         protected override void LoadContent () {

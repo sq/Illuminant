@@ -14,7 +14,6 @@ namespace Squared.Illuminant {
         public static float DefaultSubdivision = 128f;
 
         public readonly SpatialCollection<LightSource> LightSources = new SpatialCollection<LightSource>(DefaultSubdivision);
-        public readonly List<LightReceiver> LightReceivers = new List<LightReceiver>();
         public readonly SpatialCollection<LightObstructionBase> Obstructions = new SpatialCollection<LightObstructionBase>(DefaultSubdivision);
         public readonly SpatialCollection<HeightVolumeBase> HeightVolumes = new SpatialCollection<HeightVolumeBase>(DefaultSubdivision);
 
@@ -83,37 +82,9 @@ namespace Squared.Illuminant {
             }
         }
 
-        /// <param name="position">The position.</param>
-        /// <param name="ignoredLights">A set of lights to ignore, if any. If this value is a HashSet of LightSources it will be used directly, otherwise the sequence is copied.</param>
-        /// <returns>The created receiver</returns>
-        public LightReceiver AddLightReceiver (LightPosition position, LightIgnorePredicate lightIgnorePredicate = null) {
-            var result = new LightReceiver {
-                Position = position,
-                LightIgnorePredicate = lightIgnorePredicate
-            };
-
-            LightReceivers.Add(result);
-
-            return result;
-        }
-
-        /// <summary>
-        /// Updates all the lighting environment's receivers based on the current positions of light sources and obstructions.
-        /// </summary>
-        public void UpdateReceivers () {
-            if (LightReceivers.Count == 0)
-                return;
-
-            var query = new LightingQuery(this, true);
-
-            foreach (var receiver in LightReceivers)
-                receiver.Update(query);
-        }
-
         public void Clear () {
             Obstructions.Clear();
             LightSources.Clear();
-            LightReceivers.Clear();
         }
     }
 

@@ -113,11 +113,6 @@
     <Compile Include="Program.cs" />
     <Compile Include="Scenes\Soulcaster.cs" />
     <Compile Include="Scenes\HeightVolumeTest.cs" />
-    <Compile Include="Scenes\RampTest.cs" />
-    <Compile Include="Scenes\ParticleLight.cs" />
-    <Compile Include="Scenes\ReceiverTest.cs" />
-    <Compile Include="Scenes\Goat.cs" />
-    <Compile Include="Scenes\LightingTest.cs" />
     <Compile Include="TestGame.cs" />
   </ItemGroup>
   <ItemGroup>
