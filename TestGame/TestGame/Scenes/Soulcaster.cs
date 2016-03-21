@@ -198,20 +198,29 @@ namespace TestGame.Scenes {
                     bb.Add(dc);
                 }
 
-                if (ShowDistanceField || ShowTerrainDepth) {
-                    ClearBatch.AddNew(frame, 2, Game.ScreenMaterials.Clear, Color.White);
-
+                if (ShowDistanceField) {
                     using (var bb = BitmapBatch.New(
                         frame, 3, Game.ScreenMaterials.Get(
+                            Renderer.IlluminantMaterials.VisualizeDistanceField,
+                            blendState: BlendState.Opaque
+                        ),
+                        samplerState: SamplerState.PointClamp                     
+                    ))
+                        bb.Add(new BitmapDrawCall(
+                            Renderer.DistanceField, Vector2.Zero, Color.White
+                        ));
+                }
+
+                if (ShowTerrainDepth) {
+                    using (var bb = BitmapBatch.New(
+                        frame, 4, Game.ScreenMaterials.Get(
                             Game.ScreenMaterials.ScreenSpaceBitmap,
                             blendState: BlendState.AlphaBlend
                         ),
                         samplerState: SamplerState.PointClamp                     
                     ))
                         bb.Add(new BitmapDrawCall(
-                            ShowTerrainDepth
-                                ? Renderer.TerrainDepthmap
-                                : Renderer.DistanceField, Vector2.Zero, Color.White
+                            Renderer.TerrainDepthmap, Vector2.Zero, Color.White
                         ));
                 }
             }

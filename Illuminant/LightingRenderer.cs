@@ -213,7 +213,7 @@ namespace Squared.Illuminant {
         public readonly RendererConfiguration Configuration;
         public LightingEnvironment Environment;
 
-        const int  DistanceLimit = 256;
+        const int  DistanceLimit = 512;
         const int  HeightmapResolutionMultiplier = 1;
         const int  DistanceFieldResolutionMultiplier = 1;
         const bool HighPrecisionTerrain = true;
@@ -262,7 +262,7 @@ namespace Squared.Illuminant {
                     coordinator.Device,
                     Configuration.MaximumRenderSize.First * DistanceFieldResolutionMultiplier, 
                     Configuration.MaximumRenderSize.Second * DistanceFieldResolutionMultiplier,
-                    false, SurfaceFormat.Rgba64, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.DiscardContents
+                    false, SurfaceFormat.Single, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.DiscardContents
                 );
             }
 
@@ -411,6 +411,9 @@ namespace Squared.Illuminant {
 
                 materials.Add(IlluminantMaterials.DistanceFieldInterior = 
                     new Squared.Render.EffectMaterial(content.Load<Effect>("DistanceField"), "Interior"));
+
+                materials.Add(IlluminantMaterials.VisualizeDistanceField = 
+                    new Squared.Render.EffectMaterial(content.Load<Effect>("DistanceField"), "Visualize"));
             }
 
             // If stencil == false: set stencil to true.
@@ -1241,7 +1244,7 @@ namespace Squared.Illuminant {
                     Render.Tracing.RenderTrace.Marker(group, -1, "LightingRenderer {1:X4} : Begin Distance Field", this.GetHashCode());
 
                 ClearBatch.AddNew(
-                    group, 0, Materials.Clear, Color.White, 1f, 0
+                    group, 0, Materials.Clear, Color.Black, 1f, 0
                 );
 
                 int i = 1;
@@ -1380,7 +1383,7 @@ namespace Squared.Illuminant {
         public Material DebugOutlines, Shadow, ClearStencil;
         public Material PointLightLinear, PointLightExponential, PointLightLinearRampTexture, PointLightExponentialRampTexture;
         public Squared.Render.EffectMaterial VolumeFrontFace, VolumeTopFace;
-        public Squared.Render.EffectMaterial DistanceFieldExterior, DistanceFieldInterior;
+        public Squared.Render.EffectMaterial DistanceFieldExterior, DistanceFieldInterior, VisualizeDistanceField;
         public Squared.Render.EffectMaterial ScreenSpaceGammaCompressedBitmap, WorldSpaceGammaCompressedBitmap;
         public Squared.Render.EffectMaterial ScreenSpaceToneMappedBitmap, WorldSpaceToneMappedBitmap;
 #if !SDL2

@@ -16,21 +16,26 @@ float2 closestPointOnEdge (
     return edgeStart + ((edgeEnd - edgeStart) * clamp(u, 0, 1));
 }
 
-#define DISTANCE_MAX 127.0
+// HACK: We offset all values because we can only clear the render target to 0.0 or 1.0 :(
+//  This makes the pixels cleared to 0 by the gpu count as extremely distant
+#define DISTANCE_OFFSET 1024.0
+
+// HACK: Scale distance values into [0, 1] so we can use the depth buffer to do a cheap min()
+#define DISTANCE_DEPTH_MAX 2048.0
 
 float distanceToDepth (float distance) {
     // FIXME: The abs() here is designed to pick the 'closest' point, whether it's interior or exterior
     // We do interior/exterior in separate passes so that an exterior point never overrides an interior
     //  point, but we want to ensure that in the case of two intersecting volumes we actually produce
     //  the distance to the closest volume edge.
-    return clamp(abs(distance / DISTANCE_MAX), 0, 1);
+    return clamp(abs(distance / DISTANCE_DEPTH_MAX), 0, 1);
 }
 
 float4 encodeDistance (float distance) {
-    float d = (distance / DISTANCE_MAX) + 0.5;
-    return float4(d, d, d, 1);
+    float d = distance;
+    return float4(d - DISTANCE_OFFSET, 1, 1, 1);
 }
 
-float decodeDistance (float encodedDistance) {
-    return (encodedDistance - 0.5) * DISTANCE_MAX;
+float decodeDistance (float4 encodedDistance) {
+    return encodedDistance.r + DISTANCE_OFFSET;
 }

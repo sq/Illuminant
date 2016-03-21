@@ -31,16 +31,16 @@ namespace TestGame {
             Graphics = new GraphicsDeviceManager(this);
             Graphics.PreferredBackBufferFormat = SurfaceFormat.Color;
             Graphics.PreferredDepthStencilFormat = DepthFormat.Depth24Stencil8;
-            Graphics.PreferredBackBufferWidth = 1257;
-            Graphics.PreferredBackBufferHeight = 1250;
+            Graphics.PreferredBackBufferWidth = 1920;
+            Graphics.PreferredBackBufferHeight = 1080;
             Graphics.SynchronizeWithVerticalRetrace = true;
             // Graphics.SynchronizeWithVerticalRetrace = false;
             Graphics.PreferMultiSampling = false;
 
             Content.RootDirectory = "Content";
 
-            UseThreadedDraw = true;
-            IsFixedTimeStep = false;
+            UseThreadedDraw = false;
+            IsFixedTimeStep = true;
 
             PreviousKeyboardState = Keyboard.GetState();
 
@@ -89,6 +89,8 @@ namespace TestGame {
         }
 
         public override void Draw (GameTime gameTime, Frame frame) {
+            ClearBatch.AddNew(frame, -9999, ScreenMaterials.Clear, Color.Black);
+
             Scenes[ActiveSceneIndex].Draw(frame);
         }
     }
