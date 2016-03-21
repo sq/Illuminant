@@ -10,6 +10,8 @@ shared float4x4 ModelViewMatrix;
 uniform float4 LightNeutralColor;
 uniform float3 LightCenter;
 
+#define PENUMBRA_THICKNESS 8
+
 float4 ApplyTransform (float3 position) {
     float3 localPosition = ((position - float3(ViewportPosition.xy, 0)) * float3(ViewportScale, 1));
     return mul(mul(float4(localPosition.xyz, 1), ModelViewMatrix), ProjectionMatrix);
@@ -29,6 +31,45 @@ void PointLightVertexShader(
     result = float4(transformedPosition.xy, 0, transformedPosition.w);
 }
 
+float coneTrace (
+    in float3 lightCenter,
+    in float3 shadedPixelPosition
+) {
+    float traceOffset = 0;
+    float3 traceVector = (shadedPixelPosition - lightCenter);
+    float traceLength = length(traceVector);
+    traceVector = normalize(traceVector);
+
+    float lowestDistance = 999;
+    float coneAttenuation = 1.0;
+
+    while (traceOffset < traceLength) {
+        float3 tracePosition = lightCenter + (traceVector * traceOffset);
+        float distanceToObstacle = sampleDistanceField(tracePosition.xy);
+
+        if (distanceToObstacle <= 0) {
+            // TODO: Factor in Z
+            /*
+            float2 obstacleZ = sampleTerrain(tracePosition.xy);
+
+            if ((obstacleZ.y >= lightCenter.z) && (obstacleZ.y >= shadedZ))
+            */
+
+            return 0;
+        }
+
+        float maxSearch = traceLength - traceOffset;
+        float stepAttenuation = min(PENUMBRA_THICKNESS, maxSearch);
+        coneAttenuation = min(coneAttenuation, clamp(distanceToObstacle / stepAttenuation, 0, 1));
+
+        lowestDistance = min(distanceToObstacle, lowestDistance);
+
+        traceOffset += max(abs(distanceToObstacle), 1);
+    }
+
+    return coneAttenuation;
+}
+
 float PointLightPixelCore(
     in float2 worldPosition : TEXCOORD2,
     in float3 lightCenter   : TEXCOORD0,
@@ -44,33 +85,10 @@ float PointLightPixelCore(
 
     float3 shadedPixelPosition = float3(worldPosition.xy, shadedZ);
 
-    float traceOffset = 0;
-    float3 traceVector = (shadedPixelPosition - lightCenter);
-    float traceLength = length(traceVector);
-    traceVector = normalize(traceVector);
-
-    float lowestDistance = 999;
-
-    while (traceOffset < traceLength) {
-        float3 tracePosition = lightCenter + (traceVector * traceOffset);
-        float distanceToObstacle = sampleDistanceField(tracePosition.xy);
-
-        if (distanceToObstacle <= 0)
-            return 0;
-
-        lowestDistance = min(lowestDistance, distanceToObstacle);        
-        traceOffset += max(floor(abs(distanceToObstacle)), 1);
-    }
-
     // FIXME: What about z?
     float lightOpacity = computeLightOpacity(shadedPixelPosition, lightCenter, ramp.x, ramp.y);
 
-    if (0) {
-        float coneAttenuation = clamp(lowestDistance / (ramp.x / 2), 0, 1);
-        return lightOpacity * coneAttenuation;
-    }
-
-    return lightOpacity;
+    return lightOpacity * coneTrace(lightCenter, shadedPixelPosition);
 }
 
 void PointLightPixelShaderLinear(

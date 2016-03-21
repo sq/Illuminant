@@ -82,9 +82,9 @@ namespace TestGame.Scenes {
             for (var i = 0; i < 12; i++) {
                 light = new LightSource {
                     Position = new Vector3(64, 64, rng.NextFloat(0.1f, 2.0f)),
-                    Color = new Vector4((float)rng.NextDouble(0.1f, 1.0f), (float)rng.NextDouble(0.1f, 1.0f), (float)rng.NextDouble(0.1f, 1.0f), 1.0f),
-                    RampStart = rng.NextFloat(32, 60),
-                    RampEnd = rng.NextFloat(160, 250),
+                    Color = new Vector4((float)rng.NextDouble(0.2f, 0.7f), (float)rng.NextDouble(0.2f, 0.7f), (float)rng.NextDouble(0.2f, 0.7f), 1.0f),
+                    RampStart = rng.NextFloat(40, 68),
+                    RampEnd = rng.NextFloat(210, 300),
                     RampMode = LightSourceRampMode.Exponential
                 };
 
@@ -103,6 +103,8 @@ namespace TestGame.Scenes {
 
             var points = new List<Vector2>();
 
+            int j = 0;
+
             for (float r = 0.9f, hs = (maxHeight - minHeight) / heightTiers, rs = -r / (heightTiers + 1), h = minHeight + hs; h <= maxHeight; h += hs, r += rs) {
                 points.Clear();
 
@@ -120,7 +122,9 @@ namespace TestGame.Scenes {
                     0.0f, h
                 );
 
-                Environment.HeightVolumes.Add(volume);
+                j++;
+                if (j == heightTiers - 1)
+                    Environment.HeightVolumes.Add(volume);
             }
 
             Environment.HeightVolumes.Add(new SimpleHeightVolume(

@@ -888,8 +888,9 @@ namespace Squared.Illuminant {
                     Geometry.PointInPolygon(posXy, hv.Polygon)
             );
 
-            if (isEnclosed)
-                return true;
+            // FIXME: This is broken when lying on the same axis as a polygon edge, sometimes. :|
+            // if (isEnclosed)
+            //    return true;
 
             return false;
         }
