@@ -1,8 +1,5 @@
 #include "LightCommon.fxh"
-
-#define SHADOW_DEPTH_BIAS -0.01
-#define FILLRULE_NEGATIVE_OFFSET 0
-#define FILLRULE_POSITIVE_OFFSET 0.99
+#include "DistanceFieldCommon.fxh"
 
 shared float2 ViewportScale;
 shared float2 ViewportPosition;
@@ -12,8 +9,6 @@ shared float4x4 ModelViewMatrix;
 
 uniform float4 LightNeutralColor;
 uniform float3 LightCenter;
-
-uniform float3 ShadowLength;
 
 float4 ApplyTransform (float3 position) {
     float3 localPosition = ((position - float3(ViewportPosition.xy, 0)) * float3(ViewportScale, 1));
@@ -121,77 +116,6 @@ void PointLightPixelShaderExponentialRampTexture(
 
     float4 lightColorActual = float4(color.rgb * color.a, color.a);
     result = lerp(LightNeutralColor, lightColorActual, distanceOpacity);
-}
-
-void ShadowVertexShader(
-    in float3  position  : POSITION0,
-    in float   pairIndex : BLENDINDICES,
-    in float   minZ      : TEXCOORD0,
-    out float4 z         : TEXCOORD0,
-    out float4 result    : POSITION0
-) {
-    float3 deltaMin = (float3(position.xy, minZ) - LightCenter);
-    float3 delta = (position - LightCenter);
-
-    float3 directionMin = normalize(deltaMin);
-    float3 direction = normalize(delta);
-
-    float3 shadowLengthScaled = float3(ShadowLength.x, ShadowLength.x, ShadowLength.x);
-
-    if ((pairIndex == 0) || (minZ > LightCenter.z)) {
-        shadowLengthScaled = float3(0, 0, 0);
-    }
-
-    float3 untransformed = position + (direction * shadowLengthScaled);
-    float  untransformedMinZ = minZ + (directionMin.z * shadowLengthScaled.z);
-
-    float3 directionSign = sign(direction);
-    float4 fillruleOffset = float4(
-        (clamp(directionSign.x,  0, 1) * FILLRULE_POSITIVE_OFFSET) +
-        (clamp(directionSign.x, -1, 0) * FILLRULE_NEGATIVE_OFFSET),
-        (clamp(directionSign.y,  0, 1) * FILLRULE_POSITIVE_OFFSET) +
-        (clamp(directionSign.y, -1, 0) * FILLRULE_NEGATIVE_OFFSET),
-        0, 0
-    );
-
-    float4 transformed = ApplyTransform(untransformed + fillruleOffset);
-
-    // FIXME: Why do I have to strip Z????
-    result = float4(transformed.x, transformed.y, 0, transformed.w);
-
-    z = float4(
-        minZ, position.z, untransformedMinZ, untransformed.z
-    );
-}
-
-void ShadowPixelShader(
-    // startMinZ, startMaxZ, endMinZ, endMaxZ
-    in  float4 _z        : TEXCOORD0,
-    in  float2 vpos      : VPOS,
-    out float4 color     : COLOR0
-) {
-    float startMinZ = _z.x;
-    float startMaxZ = _z.y;
-    float thisMinZ  = _z.z;
-    float thisMaxZ  = _z.w + SHADOW_DEPTH_BIAS;
-
-    float2 terrainZ = sampleTerrain(vpos);
-
-    // Is this shadow pixel beneath the visible surface, and thus useless?
-    int isBeneathVisibleSurface = (thisMaxZ < terrainZ.y);
-
-    if (isBeneathVisibleSurface)
-        discard;
-
-    color = float4(1, 1, 1, 0);
-}
-
-technique Shadow {
-    pass P0
-    {
-        vertexShader = compile vs_3_0 ShadowVertexShader();
-        pixelShader = compile ps_3_0 ShadowPixelShader();
-    }
 }
 
 technique PointLightLinear {

@@ -185,9 +185,7 @@ namespace Squared.Illuminant {
         public readonly DefaultMaterialSet Materials;
         public readonly RenderCoordinator Coordinator;
         public readonly IlluminantMaterials IlluminantMaterials;
-        public readonly Squared.Render.EffectMaterial ShadowMaterialInner;
         public readonly Squared.Render.EffectMaterial[] PointLightMaterialsInner = new Squared.Render.EffectMaterial[4];
-        public readonly DepthStencilState PointLightStencil, ShadowStencil;
         public readonly DepthStencilState TopFaceDepthStencilState, FrontFaceDepthStencilState;
         public readonly DepthStencilState DistanceInteriorStencilState, DistanceExteriorStencilState;
         public readonly BlendState        HeightMin, HeightMax;
@@ -208,7 +206,7 @@ namespace Squared.Illuminant {
         private readonly RenderTarget2D _TerrainDepthmap;
         private readonly RenderTarget2D _DistanceField;
 
-        private readonly Action<DeviceManager, object> BeginLightPass, EndLightPass, RestoreScissorRect, ShadowBatchSetup, IlluminationBatchSetup;
+        private readonly Action<DeviceManager, object> BeginLightPass, EndLightPass, RestoreScissorRect, IlluminationBatchSetup;
 
         public readonly RendererConfiguration Configuration;
         public LightingEnvironment Environment;
@@ -241,7 +239,6 @@ namespace Squared.Illuminant {
             BeginLightPass     = _BeginLightPass;
             EndLightPass       = _EndLightPass;
             RestoreScissorRect = _RestoreScissorRect;
-            ShadowBatchSetup   = _ShadowBatchSetup;
             IlluminationBatchSetup = _IlluminationBatchSetup;
 
             lock (coordinator.CreateResourceLock) {
@@ -286,18 +283,6 @@ namespace Squared.Illuminant {
                     blendState: BlendState.AlphaBlend
                 )
             );
-
-            // If stencil == false, paint point light at this location
-            PointLightStencil = new DepthStencilState {
-                DepthBufferEnable = false,
-                StencilEnable = true,
-                StencilMask = StencilTrue,
-                StencilWriteMask = StencilFalse,
-                StencilFunction = CompareFunction.Equal,
-                StencilPass = StencilOperation.Keep,
-                StencilFail = StencilOperation.Keep,
-                ReferenceStencil = StencilFalse
-            };
 
             TopFaceDepthStencilState = new DepthStencilState {
                 StencilEnable = false,
@@ -358,13 +343,8 @@ namespace Squared.Illuminant {
             {
                 var dBegin = new[] {
                     MaterialUtil.MakeDelegate(
-#if SHADOW_VIZ
-                        rasterizerState: RasterizerState.CullNone,
-                        depthStencilState: DepthStencilState.None
-#else
                         rasterizerState: RenderStates.ScissorOnly, 
-                        depthStencilState: PointLightStencil
-#endif
+                        depthStencilState: DepthStencilState.None
                     )
                 };
                 var dEnd = new[] {
@@ -415,47 +395,6 @@ namespace Squared.Illuminant {
                 materials.Add(IlluminantMaterials.VisualizeDistanceField = 
                     new Squared.Render.EffectMaterial(content.Load<Effect>("Visualize"), "Visualize"));
             }
-
-            // If stencil == false: set stencil to true.
-            // If stencil == true: leave stencil alone, don't paint this pixel
-            ShadowStencil = new DepthStencilState {
-                DepthBufferEnable = false,
-                StencilEnable = true,
-                StencilMask = StencilTrue,
-                StencilWriteMask = StencilTrue,
-                StencilFunction = CompareFunction.NotEqual,
-                StencilPass = StencilOperation.Replace,
-                StencilFail = StencilOperation.Keep,
-                ReferenceStencil = StencilTrue
-            };
-
-            materials.Add(IlluminantMaterials.Shadow = new DelegateMaterial(
-                ShadowMaterialInner = new Squared.Render.EffectMaterial(
-#if SDL2
-                    content.Load<Effect>("Shadow"), "Shadow"
-#else
-                    content.Load<Effect>("Illumination"), "Shadow"
-#endif
-                ),
-                new[] {
-                    MaterialUtil.MakeDelegate(
-#if SHADOW_VIZ
-                        rasterizerState: RasterizerState.CullNone, 
-                        depthStencilState: DepthStencilState.None,
-                        blendState: BlendState.Opaque
-#else
-                        rasterizerState : RenderStates.ScissorOnly,
-                        depthStencilState: ShadowStencil,
-                        blendState: RenderStates.DrawNone
-#endif
-                    )
-                },
-                new[] {
-                    MaterialUtil.MakeDelegate(
-                        rasterizerState: RasterizerState.CullNone, depthStencilState: DepthStencilState.None
-                    )
-                }
-            ));
 
 #if SDL2
             materials.Add(IlluminantMaterials.ScreenSpaceGammaCompressedBitmap = new Squared.Render.EffectMaterial(
@@ -511,9 +450,6 @@ namespace Squared.Illuminant {
                 cachedSector.Dispose();
 
             SectorCache.Clear();
-
-            PointLightStencil.Dispose();
-            ShadowStencil.Dispose();
         }
 
         public RenderTarget2D TerrainDepthmap {
@@ -637,38 +573,8 @@ namespace Squared.Illuminant {
                 );
             }
 
-            ShadowMaterialInner.Effect.Parameters["GroundZ"].SetValue(Environment.GroundZ);
-            ShadowMaterialInner.Effect.Parameters["ZDistanceScale"].SetValue(Environment.ZDistanceScale);
-            ShadowMaterialInner.Effect.Parameters["ZToYMultiplier"].SetValue(
-                Configuration.TwoPointFiveD
-                    ? Environment.ZToYMultiplier
-                    : 0.0f
-            );
-
             device.Device.SamplerStates[1] = GetRampSamplerState(ls.RampTextureFilter);
             device.Device.ScissorRectangle = StoredScissorRect;
-        }
-
-        private void _ShadowBatchSetup (DeviceManager device, object lightSource) {
-            var ls = (LightSource)lightSource;
-
-            ShadowMaterialInner.Effect.Parameters["LightCenter"].SetValue((Vector3)ls.Position);
-            
-            // FIXME: Figure out why the derived computation for this in the shader doesn't work.
-            // ShadowMaterialInner.Effect.Parameters["ShadowLength"].SetValue(ls.RampEnd * 2);
-
-            // HACK: 10k pixels should be more than enough
-            const float shadowLength = 9999f;
-            ShadowMaterialInner.Effect.Parameters["ShadowLength"].SetValue(shadowLength);
-
-            device.Device.ScissorRectangle = GetScissorRectForLightSource(device, ls);
-
-            var tsize = new Vector2(
-                (float)HeightmapResolutionMultiplier / _TerrainDepthmap.Width, 
-                (float)HeightmapResolutionMultiplier / _TerrainDepthmap.Height
-            );
-            ShadowMaterialInner.Effect.Parameters["TerrainTextureTexelSize"].SetValue(tsize);
-            ShadowMaterialInner.Effect.Parameters["TerrainTexture"].SetValue(_TerrainDepthmap);
         }
 
         private CachedSector GetCachedSector (Frame frame, Pair<int> sectorIndex) {
@@ -906,34 +812,6 @@ namespace Squared.Illuminant {
                         needStencilClear = false;
                     }
 
-                    NativeBatch stencilBatch = null;
-
-                    // TODO: Rasterize the terrain map into the depth buffer and use depth to cull shadow fragments below the terrain
-
-                    {
-                        SpatialCollection<LightObstructionBase>.Sector currentSector;
-                        using (var e = Environment.Obstructions.GetSectorsFromBounds(lightBounds))
-                        while (e.GetNext(out currentSector)) {
-                            var cachedSector = GetCachedSector(frame, currentSector.Index);
-                            if (cachedSector.VertexCount <= 0)
-                                continue;
-
-                            RenderLightingSector(frame, ref needStencilClear, currentLightGroup, ref layerIndex, lightSource, ref stencilBatch, cachedSector, i + 1);
-                        }
-                    }
-
-                    {
-                        SpatialCollection<HeightVolumeBase>.Sector currentSector;
-                        using (var e = Environment.HeightVolumes.GetSectorsFromBounds(lightBounds))
-                        while (e.GetNext(out currentSector)) {
-                            var cachedSector = GetCachedSector(frame, currentSector.Index);
-                            if (cachedSector.VertexCount <= 0)
-                                continue;
-
-                            RenderLightingSector(frame, ref needStencilClear, currentLightGroup, ref layerIndex, lightSource, ref stencilBatch, cachedSector, i + 1);
-                        }
-                    }
-
                     var vertex = MakePointLightVertex(lightSource, intensityScale);
 
                     vertex.Position = clippedLightBounds.TopLeft;
@@ -1133,29 +1011,6 @@ namespace Squared.Illuminant {
                     }
                 }
             }
-        }
-
-        private void RenderLightingSector (Frame frame, ref bool needStencilClear, BatchGroup currentLightGroup, ref int layerIndex, LightSource lightSource, ref NativeBatch stencilBatch, CachedSector cachedSector, int drawnIndex) {
-            if (cachedSector.DrawnIndex >= drawnIndex)
-                return;
-
-            cachedSector.DrawnIndex = drawnIndex;
-
-            if (stencilBatch == null) {
-                if (Render.Tracing.RenderTrace.EnableTracing)
-                    Render.Tracing.RenderTrace.Marker(currentLightGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Begin Stencil Shadow Batch", frame.Index, this.GetHashCode());
-
-                stencilBatch = NativeBatch.New(currentLightGroup, layerIndex++, IlluminantMaterials.Shadow, ShadowBatchSetup, lightSource);
-                stencilBatch.Dispose();
-                needStencilClear = true;
-
-                if (Render.Tracing.RenderTrace.EnableTracing)
-                    Render.Tracing.RenderTrace.Marker(currentLightGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : End Stencil Shadow Batch", frame.Index, this.GetHashCode());
-            }
-
-            stencilBatch.Add(new NativeDrawCall(
-                PrimitiveType.TriangleList, cachedSector.ObstructionVertexBuffer, 0, cachedSector.ObstructionIndexBuffer, 0, 0, cachedSector.VertexCount, 0, cachedSector.PrimitiveCount
-            ));
         }
 
         public void RenderHeightmap (Frame frame, IBatchContainer container, int layer) {
