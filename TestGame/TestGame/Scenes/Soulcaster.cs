@@ -14,8 +14,6 @@ using Squared.Render.Convenience;
 
 namespace TestGame.Scenes {
     public class SoulcasterTest : Scene {
-        DefaultMaterialSet LightmapMaterials;
-
         LightingEnvironment Environment;
         LightingRenderer Renderer;
 
@@ -100,7 +98,7 @@ namespace TestGame.Scenes {
         }
 
         public override void LoadContent () {
-            LightmapMaterials = new DefaultMaterialSet(Game.Services);
+            Game.Materials = new DefaultMaterialSet(Game.Services);
 
             // Since the spiral is very detailed
             LightingEnvironment.DefaultSubdivision = 128f;
@@ -110,7 +108,7 @@ namespace TestGame.Scenes {
             Background = Game.Content.Load<Texture2D>("sc3test");
 
             Renderer = new LightingRenderer(
-                Game.Content, Game.RenderCoordinator, LightmapMaterials, Environment, 
+                Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(Width, Height) {
                     TwoPointFiveD = true
                 }
@@ -143,85 +141,86 @@ namespace TestGame.Scenes {
         public override void Draw (Squared.Render.Frame frame) {
             const float LightmapScale = 1f;
 
-            LightmapMaterials.ViewportScale = new Vector2(1f / LightmapScale);
-            LightmapMaterials.ProjectionMatrix = Matrix.CreateOrthographicOffCenter(
-                0, Width,
-                Height, 0,
-                0, 1
-            );
-
             CreateRenderTargets();
 
             Renderer.RenderHeightmap(frame, frame, -2);
 
             using (var bg = BatchGroup.ForRenderTarget(
-                frame, -1, Lightmap
+                frame, -1, Lightmap,
+                (dm, _) => {
+                    Game.Materials.PushViewTransform(ViewTransform.CreateOrthographic(Lightmap.Width, Lightmap.Height));
+                },
+                (dm, _) => {
+                    Game.Materials.PopViewTransform();
+                }
             )) {
-                ClearBatch.AddNew(bg, 0, LightmapMaterials.Clear, clearColor: Color.Black, clearZ: 0, clearStencil: 0);
+                ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black, clearZ: 0, clearStencil: 0);
 
                 Renderer.RenderLighting(frame, bg, 1, intensityScale: 1);
 
                 // Ambient light
                 using (var gb = GeometryBatch.New(
                     bg, 9999, 
-                    Game.ScreenMaterials.Get(Game.ScreenMaterials.ScreenSpaceGeometry, blendState: BlendState.Additive)
+                    Game.Materials.Get(Game.Materials.ScreenSpaceGeometry, blendState: BlendState.Additive)
                 ))
                     gb.AddFilledQuad(Bounds.FromPositionAndSize(Vector2.Zero, Vector2.One * 9999), new Color(32, 32, 32, 255));
             };
 
-            ClearBatch.AddNew(frame, 0, Game.ScreenMaterials.Clear, clearColor: Color.Black);
+            using (var group = BatchGroup.New(frame, 0)) {
+                ClearBatch.AddNew(group, 0, Game.Materials.Clear, clearColor: Color.Blue);
 
-            if (ShowLightmap) {
-                using (var bb = BitmapBatch.New(
-                    frame, 1,
-                    Game.ScreenMaterials.Get(Game.ScreenMaterials.ScreenSpaceBitmap, blendState: BlendState.Opaque),
-                    samplerState: SamplerState.PointClamp
-                ))
-                    bb.Add(new BitmapDrawCall(
-                        Lightmap, Vector2.Zero
-                    ));
-            } else {
-                using (var bb = BitmapBatch.New(
-                    frame, 1,
-                    Game.ScreenMaterials.Get(
-                        ShowTerrainDepth
-                            ? Game.ScreenMaterials.ScreenSpaceBitmap
-                            : Game.ScreenMaterials.ScreenSpaceLightmappedBitmap,
-                        blendState: BlendState.Opaque
-                    ),
-                    samplerState: SamplerState.PointClamp
-                )) {
-                    var dc = new BitmapDrawCall(
-                        Background, Vector2.Zero, Color.White * (ShowTerrainDepth ? 0.7f : 1.0f)
-                    );
-                    dc.Textures = new TextureSet(dc.Textures.Texture1, Lightmap);
-                    bb.Add(dc);
-                }
-
-                if (ShowDistanceField) {
+                if (ShowLightmap) {
                     using (var bb = BitmapBatch.New(
-                        frame, 3, Game.ScreenMaterials.Get(
-                            Renderer.IlluminantMaterials.VisualizeDistanceField,
+                        group, 1,
+                        Game.Materials.Get(Game.Materials.ScreenSpaceBitmap, blendState: BlendState.Opaque),
+                        samplerState: SamplerState.PointClamp
+                    ))
+                        bb.Add(new BitmapDrawCall(
+                            Lightmap, Vector2.Zero
+                        ));
+                } else {
+                    using (var bb = BitmapBatch.New(
+                        group, 1,
+                        Game.Materials.Get(
+                            ShowTerrainDepth
+                                ? Game.Materials.ScreenSpaceBitmap
+                                : Game.Materials.ScreenSpaceLightmappedBitmap,
                             blendState: BlendState.Opaque
                         ),
-                        samplerState: SamplerState.PointClamp                     
-                    ))
-                        bb.Add(new BitmapDrawCall(
-                            Renderer.DistanceField, Vector2.Zero, Color.White
-                        ));
-                }
+                        samplerState: SamplerState.PointClamp
+                    )) {
+                        var dc = new BitmapDrawCall(
+                            Background, Vector2.Zero, Color.White * (ShowTerrainDepth ? 0.7f : 1.0f)
+                        );
+                        dc.Textures = new TextureSet(dc.Textures.Texture1, Lightmap);
+                        bb.Add(dc);
+                    }
 
-                if (ShowTerrainDepth) {
-                    using (var bb = BitmapBatch.New(
-                        frame, 4, Game.ScreenMaterials.Get(
-                            Game.ScreenMaterials.ScreenSpaceBitmap,
-                            blendState: BlendState.AlphaBlend
-                        ),
-                        samplerState: SamplerState.PointClamp                     
-                    ))
-                        bb.Add(new BitmapDrawCall(
-                            Renderer.TerrainDepthmap, Vector2.Zero, Color.White
-                        ));
+                    if (ShowDistanceField) {
+                        using (var bb = BitmapBatch.New(
+                            group, 3, Game.Materials.Get(
+                                Renderer.IlluminantMaterials.VisualizeDistanceField,
+                                blendState: BlendState.Opaque
+                            ),
+                            samplerState: SamplerState.PointClamp
+                        ))
+                            bb.Add(new BitmapDrawCall(
+                                Renderer.DistanceField, Vector2.Zero, Color.White
+                            ));
+                    }
+
+                    if (ShowTerrainDepth) {
+                        using (var bb = BitmapBatch.New(
+                            group, 4, Game.Materials.Get(
+                                Game.Materials.ScreenSpaceBitmap,
+                                blendState: BlendState.AlphaBlend
+                            ),
+                            samplerState: SamplerState.PointClamp
+                        ))
+                            bb.Add(new BitmapDrawCall(
+                                Renderer.TerrainDepthmap, Vector2.Zero, Color.White
+                            ));
+                    }
                 }
             }
         }

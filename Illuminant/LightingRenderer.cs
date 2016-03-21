@@ -262,7 +262,7 @@ namespace Squared.Illuminant {
                     coordinator.Device,
                     Configuration.MaximumRenderSize.First * DistanceFieldResolutionMultiplier, 
                     Configuration.MaximumRenderSize.Second * DistanceFieldResolutionMultiplier,
-                    false, SurfaceFormat.Single, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.DiscardContents
+                    false, SurfaceFormat.Vector4, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.DiscardContents
                 );
             }
 
@@ -413,7 +413,7 @@ namespace Squared.Illuminant {
                     new Squared.Render.EffectMaterial(content.Load<Effect>("DistanceField"), "Interior"));
 
                 materials.Add(IlluminantMaterials.VisualizeDistanceField = 
-                    new Squared.Render.EffectMaterial(content.Load<Effect>("DistanceField"), "Visualize"));
+                    new Squared.Render.EffectMaterial(content.Load<Effect>("Visualize"), "Visualize"));
             }
 
             // If stencil == false: set stencil to true.
@@ -1168,7 +1168,16 @@ namespace Squared.Illuminant {
             Vector2 minCoordinate = new Vector2(999999, 999999);
             Vector2 maxCoordinate = new Vector2(-999999, -999999);
 
-            using (var group = BatchGroup.ForRenderTarget(container, layer, _TerrainDepthmap)) {
+            using (var group = BatchGroup.ForRenderTarget(
+                container, layer, _TerrainDepthmap,
+                // FIXME: Optimize this
+                (dm, _) => {
+                    Materials.PushViewTransform(ViewTransform.CreateOrthographic(_TerrainDepthmap.Width, _TerrainDepthmap.Height));
+                },
+                (dm, _) => {
+                    Materials.PopViewTransform();
+                }
+            )) {
                 if (Render.Tracing.RenderTrace.EnableTracing)
                     Render.Tracing.RenderTrace.Marker(group, -1, "Frame {0:0000} : LightingRenderer {1:X4} : Begin Heightmap", frame.Index, this.GetHashCode());
 
@@ -1238,8 +1247,15 @@ namespace Squared.Illuminant {
                 0, 1, 3, 1, 2, 3
             };
 
-            using (var group = BatchGroup.ForRenderTarget(resultGroup, layerIndex++, _DistanceField, (dm, _) => {
-            })) {
+            using (var group = BatchGroup.ForRenderTarget(resultGroup, layerIndex++, _DistanceField,
+                // FIXME: Optimize this
+                (dm, _) => {
+                    Materials.PushViewTransform(ViewTransform.CreateOrthographic(_DistanceField.Width, _DistanceField.Height));
+                },
+                (dm, _) => {
+                    Materials.PopViewTransform();
+                }
+            )) {
                 if (Render.Tracing.RenderTrace.EnableTracing)
                     Render.Tracing.RenderTrace.Marker(group, -1, "LightingRenderer {1:X4} : Begin Distance Field", this.GetHashCode());
 

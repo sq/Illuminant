@@ -13,8 +13,6 @@ using Squared.Render;
 
 namespace TestGame.Scenes {
     public class HeightVolumeTest : Scene {
-        DefaultMaterialSet LightmapMaterials;
-
         LightingEnvironment Environment;
         LightingRenderer Renderer;
 
@@ -58,15 +56,13 @@ namespace TestGame.Scenes {
         }
 
         public override void LoadContent () {
-            LightmapMaterials = new DefaultMaterialSet(Game.Services);
-
             // Since the spiral is very detailed
             LightingEnvironment.DefaultSubdivision = 128f;
 
             Environment = new LightingEnvironment();
 
             Renderer = new LightingRenderer(
-                Game.Content, Game.RenderCoordinator, LightmapMaterials, Environment, 
+                Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(Width, Height)
             );
 
@@ -96,7 +92,7 @@ namespace TestGame.Scenes {
                 Environment.LightSources.Add(light);
             }
 
-            const float angleStep = (float)(Math.PI / 64);
+            const float angleStep = (float)(Math.PI / 20);
             const int   heightTiers = 5;
             const float minHeight = 0f;
             const float maxHeight = 1f;
@@ -139,8 +135,8 @@ namespace TestGame.Scenes {
         public override void Draw (Squared.Render.Frame frame) {
             const float LightmapScale = 1f;
 
-            LightmapMaterials.ViewportScale = new Vector2(1f / LightmapScale);
-            LightmapMaterials.ProjectionMatrix = Matrix.CreateOrthographicOffCenter(
+            Game.Materials.ViewportScale = new Vector2(1f / LightmapScale);
+            Game.Materials.ProjectionMatrix = Matrix.CreateOrthographicOffCenter(
                 0, Width,
                 Height, 0,
                 0, 1
@@ -153,18 +149,24 @@ namespace TestGame.Scenes {
             Renderer.RenderHeightmap(frame, frame, -2);
 
             using (var bg = BatchGroup.ForRenderTarget(
-                frame, -1, Lightmap
+                frame, -1, Lightmap,
+                (dm, _) => {
+                    Game.Materials.PushViewTransform(ViewTransform.CreateOrthographic(Lightmap.Width, Lightmap.Height));
+                },
+                (dm, _) => {
+                    Game.Materials.PopViewTransform();
+                }
             )) {
-                ClearBatch.AddNew(bg, 0, LightmapMaterials.Clear, clearColor: Color.Black, clearZ: 0, clearStencil: 0);
+                ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black, clearZ: 0, clearStencil: 0);
 
                 Renderer.RenderLighting(frame, bg, 1, intensityScale: 1);
             };
 
-            ClearBatch.AddNew(frame, 0, Game.ScreenMaterials.Clear, clearColor: Color.Black);
+            ClearBatch.AddNew(frame, 0, Game.Materials.Clear, clearColor: Color.Black);
 
             using (var bb = BitmapBatch.New(
                 frame, 1,
-                Game.ScreenMaterials.Get(Game.ScreenMaterials.ScreenSpaceBitmap, blendState: BlendState.Opaque),
+                Game.Materials.Get(Game.Materials.ScreenSpaceBitmap, blendState: BlendState.Opaque),
                 samplerState: SamplerState.PointClamp
             ))
                 bb.Add(new BitmapDrawCall(

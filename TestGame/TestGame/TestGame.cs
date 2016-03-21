@@ -20,7 +20,7 @@ using TestGame.Scenes;
 namespace TestGame {
     public class TestGame : MultithreadedGame {
         public GraphicsDeviceManager Graphics;
-        public DefaultMaterialSet ScreenMaterials;
+        public DefaultMaterialSet Materials;
 
         public KeyboardState PreviousKeyboardState, KeyboardState;
 
@@ -39,8 +39,8 @@ namespace TestGame {
 
             Content.RootDirectory = "Content";
 
-            UseThreadedDraw = false;
-            IsFixedTimeStep = true;
+            UseThreadedDraw = true;
+            IsFixedTimeStep = false;
 
             PreviousKeyboardState = Keyboard.GetState();
 
@@ -55,15 +55,7 @@ namespace TestGame {
         protected override void LoadContent () {
             base.LoadContent();
 
-            ScreenMaterials = new DefaultMaterialSet(Services) {
-                ViewportScale = new Vector2(1, 1),
-                ViewportPosition = new Vector2(0, 0),
-                ProjectionMatrix = Matrix.CreateOrthographicOffCenter(
-                    0, GraphicsDevice.Viewport.Width,
-                    GraphicsDevice.Viewport.Height, 0,
-                    0, 1
-                )
-            };
+            Materials = new DefaultMaterialSet(Services);
 
             foreach (var scene in Scenes)
                 scene.LoadContent();
@@ -89,7 +81,7 @@ namespace TestGame {
         }
 
         public override void Draw (GameTime gameTime, Frame frame) {
-            ClearBatch.AddNew(frame, -9999, ScreenMaterials.Clear, Color.Black);
+            ClearBatch.AddNew(frame, -9999, Materials.Clear, Color.Black);
 
             Scenes[ActiveSceneIndex].Draw(frame);
         }
