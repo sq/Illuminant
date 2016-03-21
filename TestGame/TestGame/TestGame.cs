@@ -49,7 +49,7 @@ namespace TestGame {
                 new SoulcasterTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
             };
 
-            ActiveSceneIndex = 0;
+            ActiveSceneIndex = 1;
         }
 
         protected override void LoadContent () {

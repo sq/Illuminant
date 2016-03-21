@@ -189,6 +189,7 @@ namespace Squared.Illuminant {
         public readonly Squared.Render.EffectMaterial[] PointLightMaterialsInner = new Squared.Render.EffectMaterial[4];
         public readonly DepthStencilState PointLightStencil, ShadowStencil;
         public readonly DepthStencilState TopFaceDepthStencilState, FrontFaceDepthStencilState;
+        public readonly DepthStencilState DistanceInteriorStencilState, DistanceExteriorStencilState;
         public readonly BlendState        HeightMin, HeightMax;
 
         private static readonly short[] ShadowIndices;
@@ -212,7 +213,9 @@ namespace Squared.Illuminant {
         public readonly RendererConfiguration Configuration;
         public LightingEnvironment Environment;
 
+        const int  DistanceLimit = 256;
         const int  HeightmapResolutionMultiplier = 1;
+        const int  DistanceFieldResolutionMultiplier = 1;
         const bool HighPrecisionTerrain = true;
         const int  StencilTrue  = 0xFF;
         const int  StencilFalse = 0x00;
@@ -257,9 +260,9 @@ namespace Squared.Illuminant {
 
                 _DistanceField = new RenderTarget2D(
                     coordinator.Device,
-                    Configuration.MaximumRenderSize.First * HeightmapResolutionMultiplier, 
-                    Configuration.MaximumRenderSize.Second * HeightmapResolutionMultiplier,
-                    false, SurfaceFormat.Rg32, DepthFormat.Depth24, 0, RenderTargetUsage.DiscardContents
+                    Configuration.MaximumRenderSize.First * DistanceFieldResolutionMultiplier, 
+                    Configuration.MaximumRenderSize.Second * DistanceFieldResolutionMultiplier,
+                    false, SurfaceFormat.Rgba64, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.DiscardContents
                 );
             }
 
@@ -308,6 +311,34 @@ namespace Squared.Illuminant {
                 DepthBufferEnable = true,
                 DepthBufferFunction = CompareFunction.GreaterEqual,
                 DepthBufferWriteEnable = false
+            };
+
+            DistanceInteriorStencilState = new DepthStencilState {
+                StencilEnable = true,
+                StencilPass = StencilOperation.Replace,
+                StencilFail = StencilOperation.Keep,
+                StencilFunction = CompareFunction.Always,
+
+                ReferenceStencil = StencilTrue,
+                StencilMask = StencilTrue,
+                StencilWriteMask = StencilTrue,
+
+                DepthBufferEnable = true,
+                DepthBufferFunction = CompareFunction.LessEqual,
+                DepthBufferWriteEnable = true
+            };
+
+            DistanceExteriorStencilState = new DepthStencilState {
+                StencilEnable = true,
+                StencilFunction = CompareFunction.Equal,
+
+                ReferenceStencil = StencilFalse,
+                StencilMask = StencilTrue,
+                StencilWriteMask = StencilFalse,
+
+                DepthBufferEnable = true,
+                DepthBufferFunction = CompareFunction.LessEqual,
+                DepthBufferWriteEnable = true
             };
 
             HeightMin = new BlendState {
@@ -375,8 +406,11 @@ namespace Squared.Illuminant {
                 materials.Add(IlluminantMaterials.VolumeFrontFace = 
                     new Squared.Render.EffectMaterial(content.Load<Effect>("VolumeFaces"), "VolumeFrontFace"));
 
-                materials.Add(IlluminantMaterials.DistanceFieldEdge = 
-                    new Squared.Render.EffectMaterial(content.Load<Effect>("DistanceField"), "Edge"));
+                materials.Add(IlluminantMaterials.DistanceFieldExterior = 
+                    new Squared.Render.EffectMaterial(content.Load<Effect>("DistanceField"), "Exterior"));
+
+                materials.Add(IlluminantMaterials.DistanceFieldInterior = 
+                    new Squared.Render.EffectMaterial(content.Load<Effect>("DistanceField"), "Interior"));
             }
 
             // If stencil == false: set stencil to true.
@@ -1193,34 +1227,40 @@ namespace Squared.Illuminant {
         }
 
         private void RenderDistanceField (ref int layerIndex, IBatchContainer resultGroup) {
-            var parameters = IlluminantMaterials.DistanceFieldEdge.Effect.Parameters;
+            var intParameters = IlluminantMaterials.DistanceFieldInterior.Effect.Parameters;
+            var extParameters = IlluminantMaterials.DistanceFieldExterior.Effect.Parameters;
 
             int w = _DistanceField.Width, h = _DistanceField.Height;
             var indices = new short[] {
                 0, 1, 3, 1, 2, 3
             };
 
-            const float distanceLimit = 512f;
-
             using (var group = BatchGroup.ForRenderTarget(resultGroup, layerIndex++, _DistanceField, (dm, _) => {
-                parameters["DistanceLimit"].SetValue(distanceLimit);
-                parameters["CoordinateOffset"].SetValue(_CoordinateOffset);
-                parameters["CoordinateScale"].SetValue(_CoordinateScale);
             })) {
                 if (Render.Tracing.RenderTrace.EnableTracing)
                     Render.Tracing.RenderTrace.Marker(group, -1, "LightingRenderer {1:X4} : Begin Distance Field", this.GetHashCode());
 
                 ClearBatch.AddNew(
-                    group, 0, Materials.Clear, 
-                    Color.Transparent, clearZ: 1.0f
+                    group, 0, Materials.Clear, Color.White, 1f, 0
                 );
 
                 int i = 1;
+
                 // Rasterize the height volumes in sequential order.
+                using (var interiorGroup = BatchGroup.ForRenderTarget(group, 1, _DistanceField, (dm, _) => {
+                    dm.Device.BlendState = BlendState.Opaque;
+                    dm.Device.RasterizerState = RasterizerState.CullNone;
+                    dm.Device.DepthStencilState = DistanceInteriorStencilState;
+                }))
+                using (var exteriorGroup = BatchGroup.ForRenderTarget(group, 2, _DistanceField, (dm, _) => {
+                    dm.Device.BlendState = BlendState.Opaque;
+                    dm.Device.RasterizerState = RasterizerState.CullNone;
+                    dm.Device.DepthStencilState = DistanceExteriorStencilState;
+                }))
                 foreach (var hv in Environment.HeightVolumes) {
                     var p = hv.Polygon;
                     var m = hv.Mesh3D;
-                    var b = hv.Bounds.Expand(distanceLimit, distanceLimit);
+                    var b = hv.Bounds.Expand(DistanceLimit, DistanceLimit);
 
                     var verts = new VertexPositionColor[] {
                         new VertexPositionColor(new Vector3(b.TopLeft, 0), Color.White),
@@ -1229,22 +1269,37 @@ namespace Squared.Illuminant {
                         new VertexPositionColor(new Vector3(b.BottomLeft, 0), Color.White)
                     };
 
-                    using (var edgeBatch = PrimitiveBatch<VertexPositionColor>.New(
-                        group, i++, IlluminantMaterials.DistanceFieldEdge,
-                        (dm, _) => {
-                            dm.Device.BlendState        = BlendState.Opaque;
-                            dm.Device.RasterizerState   = RasterizerState.CullNone;
-                            dm.Device.DepthStencilState = DepthStencilState.Default;
+                    if (p.Count > 44)
+                        throw new Exception("Height volume has too many vertices (limit is 44)");
 
-                            parameters["NumVertices"].SetValue(Math.Min(40, p.Count));
-                            parameters["Vertices"]   .SetValue(p.GetVertices());
-                            IlluminantMaterials.DistanceFieldEdge.Flush();
+                    using (var batch = PrimitiveBatch<VertexPositionColor>.New(
+                        interiorGroup, i, IlluminantMaterials.DistanceFieldInterior,
+                        (dm, _) => {
+                            intParameters["NumVertices"].SetValue(p.Count);
+                            intParameters["Vertices"].SetValue(p.GetVertices());
+                            IlluminantMaterials.DistanceFieldInterior.Flush();
                         }
                     ))
-                        edgeBatch.Add(new PrimitiveDrawCall<VertexPositionColor>(
+                        batch.Add(new PrimitiveDrawCall<VertexPositionColor>(
+                            PrimitiveType.TriangleList,
+                            m, 0, m.Length / 3
+                        ));
+
+
+                    using (var batch = PrimitiveBatch<VertexPositionColor>.New(
+                        exteriorGroup, i, IlluminantMaterials.DistanceFieldExterior,
+                        (dm, _) => {
+                            extParameters["NumVertices"].SetValue(p.Count);
+                            extParameters["Vertices"].SetValue(p.GetVertices());
+                            IlluminantMaterials.DistanceFieldExterior.Flush();
+                        }
+                    ))
+                        batch.Add(new PrimitiveDrawCall<VertexPositionColor>(
                             PrimitiveType.TriangleList,
                             verts, 0, verts.Length, indices, 0, indices.Length / 3
                         ));
+
+                    i++;
                 }
 
                 if (Render.Tracing.RenderTrace.EnableTracing)
@@ -1325,7 +1380,7 @@ namespace Squared.Illuminant {
         public Material DebugOutlines, Shadow, ClearStencil;
         public Material PointLightLinear, PointLightExponential, PointLightLinearRampTexture, PointLightExponentialRampTexture;
         public Squared.Render.EffectMaterial VolumeFrontFace, VolumeTopFace;
-        public Squared.Render.EffectMaterial DistanceFieldEdge;
+        public Squared.Render.EffectMaterial DistanceFieldExterior, DistanceFieldInterior;
         public Squared.Render.EffectMaterial ScreenSpaceGammaCompressedBitmap, WorldSpaceGammaCompressedBitmap;
         public Squared.Render.EffectMaterial ScreenSpaceToneMappedBitmap, WorldSpaceToneMappedBitmap;
 #if !SDL2

@@ -28,7 +28,7 @@ namespace TestGame.Scenes {
 
         bool ShowTerrainDepth  = false;
         bool ShowLightmap      = false;
-        bool ShowDistanceField = false;
+        bool ShowDistanceField = true;
 
         public SoulcasterTest (TestGame game, int width, int height)
             : base(game, 1024, 1024) {
@@ -132,8 +132,9 @@ namespace TestGame.Scenes {
             Pillar(new Vector2(97, 523));
             Pillar(new Vector2(719, 520));
 
-            // Floating cylinder
+            // Floating cylinders
             Ellipse(new Vector2(420, 830), 40f, 40f, 0.33f, 0.20f);
+            Ellipse(new Vector2(460, 825), 35f, 35f, 0.35f, 0.10f);
 
             Environment.ZDistanceScale = 128;
             Environment.ZToYMultiplier = 320;
@@ -198,8 +199,10 @@ namespace TestGame.Scenes {
                 }
 
                 if (ShowDistanceField || ShowTerrainDepth) {
+                    ClearBatch.AddNew(frame, 2, Game.ScreenMaterials.Clear, Color.White);
+
                     using (var bb = BitmapBatch.New(
-                        frame, 2, Game.ScreenMaterials.Get(
+                        frame, 3, Game.ScreenMaterials.Get(
                             Game.ScreenMaterials.ScreenSpaceBitmap,
                             blendState: BlendState.AlphaBlend
                         ),
@@ -208,7 +211,7 @@ namespace TestGame.Scenes {
                         bb.Add(new BitmapDrawCall(
                             ShowTerrainDepth
                                 ? Renderer.TerrainDepthmap
-                                : Renderer.DistanceField, Vector2.Zero
+                                : Renderer.DistanceField, Vector2.Zero, Color.White
                         ));
                 }
             }

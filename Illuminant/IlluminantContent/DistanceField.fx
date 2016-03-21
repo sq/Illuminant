@@ -1,15 +1,13 @@
 #include "..\..\Upstream\Fracture\Squared\RenderLib\Content\GeometryCommon.fxh"
 #include "Common.fxh"
 
-#define MAX_VERTICES   40
+#define MAX_VERTICES   44
 
 uniform float2 PixelSize;
 uniform float2 Vertices[MAX_VERTICES];
-uniform float2 CoordinateOffset, CoordinateScale;
-uniform float  DistanceLimit;
 uniform int    NumVertices;
 
-void EdgeVertexShader (
+void BasicVertexShader (
     in    float3 position      : POSITION0, // x, y, z
     out   float4 result        : POSITION0
 ) {
@@ -17,49 +15,62 @@ void EdgeVertexShader (
     result.z = position.z;
 }
 
-void EdgePixelShader (
-    inout float4 color : COLOR0,
-    in    float2 vpos  : VPOS,
-    out   float  depth : DEPTH
+float computeDistance (
+    float2 vpos
 ) {
-    float2 resultPoint         = float2(0, 0);
-    float  resultPointDistance = 99999;
-
-    float2 self = vpos;
+    float resultDistance = 99999;
 
     for (int i = 0; i < NumVertices; i++) {
         float2 edgeA = Vertices[i];
         float2 edgeB = Vertices[i + 1];
 
-        if (i == NumVertices - 1)
+        if (i >= NumVertices - 1)
             edgeB = Vertices[0];
 
-        float2 closest = closestPointOnEdge(self, edgeA, edgeB);
-        float2 closestDelta = self - closest;
+        float2 closest = closestPointOnEdge(vpos, edgeA, edgeB);
+        float2 closestDelta = vpos - closest;
         float  closestDistance = length(closestDelta);
 
-        if (closestDistance < resultPointDistance) {
-            resultPoint = closest;
-            resultPointDistance = closestDistance;
-        }
+        resultDistance = min(resultDistance, closestDistance);
     }
 
-    if (resultPointDistance >= DistanceLimit)
-        discard;
-
-    depth = resultPointDistance / DistanceLimit;
-    float2 adjustedResult = (resultPoint + CoordinateOffset) * CoordinateScale;
-
-    color = float4(
-        adjustedResult.x, adjustedResult.y, 0, 1
-    );
+    return resultDistance;
 }
 
-technique Edge
+void InteriorPixelShader (
+    out float4 color : COLOR0,
+    in  float2 vpos : VPOS,
+    out float  depth : DEPTH
+) {
+    float resultDistance = -computeDistance(vpos);
+    color = encodeDistance(resultDistance);
+    depth = distanceToDepth(resultDistance);
+}
+
+void ExteriorPixelShader (
+    out float4 color : COLOR0,
+    in  float2 vpos  : VPOS,
+    out float  depth : DEPTH
+) {
+    float resultDistance = computeDistance(vpos);
+    color = encodeDistance(resultDistance);
+    depth = distanceToDepth(resultDistance);
+}
+
+technique Exterior
 {
     pass P0
     {
-        vertexShader = compile vs_3_0 EdgeVertexShader();
-        pixelShader  = compile ps_3_0 EdgePixelShader();
+        vertexShader = compile vs_3_0 BasicVertexShader();
+        pixelShader  = compile ps_3_0 ExteriorPixelShader();
+    }
+}
+
+technique Interior
+{
+    pass P0
+    {
+        vertexShader = compile vs_3_0 BasicVertexShader();
+        pixelShader = compile ps_3_0 InteriorPixelShader();
     }
 }
