@@ -26,7 +26,7 @@ namespace TestGame.Scenes {
 
         bool ShowTerrainDepth  = false;
         bool ShowLightmap      = false;
-        bool ShowDistanceField = true;
+        bool ShowDistanceField = false;
 
         public SoulcasterTest (TestGame game, int width, int height)
             : base(game, 1024, 1024) {

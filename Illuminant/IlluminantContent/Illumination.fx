@@ -42,9 +42,35 @@ float PointLightPixelCore(
     if ((lightCenter.z < terrainZ.x) && (lightCenter.z < terrainZ.y))
         shadedZ = GroundZ;
 
-    // FIXME: What about z?
     float3 shadedPixelPosition = float3(worldPosition.xy, shadedZ);
-    return computeLightOpacity(shadedPixelPosition, lightCenter, ramp.x, ramp.y);
+
+    float traceOffset = 0;
+    float3 traceVector = (shadedPixelPosition - lightCenter);
+    float traceLength = length(traceVector);
+    traceVector = normalize(traceVector);
+
+    float lowestDistance = 999;
+
+    while (traceOffset < traceLength) {
+        float3 tracePosition = lightCenter + (traceVector * traceOffset);
+        float distanceToObstacle = sampleDistanceField(tracePosition.xy);
+
+        if (distanceToObstacle <= 0)
+            return 0;
+
+        lowestDistance = min(lowestDistance, distanceToObstacle);        
+        traceOffset += max(floor(abs(distanceToObstacle)), 1);
+    }
+
+    // FIXME: What about z?
+    float lightOpacity = computeLightOpacity(shadedPixelPosition, lightCenter, ramp.x, ramp.y);
+
+    if (0) {
+        float coneAttenuation = clamp(lowestDistance / (ramp.x / 2), 0, 1);
+        return lightOpacity * coneAttenuation;
+    }
+
+    return lightOpacity;
 }
 
 void PointLightPixelShaderLinear(

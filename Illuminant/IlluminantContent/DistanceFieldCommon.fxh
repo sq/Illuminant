@@ -24,8 +24,7 @@ float2 closestPointOnEdge (
 
 //
 // For floating-point distance field encoding
-
-#define FP_DISTANCE
+// #define FP_DISTANCE
 
 // HACK: We offset all values because we can only clear the render target to 0.0 or 1.0 :(
 //  This makes the pixels cleared to 0 by the gpu count as extremely distant
@@ -77,8 +76,8 @@ uniform float2 DistanceFieldTextureTexelSize;
     #define DISTANCE_FIELD_FILTER LINEAR
 #endif
 
-Texture2D DistanceFieldTexture        : register(t3);
-sampler   DistanceFieldTextureSampler : register(s3) {
+Texture2D DistanceFieldTexture        : register(t4);
+sampler   DistanceFieldTextureSampler : register(s4) {
     Texture = (DistanceFieldTexture);
     MipFilter = POINT;
     MinFilter = DISTANCE_FIELD_FILTER;
@@ -89,6 +88,7 @@ float sampleDistanceField (
     float2 positionPx
 ) {
     float2 uv = positionPx * DistanceFieldTextureTexelSize;
+    // FIXME: Read appropriate channel here (.a for alpha8, .r for everything else)
     float raw = tex2Dgrad(DistanceFieldTextureSampler, uv, 0, 0).r;
     return decodeDistance(raw);
 }

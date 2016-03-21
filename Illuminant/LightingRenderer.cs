@@ -259,7 +259,7 @@ namespace Squared.Illuminant {
                     coordinator.Device,
                     Configuration.MaximumRenderSize.First * DistanceFieldResolutionMultiplier, 
                     Configuration.MaximumRenderSize.Second * DistanceFieldResolutionMultiplier,
-                    false, SurfaceFormat.Single, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.DiscardContents
+                    false, SurfaceFormat.Rg32, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.DiscardContents
                 );
             }
 
@@ -571,6 +571,8 @@ namespace Squared.Illuminant {
                         ? Environment.ZToYMultiplier
                         : 0.0f
                 );
+
+                SetDistanceFieldParameters(mi.Effect.Parameters);
             }
 
             device.Device.SamplerStates[1] = GetRampSamplerState(ls.RampTextureFilter);
@@ -860,7 +862,8 @@ namespace Squared.Illuminant {
                     FlushPointLightBatch(ref currentLightGroup, ref batchFirstLightSource, ref layerIndex);
                 }
 
-                if (Configuration.TwoPointFiveD) {
+                // FIXME
+                if (Configuration.TwoPointFiveD && false) {
                     if (Render.Tracing.RenderTrace.EnableTracing)
                         Render.Tracing.RenderTrace.Marker(resultGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Volume Faces", frame.Index, this.GetHashCode());
 
@@ -923,6 +926,14 @@ namespace Squared.Illuminant {
             p["TerrainTextureTexelSize"].SetValue(tsize);
             p["TerrainTexture"].SetValue(_TerrainDepthmap);
 
+            SetDistanceFieldParameters(p);
+        }
+
+        private void SetDistanceFieldParameters (EffectParameterCollection p) {
+            var tsize = new Vector2(
+                (float)DistanceFieldResolutionMultiplier / _DistanceField.Width, 
+                (float)DistanceFieldResolutionMultiplier / _DistanceField.Height
+            );
             p["DistanceFieldTextureTexelSize"].SetValue(tsize);
             p["DistanceFieldTexture"].SetValue(_DistanceField);
         }
@@ -1077,7 +1088,7 @@ namespace Squared.Illuminant {
                     Render.Tracing.RenderTrace.Marker(group, 2, "Frame {0:0000} : LightingRenderer {1:X4} : End Heightmap", frame.Index, this.GetHashCode());
             }
 
-            if (Configuration.TwoPointFiveD && !_DistanceFieldReady) {
+            if (!_DistanceFieldReady) {
                 RenderDistanceField(ref layer, container);
                 _DistanceFieldReady = true;
             }
@@ -1102,7 +1113,7 @@ namespace Squared.Illuminant {
                 }
             )) {
                 if (Render.Tracing.RenderTrace.EnableTracing)
-                    Render.Tracing.RenderTrace.Marker(group, -1, "LightingRenderer {1:X4} : Begin Distance Field", this.GetHashCode());
+                    Render.Tracing.RenderTrace.Marker(group, -1, "LightingRenderer {0:X4} : Begin Distance Field", this.GetHashCode());
 
                 ClearBatch.AddNew(
                     group, 0, Materials.Clear, Color.Black, 1f, 0
@@ -1167,7 +1178,7 @@ namespace Squared.Illuminant {
                 }
 
                 if (Render.Tracing.RenderTrace.EnableTracing)
-                    Render.Tracing.RenderTrace.Marker(group, 2, "LightingRenderer {1:X4} : End Distance Field", this.GetHashCode());
+                    Render.Tracing.RenderTrace.Marker(group, 2, "LightingRenderer {0:X4} : End Distance Field", this.GetHashCode());
             }
         }
 
