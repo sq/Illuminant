@@ -262,7 +262,7 @@ namespace Squared.Illuminant {
                     coordinator.Device,
                     Configuration.MaximumRenderSize.First * DistanceFieldResolutionMultiplier, 
                     Configuration.MaximumRenderSize.Second * DistanceFieldResolutionMultiplier,
-                    false, SurfaceFormat.Vector4, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.DiscardContents
+                    false, SurfaceFormat.Single, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.DiscardContents
                 );
             }
 
@@ -1015,7 +1015,6 @@ namespace Squared.Illuminant {
 
         const int FaceMaxLights = 12;
 
-        private Vector2   _CoordinateOffset, _CoordinateScale;
         // HACK
         private bool      _DistanceFieldReady = false;
 
@@ -1048,9 +1047,6 @@ namespace Squared.Illuminant {
 
             p["DistanceFieldTextureTexelSize"].SetValue(tsize);
             p["DistanceFieldTexture"].SetValue(_DistanceField);
-
-            p["InverseCoordinateScale"].SetValue(new Vector2(1.0f / _CoordinateScale.X, 1.0f / _CoordinateScale.Y));
-            p["CoordinateOffset"].SetValue(_CoordinateOffset);
         }
 
         private void SetTwoPointFiveDParameters (DeviceManager dm, object _) {
@@ -1227,12 +1223,6 @@ namespace Squared.Illuminant {
             }
 
             if (Configuration.TwoPointFiveD && !_DistanceFieldReady) {
-                _CoordinateOffset = -minCoordinate;
-                _CoordinateScale = new Vector2(
-                    1f / (maxCoordinate.X - minCoordinate.X),
-                    1f / (maxCoordinate.Y - minCoordinate.Y)
-                );
-
                 RenderDistanceField(ref layer, container);
                 _DistanceFieldReady = true;
             }

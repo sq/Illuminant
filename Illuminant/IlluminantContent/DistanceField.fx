@@ -1,5 +1,5 @@
 #include "..\..\Upstream\Fracture\Squared\RenderLib\Content\GeometryCommon.fxh"
-#include "Common.fxh"
+#include "DistanceFieldCommon.fxh"
 
 #define MAX_VERTICES   44
 

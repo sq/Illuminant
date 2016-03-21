@@ -57,6 +57,9 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="DistanceFieldCommon.fxh">
+      <Name>DistanceFieldCommon</Name>
+    </None>
     <None Include="RampCommon.fxh">
       <Name>RampCommon</Name>
       <Importer>EffectImporter</Importer>
@@ -83,13 +86,6 @@
       <Importer>EffectImporter</Importer>
       <Processor>EffectProcessor</Processor>
     </Compile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Common.fxh">
-      <Name>Common</Name>
-      <Importer>EffectImporter</Importer>
-      <Processor>EffectProcessor</Processor>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Visualize.fx">

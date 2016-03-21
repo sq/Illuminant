@@ -1,6 +1,6 @@
 #include "..\..\Upstream\Fracture\Squared\RenderLib\Content\GeometryCommon.fxh"
 #include "LightCommon.fxh"
-#include "Common.fxh"
+#include "DistanceFieldCommon.fxh"
 
 #define MAX_LIGHTS 12
 
@@ -9,35 +9,7 @@
 #define TOP_FACE_RAYCAST_SHADOWS              1
 #define FRONT_FACE_DOT_RAMP                   1
 #define FRONT_FACE_RAYCAST_SHADOWS            1
-#define DISTANCE_FIELD_ACCELERATED_RAYCASTING 1
 
-#if DISTANCE_FIELD_ACCELERATED_RAYCASTING
-
-    // How far to skip each time
-    #define ACCELERATED_SKIP_LENGTH_FACTOR 0.99
-    // Minimum distance to skip (in pixels)
-    #define ACCELERATED_SKIP_LENGTH_MINIMUM 0.1
-
-    // Initially step at this rate while raycasting
-    #define RAYCAST_INITIAL_STEP_PX 0.5
-    // Initial growth rate of step rate
-    #define RAYCAST_INITIAL_STEP_GROWTH_FACTOR 1.01
-    // Growth rate increases per step also
-    #define RAYCAST_STEP_GROWTH_FACTOR_GROWTH_FACTOR 1.01
-
-#else
-
-    // Initially step at this rate while raycasting
-    #define RAYCAST_INITIAL_STEP_PX 1.0
-    // Initial growth rate of step rate
-    #define RAYCAST_INITIAL_STEP_GROWTH_FACTOR 1.1
-    // Growth rate increases per step also
-    #define RAYCAST_STEP_GROWTH_FACTOR_GROWTH_FACTOR 1.05
-
-#endif
-
-// Never step more than this many pixels at a time
-#define RAYCAST_STEP_LIMIT_PX 48
 // Never do a raycast when the light is closer to the wall than this
 #define RAYCAST_MIN_DISTANCE_PX 4
 // If the light contribution is lower than this, don't raycast
@@ -49,26 +21,6 @@ uniform float4 LightNeutralColors[MAX_LIGHTS];
 uniform float4 LightColors       [MAX_LIGHTS];
 
 uniform int    NumLights;
-
-uniform float2 CoordinateOffset, InverseCoordinateScale;
-uniform float2 DistanceFieldTextureTexelSize;
-
-Texture2D DistanceFieldTexture        : register(t3);
-sampler   DistanceFieldTextureSampler : register(s3) {
-    Texture = (DistanceFieldTexture);
-    MipFilter = POINT;
-    MinFilter = POINT;
-    MagFilter = POINT;
-};
-
-// returns closest obstacle or zero
-float2 sampleDistanceField(
-    float2 positionPx
-) {
-    float2 uv = positionPx * DistanceFieldTextureTexelSize;
-    float2 raw = tex2Dgrad(DistanceFieldTextureSampler, uv, 0, 0).rg;
-    return (raw * InverseCoordinateScale) - CoordinateOffset;
-}
 
 void FrontFaceVertexShader (
     in    float3 position      : POSITION0, // x, y, z
@@ -90,7 +42,7 @@ float ComputeRaycastedShadowOcclusionSample (
     float maxDistance = length(lightDirection);
     lightDirection = normalize(lightDirection);
 
-    // Do a stochastic raycast between the light and the wall to determine
+    // Do a raycast between the light and the wall to determine
     //  whether the light is obstructed.
     // FIXME: This will cause flickering for small obstructions combined
     //  with moving lights.
@@ -98,9 +50,8 @@ float ComputeRaycastedShadowOcclusionSample (
     if (
         (maxDistance >= RAYCAST_MIN_DISTANCE_PX)
     ) {
-        float raycastStepRatePx = RAYCAST_INITIAL_STEP_PX;
-        float stepGrowthFactor = RAYCAST_INITIAL_STEP_GROWTH_FACTOR;
-        float castDistance = 0.5;
+        float castDistance = 0.1;
+        float closestProximity = 999;
 
         while (castDistance < maxDistance) {
             float3 samplePosition = (lightPosition + (lightDirection * castDistance));
@@ -118,33 +69,17 @@ float ComputeRaycastedShadowOcclusionSample (
                 seenUnobstructed = 1;
             }
 
-            if (obstructed && seenUnobstructed)
-                break;
+            float distanceToObstacle = sampleDistanceField(samplePosition.xy);
+            closestProximity = min(distanceToObstacle, closestProximity);
 
-#if DISTANCE_FIELD_ACCELERATED_RAYCASTING
-            float2 nearestObstacle = sampleDistanceField(samplePosition.xy);
-            float2 vectorToNearestObstacle = nearestObstacle - samplePosition.xy;
-            if (dot(lightDirection.xy, vectorToNearestObstacle) >= 0) {
-                float skipDistance = length(vectorToNearestObstacle) * ACCELERATED_SKIP_LENGTH_FACTOR;
-
-                if (skipDistance >= ACCELERATED_SKIP_LENGTH_MINIMUM) {
-                    castDistance += skipDistance;
-                    continue;
-                }
-            }
-#endif
-
-            raycastStepRatePx = clamp(
-                raycastStepRatePx * stepGrowthFactor,
-                1, RAYCAST_STEP_LIMIT_PX
-            );
-            stepGrowthFactor *= RAYCAST_STEP_GROWTH_FACTOR_GROWTH_FACTOR;
-
-            castDistance += raycastStepRatePx;
+            castDistance += max(abs(distanceToObstacle), 1);
         }
 
-        if (obstructed && seenUnobstructed)
-            return 1;
+        // if (obstructed && seenUnobstructed)
+        if (closestProximity >= 24)
+            return 0;
+        else
+            return clamp((24 - closestProximity) / 20, 0, 1);
     }
 
     return 0;
@@ -153,6 +88,10 @@ float ComputeRaycastedShadowOcclusionSample (
 float ComputeRaycastedShadowOpacity (
     float3 lightPosition, float3 worldPosition
 ) {
+    float3 pos = lightPosition + ((worldPosition - lightPosition) / 2);
+    float s = sampleDistanceField(pos.xy);
+    return clamp(s / 32, 0, 1);
+
     return 1.0 - ComputeRaycastedShadowOcclusionSample(lightPosition, worldPosition);
 }
 

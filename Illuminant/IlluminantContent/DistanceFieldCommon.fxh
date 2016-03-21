@@ -16,12 +16,28 @@ float2 closestPointOnEdge (
     return edgeStart + ((edgeEnd - edgeStart) * clamp(u, 0, 1));
 }
 
+//
+// For integral distance field encoding
+
+// This is a distance of 0
+#define DISTANCE_ZERO (192.0 / 255.0)
+
+//
+// For floating-point distance field encoding
+
+#define FP_DISTANCE
+
 // HACK: We offset all values because we can only clear the render target to 0.0 or 1.0 :(
 //  This makes the pixels cleared to 0 by the gpu count as extremely distant
-#define DISTANCE_OFFSET 1024.0
+#define DISTANCE_OFFSET 768.0
+
+
+//
+// General
 
 // HACK: Scale distance values into [0, 1] so we can use the depth buffer to do a cheap min()
-#define DISTANCE_DEPTH_MAX 2048.0
+#define DISTANCE_DEPTH_MAX 1024.0
+
 
 float distanceToDepth (float distance) {
     // FIXME: The abs() here is designed to pick the 'closest' point, whether it's interior or exterior
@@ -32,10 +48,47 @@ float distanceToDepth (float distance) {
 }
 
 float4 encodeDistance (float distance) {
+#ifdef FP_DISTANCE
     float d = distance;
-    return float4(d - DISTANCE_OFFSET, 1, 1, 1);
+    return d - DISTANCE_OFFSET;
+#else
+    float scaled = distance / 255.0;
+    return clamp(DISTANCE_ZERO - scaled, 0, 1);
+#endif
 }
 
 float decodeDistance (float4 encodedDistance) {
+#ifdef FP_DISTANCE
     return encodedDistance.r + DISTANCE_OFFSET;
+#else
+    if (encodedDistance.a <= DISTANCE_ZERO)
+        return (DISTANCE_ZERO - encodedDistance.a) * 255.0;
+    else
+        return (encodedDistance.a - DISTANCE_ZERO) * -255.0;
+#endif
+}
+
+uniform float2 DistanceFieldTextureTexelSize;
+
+// FIXME: DX9 can't filter half-float surfaces
+#ifdef FP_DISTANCE
+    #define DISTANCE_FIELD_FILTER POINT
+#else
+    #define DISTANCE_FIELD_FILTER LINEAR
+#endif
+
+Texture2D DistanceFieldTexture        : register(t3);
+sampler   DistanceFieldTextureSampler : register(s3) {
+    Texture = (DistanceFieldTexture);
+    MipFilter = POINT;
+    MinFilter = DISTANCE_FIELD_FILTER;
+    MagFilter = DISTANCE_FIELD_FILTER;
+};
+
+float sampleDistanceField (
+    float2 positionPx
+) {
+    float2 uv = positionPx * DistanceFieldTextureTexelSize;
+    float raw = tex2Dgrad(DistanceFieldTextureSampler, uv, 0, 0).r;
+    return decodeDistance(raw);
 }
