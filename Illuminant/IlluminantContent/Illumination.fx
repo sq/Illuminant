@@ -10,8 +10,6 @@ shared float4x4 ModelViewMatrix;
 uniform float4 LightNeutralColor;
 uniform float3 LightCenter;
 
-#define PENUMBRA_THICKNESS 8
-
 float4 ApplyTransform (float3 position) {
     float3 localPosition = ((position - float3(ViewportPosition.xy, 0)) * float3(ViewportScale, 1));
     return mul(mul(float4(localPosition.xyz, 1), ModelViewMatrix), ProjectionMatrix);
@@ -29,45 +27,6 @@ void PointLightVertexShader(
     // FIXME: Z
     float4 transformedPosition = ApplyTransform(float3(position, lightCenter.z));
     result = float4(transformedPosition.xy, 0, transformedPosition.w);
-}
-
-float coneTrace (
-    in float3 lightCenter,
-    in float3 shadedPixelPosition
-) {
-    float traceOffset = 0;
-    float3 traceVector = (shadedPixelPosition - lightCenter);
-    float traceLength = length(traceVector);
-    traceVector = normalize(traceVector);
-
-    float lowestDistance = 999;
-    float coneAttenuation = 1.0;
-
-    while (traceOffset < traceLength) {
-        float3 tracePosition = lightCenter + (traceVector * traceOffset);
-        float distanceToObstacle = sampleDistanceField(tracePosition.xy);
-
-        if (distanceToObstacle <= 0) {
-            // TODO: Factor in Z
-            /*
-            float2 obstacleZ = sampleTerrain(tracePosition.xy);
-
-            if ((obstacleZ.y >= lightCenter.z) && (obstacleZ.y >= shadedZ))
-            */
-
-            return 0;
-        }
-
-        float maxSearch = traceLength - traceOffset;
-        float stepAttenuation = min(PENUMBRA_THICKNESS, maxSearch);
-        coneAttenuation = min(coneAttenuation, clamp(distanceToObstacle / stepAttenuation, 0, 1));
-
-        lowestDistance = min(distanceToObstacle, lowestDistance);
-
-        traceOffset += max(abs(distanceToObstacle), 1);
-    }
-
-    return coneAttenuation;
 }
 
 float PointLightPixelCore(
@@ -88,7 +47,7 @@ float PointLightPixelCore(
     // FIXME: What about z?
     float lightOpacity = computeLightOpacity(shadedPixelPosition, lightCenter, ramp.x, ramp.y);
 
-    return lightOpacity * coneTrace(lightCenter, shadedPixelPosition);
+    return lightOpacity * coneTrace(lightCenter, ramp, shadedPixelPosition);
 }
 
 void PointLightPixelShaderLinear(

@@ -259,7 +259,7 @@ namespace Squared.Illuminant {
                     coordinator.Device,
                     Configuration.MaximumRenderSize.First * DistanceFieldResolutionMultiplier, 
                     Configuration.MaximumRenderSize.Second * DistanceFieldResolutionMultiplier,
-                    false, SurfaceFormat.Rg32, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.DiscardContents
+                    false, SurfaceFormat.Alpha8, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.DiscardContents
                 );
             }
 
@@ -863,7 +863,7 @@ namespace Squared.Illuminant {
                 }
 
                 // FIXME
-                if (Configuration.TwoPointFiveD && false) {
+                if (Configuration.TwoPointFiveD) {
                     if (Render.Tracing.RenderTrace.EnableTracing)
                         Render.Tracing.RenderTrace.Marker(resultGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Volume Faces", frame.Index, this.GetHashCode());
 
@@ -1117,7 +1117,7 @@ namespace Squared.Illuminant {
                     Render.Tracing.RenderTrace.Marker(group, -1, "LightingRenderer {0:X4} : Begin Distance Field", this.GetHashCode());
 
                 ClearBatch.AddNew(
-                    group, 0, Materials.Clear, Color.Black, 1f, 0
+                    group, 0, Materials.Clear, Color.Transparent, 1f, 0
                 );
 
                 int i = 1;

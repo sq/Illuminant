@@ -36,63 +36,15 @@ void FrontFaceVertexShader (
 }
 
 float ComputeRaycastedShadowOcclusionSample (
-    float3 lightPosition, float3 worldPosition
+    float3 lightPosition, float2 lightRamp, float3 worldPosition
 ) {
-    float3 lightDirection = worldPosition - lightPosition;
-    float maxDistance = length(lightDirection);
-    lightDirection = normalize(lightDirection);
-
-    // Do a raycast between the light and the wall to determine
-    //  whether the light is obstructed.
-    // FIXME: This will cause flickering for small obstructions combined
-    //  with moving lights.
-    int seenUnobstructed = 0, obstructed = 0;
-    if (
-        (maxDistance >= RAYCAST_MIN_DISTANCE_PX)
-    ) {
-        float castDistance = 0.1;
-        float closestProximity = 999;
-
-        while (castDistance < maxDistance) {
-            float3 samplePosition = (lightPosition + (lightDirection * castDistance));
-            float2 terrainZ = sampleTerrain(samplePosition);
-
-            // Only obstruct the ray if it passes through the interior of the height volume.
-            // This allows volumes to float above the ground and look okay.
-            if (
-                (terrainZ.x < samplePosition.z) &&
-                (terrainZ.y > samplePosition.z)
-            ) {
-                obstructed = 1;
-            }
-            else if (obstructed) {
-                seenUnobstructed = 1;
-            }
-
-            float distanceToObstacle = sampleDistanceField(samplePosition.xy);
-            closestProximity = min(distanceToObstacle, closestProximity);
-
-            castDistance += max(abs(distanceToObstacle), 1);
-        }
-
-        // if (obstructed && seenUnobstructed)
-        if (closestProximity >= 24)
-            return 0;
-        else
-            return clamp((24 - closestProximity) / 20, 0, 1);
-    }
-
-    return 0;
+    return coneTrace(lightPosition, lightRamp, worldPosition);
 }
 
 float ComputeRaycastedShadowOpacity (
-    float3 lightPosition, float3 worldPosition
+    float3 lightPosition, float2 lightRamp, float3 worldPosition
 ) {
-    float3 pos = lightPosition + ((worldPosition - lightPosition) / 2);
-    float s = sampleDistanceField(pos.xy);
-    return clamp(s / 32, 0, 1);
-
-    return 1.0 - ComputeRaycastedShadowOcclusionSample(lightPosition, worldPosition);
+    return ComputeRaycastedShadowOcclusionSample(lightPosition, lightRamp, worldPosition);
 }
 
 void FrontFacePixelShader (
@@ -130,7 +82,7 @@ void FrontFacePixelShader (
 #endif
 
 #if FRONT_FACE_RAYCAST_SHADOWS
-        opacity *= ComputeRaycastedShadowOpacity(lightPosition, worldPosition);
+        opacity *= ComputeRaycastedShadowOpacity(lightPosition, properties.xy, worldPosition);
 #endif
 
         float4 lightColor = lerp(LightNeutralColors[i], LightColors[i], opacity);
@@ -185,7 +137,7 @@ void TopFacePixelShader(
 #endif
 
 #if TOP_FACE_RAYCAST_SHADOWS        
-        opacity *= ComputeRaycastedShadowOpacity(lightPosition, worldPosition);
+        opacity *= ComputeRaycastedShadowOpacity(lightPosition, properties.xy, worldPosition);
 #endif
 
         float4 lightColor = lerp(LightNeutralColors[i], LightColors[i], opacity);

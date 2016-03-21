@@ -39,11 +39,11 @@ float2 closestPointOnEdge (
 
 
 float distanceToDepth (float distance) {
-    // FIXME: The abs() here is designed to pick the 'closest' point, whether it's interior or exterior
-    // We do interior/exterior in separate passes so that an exterior point never overrides an interior
-    //  point, but we want to ensure that in the case of two intersecting volumes we actually produce
-    //  the distance to the closest volume edge.
-    return clamp(abs(distance / DISTANCE_DEPTH_MAX), 0, 1);
+    if (distance < 0) { 
+        return clamp(0.25 + (distance / 256), 0, 0.25);
+    } else {
+        return clamp(0.25 + (distance / DISTANCE_DEPTH_MAX), 0.25, 1); 
+    }
 }
 
 float4 encodeDistance (float distance) {
@@ -51,19 +51,22 @@ float4 encodeDistance (float distance) {
     float d = distance;
     return d - DISTANCE_OFFSET;
 #else
-    float scaled = distance / 255.0;
-    return clamp(DISTANCE_ZERO - scaled, 0, 1);
+    if (distance >= 0) {
+        return DISTANCE_ZERO - (distance / 80);
+    } else {
+        return DISTANCE_ZERO + (-distance / 10);
+    }
 #endif
 }
 
-float decodeDistance (float4 encodedDistance) {
+float decodeDistance (float encodedDistance) {
 #ifdef FP_DISTANCE
-    return encodedDistance.r + DISTANCE_OFFSET;
+    return encodedDistance + DISTANCE_OFFSET;
 #else
-    if (encodedDistance.a <= DISTANCE_ZERO)
-        return (DISTANCE_ZERO - encodedDistance.a) * 255.0;
+    if (encodedDistance <= DISTANCE_ZERO)
+        return (DISTANCE_ZERO - encodedDistance) * 80;
     else
-        return (encodedDistance.a - DISTANCE_ZERO) * -255.0;
+        return (encodedDistance - DISTANCE_ZERO) * -10;
 #endif
 }
 
@@ -89,6 +92,47 @@ float sampleDistanceField (
 ) {
     float2 uv = positionPx * DistanceFieldTextureTexelSize;
     // FIXME: Read appropriate channel here (.a for alpha8, .r for everything else)
-    float raw = tex2Dgrad(DistanceFieldTextureSampler, uv, 0, 0).r;
+    float raw = tex2Dgrad(DistanceFieldTextureSampler, uv, 0, 0).a;
     return decodeDistance(raw);
+}
+
+float conePenumbra (
+    float3 ramp,
+    float  distanceFromLight,
+    float  traceLength,
+    float  distanceToObstacle
+) {
+    // FIXME: Cancel out shadowing as we approach the target point somehow?
+    float localRadius = lerp(ramp.x, ramp.y, clamp(distanceFromLight * ramp.z, 0, 1));
+    return clamp(distanceToObstacle / localRadius, 0, 1);
+}
+
+float coneTrace (
+    in float3 lightCenter,
+    in float2 lightRamp,
+    in float3 shadedPixelPosition
+) {
+    float3 ramp = float3(1, min(lightRamp.x, 16), rcp(max(lightRamp.y, 1)));
+    float traceOffset = 0;
+    float3 traceVector = (shadedPixelPosition - lightCenter);
+    float traceLength = length(traceVector);
+    traceVector = normalize(traceVector);
+
+    float coneAttenuation = 1.0;
+
+    while (traceOffset < traceLength) {
+        float3 tracePosition = lightCenter + (traceVector * traceOffset);
+        float distanceToObstacle = sampleDistanceField(tracePosition.xy);
+        float penumbra = conePenumbra(ramp, traceOffset, traceLength, distanceToObstacle);
+        coneAttenuation = min(coneAttenuation, penumbra);
+        traceOffset += max(abs(distanceToObstacle), 3);
+    }
+
+    {
+        float distanceToObstacle = sampleDistanceField(shadedPixelPosition.xy);
+        float penumbra = conePenumbra(ramp, traceLength, traceLength, distanceToObstacle);
+        coneAttenuation = min(coneAttenuation, penumbra);
+    }
+
+    return coneAttenuation;
 }

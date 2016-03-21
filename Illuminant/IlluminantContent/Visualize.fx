@@ -13,16 +13,16 @@ void VisualizePixelShader(
     addColor.a = 0;
 
     float4 encoded = tex2Dgrad(TextureSampler, clamp(texCoord, texTL, texBR), 0, 0);
-    float decoded = decodeDistance(encoded);
+    float decoded = decodeDistance(encoded.a);
 
     float4 visualized;
 
     if (decoded <= 0) {
-        float g = abs(decoded / 32);
-        visualized = float4(1, 1, g, 1);
+        float g = abs(decoded / 8);
+        visualized = float4(0.1, 1 - g, 0, 1);
     } else {
-        float g = 1.0 - clamp(decoded / 127, 0, 1);
-        visualized = float4(g, g * 0.5, 0, 1);
+        float g = 1.0 - clamp(decoded / 63, 0, 1);
+        visualized = float4(0, 0, g, 1);
     }
 
     result = multiplyColor * visualized;
