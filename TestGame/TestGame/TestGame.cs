@@ -16,6 +16,7 @@ using Squared.Render;
 using Squared.Render.Convenience;
 using Squared.Util;
 using TestGame.Scenes;
+using ThreefoldTrials.Framework;
 
 namespace TestGame {
     public class TestGame : MultithreadedGame {
@@ -23,6 +24,8 @@ namespace TestGame {
         public DefaultMaterialSet Materials;
 
         public KeyboardState PreviousKeyboardState, KeyboardState;
+
+        public SpriteFont Font;
 
         public readonly Scene[] Scenes;
         public int ActiveSceneIndex = 0;
@@ -55,6 +58,7 @@ namespace TestGame {
         protected override void LoadContent () {
             base.LoadContent();
 
+            Font = Content.Load<SpriteFont>("Font");
             Materials = new DefaultMaterialSet(Services);
 
             foreach (var scene in Scenes)
@@ -73,6 +77,8 @@ namespace TestGame {
 
             Scenes[ActiveSceneIndex].Update(gameTime);
 
+            PerformanceStats.Record(this);
+
             Window.Title = String.Format("Scene {0}: {1} {2}", ActiveSceneIndex, Scenes[ActiveSceneIndex].GetType().Name, Scenes[ActiveSceneIndex].Status);
 
             PreviousKeyboardState = KeyboardState;
@@ -84,6 +90,25 @@ namespace TestGame {
             ClearBatch.AddNew(frame, -9999, Materials.Clear, Color.Black);
 
             Scenes[ActiveSceneIndex].Draw(frame);
+
+            var ir = new ImperativeRenderer(frame, Materials);
+            DrawPerformanceStats(ref ir);
+        }
+
+        private void DrawPerformanceStats (ref ImperativeRenderer ir) {
+            const float scale = 0.75f;
+            var layout = Font.LayoutString(PerformanceStats.GetText(this), scale: scale);
+            var layoutSize = layout.Size * scale;
+            var position = new Vector2(Graphics.PreferredBackBufferWidth - (220 * scale), 30f).Floor();
+
+            ir.FillRectangle(
+                Bounds.FromPositionAndSize(position, layoutSize),
+                Color.Black * 0.45f,
+                layer: 9000
+            );
+            ir.Layer += 1;
+            ir.DrawMultiple(layout, position + Vector2.One, Color.Black, sortKey: 0f, layer: 9001);
+            ir.DrawMultiple(layout, position, Color.White, sortKey: 1f, layer: 9001);
         }
     }
 
