@@ -16,11 +16,14 @@ using Squared.Util;
 
 namespace Squared.Illuminant {
     public class RendererConfiguration {
-        public float ClipRegionScale       = 1.0f;
-        public bool  TwoPointFiveD         = false;
-        public float ZOffset               = 0.0f;
-        public float ZScale                = 1.0f;
-        public float DistanceFieldStepSize = 1.0f;
+        public float ClipRegionScale         = 1.0f;
+        public bool  TwoPointFiveD           = false;
+        public float ZOffset                 = 0.0f;
+        public float ZScale                  = 1.0f;
+        public float DistanceFieldStepSize   = 1.0f;
+        public float HeightmapResolution     = 1.0f;
+        public float DistanceFieldResolution = 1.0f;
+        public int   DistanceFieldSliceCount = 1;
 
         public readonly Pair<int> MaximumRenderSize;
 
@@ -216,9 +219,9 @@ namespace Squared.Illuminant {
         const int   StencilTrue  = 0xFF;
         const int   StencilFalse = 0x00;
 
+        public readonly int DistanceFieldSlicesX, DistanceFieldSlicesY;
+
         public readonly bool  HighPrecisionTerrain = true;
-        public readonly float HeightmapResolutionMultiplier = 1;
-        public readonly float DistanceFieldResolutionMultiplier = 1f;
 
         static LightingRenderer () {
             ShadowIndices = new short[] {
@@ -230,16 +233,11 @@ namespace Squared.Illuminant {
         public LightingRenderer (
             ContentManager content, RenderCoordinator coordinator, 
             DefaultMaterialSet materials, LightingEnvironment environment,
-            RendererConfiguration configuration,
-            float? heightmapResolution = null,
-            float? distanceFieldResolution = null
+            RendererConfiguration configuration
         ) {
             Materials = materials;
             Coordinator = coordinator;
             Configuration = configuration;
-
-            HeightmapResolutionMultiplier = heightmapResolution.GetValueOrDefault(HeightmapResolutionMultiplier);
-            DistanceFieldResolutionMultiplier = distanceFieldResolution.GetValueOrDefault(DistanceFieldResolutionMultiplier);
 
             IlluminantMaterials = new IlluminantMaterials(materials);
 
@@ -257,15 +255,27 @@ namespace Squared.Illuminant {
 
                 _TerrainDepthmap = new RenderTarget2D(
                     coordinator.Device, 
-                    (int)(Configuration.MaximumRenderSize.First * HeightmapResolutionMultiplier), 
-                    (int)(Configuration.MaximumRenderSize.Second * HeightmapResolutionMultiplier),
+                    (int)(Configuration.MaximumRenderSize.First * Configuration.HeightmapResolution), 
+                    (int)(Configuration.MaximumRenderSize.Second * Configuration.HeightmapResolution),
                     false, fmt, DepthFormat.None, 0, RenderTargetUsage.DiscardContents
                 );
 
+                var distanceFieldSliceWidth = (int)(Configuration.MaximumRenderSize.First * Configuration.DistanceFieldResolution);
+                var distanceFieldSliceHeight = (int)(Configuration.MaximumRenderSize.Second * Configuration.DistanceFieldResolution);
+                int maxSlicesX = 4096 / distanceFieldSliceWidth;
+                int maxSlicesY = 4096 / distanceFieldSliceHeight;
+                int maxSlices = maxSlicesX * maxSlicesY;
+
+                if (Configuration.DistanceFieldSliceCount > maxSlices)
+                    throw new ArgumentOutOfRangeException("Too many distance field slices requested for this size. Maximum is " + maxSlices);
+
+                DistanceFieldSlicesX = Math.Min(maxSlicesX, Configuration.DistanceFieldSliceCount);
+                DistanceFieldSlicesY = Math.Max(Configuration.DistanceFieldSliceCount / maxSlicesX, 1);
+
                 _DistanceField = new RenderTarget2D(
                     coordinator.Device,
-                    (int)(Configuration.MaximumRenderSize.First * DistanceFieldResolutionMultiplier), 
-                    (int)(Configuration.MaximumRenderSize.Second * DistanceFieldResolutionMultiplier),
+                    distanceFieldSliceWidth * DistanceFieldSlicesX, 
+                    distanceFieldSliceHeight * DistanceFieldSlicesY,
                     false, SurfaceFormat.Alpha8, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.DiscardContents
                 );
             }
@@ -935,7 +945,7 @@ namespace Squared.Illuminant {
                 1f / Configuration.MaximumRenderSize.First, 
                 1f / Configuration.MaximumRenderSize.Second
             );
-            p["HeightmapInvScaleFactor"].SetValue(1f / HeightmapResolutionMultiplier);
+            p["HeightmapInvScaleFactor"].SetValue(1f / Configuration.HeightmapResolution);
             p["TerrainTextureTexelSize"].SetValue(tsize);
 
             if (setTerrainTexture)
@@ -945,12 +955,14 @@ namespace Squared.Illuminant {
         }
 
         private void SetDistanceFieldParameters (EffectParameterCollection p, bool setDistanceTexture) {
+            p["DistanceFieldTextureSliceSize"].SetValue(new Vector2(1f / DistanceFieldSlicesX, 1f / DistanceFieldSlicesY));
+
             var tsize = new Vector2(
-                1f / Configuration.MaximumRenderSize.First, 
-                1f / Configuration.MaximumRenderSize.Second
+                1f / (Configuration.MaximumRenderSize.First * DistanceFieldSlicesX), 
+                1f / (Configuration.MaximumRenderSize.Second * DistanceFieldSlicesY)
             );
-            p["DistanceFieldInvScaleFactor"].SetValue(1f / DistanceFieldResolutionMultiplier);
             p["DistanceFieldTextureTexelSize"].SetValue(tsize);
+            p["DistanceFieldInvScaleFactor"].SetValue(1f / Configuration.DistanceFieldResolution);
             p["DistanceFieldMinimumStepSize"].SetValue(Configuration.DistanceFieldStepSize);
 
             if (setDistanceTexture)
@@ -1125,7 +1137,10 @@ namespace Squared.Illuminant {
             using (var group = BatchGroup.ForRenderTarget(resultGroup, layerIndex++, _DistanceField,
                 // FIXME: Optimize this
                 (dm, _) => {
-                    Materials.PushViewTransform(ViewTransform.CreateOrthographic(Configuration.MaximumRenderSize.First, Configuration.MaximumRenderSize.Second));
+                    Materials.PushViewTransform(ViewTransform.CreateOrthographic(
+                        Configuration.MaximumRenderSize.First * DistanceFieldSlicesX, 
+                        Configuration.MaximumRenderSize.Second * DistanceFieldSlicesY
+                    ));
                     SetDistanceFieldParameters(IlluminantMaterials.DistanceFieldInterior.Effect.Parameters, false);                    
                     SetDistanceFieldParameters(IlluminantMaterials.DistanceFieldExterior.Effect.Parameters, false);                    
                 },
