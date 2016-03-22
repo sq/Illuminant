@@ -16,10 +16,11 @@ using Squared.Util;
 
 namespace Squared.Illuminant {
     public class RendererConfiguration {
-        public float ClipRegionScale     = 1.0f;
-        public bool  TwoPointFiveD       = false;
-        public float ZOffset             = 0.0f;
-        public float ZScale              = 1.0f;
+        public float ClipRegionScale       = 1.0f;
+        public bool  TwoPointFiveD         = false;
+        public float ZOffset               = 0.0f;
+        public float ZScale                = 1.0f;
+        public float DistanceFieldStepSize = 1.0f;
 
         public readonly Pair<int> MaximumRenderSize;
 
@@ -950,6 +951,7 @@ namespace Squared.Illuminant {
             );
             p["DistanceFieldInvScaleFactor"].SetValue(1f / DistanceFieldResolutionMultiplier);
             p["DistanceFieldTextureTexelSize"].SetValue(tsize);
+            p["DistanceFieldMinimumStepSize"].SetValue(Configuration.DistanceFieldStepSize);
 
             if (setDistanceTexture)
                 p["DistanceFieldTexture"].SetValue(_DistanceField);

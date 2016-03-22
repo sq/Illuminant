@@ -16,10 +16,6 @@
 //  *and* it's mathematically correct!
 #define DISTANCE_FIELD_FILTER LINEAR
 
-// The minimum trace step size (in pixels)
-// Higher values improve the worst-case performance of the trace, but introduce artifacts
-#define MIN_STEP_SIZE 3
-
 // The minimum and maximum approximate cone tracing radius
 // The cone grows larger as light travels from the source, up to the maximum
 // Raising the maximum produces soft shadows, but if it's too large you will get artifacts.
@@ -80,6 +76,7 @@ float decodeDistance (float encodedDistance) {
         return (encodedDistance - DISTANCE_ZERO) * -(DISTANCE_NEGATIVE_MAX / DISTANCE_NEGATIVE_RANGE);
 }
 
+uniform float  DistanceFieldMinimumStepSize;
 uniform float  DistanceFieldInvScaleFactor;
 uniform float2 DistanceFieldTextureTexelSize;
 
@@ -127,6 +124,7 @@ float coneTrace (
     in float3 shadedPixelPosition,
     in float  interiorBrightness
 ) {
+    float minStepSize = max(1, DistanceFieldMinimumStepSize);
     float3 ramp = float3(MIN_CONE_RADIUS, min(lightRamp.x, MAX_CONE_RADIUS), rcp(max(lightRamp.y, 1)));
     float traceOffset = 0;
     float3 traceVector = (shadedPixelPosition - lightCenter);
@@ -144,7 +142,7 @@ float coneTrace (
         if (coneAttenuation <= FULLY_SHADOWED_THRESHOLD)
             break;
 
-        traceOffset += max(abs(distanceToObstacle), MIN_STEP_SIZE);
+        traceOffset += max(abs(distanceToObstacle), minStepSize);
     }
 
     // HACK: Do an extra sample at the end directly at the shaded pixel.
