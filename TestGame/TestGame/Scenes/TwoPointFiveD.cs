@@ -111,7 +111,9 @@ namespace TestGame.Scenes {
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(Width, Height) {
                     TwoPointFiveD = true
-                }
+                },
+                heightmapResolution: 1f,
+                distanceFieldResolution: 1f
             );
 
             var light = new LightSource {
@@ -205,7 +207,8 @@ namespace TestGame.Scenes {
                             samplerState: SamplerState.PointClamp
                         ))
                             bb.Add(new BitmapDrawCall(
-                                Renderer.DistanceField, Vector2.Zero, Color.White
+                                Renderer.DistanceField, Vector2.Zero, new Bounds(Vector2.Zero, Vector2.One), 
+                                Color.White, 1f / Renderer.DistanceFieldResolutionMultiplier
                             ));
                     }
 
@@ -218,7 +221,8 @@ namespace TestGame.Scenes {
                             samplerState: SamplerState.PointClamp
                         ))
                             bb.Add(new BitmapDrawCall(
-                                Renderer.TerrainDepthmap, Vector2.Zero, Color.White
+                                Renderer.TerrainDepthmap, Vector2.Zero, new Bounds(Vector2.Zero, Vector2.One), 
+                                Color.White, 1f / Renderer.HeightmapResolutionMultiplier
                             ));
                     }
                 }

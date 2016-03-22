@@ -80,6 +80,7 @@ float decodeDistance (float encodedDistance) {
         return (encodedDistance - DISTANCE_ZERO) * -(DISTANCE_NEGATIVE_MAX / DISTANCE_NEGATIVE_RANGE);
 }
 
+uniform float  DistanceFieldInvScaleFactor;
 uniform float2 DistanceFieldTextureTexelSize;
 
 Texture2D DistanceFieldTexture        : register(t4);
@@ -93,7 +94,7 @@ sampler   DistanceFieldTextureSampler : register(s4) {
 float sampleDistanceField (
     float2 positionPx
 ) {
-    float2 uv = positionPx * DistanceFieldTextureTexelSize;
+    float2 uv = (positionPx * DistanceFieldTextureTexelSize);
     // FIXME: Read appropriate channel here (.a for alpha8, .r for everything else)
     float raw = tex2Dgrad(DistanceFieldTextureSampler, uv, 0, 0).a;
     return decodeDistance(raw);

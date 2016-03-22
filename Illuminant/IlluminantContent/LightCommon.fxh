@@ -4,6 +4,7 @@ uniform float GroundZ;
 uniform float ZDistanceScale;
 uniform float ZToYMultiplier;
 
+uniform float  HeightmapInvScaleFactor;
 uniform float2 TerrainTextureTexelSize;
 
 Texture2D TerrainTexture      : register(t2);

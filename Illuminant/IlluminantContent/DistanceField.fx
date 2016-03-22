@@ -39,6 +39,7 @@ void InteriorPixelShader (
     in  float2 vpos : VPOS,
     out float  depth : DEPTH
 ) {
+    vpos *= DistanceFieldInvScaleFactor;
     float resultDistance = -computeDistance(vpos);
     color = encodeDistance(resultDistance);
     depth = distanceToDepth(resultDistance);
@@ -49,6 +50,7 @@ void ExteriorPixelShader (
     in  float2 vpos  : VPOS,
     out float  depth : DEPTH
 ) {
+    vpos *= DistanceFieldInvScaleFactor;
     float resultDistance = computeDistance(vpos);
     color = encodeDistance(resultDistance);
     depth = distanceToDepth(resultDistance);
