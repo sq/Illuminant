@@ -38,7 +38,7 @@ void FrontFaceVertexShader (
 float ComputeRaycastedShadowOcclusionSample (
     float3 lightPosition, float2 lightRamp, float3 worldPosition
 ) {
-    return coneTrace(lightPosition, lightRamp, worldPosition);
+    return coneTrace(lightPosition, lightRamp, worldPosition, 1);
 }
 
 float ComputeRaycastedShadowOpacity (

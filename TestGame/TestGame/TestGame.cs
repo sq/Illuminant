@@ -46,7 +46,7 @@ namespace TestGame {
 
             Scenes = new Scene[] {
                 new HeightVolumeTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new SoulcasterTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
+                new TwoPointFiveDTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
             };
 
             ActiveSceneIndex = 1;

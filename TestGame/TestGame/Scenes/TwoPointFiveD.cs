@@ -13,7 +13,7 @@ using Squared.Render;
 using Squared.Render.Convenience;
 
 namespace TestGame.Scenes {
-    public class SoulcasterTest : Scene {
+    public class TwoPointFiveDTest : Scene {
         LightingEnvironment Environment;
         LightingRenderer Renderer;
 
@@ -28,7 +28,7 @@ namespace TestGame.Scenes {
         bool ShowLightmap      = false;
         bool ShowDistanceField = false;
 
-        public SoulcasterTest (TestGame game, int width, int height)
+        public TwoPointFiveDTest (TestGame game, int width, int height)
             : base(game, 1024, 1024) {
         }
 

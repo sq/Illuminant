@@ -47,7 +47,7 @@ float PointLightPixelCore(
     // FIXME: What about z?
     float lightOpacity = computeLightOpacity(shadedPixelPosition, lightCenter, ramp.x, ramp.y);
 
-    return lightOpacity * coneTrace(lightCenter, ramp, shadedPixelPosition);
+    return lightOpacity * coneTrace(lightCenter, ramp, shadedPixelPosition, 0);
 }
 
 void PointLightPixelShaderLinear(
