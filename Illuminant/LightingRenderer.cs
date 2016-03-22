@@ -211,7 +211,7 @@ namespace Squared.Illuminant {
         public readonly RendererConfiguration Configuration;
         public LightingEnvironment Environment;
 
-        const int  DistanceLimit = 512;
+        const int  DistanceLimit = 128;
         const int  HeightmapResolutionMultiplier = 1;
         const int  DistanceFieldResolutionMultiplier = 1;
         const bool HighPrecisionTerrain = true;
@@ -752,23 +752,27 @@ namespace Squared.Illuminant {
                         continue;
 
                     var lightBounds = new Bounds((Vector2)lightSource.Position - new Vector2(lightSource.RampEnd), (Vector2)lightSource.Position + new Vector2(lightSource.RampEnd));
-                    bool lightWithinVolume = false;
 
-                    // If the light is contained within a height volume that encompasses it in all 3 dimensions, cull it
-                    using (var e = Environment.HeightVolumes.GetItemsFromBounds(lightBounds))
-                    while (e.MoveNext()) {
-                        if (
-                            e.Current.Item.IsObstruction && 
-                            (e.Current.Item.Height > lightSource.Position.Z) &&
-                            Geometry.PointInPolygon((Vector2)lightSource.Position, e.Current.Item.Polygon)
-                        ) {
-                            lightWithinVolume = true;
-                            break;
+                    // FIXME: Broken :(
+                    if (false) {
+                        bool lightWithinVolume = false;
+
+                        // If the light is contained within a height volume that encompasses it in all 3 dimensions, cull it
+                        using (var e = Environment.HeightVolumes.GetItemsFromBounds(lightBounds))
+                        while (e.MoveNext()) {
+                            if (
+                                e.Current.Item.IsObstruction && 
+                                (e.Current.Item.Height > lightSource.Position.Z) &&
+                                Geometry.PointInPolygon((Vector2)lightSource.Position, e.Current.Item.Polygon)
+                            ) {
+                                lightWithinVolume = true;
+                                break;
+                            }
                         }
-                    }
 
-                    if (lightWithinVolume)
-                        continue;
+                        if (lightWithinVolume)
+                            continue;
+                    }
 
                     if (batchFirstLightSource != null) {
                         var needFlush =

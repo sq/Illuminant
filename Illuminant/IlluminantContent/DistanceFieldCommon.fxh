@@ -1,38 +1,42 @@
-//
-// For integral distance field encoding
-
 // This is a distance of 0
+// Moving this value up/down allocates more precision to positive or negative distances
 #define DISTANCE_ZERO (192.0 / 255.0)
 
-//
-// For floating-point distance field encoding
-// #define FP_DISTANCE
+#define DISTANCE_POSITIVE_RANGE DISTANCE_ZERO
+#define DISTANCE_NEGATIVE_RANGE (1 - DISTANCE_ZERO)
 
-// HACK: We offset all values because we can only clear the render target to 0.0 or 1.0 :(
-//  This makes the pixels cleared to 0 by the gpu count as extremely distant
-#define DISTANCE_OFFSET 768.0
+// Maximum positive (outside) distance
+// Smaller values increase the precision of distance values but slow down traces
+#define DISTANCE_POSITIVE_MAX 64
 
+// Maximum negative (inside) distance
+#define DISTANCE_NEGATIVE_MAX 12
 
-//
-// Cone tracing
+// Filtering dramatically increases the precision of the distance field,
+//  *and* it's mathematically correct!
+#define DISTANCE_FIELD_FILTER LINEAR
 
+// The minimum trace step size (in pixels)
+// Higher values improve the worst-case performance of the trace, but introduce artifacts
+#define MIN_STEP_SIZE 3
 
-#define MIN_CONE_RADIUS 1
-#define MAX_CONE_RADIUS 18
+// The minimum and maximum approximate cone tracing radius
+// The cone grows larger as light travels from the source, up to the maximum
+// Raising the maximum produces soft shadows, but if it's too large you will get artifacts.
+// A larger maximum also increases the size of the AO 'blobs' around distant obstructions.
+#define MIN_CONE_RADIUS 1.5
+#define MAX_CONE_RADIUS 16
 
+// We threshold shadow values from cone tracing to eliminate 'almost obstructed' and 'almost unobstructed' artifacts
+#define FULLY_SHADOWED_THRESHOLD 0.05
+#define UNSHADOWED_THRESHOLD 0.95
 
-//
-// General
-
-// HACK: Scale distance values into [0, 1] so we can use the depth buffer to do a cheap min()
+// We scale distance values into [0, 1] so we can use the depth buffer to do a cheap min()
 #define DISTANCE_DEPTH_MAX 1024.0
+#define DISTANCE_DEPTH_OFFSET 0.25
 
-// FIXME: DX9 can't filter half-float surfaces
-#ifdef FP_DISTANCE
-    #define DISTANCE_FIELD_FILTER POINT
-#else
-    #define DISTANCE_FIELD_FILTER LINEAR
-#endif
+// Distances <= this are considered 'inside'
+#define INTERIOR_THRESHOLD 0.25
 
 
 float closestPointOnEdgeAsFactor (
@@ -55,34 +59,25 @@ float2 closestPointOnEdge (
 
 float distanceToDepth (float distance) {
     if (distance < 0) { 
-        return clamp(0.25 + (distance / 256), 0, 0.25);
+        return clamp(DISTANCE_DEPTH_OFFSET + (distance / 256), 0, DISTANCE_DEPTH_OFFSET);
     } else {
-        return clamp(0.25 + (distance / DISTANCE_DEPTH_MAX), 0.25, 1); 
+        return clamp(DISTANCE_DEPTH_OFFSET + (distance / DISTANCE_DEPTH_MAX), DISTANCE_DEPTH_OFFSET, 1); 
     }
 }
 
 float4 encodeDistance (float distance) {
-#ifdef FP_DISTANCE
-    float d = distance;
-    return d - DISTANCE_OFFSET;
-#else
     if (distance >= 0) {
-        return DISTANCE_ZERO - (distance / 70);
+        return DISTANCE_ZERO - ((distance / DISTANCE_POSITIVE_MAX) * DISTANCE_POSITIVE_RANGE);
     } else {
-        return DISTANCE_ZERO + (-distance / 12);
+        return DISTANCE_ZERO + ((-distance / DISTANCE_NEGATIVE_MAX) * DISTANCE_NEGATIVE_RANGE);
     }
-#endif
 }
 
 float decodeDistance (float encodedDistance) {
-#ifdef FP_DISTANCE
-    return encodedDistance + DISTANCE_OFFSET;
-#else
     if (encodedDistance <= DISTANCE_ZERO)
-        return (DISTANCE_ZERO - encodedDistance) * 70;
+        return (DISTANCE_ZERO - encodedDistance) * (DISTANCE_POSITIVE_MAX / DISTANCE_POSITIVE_RANGE);
     else
-        return (encodedDistance - DISTANCE_ZERO) * -12;
-#endif
+        return (encodedDistance - DISTANCE_ZERO) * -(DISTANCE_NEGATIVE_MAX / DISTANCE_NEGATIVE_RANGE);
 }
 
 uniform float2 DistanceFieldTextureTexelSize;
@@ -104,6 +99,14 @@ float sampleDistanceField (
     return decodeDistance(raw);
 }
 
+float sampleAlongRay (
+    float3 rayStart, float3 rayDirection, float distance
+) {
+    float3 samplePosition = rayStart + (rayDirection * distance);
+    float sample = sampleDistanceField(samplePosition.xy);
+    return sample;
+}
+
 float conePenumbra (
     float3 ramp,
     float  distanceFromLight,
@@ -112,38 +115,9 @@ float conePenumbra (
 ) {
     // FIXME: Cancel out shadowing as we approach the target point somehow?
     float localRadius = lerp(ramp.x, ramp.y, clamp(distanceFromLight * ramp.z, 0, 1));
-    return clamp(distanceToObstacle / localRadius, 0, 1);
-}
+    float result = clamp(distanceToObstacle / localRadius, 0, 1);
 
-float isInside (float distance) {
-    return distance <= 0.1;
-}
-
-float didGradientChange (
-    inout float previousDistance,
-    inout float previousGradient,
-    in    float distanceToObstacle,
-    out   float gradient
-) {
-    float distanceDelta = previousDistance - distanceToObstacle;
-
-    if ((previousDistance <= 0) && (distanceToObstacle <= 0)) {
-        // HACK: Interior is always forced to a specific gradient
-        gradient = 0.0;
-    } else if (abs(distanceDelta) >= 0.25) {
-        gradient = sign(distanceDelta);
-    } else {
-        gradient = 0.0;
-    }
-
-    previousDistance = distanceToObstacle;
-
-    if (gradient != previousGradient) {
-        previousGradient = gradient;
-        return 1.0;
-    }
-
-    return 0;
+    return result;
 }
 
 float coneTrace (
@@ -159,32 +133,28 @@ float coneTrace (
     traceVector = normalize(traceVector);
 
     float coneAttenuation = 1.0;
-    float incompleteConeAttenuation = 1.0;
-    float previousDistance = 9999;
-    float previousGradient = 0.0, gradient;
 
     while (traceOffset < traceLength) {
-        float3 tracePosition = lightCenter + (traceVector * traceOffset);
-        float distanceToObstacle = sampleDistanceField(tracePosition.xy);
-
-        if (
-            didGradientChange(previousDistance, previousGradient, distanceToObstacle, gradient) > 0
-        ) {
-            coneAttenuation = min(coneAttenuation, incompleteConeAttenuation);
-            incompleteConeAttenuation = 1.0;
-        }
+        float distanceToObstacle = sampleAlongRay(lightCenter, traceVector, traceOffset);
 
         float penumbra = conePenumbra(ramp, traceOffset, traceLength, distanceToObstacle);
-        incompleteConeAttenuation = min(incompleteConeAttenuation, penumbra);
+        coneAttenuation = min(coneAttenuation, penumbra);
 
-        traceOffset += max(abs(distanceToObstacle), 1);
+        if (coneAttenuation <= FULLY_SHADOWED_THRESHOLD)
+            break;
+
+        traceOffset += max(abs(distanceToObstacle), MIN_STEP_SIZE);
     }
 
+    // HACK: Do an extra sample at the end directly at the shaded pixel.
+    // This eliminates weird curved banding artifacts close to obstructions.
+    if (coneAttenuation > FULLY_SHADOWED_THRESHOLD)
     {
-        float distanceToObstacle = sampleDistanceField(shadedPixelPosition.xy);
+        float distanceToObstacle = sampleAlongRay(shadedPixelPosition, traceVector, 0);
 
-        return coneAttenuation * lerp(1, interiorBrightness, 1.0 - clamp(distanceToObstacle - 0.85, 0, 1));
+        float penumbra = conePenumbra(ramp, traceOffset, traceLength, distanceToObstacle);
+        coneAttenuation = min(coneAttenuation, penumbra);
     }
 
-    return coneAttenuation;
+    return clamp((coneAttenuation - FULLY_SHADOWED_THRESHOLD) / (UNSHADOWED_THRESHOLD - FULLY_SHADOWED_THRESHOLD), 0, 1);
 }
