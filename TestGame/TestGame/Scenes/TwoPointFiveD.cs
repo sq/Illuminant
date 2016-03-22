@@ -114,7 +114,7 @@ namespace TestGame.Scenes {
                 new RendererConfiguration(1024, 1024) {
                     // TwoPointFiveD = true,
                     DistanceFieldResolution = 0.5f,
-                    DistanceFieldSliceCount = 1
+                    DistanceFieldSliceCount = 2
                 }
             );
 

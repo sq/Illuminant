@@ -1144,8 +1144,10 @@ namespace Squared.Illuminant {
                     int slice = _slice;
 
                     float sliceZ = (slice / (float)Configuration.DistanceFieldSliceCount);
-                    var sliceX = ((slice % DistanceFieldSlicesX) * DistanceFieldSliceWidth);
-                    var sliceY = ((slice / DistanceFieldSlicesX) * DistanceFieldSliceHeight);
+                    var sliceX = (slice % DistanceFieldSlicesX) * DistanceFieldSliceWidth;
+                    var sliceY = (slice / DistanceFieldSlicesX) * DistanceFieldSliceHeight;
+                    var sliceXVirtual = (slice % DistanceFieldSlicesX) * Configuration.MaximumRenderSize.First;
+                    var sliceYVirtual = (slice / DistanceFieldSlicesX) * Configuration.MaximumRenderSize.Second;
 
                     using (var group = BatchGroup.New(rtGroup, slice + 1,
                         // FIXME: Optimize this
@@ -1154,7 +1156,7 @@ namespace Squared.Illuminant {
                                 Configuration.MaximumRenderSize.First * DistanceFieldSlicesX,
                                 Configuration.MaximumRenderSize.Second * DistanceFieldSlicesY
                             );
-                            vt.Position = new Vector2(-sliceX, -sliceY);
+                            vt.Position = new Vector2(-sliceXVirtual, -sliceYVirtual);
                             Materials.PushViewTransform(ref vt);
 
                             dm.Device.ScissorRectangle = new Rectangle(

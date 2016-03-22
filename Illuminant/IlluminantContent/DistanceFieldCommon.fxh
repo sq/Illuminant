@@ -138,6 +138,11 @@ float conePenumbra (
     float  traceLength,
     float  distanceToObstacle
 ) {
+    /*
+    if (distanceToObstacle <= 0)
+        return 0;
+    */
+
     // FIXME: Cancel out shadowing as we approach the target point somehow?
     float localRadius = lerp(ramp.x, ramp.y, clamp(distanceFromLight * ramp.z, 0, 1));
     float result = clamp(distanceToObstacle / localRadius, 0, 1);

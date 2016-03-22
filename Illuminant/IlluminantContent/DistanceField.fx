@@ -54,14 +54,14 @@ void InteriorPixelShader (
     out float4 color : COLOR0,
     in  float2 vpos : VPOS
 ) {
-    vpos += ViewportPosition;
-    vpos *= DistanceFieldInvScaleFactor;
-    float resultDistance = computeDistance(vpos);
-
+    float resultDistance;
     if ((SliceZ >= MinZ) && (SliceZ <= MaxZ)) {
-        resultDistance = -resultDistance;
+        vpos *= DistanceFieldInvScaleFactor;
+        vpos += ViewportPosition;
+        resultDistance = -computeDistance(vpos);
+    } else {
+        resultDistance = min(abs(SliceZ - MinZ), abs(SliceZ - MaxZ)) * ZDistanceScale;
     }
-
     color = encodeDistance(resultDistance);
 }
 
@@ -69,8 +69,8 @@ void ExteriorPixelShader (
     out float4 color : COLOR0,
     in  float2 vpos  : VPOS
 ) {
-    vpos += ViewportPosition;
     vpos *= DistanceFieldInvScaleFactor;
+    vpos += ViewportPosition;
     float resultDistance = computeDistance(vpos);
     color = encodeDistance(resultDistance);
 }
