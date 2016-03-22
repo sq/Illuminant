@@ -7,7 +7,7 @@
 
 // Maximum positive (outside) distance
 // Smaller values increase the precision of distance values but slow down traces
-#define DISTANCE_POSITIVE_MAX 160
+#define DISTANCE_POSITIVE_MAX 96
 
 // Maximum negative (inside) distance
 #define DISTANCE_NEGATIVE_MAX 32
@@ -17,13 +17,13 @@
 #define DISTANCE_FIELD_FILTER LINEAR
 
 // HACK: Step by a fraction of the distance to the next object for better accuracy
-#define PARTIAL_STEP_SIZE 0.5
+#define PARTIAL_STEP_SIZE 0.9
 
 // The minimum and maximum approximate cone tracing radius
 // The cone grows larger as light travels from the source, up to the maximum
 // Raising the maximum produces soft shadows, but if it's too large you will get artifacts.
 // A larger maximum also increases the size of the AO 'blobs' around distant obstructions.
-#define MIN_CONE_RADIUS 1
+#define MIN_CONE_RADIUS 2
 #define MAX_CONE_RADIUS 24
 
 // We threshold shadow values from cone tracing to eliminate 'almost obstructed' and 'almost unobstructed' artifacts
@@ -97,7 +97,7 @@ float2 computeDistanceFieldUv (
 ) {
     sliceIndex = clamp(sliceIndex, 0, DistanceFieldTextureSliceCount.z - 1);
     float columnIndex = floor(sliceIndex % DistanceFieldTextureSliceCount.x);
-    float rowIndex    = floor(sliceIndex / DistanceFieldTextureSliceCount.y);
+    float rowIndex    = floor(sliceIndex / DistanceFieldTextureSliceCount.x);
     float2 uv = clamp(positionPx * DistanceFieldTextureTexelSize, float2(0, 0), DistanceFieldTextureSliceSize);
     return uv + float2(columnIndex * DistanceFieldTextureSliceSize.x, rowIndex * DistanceFieldTextureSliceSize.y);
 }
@@ -106,22 +106,21 @@ float sampleDistanceField (
     float3 position
 ) {
     // Interpolate between two Z samples. The xy interpolation is done by the GPU for us.
-    float sliceIndex1;
-    // HACK: Compensate for Z scaling
-    float subslice = modf(position.z * DistanceFieldTextureSliceCount.z / ZDistanceScale, sliceIndex1);
+    float slicePosition = clamp(position.z / ZDistanceScale * DistanceFieldTextureSliceCount.z, 0, DistanceFieldTextureSliceCount.z - 1);
+    float sliceIndex1 = floor(slicePosition);
+    float subslice = slicePosition - sliceIndex1;
     float sliceIndex2 = sliceIndex1 + 1;
     
     // FIXME: Read appropriate channel here (.a for alpha8, .r for everything else)
-    float raw1 = tex2Dgrad(
+    float distance1 = decodeDistance(tex2Dgrad(
         DistanceFieldTextureSampler, computeDistanceFieldUv(position.xy, sliceIndex1), 0, 0
-    ).r;
+    ).r);
 
-    float raw2 = tex2Dgrad(
+    float distance2 = decodeDistance(tex2Dgrad(
         DistanceFieldTextureSampler, computeDistanceFieldUv(position.xy, sliceIndex2), 0, 0
-    ).r;
-    float raw = lerp(raw1, raw2, subslice);
-
-    return decodeDistance(raw);
+    ).r);
+    
+    return lerp(distance1, distance2, subslice);
 }
 
 float sampleAlongRay (
@@ -138,11 +137,6 @@ float conePenumbra (
     float  traceLength,
     float  distanceToObstacle
 ) {
-    /*
-    if (distanceToObstacle <= 0)
-        return 0;
-    */
-
     // FIXME: Cancel out shadowing as we approach the target point somehow?
     float localRadius = lerp(ramp.x, ramp.y, clamp(distanceFromLight * ramp.z, 0, 1));
     float result = clamp(distanceToObstacle / localRadius, 0, 1);

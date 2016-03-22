@@ -26,7 +26,7 @@ namespace TestGame.Scenes {
 
         bool ShowTerrainDepth  = false;
         bool ShowLightmap      = false;
-        bool ShowDistanceField = true;
+        bool ShowDistanceField = false;
 
         public TwoPointFiveDTest (TestGame game, int width, int height)
             : base(game, 1024, 1024) {
@@ -65,9 +65,6 @@ namespace TestGame.Scenes {
         }
 
         void Ellipse (Vector2 center, float radiusX, float radiusY, float z1, float height) {
-            // FIXME
-            return;
-
             var numPoints = Math.Max(
                 16,
                 (int)Math.Ceiling((radiusX + radiusY) * 0.35f)
@@ -102,9 +99,6 @@ namespace TestGame.Scenes {
         public override void LoadContent () {
             Game.Materials = new DefaultMaterialSet(Game.Services);
 
-            // Since the spiral is very detailed
-            LightingEnvironment.DefaultSubdivision = 128f;
-
             Environment = new LightingEnvironment();
 
             Background = Game.Content.Load<Texture2D>("sc3test");
@@ -112,9 +106,10 @@ namespace TestGame.Scenes {
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(1024, 1024) {
-                    // TwoPointFiveD = true,
-                    DistanceFieldResolution = 0.5f,
-                    DistanceFieldSliceCount = 2
+                    TwoPointFiveD = true,
+                    DistanceFieldResolution = 1f,
+                    DistanceFieldSliceCount = 8,
+                    DistanceFieldStepSize = 3
                 }
             );
 
@@ -199,39 +194,39 @@ namespace TestGame.Scenes {
                         dc.Textures = new TextureSet(dc.Textures.Texture1, Lightmap);
                         bb.Add(dc);
                     }
+                }
 
-                    if (ShowDistanceField) {
-                        float dfScale = Math.Min(
-                            (Game.Graphics.PreferredBackBufferWidth - 4) / (float)Renderer.DistanceField.Width,
-                            (Game.Graphics.PreferredBackBufferHeight - 4) / (float)Renderer.DistanceField.Height
-                        );
+                if (ShowDistanceField) {
+                    float dfScale = Math.Min(
+                        (Game.Graphics.PreferredBackBufferWidth - 4) / (float)Renderer.DistanceField.Width,
+                        (Game.Graphics.PreferredBackBufferHeight - 4) / (float)Renderer.DistanceField.Height
+                    );
 
-                        using (var bb = BitmapBatch.New(
-                            group, 3, Game.Materials.Get(
-                                Renderer.IlluminantMaterials.VisualizeDistanceField,
-                                blendState: BlendState.Opaque
-                            ),
-                            samplerState: SamplerState.PointClamp
-                        ))
-                            bb.Add(new BitmapDrawCall(
-                                Renderer.DistanceField, Vector2.Zero, new Bounds(Vector2.Zero, Vector2.One), 
-                                Color.White, dfScale
-                            ));
-                    }
+                    using (var bb = BitmapBatch.New(
+                        group, 3, Game.Materials.Get(
+                            Renderer.IlluminantMaterials.VisualizeDistanceField,
+                            blendState: BlendState.Opaque
+                        ),
+                        samplerState: SamplerState.PointClamp
+                    ))
+                        bb.Add(new BitmapDrawCall(
+                            Renderer.DistanceField, Vector2.Zero, new Bounds(Vector2.Zero, Vector2.One), 
+                            Color.White, dfScale
+                        ));
+                }
 
-                    if (ShowTerrainDepth) {
-                        using (var bb = BitmapBatch.New(
-                            group, 4, Game.Materials.Get(
-                                Game.Materials.ScreenSpaceBitmap,
-                                blendState: BlendState.AlphaBlend
-                            ),
-                            samplerState: SamplerState.PointClamp
-                        ))
-                            bb.Add(new BitmapDrawCall(
-                                Renderer.TerrainDepthmap, Vector2.Zero, new Bounds(Vector2.Zero, Vector2.One), 
-                                Color.White, 1f / Renderer.Configuration.HeightmapResolution
-                            ));
-                    }
+                if (ShowTerrainDepth) {
+                    using (var bb = BitmapBatch.New(
+                        group, 4, Game.Materials.Get(
+                            Game.Materials.ScreenSpaceBitmap,
+                            blendState: BlendState.AlphaBlend
+                        ),
+                        samplerState: SamplerState.PointClamp
+                    ))
+                        bb.Add(new BitmapDrawCall(
+                            Renderer.TerrainDepthmap, Vector2.Zero, new Bounds(Vector2.Zero, Vector2.One), 
+                            Color.White, 1f / Renderer.Configuration.HeightmapResolution
+                        ));
                 }
             }
         }
@@ -258,8 +253,8 @@ namespace TestGame.Scenes {
                 LightZ = (ms.ScrollWheelValue / 1024.0f) + 
                     Squared.Util.Arithmetic.PulseExp(t, 0, 0.3f);
 
-                if (LightZ < 0)
-                    LightZ = 0;
+                if (LightZ < 0.01f)
+                    LightZ = 0.01f;
 
                 var mousePos = new Vector3(ms.X, ms.Y, LightZ);
 
