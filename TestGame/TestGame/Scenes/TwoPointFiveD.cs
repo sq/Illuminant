@@ -26,7 +26,7 @@ namespace TestGame.Scenes {
 
         bool ShowTerrainDepth  = false;
         bool ShowLightmap      = false;
-        bool ShowDistanceField = false;
+        bool ShowDistanceField = true;
 
         public TwoPointFiveDTest (TestGame game, int width, int height)
             : base(game, 1024, 1024) {
@@ -64,7 +64,10 @@ namespace TestGame.Scenes {
             return result;
         }
 
-        HeightVolumeBase Ellipse (Vector2 center, float radiusX, float radiusY, float z1, float height) {
+        void Ellipse (Vector2 center, float radiusX, float radiusY, float z1, float height) {
+            // FIXME
+            return;
+
             var numPoints = Math.Max(
                 16,
                 (int)Math.Ceiling((radiusX + radiusY) * 0.35f)
@@ -82,7 +85,6 @@ namespace TestGame.Scenes {
                 z1, height
             );
             Environment.HeightVolumes.Add(result);
-            return result;
         }
 
         void Pillar (Vector2 center) {
@@ -110,8 +112,9 @@ namespace TestGame.Scenes {
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(1024, 1024) {
-                    TwoPointFiveD = true,
-                    DistanceFieldSliceCount = 2
+                    // TwoPointFiveD = true,
+                    DistanceFieldResolution = 0.5f,
+                    DistanceFieldSliceCount = 1
                 }
             );
 
@@ -199,8 +202,8 @@ namespace TestGame.Scenes {
 
                     if (ShowDistanceField) {
                         float dfScale = Math.Min(
-                            Width / (float)Renderer.DistanceField.Width,
-                            Height / (float)Renderer.DistanceField.Height
+                            (Game.Graphics.PreferredBackBufferWidth - 4) / (float)Renderer.DistanceField.Width,
+                            (Game.Graphics.PreferredBackBufferHeight - 4) / (float)Renderer.DistanceField.Height
                         );
 
                         using (var bb = BitmapBatch.New(
@@ -212,7 +215,7 @@ namespace TestGame.Scenes {
                         ))
                             bb.Add(new BitmapDrawCall(
                                 Renderer.DistanceField, Vector2.Zero, new Bounds(Vector2.Zero, Vector2.One), 
-                                Color.White, dfScale / Renderer.Configuration.DistanceFieldResolution
+                                Color.White, dfScale
                             ));
                     }
 

@@ -1,11 +1,12 @@
 #include "..\..\Upstream\Fracture\Squared\RenderLib\Content\GeometryCommon.fxh"
+#include "LightCommon.fxh"
 #include "DistanceFieldCommon.fxh"
 
-#define MAX_VERTICES   40
+#define MAX_VERTICES   38
 
 uniform float2 PixelSize;
 uniform float2 Vertices[MAX_VERTICES];
-uniform float2 MinZ, MaxZ;
+uniform float  MinZ, MaxZ;
 uniform float  SliceZ;
 uniform int    NumVertices;
 
@@ -28,8 +29,19 @@ float computeDistance (
 
         float2 closest = closestPointOnEdge(vpos, edgeA, edgeB);
         float2 closestDeltaXy = (vpos - closest);
-        float  closestDeltaZ = min(abs(SliceZ - MinZ), abs(SliceZ - MaxZ));
-        float3 closestDelta = float3(closestDeltaXy.x, closestDeltaXy.y, closestDeltaZ);
+        float deltaMinZ = SliceZ - MinZ;
+        float deltaMaxZ = SliceZ - MaxZ;
+
+        float closestDeltaZ;
+        if ((SliceZ >= MinZ) && (SliceZ <= MaxZ)) {
+            closestDeltaZ = 0;
+        } else if (abs(deltaMinZ) > abs(deltaMaxZ)) {
+            closestDeltaZ = deltaMaxZ;
+        } else {
+            closestDeltaZ = deltaMinZ;
+        }
+
+        float3 closestDelta = float3(closestDeltaXy.x, closestDeltaXy.y, closestDeltaZ * ZDistanceScale);
         float  closestDistance = length(closestDelta);
 
         resultDistance = min(resultDistance, closestDistance);
@@ -40,26 +52,27 @@ float computeDistance (
 
 void InteriorPixelShader (
     out float4 color : COLOR0,
-    in  float2 vpos : VPOS,
-    out float  depth : DEPTH
+    in  float2 vpos : VPOS
 ) {
     vpos += ViewportPosition;
     vpos *= DistanceFieldInvScaleFactor;
-    float resultDistance = -computeDistance(vpos);
+    float resultDistance = computeDistance(vpos);
+
+    if ((SliceZ >= MinZ) && (SliceZ <= MaxZ)) {
+        resultDistance = -resultDistance;
+    }
+
     color = encodeDistance(resultDistance);
-    depth = distanceToDepth(resultDistance);
 }
 
 void ExteriorPixelShader (
     out float4 color : COLOR0,
-    in  float2 vpos  : VPOS,
-    out float  depth : DEPTH
+    in  float2 vpos  : VPOS
 ) {
     vpos += ViewportPosition;
     vpos *= DistanceFieldInvScaleFactor;
     float resultDistance = computeDistance(vpos);
     color = encodeDistance(resultDistance);
-    depth = distanceToDepth(resultDistance);
 }
 
 technique Exterior

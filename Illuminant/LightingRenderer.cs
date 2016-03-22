@@ -215,7 +215,7 @@ namespace Squared.Illuminant {
         public readonly RendererConfiguration Configuration;
         public LightingEnvironment Environment;
 
-        const int   DistanceLimit = 128;
+        const int   DistanceLimit = 256;
         const int   StencilTrue  = 0xFF;
         const int   StencilFalse = 0x00;
 
@@ -271,13 +271,13 @@ namespace Squared.Illuminant {
                     throw new ArgumentOutOfRangeException("Too many distance field slices requested for this size. Maximum is " + maxSlices);
 
                 DistanceFieldSlicesX = Math.Min(maxSlicesX, Configuration.DistanceFieldSliceCount);
-                DistanceFieldSlicesY = Math.Max(Configuration.DistanceFieldSliceCount / maxSlicesX, 1);
+                DistanceFieldSlicesY = Math.Max((int)Math.Ceiling(Configuration.DistanceFieldSliceCount / (float)maxSlicesX), 1);
 
                 _DistanceField = new RenderTarget2D(
                     coordinator.Device,
                     DistanceFieldSliceWidth * DistanceFieldSlicesX, 
                     DistanceFieldSliceHeight * DistanceFieldSlicesY,
-                    false, SurfaceFormat.Alpha8, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.DiscardContents
+                    false, SurfaceFormat.Rg32, DepthFormat.None, 0, RenderTargetUsage.DiscardContents
                 );
             }
 
@@ -583,7 +583,6 @@ namespace Squared.Illuminant {
                 mi.Effect.Parameters["TerrainTexture"].SetValue(_TerrainDepthmap);
 
                 mi.Effect.Parameters["GroundZ"].SetValue(Environment.GroundZ);
-                mi.Effect.Parameters["ZDistanceScale"].SetValue(Environment.ZDistanceScale);
                 mi.Effect.Parameters["ZToYMultiplier"].SetValue(
                     Configuration.TwoPointFiveD
                         ? Environment.ZToYMultiplier
@@ -917,7 +916,7 @@ namespace Squared.Illuminant {
             return false;
         }
 
-        const int FaceMaxLights = 12;
+        const int FaceMaxLights = 8;
 
         // HACK
         private bool      _DistanceFieldReady = false;
@@ -930,7 +929,6 @@ namespace Squared.Illuminant {
 
         private void SetTwoPointFiveDParametersInner (EffectParameterCollection p, bool setTerrainTexture, bool setDistanceTexture) {
             p["GroundZ"]           .SetValue(Environment.GroundZ);
-            p["ZDistanceScale"]    .SetValue(Environment.ZDistanceScale);
             p["ZToYMultiplier"]    .SetValue(
                 Configuration.TwoPointFiveD
                     ? Environment.ZToYMultiplier
@@ -956,7 +954,10 @@ namespace Squared.Illuminant {
         }
 
         private void SetDistanceFieldParameters (EffectParameterCollection p, bool setDistanceTexture) {
+            p["ZDistanceScale"].SetValue(Environment.ZDistanceScale);
+
             p["DistanceFieldTextureSliceSize"].SetValue(new Vector2(1f / DistanceFieldSlicesX, 1f / DistanceFieldSlicesY));
+            p["DistanceFieldTextureSliceCount"].SetValue(new Vector3(DistanceFieldSlicesX, DistanceFieldSlicesY, Configuration.DistanceFieldSliceCount));
 
             var tsize = new Vector2(
                 1f / (Configuration.MaximumRenderSize.First * DistanceFieldSlicesX), 
@@ -1142,7 +1143,7 @@ namespace Squared.Illuminant {
                 for (var _slice = 0; _slice < Configuration.DistanceFieldSliceCount; _slice++) {
                     int slice = _slice;
 
-                    float sliceZ = slice / (float)Configuration.DistanceFieldSliceCount;
+                    float sliceZ = (slice / (float)Configuration.DistanceFieldSliceCount);
                     var sliceX = ((slice % DistanceFieldSlicesX) * DistanceFieldSliceWidth);
                     var sliceY = ((slice / DistanceFieldSlicesX) * DistanceFieldSliceHeight);
 
@@ -1150,8 +1151,8 @@ namespace Squared.Illuminant {
                         // FIXME: Optimize this
                         (dm, _) => {
                             var vt = ViewTransform.CreateOrthographic(
-                                DistanceFieldSliceWidth * DistanceFieldSlicesX,
-                                DistanceFieldSliceHeight * DistanceFieldSlicesY
+                                Configuration.MaximumRenderSize.First * DistanceFieldSlicesX,
+                                Configuration.MaximumRenderSize.Second * DistanceFieldSlicesY
                             );
                             vt.Position = new Vector2(-sliceX, -sliceY);
                             Materials.PushViewTransform(ref vt);
@@ -1172,20 +1173,17 @@ namespace Squared.Illuminant {
 
                         int i = 1;
 
-                        ClearBatch.AddNew(
-                            group, 0, Materials.Clear, clearZ: 1f, clearStencil: 0
-                        );
-
                         // Rasterize the height volumes in sequential order.
+                        // FIXME: Depth buffer/stencil buffer tricks should work for generating this SDF, but don't?
                         using (var interiorGroup = BatchGroup.ForRenderTarget(group, 1, _DistanceField, (dm, _) => {
-                            dm.Device.BlendState = BlendState.Opaque;
+                            dm.Device.BlendState = RenderStates.MaxBlendValue;
                             dm.Device.RasterizerState = RenderStates.ScissorOnly;
-                            dm.Device.DepthStencilState = DistanceInteriorStencilState;
+                            dm.Device.DepthStencilState = DepthStencilState.None;
                         }))
                         using (var exteriorGroup = BatchGroup.ForRenderTarget(group, 2, _DistanceField, (dm, _) => {
-                            dm.Device.BlendState = BlendState.Opaque;
+                            dm.Device.BlendState = RenderStates.MaxBlendValue;
                             dm.Device.RasterizerState = RenderStates.ScissorOnly;
-                            dm.Device.DepthStencilState = DistanceExteriorStencilState;
+                            dm.Device.DepthStencilState = DepthStencilState.None;
                         }))
                             foreach (var hv in Environment.HeightVolumes) {
                                 var p = hv.Polygon;
@@ -1199,8 +1197,8 @@ namespace Squared.Illuminant {
                                     new VertexPositionColor(new Vector3(b.BottomLeft, 0), Color.White)
                                 };
 
-                                if (p.Count > 40)
-                                    throw new Exception("Height volume has too many vertices (limit is 40)");
+                                if (p.Count > 38)
+                                    throw new Exception("Height volume has too many vertices (limit is 38)");
 
                                 using (var batch = PrimitiveBatch<VertexPositionColor>.New(
                                     interiorGroup, i, IlluminantMaterials.DistanceFieldInterior,

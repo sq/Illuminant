@@ -1,4 +1,5 @@
 #include "..\..\Upstream\Fracture\Squared\RenderLib\Content\BitmapCommon.fxh"
+#include "LightCommon.fxh"
 #include "DistanceFieldCommon.fxh"
 
 void VisualizePixelShader(
@@ -13,7 +14,7 @@ void VisualizePixelShader(
     addColor.a = 0;
 
     float4 encoded = tex2Dgrad(TextureSampler, clamp(texCoord, texTL, texBR), 0, 0);
-    float decoded = decodeDistance(encoded.a);
+    float decoded = decodeDistance(encoded.r);
 
     float4 visualized;
 

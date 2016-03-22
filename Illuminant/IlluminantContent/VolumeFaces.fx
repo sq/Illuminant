@@ -2,7 +2,7 @@
 #include "LightCommon.fxh"
 #include "DistanceFieldCommon.fxh"
 
-#define MAX_LIGHTS 12
+#define MAX_LIGHTS 8
 
 #define EXPONENTIAL                           0
 #define TOP_FACE_DOT_RAMP                     0
