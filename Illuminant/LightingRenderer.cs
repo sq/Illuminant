@@ -219,6 +219,7 @@ namespace Squared.Illuminant {
         const int   StencilTrue  = 0xFF;
         const int   StencilFalse = 0x00;
 
+        public readonly int DistanceFieldSliceWidth, DistanceFieldSliceHeight;
         public readonly int DistanceFieldSlicesX, DistanceFieldSlicesY;
 
         public readonly bool  HighPrecisionTerrain = true;
@@ -260,10 +261,10 @@ namespace Squared.Illuminant {
                     false, fmt, DepthFormat.None, 0, RenderTargetUsage.DiscardContents
                 );
 
-                var distanceFieldSliceWidth = (int)(Configuration.MaximumRenderSize.First * Configuration.DistanceFieldResolution);
-                var distanceFieldSliceHeight = (int)(Configuration.MaximumRenderSize.Second * Configuration.DistanceFieldResolution);
-                int maxSlicesX = 4096 / distanceFieldSliceWidth;
-                int maxSlicesY = 4096 / distanceFieldSliceHeight;
+                DistanceFieldSliceWidth = (int)(Configuration.MaximumRenderSize.First * Configuration.DistanceFieldResolution);
+                DistanceFieldSliceHeight = (int)(Configuration.MaximumRenderSize.Second * Configuration.DistanceFieldResolution);
+                int maxSlicesX = 4096 / DistanceFieldSliceWidth;
+                int maxSlicesY = 4096 / DistanceFieldSliceHeight;
                 int maxSlices = maxSlicesX * maxSlicesY;
 
                 if (Configuration.DistanceFieldSliceCount > maxSlices)
@@ -274,8 +275,8 @@ namespace Squared.Illuminant {
 
                 _DistanceField = new RenderTarget2D(
                     coordinator.Device,
-                    distanceFieldSliceWidth * DistanceFieldSlicesX, 
-                    distanceFieldSliceHeight * DistanceFieldSlicesY,
+                    DistanceFieldSliceWidth * DistanceFieldSlicesX, 
+                    DistanceFieldSliceHeight * DistanceFieldSlicesY,
                     false, SurfaceFormat.Alpha8, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.DiscardContents
                 );
             }
@@ -340,7 +341,7 @@ namespace Squared.Illuminant {
 
                 DepthBufferEnable = true,
                 DepthBufferFunction = CompareFunction.LessEqual,
-                DepthBufferWriteEnable = true
+                DepthBufferWriteEnable = true,
             };
 
             HeightMin = new BlendState {
@@ -1129,92 +1130,118 @@ namespace Squared.Illuminant {
             var intParameters = IlluminantMaterials.DistanceFieldInterior.Effect.Parameters;
             var extParameters = IlluminantMaterials.DistanceFieldExterior.Effect.Parameters;
 
-            int w = _DistanceField.Width, h = _DistanceField.Height;
             var indices = new short[] {
                 0, 1, 3, 1, 2, 3
             };
 
-            using (var group = BatchGroup.ForRenderTarget(resultGroup, layerIndex++, _DistanceField,
-                // FIXME: Optimize this
-                (dm, _) => {
-                    Materials.PushViewTransform(ViewTransform.CreateOrthographic(
-                        Configuration.MaximumRenderSize.First * DistanceFieldSlicesX, 
-                        Configuration.MaximumRenderSize.Second * DistanceFieldSlicesY
-                    ));
-                    SetDistanceFieldParameters(IlluminantMaterials.DistanceFieldInterior.Effect.Parameters, false);                    
-                    SetDistanceFieldParameters(IlluminantMaterials.DistanceFieldExterior.Effect.Parameters, false);                    
-                },
-                (dm, _) => {
-                    Materials.PopViewTransform();
-                }
-            )) {
-                if (Render.Tracing.RenderTrace.EnableTracing)
-                    Render.Tracing.RenderTrace.Marker(group, -1, "LightingRenderer {0:X4} : Begin Distance Field", this.GetHashCode());
-
+            using (var rtGroup = BatchGroup.ForRenderTarget(resultGroup, layerIndex++, _DistanceField)) {
                 ClearBatch.AddNew(
-                    group, 0, Materials.Clear, Color.Transparent, 1f, 0
+                    rtGroup, 0, Materials.Clear, Color.Transparent
                 );
 
-                int i = 1;
+                for (var _slice = 0; _slice < Configuration.DistanceFieldSliceCount; _slice++) {
+                    int slice = _slice;
 
-                // Rasterize the height volumes in sequential order.
-                using (var interiorGroup = BatchGroup.ForRenderTarget(group, 1, _DistanceField, (dm, _) => {
-                    dm.Device.BlendState = BlendState.Opaque;
-                    dm.Device.RasterizerState = RasterizerState.CullNone;
-                    dm.Device.DepthStencilState = DistanceInteriorStencilState;
-                }))
-                using (var exteriorGroup = BatchGroup.ForRenderTarget(group, 2, _DistanceField, (dm, _) => {
-                    dm.Device.BlendState = BlendState.Opaque;
-                    dm.Device.RasterizerState = RasterizerState.CullNone;
-                    dm.Device.DepthStencilState = DistanceExteriorStencilState;
-                }))
-                foreach (var hv in Environment.HeightVolumes) {
-                    var p = hv.Polygon;
-                    var m = hv.Mesh3D;
-                    var b = hv.Bounds.Expand(DistanceLimit, DistanceLimit);
+                    float sliceZ = slice / (float)Configuration.DistanceFieldSliceCount;
+                    var sliceX = ((slice % DistanceFieldSlicesX) * DistanceFieldSliceWidth);
+                    var sliceY = ((slice / DistanceFieldSlicesX) * DistanceFieldSliceHeight);
 
-                    var verts = new VertexPositionColor[] {
-                        new VertexPositionColor(new Vector3(b.TopLeft, 0), Color.White),
-                        new VertexPositionColor(new Vector3(b.TopRight, 0), Color.White),
-                        new VertexPositionColor(new Vector3(b.BottomRight, 0), Color.White),
-                        new VertexPositionColor(new Vector3(b.BottomLeft, 0), Color.White)
-                    };
-
-                    if (p.Count > 44)
-                        throw new Exception("Height volume has too many vertices (limit is 44)");
-
-                    using (var batch = PrimitiveBatch<VertexPositionColor>.New(
-                        interiorGroup, i, IlluminantMaterials.DistanceFieldInterior,
+                    using (var group = BatchGroup.New(rtGroup, slice + 1,
+                        // FIXME: Optimize this
                         (dm, _) => {
-                            intParameters["NumVertices"].SetValue(p.Count);
-                            intParameters["Vertices"].SetValue(p.GetVertices());
-                            IlluminantMaterials.DistanceFieldInterior.Flush();
-                        }
-                    ))
-                        batch.Add(new PrimitiveDrawCall<VertexPositionColor>(
-                            PrimitiveType.TriangleList,
-                            m, 0, m.Length / 3
-                        ));
+                            var vt = ViewTransform.CreateOrthographic(
+                                DistanceFieldSliceWidth * DistanceFieldSlicesX,
+                                DistanceFieldSliceHeight * DistanceFieldSlicesY
+                            );
+                            vt.Position = new Vector2(-sliceX, -sliceY);
+                            Materials.PushViewTransform(ref vt);
 
+                            dm.Device.ScissorRectangle = new Rectangle(
+                                sliceX, sliceY, DistanceFieldSliceWidth, DistanceFieldSliceHeight
+                            );
 
-                    using (var batch = PrimitiveBatch<VertexPositionColor>.New(
-                        exteriorGroup, i, IlluminantMaterials.DistanceFieldExterior,
+                            SetDistanceFieldParameters(IlluminantMaterials.DistanceFieldInterior.Effect.Parameters, false);
+                            SetDistanceFieldParameters(IlluminantMaterials.DistanceFieldExterior.Effect.Parameters, false);
+                        },
                         (dm, _) => {
-                            extParameters["NumVertices"].SetValue(p.Count);
-                            extParameters["Vertices"].SetValue(p.GetVertices());
-                            IlluminantMaterials.DistanceFieldExterior.Flush();
+                            Materials.PopViewTransform();
                         }
-                    ))
-                        batch.Add(new PrimitiveDrawCall<VertexPositionColor>(
-                            PrimitiveType.TriangleList,
-                            verts, 0, verts.Length, indices, 0, indices.Length / 3
-                        ));
+                    )) {
+                        if (Render.Tracing.RenderTrace.EnableTracing)
+                            Render.Tracing.RenderTrace.Marker(group, -1, "LightingRenderer {0:X4} : Begin Distance Field Slice #{1}", this.GetHashCode(), slice);
 
-                    i++;
+                        int i = 1;
+
+                        ClearBatch.AddNew(
+                            group, 0, Materials.Clear, clearZ: 1f, clearStencil: 0
+                        );
+
+                        // Rasterize the height volumes in sequential order.
+                        using (var interiorGroup = BatchGroup.ForRenderTarget(group, 1, _DistanceField, (dm, _) => {
+                            dm.Device.BlendState = BlendState.Opaque;
+                            dm.Device.RasterizerState = RenderStates.ScissorOnly;
+                            dm.Device.DepthStencilState = DistanceInteriorStencilState;
+                        }))
+                        using (var exteriorGroup = BatchGroup.ForRenderTarget(group, 2, _DistanceField, (dm, _) => {
+                            dm.Device.BlendState = BlendState.Opaque;
+                            dm.Device.RasterizerState = RenderStates.ScissorOnly;
+                            dm.Device.DepthStencilState = DistanceExteriorStencilState;
+                        }))
+                            foreach (var hv in Environment.HeightVolumes) {
+                                var p = hv.Polygon;
+                                var m = hv.Mesh3D;
+                                var b = hv.Bounds.Expand(DistanceLimit, DistanceLimit);
+
+                                var verts = new VertexPositionColor[] {
+                                    new VertexPositionColor(new Vector3(b.TopLeft, 0), Color.White),
+                                    new VertexPositionColor(new Vector3(b.TopRight, 0), Color.White),
+                                    new VertexPositionColor(new Vector3(b.BottomRight, 0), Color.White),
+                                    new VertexPositionColor(new Vector3(b.BottomLeft, 0), Color.White)
+                                };
+
+                                if (p.Count > 40)
+                                    throw new Exception("Height volume has too many vertices (limit is 40)");
+
+                                using (var batch = PrimitiveBatch<VertexPositionColor>.New(
+                                    interiorGroup, i, IlluminantMaterials.DistanceFieldInterior,
+                                    (dm, _) => {
+                                        intParameters["NumVertices"].SetValue(p.Count);
+                                        intParameters["Vertices"].SetValue(p.GetVertices());
+                                        intParameters["SliceZ"].SetValue(sliceZ);
+                                        intParameters["MinZ"].SetValue(hv.ZBase);
+                                        intParameters["MaxZ"].SetValue(hv.ZBase + hv.Height);
+                                        IlluminantMaterials.DistanceFieldInterior.Flush();
+                                    }
+                                ))
+                                    batch.Add(new PrimitiveDrawCall<VertexPositionColor>(
+                                        PrimitiveType.TriangleList,
+                                        m, 0, m.Length / 3
+                                    ));
+
+
+                                using (var batch = PrimitiveBatch<VertexPositionColor>.New(
+                                    exteriorGroup, i, IlluminantMaterials.DistanceFieldExterior,
+                                    (dm, _) => {
+                                        extParameters["NumVertices"].SetValue(p.Count);
+                                        extParameters["Vertices"].SetValue(p.GetVertices());
+                                        extParameters["SliceZ"].SetValue(sliceZ);
+                                        extParameters["MinZ"].SetValue(hv.ZBase);
+                                        extParameters["MaxZ"].SetValue(hv.ZBase + hv.Height);
+                                        IlluminantMaterials.DistanceFieldExterior.Flush();
+                                    }
+                                ))
+                                    batch.Add(new PrimitiveDrawCall<VertexPositionColor>(
+                                        PrimitiveType.TriangleList,
+                                        verts, 0, verts.Length, indices, 0, indices.Length / 3
+                                    ));
+
+                                i++;
+                            }
+
+                        if (Render.Tracing.RenderTrace.EnableTracing)
+                            Render.Tracing.RenderTrace.Marker(group, 2, "LightingRenderer {0:X4} : End Distance Field Slice #{1}", this.GetHashCode(), slice);
+                    }
                 }
-
-                if (Render.Tracing.RenderTrace.EnableTracing)
-                    Render.Tracing.RenderTrace.Marker(group, 2, "LightingRenderer {0:X4} : End Distance Field", this.GetHashCode());
             }
         }
 

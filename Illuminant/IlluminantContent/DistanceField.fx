@@ -1,17 +1,19 @@
 #include "..\..\Upstream\Fracture\Squared\RenderLib\Content\GeometryCommon.fxh"
 #include "DistanceFieldCommon.fxh"
 
-#define MAX_VERTICES   44
+#define MAX_VERTICES   40
 
 uniform float2 PixelSize;
 uniform float2 Vertices[MAX_VERTICES];
+uniform float2 MinZ, MaxZ;
+uniform float  SliceZ;
 uniform int    NumVertices;
 
 void DistanceVertexShader (
     in    float3 position      : POSITION0, // x, y, z
     out   float4 result        : POSITION0
 ) {
-    result = TransformPosition(float4(position.xy, 0, 1), 0);
+    result = TransformPosition(float4(position.xy - ViewportPosition, 0, 1), 0);
     result.z = position.z;
 }
 
@@ -25,7 +27,9 @@ float computeDistance (
         float2 edgeA = Vertices[i], edgeB = Vertices[i2];
 
         float2 closest = closestPointOnEdge(vpos, edgeA, edgeB);
-        float2 closestDelta = vpos - closest;
+        float2 closestDeltaXy = (vpos - closest);
+        float  closestDeltaZ = min(abs(SliceZ - MinZ), abs(SliceZ - MaxZ));
+        float3 closestDelta = float3(closestDeltaXy.x, closestDeltaXy.y, closestDeltaZ);
         float  closestDistance = length(closestDelta);
 
         resultDistance = min(resultDistance, closestDistance);
@@ -39,6 +43,7 @@ void InteriorPixelShader (
     in  float2 vpos : VPOS,
     out float  depth : DEPTH
 ) {
+    vpos += ViewportPosition;
     vpos *= DistanceFieldInvScaleFactor;
     float resultDistance = -computeDistance(vpos);
     color = encodeDistance(resultDistance);
@@ -50,6 +55,7 @@ void ExteriorPixelShader (
     in  float2 vpos  : VPOS,
     out float  depth : DEPTH
 ) {
+    vpos += ViewportPosition;
     vpos *= DistanceFieldInvScaleFactor;
     float resultDistance = computeDistance(vpos);
     color = encodeDistance(resultDistance);

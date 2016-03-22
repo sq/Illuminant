@@ -111,7 +111,7 @@ namespace TestGame.Scenes {
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(1024, 1024) {
                     TwoPointFiveD = true,
-                    DistanceFieldSliceCount = 4
+                    DistanceFieldSliceCount = 2
                 }
             );
 
@@ -198,6 +198,11 @@ namespace TestGame.Scenes {
                     }
 
                     if (ShowDistanceField) {
+                        float dfScale = Math.Min(
+                            Width / (float)Renderer.DistanceField.Width,
+                            Height / (float)Renderer.DistanceField.Height
+                        );
+
                         using (var bb = BitmapBatch.New(
                             group, 3, Game.Materials.Get(
                                 Renderer.IlluminantMaterials.VisualizeDistanceField,
@@ -207,7 +212,7 @@ namespace TestGame.Scenes {
                         ))
                             bb.Add(new BitmapDrawCall(
                                 Renderer.DistanceField, Vector2.Zero, new Bounds(Vector2.Zero, Vector2.One), 
-                                Color.White, 1f / Renderer.Configuration.DistanceFieldResolution
+                                Color.White, dfScale / Renderer.Configuration.DistanceFieldResolution
                             ));
                     }
 
