@@ -3,12 +3,10 @@
 #include "DistanceFieldCommon.fxh"
 
 // UGH
-#define MAX_LIGHTS 3
+#define MAX_LIGHTS 4
 
 #define EXPONENTIAL                           0
-#define TOP_FACE_DOT_RAMP                     0
 #define TOP_FACE_RAYCAST_SHADOWS              1
-#define FRONT_FACE_DOT_RAMP                   0
 #define FRONT_FACE_RAYCAST_SHADOWS            1
 
 // Never do a raycast when the light is closer to the wall than this
@@ -70,15 +68,6 @@ void FrontFacePixelShader (
         opacity *= lerp(1, opacity, properties.z);
 #endif
 
-#if FRONT_FACE_DOT_RAMP
-        float3 lightDirection = normalize(worldPosition - lightPosition);
-        float  lightDotNormal = dot(-lightDirection, normal);
-
-        // HACK: How do we get smooth ramping here without breaking pure horizontal walls?
-        float dotRamp = clamp((lightDotNormal + 0.5) * 2, 0, 1);
-        opacity *= dotRamp;
-#endif
-
 #if FRONT_FACE_RAYCAST_SHADOWS
         opacity *= ComputeRaycastedShadowOpacity(lightPosition, properties.xy, worldPosition);
 #endif
@@ -127,15 +116,6 @@ void TopFacePixelShader(
 #if EXPONENTIAL
         // Conditional exponential ramp
         opacity *= lerp(1, opacity, properties.z);
-#endif
-
-#if TOP_FACE_DOT_RAMP
-        float3 lightDirection = normalize(float3(worldPosition.xy - lightPosition.xy, 0));
-        float  lightDotNormal = dot(-lightDirection, normal);
-
-        // HACK: How do we get smooth ramping here without breaking pure horizontal walls?
-        float dotRamp = clamp((lightDotNormal + 0.45) * 1.9, 0, 1);
-        opacity *= (dotRamp * dotRamp);
 #endif
 
 #if TOP_FACE_RAYCAST_SHADOWS        

@@ -25,9 +25,7 @@
 // Raising the maximum produces soft shadows, but if it's too large you will get artifacts.
 // A larger minimum increases the size of the AO 'blobs' around distant obstructions.
 #define MIN_CONE_RADIUS 1
-uniform float DistanceFieldMaxConeRadius;
-// The rate the cone is allowed to grow per-pixel
-uniform float DistanceFieldConeGrowthRate;
+// See uniforms for the other two constants
 
 // We threshold shadow values from cone tracing to eliminate 'almost obstructed' and 'almost unobstructed' artifacts
 #define FULLY_SHADOWED_THRESHOLD 0.02
@@ -73,6 +71,12 @@ float decodeDistance (float encodedDistance) {
     else
         return (encodedDistance - DISTANCE_ZERO) * -(DISTANCE_NEGATIVE_MAX / DISTANCE_NEGATIVE_RANGE);
 }
+
+// See min growth rate constant above
+uniform float DistanceFieldMaxConeRadius;
+
+// The rate the cone is allowed to grow per-pixel
+uniform float DistanceFieldConeGrowthRate;
 
 // Occlusion values are mapped to opacity values via this exponent
 uniform float  DistanceFieldOcclusionToOpacityPower;
@@ -191,7 +195,10 @@ void coneTraceStep (
         coneAttenuation = min(coneAttenuation, penumbra);
     }
 
-    traceOffset += max(abs(distanceToObstacle) * PARTIAL_STEP_SIZE, minStepSize);
+    traceOffset = min(
+        traceOffset + max(abs(distanceToObstacle) * PARTIAL_STEP_SIZE, minStepSize),
+        traceLength
+    );
 }
 
 float coneTrace (
@@ -212,26 +219,17 @@ float coneTrace (
 
     float initialDistance = SHRUG;
     float coneAttenuation = 1.0;
+    bool abort;
 
-    while (traceOffset < traceLength) {
+    // FIXME: Did I get this right? Should always do a step at the beginning and end of the ray
+    do {
+        abort = (traceOffset > traceLength);
+
         coneTraceStep(
             shadedPixelPosition, traceVector, traceLength, minStepSize,
             initialDistance, obstructionCompensation, traceOffset, coneAttenuation
         );
-
-        if (coneAttenuation <= FULLY_SHADOWED_THRESHOLD)
-            break;
-    }
-
-    // HACK: Do an extra sample at the end directly in front of the light.
-    // This eliminates banding artifacts when the light and the shaded pixel are both close to an obstruction.
-    if (coneAttenuation > FULLY_SHADOWED_THRESHOLD) {
-        traceOffset = traceLength;
-        coneTraceStep(
-            shadedPixelPosition, traceVector, traceLength, minStepSize,
-            initialDistance, obstructionCompensation, traceOffset, coneAttenuation
-        );
-    }
+    } while (!abort && (coneAttenuation > FULLY_SHADOWED_THRESHOLD));
 
     return pow(
         clamp((coneAttenuation - FULLY_SHADOWED_THRESHOLD) / (UNSHADOWED_THRESHOLD - FULLY_SHADOWED_THRESHOLD), 0, 1), 
