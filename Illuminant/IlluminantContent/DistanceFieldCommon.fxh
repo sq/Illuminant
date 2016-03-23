@@ -134,7 +134,6 @@ float sampleAlongRay (
 float conePenumbra (
     float3 ramp,
     float  distanceFromLight,
-    float  traceLength,
     float  distanceToObstacle
 ) {
     // FIXME: Cancel out shadowing as we approach the target point somehow?
@@ -142,6 +141,21 @@ float conePenumbra (
     float result = clamp(distanceToObstacle / localRadius, 0, 1);
 
     return result;
+}
+
+float coneTraceStep (
+    in float3 traceStart,
+    in float3 traceVector,
+    in float  traceOffset,
+    in float3 ramp,
+    inout float coneAttenuation
+) {
+    float distanceToObstacle = sampleAlongRay(traceStart, traceVector, traceOffset);
+
+    float penumbra = conePenumbra(ramp, traceOffset, distanceToObstacle);
+    coneAttenuation = min(coneAttenuation, penumbra);
+
+    return distanceToObstacle;
 }
 
 float coneTrace (
@@ -164,10 +178,10 @@ float coneTrace (
     float coneAttenuation = 1.0;
 
     while (traceOffset < traceLength) {
-        float distanceToObstacle = sampleAlongRay(lightCenter, traceVector, traceOffset);
-
-        float penumbra = conePenumbra(ramp, traceOffset, traceLength, distanceToObstacle);
-        coneAttenuation = min(coneAttenuation, penumbra);
+        float distanceToObstacle = coneTraceStep(
+            lightCenter, traceVector, traceOffset,
+            ramp, coneAttenuation
+        );
 
         if (coneAttenuation <= FULLY_SHADOWED_THRESHOLD)
             break;
@@ -177,12 +191,11 @@ float coneTrace (
 
     // HACK: Do an extra sample at the end directly at the shaded pixel.
     // This eliminates weird curved banding artifacts close to obstructions.
-    if (coneAttenuation > FULLY_SHADOWED_THRESHOLD)
-    {
-        float distanceToObstacle = sampleAlongRay(shadedPixelPosition, traceVector, 0);
-
-        float penumbra = conePenumbra(ramp, traceOffset, traceLength, distanceToObstacle);
-        coneAttenuation = min(coneAttenuation, penumbra);
+    if (coneAttenuation > FULLY_SHADOWED_THRESHOLD) {
+        coneTraceStep(
+            lightCenter, traceVector, traceLength,
+            ramp, coneAttenuation
+        );
     }
 
     return clamp((coneAttenuation - FULLY_SHADOWED_THRESHOLD) / (UNSHADOWED_THRESHOLD - FULLY_SHADOWED_THRESHOLD), 0, 1);
