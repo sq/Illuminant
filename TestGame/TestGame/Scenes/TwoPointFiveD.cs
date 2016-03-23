@@ -67,7 +67,7 @@ namespace TestGame.Scenes {
         void Ellipse (Vector2 center, float radiusX, float radiusY, float z1, float height) {
             var numPoints = Math.Max(
                 16,
-                (int)Math.Ceiling((radiusX + radiusY) * 0.35f)
+                (int)Math.Ceiling((radiusX + radiusY) * 0.45f)
             );
 
             var pts = new Vector2[numPoints];
@@ -108,7 +108,7 @@ namespace TestGame.Scenes {
                 new RendererConfiguration(1024, 1024) {
                     TwoPointFiveD = true,
                     DistanceFieldResolution = 0.5f,
-                    DistanceFieldSliceCount = 32,
+                    DistanceFieldSliceCount = 64,
                     DistanceFieldStepSize = 3
                 }
             );

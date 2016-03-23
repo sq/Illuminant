@@ -14,7 +14,7 @@ void VisualizePixelShader(
     addColor.a = 0;
 
     float4 encoded = tex2Dgrad(TextureSampler, clamp(texCoord, texTL, texBR), 0, 0);
-    float decoded = decodeDistance(encoded.r);
+    float decoded = decodeDistance(encoded.a);
 
     float4 visualized;
 

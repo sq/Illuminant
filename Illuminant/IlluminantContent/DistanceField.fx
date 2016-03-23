@@ -2,13 +2,20 @@
 #include "LightCommon.fxh"
 #include "DistanceFieldCommon.fxh"
 
-#define MAX_VERTICES   38
-
 uniform float2 PixelSize;
-uniform float2 Vertices[MAX_VERTICES];
 uniform float  MinZ, MaxZ;
 uniform float  SliceZ;
 uniform int    NumVertices;
+
+Texture2D VertexDataTexture : register(t5);
+sampler   VertexDataSampler : register(s5) {
+    Texture = (VertexDataTexture);
+    MipFilter = POINT;
+    MinFilter = POINT;
+    MagFilter = POINT;
+    AddressU  = WRAP;
+    AddressV  = WRAP;
+};
 
 void DistanceVertexShader (
     in    float3 position      : POSITION0, // x, y, z
@@ -22,10 +29,11 @@ float computeDistance (
     float2 vpos
 ) {
     float resultDistance = 99999;
+    float indexMultiplier = 1.0 / NumVertices;
 
     for (int i = 0; i < NumVertices; i++) {
-        int i2 = (i >= NumVertices - 1) ? 0 : i + 1;
-        float2 edgeA = Vertices[i], edgeB = Vertices[i2];
+        float2 edgeA = tex2Dgrad(VertexDataSampler, float2(i * indexMultiplier, 0), 0, 0);
+        float2 edgeB = tex2Dgrad(VertexDataSampler, float2((i + 1) * indexMultiplier, 0), 0, 0);
 
         float2 closest = closestPointOnEdge(vpos, edgeA, edgeB);
         float2 closestDeltaXy = (vpos - closest);

@@ -7,10 +7,10 @@
 
 // Maximum positive (outside) distance
 // Smaller values increase the precision of distance values but slow down traces
-#define DISTANCE_POSITIVE_MAX 96
+#define DISTANCE_POSITIVE_MAX 64
 
 // Maximum negative (inside) distance
-#define DISTANCE_NEGATIVE_MAX 32
+#define DISTANCE_NEGATIVE_MAX 24
 
 // Filtering dramatically increases the precision of the distance field,
 //  *and* it's mathematically correct!
@@ -21,15 +21,15 @@
 #define PARTIAL_STEP_SIZE 1
 
 // The minimum and maximum approximate cone tracing radius
-// The cone grows larger as light travels from the source, up to the maximum
+// The radius increases as the cone approaches the light source
 // Raising the maximum produces soft shadows, but if it's too large you will get artifacts.
-// A larger maximum also increases the size of the AO 'blobs' around distant obstructions.
-#define MIN_CONE_RADIUS 1.5
-#define MAX_CONE_RADIUS 32
+// A larger minimum increases the size of the AO 'blobs' around distant obstructions.
+#define MIN_CONE_RADIUS 1
+#define MAX_CONE_RADIUS 16
 
 // We threshold shadow values from cone tracing to eliminate 'almost obstructed' and 'almost unobstructed' artifacts
 #define FULLY_SHADOWED_THRESHOLD 0.05
-#define UNSHADOWED_THRESHOLD 0.95
+#define UNSHADOWED_THRESHOLD 0.933
 
 // We scale distance values into [0, 1] so we can use the depth buffer to do a cheap min()
 #define DISTANCE_DEPTH_MAX 1024.0
@@ -88,6 +88,7 @@ uniform float2 DistanceFieldTextureTexelSize;
 Texture2D DistanceFieldTexture        : register(t4);
 sampler   DistanceFieldTextureSampler : register(s4) {
     Texture = (DistanceFieldTexture);
+    MipFilter = POINT;
     MinFilter = DISTANCE_FIELD_FILTER;
     MagFilter = DISTANCE_FIELD_FILTER;
 };
@@ -106,7 +107,8 @@ float sampleDistanceField (
     float3 position
 ) {
     // Interpolate between two Z samples. The xy interpolation is done by the GPU for us.
-    float slicePosition = clamp(position.z / ZDistanceScale * DistanceFieldTextureSliceCount.z, 0, DistanceFieldTextureSliceCount.z - 1);
+    float sliceCountMinusOne = DistanceFieldTextureSliceCount.z - 1;
+    float slicePosition = clamp(position.z / ZDistanceScale * sliceCountMinusOne, 0, sliceCountMinusOne);
     float sliceIndex1 = floor(slicePosition);
     float subslice = slicePosition - sliceIndex1;
     float sliceIndex2 = sliceIndex1 + 1;
@@ -114,11 +116,11 @@ float sampleDistanceField (
     // FIXME: Read appropriate channel here (.a for alpha8, .r for everything else)
     float distance1 = decodeDistance(tex2Dgrad(
         DistanceFieldTextureSampler, computeDistanceFieldUv(position.xy, sliceIndex1), 0, 0
-    ).r);
+    ).a);
 
     float distance2 = decodeDistance(tex2Dgrad(
         DistanceFieldTextureSampler, computeDistanceFieldUv(position.xy, sliceIndex2), 0, 0
-    ).r);
+    ).a);
     
     return lerp(distance1, distance2, subslice);
 }

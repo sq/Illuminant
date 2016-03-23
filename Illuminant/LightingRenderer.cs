@@ -277,7 +277,7 @@ namespace Squared.Illuminant {
                     coordinator.Device,
                     DistanceFieldSliceWidth * DistanceFieldSlicesX, 
                     DistanceFieldSliceHeight * DistanceFieldSlicesY,
-                    false, SurfaceFormat.Rg32, DepthFormat.None, 0, RenderTargetUsage.DiscardContents
+                    false, SurfaceFormat.Alpha8, DepthFormat.None, 0, RenderTargetUsage.DiscardContents
                 );
             }
 
@@ -916,7 +916,7 @@ namespace Squared.Illuminant {
             return false;
         }
 
-        const int FaceMaxLights = 7;
+        const int FaceMaxLights = 4;
 
         // HACK
         private bool      _DistanceFieldReady = false;
@@ -1128,6 +1128,7 @@ namespace Squared.Illuminant {
         }
 
         private void RenderDistanceField (ref int layerIndex, IBatchContainer resultGroup) {
+            var vertexDataTextures = new Dictionary<object, Texture2D>();
             var intParameters = IlluminantMaterials.DistanceFieldInterior.Effect.Parameters;
             var extParameters = IlluminantMaterials.DistanceFieldExterior.Effect.Parameters;
 
@@ -1143,7 +1144,7 @@ namespace Squared.Illuminant {
                 for (var _slice = 0; _slice < Configuration.DistanceFieldSliceCount; _slice++) {
                     int slice = _slice;
 
-                    float sliceZ = (slice / (float)Configuration.DistanceFieldSliceCount);
+                    float sliceZ = (slice / (float)(Configuration.DistanceFieldSliceCount - 1));
                     var sliceX = (slice % DistanceFieldSlicesX) * DistanceFieldSliceWidth;
                     var sliceY = (slice / DistanceFieldSlicesX) * DistanceFieldSliceHeight;
                     var sliceXVirtual = (slice % DistanceFieldSlicesX) * Configuration.MaximumRenderSize.First;
@@ -1199,14 +1200,21 @@ namespace Squared.Illuminant {
                                     new VertexPositionColor(new Vector3(b.BottomLeft, 0), Color.White)
                                 };
 
-                                if (p.Count > 38)
-                                    throw new Exception("Height volume has too many vertices (limit is 38)");
+                                Texture2D vertexDataTexture;
+
+                                if (!vertexDataTextures.TryGetValue(p, out vertexDataTexture))
+                                lock (Coordinator.CreateResourceLock) {
+                                    vertexDataTexture = new Texture2D(Coordinator.Device, p.Count, 1, false, SurfaceFormat.Vector2);
+                                    vertexDataTextures[p] = vertexDataTexture;
+                                }
+
+                                vertexDataTexture.SetData(p.GetVertices());
 
                                 using (var batch = PrimitiveBatch<VertexPositionColor>.New(
                                     interiorGroup, i, IlluminantMaterials.DistanceFieldInterior,
                                     (dm, _) => {
                                         intParameters["NumVertices"].SetValue(p.Count);
-                                        intParameters["Vertices"].SetValue(p.GetVertices());
+                                        intParameters["VertexDataTexture"].SetValue(vertexDataTexture);
                                         intParameters["SliceZ"].SetValue(sliceZ);
                                         intParameters["MinZ"].SetValue(hv.ZBase);
                                         intParameters["MaxZ"].SetValue(hv.ZBase + hv.Height);
@@ -1223,7 +1231,7 @@ namespace Squared.Illuminant {
                                     exteriorGroup, i, IlluminantMaterials.DistanceFieldExterior,
                                     (dm, _) => {
                                         extParameters["NumVertices"].SetValue(p.Count);
-                                        extParameters["Vertices"].SetValue(p.GetVertices());
+                                        extParameters["VertexDataTexture"].SetValue(vertexDataTexture);
                                         extParameters["SliceZ"].SetValue(sliceZ);
                                         extParameters["MinZ"].SetValue(hv.ZBase);
                                         extParameters["MaxZ"].SetValue(hv.ZBase + hv.Height);
@@ -1243,6 +1251,9 @@ namespace Squared.Illuminant {
                     }
                 }
             }
+
+            foreach (var kvp in vertexDataTextures)
+                Coordinator.DisposeResource(kvp.Value);
         }
 
         private void FlushPointLightBatch (ref BatchGroup lightGroup, ref LightSource batchFirstLightSource, ref int layerIndex) {
