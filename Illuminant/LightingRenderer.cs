@@ -210,6 +210,8 @@ namespace Squared.Illuminant {
         private readonly RenderTarget2D _TerrainDepthmap;
         private readonly RenderTarget2D _DistanceField;
 
+        private RenderTimer LightPassTimer, DistanceFieldTimer;
+
         private readonly Action<DeviceManager, object> BeginLightPass, EndLightPass, RestoreScissorRect, IlluminationBatchSetup;
 
         public readonly RendererConfiguration Configuration;
@@ -267,8 +269,11 @@ namespace Squared.Illuminant {
                 int maxSlicesY = 4096 / DistanceFieldSliceHeight;
                 int maxSlices = maxSlicesX * maxSlicesY;
 
-                if (Configuration.DistanceFieldSliceCount > maxSlices)
-                    throw new ArgumentOutOfRangeException("Too many distance field slices requested for this size. Maximum is " + maxSlices);
+                // FIXME: Should we abort? The user can't easily determine a good slice count given a resolution
+                if (Configuration.DistanceFieldSliceCount > maxSlices) {
+                    Configuration.DistanceFieldSliceCount = maxSlices;
+                    //throw new ArgumentOutOfRangeException("Too many distance field slices requested for this size. Maximum is " + maxSlices);
+                }
 
                 DistanceFieldSlicesX = Math.Min(maxSlicesX, Configuration.DistanceFieldSliceCount);
                 DistanceFieldSlicesY = Math.Max((int)Math.Ceiling(Configuration.DistanceFieldSliceCount / (float)maxSlicesX), 1);
@@ -482,7 +487,34 @@ namespace Squared.Illuminant {
             }
         }
 
+        private void OnLightPassCompleted (RenderTimer timer) {
+            // HACK: This timer needs to exist so the distance field timer is accurate
+            return;
+
+            var cpuDurationMs = timer.CPUDuration.GetValueOrDefault(0) * 1000;
+            var gpuDurationMs = timer.GPUDuration.GetValueOrDefault(0) * 1000;
+
+            Console.WriteLine(
+                "Light pass ~{0:0000.0}ms", gpuDurationMs
+            );
+        }
+
+        private void OnDistanceFieldCompleted (RenderTimer timer) {
+            // HACK: This timer needs to exist so the light pass timer is accurate, if used
+
+            var cpuDurationMs = timer.CPUDuration.GetValueOrDefault(0) * 1000;
+            var gpuDurationMs = timer.GPUDuration.GetValueOrDefault(0) * 1000;
+
+            Console.WriteLine(
+                "Distance field ~{0:0000.0}ms", gpuDurationMs
+            );
+        }
+
         private void _BeginLightPass (DeviceManager device, object userData) {
+            LightPassTimer = new RenderTimer(device.Device);
+            LightPassTimer.Completed += OnLightPassCompleted;
+            LightPassTimer.Begin();
+
             device.PushStates();
             StoredScissorRect = device.Device.ScissorRectangle;
         }
@@ -494,6 +526,8 @@ namespace Squared.Illuminant {
         private void _EndLightPass (DeviceManager device, object userData) {
             device.Device.ScissorRectangle = StoredScissorRect;
             device.PopStates();
+
+            LightPassTimer.End();
         }
 
         private Rectangle GetScissorRectForLightSource (DeviceManager device, LightSource ls) {
@@ -1135,8 +1169,18 @@ namespace Squared.Illuminant {
             var indices = new short[] {
                 0, 1, 3, 1, 2, 3
             };
-
-            using (var rtGroup = BatchGroup.ForRenderTarget(resultGroup, layerIndex++, _DistanceField)) {
+            
+            using (var rtGroup = BatchGroup.ForRenderTarget(
+                resultGroup, layerIndex++, _DistanceField,
+                (dm, _) => {
+                    DistanceFieldTimer = new RenderTimer(dm.Device);
+                    DistanceFieldTimer.Completed += OnDistanceFieldCompleted;
+                    DistanceFieldTimer.Begin();
+                },
+                (dm, _) => {
+                    DistanceFieldTimer.End();
+                }
+            )) {
                 ClearBatch.AddNew(
                     rtGroup, 0, Materials.Clear, Color.Transparent
                 );
@@ -1153,6 +1197,7 @@ namespace Squared.Illuminant {
                     using (var group = BatchGroup.New(rtGroup, slice + 1,
                         // FIXME: Optimize this
                         (dm, _) => {
+                            
                             var vt = ViewTransform.CreateOrthographic(
                                 Configuration.MaximumRenderSize.First * DistanceFieldSlicesX,
                                 Configuration.MaximumRenderSize.Second * DistanceFieldSlicesY
