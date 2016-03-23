@@ -144,16 +144,20 @@ float conePenumbra (
 }
 
 float coneTraceStep (
-    in float3 traceStart,
-    in float3 traceVector,
-    in float  traceOffset,
-    in float3 ramp,
-    inout float coneAttenuation
+    in    float3 traceStart,
+    in    float3 traceVector,
+    in    float  minStepSize, 
+    in    float3 ramp,
+    in    float  obstructionCompensation,
+    inout float  traceOffset,
+    inout float  coneAttenuation
 ) {
     float distanceToObstacle = sampleAlongRay(traceStart, traceVector, traceOffset);
 
     float penumbra = conePenumbra(ramp, traceOffset, distanceToObstacle);
     coneAttenuation = min(coneAttenuation, penumbra);
+
+    traceOffset += max(abs(distanceToObstacle) * PARTIAL_STEP_SIZE, minStepSize);
 
     return distanceToObstacle;
 }
@@ -162,7 +166,7 @@ float coneTrace (
     in float3 lightCenter,
     in float2 lightRamp,
     in float3 shadedPixelPosition,
-    in float  interiorBrightness
+    in float  obstructionCompensation
 ) {
     // HACK: Compensate for Z scaling
     lightCenter.z *= ZDistanceScale;
@@ -171,7 +175,7 @@ float coneTrace (
     float minStepSize = max(1, DistanceFieldMinimumStepSize);
     float3 ramp = float3(MIN_CONE_RADIUS, min(lightRamp.x, MAX_CONE_RADIUS), rcp(max(lightRamp.y, 1)));
     float traceOffset = 0;
-    float3 traceVector = (shadedPixelPosition - lightCenter);
+    float3 traceVector = (lightCenter - shadedPixelPosition);
     float traceLength = length(traceVector);
     traceVector = normalize(traceVector);
 
@@ -179,22 +183,21 @@ float coneTrace (
 
     while (traceOffset < traceLength) {
         float distanceToObstacle = coneTraceStep(
-            lightCenter, traceVector, traceOffset,
-            ramp, coneAttenuation
+            shadedPixelPosition, traceVector, minStepSize, ramp, obstructionCompensation,
+            traceOffset, coneAttenuation
         );
 
         if (coneAttenuation <= FULLY_SHADOWED_THRESHOLD)
             break;
-
-        traceOffset += max(abs(distanceToObstacle) * PARTIAL_STEP_SIZE, minStepSize);
     }
 
-    // HACK: Do an extra sample at the end directly at the shaded pixel.
-    // This eliminates weird curved banding artifacts close to obstructions.
+    // HACK: Do an extra sample at the end directly in front of the light.
+    // This eliminates banding artifacts when the light and the shaded pixel are both close to an obstruction.
     if (coneAttenuation > FULLY_SHADOWED_THRESHOLD) {
+        traceOffset = traceLength;
         coneTraceStep(
-            lightCenter, traceVector, traceLength,
-            ramp, coneAttenuation
+            shadedPixelPosition, traceVector, minStepSize, ramp, obstructionCompensation,
+            traceOffset, coneAttenuation
         );
     }
 

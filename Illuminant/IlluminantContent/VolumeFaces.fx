@@ -6,9 +6,9 @@
 
 #define EXPONENTIAL                           0
 #define TOP_FACE_DOT_RAMP                     0
-#define TOP_FACE_RAYCAST_SHADOWS              0
+#define TOP_FACE_RAYCAST_SHADOWS              1
 #define FRONT_FACE_DOT_RAMP                   1
-#define FRONT_FACE_RAYCAST_SHADOWS            0
+#define FRONT_FACE_RAYCAST_SHADOWS            1
 
 // Never do a raycast when the light is closer to the wall than this
 #define RAYCAST_MIN_DISTANCE_PX 4
