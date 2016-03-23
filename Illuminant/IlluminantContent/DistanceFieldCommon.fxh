@@ -7,10 +7,10 @@
 
 // Maximum positive (outside) distance
 // Smaller values increase the precision of distance values but slow down traces
-#define DISTANCE_POSITIVE_MAX 64
+#define DISTANCE_POSITIVE_MAX 128
 
 // Maximum negative (inside) distance
-#define DISTANCE_NEGATIVE_MAX 24
+#define DISTANCE_NEGATIVE_MAX 48
 
 // Filtering dramatically increases the precision of the distance field,
 //  *and* it's mathematically correct!
@@ -28,13 +28,14 @@
 #define MAX_CONE_RADIUS 16
 
 // We threshold shadow values from cone tracing to eliminate 'almost obstructed' and 'almost unobstructed' artifacts
-#define FULLY_SHADOWED_THRESHOLD 0.05
-#define UNSHADOWED_THRESHOLD 0.933
+#define FULLY_SHADOWED_THRESHOLD 0.015
+#define UNSHADOWED_THRESHOLD 0.985
 
-// We scale distance values into [0, 1] so we can use the depth buffer to do a cheap min()
-#define DISTANCE_DEPTH_MAX 1024.0
-#define DISTANCE_DEPTH_OFFSET 0.25
+// HACK: Adjusts the threshold for obstruction compensation so that the sample point must be
+//  an additional distance beyond the edge of the obstruction to count
+#define OBSTRUCTION_FUDGE 0.1
 
+// HACK: Placeholder for uninitialized distance value
 #define SHRUG -9999
 
 
@@ -54,14 +55,6 @@ float2 closestPointOnEdge (
 ) {
     float u = closestPointOnEdgeAsFactor(pt, edgeStart, edgeEnd);
     return edgeStart + ((edgeEnd - edgeStart) * clamp(u, 0, 1));
-}
-
-float distanceToDepth (float distance) {
-    if (distance < 0) { 
-        return clamp(DISTANCE_DEPTH_OFFSET + (distance / 256), 0, DISTANCE_DEPTH_OFFSET);
-    } else {
-        return clamp(DISTANCE_DEPTH_OFFSET + (distance / DISTANCE_DEPTH_MAX), DISTANCE_DEPTH_OFFSET, 1); 
-    }
 }
 
 float4 encodeDistance (float distance) {
@@ -116,11 +109,11 @@ float sampleDistanceField (
     // FIXME: Read appropriate channel here (.a for alpha8, .r for everything else)
     float distance1 = decodeDistance(tex2Dgrad(
         DistanceFieldTextureSampler, computeDistanceFieldUv(position.xy, sliceIndex1), 0, 0
-    ).a);
+    ).r);
 
     float distance2 = decodeDistance(tex2Dgrad(
         DistanceFieldTextureSampler, computeDistanceFieldUv(position.xy, sliceIndex2), 0, 0
-    ).a);
+    ).r);
     
     return lerp(distance1, distance2, subslice);
 }
@@ -163,7 +156,7 @@ void coneTraceStep (
         if (initialDistance == SHRUG)
             initialDistance = distanceToObstacle;
 
-        float expectedDistance = initialDistance + traceOffset - 1;
+        float expectedDistance = initialDistance + traceOffset - OBSTRUCTION_FUDGE;
         
         if (distanceToObstacle < expectedDistance)
             obstructionCompensation = false;

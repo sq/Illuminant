@@ -20,7 +20,7 @@ namespace Squared.Illuminant {
         public bool  TwoPointFiveD           = false;
         public float ZOffset                 = 0.0f;
         public float ZScale                  = 1.0f;
-        public float DistanceFieldStepSize   = 1.0f;
+        public float DistanceFieldStepSize   = 3.0f;
         public float HeightmapResolution     = 1.0f;
         public float DistanceFieldResolution = 1.0f;
         public int   DistanceFieldSliceCount = 1;
@@ -277,7 +277,7 @@ namespace Squared.Illuminant {
                     coordinator.Device,
                     DistanceFieldSliceWidth * DistanceFieldSlicesX, 
                     DistanceFieldSliceHeight * DistanceFieldSlicesY,
-                    false, SurfaceFormat.Alpha8, DepthFormat.None, 0, RenderTargetUsage.DiscardContents
+                    false, SurfaceFormat.Rg32, DepthFormat.None, 0, RenderTargetUsage.DiscardContents
                 );
             }
 
