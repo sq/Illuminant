@@ -25,11 +25,16 @@
 // Raising the maximum produces soft shadows, but if it's too large you will get artifacts.
 // A larger minimum increases the size of the AO 'blobs' around distant obstructions.
 #define MIN_CONE_RADIUS 1
-#define MAX_CONE_RADIUS 12
+#define MAX_CONE_RADIUS 16
+// The rate the cone is allowed to grow per-pixel
+#define CONE_GROWTH_RATE 0.1
 
 // We threshold shadow values from cone tracing to eliminate 'almost obstructed' and 'almost unobstructed' artifacts
 #define FULLY_SHADOWED_THRESHOLD 0.015
 #define UNSHADOWED_THRESHOLD 0.985
+
+// Occlusion values are mapped to opacity values via this exponent
+#define OCCLUSION_TO_OPACITY_POWER 0.33
 
 // HACK: Adjusts the threshold for obstruction compensation so that the sample point must be
 //  an additional distance beyond the edge of the obstruction to count
@@ -126,18 +131,21 @@ float sampleAlongRay (
 }
 
 float conePenumbra (
-    float3 ramp,
     float  traceOffset,
     float  traceLength,
     float  distanceToObstacle
 ) {
-    float localRadius = min(
-        // Cone radius increases as we travel along the trace
-        lerp(ramp.x, ramp.y, clamp(traceOffset * ramp.z, 0, 1)),
-        // But we want to ramp the radius back down as we approach the end of the trace, otherwise
-        //  objects *past* the end of the trace will count as occluders
-        traceLength - traceOffset
-    );
+    // FIXME: This creates unoccluded voids when the light is at the center of a floating occluder
+    float localRadius = max(min(min(
+            MAX_CONE_RADIUS,
+            // But we want to ramp the radius back down as we approach the end of the trace, otherwise
+            //  objects *past* the end of the trace will count as occluders
+            (traceLength - traceOffset) * CONE_GROWTH_RATE
+            // And we want to ramp the radius down for points close to the beginning of the trace, as well
+        ), traceOffset * CONE_GROWTH_RATE
+        // And we can't go lower than the minimum cone size
+    ), MIN_CONE_RADIUS);
+
     float result = clamp(distanceToObstacle / localRadius, 0, 1);
 
     return result;
@@ -148,7 +156,6 @@ void coneTraceStep (
     in    float3 traceVector,
     in    float  traceLength,
     in    float  minStepSize, 
-    in    float3 ramp,
     inout float  initialDistance,
     inout bool   obstructionCompensation,
     inout float  traceOffset,
@@ -167,7 +174,7 @@ void coneTraceStep (
         if (distanceToObstacle < expectedDistance)
             obstructionCompensation = false;
     } else {
-        float penumbra = conePenumbra(ramp, traceOffset, traceLength, distanceToObstacle);
+        float penumbra = conePenumbra(traceOffset, traceLength, distanceToObstacle);
         coneAttenuation = min(coneAttenuation, penumbra);
     }
 
@@ -185,7 +192,6 @@ float coneTrace (
     shadedPixelPosition.z *= ZDistanceScale;
 
     float minStepSize = max(1, DistanceFieldMinimumStepSize);
-    float3 ramp = float3(MIN_CONE_RADIUS, min(lightRamp.x, MAX_CONE_RADIUS), rcp(max(lightRamp.y, 1)));
     float traceOffset = 0;
     float3 traceVector = (lightCenter - shadedPixelPosition);
     float traceLength = length(traceVector);
@@ -196,7 +202,7 @@ float coneTrace (
 
     while (traceOffset < traceLength) {
         coneTraceStep(
-            shadedPixelPosition, traceVector, traceLength, minStepSize, ramp, 
+            shadedPixelPosition, traceVector, traceLength, minStepSize,
             initialDistance, obstructionCompensation, traceOffset, coneAttenuation
         );
 
@@ -209,10 +215,10 @@ float coneTrace (
     if (coneAttenuation > FULLY_SHADOWED_THRESHOLD) {
         traceOffset = traceLength;
         coneTraceStep(
-            shadedPixelPosition, traceVector, traceLength, minStepSize, ramp, 
+            shadedPixelPosition, traceVector, traceLength, minStepSize,
             initialDistance, obstructionCompensation, traceOffset, coneAttenuation
         );
     }
 
-    return clamp((coneAttenuation - FULLY_SHADOWED_THRESHOLD) / (UNSHADOWED_THRESHOLD - FULLY_SHADOWED_THRESHOLD), 0, 1);
+    return pow(clamp((coneAttenuation - FULLY_SHADOWED_THRESHOLD) / (UNSHADOWED_THRESHOLD - FULLY_SHADOWED_THRESHOLD), 0, 1), OCCLUSION_TO_OPACITY_POWER);
 }
