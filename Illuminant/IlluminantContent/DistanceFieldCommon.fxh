@@ -85,14 +85,19 @@ sampler   DistanceFieldTextureSampler : register(s4) {
     MagFilter = DISTANCE_FIELD_FILTER;
 };
 
-float2 computeDistanceFieldUv (
-    float2 positionPx, float sliceIndex
+float2 computeDistanceFieldSliceUv (
+    float sliceIndex
 ) {
     sliceIndex = clamp(sliceIndex, 0, DistanceFieldTextureSliceCount.z - 1) / 2;
     float columnIndex = floor(fmod(sliceIndex, DistanceFieldTextureSliceCount.x));
     float rowIndex    = floor(sliceIndex / DistanceFieldTextureSliceCount.x);
-    float2 uv = clamp(positionPx * DistanceFieldTextureTexelSize, float2(0, 0), DistanceFieldTextureSliceSize);
-    return uv + float2(columnIndex * DistanceFieldTextureSliceSize.x, rowIndex * DistanceFieldTextureSliceSize.y);
+    return float2(columnIndex * DistanceFieldTextureSliceSize.x, rowIndex * DistanceFieldTextureSliceSize.y);
+}
+
+float2 computeDistanceFieldSubsliceUv (
+    float2 positionPx
+) {
+    return clamp(positionPx * DistanceFieldTextureTexelSize, float2(0, 0), DistanceFieldTextureSliceSize);
 }
 
 float sampleDistanceField (
@@ -103,27 +108,25 @@ float sampleDistanceField (
     float sliceIndex1 = floor(slicePosition);
     float subslice = slicePosition - sliceIndex1;
     float sliceIndex2 = sliceIndex1 + 1;
+
+    float2 uv = computeDistanceFieldSubsliceUv(position.xy);
     
     float2 sample1 = tex2Dgrad(
-        DistanceFieldTextureSampler, computeDistanceFieldUv(position.xy, sliceIndex1), 0, 0
+        DistanceFieldTextureSampler, uv + computeDistanceFieldSliceUv(sliceIndex1), 0, 0
     );
     float2 sample2 = tex2Dgrad(
-        DistanceFieldTextureSampler, computeDistanceFieldUv(position.xy, sliceIndex2), 0, 0
+        DistanceFieldTextureSampler, uv + computeDistanceFieldSliceUv(sliceIndex2), 0, 0
     );
     
     // FIXME: Somehow this r/g encoding introduces a consistent error along the z-axis compared to the old encoding?
     // It seems like floor instead of ceil fixes it but I have no idea why
     float evenSlice = floor(fmod(sliceIndex1, 2));
    
-    return lerp(
-        decodeDistance(
-            lerp(sample1.r, sample1.g, evenSlice)
-        ), 
-        decodeDistance(
-            lerp(sample2.g, sample2.r, evenSlice)
-        ),
+    return decodeDistance(lerp(
+        lerp(sample1.r, sample1.g, evenSlice),
+        lerp(sample2.g, sample2.r, evenSlice),
         subslice
-    );
+    ));
 }
 
 float sampleAlongRay (
@@ -139,6 +142,8 @@ float conePenumbra (
     float  traceLength,
     float  distanceToObstacle
 ) {
+    // FIXME: Instead of ramping the cone radius at start/end of trace, just adjust the distance value?
+
     // FIXME: This creates unoccluded voids when the light is at the center of a floating occluder
     float localRadius = max(min(min(
             DistanceFieldMaxConeRadius,
