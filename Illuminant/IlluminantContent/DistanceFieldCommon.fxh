@@ -118,7 +118,8 @@ float sampleDistanceField (
     );
     
     // FIXME: Somehow this r/g encoding introduces a consistent error along the z-axis compared to the old encoding?
-    float evenSlice = ceil(fmod(sliceIndex1, 2));
+    // It seems like floor instead of ceil fixes it but I have no idea why
+    float evenSlice = floor(fmod(sliceIndex1, 2));
    
     return lerp(
         decodeDistance(
