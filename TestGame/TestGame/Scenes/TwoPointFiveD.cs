@@ -115,14 +115,25 @@ namespace TestGame.Scenes {
 
             var light = new LightSource {
                 Position = new Vector3(64, 64, 0.7f),
-                Color = new Vector4(1f, 1f, 1f, 1f) * 0.75f,
-                RampStart = 80,
-                RampEnd = 560,
+                Color = new Vector4(1f, 1f, 1f, 0.5f),
+                RampStart = 60,
+                RampEnd = 600,
                 RampMode = LightSourceRampMode.Exponential
             };
 
             Lights.Add(light);
             Environment.LightSources.Add(light);
+
+            var light2 = new LightSource {
+                Position = new Vector3(1024, 800, 2.5f),
+                Color = new Vector4(0.2f, 0.4f, 0.6f, 0.4f),
+                RampStart = 1024,
+                RampEnd = 10240,
+                RampMode = LightSourceRampMode.Linear
+            };
+
+            Lights.Add(light2);
+            Environment.LightSources.Add(light2);
 
             Rect(new Vector2(330, 337), new Vector2(Width, 394), 0f, 0.435f);
 
@@ -156,13 +167,6 @@ namespace TestGame.Scenes {
                 ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black, clearZ: 0, clearStencil: 0);
 
                 Renderer.RenderLighting(frame, bg, 1, intensityScale: 1);
-
-                // Ambient light
-                using (var gb = GeometryBatch.New(
-                    bg, 9999, 
-                    Game.Materials.Get(Game.Materials.ScreenSpaceGeometry, blendState: BlendState.Additive)
-                ))
-                    gb.AddFilledQuad(Bounds.FromPositionAndSize(Vector2.Zero, Vector2.One * 9999), new Color(32, 32, 32, 255));
             };
 
             using (var group = BatchGroup.New(frame, 0)) {

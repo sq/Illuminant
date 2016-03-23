@@ -25,7 +25,7 @@
 // Raising the maximum produces soft shadows, but if it's too large you will get artifacts.
 // A larger minimum increases the size of the AO 'blobs' around distant obstructions.
 #define MIN_CONE_RADIUS 1
-#define MAX_CONE_RADIUS 16
+#define MAX_CONE_RADIUS 12
 
 // We threshold shadow values from cone tracing to eliminate 'almost obstructed' and 'almost unobstructed' artifacts
 #define FULLY_SHADOWED_THRESHOLD 0.015
@@ -128,11 +128,17 @@ float sampleAlongRay (
 
 float conePenumbra (
     float3 ramp,
-    float  distanceFromLight,
+    float  traceOffset,
+    float  traceLength,
     float  distanceToObstacle
 ) {
-    // FIXME: Cancel out shadowing as we approach the target point somehow?
-    float localRadius = lerp(ramp.x, ramp.y, clamp(distanceFromLight * ramp.z, 0, 1));
+    float localRadius = min(
+        // Cone radius increases as we travel along the trace
+        lerp(ramp.x, ramp.y, clamp(traceOffset * ramp.z, 0, 1)),
+        // But we want to ramp the radius back down as we approach the end of the trace, otherwise
+        //  objects *past* the end of the trace will count as occluders
+        traceLength - traceOffset
+    );
     float result = clamp(distanceToObstacle / localRadius, 0, 1);
 
     return result;
@@ -141,6 +147,7 @@ float conePenumbra (
 void coneTraceStep (
     in    float3 traceStart,
     in    float3 traceVector,
+    in    float  traceLength,
     in    float  minStepSize, 
     in    float3 ramp,
     inout float  initialDistance,
@@ -161,7 +168,7 @@ void coneTraceStep (
         if (distanceToObstacle < expectedDistance)
             obstructionCompensation = false;
     } else {
-        float penumbra = conePenumbra(ramp, traceOffset, distanceToObstacle);
+        float penumbra = conePenumbra(ramp, traceOffset, traceLength, distanceToObstacle);
         coneAttenuation = min(coneAttenuation, penumbra);
     }
 
@@ -190,7 +197,7 @@ float coneTrace (
 
     while (traceOffset < traceLength) {
         coneTraceStep(
-            shadedPixelPosition, traceVector, minStepSize, ramp, 
+            shadedPixelPosition, traceVector, traceLength, minStepSize, ramp, 
             initialDistance, obstructionCompensation, traceOffset, coneAttenuation
         );
 
@@ -203,7 +210,7 @@ float coneTrace (
     if (coneAttenuation > FULLY_SHADOWED_THRESHOLD) {
         traceOffset = traceLength;
         coneTraceStep(
-            shadedPixelPosition, traceVector, minStepSize, ramp, 
+            shadedPixelPosition, traceVector, traceLength, minStepSize, ramp, 
             initialDistance, obstructionCompensation, traceOffset, coneAttenuation
         );
     }
