@@ -62,8 +62,11 @@ namespace TestGame.Scenes {
             Environment = new LightingEnvironment();
 
             Renderer = new LightingRenderer(
-                Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
-                new RendererConfiguration(Width, Height)
+                Game.Content, Game.RenderCoordinator, Game.Materials, Environment,
+                new RendererConfiguration(Width, Height) {
+                    DistanceFieldResolution = 0.4f,
+                    DistanceFieldSliceCount = 32
+                }
             );
 
             var light = new LightSource {
@@ -92,18 +95,16 @@ namespace TestGame.Scenes {
                 Environment.LightSources.Add(light);
             }
 
-            const float angleStep = (float)(Math.PI / 20);
+            const float angleStep = (float)(Math.PI / 128);
             const int   heightTiers = 5;
             const float minHeight = 0f;
-            const float maxHeight = 1f;
+            const float maxHeight = 0.9f;
 
             Environment.GroundZ = 0;
             Environment.ZDistanceScale = 128;
             Environment.ZToYMultiplier = 200;
 
             var points = new List<Vector2>();
-
-            int j = 0;
 
             for (float r = 0.9f, hs = (maxHeight - minHeight) / heightTiers, rs = -r / (heightTiers + 1), h = minHeight + hs; h <= maxHeight; h += hs, r += rs) {
                 points.Clear();
@@ -122,9 +123,7 @@ namespace TestGame.Scenes {
                     0.0f, h
                 );
 
-                j++;
-                if (j == heightTiers - 1)
-                    Environment.HeightVolumes.Add(volume);
+                Environment.HeightVolumes.Add(volume);
             }
 
             Environment.HeightVolumes.Add(new SimpleHeightVolume(

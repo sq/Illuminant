@@ -100,8 +100,7 @@ float sampleDistanceField (
     float3 position
 ) {
     // Interpolate between two Z samples. The xy interpolation is done by the GPU for us.
-    float sliceCountMinusOne = DistanceFieldTextureSliceCount.z - 1;
-    float slicePosition = clamp(position.z / ZDistanceScale * sliceCountMinusOne, 0, sliceCountMinusOne);
+    float slicePosition = clamp(position.z / ZDistanceScale * DistanceFieldTextureSliceCount.z, 0, DistanceFieldTextureSliceCount.z);
     float sliceIndex1 = floor(slicePosition);
     float subslice = slicePosition - sliceIndex1;
     float sliceIndex2 = sliceIndex1 + 1;
