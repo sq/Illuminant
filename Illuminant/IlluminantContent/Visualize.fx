@@ -20,10 +20,10 @@ void VisualizePixelShader(
     float4 visualized;
 
     if (decoded <= 0) {
-        float g = abs(decoded / DISTANCE_NEGATIVE_MAX);
+        float g = abs(decoded / DISTANCE_MAX);
         visualized = float4(0.1, g, 0, 1);
     } else {
-        float g = 1.0 - clamp(decoded / DISTANCE_POSITIVE_MAX, 0, 1);
+        float g = 1.0 - clamp(decoded / DISTANCE_MAX, 0, 1);
         visualized = float4(0, 0, g, 1);
     }
 

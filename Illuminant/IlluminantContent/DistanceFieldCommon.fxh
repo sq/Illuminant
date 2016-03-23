@@ -2,15 +2,9 @@
 // Moving this value up/down allocates more precision to positive or negative distances
 #define DISTANCE_ZERO (192.0 / 255.0)
 
-#define DISTANCE_POSITIVE_RANGE DISTANCE_ZERO
-#define DISTANCE_NEGATIVE_RANGE (1 - DISTANCE_ZERO)
-
-// Maximum positive (outside) distance
+// Maximum distance
 // Smaller values increase the precision of distance values but slow down traces
-#define DISTANCE_POSITIVE_MAX 128
-
-// Maximum negative (inside) distance
-#define DISTANCE_NEGATIVE_MAX 48
+#define DISTANCE_MAX 128
 
 // Filtering dramatically increases the precision of the distance field,
 //  *and* it's mathematically correct!
@@ -58,18 +52,11 @@ float2 closestPointOnEdge (
 }
 
 float4 encodeDistance (float distance) {
-    if (distance >= 0) {
-        return DISTANCE_ZERO - ((distance / DISTANCE_POSITIVE_MAX) * DISTANCE_POSITIVE_RANGE);
-    } else {
-        return DISTANCE_ZERO + ((-distance / DISTANCE_NEGATIVE_MAX) * DISTANCE_NEGATIVE_RANGE);
-    }
+    return DISTANCE_ZERO - (distance / DISTANCE_MAX);
 }
 
 float decodeDistance (float encodedDistance) {
-    if (encodedDistance <= DISTANCE_ZERO)
-        return (DISTANCE_ZERO - encodedDistance) * (DISTANCE_POSITIVE_MAX / DISTANCE_POSITIVE_RANGE);
-    else
-        return (encodedDistance - DISTANCE_ZERO) * -(DISTANCE_NEGATIVE_MAX / DISTANCE_NEGATIVE_RANGE);
+    return (DISTANCE_ZERO - encodedDistance) * DISTANCE_MAX;
 }
 
 // See min growth rate constant above
