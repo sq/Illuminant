@@ -3,7 +3,7 @@
 #include "DistanceFieldCommon.fxh"
 
 // UGH
-#define MAX_LIGHTS 4
+#define MAX_LIGHTS 3
 
 #define EXPONENTIAL                           0
 #define TOP_FACE_DOT_RAMP                     0

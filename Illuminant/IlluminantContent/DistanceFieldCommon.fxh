@@ -94,8 +94,8 @@ sampler   DistanceFieldTextureSampler : register(s4) {
 float2 computeDistanceFieldUv (
     float2 positionPx, float sliceIndex
 ) {
-    sliceIndex = clamp(sliceIndex, 0, DistanceFieldTextureSliceCount.z - 1);
-    float columnIndex = floor(sliceIndex % DistanceFieldTextureSliceCount.x);
+    sliceIndex = clamp(sliceIndex, 0, DistanceFieldTextureSliceCount.z - 1) / 2;
+    float columnIndex = floor(fmod(sliceIndex, DistanceFieldTextureSliceCount.x));
     float rowIndex    = floor(sliceIndex / DistanceFieldTextureSliceCount.x);
     float2 uv = clamp(positionPx * DistanceFieldTextureTexelSize, float2(0, 0), DistanceFieldTextureSliceSize);
     return uv + float2(columnIndex * DistanceFieldTextureSliceSize.x, rowIndex * DistanceFieldTextureSliceSize.y);
@@ -110,16 +110,25 @@ float sampleDistanceField (
     float subslice = slicePosition - sliceIndex1;
     float sliceIndex2 = sliceIndex1 + 1;
     
-    // FIXME: Read appropriate channel here (.a for alpha8, .r for everything else)
-    float distance1 = decodeDistance(tex2Dgrad(
+    float2 sample1 = tex2Dgrad(
         DistanceFieldTextureSampler, computeDistanceFieldUv(position.xy, sliceIndex1), 0, 0
-    ).r);
-
-    float distance2 = decodeDistance(tex2Dgrad(
+    );
+    float2 sample2 = tex2Dgrad(
         DistanceFieldTextureSampler, computeDistanceFieldUv(position.xy, sliceIndex2), 0, 0
-    ).r);
+    );
     
-    return lerp(distance1, distance2, subslice);
+    // FIXME: Somehow this r/g encoding introduces a consistent error along the z-axis compared to the old encoding?
+    float evenSlice = ceil(fmod(sliceIndex1, 2));
+   
+    return lerp(
+        decodeDistance(
+            lerp(sample1.r, sample1.g, evenSlice)
+        ), 
+        decodeDistance(
+            lerp(sample2.g, sample2.r, evenSlice)
+        ),
+        subslice
+    );
 }
 
 float sampleAlongRay (

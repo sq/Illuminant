@@ -208,14 +208,14 @@ namespace TestGame.Scenes {
 
                     using (var bb = BitmapBatch.New(
                         group, 3, Game.Materials.Get(
-                            Renderer.IlluminantMaterials.VisualizeDistanceField,
+                            Game.Materials.ScreenSpaceBitmap,
                             blendState: BlendState.Opaque
                         ),
                         samplerState: SamplerState.PointClamp
                     ))
                         bb.Add(new BitmapDrawCall(
                             Renderer.DistanceField, Vector2.Zero, new Bounds(Vector2.Zero, Vector2.One), 
-                            Color.White, dfScale
+                            new Color(255, 255, 0, 255), dfScale
                         ));
                 }
 
@@ -223,7 +223,7 @@ namespace TestGame.Scenes {
                     using (var bb = BitmapBatch.New(
                         group, 4, Game.Materials.Get(
                             Game.Materials.ScreenSpaceBitmap,
-                            blendState: BlendState.AlphaBlend
+                            blendState: BlendState.Opaque
                         ),
                         samplerState: SamplerState.PointClamp
                     ))

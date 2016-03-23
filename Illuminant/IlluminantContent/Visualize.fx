@@ -13,6 +13,7 @@ void VisualizePixelShader(
     addColor.rgb *= addColor.a;
     addColor.a = 0;
 
+    // FIXME: How should this work for r/g?
     float4 encoded = tex2Dgrad(TextureSampler, clamp(texCoord, texTL, texBR), 0, 0);
     float decoded = decodeDistance(encoded.r);
 

@@ -192,7 +192,7 @@ namespace Squared.Illuminant {
         public readonly Squared.Render.EffectMaterial[] PointLightMaterialsInner = new Squared.Render.EffectMaterial[4];
         public readonly DepthStencilState TopFaceDepthStencilState, FrontFaceDepthStencilState;
         public readonly DepthStencilState DistanceInteriorStencilState, DistanceExteriorStencilState;
-        public readonly BlendState        HeightMin, HeightMax;
+        public readonly BlendState        HeightMin, HeightMax, OddSlice, EvenSlice;
 
         private static readonly short[] ShadowIndices;
         private static readonly Dictionary<TextureFilter, SamplerState> RampSamplerStates = new Dictionary<TextureFilter, SamplerState>();
@@ -267,7 +267,8 @@ namespace Squared.Illuminant {
                 DistanceFieldSliceHeight = (int)(Configuration.MaximumRenderSize.Second * Configuration.DistanceFieldResolution);
                 int maxSlicesX = 4096 / DistanceFieldSliceWidth;
                 int maxSlicesY = 4096 / DistanceFieldSliceHeight;
-                int maxSlices = maxSlicesX * maxSlicesY;
+                // HACK: We encode odd/even slices in the red and green channels
+                int maxSlices = maxSlicesX * maxSlicesY * 2;
 
                 // FIXME: Should we abort? The user can't easily determine a good slice count given a resolution
                 if (Configuration.DistanceFieldSliceCount > maxSlices) {
@@ -275,8 +276,10 @@ namespace Squared.Illuminant {
                     //throw new ArgumentOutOfRangeException("Too many distance field slices requested for this size. Maximum is " + maxSlices);
                 }
 
-                DistanceFieldSlicesX = Math.Min(maxSlicesX, Configuration.DistanceFieldSliceCount);
-                DistanceFieldSlicesY = Math.Max((int)Math.Ceiling(Configuration.DistanceFieldSliceCount / (float)maxSlicesX), 1);
+                int effectiveSliceCount = (Configuration.DistanceFieldSliceCount + 1) / 2;
+
+                DistanceFieldSlicesX = Math.Min(maxSlicesX, effectiveSliceCount);
+                DistanceFieldSlicesY = Math.Max((int)Math.Ceiling(effectiveSliceCount / (float)maxSlicesX), 1);
 
                 _DistanceField = new RenderTarget2D(
                     coordinator.Device,
@@ -360,6 +363,20 @@ namespace Squared.Illuminant {
                 ColorWriteChannels    = ColorWriteChannels.Green,
                 ColorBlendFunction    = BlendFunction.Max,
                 ColorSourceBlend      = Blend.One,
+                ColorDestinationBlend = Blend.One
+            };
+
+            EvenSlice = new BlendState {
+                ColorWriteChannels = ColorWriteChannels.Red,
+                ColorBlendFunction = BlendFunction.Max,
+                ColorSourceBlend = Blend.One,
+                ColorDestinationBlend = Blend.One
+            };
+
+            OddSlice = new BlendState {
+                ColorWriteChannels = ColorWriteChannels.Green,
+                ColorBlendFunction = BlendFunction.Max,
+                ColorSourceBlend = Blend.One,
                 ColorDestinationBlend = Blend.One
             };
 
@@ -622,6 +639,8 @@ namespace Squared.Illuminant {
                         ? Environment.ZToYMultiplier
                         : 0.0f
                 );
+
+                mi.Effect.Parameters["Time"].SetValue((float)Time.Seconds);
 
                 SetDistanceFieldParameters(mi.Effect.Parameters, true);
             }
@@ -950,7 +969,7 @@ namespace Squared.Illuminant {
             return false;
         }
 
-        const int FaceMaxLights = 4;
+        const int FaceMaxLights = 3;
 
         // HACK
         private bool      _DistanceFieldReady = false;
@@ -1189,15 +1208,15 @@ namespace Squared.Illuminant {
                     int slice = _slice;
 
                     float sliceZ = (slice / (float)(Configuration.DistanceFieldSliceCount - 1));
-                    var sliceX = (slice % DistanceFieldSlicesX) * DistanceFieldSliceWidth;
-                    var sliceY = (slice / DistanceFieldSlicesX) * DistanceFieldSliceHeight;
-                    var sliceXVirtual = (slice % DistanceFieldSlicesX) * Configuration.MaximumRenderSize.First;
-                    var sliceYVirtual = (slice / DistanceFieldSlicesX) * Configuration.MaximumRenderSize.Second;
+                    int displaySlice = slice / 2;
+                    var sliceX = (displaySlice % DistanceFieldSlicesX) * DistanceFieldSliceWidth;
+                    var sliceY = (displaySlice / DistanceFieldSlicesX) * DistanceFieldSliceHeight;
+                    var sliceXVirtual = (displaySlice % DistanceFieldSlicesX) * Configuration.MaximumRenderSize.First;
+                    var sliceYVirtual = (displaySlice / DistanceFieldSlicesX) * Configuration.MaximumRenderSize.Second;
 
                     using (var group = BatchGroup.New(rtGroup, slice + 1,
                         // FIXME: Optimize this
-                        (dm, _) => {
-                            
+                        (dm, _) => {                            
                             var vt = ViewTransform.CreateOrthographic(
                                 Configuration.MaximumRenderSize.First * DistanceFieldSlicesX,
                                 Configuration.MaximumRenderSize.Second * DistanceFieldSlicesY
@@ -1208,6 +1227,9 @@ namespace Squared.Illuminant {
                             dm.Device.ScissorRectangle = new Rectangle(
                                 sliceX, sliceY, DistanceFieldSliceWidth, DistanceFieldSliceHeight
                             );
+                            dm.Device.BlendState = ((slice % 2) == 0)
+                                ? EvenSlice
+                                : OddSlice;
 
                             SetDistanceFieldParameters(IlluminantMaterials.DistanceFieldInterior.Effect.Parameters, false);
                             SetDistanceFieldParameters(IlluminantMaterials.DistanceFieldExterior.Effect.Parameters, false);
@@ -1224,12 +1246,10 @@ namespace Squared.Illuminant {
                         // Rasterize the height volumes in sequential order.
                         // FIXME: Depth buffer/stencil buffer tricks should work for generating this SDF, but don't?
                         using (var interiorGroup = BatchGroup.ForRenderTarget(group, 1, _DistanceField, (dm, _) => {
-                            dm.Device.BlendState = RenderStates.MaxBlendValue;
                             dm.Device.RasterizerState = RenderStates.ScissorOnly;
                             dm.Device.DepthStencilState = DepthStencilState.None;
                         }))
                         using (var exteriorGroup = BatchGroup.ForRenderTarget(group, 2, _DistanceField, (dm, _) => {
-                            dm.Device.BlendState = RenderStates.MaxBlendValue;
                             dm.Device.RasterizerState = RenderStates.ScissorOnly;
                             dm.Device.DepthStencilState = DepthStencilState.None;
                         }))

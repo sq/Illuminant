@@ -10,6 +10,8 @@ shared float4x4 ModelViewMatrix;
 uniform float4 LightNeutralColor;
 uniform float3 LightCenter;
 
+uniform float Time;
+
 float4 ApplyTransform (float3 position) {
     float3 localPosition = ((position - float3(ViewportPosition.xy, 0)) * float3(ViewportScale, 1));
     return mul(mul(float4(localPosition.xyz, 1), ModelViewMatrix), ProjectionMatrix);
