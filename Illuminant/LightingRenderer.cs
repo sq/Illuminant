@@ -20,10 +20,13 @@ namespace Squared.Illuminant {
         public bool  TwoPointFiveD           = false;
         public float ZOffset                 = 0.0f;
         public float ZScale                  = 1.0f;
-        public float DistanceFieldStepSize   = 3.0f;
         public float HeightmapResolution     = 1.0f;
+        public float DistanceFieldStepSize   = 3.0f;
         public float DistanceFieldResolution = 1.0f;
         public int   DistanceFieldSliceCount = 1;
+        public float DistanceFieldOcclusionToOpacityPower = 1;
+        public float DistanceFieldMaxConeRadius = 8;
+        public float DistanceFieldConeGrowthRate = 1;
 
         public readonly Pair<int> MaximumRenderSize;
 
@@ -1019,6 +1022,9 @@ namespace Squared.Illuminant {
             p["DistanceFieldTextureTexelSize"].SetValue(tsize);
             p["DistanceFieldInvScaleFactor"].SetValue(1f / Configuration.DistanceFieldResolution);
             p["DistanceFieldMinimumStepSize"].SetValue(Configuration.DistanceFieldStepSize);
+            p["DistanceFieldOcclusionToOpacityPower"].SetValue(Configuration.DistanceFieldOcclusionToOpacityPower);
+            p["DistanceFieldMaxConeRadius"].SetValue(Configuration.DistanceFieldMaxConeRadius);
+            p["DistanceFieldConeGrowthRate"].SetValue(Configuration.DistanceFieldConeGrowthRate);
 
             if (setDistanceTexture)
                 p["DistanceFieldTexture"].SetValue(_DistanceField);

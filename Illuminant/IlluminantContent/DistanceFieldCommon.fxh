@@ -25,16 +25,13 @@
 // Raising the maximum produces soft shadows, but if it's too large you will get artifacts.
 // A larger minimum increases the size of the AO 'blobs' around distant obstructions.
 #define MIN_CONE_RADIUS 1
-#define MAX_CONE_RADIUS 16
+uniform float DistanceFieldMaxConeRadius;
 // The rate the cone is allowed to grow per-pixel
-#define CONE_GROWTH_RATE 0.1
+uniform float DistanceFieldConeGrowthRate;
 
 // We threshold shadow values from cone tracing to eliminate 'almost obstructed' and 'almost unobstructed' artifacts
-#define FULLY_SHADOWED_THRESHOLD 0.015
-#define UNSHADOWED_THRESHOLD 0.985
-
-// Occlusion values are mapped to opacity values via this exponent
-#define OCCLUSION_TO_OPACITY_POWER 0.33
+#define FULLY_SHADOWED_THRESHOLD 0.02
+#define UNSHADOWED_THRESHOLD 0.98
 
 // HACK: Adjusts the threshold for obstruction compensation so that the sample point must be
 //  an additional distance beyond the edge of the obstruction to count
@@ -77,7 +74,13 @@ float decodeDistance (float encodedDistance) {
         return (encodedDistance - DISTANCE_ZERO) * -(DISTANCE_NEGATIVE_MAX / DISTANCE_NEGATIVE_RANGE);
 }
 
+// Occlusion values are mapped to opacity values via this exponent
+uniform float  DistanceFieldOcclusionToOpacityPower;
+
+// Traces always walk at least this many pixels per step
 uniform float  DistanceFieldMinimumStepSize;
+
+
 uniform float  DistanceFieldInvScaleFactor;
 uniform float3 DistanceFieldTextureSliceCount;
 uniform float2 DistanceFieldTextureSliceSize;
@@ -147,12 +150,12 @@ float conePenumbra (
 ) {
     // FIXME: This creates unoccluded voids when the light is at the center of a floating occluder
     float localRadius = max(min(min(
-            MAX_CONE_RADIUS,
+            DistanceFieldMaxConeRadius,
             // But we want to ramp the radius back down as we approach the end of the trace, otherwise
             //  objects *past* the end of the trace will count as occluders
-            (traceLength - traceOffset) * CONE_GROWTH_RATE
+            (traceLength - traceOffset) * DistanceFieldConeGrowthRate
             // And we want to ramp the radius down for points close to the beginning of the trace, as well
-        ), traceOffset * CONE_GROWTH_RATE
+        ), traceOffset * DistanceFieldConeGrowthRate
         // And we can't go lower than the minimum cone size
     ), MIN_CONE_RADIUS);
 
@@ -230,5 +233,8 @@ float coneTrace (
         );
     }
 
-    return pow(clamp((coneAttenuation - FULLY_SHADOWED_THRESHOLD) / (UNSHADOWED_THRESHOLD - FULLY_SHADOWED_THRESHOLD), 0, 1), OCCLUSION_TO_OPACITY_POWER);
+    return pow(
+        clamp((coneAttenuation - FULLY_SHADOWED_THRESHOLD) / (UNSHADOWED_THRESHOLD - FULLY_SHADOWED_THRESHOLD), 0, 1), 
+        DistanceFieldOcclusionToOpacityPower
+    );
 }

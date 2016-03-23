@@ -109,7 +109,10 @@ namespace TestGame.Scenes {
                     TwoPointFiveD = true,
                     DistanceFieldResolution = 0.5f,
                     DistanceFieldSliceCount = 32,
-                    DistanceFieldStepSize = 1.33f
+                    DistanceFieldStepSize = 1.33f,
+                    DistanceFieldOcclusionToOpacityPower = 0.6f,
+                    DistanceFieldConeGrowthRate = 0.2f,
+                    DistanceFieldMaxConeRadius = 32
                 }
             );
 
