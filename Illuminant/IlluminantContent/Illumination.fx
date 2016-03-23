@@ -47,7 +47,7 @@ float PointLightPixelCore(
 
     // FIXME: What about z?
     float lightOpacity = computeLightOpacity(shadedPixelPosition, lightCenter, ramp.x, ramp.y);
-    float tracedOcclusion = coneTrace(lightCenter, ramp, shadedPixelPosition, 0);
+    float tracedOcclusion = coneTrace(lightCenter, ramp, shadedPixelPosition, false);
 
     return lightOpacity * tracedOcclusion;
 }

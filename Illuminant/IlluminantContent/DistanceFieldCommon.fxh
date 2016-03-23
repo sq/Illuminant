@@ -17,14 +17,15 @@
 #define DISTANCE_FIELD_FILTER LINEAR
 
 // HACK: Step by a fraction of the distance to the next object for better accuracy
-#define PARTIAL_STEP_SIZE 0.9
+// Not recommended, actually! But hey, maybe it'll help.
+#define PARTIAL_STEP_SIZE 1
 
 // The minimum and maximum approximate cone tracing radius
 // The cone grows larger as light travels from the source, up to the maximum
 // Raising the maximum produces soft shadows, but if it's too large you will get artifacts.
 // A larger maximum also increases the size of the AO 'blobs' around distant obstructions.
-#define MIN_CONE_RADIUS 2
-#define MAX_CONE_RADIUS 24
+#define MIN_CONE_RADIUS 1.5
+#define MAX_CONE_RADIUS 32
 
 // We threshold shadow values from cone tracing to eliminate 'almost obstructed' and 'almost unobstructed' artifacts
 #define FULLY_SHADOWED_THRESHOLD 0.05
@@ -34,8 +35,7 @@
 #define DISTANCE_DEPTH_MAX 1024.0
 #define DISTANCE_DEPTH_OFFSET 0.25
 
-// Distances <= this are considered 'inside'
-#define INTERIOR_THRESHOLD 0.25
+#define SHRUG -9999
 
 
 float closestPointOnEdgeAsFactor (
@@ -143,30 +143,41 @@ float conePenumbra (
     return result;
 }
 
-float coneTraceStep (
+void coneTraceStep (
     in    float3 traceStart,
     in    float3 traceVector,
     in    float  minStepSize, 
     in    float3 ramp,
-    in    float  obstructionCompensation,
+    inout float  initialDistance,
+    inout bool   obstructionCompensation,
     inout float  traceOffset,
     inout float  coneAttenuation
 ) {
     float distanceToObstacle = sampleAlongRay(traceStart, traceVector, traceOffset);
 
-    float penumbra = conePenumbra(ramp, traceOffset, distanceToObstacle);
-    coneAttenuation = min(coneAttenuation, penumbra);
+    // HACK: When shading a pixel that is known to begin in an obstruction, we ignore
+    //  obstruction samples until we have successfully left the obstruction
+    if (obstructionCompensation) {
+        if (initialDistance == SHRUG)
+            initialDistance = distanceToObstacle;
+
+        float expectedDistance = initialDistance + traceOffset - 1;
+        
+        if (distanceToObstacle < expectedDistance)
+            obstructionCompensation = false;
+    } else {
+        float penumbra = conePenumbra(ramp, traceOffset, distanceToObstacle);
+        coneAttenuation = min(coneAttenuation, penumbra);
+    }
 
     traceOffset += max(abs(distanceToObstacle) * PARTIAL_STEP_SIZE, minStepSize);
-
-    return distanceToObstacle;
 }
 
 float coneTrace (
     in float3 lightCenter,
     in float2 lightRamp,
     in float3 shadedPixelPosition,
-    in float  obstructionCompensation
+    in bool   obstructionCompensation
 ) {
     // HACK: Compensate for Z scaling
     lightCenter.z *= ZDistanceScale;
@@ -179,12 +190,13 @@ float coneTrace (
     float traceLength = length(traceVector);
     traceVector = normalize(traceVector);
 
+    float initialDistance = SHRUG;
     float coneAttenuation = 1.0;
 
     while (traceOffset < traceLength) {
-        float distanceToObstacle = coneTraceStep(
-            shadedPixelPosition, traceVector, minStepSize, ramp, obstructionCompensation,
-            traceOffset, coneAttenuation
+        coneTraceStep(
+            shadedPixelPosition, traceVector, minStepSize, ramp, 
+            initialDistance, obstructionCompensation, traceOffset, coneAttenuation
         );
 
         if (coneAttenuation <= FULLY_SHADOWED_THRESHOLD)
@@ -196,8 +208,8 @@ float coneTrace (
     if (coneAttenuation > FULLY_SHADOWED_THRESHOLD) {
         traceOffset = traceLength;
         coneTraceStep(
-            shadedPixelPosition, traceVector, minStepSize, ramp, obstructionCompensation,
-            traceOffset, coneAttenuation
+            shadedPixelPosition, traceVector, minStepSize, ramp, 
+            initialDistance, obstructionCompensation, traceOffset, coneAttenuation
         );
     }
 

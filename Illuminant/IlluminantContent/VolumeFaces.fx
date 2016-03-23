@@ -2,12 +2,13 @@
 #include "LightCommon.fxh"
 #include "DistanceFieldCommon.fxh"
 
-#define MAX_LIGHTS 8
+// UGH
+#define MAX_LIGHTS 7
 
 #define EXPONENTIAL                           0
 #define TOP_FACE_DOT_RAMP                     0
 #define TOP_FACE_RAYCAST_SHADOWS              1
-#define FRONT_FACE_DOT_RAMP                   1
+#define FRONT_FACE_DOT_RAMP                   0
 #define FRONT_FACE_RAYCAST_SHADOWS            1
 
 // Never do a raycast when the light is closer to the wall than this
@@ -38,7 +39,7 @@ void FrontFaceVertexShader (
 float ComputeRaycastedShadowOcclusionSample (
     float3 lightPosition, float2 lightRamp, float3 worldPosition
 ) {
-    return coneTrace(lightPosition, lightRamp, worldPosition, 1);
+    return coneTrace(lightPosition, lightRamp, worldPosition, true);
 }
 
 float ComputeRaycastedShadowOpacity (
@@ -59,10 +60,6 @@ void FrontFacePixelShader (
         // FIXME: What about z?
         float3 properties = LightProperties[i];
         float3 lightPosition = LightPositions[i];
-        float3 lightDirection = worldPosition - lightPosition;
-
-        float maxDistance = length(lightDirection);
-        lightDirection = normalize(lightDirection);
 
         float  opacity = computeLightOpacity(worldPosition, lightPosition, properties.x, properties.y);
         if (opacity <= 0)
@@ -74,6 +71,7 @@ void FrontFacePixelShader (
 #endif
 
 #if FRONT_FACE_DOT_RAMP
+        float3 lightDirection = normalize(worldPosition - lightPosition);
         float  lightDotNormal = dot(-lightDirection, normal);
 
         // HACK: How do we get smooth ramping here without breaking pure horizontal walls?
@@ -110,11 +108,15 @@ void TopFacePixelShader(
     float3 normal = float3(0, 0, 1);
     float3 accumulator = float3(0, 0, 0);
 
+    float2 terrainZ = sampleTerrain(worldPosition.xy);
+
     for (int i = 0; i < NumLights; i++) {
         // FIXME: What about z?
         float3 properties = LightProperties[i];
         float3 lightPosition = LightPositions[i];
 
+        if (lightPosition.z < terrainZ.x)
+            continue;
         if (lightPosition.z < worldPosition.z)
             continue;
 

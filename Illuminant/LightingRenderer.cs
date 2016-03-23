@@ -916,7 +916,7 @@ namespace Squared.Illuminant {
             return false;
         }
 
-        const int FaceMaxLights = 8;
+        const int FaceMaxLights = 7;
 
         // HACK
         private bool      _DistanceFieldReady = false;

@@ -91,7 +91,7 @@ namespace TestGame.Scenes {
 
             var baseSizeTL = new Vector2(62, 65);
             var baseSizeBR = new Vector2(64, 57);
-            Ellipse(center, 55f, 45f, 0, totalHeight);
+            Ellipse(center, 51f, 45f, 0, totalHeight);
             Rect(center - baseSizeTL, center + baseSizeBR, 0.0f, baseHeight);
             Rect(center - baseSizeTL, center + baseSizeBR, totalHeight - capHeight, capHeight);
         }
@@ -107,8 +107,8 @@ namespace TestGame.Scenes {
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(1024, 1024) {
                     TwoPointFiveD = true,
-                    DistanceFieldResolution = 1f,
-                    DistanceFieldSliceCount = 8,
+                    DistanceFieldResolution = 0.5f,
+                    DistanceFieldSliceCount = 32,
                     DistanceFieldStepSize = 3
                 }
             );
@@ -131,7 +131,7 @@ namespace TestGame.Scenes {
 
             // Floating cylinders
             Ellipse(new Vector2(420, 830), 40f, 40f, 0.33f, 0.20f);
-            Ellipse(new Vector2(460, 825), 35f, 35f, 0.35f, 0.10f);
+            Ellipse(new Vector2(500, 825), 35f, 35f, 0.35f, 0.10f);
 
             Environment.ZDistanceScale = 128;
             Environment.ZToYMultiplier = 320;
@@ -247,11 +247,7 @@ namespace TestGame.Scenes {
                 var ms = Mouse.GetState();
                 Game.IsMouseVisible = true;
 
-                var t = (float)gameTime.TotalGameTime.TotalSeconds * 0.3f;
-                t = 0;
-
-                LightZ = (ms.ScrollWheelValue / 1024.0f) + 
-                    Squared.Util.Arithmetic.PulseExp(t, 0, 0.3f);
+                LightZ = (ms.ScrollWheelValue / 2048.0f);
 
                 if (LightZ < 0.01f)
                     LightZ = 0.01f;
