@@ -39,7 +39,8 @@ float PointLightPixelCore(
 
     float shadedZ = terrainZ.y;
 
-    if ((lightCenter.z < terrainZ.x) && (lightCenter.z < terrainZ.y))
+    // HACK: Suppress solid shadow directly under floating obstructions
+    if (terrainZ.x > GroundZ)
         shadedZ = GroundZ;
 
     float3 shadedPixelPosition = float3(worldPosition.xy, shadedZ);
