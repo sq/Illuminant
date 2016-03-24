@@ -9,7 +9,7 @@ namespace ThreefoldTrials.Framework {
         private static readonly StringBuilder StringBuilder = new StringBuilder();
         private static string _CachedString = null;
 
-        public const int SampleCount = 15;
+        public const int SampleCount = 60;
         public static readonly List<double> WaitSamples = new List<double>(),
             BeginDrawSamples = new List<double>(),
             DrawSamples = new List<double>(),
@@ -37,6 +37,10 @@ namespace ThreefoldTrials.Framework {
             var endAverage = GetAverage(EndDrawSamples);
             var waitAverage = GetAverage(WaitSamples);
 
+            var totalAverage = drawAverage + beginAverage + endAverage + waitAverage;
+            var fpsAverage = 1000.0 / totalAverage;
+
+            StringBuilder.AppendFormat("FPS ~{0:0000.0}\r\n", fpsAverage);
             StringBuilder.AppendFormat("D {0:000.0}\r\n", drawAverage);
             StringBuilder.AppendFormat("BE {0:000.0}\r\n", beginAverage + endAverage);
             StringBuilder.AppendFormat("W {0:000.0}\r\n", waitAverage);
