@@ -19,7 +19,7 @@ void GammaCompressedPixelShader(
 	addColor.rgb *= addColor.a;
 	addColor.a = 0;
 
-	result = multiplyColor * (tex2Dgrad(TextureSampler, clamp(texCoord, texTL, texBR), 0, 0) * InverseScaleFactor);
+	result = multiplyColor * (tex2D(TextureSampler, clamp(texCoord, texTL, texBR)) * InverseScaleFactor);
 	result += (addColor * result.a);
 
     float resultLuminance = dot(result, RGBToLuminance);
@@ -88,7 +88,7 @@ void ToneMappedPixelShader(
 	addColor.rgb *= addColor.a;
 	addColor.a = 0;
 
-	result = multiplyColor * (tex2Dgrad(TextureSampler, clamp(texCoord, texTL, texBR), 0, 0) * InverseScaleFactor);
+	result = multiplyColor * (tex2D(TextureSampler, clamp(texCoord, texTL, texBR)) * InverseScaleFactor);
 	result += (addColor * result.a);
 
     result = float4(Uncharted2Tonemap(result.rgb * Exposure) / Uncharted2Tonemap1(WhitePoint), result.a);

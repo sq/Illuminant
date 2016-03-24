@@ -15,7 +15,7 @@ void RampPixelShader(
 	addColor.rgb *= addColor.a;
 	addColor.a = 0;
 
-    result = tex2Dgrad(TextureSampler, clamp(texCoord, texTL, texBR), 0, 0);
+    result = tex2D(TextureSampler, clamp(texCoord, texTL, texBR));
     float luminance = dot(result, RGBToLuminance);
     float rampFactor = RampLookup(luminance) / luminance;
 

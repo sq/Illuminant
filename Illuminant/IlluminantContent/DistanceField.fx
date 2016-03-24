@@ -31,9 +31,10 @@ float computeDistance (
     float resultDistance = 99999;
     float indexMultiplier = 1.0 / NumVertices;
 
+    [loop]
     for (int i = 0; i < NumVertices; i++) {
-        float2 edgeA = tex2Dgrad(VertexDataSampler, float2(i * indexMultiplier, 0), 0, 0);
-        float2 edgeB = tex2Dgrad(VertexDataSampler, float2((i + 1) * indexMultiplier, 0), 0, 0);
+        float2 edgeA = tex2Dlod(VertexDataSampler, float4(i * indexMultiplier, 0, 0, 0));
+        float2 edgeB = tex2Dlod(VertexDataSampler, float4((i + 1) * indexMultiplier, 0, 0, 0));
 
         float2 closest = closestPointOnEdge(vpos, edgeA, edgeB);
         float2 closestDeltaXy = (vpos - closest);

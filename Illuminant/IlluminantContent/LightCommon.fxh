@@ -19,7 +19,7 @@ float2 sampleTerrain(
     float2 positionPx
 ) {
     float2 uv     = positionPx * TerrainTextureTexelSize;
-    float2 sample = tex2Dgrad(TerrainTextureSampler, uv, 0, 0).rg;
+    float2 sample = tex2Dlod(TerrainTextureSampler, float4(uv, 0, 0)).rg;
     return sample;
 }
 
