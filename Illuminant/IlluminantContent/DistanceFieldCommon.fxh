@@ -4,7 +4,7 @@
 
 // Maximum distance
 // Smaller values increase the precision of distance values but slow down traces
-#define DISTANCE_MAX 128
+#define DISTANCE_MAX 256
 
 // Filtering dramatically increases the precision of the distance field,
 //  *and* it's mathematically correct!
@@ -187,10 +187,7 @@ void coneTraceStep (
         coneAttenuation = min(coneAttenuation, penumbra);
     }
 
-    traceOffset = min(
-        traceOffset + max(abs(distanceToObstacle) * PARTIAL_STEP_SIZE, minStepSize),
-        traceLength
-    );
+    traceOffset = traceOffset + max(abs(distanceToObstacle) * PARTIAL_STEP_SIZE, minStepSize);
 }
 
 float coneTrace (
@@ -214,14 +211,16 @@ float coneTrace (
     bool abort;
 
     // FIXME: Did I get this right? Should always do a step at the beginning and end of the ray
-    do {
-        abort = (traceOffset > traceLength);
+    while (!abort) {
+        abort = traceOffset >= traceLength;
+        if (abort)
+            traceOffset = traceLength;
 
         coneTraceStep(
             shadedPixelPosition, traceVector, traceLength, minStepSize,
             initialDistance, obstructionCompensation, traceOffset, coneAttenuation
         );
-    } while (!abort && (coneAttenuation > FULLY_SHADOWED_THRESHOLD));
+    }
 
     return pow(
         clamp((coneAttenuation - FULLY_SHADOWED_THRESHOLD) / (UNSHADOWED_THRESHOLD - FULLY_SHADOWED_THRESHOLD), 0, 1), 

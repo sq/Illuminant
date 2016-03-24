@@ -213,14 +213,12 @@ namespace Squared.Illuminant {
         private readonly RenderTarget2D _TerrainDepthmap;
         private readonly RenderTarget2D _DistanceField;
 
-        private RenderTimer LightPassTimer, DistanceFieldTimer;
-
         private readonly Action<DeviceManager, object> BeginLightPass, EndLightPass, RestoreScissorRect, IlluminationBatchSetup;
 
         public readonly RendererConfiguration Configuration;
         public LightingEnvironment Environment;
 
-        const int   DistanceLimit = 256;
+        const int   DistanceLimit = 258;
         const int   StencilTrue  = 0xFF;
         const int   StencilFalse = 0x00;
 
@@ -531,10 +529,6 @@ namespace Squared.Illuminant {
         }
 
         private void _BeginLightPass (DeviceManager device, object userData) {
-            LightPassTimer = new RenderTimer(device.Device);
-            LightPassTimer.Completed += OnLightPassCompleted;
-            LightPassTimer.Begin();
-
             device.PushStates();
             StoredScissorRect = device.Device.ScissorRectangle;
         }
@@ -546,8 +540,6 @@ namespace Squared.Illuminant {
         private void _EndLightPass (DeviceManager device, object userData) {
             device.Device.ScissorRectangle = StoredScissorRect;
             device.PopStates();
-
-            LightPassTimer.End();
         }
 
         private Rectangle GetScissorRectForLightSource (DeviceManager device, LightSource ls) {
@@ -1196,15 +1188,7 @@ namespace Squared.Illuminant {
             };
             
             using (var rtGroup = BatchGroup.ForRenderTarget(
-                resultGroup, layerIndex++, _DistanceField,
-                (dm, _) => {
-                    DistanceFieldTimer = new RenderTimer(dm.Device);
-                    DistanceFieldTimer.Completed += OnDistanceFieldCompleted;
-                    DistanceFieldTimer.Begin();
-                },
-                (dm, _) => {
-                    DistanceFieldTimer.End();
-                }
+                resultGroup, layerIndex++, _DistanceField
             )) {
                 ClearBatch.AddNew(
                     rtGroup, 0, Materials.Clear, Color.Transparent
