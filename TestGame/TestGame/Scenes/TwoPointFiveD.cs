@@ -108,11 +108,11 @@ namespace TestGame.Scenes {
                 new RendererConfiguration(1024, 1024) {
                     TwoPointFiveD = true,
                     DistanceFieldResolution = 0.5f,
-                    DistanceFieldSliceCount = 32,
+                    DistanceFieldSliceCount = 48,
                     DistanceFieldStepSize = 1.33f,
-                    DistanceFieldOcclusionToOpacityPower = 0.6f,
+                    DistanceFieldOcclusionToOpacityPower = 0.45f,
                     DistanceFieldConeGrowthRate = 0.2f,
-                    DistanceFieldMaxConeRadius = 32
+                    DistanceFieldMaxConeRadius = 24
                 }
             );
 
@@ -144,8 +144,19 @@ namespace TestGame.Scenes {
             Pillar(new Vector2(719, 520));
 
             // Floating cylinders
-            Ellipse(new Vector2(420, 830), 40f, 40f, 0.33f, 0.20f);
-            Ellipse(new Vector2(500, 825), 35f, 35f, 0.35f, 0.10f);
+            if (false) {
+                Ellipse(new Vector2(420, 830), 40f, 40f, 0.33f, 0.20f);
+                Ellipse(new Vector2(500, 825), 35f, 35f, 0.35f, 0.10f);
+            }
+
+            Environment.Obstructions.Add(new LightObstruction(
+                LightObstructionType.Box, 
+                new Vector3(500, 750, 0), new Vector3(50, 100, 0.1f)
+            ));
+            Environment.Obstructions.Add(new LightObstruction(
+                LightObstructionType.Ellipsoid, 
+                new Vector3(500, 750, 0), new Vector3(120, 40, 0.1f)
+            ));
 
             Environment.ZDistanceScale = 128;
             Environment.ZToYMultiplier = 320;

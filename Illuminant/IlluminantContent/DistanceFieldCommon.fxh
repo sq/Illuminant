@@ -22,12 +22,15 @@
 // See uniforms for the other two constants
 
 // We threshold shadow values from cone tracing to eliminate 'almost obstructed' and 'almost unobstructed' artifacts
-#define FULLY_SHADOWED_THRESHOLD 0.02
-#define UNSHADOWED_THRESHOLD 0.98
+#define FULLY_SHADOWED_THRESHOLD 0.05
+#define UNSHADOWED_THRESHOLD 0.95
 
 // HACK: Adjusts the threshold for obstruction compensation so that the sample point must be
 //  an additional distance beyond the edge of the obstruction to count
-#define OBSTRUCTION_FUDGE 0.1
+#define OBSTRUCTION_FUDGE 0.05
+
+// Scale all [0-1] accumulators/values by this to avoid round-to-zero issues
+#define DENORMAL_HACK 100
 
 // HACK: Placeholder for uninitialized distance value
 #define SHRUG -9999
@@ -155,7 +158,8 @@ float conePenumbra (
         // And we can't go lower than the minimum cone size
     ), MIN_CONE_RADIUS);
 
-    float result = clamp(distanceToObstacle / localRadius, 0, 1);
+    distanceToObstacle *= DENORMAL_HACK;
+    float result = clamp(distanceToObstacle / localRadius, 0, DENORMAL_HACK);
 
     return result;
 }
@@ -175,14 +179,25 @@ void coneTraceStep (
     // HACK: When shading a pixel that is known to begin in an obstruction, we ignore
     //  obstruction samples until we have successfully left the obstruction
     if (obstructionCompensation) {
+        // Record the distance of the first sample for use in the compensation calculation
         if (initialDistance == SHRUG)
             initialDistance = distanceToObstacle;
 
+        // Obstruction compensation is based on the expectation that the obstacle ends at
+        //  -initialDistance along the ray, which is... usually true
         float expectedDistance = initialDistance + traceOffset - OBSTRUCTION_FUDGE;
         
         if (distanceToObstacle < expectedDistance)
             obstructionCompensation = false;
     } else {
+        // If the first sample is inside an object we kill the trace entirely
+        if (initialDistance == SHRUG) {
+            initialDistance = distanceToObstacle;
+
+            if (distanceToObstacle < OBSTRUCTION_FUDGE)
+                coneAttenuation = 0;
+        }
+
         float penumbra = conePenumbra(traceOffset, traceLength, distanceToObstacle);
         coneAttenuation = min(coneAttenuation, penumbra);
     }
@@ -207,12 +222,14 @@ float coneTrace (
     traceVector = normalize(traceVector);
 
     float initialDistance = SHRUG;
-    float coneAttenuation = 1.0;
+    float coneAttenuation = 1.0 * DENORMAL_HACK;
     bool abort;
+
+    float fst = FULLY_SHADOWED_THRESHOLD * DENORMAL_HACK;
 
     // FIXME: Did I get this right? Should always do a step at the beginning and end of the ray
     while (!abort) {
-        abort = traceOffset >= traceLength;
+        abort = (traceOffset >= traceLength) || (coneAttenuation <= fst);
         if (abort)
             traceOffset = traceLength;
 
@@ -223,7 +240,11 @@ float coneTrace (
     }
 
     return pow(
-        clamp((coneAttenuation - FULLY_SHADOWED_THRESHOLD) / (UNSHADOWED_THRESHOLD - FULLY_SHADOWED_THRESHOLD), 0, 1), 
+        clamp(
+            clamp((coneAttenuation - fst) / DENORMAL_HACK, 0, 1) / 
+            (UNSHADOWED_THRESHOLD - FULLY_SHADOWED_THRESHOLD),
+            0, 1
+        ), 
         DistanceFieldOcclusionToOpacityPower
     );
 }

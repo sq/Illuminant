@@ -433,8 +433,8 @@ namespace Squared.Illuminant {
                 materials.Add(IlluminantMaterials.DistanceFieldInterior = 
                     new Squared.Render.EffectMaterial(content.Load<Effect>("DistanceField"), "Interior"));
 
-                materials.Add(IlluminantMaterials.VisualizeDistanceField = 
-                    new Squared.Render.EffectMaterial(content.Load<Effect>("Visualize"), "Visualize"));
+                materials.Add(IlluminantMaterials.DistanceFunction = 
+                    new Squared.Render.EffectMaterial(content.Load<Effect>("DistanceFunction"), "DistanceFunction"));
             }
 
 #if SDL2
@@ -1083,6 +1083,8 @@ namespace Squared.Illuminant {
                     ));
                 }
 
+                // TODO: Update the heightmap using any SDF light obstructions (maybe only if they're flagged?)
+
                 if (Render.Tracing.RenderTrace.EnableTracing)
                     Render.Tracing.RenderTrace.Marker(group, 2, "Frame {0:0000} : LightingRenderer {1:X4} : End Heightmap", frame.Index, this.GetHashCode());
             }
@@ -1157,6 +1159,7 @@ namespace Squared.Illuminant {
                 if (Render.Tracing.RenderTrace.EnableTracing)
                     Render.Tracing.RenderTrace.Marker(group, -1, "LightingRenderer {0:X4} : Begin Distance Field Slice #{1}", this.GetHashCode(), slice);
 
+                RenderDistanceFieldDistanceFunctions(indices, sliceZ, group);
                 RenderDistanceFieldHeightVolumes(indices, vertexDataTextures, intParameters, extParameters, sliceZ, group);
 
                 if (Render.Tracing.RenderTrace.EnableTracing)
@@ -1236,6 +1239,48 @@ namespace Squared.Illuminant {
                 }
         }
 
+        private void RenderDistanceFieldDistanceFunctions (short[] indices, float sliceZ, BatchGroup group) {
+            var verts = new VertexPositionColor[] {
+                new VertexPositionColor(new Vector3(0, 0, 0), Color.White),
+                new VertexPositionColor(new Vector3(Configuration.MaximumRenderSize.First, 0, 0), Color.White),
+                new VertexPositionColor(new Vector3(Configuration.MaximumRenderSize.First, Configuration.MaximumRenderSize.Second, 0), Color.White),
+                new VertexPositionColor(new Vector3(0, Configuration.MaximumRenderSize.Second, 0), Color.White)
+            };
+
+            var items = Environment.Obstructions;
+            var types = new float[items.Count];
+            var centers = new Vector3[items.Count];
+            var sizes = new Vector3[items.Count];
+
+            for (int i = 0; i < items.Count; i++) {
+                var item = items[i];
+                types[i] = (int)item.Type;
+                centers[i] = item.Center;
+                sizes[i] = item.Size;
+            }
+
+            using (var batch = PrimitiveBatch<VertexPositionColor>.New(
+                group, 1, IlluminantMaterials.DistanceFunction,
+                (dm, _) => {
+                    var p = IlluminantMaterials.DistanceFunction.Effect.Parameters;
+
+                    p["NumDistanceObjects"].SetValue(items.Count);
+                    p["DistanceObjectTypes"].SetValue(types);
+                    p["DistanceObjectCenters"].SetValue(centers);
+                    p["DistanceObjectSizes"].SetValue(sizes);
+                    p["SliceZ"].SetValue(sliceZ);
+
+                    SetDistanceFieldParameters(p, false);
+
+                    IlluminantMaterials.DistanceFunction.Flush();
+                }
+            ))
+                batch.Add(new PrimitiveDrawCall<VertexPositionColor>(
+                    PrimitiveType.TriangleList,
+                    verts, 0, 4, indices, 0, 2
+                ));
+        }
+
         private void FlushPointLightBatch (ref BatchGroup lightGroup, ref LightSource batchFirstLightSource, ref int layerIndex) {
             if (lightGroup == null)
                 return;
@@ -1273,7 +1318,8 @@ namespace Squared.Illuminant {
         public Material DebugOutlines, Shadow, ClearStencil;
         public Material PointLightLinear, PointLightExponential, PointLightLinearRampTexture, PointLightExponentialRampTexture;
         public Squared.Render.EffectMaterial VolumeFrontFace, VolumeTopFace;
-        public Squared.Render.EffectMaterial DistanceFieldExterior, DistanceFieldInterior, VisualizeDistanceField;
+        public Squared.Render.EffectMaterial DistanceFieldExterior, DistanceFieldInterior;
+        public Squared.Render.EffectMaterial DistanceFunction;
         public Squared.Render.EffectMaterial ScreenSpaceGammaCompressedBitmap, WorldSpaceGammaCompressedBitmap;
         public Squared.Render.EffectMaterial ScreenSpaceToneMappedBitmap, WorldSpaceToneMappedBitmap;
 #if !SDL2

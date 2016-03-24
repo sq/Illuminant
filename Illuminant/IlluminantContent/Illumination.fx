@@ -49,7 +49,7 @@ float PointLightPixelCore(
 
     float lightOpacity = computeLightOpacity(shadedPixelPosition, lightCenter, ramp.x, ramp.y);
     // FIXME: Should we really need to turn on obstruction compensation here?
-    float tracedOcclusion = coneTrace(lightCenter, ramp, shadedPixelPosition, true);
+    float tracedOcclusion = coneTrace(lightCenter, ramp, shadedPixelPosition, false);
 
     return lightOpacity * tracedOcclusion;
 }

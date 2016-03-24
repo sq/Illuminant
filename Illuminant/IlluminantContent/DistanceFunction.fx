@@ -4,11 +4,10 @@
 
 #define MAX_DISTANCE_OBJECTS 16
 
-#define TYPE_SPHERE 0
-#define TYPE_BOX    1
+#define TYPE_ELLIPSOID 0
+#define TYPE_BOX       1
 
 uniform float2 PixelSize;
-uniform float  MinZ, MaxZ;
 uniform float  SliceZ;
 
 uniform int    NumDistanceObjects;
@@ -30,19 +29,21 @@ float evaluateFunction (
     float type, float3 center, float3 size
 ) {
     position -= center;
+    position.z *= ZDistanceScale;
+    size.z *= ZDistanceScale;
+
     type = floor(type);
 
-    if (type == TYPE_SPHERE) {
-        return length(position) - size;
+    if (type == TYPE_ELLIPSOID) {
+        return (length(position / size) - 1.0) * 
+            min(min(size.x, size.y), size.z);
     } else if (type == TYPE_BOX) {
         float3 d = abs(position) - size;
         return
             min(
                 max(d.x, max(d.y, d.z)),
                 0.0
-                ) + length(
-                    max(d, 0.0)
-                    );
+            ) + length(max(d, 0.0));
     }
 
     // FIXME
