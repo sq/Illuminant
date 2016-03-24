@@ -141,22 +141,31 @@ float sampleAlongRay (
 }
 
 float conePenumbra (
-    float  traceOffset,
-    float  traceLength,
-    float  distanceToObstacle
+    float traceOffset,
+    float traceLength,
+    float distanceToObstacle
 ) {
     // FIXME: Instead of ramping the cone radius at start/end of trace, just adjust the distance value?
 
     // FIXME: This creates unoccluded voids when the light is at the center of a floating occluder
-    float localRadius = max(min(min(
-            DistanceFieldMaxConeRadius,
-            // But we want to ramp the radius back down as we approach the end of the trace, otherwise
-            //  objects *past* the end of the trace will count as occluders
-            (traceLength - traceOffset) * DistanceFieldConeGrowthRate
+    /*
+    float localRadius = max(
+        min(
+            min(
+                DistanceFieldMaxConeRadius,
+                // But we want to ramp the radius back down as we approach the end of the trace, otherwise
+                //  objects *past* the end of the trace will count as occluders
+                (traceLength - traceOffset) * DistanceFieldConeGrowthRate
+            ),
             // And we want to ramp the radius down for points close to the beginning of the trace, as well
-        ), traceOffset * DistanceFieldConeGrowthRate
+            traceOffset * DistanceFieldConeGrowthRate
+        ),
         // And we can't go lower than the minimum cone size
-    ), MIN_CONE_RADIUS);
+        MIN_CONE_RADIUS
+    );
+    */
+
+    float localRadius = DistanceFieldMaxConeRadius;
 
     distanceToObstacle *= DENORMAL_HACK;
     float result = clamp(distanceToObstacle / localRadius, 0, DENORMAL_HACK);
@@ -169,35 +178,24 @@ void coneTraceStep (
     in    float3 traceVector,
     in    float  traceLength,
     in    float  minStepSize, 
-    inout float  initialDistance,
+    in    float  distanceAtShadedPoint,
+    in    float  distanceAtLight,
     inout bool   obstructionCompensation,
     inout float  traceOffset,
     inout float  coneAttenuation
 ) {
     float distanceToObstacle = sampleAlongRay(traceStart, traceVector, traceOffset);
 
-    // HACK: When shading a pixel that is known to begin in an obstruction, we ignore
-    //  obstruction samples until we have successfully left the obstruction
     if (obstructionCompensation) {
-        // Record the distance of the first sample for use in the compensation calculation
-        if (initialDistance == SHRUG)
-            initialDistance = distanceToObstacle;
-
+        // HACK: When shading a pixel that is known be in/on an obstruction, we ignore
+        //  trace samples until we have successfully left the obstruction
         // Obstruction compensation is based on the expectation that the obstacle ends at
         //  -initialDistance along the ray, which is... usually true
-        float expectedDistance = initialDistance + traceOffset - OBSTRUCTION_FUDGE;
+        float expectedDistance = distanceAtShadedPoint + traceOffset - OBSTRUCTION_FUDGE;
         
         if (distanceToObstacle < expectedDistance)
             obstructionCompensation = false;
     } else {
-        // If the first sample is inside an object we kill the trace entirely
-        if (initialDistance == SHRUG) {
-            initialDistance = distanceToObstacle;
-
-            if (distanceToObstacle < OBSTRUCTION_FUDGE)
-                coneAttenuation = 0;
-        }
-
         float penumbra = conePenumbra(traceOffset, traceLength, distanceToObstacle);
         coneAttenuation = min(coneAttenuation, penumbra);
     }
@@ -221,13 +219,19 @@ float coneTrace (
     float traceLength = length(traceVector);
     traceVector = normalize(traceVector);
 
-    float initialDistance = SHRUG;
     float coneAttenuation = 1.0 * DENORMAL_HACK;
-    bool abort;
+    bool abort = false;
 
+    // If the shaded point is completely within an obstacle we kill the trace early
+    float distanceAtShadedPoint = sampleDistanceField(shadedPixelPosition);
+    if ((distanceAtShadedPoint < OBSTRUCTION_FUDGE) && !obstructionCompensation)
+        return 0;
+
+    float distanceAtLight       = sampleDistanceField(lightCenter);
     float fst = FULLY_SHADOWED_THRESHOLD * DENORMAL_HACK;
 
     // FIXME: Did I get this right? Should always do a step at the beginning and end of the ray
+    [loop]
     while (!abort) {
         abort = (traceOffset >= traceLength) || (coneAttenuation <= fst);
         if (abort)
@@ -235,7 +239,8 @@ float coneTrace (
 
         coneTraceStep(
             shadedPixelPosition, traceVector, traceLength, minStepSize,
-            initialDistance, obstructionCompensation, traceOffset, coneAttenuation
+            distanceAtShadedPoint, distanceAtLight,
+            obstructionCompensation, traceOffset, coneAttenuation
         );
     }
 

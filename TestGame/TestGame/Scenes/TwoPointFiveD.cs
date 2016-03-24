@@ -36,7 +36,7 @@ namespace TestGame.Scenes {
             int scaledWidth = (int)Width;
             int scaledHeight = (int)Height;
 
-            const int multisampleCount = 0;
+            const int multisampleCount = 8;
 
             if (scaledWidth < 4)
                 scaledWidth = 4;
@@ -49,7 +49,7 @@ namespace TestGame.Scenes {
 
                 Lightmap = new RenderTarget2D(
                     Game.GraphicsDevice, scaledWidth, scaledHeight, false,
-                    SurfaceFormat.Color, DepthFormat.Depth24Stencil8, multisampleCount, 
+                    SurfaceFormat.Color, DepthFormat.Depth24, multisampleCount, 
                     // YUCK
                     RenderTargetUsage.DiscardContents
                 );
@@ -112,7 +112,8 @@ namespace TestGame.Scenes {
                     DistanceFieldStepSize = 1.33f,
                     DistanceFieldOcclusionToOpacityPower = 0.45f,
                     DistanceFieldConeGrowthRate = 0.2f,
-                    DistanceFieldMaxConeRadius = 24
+                    DistanceFieldMaxConeRadius = 16,
+                    DistanceFieldCaching = false
                 }
             );
 
@@ -149,14 +150,19 @@ namespace TestGame.Scenes {
                 Ellipse(new Vector2(500, 825), 35f, 35f, 0.35f, 0.10f);
             }
 
-            Environment.Obstructions.Add(new LightObstruction(
-                LightObstructionType.Box, 
-                new Vector3(500, 750, 0), new Vector3(50, 100, 0.1f)
-            ));
+            if (false)
+                Environment.Obstructions.Add(new LightObstruction(
+                    LightObstructionType.Box, 
+                    new Vector3(500, 750, 0), new Vector3(50, 100, 0.1f)
+                ));
+
             Environment.Obstructions.Add(new LightObstruction(
                 LightObstructionType.Ellipsoid, 
-                new Vector3(500, 750, 0), new Vector3(120, 40, 0.1f)
+                new Vector3(500, 750, 0), new Vector3(120, 120, 0.1f)
             ));
+
+            if (false)
+                Environment.HeightVolumes.Clear();
 
             Environment.ZDistanceScale = 128;
             Environment.ZToYMultiplier = 320;
@@ -178,7 +184,7 @@ namespace TestGame.Scenes {
                     Game.Materials.PopViewTransform();
                 }
             )) {
-                ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black, clearZ: 0, clearStencil: 0);
+                ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black, clearZ: 0);
 
                 Renderer.RenderLighting(frame, bg, 1, intensityScale: 1);
             };

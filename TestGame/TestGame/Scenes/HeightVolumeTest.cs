@@ -47,7 +47,7 @@ namespace TestGame.Scenes {
 
                 Lightmap = new RenderTarget2D(
                     Game.GraphicsDevice, scaledWidth, scaledHeight, false,
-                    SurfaceFormat.Color, DepthFormat.Depth24Stencil8, multisampleCount, 
+                    SurfaceFormat.Color, DepthFormat.Depth24, multisampleCount, 
                     // YUCK
                     RenderTargetUsage.DiscardContents
                 );
@@ -159,7 +159,7 @@ namespace TestGame.Scenes {
                     Game.Materials.PopViewTransform();
                 }
             )) {
-                ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black, clearZ: 0, clearStencil: 0);
+                ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black, clearZ: 0);
 
                 Renderer.RenderLighting(frame, bg, 1, intensityScale: 1);
             };

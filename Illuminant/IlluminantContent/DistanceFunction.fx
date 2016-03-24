@@ -35,8 +35,8 @@ float evaluateFunction (
     type = floor(type);
 
     if (type == TYPE_ELLIPSOID) {
-        return (length(position / size) - 1.0) * 
-            min(min(size.x, size.y), size.z);
+        float l = length(position / size) - 1.0;
+        return l * min(min(size.x, size.y), size.z);
     } else if (type == TYPE_BOX) {
         float3 d = abs(position) - size;
         return

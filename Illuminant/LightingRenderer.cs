@@ -16,17 +16,18 @@ using Squared.Util;
 
 namespace Squared.Illuminant {
     public class RendererConfiguration {
-        public float ClipRegionScale         = 1.0f;
-        public bool  TwoPointFiveD           = false;
-        public float ZOffset                 = 0.0f;
-        public float ZScale                  = 1.0f;
-        public float HeightmapResolution     = 1.0f;
-        public float DistanceFieldStepSize   = 3.0f;
-        public float DistanceFieldResolution = 1.0f;
-        public int   DistanceFieldSliceCount = 1;
-        public float DistanceFieldOcclusionToOpacityPower = 1;
-        public float DistanceFieldMaxConeRadius = 8;
+        public float ClipRegionScale             = 1.0f;
+        public bool  TwoPointFiveD               = false;
+        public float ZOffset                     = 0.0f;
+        public float ZScale                      = 1.0f;
+        public float HeightmapResolution         = 1.0f;
+        public float DistanceFieldStepSize       = 3.0f;
+        public float DistanceFieldResolution     = 1.0f;
+        public int   DistanceFieldSliceCount     = 1;
+        public float DistanceFieldMaxConeRadius  = 8;
         public float DistanceFieldConeGrowthRate = 1;
+        public bool  DistanceFieldCaching        = true;
+        public float DistanceFieldOcclusionToOpacityPower = 1;
 
         public readonly Pair<int> MaximumRenderSize;
 
@@ -289,27 +290,6 @@ namespace Squared.Illuminant {
                     false, SurfaceFormat.Rg32, DepthFormat.None, 0, RenderTargetUsage.DiscardContents
                 );
             }
-
-            IlluminantMaterials.ClearStencil = materials.Get(
-                materials.Clear, 
-                rasterizerState: RasterizerState.CullNone, 
-                depthStencilState: new DepthStencilState {
-                    StencilEnable = true,
-                    StencilMask = StencilTrue,
-                    StencilWriteMask = StencilTrue,
-                    ReferenceStencil = StencilFalse,
-                    StencilFunction = CompareFunction.Always,
-                    StencilPass = StencilOperation.Replace,
-                    StencilFail = StencilOperation.Replace,
-                },
-                blendState: BlendState.Opaque
-            );
-
-            materials.Add(
-                IlluminantMaterials.DebugOutlines = materials.WorldSpaceGeometry.SetStates(
-                    blendState: BlendState.AlphaBlend
-                )
-            );
 
             TopFaceDepthStencilState = new DepthStencilState {
                 StencilEnable = false,
@@ -698,7 +678,6 @@ namespace Squared.Illuminant {
                 }
             }
 
-            var needStencilClear = true;
             int vertexOffset = 0, indexOffset = 0;
             LightSource batchFirstLightSource = null;
             BatchGroup currentLightGroup = null;
@@ -756,7 +735,6 @@ namespace Squared.Illuminant {
 
                     if (batchFirstLightSource != null) {
                         var needFlush =
-                            (needStencilClear) ||
                             (batchFirstLightSource.ClipRegion.HasValue != lightSource.ClipRegion.HasValue) ||
                             (batchFirstLightSource.NeutralColor != lightSource.NeutralColor) ||
                             (batchFirstLightSource.Mode != lightSource.Mode) ||
@@ -785,17 +763,6 @@ namespace Squared.Illuminant {
                             continue;
                     } else {
                         clippedLightBounds = lightBounds;
-                    }
-
-                    if (needStencilClear) {
-                        if (Render.Tracing.RenderTrace.EnableTracing)
-                            Render.Tracing.RenderTrace.Marker(currentLightGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Stencil Clear", frame.Index, this.GetHashCode());
-#if SHADOW_VIZ
-                        ClearBatch.AddNew(currentLightGroup, layerIndex++, Materials.Clear, clearColor: Color.Black, clearStencil: StencilFalse);
-#else
-                        ClearBatch.AddNew(currentLightGroup, layerIndex++, IlluminantMaterials.ClearStencil, clearStencil: StencilFalse);
-#endif
-                        needStencilClear = false;
                     }
 
                     var vertex = MakePointLightVertex(lightSource, intensityScale);
@@ -1091,7 +1058,7 @@ namespace Squared.Illuminant {
 
             if (!_DistanceFieldReady) {
                 RenderDistanceField(ref layer, container);
-                _DistanceFieldReady = true;
+                _DistanceFieldReady = Configuration.DistanceFieldCaching;
             }
         }
 
@@ -1315,7 +1282,6 @@ namespace Squared.Illuminant {
     public class IlluminantMaterials {
         public readonly DefaultMaterialSet MaterialSet;
 
-        public Material DebugOutlines, Shadow, ClearStencil;
         public Material PointLightLinear, PointLightExponential, PointLightLinearRampTexture, PointLightExponentialRampTexture;
         public Squared.Render.EffectMaterial VolumeFrontFace, VolumeTopFace;
         public Squared.Render.EffectMaterial DistanceFieldExterior, DistanceFieldInterior;
