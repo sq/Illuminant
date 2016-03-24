@@ -92,11 +92,13 @@ namespace TestGame {
         public void Update (ParticleSystem<Spark>.ParticleUpdateArgs args) {
             Spark particle;
 
+            // FIXME: Collision detection
+            /*
             LineWriter.Reset();
-            LightingEnvironment.EnumerateObstructionLinesInBounds(args.SectorBounds, LineWriter);
 
             var lines = LineWriter.Lines.GetBuffer();
             var lineCount = LineWriter.Lines.Count;
+            */
 
             while (args.Enumerator.GetNext(out particle)) {
                 if (particle.FramesLeft <= 0) {
@@ -108,6 +110,8 @@ namespace TestGame {
                 particle.PreviousPosition = particle.Position;
                 particle.Position += particle.Velocity;
 
+                // FIXME: Collision detection
+                /*
                 float distance;
                 bool intersected = false;
 
@@ -137,6 +141,7 @@ namespace TestGame {
                 }
 
                 if (!intersected)
+                */
                     particle.Velocity = Spark.ApplyGravity(particle.Velocity);
 
                 args.ParticleMoved(ref particle, ref particle.PreviousPosition, ref particle.Position);

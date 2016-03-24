@@ -644,91 +644,6 @@ namespace Squared.Illuminant {
             device.Device.ScissorRectangle = StoredScissorRect;
         }
 
-        private CachedSector GetCachedSector (Frame frame, Pair<int> sectorIndex) {
-            CachedSector result;
-            if (!SectorCache.TryGetValue(sectorIndex, out result))
-                SectorCache.Add(sectorIndex, result = new CachedSector {
-                    SectorIndex = sectorIndex
-                });
-
-            if (result.FrameIndex == frame.Index)
-                return result;
-
-            SpatialCollection<HeightVolumeBase>.Sector heightSector;
-            SpatialCollection<LightObstructionBase>.Sector obsSector;
-
-            Environment.HeightVolumes.TryGetSector(sectorIndex, out heightSector);
-            Environment.Obstructions.TryGetSector(sectorIndex, out obsSector);
-
-            int lineCount = 0;
-
-            if (heightSector != null)
-            foreach (var item in heightSector)
-                lineCount += item.Item.LineCount;
-
-            if (obsSector != null)
-            foreach (var item in obsSector)
-                lineCount += item.Item.LineCount;
-
-            result.PrimitiveCount = lineCount * 2;
-            result.VertexCount = lineCount * 4;
-            result.IndexCount = lineCount * 6;
-
-            if ((result.ObstructionVertexBuffer != null) && (result.ObstructionVertexBuffer.VertexCount < result.VertexCount)) {
-                lock (Coordinator.CreateResourceLock)
-                    result.ObstructionVertexBuffer.Dispose();
-                
-                result.ObstructionVertexBuffer = null;
-            }
-
-            if ((result.ObstructionIndexBuffer != null) && (result.ObstructionIndexBuffer.IndexCount < result.IndexCount)) {
-                lock (Coordinator.CreateResourceLock)
-                    result.ObstructionIndexBuffer.Dispose();
-                
-                result.ObstructionIndexBuffer = null;
-            }
-
-            if (result.ObstructionVertexBuffer == null) {
-                lock (Coordinator.CreateResourceLock)
-                    result.ObstructionVertexBuffer = new DynamicVertexBuffer(frame.RenderManager.DeviceManager.Device, (new ShadowVertex().VertexDeclaration), result.VertexCount, BufferUsage.WriteOnly);
-            }
-
-            if (result.ObstructionIndexBuffer == null) {
-                lock (Coordinator.CreateResourceLock)
-                    result.ObstructionIndexBuffer = new DynamicIndexBuffer(frame.RenderManager.DeviceManager.Device, IndexElementSize.SixteenBits, result.IndexCount, BufferUsage.WriteOnly);
-            }
-
-            using (var va = BufferPool<ShadowVertex>.Allocate(result.VertexCount))
-            using (var ia = BufferPool<short>.Allocate(result.IndexCount)) {
-                var vb = va.Data;
-                var ib = ia.Data;
-
-                ArrayLineWriterInstance.SetOutput(vb, ib);
-
-                if (heightSector != null)
-                foreach (var itemInfo in heightSector)
-                    itemInfo.Item.GenerateLines(ArrayLineWriterInstance);
-
-                if (obsSector != null)
-                foreach (var itemInfo in obsSector)
-                    itemInfo.Item.GenerateLines(ArrayLineWriterInstance);
-
-                var linesWritten = ArrayLineWriterInstance.Finish();
-                if (linesWritten != lineCount)
-                    throw new InvalidDataException("GenerateLines didn't generate enough lines based on LineCount");
-
-                lock (Coordinator.UseResourceLock) {
-                    result.ObstructionVertexBuffer.SetData(vb, 0, result.VertexCount, SetDataOptions.Discard);
-                    result.ObstructionIndexBuffer.SetData(ib, 0, result.IndexCount, SetDataOptions.Discard);
-                }
-            }
-
-            result.FrameIndex = frame.Index;
-            result.DrawnIndex = -1;
-
-            return result;
-        }
-
         private void UpdateZRange () {
             float minZ = Environment.GroundZ;
             float maxZ = minZ;
@@ -964,7 +879,7 @@ namespace Squared.Illuminant {
             return false;
         }
 
-        const int FaceMaxLights = 3;
+        const int FaceMaxLights = 16;
 
         // HACK
         private bool      _DistanceFieldReady = false;
@@ -1339,42 +1254,6 @@ namespace Squared.Illuminant {
             lightGroup = null;
             batchFirstLightSource = null;
             PointLightBatchBuffer.Clear();
-        }
-
-        public void RenderOutlines (IBatchContainer container, int layer, bool showLights, Color? lineColor = null, Color? lightColor = null) {
-            using (var group = BatchGroup.New(container, layer)) {
-                using (var gb = GeometryBatch.New(group, 0, IlluminantMaterials.DebugOutlines)) {
-                    VisualizerLineWriterInstance.Batch = gb;
-
-                    var lc = lineColor.GetValueOrDefault(Color.White);
-                    foreach (var hv in Environment.HeightVolumes) {
-                        VisualizerLineWriterInstance.Color = lc * hv.Height;
-                        hv.GenerateLines(VisualizerLineWriterInstance);
-                    }
-
-                    VisualizerLineWriterInstance.Color = lineColor.GetValueOrDefault(Color.White);
-                    foreach (var lo in Environment.Obstructions)
-                        lo.GenerateLines(VisualizerLineWriterInstance);
-
-                    VisualizerLineWriterInstance.Batch = null;
-                }
-
-                int i = 0;
-
-                if (showLights)
-                foreach (var lightSource in Environment.LightSources) {
-                    var cMax = lightColor.GetValueOrDefault(Color.White);
-                    var cMin = cMax * 0.25f;
-
-                    using (var gb = GeometryBatch.New(group, i + 1, IlluminantMaterials.DebugOutlines)) {
-                        gb.AddFilledRing((Vector2)lightSource.Position, 0f, 2f, cMax, cMax);
-                        gb.AddFilledRing((Vector2)lightSource.Position, lightSource.RampStart - 1f, lightSource.RampStart + 1f, cMax, cMax);
-                        gb.AddFilledRing((Vector2)lightSource.Position, lightSource.RampEnd - 1f, lightSource.RampEnd + 1f, cMin, cMin);
-                    }
-
-                    i += 1;
-                }
-            }
         }
     }
 

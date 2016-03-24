@@ -20,7 +20,6 @@ namespace TestGame.Scenes {
 
         public readonly List<LightSource> Lights = new List<LightSource>();
 
-        bool ShowOutlines       = false;
         bool ShowTerrainDepth   = false;
         bool TwoPointFiveD      = false;
         bool ShowRotatingLights = false;
@@ -64,7 +63,7 @@ namespace TestGame.Scenes {
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment,
                 new RendererConfiguration(Width, Height) {
-                    DistanceFieldResolution = 0.4f,
+                    DistanceFieldResolution = 0.75f,
                     DistanceFieldSliceCount = 32
                 }
             );
@@ -95,7 +94,7 @@ namespace TestGame.Scenes {
                 Environment.LightSources.Add(light);
             }
 
-            const float angleStep = (float)(Math.PI / 128);
+            const float angleStep = (float)(Math.PI / 32);
             const int   heightTiers = 5;
             const float minHeight = 0f;
             const float maxHeight = 0.9f;
@@ -177,17 +176,11 @@ namespace TestGame.Scenes {
                         ? Renderer.TerrainDepthmap
                         : Lightmap, Vector2.Zero
                 ));
-
-            if (ShowOutlines)
-                Renderer.RenderOutlines(frame, 2, true);
         }
 
         public override void Update (GameTime gameTime) {
             if (Game.IsActive) {
                 const float step = 0.1f;
-
-                if (KeyWasPressed(Keys.O))
-                    ShowOutlines = !ShowOutlines;
 
                 if (KeyWasPressed(Keys.T))
                     ShowTerrainDepth = !ShowTerrainDepth;

@@ -14,7 +14,6 @@ namespace Squared.Illuminant {
         public static float DefaultSubdivision = 128f;
 
         public readonly SpatialCollection<LightSource> LightSources = new SpatialCollection<LightSource>(DefaultSubdivision);
-        public readonly SpatialCollection<LightObstructionBase> Obstructions = new SpatialCollection<LightObstructionBase>(DefaultSubdivision);
         public readonly SpatialCollection<HeightVolumeBase> HeightVolumes = new SpatialCollection<HeightVolumeBase>(DefaultSubdivision);
 
         public float GroundZ = 0f;
@@ -24,66 +23,7 @@ namespace Squared.Illuminant {
         // Offsets Y coordinates by (Z * -ZToYMultiplier) if TwoPointFiveD is enabled
         public float ZToYMultiplier = 1f;
 
-        public void EnumerateObstructionLinesInBounds (Bounds bounds, ILineWriter output) {
-            {
-                SpatialCollection<HeightVolumeBase>.ItemInfo ii;
-
-                using (var e = HeightVolumes.GetItemsFromBounds(bounds, false))
-                while (e.GetNext(out ii)) {
-                    if (!ii.Bounds.Intersects(bounds))
-                        continue;
-
-                    ii.Item.GenerateLines(output);
-                }
-            }
-
-            {
-                SpatialCollection<LightObstructionBase>.ItemInfo ii;
-
-                using (var e = Obstructions.GetItemsFromBounds(bounds, false))
-                while (e.GetNext(out ii)) {
-                    if (!ii.Bounds.Intersects(bounds))
-                        continue;
-
-                    ii.Item.GenerateLines(output);
-                }
-            }
-        }
-
-        public void EnumerateObstructionLinesInBounds (Bounds bounds, ILineWriter output, ref bool cancel) {
-            {
-                SpatialCollection<HeightVolumeBase>.ItemInfo ii;
-
-                using (var e = HeightVolumes.GetItemsFromBounds(bounds, false))
-                while (e.GetNext(out ii)) {
-                    if (!ii.Bounds.Intersects(bounds))
-                        continue;
-
-                    ii.Item.GenerateLines(output);
-
-                    if (cancel)
-                        return;
-                }
-            }
-
-            {
-                SpatialCollection<LightObstructionBase>.ItemInfo ii;
-
-                using (var e = Obstructions.GetItemsFromBounds(bounds, false))
-                while (e.GetNext(out ii)) {
-                    if (!ii.Bounds.Intersects(bounds))
-                        continue;
-
-                    ii.Item.GenerateLines(output);
-
-                    if (cancel)
-                        return;
-                }
-            }
-        }
-
         public void Clear () {
-            Obstructions.Clear();
             LightSources.Clear();
         }
     }
