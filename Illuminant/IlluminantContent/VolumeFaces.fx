@@ -54,6 +54,7 @@ void FrontFacePixelShader (
 ) {
     float3 accumulator = float3(0, 0, 0);
 
+    [loop]
     for (int i = 0; i < NumLights; i++) {
         // FIXME: What about z?
         float3 properties = LightProperties[i];
@@ -99,6 +100,7 @@ void TopFacePixelShader(
 
     float2 terrainZ = sampleTerrain(worldPosition.xy);
 
+    [loop]
     for (int i = 0; i < NumLights; i++) {
         // FIXME: What about z?
         float3 properties = LightProperties[i];

@@ -1094,10 +1094,6 @@ namespace Squared.Illuminant {
         }
 
         private void RenderDistanceField (ref int layerIndex, IBatchContainer resultGroup) {
-            var vertexDataTextures = new Dictionary<object, Texture2D>();
-            var intParameters = IlluminantMaterials.DistanceFieldInterior.Effect.Parameters;
-            var extParameters = IlluminantMaterials.DistanceFieldExterior.Effect.Parameters;
-
             var indices = new short[] {
                 0, 1, 3, 1, 2, 3
             };
@@ -1109,121 +1105,135 @@ namespace Squared.Illuminant {
                     rtGroup, 0, Materials.Clear, Color.Transparent
                 );
 
-                for (var _slice = 0; _slice < Configuration.DistanceFieldSliceCount; _slice++) {
-                    int slice = _slice;
+                var vertexDataTextures = new Dictionary<object, Texture2D>();
+                var intParameters = IlluminantMaterials.DistanceFieldInterior.Effect.Parameters;
+                var extParameters = IlluminantMaterials.DistanceFieldExterior.Effect.Parameters;
 
-                    float sliceZ = (slice / (float)(Configuration.DistanceFieldSliceCount - 1));
-                    int displaySlice = slice / 2;
-                    var sliceX = (displaySlice % DistanceFieldSlicesX) * DistanceFieldSliceWidth;
-                    var sliceY = (displaySlice / DistanceFieldSlicesX) * DistanceFieldSliceHeight;
-                    var sliceXVirtual = (displaySlice % DistanceFieldSlicesX) * Configuration.MaximumRenderSize.First;
-                    var sliceYVirtual = (displaySlice / DistanceFieldSlicesX) * Configuration.MaximumRenderSize.Second;
+                for (var slice = 0; slice < Configuration.DistanceFieldSliceCount; slice++)
+                    RenderDistanceFieldSlice(indices, rtGroup, vertexDataTextures, intParameters, extParameters, slice);
 
-                    using (var group = BatchGroup.New(rtGroup, slice + 1,
-                        // FIXME: Optimize this
-                        (dm, _) => {                            
-                            var vt = ViewTransform.CreateOrthographic(
-                                Configuration.MaximumRenderSize.First * DistanceFieldSlicesX,
-                                Configuration.MaximumRenderSize.Second * DistanceFieldSlicesY
-                            );
-                            vt.Position = new Vector2(-sliceXVirtual, -sliceYVirtual);
-                            Materials.PushViewTransform(ref vt);
+                foreach (var kvp in vertexDataTextures)
+                    Coordinator.DisposeResource(kvp.Value);
+            }
+        }
 
-                            dm.Device.ScissorRectangle = new Rectangle(
-                                sliceX, sliceY, DistanceFieldSliceWidth, DistanceFieldSliceHeight
-                            );
-                            dm.Device.BlendState = ((slice % 2) == 0)
-                                ? EvenSlice
-                                : OddSlice;
+        private void RenderDistanceFieldSlice (
+            short[] indices, BatchGroup rtGroup, 
+            Dictionary<object, Texture2D> vertexDataTextures, 
+            EffectParameterCollection intParameters, EffectParameterCollection extParameters, 
+            int slice
+        ) {
+            float sliceZ = (slice / (float)(Configuration.DistanceFieldSliceCount - 1));
+            int displaySlice = slice / 2;
+            var sliceX = (displaySlice % DistanceFieldSlicesX) * DistanceFieldSliceWidth;
+            var sliceY = (displaySlice / DistanceFieldSlicesX) * DistanceFieldSliceHeight;
+            var sliceXVirtual = (displaySlice % DistanceFieldSlicesX) * Configuration.MaximumRenderSize.First;
+            var sliceYVirtual = (displaySlice / DistanceFieldSlicesX) * Configuration.MaximumRenderSize.Second;
 
-                            SetDistanceFieldParameters(IlluminantMaterials.DistanceFieldInterior.Effect.Parameters, false);
-                            SetDistanceFieldParameters(IlluminantMaterials.DistanceFieldExterior.Effect.Parameters, false);
-                        },
-                        (dm, _) => {
-                            Materials.PopViewTransform();
-                        }
-                    )) {
-                        if (Render.Tracing.RenderTrace.EnableTracing)
-                            Render.Tracing.RenderTrace.Marker(group, -1, "LightingRenderer {0:X4} : Begin Distance Field Slice #{1}", this.GetHashCode(), slice);
+            using (var group = BatchGroup.New(rtGroup, slice + 1,
+                // FIXME: Optimize this
+                (dm, _) => {
+                    var vt = ViewTransform.CreateOrthographic(
+                        Configuration.MaximumRenderSize.First * DistanceFieldSlicesX,
+                        Configuration.MaximumRenderSize.Second * DistanceFieldSlicesY
+                    );
+                    vt.Position = new Vector2(-sliceXVirtual, -sliceYVirtual);
+                    Materials.PushViewTransform(ref vt);
 
-                        int i = 1;
+                    dm.Device.ScissorRectangle = new Rectangle(
+                        sliceX, sliceY, DistanceFieldSliceWidth, DistanceFieldSliceHeight
+                    );
+                    dm.Device.BlendState = ((slice % 2) == 0)
+                        ? EvenSlice
+                        : OddSlice;
 
-                        // Rasterize the height volumes in sequential order.
-                        // FIXME: Depth buffer/stencil buffer tricks should work for generating this SDF, but don't?
-                        using (var interiorGroup = BatchGroup.ForRenderTarget(group, 1, _DistanceField, (dm, _) => {
-                            dm.Device.RasterizerState = RenderStates.ScissorOnly;
-                            dm.Device.DepthStencilState = DepthStencilState.None;
-                        }))
-                        using (var exteriorGroup = BatchGroup.ForRenderTarget(group, 2, _DistanceField, (dm, _) => {
-                            dm.Device.RasterizerState = RenderStates.ScissorOnly;
-                            dm.Device.DepthStencilState = DepthStencilState.None;
-                        }))
-                            foreach (var hv in Environment.HeightVolumes) {
-                                var p = hv.Polygon;
-                                var m = hv.Mesh3D;
-                                var b = hv.Bounds.Expand(DistanceLimit, DistanceLimit);
+                    SetDistanceFieldParameters(IlluminantMaterials.DistanceFieldInterior.Effect.Parameters, false);
+                    SetDistanceFieldParameters(IlluminantMaterials.DistanceFieldExterior.Effect.Parameters, false);
+                },
+                (dm, _) => {
+                    Materials.PopViewTransform();
+                }
+            )) {
+                if (Render.Tracing.RenderTrace.EnableTracing)
+                    Render.Tracing.RenderTrace.Marker(group, -1, "LightingRenderer {0:X4} : Begin Distance Field Slice #{1}", this.GetHashCode(), slice);
 
-                                var verts = new VertexPositionColor[] {
+                RenderDistanceFieldHeightVolumes(indices, vertexDataTextures, intParameters, extParameters, sliceZ, group);
+
+                if (Render.Tracing.RenderTrace.EnableTracing)
+                    Render.Tracing.RenderTrace.Marker(group, 2, "LightingRenderer {0:X4} : End Distance Field Slice #{1}", this.GetHashCode(), slice);
+            }
+        }
+
+        private void RenderDistanceFieldHeightVolumes (short[] indices, Dictionary<object, Texture2D> vertexDataTextures, EffectParameterCollection intParameters, EffectParameterCollection extParameters, float sliceZ, BatchGroup group) {
+            int i = 1;
+
+            // Rasterize the height volumes in sequential order.
+            // FIXME: Depth buffer/stencil buffer tricks should work for generating this SDF, but don't?
+            using (var interiorGroup = BatchGroup.ForRenderTarget(group, 1, _DistanceField, (dm, _) => {
+                dm.Device.RasterizerState = RenderStates.ScissorOnly;
+                dm.Device.DepthStencilState = DepthStencilState.None;
+            }))
+            using (var exteriorGroup = BatchGroup.ForRenderTarget(group, 2, _DistanceField, (dm, _) => {
+                dm.Device.RasterizerState = RenderStates.ScissorOnly;
+                dm.Device.DepthStencilState = DepthStencilState.None;
+            }))
+                foreach (var hv in Environment.HeightVolumes) {
+                    var p = hv.Polygon;
+                    var m = hv.Mesh3D;
+                    var b = hv.Bounds.Expand(DistanceLimit, DistanceLimit);
+
+                    var verts = new VertexPositionColor[] {
                                     new VertexPositionColor(new Vector3(b.TopLeft, 0), Color.White),
                                     new VertexPositionColor(new Vector3(b.TopRight, 0), Color.White),
                                     new VertexPositionColor(new Vector3(b.BottomRight, 0), Color.White),
                                     new VertexPositionColor(new Vector3(b.BottomLeft, 0), Color.White)
                                 };
 
-                                Texture2D vertexDataTexture;
+                    Texture2D vertexDataTexture;
 
-                                if (!vertexDataTextures.TryGetValue(p, out vertexDataTexture))
-                                lock (Coordinator.CreateResourceLock) {
-                                    vertexDataTexture = new Texture2D(Coordinator.Device, p.Count, 1, false, SurfaceFormat.Vector2);
-                                    vertexDataTextures[p] = vertexDataTexture;
-                                }
+                    if (!vertexDataTextures.TryGetValue(p, out vertexDataTexture))
+                        lock (Coordinator.CreateResourceLock) {
+                            vertexDataTexture = new Texture2D(Coordinator.Device, p.Count, 1, false, SurfaceFormat.Vector2);
+                            vertexDataTextures[p] = vertexDataTexture;
+                        }
 
-                                vertexDataTexture.SetData(p.GetVertices());
+                    vertexDataTexture.SetData(p.GetVertices());
 
-                                using (var batch = PrimitiveBatch<VertexPositionColor>.New(
-                                    interiorGroup, i, IlluminantMaterials.DistanceFieldInterior,
-                                    (dm, _) => {
-                                        intParameters["NumVertices"].SetValue(p.Count);
-                                        intParameters["VertexDataTexture"].SetValue(vertexDataTexture);
-                                        intParameters["SliceZ"].SetValue(sliceZ);
-                                        intParameters["MinZ"].SetValue(hv.ZBase);
-                                        intParameters["MaxZ"].SetValue(hv.ZBase + hv.Height);
-                                        IlluminantMaterials.DistanceFieldInterior.Flush();
-                                    }
-                                ))
-                                    batch.Add(new PrimitiveDrawCall<VertexPositionColor>(
-                                        PrimitiveType.TriangleList,
-                                        m, 0, m.Length / 3
-                                    ));
+                    using (var batch = PrimitiveBatch<VertexPositionColor>.New(
+                        interiorGroup, i, IlluminantMaterials.DistanceFieldInterior,
+                        (dm, _) => {
+                            intParameters["NumVertices"].SetValue(p.Count);
+                            intParameters["VertexDataTexture"].SetValue(vertexDataTexture);
+                            intParameters["SliceZ"].SetValue(sliceZ);
+                            intParameters["MinZ"].SetValue(hv.ZBase);
+                            intParameters["MaxZ"].SetValue(hv.ZBase + hv.Height);
+                            IlluminantMaterials.DistanceFieldInterior.Flush();
+                        }
+                    ))
+                        batch.Add(new PrimitiveDrawCall<VertexPositionColor>(
+                            PrimitiveType.TriangleList,
+                            m, 0, m.Length / 3
+                        ));
 
 
-                                using (var batch = PrimitiveBatch<VertexPositionColor>.New(
-                                    exteriorGroup, i, IlluminantMaterials.DistanceFieldExterior,
-                                    (dm, _) => {
-                                        extParameters["NumVertices"].SetValue(p.Count);
-                                        extParameters["VertexDataTexture"].SetValue(vertexDataTexture);
-                                        extParameters["SliceZ"].SetValue(sliceZ);
-                                        extParameters["MinZ"].SetValue(hv.ZBase);
-                                        extParameters["MaxZ"].SetValue(hv.ZBase + hv.Height);
-                                        IlluminantMaterials.DistanceFieldExterior.Flush();
-                                    }
-                                ))
-                                    batch.Add(new PrimitiveDrawCall<VertexPositionColor>(
-                                        PrimitiveType.TriangleList,
-                                        verts, 0, verts.Length, indices, 0, indices.Length / 3
-                                    ));
+                    using (var batch = PrimitiveBatch<VertexPositionColor>.New(
+                        exteriorGroup, i, IlluminantMaterials.DistanceFieldExterior,
+                        (dm, _) => {
+                            extParameters["NumVertices"].SetValue(p.Count);
+                            extParameters["VertexDataTexture"].SetValue(vertexDataTexture);
+                            extParameters["SliceZ"].SetValue(sliceZ);
+                            extParameters["MinZ"].SetValue(hv.ZBase);
+                            extParameters["MaxZ"].SetValue(hv.ZBase + hv.Height);
+                            IlluminantMaterials.DistanceFieldExterior.Flush();
+                        }
+                    ))
+                        batch.Add(new PrimitiveDrawCall<VertexPositionColor>(
+                            PrimitiveType.TriangleList,
+                            verts, 0, verts.Length, indices, 0, indices.Length / 3
+                        ));
 
-                                i++;
-                            }
-
-                        if (Render.Tracing.RenderTrace.EnableTracing)
-                            Render.Tracing.RenderTrace.Marker(group, 2, "LightingRenderer {0:X4} : End Distance Field Slice #{1}", this.GetHashCode(), slice);
-                    }
+                    i++;
                 }
-            }
-
-            foreach (var kvp in vertexDataTextures)
-                Coordinator.DisposeResource(kvp.Value);
         }
 
         private void FlushPointLightBatch (ref BatchGroup lightGroup, ref LightSource batchFirstLightSource, ref int layerIndex) {

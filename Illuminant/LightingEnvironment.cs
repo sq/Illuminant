@@ -14,11 +14,18 @@ namespace Squared.Illuminant {
         public static float DefaultSubdivision = 128f;
 
         public readonly SpatialCollection<LightSource> LightSources = new SpatialCollection<LightSource>(DefaultSubdivision);
+        // SDF objects that define obstructions to be rendered into the distance field
+        public readonly List<LightObstruction> Obstructions = new List<LightObstruction>();
+        // Polygonal meshes that define 3D volumes that are rendered into the distance field
+        // In 2.5d mode the volumes' top and front faces are also rendered directly into the scene
         public readonly SpatialCollection<HeightVolumeBase> HeightVolumes = new SpatialCollection<HeightVolumeBase>(DefaultSubdivision);
 
+        // The Z value of the ground plane.
         public float GroundZ = 0f;
 
         // Scaling factor for falloff based on Z (since Z is 0-1 instead of in pixels)
+        // This also affects the contribution of Z values to the distance field,
+        //  because the x/y distances are in pixels and completely outweigh the z distances
         public float ZDistanceScale = 1f;
         // Offsets Y coordinates by (Z * -ZToYMultiplier) if TwoPointFiveD is enabled
         public float ZToYMultiplier = 1f;
