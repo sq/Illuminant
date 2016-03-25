@@ -109,10 +109,10 @@ namespace TestGame.Scenes {
                     TwoPointFiveD = true,
                     DistanceFieldResolution = 0.5f,
                     DistanceFieldSliceCount = 48,
-                    DistanceFieldStepSize = 1.33f,
-                    DistanceFieldOcclusionToOpacityPower = 0.45f,
-                    DistanceFieldConeGrowthRate = 0.2f,
-                    DistanceFieldMaxConeRadius = 16,
+                    DistanceFieldMinStepSize = 1.5f,
+                    DistanceFieldLongStepFactor = 0.5f,
+                    DistanceFieldOcclusionToOpacityPower = 0.55f,
+                    DistanceFieldMaxConeRadius = 32,
                     DistanceFieldCaching = true
                 }
             );
@@ -120,7 +120,7 @@ namespace TestGame.Scenes {
             var light = new LightSource {
                 Position = new Vector3(64, 64, 0.7f),
                 Color = new Vector4(1f, 1f, 1f, 0.5f),
-                Radius = 4,
+                Radius = 16,
                 RampLength = 600,
                 RampMode = LightSourceRampMode.Exponential
             };

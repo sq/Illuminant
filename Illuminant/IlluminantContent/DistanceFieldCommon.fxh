@@ -1,3 +1,5 @@
+#define PI 3.14159265359
+
 // This is a distance of 0
 // Moving this value up/down allocates more precision to positive or negative distances
 #define DISTANCE_ZERO (192.0 / 255.0)
@@ -10,15 +12,12 @@
 //  *and* it's mathematically correct!
 #define DISTANCE_FIELD_FILTER LINEAR
 
-// HACK: Step by a fraction of the distance to the next object for better accuracy
-// 0.5 seems to eliminate banding artifacts and stuff.
-#define PARTIAL_STEP_SIZE 0.5
-
 // The minimum and maximum approximate cone tracing radius
 // The radius increases as the cone approaches the light source
 // Raising the maximum produces soft shadows, but if it's too large you will get artifacts.
 // A larger minimum increases the size of the AO 'blobs' around distant obstructions.
-#define MIN_CONE_RADIUS 1
+#define MIN_CONE_RADIUS 0.66
+#define MAX_ANGLE_DEGREES 15
 // See uniforms for the other two constants
 
 // We threshold shadow values from cone tracing to eliminate 'almost obstructed' and 'almost unobstructed' artifacts
@@ -59,17 +58,17 @@ float decodeDistance (float encodedDistance) {
     return (DISTANCE_ZERO - encodedDistance) * DISTANCE_MAX;
 }
 
-// See min growth rate constant above
-uniform float DistanceFieldMaxConeRadius;
-
-// The rate the cone is allowed to grow per-pixel
-uniform float DistanceFieldConeGrowthRate;
+// The maximum radius of the cone
+uniform float  DistanceFieldMaxConeRadius;
 
 // Occlusion values are mapped to opacity values via this exponent
 uniform float  DistanceFieldOcclusionToOpacityPower;
 
 // Traces always walk at least this many pixels per step
 uniform float  DistanceFieldMinimumStepSize;
+
+// Scales the length of long steps taken outside objects
+uniform float  DistanceFieldLongStepFactor;
 
 
 uniform float  DistanceFieldInvScaleFactor;
@@ -142,32 +141,29 @@ void coneTraceStep (
     in    float3 traceVector,
     in    float  traceLength,
     in    float  minStepSize,
-    in    float4 coneRadiusRamp,
-    in    float  distanceAtShadedPoint,
+    in    float3 coneRadiusSettings,
     inout float  traceOffset,
-    inout float  visibility,
-    inout bool   obstructionCompensation
+    inout float  visibility
 ) {
+    // We approximate the cone with a series of spheres
+    float localSphereRadius = clamp(traceOffset * coneRadiusSettings.z, coneRadiusSettings.x, coneRadiusSettings.y);
+
     float distanceToObstacle = sampleAlongRay(traceStart, traceVector, traceOffset);
 
-    /*
-    if (obstructionCompensation) {
-        // HACK: When shading a pixel that is known be in/on an obstruction, we ignore
-        //  trace samples until we have successfully left the obstruction
-        // Obstruction compensation is based on the expectation that the obstacle ends at
-        //  -initialDistance along the ray, which is... usually true
-        float expectedDistance = distanceAtShadedPoint + traceOffset - OBSTRUCTION_FUDGE;
-        
-        if (distanceToObstacle < expectedDistance)
-            obstructionCompensation = false;
-    } else {
-    */
-        float coneRadius = lerp(coneRadiusRamp.x, coneRadiusRamp.y, clamp(traceOffset - coneRadiusRamp.z, 0, coneRadiusRamp.w) / coneRadiusRamp.w);
-        float localVisibility = clamp(distanceToObstacle, 0, coneRadius) * DENORMAL_HACK / coneRadius;
-        visibility = min(visibility, localVisibility);
-    // }
+    float localVisibility = clamp(distanceToObstacle, 0, localSphereRadius) * DENORMAL_HACK / localSphereRadius;
+    visibility = min(visibility, localVisibility);
 
-    traceOffset = traceOffset + max(abs(distanceToObstacle) * PARTIAL_STEP_SIZE, minStepSize);
+    float stepSize = max(
+        abs(distanceToObstacle) * (
+            // Steps outside of objects can be scaled to be longer/shorter to adjust the quality
+            //  of partial visibility areas
+            (distanceToObstacle < 0)
+                ? 1
+                : DistanceFieldLongStepFactor
+        ), minStepSize
+    );
+
+    traceOffset = traceOffset + stepSize;
 }
 
 float coneTrace (
@@ -181,32 +177,27 @@ float coneTrace (
     shadedPixelPosition.z *= ZDistanceScale;
 
     float minStepSize = max(1, DistanceFieldMinimumStepSize);
-    float3 traceVector = (lightCenter - shadedPixelPosition);
+
     // Obstruction compensation involves shading a short distance away from the surface so it doesn't self-occlude
     float traceOffset = obstructionCompensation * 2;
-    // HACK: We reduce the length of the trace so that we stop at the closest point on the surface of the light.
-    float traceLength = max(length(traceVector) - lightRamp.x, traceOffset);
+
+    float3 traceVector = (lightCenter - shadedPixelPosition);
+    float  traceLength = length(traceVector);
     traceVector = normalize(traceVector);
 
-    float4 coneRadiusRamp = float4(
+    float maxTangentAngle = tan(MAX_ANGLE_DEGREES * PI / 180.0f);
+    float lightTangentAngle = min(lightRamp.x / traceLength, maxTangentAngle);
+
+    float3 coneRadiusSettings = float3(
         MIN_CONE_RADIUS,
         clamp(lightRamp.x, MIN_CONE_RADIUS, DistanceFieldMaxConeRadius),
-        lightRamp.x,
-        traceLength
+        lightTangentAngle
     );
 
     float fst = FULLY_SHADOWED_THRESHOLD * DENORMAL_HACK;
     float visibility = 1.0 * DENORMAL_HACK;
     bool abort = false;
 
-    // If the shaded point is completely within an obstacle we kill the trace early
-    float distanceAtShadedPoint = sampleDistanceField(shadedPixelPosition);
-    /*
-    if ((distanceAtShadedPoint < OBSTRUCTION_FUDGE) && !obstructionCompensation)
-        return 0;
-    */
-
-    // FIXME: Did I get this right? Should always do a step at the beginning and end of the ray
     [loop]
     while (!abort) {
         abort = (traceOffset >= traceLength) || 
@@ -216,8 +207,8 @@ float coneTrace (
 
         coneTraceStep(
             shadedPixelPosition, traceVector, traceLength, 
-            minStepSize, coneRadiusRamp, distanceAtShadedPoint, 
-            traceOffset, visibility, obstructionCompensation
+            minStepSize, coneRadiusSettings, 
+            traceOffset, visibility
         );
     }
 

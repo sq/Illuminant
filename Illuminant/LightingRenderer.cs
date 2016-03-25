@@ -21,11 +21,22 @@ namespace Squared.Illuminant {
         public float ZOffset                     = 0.0f;
         public float ZScale                      = 1.0f;
         public float HeightmapResolution         = 1.0f;
-        public float DistanceFieldStepSize       = 3.0f;
+        // Individual cone trace steps are not allowed to be any shorter than this.
+        // Improves the worst-case performance of the trace and avoids spending forever
+        //  stepping short distances around the edges of objects.
+        // Setting this to 1 produces the 'best' results but larger values tend to look
+        //  just fine.
+        public float DistanceFieldMinStepSize    = 3.0f;
+        // Long step distances are scaled by this factor. A factor < 1.0
+        //  eliminates banding artifacts in the soft area between full/no shadow,
+        //  at the cost of additional cone trace steps.
+        // This effectively increases how much time we spend outside of objects,
+        //  producing higher quality as a side effect.
+        // Only set this above 1.0 if you love goofy looking artifacts
+        public float DistanceFieldLongStepFactor = 1.0f;
         public float DistanceFieldResolution     = 1.0f;
         public int   DistanceFieldSliceCount     = 1;
         public float DistanceFieldMaxConeRadius  = 8;
-        public float DistanceFieldConeGrowthRate = 1;
         public bool  DistanceFieldCaching        = true;
         public float DistanceFieldOcclusionToOpacityPower = 1;
 
@@ -895,10 +906,10 @@ namespace Squared.Illuminant {
             );
             p["DistanceFieldTextureTexelSize"].SetValue(tsize);
             p["DistanceFieldInvScaleFactor"].SetValue(1f / Configuration.DistanceFieldResolution);
-            p["DistanceFieldMinimumStepSize"].SetValue(Configuration.DistanceFieldStepSize);
+            p["DistanceFieldMinimumStepSize"].SetValue(Configuration.DistanceFieldMinStepSize);
+            p["DistanceFieldLongStepFactor"].SetValue(Configuration.DistanceFieldLongStepFactor);
             p["DistanceFieldOcclusionToOpacityPower"].SetValue(Configuration.DistanceFieldOcclusionToOpacityPower);
             p["DistanceFieldMaxConeRadius"].SetValue(Configuration.DistanceFieldMaxConeRadius);
-            p["DistanceFieldConeGrowthRate"].SetValue(Configuration.DistanceFieldConeGrowthRate);
 
             if (setDistanceTexture)
                 p["DistanceFieldTexture"].SetValue(_DistanceField);
