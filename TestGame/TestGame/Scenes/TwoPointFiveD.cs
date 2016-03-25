@@ -165,7 +165,7 @@ namespace TestGame.Scenes {
                     new Vector3(500, 750, 0), new Vector3(60, 30, 0.1f)
                 ));
 
-            if (true)
+            if (false)
                 Environment.HeightVolumes.Clear();
 
             Environment.ZDistanceScale = 128;

@@ -141,23 +141,26 @@ void coneTraceStep (
     in    float3 traceStart,
     in    float3 traceVector,
     in    float  traceLength,
-    in    float  minStepSize, 
+    in    float  minStepSize,
+    in    float3 coneRadiusRamp,
     inout float  previousOffset, 
     inout float  previousDistance, 
     inout float  previousDerivative,
     inout float  traceOffset,
-    inout float  minimumObservedDistance
+    inout float  visibility
 ) {
     float distanceToObstacle = sampleAlongRay(traceStart, traceVector, traceOffset);
 
     float derivative = (distanceToObstacle - previousDistance) / (traceOffset - previousOffset);
     float secondOrderDerivative = (derivative - previousDerivative) / (traceOffset - previousOffset);
 
-    minimumObservedDistance = min(minimumObservedDistance, distanceToObstacle);
-
     previousDerivative = derivative;
     previousDistance = distanceToObstacle;
     previousOffset = traceOffset;
+
+    float coneRadius = lerp(coneRadiusRamp.x, coneRadiusRamp.y, traceOffset / coneRadiusRamp.z);
+    float localVisibility = clamp(distanceToObstacle, 0, coneRadius) * DENORMAL_HACK / coneRadius;
+    visibility = min(visibility, localVisibility);
 
     traceOffset = traceOffset + max(abs(distanceToObstacle) * PARTIAL_STEP_SIZE, minStepSize);
 }
@@ -174,64 +177,55 @@ float coneTrace (
 
     float minStepSize = max(1, DistanceFieldMinimumStepSize);
     float3 traceVector = (lightCenter - shadedPixelPosition);
+    // HACK: We reduce the length of the trace so that we stop at the closest point on the surface of the light.
     float traceLength = max(length(traceVector) - lightRamp.x, 0);
-    traceVector = normalize(traceVector);
-    // Start on the closest point within the light source
     float traceOffset = 0;
+    traceVector = normalize(traceVector);
+
+    float3 coneRadiusRamp = float3(
+        MIN_CONE_RADIUS,
+        clamp(lightRamp.x, MIN_CONE_RADIUS, DistanceFieldMaxConeRadius),
+        traceLength
+    );
+
+    // HACK
+    coneRadiusRamp.x = coneRadiusRamp.y;
 
     float fst = FULLY_SHADOWED_THRESHOLD * DENORMAL_HACK;
-
-    float minimumObservedDistance = 99999;
+    float visibility = 1.0 * DENORMAL_HACK;
     bool abort = false;
 
     // If the shaded point is completely within an obstacle we kill the trace early
     float distanceAtShadedPoint = sampleDistanceField(shadedPixelPosition);
-    /*
     if (distanceAtShadedPoint < OBSTRUCTION_FUDGE)
         return 0;
-    */
 
-    // FIXME: This is a point light, we probably want area lights
-    // Same goes for the light
-    float distanceAtLight       = sampleDistanceField(lightCenter);
-    /*
-    if (distanceAtLight < OBSTRUCTION_FUDGE)
-        return 0;
-    */
-
-    // Sample a step backward along the ray to compute a 'previous' derivative and prime the loop
-    float previousOffset     = -distanceAtShadedPoint;
+    // Sample a half-step backward along the ray to compute a 'previous' derivative and prime the loop
+    float previousOffset     = -distanceAtShadedPoint * 0.5;
     float previousDistance   = sampleAlongRay(shadedPixelPosition, traceVector, previousOffset);
-    float previousDerivative = (distanceAtShadedPoint - previousDistance) / abs(distanceAtShadedPoint);
+    float previousDerivative = (distanceAtShadedPoint - previousDistance) / abs(previousOffset);
 
     // FIXME: Did I get this right? Should always do a step at the beginning and end of the ray
     [loop]
     while (!abort) {
-        abort = (traceOffset >= traceLength) || (minimumObservedDistance < OBSTRUCTION_FUDGE);
+        abort = (traceOffset >= traceLength) || 
+            (visibility < fst);
         if (abort)
             traceOffset = traceLength;
 
         coneTraceStep(
-            shadedPixelPosition, traceVector, traceLength, minStepSize,
+            shadedPixelPosition, traceVector, traceLength, minStepSize, coneRadiusRamp,
             previousOffset, previousDistance, previousDerivative,
-            traceOffset, minimumObservedDistance
+            traceOffset, visibility
         );
     }
 
-    float coneRadius = min(max(lightRamp.x, MIN_CONE_RADIUS), DistanceFieldMaxConeRadius);
-    return clamp(
-        minimumObservedDistance / coneRadius,
-        0, 1
-    );
-
-    /*
     return pow(
         clamp(
-            clamp((coneAttenuation - fst) / DENORMAL_HACK, 0, 1) / 
+            clamp((visibility - fst) / DENORMAL_HACK, 0, 1) / 
             (UNSHADOWED_THRESHOLD - FULLY_SHADOWED_THRESHOLD),
             0, 1
         ), 
         DistanceFieldOcclusionToOpacityPower
     );
-    */
 }
