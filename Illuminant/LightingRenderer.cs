@@ -539,8 +539,8 @@ namespace Squared.Illuminant {
                 );
             } else {
                 scissorBounds = new Bounds(
-                    ((Vector2)ls.Position - new Vector2(ls.RampEnd) - Materials.ViewportPosition) * scale,
-                    ((Vector2)ls.Position + new Vector2(ls.RampEnd) - Materials.ViewportPosition) * scale
+                    ((Vector2)ls.Position - new Vector2(ls.RampLength) - Materials.ViewportPosition) * scale,
+                    ((Vector2)ls.Position + new Vector2(ls.RampLength) - Materials.ViewportPosition) * scale
                 );
             }
 
@@ -642,7 +642,7 @@ namespace Squared.Illuminant {
             vertex.LightCenter = lightSource.Position;
             vertex.Color = lightSource.Color;
             vertex.Color.W *= (lightSource.Opacity * intensityScale);
-            vertex.Ramp = new Vector2(lightSource.RampStart, lightSource.RampEnd);
+            vertex.Ramp = new Vector2(lightSource.Radius, lightSource.RampLength);
             return vertex;
         }
 
@@ -710,7 +710,7 @@ namespace Squared.Illuminant {
                     if (lightSource.Opacity <= 0)
                         continue;
 
-                    var lightBounds = new Bounds((Vector2)lightSource.Position - new Vector2(lightSource.RampEnd), (Vector2)lightSource.Position + new Vector2(lightSource.RampEnd));
+                    var lightBounds = new Bounds((Vector2)lightSource.Position - new Vector2(lightSource.RampLength), (Vector2)lightSource.Position + new Vector2(lightSource.RampLength));
 
                     // FIXME: Broken :(
                     if (false) {
@@ -926,7 +926,7 @@ namespace Squared.Illuminant {
                 _LightNeutralColors[i] = ls.NeutralColor;
                 _LightColors[i]        = ls.Color;
                 _LightProperties[i]    = new Vector3(
-                    ls.RampStart, ls.RampEnd,
+                    ls.Radius, ls.RampLength,
                     (ls.RampMode == LightSourceRampMode.Exponential)
                         ? 1
                         : 0

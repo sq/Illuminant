@@ -36,7 +36,7 @@ namespace TestGame.Scenes {
             int scaledWidth = (int)Width;
             int scaledHeight = (int)Height;
 
-            const int multisampleCount = 8;
+            const int multisampleCount = 0;
 
             if (scaledWidth < 4)
                 scaledWidth = 4;
@@ -113,15 +113,15 @@ namespace TestGame.Scenes {
                     DistanceFieldOcclusionToOpacityPower = 0.45f,
                     DistanceFieldConeGrowthRate = 0.2f,
                     DistanceFieldMaxConeRadius = 16,
-                    DistanceFieldCaching = false
+                    DistanceFieldCaching = true
                 }
             );
 
             var light = new LightSource {
                 Position = new Vector3(64, 64, 0.7f),
                 Color = new Vector4(1f, 1f, 1f, 0.5f),
-                RampStart = 60,
-                RampEnd = 600,
+                Radius = 32,
+                RampLength = 400,
                 RampMode = LightSourceRampMode.Exponential
             };
 
@@ -131,13 +131,16 @@ namespace TestGame.Scenes {
             var light2 = new LightSource {
                 Position = new Vector3(1024, 800, 2.5f),
                 Color = new Vector4(0.2f, 0.4f, 0.6f, 0.4f),
-                RampStart = 1024,
-                RampEnd = 10240,
+                // FIXME: Implement directional lights and make this one
+                Radius = 128,
+                RampLength = 2048,
                 RampMode = LightSourceRampMode.Linear
             };
 
-            Lights.Add(light2);
-            Environment.LightSources.Add(light2);
+            if (false) {
+                Lights.Add(light2);
+                Environment.LightSources.Add(light2);
+            }
 
             Rect(new Vector2(330, 337), new Vector2(Width, 394), 0f, 0.435f);
 
@@ -150,18 +153,19 @@ namespace TestGame.Scenes {
                 Ellipse(new Vector2(500, 825), 35f, 35f, 0.35f, 0.10f);
             }
 
-            if (false)
+            if (true)
                 Environment.Obstructions.Add(new LightObstruction(
                     LightObstructionType.Box, 
                     new Vector3(500, 750, 0), new Vector3(50, 100, 0.1f)
                 ));
 
-            Environment.Obstructions.Add(new LightObstruction(
-                LightObstructionType.Ellipsoid, 
-                new Vector3(500, 750, 0), new Vector3(120, 120, 0.1f)
-            ));
+            if (true)
+                Environment.Obstructions.Add(new LightObstruction(
+                    LightObstructionType.Ellipsoid, 
+                    new Vector3(500, 750, 0), new Vector3(60, 30, 0.1f)
+                ));
 
-            if (false)
+            if (true)
                 Environment.HeightVolumes.Clear();
 
             Environment.ZDistanceScale = 128;

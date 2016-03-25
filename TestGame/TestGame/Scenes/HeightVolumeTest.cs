@@ -72,8 +72,8 @@ namespace TestGame.Scenes {
                 Position = new Vector2(64, 64),
                 Color = new Vector4(1f, 1f, 1f, 1),
                 Opacity = 0.9f,
-                RampStart = 100,
-                RampEnd = 700,
+                Radius = 100,
+                RampLength = 700,
                 RampMode = LightSourceRampMode.Exponential
             };
 
@@ -85,8 +85,8 @@ namespace TestGame.Scenes {
                 light = new LightSource {
                     Position = new Vector3(64, 64, rng.NextFloat(0.1f, 2.0f)),
                     Color = new Vector4((float)rng.NextDouble(0.2f, 0.7f), (float)rng.NextDouble(0.2f, 0.7f), (float)rng.NextDouble(0.2f, 0.7f), 1.0f),
-                    RampStart = rng.NextFloat(40, 68),
-                    RampEnd = rng.NextFloat(210, 300),
+                    Radius = rng.NextFloat(40, 68),
+                    RampLength = rng.NextFloat(210, 300),
                     RampMode = LightSourceRampMode.Exponential
                 };
 

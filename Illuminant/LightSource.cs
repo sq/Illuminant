@@ -15,7 +15,7 @@ namespace Squared.Illuminant {
 
         private LightPosition _Position;
         private Bounds3 _Bounds;
-        private float _RampEnd = 1;
+        private float _RampLength = 1;
         private Texture2D _RampTexture = null;
 
         internal int _RampTextureID;
@@ -36,12 +36,12 @@ namespace Squared.Illuminant {
             }
         }
 
-        public float RampEnd {
+        public float RampLength {
             get {
-                return _RampEnd;
+                return _RampLength;
             }
             set {
-                _RampEnd = value;
+                _RampLength = value;
                 UpdateBounds();
             }
         }
@@ -73,8 +73,8 @@ namespace Squared.Illuminant {
         public Vector4 Color = Vector4.One;
         // The color the light ramps down to. You can use this to approximate ambient light when using LightSourceMode.Max/Min/Replace.
         public Vector4 NeutralColor = Vector4.Zero;
-        // The distance from the light source at which the light begins to ramp down.
-        public float RampStart = 0;
+        // The size of the light source.
+        public float Radius = 0;
         // An optional rectangular clipping region to constrain the light source's light.
         public Bounds? ClipRegion = null;
         // A separate opacity factor that you can use to easily fade lights in/out.
@@ -85,7 +85,7 @@ namespace Squared.Illuminant {
         public TextureFilter RampTextureFilter = TextureFilter.Linear;
 
         void UpdateBounds () {
-            var sz = (Vector3.One * RampEnd);
+            var sz = (Vector3.One * (Radius + RampLength));
             _Bounds = new Bounds3(
                 _Position - sz,
                 _Position + sz

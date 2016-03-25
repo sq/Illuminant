@@ -34,7 +34,7 @@ void PointLightVertexShader(
 float PointLightPixelCore(
     in float2 worldPosition : TEXCOORD2,
     in float3 lightCenter   : TEXCOORD0,
-    in float2 ramp          : TEXCOORD1, // start, end
+    in float2 ramp          : TEXCOORD1, // radius, ramp length
     in float2 vpos          : VPOS
 ) {
     float2 terrainZ = sampleTerrain(vpos);
