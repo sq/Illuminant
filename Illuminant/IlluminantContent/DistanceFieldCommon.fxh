@@ -142,25 +142,30 @@ void coneTraceStep (
     in    float3 traceVector,
     in    float  traceLength,
     in    float  minStepSize,
-    in    float3 coneRadiusRamp,
-    inout float  previousOffset, 
-    inout float  previousDistance, 
-    inout float  previousDerivative,
+    in    float4 coneRadiusRamp,
+    in    float  distanceAtShadedPoint,
     inout float  traceOffset,
-    inout float  visibility
+    inout float  visibility,
+    inout bool   obstructionCompensation
 ) {
     float distanceToObstacle = sampleAlongRay(traceStart, traceVector, traceOffset);
 
-    float derivative = (distanceToObstacle - previousDistance) / (traceOffset - previousOffset);
-    float secondOrderDerivative = (derivative - previousDerivative) / (traceOffset - previousOffset);
-
-    previousDerivative = derivative;
-    previousDistance = distanceToObstacle;
-    previousOffset = traceOffset;
-
-    float coneRadius = lerp(coneRadiusRamp.x, coneRadiusRamp.y, traceOffset / coneRadiusRamp.z);
-    float localVisibility = clamp(distanceToObstacle, 0, coneRadius) * DENORMAL_HACK / coneRadius;
-    visibility = min(visibility, localVisibility);
+    /*
+    if (obstructionCompensation) {
+        // HACK: When shading a pixel that is known be in/on an obstruction, we ignore
+        //  trace samples until we have successfully left the obstruction
+        // Obstruction compensation is based on the expectation that the obstacle ends at
+        //  -initialDistance along the ray, which is... usually true
+        float expectedDistance = distanceAtShadedPoint + traceOffset - OBSTRUCTION_FUDGE;
+        
+        if (distanceToObstacle < expectedDistance)
+            obstructionCompensation = false;
+    } else {
+    */
+        float coneRadius = lerp(coneRadiusRamp.x, coneRadiusRamp.y, clamp(traceOffset - coneRadiusRamp.z, 0, coneRadiusRamp.w) / coneRadiusRamp.w);
+        float localVisibility = clamp(distanceToObstacle, 0, coneRadius) * DENORMAL_HACK / coneRadius;
+        visibility = min(visibility, localVisibility);
+    // }
 
     traceOffset = traceOffset + max(abs(distanceToObstacle) * PARTIAL_STEP_SIZE, minStepSize);
 }
@@ -177,19 +182,18 @@ float coneTrace (
 
     float minStepSize = max(1, DistanceFieldMinimumStepSize);
     float3 traceVector = (lightCenter - shadedPixelPosition);
+    // Obstruction compensation involves shading a short distance away from the surface so it doesn't self-occlude
+    float traceOffset = obstructionCompensation * 2;
     // HACK: We reduce the length of the trace so that we stop at the closest point on the surface of the light.
-    float traceLength = max(length(traceVector) - lightRamp.x, 0);
-    float traceOffset = 0;
+    float traceLength = max(length(traceVector) - lightRamp.x, traceOffset);
     traceVector = normalize(traceVector);
 
-    float3 coneRadiusRamp = float3(
+    float4 coneRadiusRamp = float4(
         MIN_CONE_RADIUS,
         clamp(lightRamp.x, MIN_CONE_RADIUS, DistanceFieldMaxConeRadius),
+        lightRamp.x,
         traceLength
     );
-
-    // HACK
-    coneRadiusRamp.x = coneRadiusRamp.y;
 
     float fst = FULLY_SHADOWED_THRESHOLD * DENORMAL_HACK;
     float visibility = 1.0 * DENORMAL_HACK;
@@ -197,13 +201,10 @@ float coneTrace (
 
     // If the shaded point is completely within an obstacle we kill the trace early
     float distanceAtShadedPoint = sampleDistanceField(shadedPixelPosition);
-    if (distanceAtShadedPoint < OBSTRUCTION_FUDGE)
+    /*
+    if ((distanceAtShadedPoint < OBSTRUCTION_FUDGE) && !obstructionCompensation)
         return 0;
-
-    // Sample a half-step backward along the ray to compute a 'previous' derivative and prime the loop
-    float previousOffset     = -distanceAtShadedPoint * 0.5;
-    float previousDistance   = sampleAlongRay(shadedPixelPosition, traceVector, previousOffset);
-    float previousDerivative = (distanceAtShadedPoint - previousDistance) / abs(previousOffset);
+    */
 
     // FIXME: Did I get this right? Should always do a step at the beginning and end of the ray
     [loop]
@@ -214,9 +215,9 @@ float coneTrace (
             traceOffset = traceLength;
 
         coneTraceStep(
-            shadedPixelPosition, traceVector, traceLength, minStepSize, coneRadiusRamp,
-            previousOffset, previousDistance, previousDerivative,
-            traceOffset, visibility
+            shadedPixelPosition, traceVector, traceLength, 
+            minStepSize, coneRadiusRamp, distanceAtShadedPoint, 
+            traceOffset, visibility, obstructionCompensation
         );
     }
 
