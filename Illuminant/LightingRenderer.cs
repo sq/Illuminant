@@ -37,10 +37,10 @@ namespace Squared.Illuminant {
         // Terminates a cone trace after this many steps.
         // Mitigates the performance hit for complex traces near the edge of objects.
         // Most traces will not hit this cap.
-        public int   DistanceFieldMaxStepCount   = 32;
+        public int   DistanceFieldMaxStepCount   = 64;
         public float DistanceFieldResolution     = 1.0f;
         public int   DistanceFieldSliceCount     = 1;
-        public float DistanceFieldMaxConeRadius  = 8;
+        public float DistanceFieldMaxConeRadius  = 24;
         public bool  DistanceFieldCaching        = true;
         public float DistanceFieldOcclusionToOpacityPower = 1;
 
@@ -725,7 +725,10 @@ namespace Squared.Illuminant {
                     if (lightSource.Opacity <= 0)
                         continue;
 
-                    var lightBounds = new Bounds((Vector2)lightSource.Position - new Vector2(lightSource.RampLength), (Vector2)lightSource.Position + new Vector2(lightSource.RampLength));
+                    float radius = lightSource.Radius + lightSource.RampLength;
+                    var lightBounds = new Bounds(
+                        (Vector2)lightSource.Position - new Vector2(radius), (Vector2)lightSource.Position + new Vector2(radius)
+                    );
 
                     // FIXME: Broken :(
                     if (false) {

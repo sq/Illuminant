@@ -40,16 +40,11 @@ float PointLightPixelCore(
     float2 terrainZ = sampleTerrain(vpos);
 
     float shadedZ = terrainZ.y;
-
-    // HACK: Suppress solid shadow directly under floating obstructions
-    if (terrainZ.x > GroundZ)
-        shadedZ = GroundZ;
-
-    float3 shadedPixelPosition = float3(worldPosition.xy, shadedZ);
+    float3 shadedPixelPosition = float3(worldPosition.xy, shadedZ + (1 / ZDistanceScale));
 
     float lightOpacity = computeLightOpacity(shadedPixelPosition, lightCenter, ramp.x, ramp.y);
     // FIXME: Should we really need to turn on obstruction compensation here?
-    float tracedOcclusion = coneTrace(lightCenter, ramp, shadedPixelPosition, false);
+    float tracedOcclusion = coneTrace(lightCenter, ramp, shadedPixelPosition);
 
     return lightOpacity * tracedOcclusion;
 }

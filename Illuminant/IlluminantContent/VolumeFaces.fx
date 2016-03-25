@@ -5,14 +5,11 @@
 // UGH
 #define MAX_LIGHTS 16
 
+#define SELF_OCCLUSION_HACK 1.5
+
 #define EXPONENTIAL                           0
 #define TOP_FACE_RAYCAST_SHADOWS              1
 #define FRONT_FACE_RAYCAST_SHADOWS            1
-
-// Never do a raycast when the light is closer to the wall than this
-#define RAYCAST_MIN_DISTANCE_PX 4
-// If the light contribution is lower than this, don't raycast
-#define RAYCAST_MIN_OPACITY (1.0 / 255) * 4
 
 uniform float3 LightPositions    [MAX_LIGHTS];
 uniform float3 LightProperties   [MAX_LIGHTS]; // ramp_start, ramp_end, exponential
@@ -37,7 +34,7 @@ void FrontFaceVertexShader (
 float ComputeRaycastedShadowOcclusionSample (
     float3 lightPosition, float2 lightRamp, float3 worldPosition
 ) {
-    return coneTrace(lightPosition, lightRamp, worldPosition, true);
+    return coneTrace(lightPosition, lightRamp, worldPosition);
 }
 
 float ComputeRaycastedShadowOpacity (
@@ -70,7 +67,8 @@ void FrontFacePixelShader (
 #endif
 
 #if FRONT_FACE_RAYCAST_SHADOWS
-        opacity *= ComputeRaycastedShadowOpacity(lightPosition, properties.xy, worldPosition);
+        // HACK: We shift the point forwards along our surface normal to mitigate self-occlusion
+        opacity *= ComputeRaycastedShadowOpacity(lightPosition, properties.xy, worldPosition + (normal * SELF_OCCLUSION_HACK));
 #endif
 
         float4 lightColor = lerp(LightNeutralColors[i], LightColors[i], opacity);
@@ -121,7 +119,8 @@ void TopFacePixelShader(
 #endif
 
 #if TOP_FACE_RAYCAST_SHADOWS        
-        opacity *= ComputeRaycastedShadowOpacity(lightPosition, properties.xy, worldPosition);
+        // HACK: We shift the point upwards to mitigate self-occlusion
+        opacity *= ComputeRaycastedShadowOpacity(lightPosition, properties.xy, worldPosition + float3(0, 0, SELF_OCCLUSION_HACK / ZDistanceScale));
 #endif
 
         float4 lightColor = lerp(LightNeutralColors[i], LightColors[i], opacity);

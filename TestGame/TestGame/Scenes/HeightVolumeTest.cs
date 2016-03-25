@@ -63,8 +63,12 @@ namespace TestGame.Scenes {
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment,
                 new RendererConfiguration(Width, Height) {
-                    DistanceFieldResolution = 0.75f,
-                    DistanceFieldSliceCount = 32
+                    DistanceFieldResolution = 1f,
+                    DistanceFieldSliceCount = 64,
+                    DistanceFieldLongStepFactor = 0.5f,
+                    DistanceFieldMinStepSize = 1f,
+                    DistanceFieldMaxStepCount = 128,
+                    DistanceFieldCaching = true
                 }
             );
 
@@ -81,7 +85,7 @@ namespace TestGame.Scenes {
             Environment.LightSources.Add(light);
 
             var rng = new Random(1234);
-            for (var i = 0; i < 12; i++) {
+            for (var i = 0; i < 24; i++) {
                 light = new LightSource {
                     Position = new Vector3(64, 64, rng.NextFloat(0.1f, 2.0f)),
                     Color = new Vector4((float)rng.NextDouble(0.2f, 0.7f), (float)rng.NextDouble(0.2f, 0.7f), (float)rng.NextDouble(0.2f, 0.7f), 1.0f),
@@ -95,9 +99,9 @@ namespace TestGame.Scenes {
             }
 
             const float angleStep = (float)(Math.PI / 32);
-            const int   heightTiers = 5;
+            const int   heightTiers = 4;
             const float minHeight = 0f;
-            const float maxHeight = 0.9f;
+            const float maxHeight = 1f;
 
             Environment.GroundZ = 0;
             Environment.ZDistanceScale = 128;
@@ -130,7 +134,7 @@ namespace TestGame.Scenes {
                     new Vector2((Width * 0.5f) - 32f, 0f),
                     new Vector2((Width * 0.5f) + 32f, Height * 2)
                 )),
-                0f, 0.85f
+                0f, maxHeight
             ));
         }
         

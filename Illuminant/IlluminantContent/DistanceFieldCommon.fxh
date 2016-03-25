@@ -16,8 +16,8 @@
 // The radius increases as the cone approaches the light source
 // Raising the maximum produces soft shadows, but if it's too large you will get artifacts.
 // A larger minimum increases the size of the AO 'blobs' around distant obstructions.
-#define MIN_CONE_RADIUS 0.66
-#define MAX_ANGLE_DEGREES 15
+#define MIN_CONE_RADIUS 0.5
+#define MAX_ANGLE_DEGREES 10
 // See uniforms for the other two constants
 
 // As we approach the maximum number of steps we ramp visibility down to 0.
@@ -25,13 +25,14 @@
 //  (most, if not all, early-terminated traces are occluded in practice)
 #define MAX_STEP_RAMP_WINDOW 2
 
+// HACK: Start the trace a certain number of pixels (along the trace) away from the shaded point.
+// This mitigates erroneous self-occlusion
+// This works better if you offset the shaded point forwards along the surface normal.
+#define TRACE_INITIAL_OFFSET_PX 1
+
 // We threshold shadow values from cone tracing to eliminate 'almost obstructed' and 'almost unobstructed' artifacts
 #define FULLY_SHADOWED_THRESHOLD 0.03
 #define UNSHADOWED_THRESHOLD 0.97
-
-// HACK: Adjusts the threshold for obstruction compensation so that the sample point must be
-//  an additional distance beyond the edge of the obstruction to count
-#define OBSTRUCTION_FUDGE 0.05
 
 // Scale all [0-1] accumulators/values by this to avoid round-to-zero issues
 #define DENORMAL_HACK 100
@@ -111,7 +112,8 @@ float sampleDistanceField (
     float3 position
 ) {
     // Interpolate between two Z samples. The xy interpolation is done by the GPU for us.
-    float slicePosition = clamp(position.z / ZDistanceScale * DistanceFieldTextureSliceCount.z, 0, DistanceFieldTextureSliceCount.z);
+    float scaledPositionZ = position.z / ZDistanceScale;
+    float slicePosition = clamp(scaledPositionZ * DistanceFieldTextureSliceCount.z, 0, DistanceFieldTextureSliceCount.z - 1);
     float sliceIndex1 = floor(slicePosition);
     float subslice = slicePosition - sliceIndex1;
     float sliceIndex2 = sliceIndex1 + 1;
@@ -129,11 +131,17 @@ float sampleDistanceField (
     // It seems like floor instead of ceil fixes it but I have no idea why
     float evenSlice = floor(fmod(sliceIndex1, 2));
    
-    return decodeDistance(lerp(
+    float decodedDistance = decodeDistance(lerp(
         lerp(sample1.r, sample1.g, evenSlice),
         lerp(sample2.g, sample2.r, evenSlice),
         subslice
     ));
+
+    // HACK: If the z-coordinate lies outside the distance field, we need to add distance to the
+    //  distance field samples that we collected from the edge of the field.
+    // TODO: Also apply this for x/y coordinates outside the field
+    float extraZDistance = abs(position.z - clamp(position.z, 0, ZDistanceScale));
+    return decodedDistance + extraZDistance;
 }
 
 float sampleAlongRay (
@@ -177,8 +185,7 @@ void coneTraceStep (
 float coneTrace (
     in float3 lightCenter,
     in float2 lightRamp,
-    in float3 shadedPixelPosition,
-    in bool   obstructionCompensation
+    in float3 shadedPixelPosition
 ) {
     // HACK: Compensate for Z scaling
     lightCenter.z *= ZDistanceScale;
@@ -186,8 +193,7 @@ float coneTrace (
 
     float minStepSize = max(1, DistanceFieldMinimumStepSize);
 
-    // Obstruction compensation involves shading a short distance away from the surface so it doesn't self-occlude
-    float traceOffset = obstructionCompensation * 2;
+    float traceOffset = TRACE_INITIAL_OFFSET_PX;
 
     float3 traceVector = (lightCenter - shadedPixelPosition);
     float  traceLength = length(traceVector);

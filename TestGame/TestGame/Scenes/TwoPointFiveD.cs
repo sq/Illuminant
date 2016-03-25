@@ -110,19 +110,19 @@ namespace TestGame.Scenes {
                     DistanceFieldResolution = 0.5f,
                     DistanceFieldSliceCount = 48,
                     DistanceFieldMinStepSize = 3f,
-                    DistanceFieldLongStepFactor = 0.5f,
-                    DistanceFieldOcclusionToOpacityPower = 0.55f,
+                    DistanceFieldLongStepFactor = 0.66f,
+                    DistanceFieldOcclusionToOpacityPower = 0.75f,
                     DistanceFieldMaxConeRadius = 32,
-                    DistanceFieldMaxStepCount = 48,
+                    DistanceFieldMaxStepCount = 96,
                     DistanceFieldCaching = true
                 }
             );
 
             var light = new LightSource {
                 Position = new Vector3(64, 64, 0.7f),
-                Color = new Vector4(1f, 1f, 1f, 0.5f),
-                Radius = 16,
-                RampLength = 600,
+                Color = new Vector4(1f, 1f, 1f, 0.6f),
+                Radius = 20,
+                RampLength = 500,
                 RampMode = LightSourceRampMode.Exponential
             };
 
@@ -138,10 +138,20 @@ namespace TestGame.Scenes {
                 RampMode = LightSourceRampMode.Linear
             };
 
-            if (false) {
-                Lights.Add(light2);
-                Environment.LightSources.Add(light2);
-            }
+            Lights.Add(light2);
+            Environment.LightSources.Add(light2);
+
+            var light3 = new LightSource {
+                Position = new Vector3(500, 150, 2f),
+                Color = new Vector4(0.6f, 0.4f, 0.2f, 0.33f),
+                // FIXME: Implement directional lights and make this one
+                Radius = 96,
+                RampLength = 1024,
+                RampMode = LightSourceRampMode.Linear
+            };
+
+            Lights.Add(light3);
+            Environment.LightSources.Add(light3);
 
             Rect(new Vector2(330, 337), new Vector2(Width, 394), 0f, 0.435f);
 
@@ -163,7 +173,7 @@ namespace TestGame.Scenes {
             if (true)
                 Environment.Obstructions.Add(new LightObstruction(
                     LightObstructionType.Ellipsoid, 
-                    new Vector3(500, 750, 0), new Vector3(60, 30, 0.1f)
+                    new Vector3(500, 750, 0), new Vector3(90, 45, 0.1f)
                 ));
 
             if (false)
