@@ -34,6 +34,10 @@ namespace Squared.Illuminant {
         //  producing higher quality as a side effect.
         // Only set this above 1.0 if you love goofy looking artifacts
         public float DistanceFieldLongStepFactor = 1.0f;
+        // Terminates a cone trace after this many steps.
+        // Mitigates the performance hit for complex traces near the edge of objects.
+        // Most traces will not hit this cap.
+        public int   DistanceFieldMaxStepCount   = 32;
         public float DistanceFieldResolution     = 1.0f;
         public int   DistanceFieldSliceCount     = 1;
         public float DistanceFieldMaxConeRadius  = 8;
@@ -910,6 +914,7 @@ namespace Squared.Illuminant {
             p["DistanceFieldLongStepFactor"].SetValue(Configuration.DistanceFieldLongStepFactor);
             p["DistanceFieldOcclusionToOpacityPower"].SetValue(Configuration.DistanceFieldOcclusionToOpacityPower);
             p["DistanceFieldMaxConeRadius"].SetValue(Configuration.DistanceFieldMaxConeRadius);
+            p["DistanceFieldMaxStepCount"].SetValue((float)Configuration.DistanceFieldMaxStepCount);
 
             if (setDistanceTexture)
                 p["DistanceFieldTexture"].SetValue(_DistanceField);

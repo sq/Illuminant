@@ -20,6 +20,11 @@
 #define MAX_ANGLE_DEGREES 15
 // See uniforms for the other two constants
 
+// As we approach the maximum number of steps we ramp visibility down to 0.
+// Otherwise, we get gross 'false visibility' artifacts inside early-terminated traces
+//  (most, if not all, early-terminated traces are occluded in practice)
+#define MAX_STEP_RAMP_WINDOW 2
+
 // We threshold shadow values from cone tracing to eliminate 'almost obstructed' and 'almost unobstructed' artifacts
 #define FULLY_SHADOWED_THRESHOLD 0.03
 #define UNSHADOWED_THRESHOLD 0.97
@@ -60,6 +65,9 @@ float decodeDistance (float encodedDistance) {
 
 // The maximum radius of the cone
 uniform float  DistanceFieldMaxConeRadius;
+
+// The maximum number of steps to take when cone tracing
+uniform float  DistanceFieldMaxStepCount;
 
 // Occlusion values are mapped to opacity values via this exponent
 uniform float  DistanceFieldOcclusionToOpacityPower;
@@ -195,12 +203,17 @@ float coneTrace (
     );
 
     float fst = FULLY_SHADOWED_THRESHOLD * DENORMAL_HACK;
+    float ust = UNSHADOWED_THRESHOLD * DENORMAL_HACK;
     float visibility = 1.0 * DENORMAL_HACK;
     bool abort = false;
 
+    float stepCount = 0;
+
     [loop]
     while (!abort) {
-        abort = (traceOffset >= traceLength) || 
+        abort = 
+            (stepCount >= DistanceFieldMaxStepCount) ||
+            (traceOffset >= traceLength) || 
             (visibility < fst);
         if (abort)
             traceOffset = traceLength;
@@ -210,7 +223,13 @@ float coneTrace (
             minStepSize, coneRadiusSettings, 
             traceOffset, visibility
         );
+        stepCount += 1;
     }
+
+    // HACK: Force visibility down to 0 if we are going to terminate the trace because we took too many steps.
+    float windowStart = max(DistanceFieldMaxStepCount - MAX_STEP_RAMP_WINDOW, 0);
+    float stepWindowVisibility = (1.0 - (stepCount - windowStart) / MAX_STEP_RAMP_WINDOW) * DENORMAL_HACK;
+    visibility = min(visibility, stepWindowVisibility);
 
     return pow(
         clamp(
