@@ -34,9 +34,6 @@
 #define FULLY_SHADOWED_THRESHOLD 0.03
 #define UNSHADOWED_THRESHOLD 0.97
 
-// Scale all [0-1] accumulators/values by this to avoid round-to-zero issues
-#define DENORMAL_HACK 100
-
 
 float closestPointOnEdgeAsFactor (
     float2 pt, float2 edgeStart, float2 edgeEnd
@@ -108,6 +105,10 @@ float2 computeDistanceFieldSubsliceUv (
     return clamp(positionPx * DistanceFieldTextureTexelSize, float2(0, 0), DistanceFieldTextureSliceSize);
 }
 
+float intervalRamp (float value, float upperBound) {
+    return max(max(-value, value - upperBound), 0);
+};
+
 float sampleDistanceField (
     float3 position
 ) {
@@ -140,8 +141,14 @@ float sampleDistanceField (
     // HACK: If the z-coordinate lies outside the distance field, we need to add distance to the
     //  distance field samples that we collected from the edge of the field.
     // TODO: Also apply this for x/y coordinates outside the field
-    float extraZDistance = abs(position.z - clamp(position.z, 0, ZDistanceScale));
-    return decodedDistance + extraZDistance;
+    float extraDistance = intervalRamp(position.z, ZDistanceScale);
+    return length(float2(decodedDistance, extraDistance));
+    /*
+    if ((extraDistance == 0) || (decodedDistance == 0))
+        return decodedDistance;
+    else
+        return length(float2(decodedDistance, extraDistance));
+    */
 }
 
 float sampleAlongRay (
@@ -166,7 +173,7 @@ void coneTraceStep (
 
     float distanceToObstacle = sampleAlongRay(traceStart, traceVector, traceOffset);
 
-    float localVisibility = clamp(distanceToObstacle, 0, localSphereRadius) * DENORMAL_HACK / localSphereRadius;
+    float localVisibility = clamp(distanceToObstacle, 0, localSphereRadius) / localSphereRadius;
     visibility = min(visibility, localVisibility);
 
     float stepSize = max(
@@ -208,9 +215,7 @@ float coneTrace (
         lightTangentAngle
     );
 
-    float fst = FULLY_SHADOWED_THRESHOLD * DENORMAL_HACK;
-    float ust = UNSHADOWED_THRESHOLD * DENORMAL_HACK;
-    float visibility = 1.0 * DENORMAL_HACK;
+    float visibility = 1.0;
     bool abort = false;
 
     float stepCount = 0;
@@ -220,7 +225,7 @@ float coneTrace (
         abort = 
             (stepCount >= DistanceFieldMaxStepCount) ||
             (traceOffset >= traceLength) || 
-            (visibility < fst);
+            (visibility < FULLY_SHADOWED_THRESHOLD);
         if (abort)
             traceOffset = traceLength;
 
@@ -234,12 +239,12 @@ float coneTrace (
 
     // HACK: Force visibility down to 0 if we are going to terminate the trace because we took too many steps.
     float windowStart = max(DistanceFieldMaxStepCount - MAX_STEP_RAMP_WINDOW, 0);
-    float stepWindowVisibility = (1.0 - (stepCount - windowStart) / MAX_STEP_RAMP_WINDOW) * DENORMAL_HACK;
+    float stepWindowVisibility = (1.0 - (stepCount - windowStart) / MAX_STEP_RAMP_WINDOW);
     visibility = min(visibility, stepWindowVisibility);
 
     return pow(
         clamp(
-            clamp((visibility - fst) / DENORMAL_HACK, 0, 1) / 
+            clamp((visibility - FULLY_SHADOWED_THRESHOLD), 0, 1) / 
             (UNSHADOWED_THRESHOLD - FULLY_SHADOWED_THRESHOLD),
             0, 1
         ), 

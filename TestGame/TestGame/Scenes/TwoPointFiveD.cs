@@ -110,7 +110,7 @@ namespace TestGame.Scenes {
                     DistanceFieldResolution = 0.5f,
                     DistanceFieldSliceCount = 48,
                     DistanceFieldMinStepSize = 3f,
-                    DistanceFieldLongStepFactor = 0.66f,
+                    DistanceFieldLongStepFactor = 1f,
                     DistanceFieldOcclusionToOpacityPower = 0.75f,
                     DistanceFieldMaxConeRadius = 32,
                     DistanceFieldMaxStepCount = 96,
@@ -129,29 +129,31 @@ namespace TestGame.Scenes {
             Lights.Add(light);
             Environment.LightSources.Add(light);
 
-            var light2 = new LightSource {
-                Position = new Vector3(1024, 800, 2.5f),
-                Color = new Vector4(0.2f, 0.4f, 0.6f, 0.4f),
-                // FIXME: Implement directional lights and make this one
-                Radius = 128,
-                RampLength = 2048,
-                RampMode = LightSourceRampMode.Linear
-            };
+            if (false) {
+                var light2 = new LightSource {
+                    Position = new Vector3(1024, 800, 2.5f),
+                    Color = new Vector4(0.2f, 0.4f, 0.6f, 0.4f),
+                    // FIXME: Implement directional lights and make this one
+                    Radius = 128,
+                    RampLength = 2048,
+                    RampMode = LightSourceRampMode.Linear
+                };
 
-            Lights.Add(light2);
-            Environment.LightSources.Add(light2);
+                Lights.Add(light2);
+                Environment.LightSources.Add(light2);
 
-            var light3 = new LightSource {
-                Position = new Vector3(500, 150, 2f),
-                Color = new Vector4(0.6f, 0.4f, 0.2f, 0.33f),
-                // FIXME: Implement directional lights and make this one
-                Radius = 96,
-                RampLength = 1024,
-                RampMode = LightSourceRampMode.Linear
-            };
+                var light3 = new LightSource {
+                    Position = new Vector3(500, 150, 2f),
+                    Color = new Vector4(0.6f, 0.4f, 0.2f, 0.33f),
+                    // FIXME: Implement directional lights and make this one
+                    Radius = 96,
+                    RampLength = 1024,
+                    RampMode = LightSourceRampMode.Linear
+                };
 
-            Lights.Add(light3);
-            Environment.LightSources.Add(light3);
+                Lights.Add(light3);
+                Environment.LightSources.Add(light3);
+            }
 
             Rect(new Vector2(330, 337), new Vector2(Width, 394), 0f, 0.435f);
 
