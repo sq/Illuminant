@@ -73,6 +73,9 @@ uniform float  DistanceFieldOcclusionToOpacityPower;
 // Traces always walk at least this many pixels per step
 uniform float  DistanceFieldMinimumStepSize;
 
+// The minimum step size increases by this much per pixel traveled along the ray
+uniform float  DistanceFieldMinimumStepSizeGrowthRate;
+
 // Scales the length of long steps taken outside objects
 uniform float  DistanceFieldLongStepFactor;
 
@@ -160,11 +163,12 @@ void coneTraceStep (
     in    float3 traceStart,
     in    float3 traceVector,
     in    float  traceLength,
-    in    float  minStepSize,
     in    float3 coneRadiusSettings,
     inout float  traceOffset,
     inout float  visibility
 ) {
+    float minStepSize = max(1, DistanceFieldMinimumStepSize + (DistanceFieldMinimumStepSizeGrowthRate * traceOffset));
+
     // We approximate the cone with a series of spheres
     float localSphereRadius = clamp(traceOffset * coneRadiusSettings.z, coneRadiusSettings.x, coneRadiusSettings.y);
 
@@ -191,8 +195,6 @@ float coneTrace (
     in float2 lightRamp,
     in float3 shadedPixelPosition
 ) {
-    float minStepSize = max(1, DistanceFieldMinimumStepSize);
-
     float traceOffset = TRACE_INITIAL_OFFSET_PX;
 
     float3 traceVector = (lightCenter - shadedPixelPosition);
@@ -223,14 +225,13 @@ float coneTrace (
             traceOffset = traceLength;
 
         coneTraceStep(
-            shadedPixelPosition, traceVector, traceLength, 
-            minStepSize, coneRadiusSettings, 
+            shadedPixelPosition, traceVector, traceLength, coneRadiusSettings, 
             traceOffset, visibility
         );
         stepCount += 1;
     }
 
-    return stepCount / DistanceFieldMaxStepCount;
+    // return stepCount / DistanceFieldMaxStepCount;
 
     // HACK: Force visibility down to 0 if we are going to terminate the trace because we took too many steps.
     float windowStart = max(DistanceFieldMaxStepCount - MAX_STEP_RAMP_WINDOW, 0);
