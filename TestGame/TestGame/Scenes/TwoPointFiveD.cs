@@ -25,7 +25,7 @@ namespace TestGame.Scenes {
         float LightZ;
 
         bool ShowTerrainDepth  = false;
-        bool ShowLightmap      = false;
+        bool ShowLightmap      = true;
         bool ShowDistanceField = false;
 
         public TwoPointFiveDTest (TestGame game, int width, int height)
@@ -108,9 +108,9 @@ namespace TestGame.Scenes {
                 new RendererConfiguration(1024, 1024) {
                     TwoPointFiveD = true,
                     DistanceFieldResolution = 0.5f,
-                    DistanceFieldSliceCount = 48,
-                    DistanceFieldMinStepSize = 3f,
-                    DistanceFieldLongStepFactor = 1f,
+                    DistanceFieldSliceCount = 32,
+                    DistanceFieldMinStepSize = 1f,
+                    DistanceFieldLongStepFactor = 0.5f,
                     DistanceFieldOcclusionToOpacityPower = 0.75f,
                     DistanceFieldMaxConeRadius = 32,
                     DistanceFieldMaxStepCount = 96,
@@ -122,7 +122,7 @@ namespace TestGame.Scenes {
                 Position = new Vector3(64, 64, 0.7f),
                 Color = new Vector4(1f, 1f, 1f, 0.6f),
                 Radius = 20,
-                RampLength = 500,
+                RampLength = 1600,
                 RampMode = LightSourceRampMode.Exponential
             };
 
@@ -155,7 +155,7 @@ namespace TestGame.Scenes {
                 Environment.LightSources.Add(light3);
             }
 
-            Rect(new Vector2(330, 337), new Vector2(Width, 394), 0f, 55f);
+            Rect(new Vector2(330, 337), new Vector2(Width - 32, 394), 0f, 55f);
 
             Pillar(new Vector2(97, 523));
             Pillar(new Vector2(719, 520));

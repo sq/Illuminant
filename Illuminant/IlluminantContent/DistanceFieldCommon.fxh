@@ -104,7 +104,9 @@ float2 computeDistanceFieldSliceUv (
 float2 computeDistanceFieldSubsliceUv (
     float2 positionPx
 ) {
-    return clamp(positionPx * DistanceFieldTextureTexelSize, float2(0, 0), DistanceFieldTextureSliceSize);
+    // HACK: Ensure we don't sample outside of the slice (filtering! >:()
+    // FIXME: Why is this 1 and not 0.5?
+    return clamp(positionPx, 1, DistanceFieldExtent.xy - 1) * DistanceFieldTextureTexelSize;
 }
 
 float sampleDistanceField (
@@ -140,10 +142,10 @@ float sampleDistanceField (
     //  read the closest distance in the field.
     float3 minVolumeExtent = float3(0, 0, 0);
     float3 maxVolumeExtent = DistanceFieldExtent;
-    float clampedPosition = clamp(position, minVolumeExtent, maxVolumeExtent);
+    float3 clampedPosition = clamp(position, minVolumeExtent, maxVolumeExtent);
     float distanceToVolume = length(clampedPosition - position);
 
-    return decodedDistance; // + distanceToVolume;
+    return decodedDistance + distanceToVolume;
 }
 
 float sampleAlongRay (

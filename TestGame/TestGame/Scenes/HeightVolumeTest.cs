@@ -201,6 +201,9 @@ namespace TestGame.Scenes {
                 // const float minZ = 0f, maxZ = 1.5f;
                 // LightZ = Squared.Util.Arithmetic.PulseSine((float)gameTime.TotalGameTime.TotalSeconds * 0.66f, minZ, maxZ);
                 LightZ = ms.ScrollWheelValue / 2048.0f * 128f;
+
+                if (LightZ < 0.01f)
+                    LightZ = 0.01f;
                 
                 var mousePos = new Vector2(ms.X, ms.Y);
 
