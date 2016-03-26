@@ -124,11 +124,11 @@ float sampleDistanceField (
 
     float2 uv = computeDistanceFieldSubsliceUv(position.xy);
     
-    float2 sample1 = tex2Dgrad(
-        DistanceFieldTextureSampler, uv + computeDistanceFieldSliceUv(sliceIndex1), 0, 0
+    float2 sample1 = tex2Dlod(
+        DistanceFieldTextureSampler, float4(uv + computeDistanceFieldSliceUv(sliceIndex1), 0, 0)
     );
-    float2 sample2 = tex2Dgrad(
-        DistanceFieldTextureSampler, uv + computeDistanceFieldSliceUv(sliceIndex2), 0, 0
+    float2 sample2 = tex2Dlod(
+        DistanceFieldTextureSampler, float4(uv + computeDistanceFieldSliceUv(sliceIndex2), 0, 0)
     );
     
     // FIXME: Somehow this r/g encoding introduces a consistent error along the z-axis compared to the old encoding?

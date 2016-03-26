@@ -24,8 +24,10 @@ namespace TestGame.Scenes {
         Texture2D Background;
         float LightZ;
 
+        const int ScaleFactor = 1;
+
         bool ShowTerrainDepth  = false;
-        bool ShowLightmap      = true;
+        bool ShowLightmap      = false;
         bool ShowDistanceField = false;
 
         public TwoPointFiveDTest (TestGame game, int width, int height)
@@ -33,8 +35,8 @@ namespace TestGame.Scenes {
         }
 
         private void CreateRenderTargets () {
-            int scaledWidth = (int)Width;
-            int scaledHeight = (int)Height;
+            int scaledWidth = (int)Width / ScaleFactor;
+            int scaledHeight = (int)Height / ScaleFactor;
 
             const int multisampleCount = 0;
 
@@ -109,10 +111,10 @@ namespace TestGame.Scenes {
                     TwoPointFiveD = true,
                     DistanceFieldResolution = 0.5f,
                     DistanceFieldSliceCount = 32,
-                    DistanceFieldMinStepSize = 1f,
+                    DistanceFieldMinStepSize = 2f,
                     DistanceFieldMinStepSizeGrowthRate = 0.01f,
                     DistanceFieldLongStepFactor = 0.5f,
-                    DistanceFieldOcclusionToOpacityPower = 0.75f,
+                    DistanceFieldOcclusionToOpacityPower = 0.5f,
                     DistanceFieldMaxConeRadius = 32,
                     DistanceFieldMaxStepCount = 96,
                     DistanceFieldCaching = true
@@ -189,7 +191,7 @@ namespace TestGame.Scenes {
             using (var bg = BatchGroup.ForRenderTarget(
                 frame, -1, Lightmap,
                 (dm, _) => {
-                    Game.Materials.PushViewTransform(ViewTransform.CreateOrthographic(Lightmap.Width, Lightmap.Height));
+                    Game.Materials.PushViewTransform(ViewTransform.CreateOrthographic(Width, Height));
                 },
                 (dm, _) => {
                     Game.Materials.PopViewTransform();
