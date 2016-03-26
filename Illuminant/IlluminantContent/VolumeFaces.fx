@@ -59,6 +59,7 @@ void FrontFacePixelShader (
         float3 lightPosition = LightPositions[i];
 
         float  opacity = computeLightOpacity(worldPosition, lightPosition, properties.x, properties.y);
+        [branch]
         if (opacity <= 0)
             continue;
 
@@ -106,13 +107,19 @@ void TopFacePixelShader(
         float3 properties = LightProperties[i];
         float3 lightPosition = LightPositions[i];
 
+        bool kill = false;
+
         if (lightPosition.z < terrainZ.x)
-            continue;
+            kill = true;
         if (lightPosition.z < worldPosition.z)
-            continue;
+            kill = true;
 
         float  opacity = computeLightOpacity(worldPosition, lightPosition, properties.x, properties.y);
         if (opacity <= 0)
+            kill = true;
+
+        [branch]
+        if (kill)
             continue;
 
 #if EXPONENTIAL

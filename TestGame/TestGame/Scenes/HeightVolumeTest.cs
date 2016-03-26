@@ -65,9 +65,9 @@ namespace TestGame.Scenes {
                 new RendererConfiguration(Width, Height) {
                     DistanceFieldResolution = 0.2f,
                     DistanceFieldSliceCount = 16,
-                    DistanceFieldLongStepFactor = 0.5f,
+                    DistanceFieldLongStepFactor = 0.75f,
                     DistanceFieldMinStepSize = 1f,
-                    DistanceFieldMaxStepCount = 128,
+                    DistanceFieldMaxStepCount = 64,
                     DistanceFieldCaching = true
                 }
             );

@@ -59,92 +59,6 @@ namespace Squared.Illuminant {
     }
 
     public class LightingRenderer : IDisposable {
-        private class ArrayLineWriter : ILineWriter {
-            private int _Count = 0;
-            private ShadowVertex[] VertexBuffer;
-            private short[] IndexBuffer;
-
-            public void Write (
-                Vector2 a, Vector2 aHeights,
-                Vector2 b, Vector2 bHeights
-            ) {
-                ShadowVertex vertex;
-                int vertexOffset = _Count * 4;
-                int indexOffset = _Count * 6;
-
-                vertex.Position = new Vector3(a, aHeights.Y);
-                vertex.MinZ = aHeights.X;
-
-                vertex.PairIndex = 0;
-                VertexBuffer[vertexOffset + 0] = vertex;
-                vertex.PairIndex = 1;
-                VertexBuffer[vertexOffset + 1] = vertex;
-
-                vertex.Position = new Vector3(b, bHeights.Y);
-                vertex.MinZ = bHeights.X;
-
-                vertex.PairIndex = 0;
-                VertexBuffer[vertexOffset + 2] = vertex;
-                vertex.PairIndex = 1;
-                VertexBuffer[vertexOffset + 3] = vertex;
-
-                for (var j = 0; j < ShadowIndices.Length; j++)
-                    IndexBuffer[indexOffset + j] = (short)(vertexOffset + ShadowIndices[j]);
-
-                _Count += 1;
-            }
-
-            public int LinesWritten {
-                get {
-                    return _Count;
-                }
-            }
-
-            internal int Finish () {
-                int result = _Count;
-
-                _Count = -1;
-                VertexBuffer = null;
-                IndexBuffer = null;
-
-                return result;
-            }
-
-            internal void SetOutput (ShadowVertex[] vertexBuffer, short[] indexBuffer) {
-                _Count = 0;
-                VertexBuffer = vertexBuffer;
-                IndexBuffer = indexBuffer;
-            }
-        }
-
-        private class VisualizerLineWriter : ILineWriter {
-            public GeometryBatch Batch;
-            public Color Color;
-
-            public void Write (
-                Vector2 a, Vector2 aHeights,
-                Vector2 b, Vector2 bHeights
-            ) {
-                Batch.AddLine(a, b, Color);
-            }
-        }
-
-        public class CachedSector : IDisposable {
-            public Pair<int> SectorIndex;
-            public int FrameIndex;
-            public int DrawnIndex;
-            public DynamicVertexBuffer ObstructionVertexBuffer;
-            public DynamicIndexBuffer ObstructionIndexBuffer;
-            public int VertexCount, IndexCount, PrimitiveCount;
-
-            public void Dispose () {
-                if (ObstructionVertexBuffer != null)
-                    ObstructionVertexBuffer.Dispose();
-                if (ObstructionIndexBuffer != null)
-                    ObstructionIndexBuffer.Dispose();
-            }
-        }
-
         private class LightSourceComparer : IComparer<LightSource> {
             public int Compare (LightSource lhs, LightSource rhs) {
                 int result = ((int)lhs.Mode).CompareTo(((int)rhs.Mode));
@@ -187,18 +101,15 @@ namespace Squared.Illuminant {
         public readonly Squared.Render.EffectMaterial[] PointLightMaterialsInner = new Squared.Render.EffectMaterial[4];
         public readonly DepthStencilState TopFaceDepthStencilState, FrontFaceDepthStencilState;
         public readonly DepthStencilState DistanceInteriorStencilState, DistanceExteriorStencilState;
+        public readonly DepthStencilState PointLightDepthStencilState;
         public readonly BlendState        HeightMax, OddSlice, EvenSlice;
 
-        private static readonly short[] ShadowIndices;
         private static readonly Dictionary<TextureFilter, SamplerState> RampSamplerStates = new Dictionary<TextureFilter, SamplerState>();
 
-        private readonly ArrayLineWriter ArrayLineWriterInstance = new ArrayLineWriter();
-        private readonly VisualizerLineWriter VisualizerLineWriterInstance = new VisualizerLineWriter();
         private readonly LightSourceComparer LightSourceComparerInstance = new LightSourceComparer();
 
         private PointLightVertex[] PointLightVertices = new PointLightVertex[128];
         private short[] PointLightIndices = null;
-        private readonly Dictionary<Pair<int>, CachedSector> SectorCache = new Dictionary<Pair<int>, CachedSector>(new IntPairComparer());
         private readonly List<PointLightRecord> PointLightBatchBuffer = new List<PointLightRecord>(128);
         private Rectangle StoredScissorRect;
 
@@ -216,15 +127,6 @@ namespace Squared.Illuminant {
 
         public readonly int DistanceFieldSliceWidth, DistanceFieldSliceHeight;
         public readonly int DistanceFieldSlicesX, DistanceFieldSlicesY;
-
-        public readonly bool  HighPrecisionTerrain = true;
-
-        static LightingRenderer () {
-            ShadowIndices = new short[] {
-                0, 1, 2,
-                1, 2, 3
-            };
-        }
 
         public LightingRenderer (
             ContentManager content, RenderCoordinator coordinator, 
@@ -287,6 +189,13 @@ namespace Squared.Illuminant {
                 StencilEnable = false,
                 DepthBufferEnable = true,
                 DepthBufferFunction = CompareFunction.GreaterEqual,
+                DepthBufferWriteEnable = true
+            };
+            
+            PointLightDepthStencilState = new DepthStencilState {
+                StencilEnable = false,
+                DepthBufferEnable = true,
+                DepthBufferFunction = CompareFunction.GreaterEqual,
                 DepthBufferWriteEnable = false
             };
 
@@ -336,15 +245,10 @@ namespace Squared.Illuminant {
                 var dBegin = new[] {
                     MaterialUtil.MakeDelegate(
                         rasterizerState: RenderStates.ScissorOnly, 
-                        depthStencilState: DepthStencilState.None
+                        depthStencilState: PointLightDepthStencilState
                     )
                 };
-                var dEnd = new[] {
-                    MaterialUtil.MakeDelegate(
-                        rasterizerState: RasterizerState.CullNone, 
-                        depthStencilState: DepthStencilState.None
-                    )
-                };
+                Action<DeviceManager>[] dEnd = null;
 
                 materials.Add(IlluminantMaterials.PointLightExponential = new DelegateMaterial(
                     PointLightMaterialsInner[0] = new Squared.Render.EffectMaterial(
@@ -434,17 +338,9 @@ namespace Squared.Illuminant {
 #endif
 
             Environment = environment;
-
-            // Reduce garbage created by BufferPool<>.Allocate when creating cached sectors
-            BufferPool<ShadowVertex>.MaxBufferSize = 1024 * 16;
-            BufferPool<short>.MaxBufferSize = 1024 * 32;
         }
 
         public void Dispose () {
-            foreach (var cachedSector in SectorCache.Values)
-                cachedSector.Dispose();
-
-            SectorCache.Clear();
         }
 
         public RenderTarget2D TerrainDepthmap {
@@ -648,6 +544,13 @@ namespace Squared.Illuminant {
                 if (Render.Tracing.RenderTrace.EnableTracing)
                     Render.Tracing.RenderTrace.Marker(resultGroup, -9999, "Frame {0:0000} : LightingRenderer {1:X4} : Begin", frame.Index, this.GetHashCode());
 
+                if (Configuration.TwoPointFiveD) {
+                    if (Render.Tracing.RenderTrace.EnableTracing)
+                        Render.Tracing.RenderTrace.Marker(resultGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Volume Faces", frame.Index, this.GetHashCode());
+
+                    RenderTwoPointFiveD(ref layerIndex, resultGroup);
+                }
+
                 int i = 0;
                 var lightCount = 0;
 
@@ -775,14 +678,6 @@ namespace Squared.Illuminant {
                     FlushPointLightBatch(ref currentLightGroup, ref batchFirstLightSource, ref layerIndex);
                 }
 
-                // FIXME
-                if (Configuration.TwoPointFiveD) {
-                    if (Render.Tracing.RenderTrace.EnableTracing)
-                        Render.Tracing.RenderTrace.Marker(resultGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Volume Faces", frame.Index, this.GetHashCode());
-
-                    RenderTwoPointFiveD(layerIndex, resultGroup);
-                }
-
                 if (Render.Tracing.RenderTrace.EnableTracing)
                     Render.Tracing.RenderTrace.Marker(resultGroup, 9999, "Frame {0:0000} : LightingRenderer {1:X4} : End", frame.Index, this.GetHashCode());
             }
@@ -880,7 +775,7 @@ namespace Squared.Illuminant {
             SetTwoPointFiveDParametersInner(topFaceMaterial  .Effect.Parameters, true, true);
         }
 
-        private void RenderTwoPointFiveD (int layerIndex, BatchGroup resultGroup) {
+        private void RenderTwoPointFiveD (ref int layerIndex, BatchGroup resultGroup) {
             // FIXME: Support more than 12 lights
 
             int i = 0;
@@ -912,7 +807,7 @@ namespace Squared.Illuminant {
             }
 
             using (var group = BatchGroup.New(
-                resultGroup, layerIndex,
+                resultGroup, layerIndex++,
                 before: (dm, _) => dm.PushStates(),
                 after: (dm, _) => dm.PopStates()
             )) {
@@ -938,7 +833,7 @@ namespace Squared.Illuminant {
                     ),
                     batchSetup: SetTwoPointFiveDParameters
                 )) {
-                    foreach (var volume in Environment.HeightVolumes) {
+                    foreach (var volume in Environment.HeightVolumes.OrderByDescending(hv => hv.ZBase + hv.Height)) {
                         var ffm3d = volume.GetFrontFaceMesh3D();
                         if (ffm3d.Count <= 0)
                             continue;

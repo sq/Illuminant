@@ -27,7 +27,7 @@ namespace TestGame.Scenes {
         const int ScaleFactor = 1;
 
         bool ShowTerrainDepth  = false;
-        bool ShowLightmap      = false;
+        bool ShowLightmap      = true;
         bool ShowDistanceField = false;
 
         public TwoPointFiveDTest (TestGame game, int width, int height)
