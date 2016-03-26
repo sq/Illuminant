@@ -3,7 +3,6 @@
 #include "DistanceFieldCommon.fxh"
 
 uniform float2 PixelSize;
-uniform float  MinZ, MaxZ;
 uniform float  SliceZ;
 uniform int    NumVertices;
 
@@ -19,6 +18,7 @@ sampler   VertexDataSampler : register(s5) {
 
 void DistanceVertexShader (
     in    float3 position      : POSITION0, // x, y, z
+    inout float2 zRange        : TEXCOORD0,
     out   float4 result        : POSITION0
 ) {
     result = TransformPosition(float4(position.xy - ViewportPosition, 0, 1), 0);
@@ -26,24 +26,29 @@ void DistanceVertexShader (
 }
 
 float computeDistance (
-    float2 vpos
+    float2 vpos, 
+    float2 zRange,
+    float  xySign
 ) {
     float resultDistance = 99999;
     float indexMultiplier = 1.0 / NumVertices;
 
     [loop]
     for (int i = 0; i < NumVertices; i++) {
-        float2 edgeA = tex2Dlod(VertexDataSampler, float4(i * indexMultiplier, 0, 0, 0));
-        float2 edgeB = tex2Dlod(VertexDataSampler, float4((i + 1) * indexMultiplier, 0, 0, 0));
+        float2 edgeA = tex2Dlod(VertexDataSampler, float4(i * indexMultiplier, 0, 0, 0)).rg;
+        float2 edgeB = tex2Dlod(VertexDataSampler, float4((i + 1) * indexMultiplier, 0, 0, 0)).rg;
 
         float2 closest = closestPointOnEdge(vpos, edgeA, edgeB);
         float2 closestDeltaXy = (vpos - closest);
-        float deltaMinZ = SliceZ - MinZ;
-        float deltaMaxZ = SliceZ - MaxZ;
 
-        float closestDeltaZ;
-        if ((SliceZ >= MinZ) && (SliceZ <= MaxZ)) {
+        float closestDeltaZ = 0;
+        float localSign = 1;
+        float deltaMinZ = SliceZ - zRange.x;
+        float deltaMaxZ = SliceZ - zRange.y;
+
+        if ((SliceZ >= zRange.x) && (SliceZ <= zRange.y)) {
             closestDeltaZ = 0;
+            localSign = xySign;
         } else if (abs(deltaMinZ) > abs(deltaMaxZ)) {
             closestDeltaZ = deltaMaxZ;
         } else {
@@ -51,9 +56,10 @@ float computeDistance (
         }
 
         float3 closestDelta = float3(closestDeltaXy.x, closestDeltaXy.y, closestDeltaZ);
-        float  closestDistance = length(closestDelta);
+        float  closestDistance = length(closestDelta) * localSign;
 
-        resultDistance = min(resultDistance, closestDistance);
+        if (abs(closestDistance) < abs(resultDistance))
+            resultDistance = closestDistance;
     }
 
     return resultDistance;
@@ -61,26 +67,23 @@ float computeDistance (
 
 void InteriorPixelShader (
     out float4 color : COLOR0,
+    in  float2 zRange : TEXCOORD0,
     in  float2 vpos : VPOS
 ) {
-    float resultDistance;
-    if ((SliceZ >= MinZ) && (SliceZ <= MaxZ)) {
-        vpos *= DistanceFieldInvScaleFactor;
-        vpos += ViewportPosition;
-        resultDistance = -computeDistance(vpos);
-    } else {
-        resultDistance = min(abs(SliceZ - MinZ), abs(SliceZ - MaxZ));
-    }
+    vpos *= DistanceFieldInvScaleFactor;
+    vpos += ViewportPosition;
+    float resultDistance = computeDistance(vpos, zRange, -1);
     color = encodeDistance(resultDistance);
 }
 
 void ExteriorPixelShader (
     out float4 color : COLOR0,
+    in  float2 zRange : TEXCOORD0,
     in  float2 vpos  : VPOS
 ) {
     vpos *= DistanceFieldInvScaleFactor;
     vpos += ViewportPosition;
-    float resultDistance = computeDistance(vpos);
+    float resultDistance = computeDistance(vpos, zRange, 1);
     color = encodeDistance(resultDistance);
 }
 

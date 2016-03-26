@@ -9,28 +9,18 @@ uniform float2 TerrainTextureTexelSize;
 Texture2D TerrainTexture      : register(t2);
 sampler TerrainTextureSampler : register(s2) {
     Texture = (TerrainTexture);
-    MipFilter = LINEAR;
-    MinFilter = LINEAR;
-    MagFilter = LINEAR;
+    MipFilter = POINT;
+    MinFilter = POINT;
+    MagFilter = POINT;
 };
 
-// returns [min, max]
-float2 sampleTerrain(
+// returns height of the terrain in [0-1] that you should scale
+float sampleTerrain(
     float2 positionPx
 ) {
     float2 uv     = positionPx * TerrainTextureTexelSize;
-    float2 sample = tex2Dlod(TerrainTextureSampler, float4(uv, 0, 0)).rg;
+    float  sample = tex2Dlod(TerrainTextureSampler, float4(uv, 0, 0)).r;
     return sample;
-}
-
-int isLightInvisible(
-    float3 lightCenter
-) {
-    float2 terrainZ = sampleTerrain(lightCenter.xy);
-    return 
-        (lightCenter.z < 0) ||
-        ((lightCenter.z > terrainZ.x) && (lightCenter.z < terrainZ.y))
-    ;
 }
 
 float computeLightOpacity(

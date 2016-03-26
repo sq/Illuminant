@@ -126,10 +126,10 @@ float sampleDistanceField (
     
     float2 sample1 = tex2Dlod(
         DistanceFieldTextureSampler, float4(uv + computeDistanceFieldSliceUv(sliceIndex1), 0, 0)
-    );
+    ).rg;
     float2 sample2 = tex2Dlod(
         DistanceFieldTextureSampler, float4(uv + computeDistanceFieldSliceUv(sliceIndex2), 0, 0)
-    );
+    ).rg;
     
     // FIXME: Somehow this r/g encoding introduces a consistent error along the z-axis compared to the old encoding?
     // It seems like floor instead of ceil fixes it but I have no idea why

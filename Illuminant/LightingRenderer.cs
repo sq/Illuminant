@@ -56,37 +56,6 @@ namespace Squared.Illuminant {
         }
     }
 
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct FrontFaceVertex : IVertexType {
-        public Vector3 Position;
-        public Vector3 Normal;
-        public Vector2 ZRange;
-
-        public static VertexDeclaration _VertexDeclaration;
-
-        static FrontFaceVertex () {
-            var tThis = typeof(FrontFaceVertex);
-
-            _VertexDeclaration = new VertexDeclaration(
-                new VertexElement(Marshal.OffsetOf(tThis, "Position").ToInt32(), VertexElementFormat.Vector3, VertexElementUsage.Position, 0),
-                new VertexElement(Marshal.OffsetOf(tThis, "Normal").ToInt32(),   VertexElementFormat.Vector3, VertexElementUsage.Normal, 0),
-                new VertexElement(Marshal.OffsetOf(tThis, "ZRange").ToInt32(),   VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 0)
-            );
-        }
-
-        public FrontFaceVertex (Vector3 position, Vector3 normal, Vector2 zRange) {
-            Position = position;
-            Normal = normal;
-            ZRange = zRange;
-        }
-
-        public VertexDeclaration VertexDeclaration {
-            get {
-                return _VertexDeclaration;
-            }
-        }
-    }
-
     public class LightingRenderer : IDisposable {
         private class ArrayLineWriter : ILineWriter {
             private int _Count = 0;
@@ -216,7 +185,7 @@ namespace Squared.Illuminant {
         public readonly Squared.Render.EffectMaterial[] PointLightMaterialsInner = new Squared.Render.EffectMaterial[4];
         public readonly DepthStencilState TopFaceDepthStencilState, FrontFaceDepthStencilState;
         public readonly DepthStencilState DistanceInteriorStencilState, DistanceExteriorStencilState;
-        public readonly BlendState        HeightMin, HeightMax, OddSlice, EvenSlice;
+        public readonly BlendState        HeightMax, OddSlice, EvenSlice;
 
         private static readonly short[] ShadowIndices;
         private static readonly Dictionary<TextureFilter, SamplerState> RampSamplerStates = new Dictionary<TextureFilter, SamplerState>();
@@ -231,7 +200,7 @@ namespace Squared.Illuminant {
         private readonly List<PointLightRecord> PointLightBatchBuffer = new List<PointLightRecord>(128);
         private Rectangle StoredScissorRect;
 
-        private readonly RenderTarget2D _TerrainDepthmap;
+        private readonly RenderTarget2D _TerrainHeightmap;
         private readonly RenderTarget2D _DistanceField;
 
         private readonly Action<DeviceManager, object> BeginLightPass, EndLightPass, RestoreScissorRect, IlluminationBatchSetup;
@@ -272,17 +241,11 @@ namespace Squared.Illuminant {
             IlluminationBatchSetup = _IlluminationBatchSetup;
 
             lock (coordinator.CreateResourceLock) {
-                // Can't use HalfVector2 because lol, xna =[
-                SurfaceFormat fmt =
-                    HighPrecisionTerrain
-                        ? SurfaceFormat.Rg32
-                        : SurfaceFormat.Color;
-
-                _TerrainDepthmap = new RenderTarget2D(
+                _TerrainHeightmap = new RenderTarget2D(
                     coordinator.Device, 
                     (int)(Configuration.MaximumRenderSize.First * Configuration.HeightmapResolution), 
                     (int)(Configuration.MaximumRenderSize.Second * Configuration.HeightmapResolution),
-                    false, fmt, DepthFormat.None, 0, RenderTargetUsage.DiscardContents
+                    false, SurfaceFormat.Single, DepthFormat.None, 0, RenderTargetUsage.DiscardContents
                 );
 
                 DistanceFieldSliceWidth = (int)(Configuration.MaximumRenderSize.First * Configuration.DistanceFieldResolution);
@@ -353,20 +316,6 @@ namespace Squared.Illuminant {
                 DepthBufferWriteEnable = true,
             };
 
-            HeightMin = new BlendState {
-                ColorWriteChannels    = ColorWriteChannels.Red,
-                ColorBlendFunction    = BlendFunction.Min,
-                ColorSourceBlend      = Blend.One,
-                ColorDestinationBlend = Blend.One
-            };
-
-            HeightMax = new BlendState {
-                ColorWriteChannels    = ColorWriteChannels.Green,
-                ColorBlendFunction    = BlendFunction.Max,
-                ColorSourceBlend      = Blend.One,
-                ColorDestinationBlend = Blend.One
-            };
-
             EvenSlice = new BlendState {
                 ColorWriteChannels = ColorWriteChannels.Red,
                 ColorBlendFunction = BlendFunction.Max,
@@ -435,6 +384,9 @@ namespace Squared.Illuminant {
 
                 materials.Add(IlluminantMaterials.DistanceFunction = 
                     new Squared.Render.EffectMaterial(content.Load<Effect>("DistanceFunction"), "DistanceFunction"));
+
+                materials.Add(IlluminantMaterials.HeightVolume = 
+                    new Squared.Render.EffectMaterial(content.Load<Effect>("Heightmap"), "HeightVolume"));
             }
 
 #if SDL2
@@ -495,7 +447,7 @@ namespace Squared.Illuminant {
 
         public RenderTarget2D TerrainDepthmap {
             get {
-                return _TerrainDepthmap;
+                return _TerrainHeightmap;
             }
         }
 
@@ -626,7 +578,7 @@ namespace Squared.Illuminant {
                     1f / Configuration.MaximumRenderSize.Second
                 );
                 mi.Effect.Parameters["TerrainTextureTexelSize"].SetValue(tsize);
-                mi.Effect.Parameters["TerrainTexture"].SetValue(_TerrainDepthmap);
+                mi.Effect.Parameters["TerrainTexture"].SetValue(_TerrainHeightmap);
 
                 mi.Effect.Parameters["GroundZ"].SetValue(Environment.GroundZ);
                 mi.Effect.Parameters["ZToYMultiplier"].SetValue(
@@ -886,7 +838,7 @@ namespace Squared.Illuminant {
             p["TerrainTextureTexelSize"].SetValue(tsize);
 
             if (setTerrainTexture)
-                p["TerrainTexture"].SetValue(_TerrainDepthmap);
+                p["TerrainTexture"].SetValue(_TerrainHeightmap);
 
             SetDistanceFieldParameters(p, setDistanceTexture);
         }
@@ -965,7 +917,7 @@ namespace Squared.Illuminant {
                     group, 0, Materials.Clear, clearZ: 0f
                 );
 
-                using (var topBatch = PrimitiveBatch<VertexPositionColor>.New(
+                using (var topBatch = PrimitiveBatch<HeightVolumeVertex>.New(
                     group, 1, Materials.Get(
                         IlluminantMaterials.VolumeTopFace,                    
                         depthStencilState: TopFaceDepthStencilState,
@@ -974,7 +926,7 @@ namespace Squared.Illuminant {
                     ),
                     batchSetup: SetTwoPointFiveDParameters
                 ))
-                using (var frontBatch = PrimitiveBatch<FrontFaceVertex>.New(
+                using (var frontBatch = PrimitiveBatch<HeightVolumeVertex>.New(
                     group, 2, Materials.Get(
                         IlluminantMaterials.VolumeFrontFace,
                         depthStencilState: FrontFaceDepthStencilState,
@@ -988,14 +940,14 @@ namespace Squared.Illuminant {
                         if (ffm3d.Count <= 0)
                             continue;
 
-                        frontBatch.Add(new PrimitiveDrawCall<FrontFaceVertex>(
+                        frontBatch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
                             PrimitiveType.TriangleList,
                             ffm3d.Array, ffm3d.Offset, ffm3d.Count / 3
                         ));
 
                         var m3d = volume.Mesh3D;
 
-                        topBatch.Add(new PrimitiveDrawCall<VertexPositionColor>(
+                        topBatch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
                             PrimitiveType.TriangleList,
                             m3d, 0, m3d.Length / 3
                         ));
@@ -1005,13 +957,9 @@ namespace Squared.Illuminant {
         }
 
         public void RenderHeightmap (Frame frame, IBatchContainer container, int layer) {
-            Vector2 minCoordinate = new Vector2(999999, 999999);
-            Vector2 maxCoordinate = new Vector2(-999999, -999999);
-
             // FIXME: This doesn't work anymore because the Z range is no longer [0-1] so Mesh3D is garbage
-            if (false)
             using (var group = BatchGroup.ForRenderTarget(
-                container, layer, _TerrainDepthmap,
+                container, layer, _TerrainHeightmap,
                 // FIXME: Optimize this
                 (dm, _) => {
                     Materials.PushViewTransform(ViewTransform.CreateOrthographic(Configuration.MaximumRenderSize.First, Configuration.MaximumRenderSize.Second));
@@ -1025,40 +973,24 @@ namespace Squared.Illuminant {
 
                 ClearBatch.AddNew(
                     group, 0, Materials.Clear, 
-                    new Color(1.0f, Environment.GroundZ, 0f, 1f)
+                    // FIXME: Precision loss here
+                    new Color(Environment.GroundZ / Environment.MaximumZ, 0f, 0f, 1f)
                 );
 
-                using (var minBatch = PrimitiveBatch<VertexPositionColor>.New(
-                    group, 1, Materials.ScreenSpaceGeometry,
+                using (var maxBatch = PrimitiveBatch<HeightVolumeVertex>.New(
+                    group, 1, IlluminantMaterials.HeightVolume,
                     (dm, _) => {
                         dm.Device.RasterizerState = RasterizerState.CullNone;
                         dm.Device.DepthStencilState = DepthStencilState.None;
-                        dm.Device.BlendState = HeightMin;
-                    }
-                ))
-                using (var maxBatch = PrimitiveBatch<VertexPositionColor>.New(
-                    group, 1, Materials.ScreenSpaceGeometry,
-                    (dm, _) => {
-                        dm.Device.RasterizerState = RasterizerState.CullNone;
-                        dm.Device.DepthStencilState = DepthStencilState.None;
-                        dm.Device.BlendState = HeightMax;
+                        dm.Device.BlendState = BlendState.Opaque;
                     }
                 ))
                 // Rasterize the height volumes in sequential order.
                 foreach (var hv in Environment.HeightVolumes) {
                     var b = hv.Bounds;
-                    minCoordinate.X = Math.Min(minCoordinate.X, b.TopLeft.X);
-                    minCoordinate.Y = Math.Min(minCoordinate.Y, b.TopLeft.Y);
-                    maxCoordinate.X = Math.Max(maxCoordinate.X, b.BottomRight.X);
-                    maxCoordinate.Y = Math.Max(maxCoordinate.Y, b.BottomRight.Y);
-
                     var m = hv.Mesh3D;
 
-                    minBatch.Add(new PrimitiveDrawCall<VertexPositionColor>(
-                        PrimitiveType.TriangleList,
-                        m, 0, m.Length / 3
-                    ));
-                    maxBatch.Add(new PrimitiveDrawCall<VertexPositionColor>(
+                    maxBatch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
                         PrimitiveType.TriangleList,
                         m, 0, m.Length / 3
                     ));
@@ -1106,7 +1038,7 @@ namespace Squared.Illuminant {
             EffectParameterCollection intParameters, EffectParameterCollection extParameters, 
             int slice
         ) {
-            float sliceZ = (slice / (float)(Configuration.DistanceFieldSliceCount - 1)) * Environment.MaximumZ;
+            float sliceZ = (slice / Math.Max(1, (float)(Configuration.DistanceFieldSliceCount - 1))) * Environment.MaximumZ;
             int displaySlice = slice / 2;
             var sliceX = (displaySlice % DistanceFieldSlicesX) * DistanceFieldSliceWidth;
             var sliceY = (displaySlice / DistanceFieldSlicesX) * DistanceFieldSliceHeight;
@@ -1167,12 +1099,13 @@ namespace Squared.Illuminant {
                     var p = hv.Polygon;
                     var m = hv.Mesh3D;
                     var b = hv.Bounds.Expand(DistanceLimit, DistanceLimit);
+                    var zRange = new Vector2(hv.ZBase, hv.ZBase + hv.Height);
 
-                    var verts = new VertexPositionColor[] {
-                        new VertexPositionColor(new Vector3(b.TopLeft, 0), Color.White),
-                        new VertexPositionColor(new Vector3(b.TopRight, 0), Color.White),
-                        new VertexPositionColor(new Vector3(b.BottomRight, 0), Color.White),
-                        new VertexPositionColor(new Vector3(b.BottomLeft, 0), Color.White)
+                    var boundingBoxVertices = new HeightVolumeVertex[] {
+                        new HeightVolumeVertex(new Vector3(b.TopLeft, 0), Vector3.Up, zRange),
+                        new HeightVolumeVertex(new Vector3(b.TopRight, 0), Vector3.Up, zRange),
+                        new HeightVolumeVertex(new Vector3(b.BottomRight, 0), Vector3.Up, zRange),
+                        new HeightVolumeVertex(new Vector3(b.BottomLeft, 0), Vector3.Up, zRange)
                     };
 
                     Texture2D vertexDataTexture;
@@ -1185,37 +1118,32 @@ namespace Squared.Illuminant {
 
                     vertexDataTexture.SetData(p.GetVertices());
 
-                    using (var batch = PrimitiveBatch<VertexPositionColor>.New(
+                    using (var batch = PrimitiveBatch<HeightVolumeVertex>.New(
                         interiorGroup, i, IlluminantMaterials.DistanceFieldInterior,
                         (dm, _) => {
                             intParameters["NumVertices"].SetValue(p.Count);
                             intParameters["VertexDataTexture"].SetValue(vertexDataTexture);
                             intParameters["SliceZ"].SetValue(sliceZ);
-                            intParameters["MinZ"].SetValue(hv.ZBase);
-                            intParameters["MaxZ"].SetValue(hv.ZBase + hv.Height);
                             IlluminantMaterials.DistanceFieldInterior.Flush();
                         }
                     ))
-                        batch.Add(new PrimitiveDrawCall<VertexPositionColor>(
+                        batch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
                             PrimitiveType.TriangleList,
                             m, 0, m.Length / 3
                         ));
 
-
-                    using (var batch = PrimitiveBatch<VertexPositionColor>.New(
+                    using (var batch = PrimitiveBatch<HeightVolumeVertex>.New(
                         exteriorGroup, i, IlluminantMaterials.DistanceFieldExterior,
                         (dm, _) => {
                             extParameters["NumVertices"].SetValue(p.Count);
                             extParameters["VertexDataTexture"].SetValue(vertexDataTexture);
                             extParameters["SliceZ"].SetValue(sliceZ);
-                            extParameters["MinZ"].SetValue(hv.ZBase);
-                            extParameters["MaxZ"].SetValue(hv.ZBase + hv.Height);
                             IlluminantMaterials.DistanceFieldExterior.Flush();
                         }
                     ))
-                        batch.Add(new PrimitiveDrawCall<VertexPositionColor>(
+                        batch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
                             PrimitiveType.TriangleList,
-                            verts, 0, verts.Length, indices, 0, indices.Length / 3
+                            boundingBoxVertices, 0, boundingBoxVertices.Length, indices, 0, indices.Length / 3
                         ));
 
                     i++;
@@ -1223,6 +1151,8 @@ namespace Squared.Illuminant {
         }
 
         private void RenderDistanceFieldDistanceFunctions (short[] indices, float sliceZ, BatchGroup group) {
+            return;
+
             var verts = new VertexPositionColor[] {
                 new VertexPositionColor(new Vector3(0, 0, 0), Color.White),
                 new VertexPositionColor(new Vector3(Configuration.MaximumRenderSize.First, 0, 0), Color.White),
@@ -1302,6 +1232,7 @@ namespace Squared.Illuminant {
         public Squared.Render.EffectMaterial VolumeFrontFace, VolumeTopFace;
         public Squared.Render.EffectMaterial DistanceFieldExterior, DistanceFieldInterior;
         public Squared.Render.EffectMaterial DistanceFunction;
+        public Squared.Render.EffectMaterial HeightVolume;
         public Squared.Render.EffectMaterial ScreenSpaceGammaCompressedBitmap, WorldSpaceGammaCompressedBitmap;
         public Squared.Render.EffectMaterial ScreenSpaceToneMappedBitmap, WorldSpaceToneMappedBitmap;
 #if !SDL2

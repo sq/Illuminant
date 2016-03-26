@@ -108,7 +108,7 @@ namespace TestGame.Scenes {
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(1024, 1024) {
-                    TwoPointFiveD = true,
+                    // TwoPointFiveD = true,
                     DistanceFieldResolution = 0.5f,
                     DistanceFieldSliceCount = 32,
                     DistanceFieldMinStepSize = 2f,
@@ -117,14 +117,14 @@ namespace TestGame.Scenes {
                     DistanceFieldOcclusionToOpacityPower = 0.5f,
                     DistanceFieldMaxConeRadius = 32,
                     DistanceFieldMaxStepCount = 96,
-                    DistanceFieldCaching = true
+                    DistanceFieldCaching = false
                 }
             );
 
             var light = new LightSource {
                 Position = new Vector3(64, 64, 0.7f),
                 Color = new Vector4(1f, 1f, 1f, 0.5f),
-                Radius = 16,
+                Radius = 8,
                 RampLength = 500,
                 RampMode = LightSourceRampMode.Exponential
             };
@@ -136,7 +136,7 @@ namespace TestGame.Scenes {
                 Position = new Vector3(1024, 800, 320f),
                 Color = new Vector4(0.2f, 0.4f, 0.6f, 0.4f),
                 // FIXME: Implement directional lights and make this one
-                Radius = 128,
+                Radius = 64,
                 RampLength = 2048,
                 RampMode = LightSourceRampMode.Linear
             };
@@ -148,8 +148,8 @@ namespace TestGame.Scenes {
                 Position = new Vector3(500, 150, 220f),
                 Color = new Vector4(0.6f, 0.4f, 0.2f, 0.33f),
                 // FIXME: Implement directional lights and make this one
-                Radius = 96,
-                RampLength = 1024,
+                Radius = 64,
+                RampLength = 2048,
                 RampMode = LightSourceRampMode.Linear
             };
 
@@ -262,7 +262,7 @@ namespace TestGame.Scenes {
                     ))
                         bb.Add(new BitmapDrawCall(
                             Renderer.TerrainDepthmap, Vector2.Zero, new Bounds(Vector2.Zero, Vector2.One), 
-                            Color.White, 1f / Renderer.Configuration.HeightmapResolution
+                            new Color(255, 0, 0, 255), 1f / Renderer.Configuration.HeightmapResolution
                         ));
                 }
             }

@@ -37,13 +37,10 @@ float PointLightPixelCore(
     in float2 ramp          : TEXCOORD1, // radius, ramp length
     in float2 vpos          : VPOS
 ) {
-    // FIXME: Restore terrain Z and ground self-occlusion compensation?
-    /*
-    float2 terrainZ = sampleTerrain(vpos);
-    float shadedZ = terrainZ.y;
-    */
+    // float terrainZ = sampleTerrain(vpos) * DistanceFieldExtent.z;
+    float terrainZ = 0;
+    float3 shadedPixelPosition = float3(worldPosition.xy, terrainZ);
 
-    float3 shadedPixelPosition = float3(worldPosition.xy, 0);
     float lightOpacity = computeLightOpacity(shadedPixelPosition, lightCenter, ramp.x, ramp.y);
     float tracedOcclusion = coneTrace(lightCenter, ramp, shadedPixelPosition);
 

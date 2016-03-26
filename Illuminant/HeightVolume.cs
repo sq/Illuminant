@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -8,6 +9,37 @@ using Squared.Game;
 using Squared.Util;
 
 namespace Squared.Illuminant {
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    public struct HeightVolumeVertex : IVertexType {
+        public Vector3 Position;
+        public Vector3 Normal;
+        public Vector2 ZRange;
+
+        public static VertexDeclaration _VertexDeclaration;
+
+        static HeightVolumeVertex () {
+            var tThis = typeof(HeightVolumeVertex);
+
+            _VertexDeclaration = new VertexDeclaration(
+                new VertexElement(Marshal.OffsetOf(tThis, "Position").ToInt32(), VertexElementFormat.Vector3, VertexElementUsage.Position, 0),
+                new VertexElement(Marshal.OffsetOf(tThis, "Normal").ToInt32(),   VertexElementFormat.Vector3, VertexElementUsage.Normal, 0),
+                new VertexElement(Marshal.OffsetOf(tThis, "ZRange").ToInt32(),   VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 0)
+            );
+        }
+
+        public HeightVolumeVertex (Vector3 position, Vector3 normal, Vector2 zRange) {
+            Position = position;
+            Normal = normal;
+            ZRange = zRange;
+        }
+
+        public VertexDeclaration VertexDeclaration {
+            get {
+                return _VertexDeclaration;
+            }
+        }
+    }
+
     public abstract class HeightVolumeBase : IHasBounds {
         public bool IsObstruction = true;
 
@@ -16,8 +48,8 @@ namespace Squared.Illuminant {
         private float _Height;
 
         // HACK
-        protected VertexPositionColor[] _Mesh3D           = null;
-        protected FrontFaceVertex[]     _FrontFaceMesh3D  = null;
+        protected HeightVolumeVertex[] _Mesh3D = null;
+        protected HeightVolumeVertex[] _FrontFaceMesh3D = null;
 
         protected HeightVolumeBase (Polygon polygon, float zBase = 0, float height = 0) {
             Polygon = polygon;
@@ -49,11 +81,11 @@ namespace Squared.Illuminant {
             }
         }
 
-        public abstract VertexPositionColor[] Mesh3D {
+        public abstract HeightVolumeVertex[] Mesh3D {
             get;
         }
 
-        public abstract ArraySegment<FrontFaceVertex> GetFrontFaceMesh3D ();
+        public abstract ArraySegment<HeightVolumeVertex> GetFrontFaceMesh3D ();
 
         public int LineCount {
             get {
@@ -104,26 +136,24 @@ namespace Squared.Illuminant {
             : base (polygon, zBase, height) {
         }
 
-        public override VertexPositionColor[] Mesh3D {
+        public override HeightVolumeVertex[] Mesh3D {
             get {
                 var h1 = ZBase;
                 var h2 = ZBase + Height;
-
-                // [minHeight, maxHeight]
-                var c = new Color(h1, h2, 0, 1f);
+                var range = new Vector2(h1, h2);
 
                 if (_Mesh3D == null) {
                     _Mesh3D = (
                         from p in Geometry.Triangulate(Polygon) 
                         from v in p
-                        select new VertexPositionColor(
-                            new Vector3(v, h2), c                            
+                        select new HeightVolumeVertex(
+                            new Vector3(v, h2), Vector3.Up, range
                         )
                     ).ToArray();
                 } else {
                     for (var i = 0; i < _Mesh3D.Length; i++) {
                         _Mesh3D[i].Position.Z = h2;
-                        _Mesh3D[i].Color = c;
+                        _Mesh3D[i].ZRange = range;
                     }
                 }
 
@@ -131,10 +161,10 @@ namespace Squared.Illuminant {
             }
         }
 
-        public override ArraySegment<FrontFaceVertex> GetFrontFaceMesh3D () {
+        public override ArraySegment<HeightVolumeVertex> GetFrontFaceMesh3D () {
             if (_FrontFaceMesh3D == null) {
                 var count = (Polygon.Count * 6);
-                _FrontFaceMesh3D = new FrontFaceVertex[count];
+                _FrontFaceMesh3D = new HeightVolumeVertex[count];
             }
 
             var h1 = ZBase;
@@ -183,18 +213,18 @@ namespace Squared.Illuminant {
                 var bTop    = new Vector3(b, h2);
                 var bBottom = new Vector3(b, h1);
 
-                _FrontFaceMesh3D[i + 0] = new FrontFaceVertex(aTop,    aNormal, zRange);
-                _FrontFaceMesh3D[i + 1] = new FrontFaceVertex(bTop,    bNormal, zRange);
-                _FrontFaceMesh3D[i + 2] = new FrontFaceVertex(aBottom, aNormal, zRange);
-                _FrontFaceMesh3D[i + 3] = new FrontFaceVertex(bTop,    bNormal, zRange);
-                _FrontFaceMesh3D[i + 4] = new FrontFaceVertex(bBottom, bNormal, zRange);
-                _FrontFaceMesh3D[i + 5] = new FrontFaceVertex(aBottom, aNormal, zRange);
+                _FrontFaceMesh3D[i + 0] = new HeightVolumeVertex(aTop,    aNormal, zRange);
+                _FrontFaceMesh3D[i + 1] = new HeightVolumeVertex(bTop,    bNormal, zRange);
+                _FrontFaceMesh3D[i + 2] = new HeightVolumeVertex(aBottom, aNormal, zRange);
+                _FrontFaceMesh3D[i + 3] = new HeightVolumeVertex(bTop,    bNormal, zRange);
+                _FrontFaceMesh3D[i + 4] = new HeightVolumeVertex(bBottom, bNormal, zRange);
+                _FrontFaceMesh3D[i + 5] = new HeightVolumeVertex(aBottom, aNormal, zRange);
 
                 i += 6;
                 actualCount += 6;
             }
 
-            return new ArraySegment<FrontFaceVertex>(_FrontFaceMesh3D, 0, actualCount);
+            return new ArraySegment<HeightVolumeVertex>(_FrontFaceMesh3D, 0, actualCount);
         }
     }
 }
