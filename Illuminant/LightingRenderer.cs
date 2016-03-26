@@ -933,6 +933,7 @@ namespace Squared.Illuminant {
                 _LightPositions[i]     = ls.Position;
                 _LightNeutralColors[i] = ls.NeutralColor;
                 _LightColors[i]        = ls.Color;
+                _LightColors[i].W     *= ls.Opacity;
                 _LightProperties[i]    = new Vector3(
                     ls.Radius, ls.RampLength,
                     (ls.RampMode == LightSourceRampMode.Exponential)
@@ -1217,8 +1218,6 @@ namespace Squared.Illuminant {
         }
 
         private void RenderDistanceFieldDistanceFunctions (short[] indices, float sliceZ, BatchGroup group) {
-            return;
-
             var verts = new VertexPositionColor[] {
                 new VertexPositionColor(new Vector3(0, 0, 0), Color.White),
                 new VertexPositionColor(new Vector3(Configuration.MaximumRenderSize.First, 0, 0), Color.White),

@@ -34,7 +34,7 @@ namespace TestGame.Scenes {
             int scaledWidth = (int)Width;
             int scaledHeight = (int)Height;
 
-            const int multisampleCount = 0;
+            const int multisampleCount = 8;
 
             if (scaledWidth < 4)
                 scaledWidth = 4;
@@ -74,10 +74,10 @@ namespace TestGame.Scenes {
 
             var light = new LightSource {
                 Position = new Vector2(64, 64),
-                Color = new Vector4(1f, 1f, 1f, 1),
-                Opacity = 0.9f,
-                Radius = 100,
-                RampLength = 700,
+                Color = new Vector4(1f, 1f, 1f, 1f),
+                Opacity = 0.5f,
+                Radius = 60,
+                RampLength = 450,
                 RampMode = LightSourceRampMode.Exponential
             };
 
@@ -85,10 +85,10 @@ namespace TestGame.Scenes {
             Environment.LightSources.Add(light);
 
             var rng = new Random(1234);
-            for (var i = 0; i < 24; i++) {
+            for (var i = 0; i < 12; i++) {
                 light = new LightSource {
                     Position = new Vector3(64, 64, rng.NextFloat(0.1f, 2.0f)),
-                    Color = new Vector4((float)rng.NextDouble(0.2f, 0.7f), (float)rng.NextDouble(0.2f, 0.7f), (float)rng.NextDouble(0.2f, 0.7f), 1.0f),
+                    Color = new Vector4((float)rng.NextDouble(0.2f, 0.7f), (float)rng.NextDouble(0.2f, 0.7f), (float)rng.NextDouble(0.2f, 0.7f), 0.4f),
                     Radius = rng.NextFloat(40, 68),
                     RampLength = rng.NextFloat(210, 300),
                     RampMode = LightSourceRampMode.Exponential
@@ -225,7 +225,7 @@ namespace TestGame.Scenes {
                     Lights[i].Position = lightCenter + new Vector3(
                         (float)Math.Cos(angle + offset) * localRadius, 
                         (float)Math.Sin(angle + offset) * localRadius,
-                        zFromRadius * 128f
+                        zFromRadius * 192f
                     );
                     Lights[i].Color.W = ShowRotatingLights ? 1.0f : 0.0f;
                 }

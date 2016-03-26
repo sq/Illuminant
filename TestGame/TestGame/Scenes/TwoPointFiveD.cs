@@ -25,7 +25,7 @@ namespace TestGame.Scenes {
         float LightZ;
 
         bool ShowTerrainDepth  = false;
-        bool ShowLightmap      = true;
+        bool ShowLightmap      = false;
         bool ShowDistanceField = false;
 
         public TwoPointFiveDTest (TestGame game, int width, int height)
@@ -122,40 +122,38 @@ namespace TestGame.Scenes {
                 Position = new Vector3(64, 64, 0.7f),
                 Color = new Vector4(1f, 1f, 1f, 0.6f),
                 Radius = 20,
-                RampLength = 1600,
+                RampLength = 600,
                 RampMode = LightSourceRampMode.Exponential
             };
 
             Lights.Add(light);
             Environment.LightSources.Add(light);
 
-            if (false) {
-                var light2 = new LightSource {
-                    Position = new Vector3(1024, 800, 2.5f),
-                    Color = new Vector4(0.2f, 0.4f, 0.6f, 0.4f),
-                    // FIXME: Implement directional lights and make this one
-                    Radius = 128,
-                    RampLength = 2048,
-                    RampMode = LightSourceRampMode.Linear
-                };
+            var light2 = new LightSource {
+                Position = new Vector3(1024, 800, 320f),
+                Color = new Vector4(0.2f, 0.4f, 0.6f, 0.4f),
+                // FIXME: Implement directional lights and make this one
+                Radius = 128,
+                RampLength = 2048,
+                RampMode = LightSourceRampMode.Linear
+            };
 
-                Lights.Add(light2);
-                Environment.LightSources.Add(light2);
+            Lights.Add(light2);
+            Environment.LightSources.Add(light2);
 
-                var light3 = new LightSource {
-                    Position = new Vector3(500, 150, 2f),
-                    Color = new Vector4(0.6f, 0.4f, 0.2f, 0.33f),
-                    // FIXME: Implement directional lights and make this one
-                    Radius = 96,
-                    RampLength = 1024,
-                    RampMode = LightSourceRampMode.Linear
-                };
+            var light3 = new LightSource {
+                Position = new Vector3(500, 150, 220f),
+                Color = new Vector4(0.6f, 0.4f, 0.2f, 0.33f),
+                // FIXME: Implement directional lights and make this one
+                Radius = 96,
+                RampLength = 1024,
+                RampMode = LightSourceRampMode.Linear
+            };
 
-                Lights.Add(light3);
-                Environment.LightSources.Add(light3);
-            }
+            Lights.Add(light3);
+            Environment.LightSources.Add(light3);
 
-            Rect(new Vector2(330, 337), new Vector2(Width - 32, 394), 0f, 55f);
+            Rect(new Vector2(330, 337), new Vector2(Width, 394), 0f, 55f);
 
             Pillar(new Vector2(97, 523));
             Pillar(new Vector2(719, 520));
@@ -166,7 +164,7 @@ namespace TestGame.Scenes {
                     new Vector3(500, 750, 0), new Vector3(50, 100, 20f)
                 ));
 
-            if (false)
+            if (true)
                 Environment.Obstructions.Add(new LightObstruction(
                     LightObstructionType.Ellipsoid, 
                     new Vector3(500, 750, 0), new Vector3(90, 45, 20f)
