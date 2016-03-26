@@ -230,6 +230,8 @@ float coneTrace (
         stepCount += 1;
     }
 
+    return stepCount / DistanceFieldMaxStepCount;
+
     // HACK: Force visibility down to 0 if we are going to terminate the trace because we took too many steps.
     float windowStart = max(DistanceFieldMaxStepCount - MAX_STEP_RAMP_WINDOW, 0);
     float stepWindowVisibility = (1.0 - (stepCount - windowStart) / MAX_STEP_RAMP_WINDOW);

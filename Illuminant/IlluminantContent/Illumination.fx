@@ -46,6 +46,7 @@ float PointLightPixelCore(
     float3 shadedPixelPosition = float3(worldPosition.xy, 0);
     float lightOpacity = computeLightOpacity(shadedPixelPosition, lightCenter, ramp.x, ramp.y);
     float tracedOcclusion = coneTrace(lightCenter, ramp, shadedPixelPosition);
+    return tracedOcclusion;
 
     return lightOpacity * tracedOcclusion;
 }

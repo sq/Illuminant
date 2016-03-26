@@ -34,7 +34,7 @@ namespace TestGame.Scenes {
             int scaledWidth = (int)Width;
             int scaledHeight = (int)Height;
 
-            const int multisampleCount = 8;
+            const int multisampleCount = 0;
 
             if (scaledWidth < 4)
                 scaledWidth = 4;
