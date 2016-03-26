@@ -6,7 +6,7 @@
 
 // Maximum distance
 // Smaller values increase the precision of distance values but slow down traces
-#define DISTANCE_MAX 256
+#define DISTANCE_MAX 600
 
 // Filtering dramatically increases the precision of the distance field,
 //  *and* it's mathematically correct!
@@ -31,8 +31,8 @@
 #define TRACE_INITIAL_OFFSET_PX 1
 
 // We threshold shadow values from cone tracing to eliminate 'almost obstructed' and 'almost unobstructed' artifacts
-#define FULLY_SHADOWED_THRESHOLD 0.03
-#define UNSHADOWED_THRESHOLD 0.97
+#define FULLY_SHADOWED_THRESHOLD 0.1
+#define UNSHADOWED_THRESHOLD 0.95
 
 
 float closestPointOnEdgeAsFactor (

@@ -11,6 +11,7 @@ using Squared.Game;
 using Squared.Illuminant;
 using Squared.Render;
 using Squared.Render.Convenience;
+using Squared.Util;
 
 namespace TestGame.Scenes {
     public class TwoPointFiveDTest : Scene {
@@ -29,6 +30,7 @@ namespace TestGame.Scenes {
         bool ShowTerrainDepth  = false;
         bool ShowLightmap      = true;
         bool ShowDistanceField = false;
+        bool Timelapse         = true;
 
         public TwoPointFiveDTest (TestGame game, int width, int height)
             : base(game, 1024, 1024) {
@@ -38,7 +40,7 @@ namespace TestGame.Scenes {
             int scaledWidth = (int)Width / ScaleFactor;
             int scaledHeight = (int)Height / ScaleFactor;
 
-            const int multisampleCount = 0;
+            const int multisampleCount = 8;
 
             if (scaledWidth < 4)
                 scaledWidth = 4;
@@ -51,7 +53,7 @@ namespace TestGame.Scenes {
 
                 Lightmap = new RenderTarget2D(
                     Game.GraphicsDevice, scaledWidth, scaledHeight, false,
-                    SurfaceFormat.Color, DepthFormat.Depth24, multisampleCount, 
+                    SurfaceFormat.Rgba64, DepthFormat.Depth24, multisampleCount, 
                     // YUCK
                     RenderTargetUsage.DiscardContents
                 );
@@ -111,8 +113,8 @@ namespace TestGame.Scenes {
                     TwoPointFiveD = true,
                     DistanceFieldResolution = 0.5f,
                     DistanceFieldSliceCount = 32,
-                    DistanceFieldMinStepSize = 2f,
-                    DistanceFieldMinStepSizeGrowthRate = 0.01f,
+                    DistanceFieldMinStepSize = 1.33f,
+                    DistanceFieldMinStepSizeGrowthRate = 0.012f,
                     DistanceFieldLongStepFactor = 0.5f,
                     DistanceFieldOcclusionToOpacityPower = 0.5f,
                     DistanceFieldMaxConeRadius = 32,
@@ -185,6 +187,12 @@ namespace TestGame.Scenes {
             const float LightmapScale = 1f;
 
             CreateRenderTargets();
+
+            float time = (float)(Time.Seconds % 6);
+            Renderer.Configuration.DistanceFieldMaxStepCount =
+                Timelapse
+                    ? (int)Arithmetic.Clamp(time * 24, 1, 128)
+                    : 128;
 
             Renderer.UpdateFields(frame, -2);
 
@@ -277,6 +285,9 @@ namespace TestGame.Scenes {
 
                 if (KeyWasPressed(Keys.T))
                     ShowTerrainDepth = !ShowTerrainDepth;
+
+                if (KeyWasPressed(Keys.P))
+                    Timelapse = !Timelapse;
 
                 if (KeyWasPressed(Keys.D))
                     ShowDistanceField = !ShowDistanceField;

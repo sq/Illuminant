@@ -9,7 +9,7 @@ namespace ThreefoldTrials.Framework {
         private static readonly StringBuilder StringBuilder = new StringBuilder();
         private static string _CachedString = null;
 
-        public const int SampleCount = 60;
+        public const int SampleCount = 120;
         public static readonly List<double> WaitSamples = new List<double>(),
             BeginDrawSamples = new List<double>(),
             DrawSamples = new List<double>(),

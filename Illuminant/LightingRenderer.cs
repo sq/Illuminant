@@ -121,7 +121,7 @@ namespace Squared.Illuminant {
         public readonly RendererConfiguration Configuration;
         public LightingEnvironment Environment;
 
-        const int   DistanceLimit = 258;
+        const int   DistanceLimit = 610;
         const int   StencilTrue  = 0xFF;
         const int   StencilFalse = 0x00;
 
