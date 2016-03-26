@@ -52,7 +52,7 @@ float computeDistance (
     float2 vpos
 ) {
     float3 worldPosition = float3(vpos.x, vpos.y, SliceZ);
-    float resultDistance = 99999;
+    float resultDistance = 999999;
 
     [loop]
     for (int i = 0; i < NumDistanceObjects; i++) {

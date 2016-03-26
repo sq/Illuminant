@@ -1002,6 +1002,8 @@ namespace Squared.Illuminant {
             Vector2 minCoordinate = new Vector2(999999, 999999);
             Vector2 maxCoordinate = new Vector2(-999999, -999999);
 
+            // FIXME: This doesn't work anymore because the Z range is no longer [0-1] so Mesh3D is garbage
+            if (false)
             using (var group = BatchGroup.ForRenderTarget(
                 container, layer, _TerrainDepthmap,
                 // FIXME: Optimize this
@@ -1098,7 +1100,7 @@ namespace Squared.Illuminant {
             EffectParameterCollection intParameters, EffectParameterCollection extParameters, 
             int slice
         ) {
-            float sliceZ = (slice / (float)(Configuration.DistanceFieldSliceCount - 1));
+            float sliceZ = (slice / (float)(Configuration.DistanceFieldSliceCount - 1)) * Environment.MaximumZ;
             int displaySlice = slice / 2;
             var sliceX = (displaySlice % DistanceFieldSlicesX) * DistanceFieldSliceWidth;
             var sliceY = (displaySlice / DistanceFieldSlicesX) * DistanceFieldSliceHeight;
@@ -1148,10 +1150,12 @@ namespace Squared.Illuminant {
             using (var interiorGroup = BatchGroup.ForRenderTarget(group, 1, _DistanceField, (dm, _) => {
                 dm.Device.RasterizerState = RenderStates.ScissorOnly;
                 dm.Device.DepthStencilState = DepthStencilState.None;
+                SetDistanceFieldParameters(intParameters, false);
             }))
             using (var exteriorGroup = BatchGroup.ForRenderTarget(group, 2, _DistanceField, (dm, _) => {
                 dm.Device.RasterizerState = RenderStates.ScissorOnly;
                 dm.Device.DepthStencilState = DepthStencilState.None;
+                SetDistanceFieldParameters(extParameters, false);
             }))
                 foreach (var hv in Environment.HeightVolumes) {
                     var p = hv.Polygon;
@@ -1159,11 +1163,11 @@ namespace Squared.Illuminant {
                     var b = hv.Bounds.Expand(DistanceLimit, DistanceLimit);
 
                     var verts = new VertexPositionColor[] {
-                                    new VertexPositionColor(new Vector3(b.TopLeft, 0), Color.White),
-                                    new VertexPositionColor(new Vector3(b.TopRight, 0), Color.White),
-                                    new VertexPositionColor(new Vector3(b.BottomRight, 0), Color.White),
-                                    new VertexPositionColor(new Vector3(b.BottomLeft, 0), Color.White)
-                                };
+                        new VertexPositionColor(new Vector3(b.TopLeft, 0), Color.White),
+                        new VertexPositionColor(new Vector3(b.TopRight, 0), Color.White),
+                        new VertexPositionColor(new Vector3(b.BottomRight, 0), Color.White),
+                        new VertexPositionColor(new Vector3(b.BottomLeft, 0), Color.White)
+                    };
 
                     Texture2D vertexDataTexture;
 
@@ -1192,7 +1196,6 @@ namespace Squared.Illuminant {
                         ));
 
 
-                    if (false)
                     using (var batch = PrimitiveBatch<VertexPositionColor>.New(
                         exteriorGroup, i, IlluminantMaterials.DistanceFieldExterior,
                         (dm, _) => {
@@ -1214,6 +1217,8 @@ namespace Squared.Illuminant {
         }
 
         private void RenderDistanceFieldDistanceFunctions (short[] indices, float sliceZ, BatchGroup group) {
+            return;
+
             var verts = new VertexPositionColor[] {
                 new VertexPositionColor(new Vector3(0, 0, 0), Color.White),
                 new VertexPositionColor(new Vector3(Configuration.MaximumRenderSize.First, 0, 0), Color.White),

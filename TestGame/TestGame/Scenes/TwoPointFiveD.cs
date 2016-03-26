@@ -166,7 +166,7 @@ namespace TestGame.Scenes {
                     new Vector3(500, 750, 0), new Vector3(50, 100, 20f)
                 ));
 
-            if (true)
+            if (false)
                 Environment.Obstructions.Add(new LightObstruction(
                     LightObstructionType.Ellipsoid, 
                     new Vector3(500, 750, 0), new Vector3(90, 45, 20f)

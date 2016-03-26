@@ -22,7 +22,7 @@ void DistanceVertexShader (
     out   float4 result        : POSITION0
 ) {
     result = TransformPosition(float4(position.xy - ViewportPosition, 0, 1), 0);
-    result.z = position.z;
+    result.z = 0;
 }
 
 float computeDistance (
