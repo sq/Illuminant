@@ -1,7 +1,6 @@
 #include "RampCommon.fxh"
 
 uniform float GroundZ;
-uniform float ZDistanceScale;
 uniform float ZToYMultiplier;
 
 uniform float  HeightmapInvScaleFactor;
@@ -39,7 +38,6 @@ float computeLightOpacity(
     float lightRadius, float lightRampLength
 ) {
     float3 distance3 = shadedPixelPosition - lightCenter;
-    distance3.z *= ZDistanceScale;
 
     float  distance = length(distance3) - lightRadius;
     return 1 - clamp(distance / lightRampLength, 0, 1);

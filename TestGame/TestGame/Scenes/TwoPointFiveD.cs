@@ -91,9 +91,9 @@ namespace TestGame.Scenes {
 
             var baseSizeTL = new Vector2(62, 65);
             var baseSizeBR = new Vector2(64, 57);
-            Ellipse(center, 51f, 45f, 0, totalHeight);
-            Rect(center - baseSizeTL, center + baseSizeBR, 0.0f, baseHeight);
-            Rect(center - baseSizeTL, center + baseSizeBR, totalHeight - capHeight, capHeight);
+            Ellipse(center, 51f, 45f, 0, totalHeight * 128);
+            Rect(center - baseSizeTL, center + baseSizeBR, 0.0f, baseHeight * 128);
+            Rect(center - baseSizeTL, center + baseSizeBR, (totalHeight - capHeight) * 128, capHeight * 128);
         }
 
         public override void LoadContent () {
@@ -155,34 +155,29 @@ namespace TestGame.Scenes {
                 Environment.LightSources.Add(light3);
             }
 
-            Rect(new Vector2(330, 337), new Vector2(Width, 394), 0f, 0.435f);
+            Rect(new Vector2(330, 337), new Vector2(Width, 394), 0f, 55f);
 
             Pillar(new Vector2(97, 523));
             Pillar(new Vector2(719, 520));
 
-            // Floating cylinders
-            if (false) {
-                Ellipse(new Vector2(420, 830), 40f, 40f, 0.33f, 0.20f);
-                Ellipse(new Vector2(500, 825), 35f, 35f, 0.35f, 0.10f);
-            }
-
             if (true)
                 Environment.Obstructions.Add(new LightObstruction(
                     LightObstructionType.Box, 
-                    new Vector3(500, 750, 0), new Vector3(50, 100, 0.1f)
+                    new Vector3(500, 750, 0), new Vector3(50, 100, 20f)
                 ));
 
             if (true)
                 Environment.Obstructions.Add(new LightObstruction(
                     LightObstructionType.Ellipsoid, 
-                    new Vector3(500, 750, 0), new Vector3(90, 45, 0.1f)
+                    new Vector3(500, 750, 0), new Vector3(90, 45, 20f)
                 ));
 
             if (false)
                 Environment.HeightVolumes.Clear();
 
-            Environment.ZDistanceScale = 128;
-            Environment.ZToYMultiplier = 320;
+            Environment.GroundZ = 0;
+            Environment.MaximumZ = 128;
+            Environment.ZToYMultiplier = 2.5f;
         }
         
         public override void Draw (Squared.Render.Frame frame) {
@@ -288,7 +283,7 @@ namespace TestGame.Scenes {
                 var ms = Mouse.GetState();
                 Game.IsMouseVisible = true;
 
-                LightZ = (ms.ScrollWheelValue / 2048.0f);
+                LightZ = (ms.ScrollWheelValue / 2048.0f) * Environment.MaximumZ;
 
                 if (LightZ < 0.01f)
                     LightZ = 0.01f;

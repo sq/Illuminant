@@ -18,8 +18,7 @@ namespace Squared.Illuminant {
     public class RendererConfiguration {
         public float ClipRegionScale             = 1.0f;
         public bool  TwoPointFiveD               = false;
-        public float ZOffset                     = 0.0f;
-        public float ZScale                      = 1.0f;
+
         public float HeightmapResolution         = 1.0f;
         // Individual cone trace steps are not allowed to be any shorter than this.
         // Improves the worst-case performance of the trace and avoids spending forever
@@ -44,6 +43,8 @@ namespace Squared.Illuminant {
         public bool  DistanceFieldCaching        = true;
         public float DistanceFieldOcclusionToOpacityPower = 1;
 
+        // The maximum width and height of the viewport. Controls the size of the
+        //  terrain map and distance field.
         public readonly Pair<int> MaximumRenderSize;
 
         public RendererConfiguration (int maxWidth, int maxHeight) {
@@ -639,19 +640,6 @@ namespace Squared.Illuminant {
             device.Device.ScissorRectangle = StoredScissorRect;
         }
 
-        private void UpdateZRange () {
-            float minZ = Environment.GroundZ;
-            float maxZ = minZ;
-
-            foreach (var hv in Environment.HeightVolumes) {
-                minZ = Math.Min(minZ, hv.Height);
-                maxZ = Math.Max(maxZ, hv.Height);
-            }
-
-            Configuration.ZOffset = -minZ;
-            Configuration.ZScale = 1.0f / (maxZ - minZ);
-        }
-
         PointLightVertex MakePointLightVertex (LightSource lightSource, float intensityScale) {
             var vertex = new PointLightVertex();
             vertex.LightCenter = lightSource.Position;
@@ -669,8 +657,6 @@ namespace Squared.Illuminant {
         /// <param name="layer">The layer to render lighting into.</param>
         /// <param name="intensityScale">A factor to scale the intensity of all light sources. You can use this to rescale the intensity of light values for HDR.</param>
         public void RenderLighting (Frame frame, IBatchContainer container, int layer, float intensityScale = 1.0f) {
-            UpdateZRange();
-
             // FIXME
             var pointLightVertexCount = Environment.LightSources.Count * 4;
             var pointLightIndexCount = Environment.LightSources.Count * 6;
@@ -902,8 +888,11 @@ namespace Squared.Illuminant {
         }
 
         private void SetDistanceFieldParameters (EffectParameterCollection p, bool setDistanceTexture) {
-            p["ZDistanceScale"].SetValue(Environment.ZDistanceScale);
-
+            p["DistanceFieldExtent"].SetValue(new Vector3(
+                Configuration.MaximumRenderSize.First,
+                Configuration.MaximumRenderSize.Second,
+                Environment.MaximumZ
+            ));
             p["DistanceFieldTextureSliceSize"].SetValue(new Vector2(1f / DistanceFieldSlicesX, 1f / DistanceFieldSlicesY));
             p["DistanceFieldTextureSliceCount"].SetValue(new Vector3(DistanceFieldSlicesX, DistanceFieldSlicesY, Configuration.DistanceFieldSliceCount));
 
@@ -1010,8 +999,6 @@ namespace Squared.Illuminant {
         }
 
         public void RenderHeightmap (Frame frame, IBatchContainer container, int layer) {
-            UpdateZRange();
-
             Vector2 minCoordinate = new Vector2(999999, 999999);
             Vector2 maxCoordinate = new Vector2(-999999, -999999);
 
@@ -1205,6 +1192,7 @@ namespace Squared.Illuminant {
                         ));
 
 
+                    if (false)
                     using (var batch = PrimitiveBatch<VertexPositionColor>.New(
                         exteriorGroup, i, IlluminantMaterials.DistanceFieldExterior,
                         (dm, _) => {

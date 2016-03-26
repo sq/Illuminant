@@ -23,12 +23,11 @@ namespace Squared.Illuminant {
         // The Z value of the ground plane.
         public float GroundZ = 0f;
 
-        // Scaling factor for falloff based on Z (since Z is 0-1 instead of in pixels)
-        // This also affects the contribution of Z values to the distance field,
-        //  because the x/y distances are in pixels and completely outweigh the z distances
-        public float ZDistanceScale = 1f;
+        // The Z value of the sky plane. Objects above this will not be represented in the distance field.
+        public float MaximumZ = 1f;
+
         // Offsets Y coordinates by (Z * -ZToYMultiplier) if TwoPointFiveD is enabled
-        public float ZToYMultiplier = 1f;
+        public float ZToYMultiplier = 0f;
 
         public void Clear () {
             LightSources.Clear();

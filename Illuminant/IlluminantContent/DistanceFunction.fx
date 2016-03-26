@@ -29,8 +29,6 @@ float evaluateFunction (
     float type, float3 center, float3 size
 ) {
     position -= center;
-    position.z *= ZDistanceScale;
-    size.z *= ZDistanceScale;
 
     type = floor(type);
 

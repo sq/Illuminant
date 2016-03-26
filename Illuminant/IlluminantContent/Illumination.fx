@@ -40,11 +40,9 @@ float PointLightPixelCore(
     float2 terrainZ = sampleTerrain(vpos);
 
     float shadedZ = terrainZ.y;
-    float3 shadedPixelPosition = float3(worldPosition.xy, shadedZ + (1 / ZDistanceScale));
+    float3 shadedPixelPosition = float3(worldPosition.xy, shadedZ + 1);
 
-    // float lightOpacity = computeLightOpacity(shadedPixelPosition, lightCenter, ramp.x, ramp.y);
-    // HACK
-    float lightOpacity = 1.0;
+    float lightOpacity = computeLightOpacity(shadedPixelPosition, lightCenter, ramp.x, ramp.y);
     // FIXME: Should we really need to turn on obstruction compensation here?
     float tracedOcclusion = coneTrace(lightCenter, ramp, shadedPixelPosition);
 

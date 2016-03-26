@@ -26,9 +26,10 @@ void FrontFaceVertexShader (
     out   float4 result        : POSITION0
 ) {
     worldPosition = position.xyz;
+
     position.y -= ZToYMultiplier * position.z;
     result = TransformPosition(float4(position.xy, 0, 1), 0);
-    result.z = position.z;
+    result.z = position.z / DistanceFieldExtent.z;
 }
 
 float ComputeRaycastedShadowOcclusionSample (
@@ -84,9 +85,10 @@ void TopFaceVertexShader(
     out float4 result        : POSITION0
 ) {
     worldPosition = position.xyz;
+
     position.y -= ZToYMultiplier * position.z;
     result = TransformPosition(float4(position.xy, 0, 1), 0);
-    result.z = position.z;
+    result.z = position.z / DistanceFieldExtent.z;
 }
 
 void TopFacePixelShader(
@@ -120,7 +122,7 @@ void TopFacePixelShader(
 
 #if TOP_FACE_RAYCAST_SHADOWS        
         // HACK: We shift the point upwards to mitigate self-occlusion
-        opacity *= ComputeRaycastedShadowOpacity(lightPosition, properties.xy, worldPosition + float3(0, 0, SELF_OCCLUSION_HACK / ZDistanceScale));
+        opacity *= ComputeRaycastedShadowOpacity(lightPosition, properties.xy, worldPosition + float3(0, 0, SELF_OCCLUSION_HACK));
 #endif
 
         float4 lightColor = lerp(LightNeutralColors[i], LightColors[i], opacity);

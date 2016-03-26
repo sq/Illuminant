@@ -76,6 +76,8 @@ uniform float  DistanceFieldMinimumStepSize;
 // Scales the length of long steps taken outside objects
 uniform float  DistanceFieldLongStepFactor;
 
+// The world position that corresponds to a distance field texture coordinate of [1,1,1]
+uniform float3 DistanceFieldExtent;
 
 uniform float  DistanceFieldInvScaleFactor;
 uniform float3 DistanceFieldTextureSliceCount;
@@ -105,15 +107,11 @@ float2 computeDistanceFieldSubsliceUv (
     return clamp(positionPx * DistanceFieldTextureTexelSize, float2(0, 0), DistanceFieldTextureSliceSize);
 }
 
-float intervalRamp (float value, float upperBound) {
-    return max(max(-value, value - upperBound), 0);
-};
-
 float sampleDistanceField (
     float3 position
 ) {
     // Interpolate between two Z samples. The xy interpolation is done by the GPU for us.
-    float scaledPositionZ = position.z / ZDistanceScale;
+    float scaledPositionZ = position.z;
     float slicePosition = clamp(scaledPositionZ * DistanceFieldTextureSliceCount.z, 0, DistanceFieldTextureSliceCount.z - 1);
     float sliceIndex1 = floor(slicePosition);
     float subslice = slicePosition - sliceIndex1;
@@ -138,17 +136,14 @@ float sampleDistanceField (
         subslice
     ));
 
-    // HACK: If the z-coordinate lies outside the distance field, we need to add distance to the
-    //  distance field samples that we collected from the edge of the field.
-    // TODO: Also apply this for x/y coordinates outside the field
-    float extraDistance = intervalRamp(position.z, ZDistanceScale);
-    return length(float2(decodedDistance, extraDistance));
-    /*
-    if ((extraDistance == 0) || (decodedDistance == 0))
-        return decodedDistance;
-    else
-        return length(float2(decodedDistance, extraDistance));
-    */
+    // HACK: Samples outside the distance field will be wrong if they just
+    //  read the closest distance in the field.
+    float3 minVolumeExtent = float3(-99999, -99999, -99999);
+    float3 maxVolumeExtent = float3(99999, 99999, 99999);
+    float clampedPosition = clamp(position, minVolumeExtent, maxVolumeExtent);
+    float distanceToVolume = length(clampedPosition - position);
+
+    return decodedDistance;
 }
 
 float sampleAlongRay (
@@ -194,10 +189,6 @@ float coneTrace (
     in float2 lightRamp,
     in float3 shadedPixelPosition
 ) {
-    // HACK: Compensate for Z scaling
-    lightCenter.z *= ZDistanceScale;
-    shadedPixelPosition.z *= ZDistanceScale;
-
     float minStepSize = max(1, DistanceFieldMinimumStepSize);
 
     float traceOffset = TRACE_INITIAL_OFFSET_PX;

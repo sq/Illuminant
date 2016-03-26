@@ -30,9 +30,6 @@ namespace Squared.Illuminant {
                 return _ZBase;
             }
             set {
-                if ((value < 0) || (value > 1))
-                    throw new ArgumentOutOfRangeException("value", "Heights must be [0-1] (lol, d3d9)");
-
                 _ZBase = value;
             }
         }
@@ -42,9 +39,6 @@ namespace Squared.Illuminant {
                 return _Height;
             }
             set {
-                if ((value < 0) || (value > 1))
-                    throw new ArgumentOutOfRangeException("value", "Heights must be [0-1] (lol, d3d9)");
-
                 _Height = value;
             }
         }

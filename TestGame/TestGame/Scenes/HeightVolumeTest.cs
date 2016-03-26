@@ -104,7 +104,7 @@ namespace TestGame.Scenes {
             const float maxHeight = 1f;
 
             Environment.GroundZ = 0;
-            Environment.ZDistanceScale = 128;
+            Environment.MaximumZ = 128;
             Environment.ZToYMultiplier = 200;
 
             var points = new List<Vector2>();

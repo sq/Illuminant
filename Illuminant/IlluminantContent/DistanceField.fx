@@ -49,7 +49,7 @@ float computeDistance (
             closestDeltaZ = deltaMinZ;
         }
 
-        float3 closestDelta = float3(closestDeltaXy.x, closestDeltaXy.y, closestDeltaZ * ZDistanceScale);
+        float3 closestDelta = float3(closestDeltaXy.x, closestDeltaXy.y, closestDeltaZ);
         float  closestDistance = length(closestDelta);
 
         resultDistance = min(resultDistance, closestDistance);
@@ -68,7 +68,7 @@ void InteriorPixelShader (
         vpos += ViewportPosition;
         resultDistance = -computeDistance(vpos);
     } else {
-        resultDistance = min(abs(SliceZ - MinZ), abs(SliceZ - MaxZ)) * ZDistanceScale;
+        resultDistance = min(abs(SliceZ - MinZ), abs(SliceZ - MaxZ));
     }
     color = encodeDistance(resultDistance);
 }
