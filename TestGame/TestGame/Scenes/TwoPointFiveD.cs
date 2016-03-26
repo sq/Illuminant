@@ -186,7 +186,7 @@ namespace TestGame.Scenes {
 
             CreateRenderTargets();
 
-            Renderer.RenderHeightmap(frame, frame, -2);
+            Renderer.UpdateFields(frame, -2);
 
             using (var bg = BatchGroup.ForRenderTarget(
                 frame, -1, Lightmap,

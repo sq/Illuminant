@@ -63,8 +63,8 @@ namespace TestGame.Scenes {
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment,
                 new RendererConfiguration(Width, Height) {
-                    DistanceFieldResolution = 0.5f,
-                    DistanceFieldSliceCount = 64,
+                    DistanceFieldResolution = 0.2f,
+                    DistanceFieldSliceCount = 16,
                     DistanceFieldLongStepFactor = 0.5f,
                     DistanceFieldMinStepSize = 1f,
                     DistanceFieldMaxStepCount = 128,
@@ -152,7 +152,7 @@ namespace TestGame.Scenes {
 
             CreateRenderTargets();
 
-            Renderer.RenderHeightmap(frame, frame, -2);
+            Renderer.UpdateFields(frame, -2);
 
             using (var bg = BatchGroup.ForRenderTarget(
                 frame, -1, Lightmap,
@@ -178,7 +178,10 @@ namespace TestGame.Scenes {
                 bb.Add(new BitmapDrawCall(
                     ShowTerrainDepth
                         ? Renderer.TerrainDepthmap
-                        : Lightmap, Vector2.Zero
+                        : Lightmap, Vector2.Zero,
+                    ShowTerrainDepth
+                        ? new Color(255, 0, 0, 255)
+                        : Color.White
                 ));
         }
 

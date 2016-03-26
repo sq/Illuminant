@@ -20,6 +20,8 @@ namespace Squared.Illuminant {
         public bool  TwoPointFiveD               = false;
 
         public float HeightmapResolution         = 1.0f;
+        public bool  HeightmapCaching            = true;
+
         // Individual cone trace steps are not allowed to be any shorter than this.
         // Improves the worst-case performance of the trace and avoids spending forever
         //  stepping short distances around the edges of objects.
@@ -806,10 +808,11 @@ namespace Squared.Illuminant {
             return false;
         }
 
-        const int FaceMaxLights = 16;
-
         // HACK
         private bool      _DistanceFieldReady = false;
+        private bool      _HeightmapReady     = false;
+
+        const int FaceMaxLights = 16;
 
         private int       _VisibleLightCount  = 0;
         private Vector3[] _LightPositions     = new Vector3[FaceMaxLights];
@@ -956,9 +959,21 @@ namespace Squared.Illuminant {
             }
         }
 
-        public void RenderHeightmap (Frame frame, IBatchContainer container, int layer) {
+        public void UpdateFields (IBatchContainer container, int layer) {
+            if (!_HeightmapReady) {
+                RenderHeightmap(ref layer, container);
+                _HeightmapReady = Configuration.HeightmapCaching;
+            }
+
+            if (!_DistanceFieldReady) {
+                RenderDistanceField(ref layer, container);
+                _DistanceFieldReady = Configuration.DistanceFieldCaching;
+            }
+        }
+
+        private void RenderHeightmap (ref int layerIndex, IBatchContainer resultGroup) {
             using (var group = BatchGroup.ForRenderTarget(
-                container, layer, _TerrainHeightmap,
+                resultGroup, layerIndex, _TerrainHeightmap,
                 // FIXME: Optimize this
                 (dm, _) => {
                     Materials.PushViewTransform(ViewTransform.CreateOrthographic(Configuration.MaximumRenderSize.First, Configuration.MaximumRenderSize.Second));
@@ -968,7 +983,7 @@ namespace Squared.Illuminant {
                 }
             )) {
                 if (Render.Tracing.RenderTrace.EnableTracing)
-                    Render.Tracing.RenderTrace.Marker(group, -1, "Frame {0:0000} : LightingRenderer {1:X4} : Begin Heightmap", frame.Index, this.GetHashCode());
+                    Render.Tracing.RenderTrace.Marker(group, -1, "LightingRenderer {0:X4} : Begin Heightmap", this.GetHashCode());
 
                 ClearBatch.AddNew(
                     group, 0, Materials.Clear, 
@@ -1000,12 +1015,7 @@ namespace Squared.Illuminant {
                 // TODO: Update the heightmap using any SDF light obstructions (maybe only if they're flagged?)
 
                 if (Render.Tracing.RenderTrace.EnableTracing)
-                    Render.Tracing.RenderTrace.Marker(group, 2, "Frame {0:0000} : LightingRenderer {1:X4} : End Heightmap", frame.Index, this.GetHashCode());
-            }
-
-            if (!_DistanceFieldReady) {
-                RenderDistanceField(ref layer, container);
-                _DistanceFieldReady = Configuration.DistanceFieldCaching;
+                    Render.Tracing.RenderTrace.Marker(group, 2, "LightingRenderer {0:X4} : End Heightmap", this.GetHashCode());
             }
         }
 
