@@ -957,7 +957,6 @@ namespace Squared.Illuminant {
         }
 
         public void RenderHeightmap (Frame frame, IBatchContainer container, int layer) {
-            // FIXME: This doesn't work anymore because the Z range is no longer [0-1] so Mesh3D is garbage
             using (var group = BatchGroup.ForRenderTarget(
                 container, layer, _TerrainHeightmap,
                 // FIXME: Optimize this
@@ -983,10 +982,12 @@ namespace Squared.Illuminant {
                         dm.Device.RasterizerState = RasterizerState.CullNone;
                         dm.Device.DepthStencilState = DepthStencilState.None;
                         dm.Device.BlendState = BlendState.Opaque;
+
+                        IlluminantMaterials.HeightVolume.Effect.Parameters["MaxZ"].SetValue(Environment.MaximumZ);
                     }
                 ))
-                // Rasterize the height volumes in sequential order.
-                foreach (var hv in Environment.HeightVolumes) {
+                // Rasterize the height volumes in order from lowest to highest.
+                foreach (var hv in Environment.HeightVolumes.OrderBy(hv => hv.ZBase + hv.Height)) {
                     var b = hv.Bounds;
                     var m = hv.Mesh3D;
 

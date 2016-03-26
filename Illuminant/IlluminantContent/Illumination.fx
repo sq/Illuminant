@@ -1,6 +1,8 @@
 #include "LightCommon.fxh"
 #include "DistanceFieldCommon.fxh"
 
+#define SELF_OCCLUSION_HACK 1.1
+
 shared float2 ViewportScale;
 shared float2 ViewportPosition;
 
@@ -37,8 +39,7 @@ float PointLightPixelCore(
     in float2 ramp          : TEXCOORD1, // radius, ramp length
     in float2 vpos          : VPOS
 ) {
-    // float terrainZ = sampleTerrain(vpos) * DistanceFieldExtent.z;
-    float terrainZ = 0;
+    float terrainZ = (sampleTerrain(vpos) * DistanceFieldExtent.z) + SELF_OCCLUSION_HACK;
     float3 shadedPixelPosition = float3(worldPosition.xy, terrainZ);
 
     float lightOpacity = computeLightOpacity(shadedPixelPosition, lightCenter, ramp.x, ramp.y);

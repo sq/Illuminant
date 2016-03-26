@@ -108,7 +108,7 @@ namespace TestGame.Scenes {
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(1024, 1024) {
-                    // TwoPointFiveD = true,
+                    TwoPointFiveD = true,
                     DistanceFieldResolution = 0.5f,
                     DistanceFieldSliceCount = 32,
                     DistanceFieldMinStepSize = 2f,
@@ -117,15 +117,15 @@ namespace TestGame.Scenes {
                     DistanceFieldOcclusionToOpacityPower = 0.5f,
                     DistanceFieldMaxConeRadius = 32,
                     DistanceFieldMaxStepCount = 96,
-                    DistanceFieldCaching = false
+                    DistanceFieldCaching = true
                 }
             );
 
             var light = new LightSource {
                 Position = new Vector3(64, 64, 0.7f),
                 Color = new Vector4(1f, 1f, 1f, 0.5f),
-                Radius = 8,
-                RampLength = 500,
+                Radius = 24,
+                RampLength = 550,
                 RampMode = LightSourceRampMode.Exponential
             };
 
@@ -284,7 +284,7 @@ namespace TestGame.Scenes {
                 var ms = Mouse.GetState();
                 Game.IsMouseVisible = true;
 
-                LightZ = (ms.ScrollWheelValue / 2048.0f) * Environment.MaximumZ;
+                LightZ = (ms.ScrollWheelValue / 4096.0f) * Environment.MaximumZ;
 
                 if (LightZ < 0.01f)
                     LightZ = 0.01f;

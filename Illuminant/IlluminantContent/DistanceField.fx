@@ -17,18 +17,16 @@ sampler   VertexDataSampler : register(s5) {
 };
 
 void DistanceVertexShader (
-    in    float3 position      : POSITION0, // x, y, z
-    inout float2 zRange        : TEXCOORD0,
-    out   float4 result        : POSITION0
+    in    float3 position : POSITION0, // x, y, z
+    inout float2 zRange   : TEXCOORD0,
+    out   float4 result   : POSITION0
 ) {
     result = TransformPosition(float4(position.xy - ViewportPosition, 0, 1), 0);
     result.z = 0;
 }
 
 float computeDistance (
-    float2 vpos, 
-    float2 zRange,
-    float  xySign
+    float2 vpos, float2 zRange
 ) {
     float resultDistance = 99999;
     float indexMultiplier = 1.0 / NumVertices;
@@ -40,15 +38,12 @@ float computeDistance (
 
         float2 closest = closestPointOnEdge(vpos, edgeA, edgeB);
         float2 closestDeltaXy = (vpos - closest);
-
-        float closestDeltaZ = 0;
-        float localSign = 1;
         float deltaMinZ = SliceZ - zRange.x;
         float deltaMaxZ = SliceZ - zRange.y;
 
+        float closestDeltaZ;
         if ((SliceZ >= zRange.x) && (SliceZ <= zRange.y)) {
             closestDeltaZ = 0;
-            localSign = xySign;
         } else if (abs(deltaMinZ) > abs(deltaMaxZ)) {
             closestDeltaZ = deltaMaxZ;
         } else {
@@ -56,10 +51,9 @@ float computeDistance (
         }
 
         float3 closestDelta = float3(closestDeltaXy.x, closestDeltaXy.y, closestDeltaZ);
-        float  closestDistance = length(closestDelta) * localSign;
+        float  closestDistance = length(closestDelta);
 
-        if (abs(closestDistance) < abs(resultDistance))
-            resultDistance = closestDistance;
+        resultDistance = min(resultDistance, closestDistance);
     }
 
     return resultDistance;
@@ -72,7 +66,14 @@ void InteriorPixelShader (
 ) {
     vpos *= DistanceFieldInvScaleFactor;
     vpos += ViewportPosition;
-    float resultDistance = computeDistance(vpos, zRange, -1);
+
+    float resultDistance;
+    if ((SliceZ >= zRange.x) && (SliceZ <= zRange.y)) {
+        resultDistance = -computeDistance(vpos, zRange);
+    } else {
+        resultDistance = min(abs(SliceZ - zRange.x), abs(SliceZ - zRange.y));
+    }
+
     color = encodeDistance(resultDistance);
 }
 
@@ -83,7 +84,7 @@ void ExteriorPixelShader (
 ) {
     vpos *= DistanceFieldInvScaleFactor;
     vpos += ViewportPosition;
-    float resultDistance = computeDistance(vpos, zRange, 1);
+    float resultDistance = computeDistance(vpos, zRange);
     color = encodeDistance(resultDistance);
 }
 
