@@ -21,7 +21,7 @@ namespace TestGame.Scenes {
         public readonly List<LightSource> Lights = new List<LightSource>();
 
         bool ShowTerrainDepth   = false;
-        bool TwoPointFiveD      = false;
+        bool TwoPointFiveD      = true;
         bool ShowRotatingLights = false;
 
         float LightZ = 0;
@@ -63,7 +63,7 @@ namespace TestGame.Scenes {
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment,
                 new RendererConfiguration(Width, Height) {
-                    DistanceFieldResolution = 1f,
+                    DistanceFieldResolution = 0.5f,
                     DistanceFieldSliceCount = 64,
                     DistanceFieldLongStepFactor = 0.5f,
                     DistanceFieldMinStepSize = 1f,
@@ -99,13 +99,13 @@ namespace TestGame.Scenes {
             }
 
             const float angleStep = (float)(Math.PI / 32);
-            const int   heightTiers = 4;
+            const int   heightTiers = 8;
             const float minHeight = 0f;
-            const float maxHeight = 1f;
+            const float maxHeight = 127f;
 
             Environment.GroundZ = 0;
             Environment.MaximumZ = 128;
-            Environment.ZToYMultiplier = 200;
+            Environment.ZToYMultiplier = 1.25f;
 
             var points = new List<Vector2>();
 
@@ -200,7 +200,7 @@ namespace TestGame.Scenes {
 
                 // const float minZ = 0f, maxZ = 1.5f;
                 // LightZ = Squared.Util.Arithmetic.PulseSine((float)gameTime.TotalGameTime.TotalSeconds * 0.66f, minZ, maxZ);
-                LightZ = ms.ScrollWheelValue / 2048.0f;
+                LightZ = ms.ScrollWheelValue / 2048.0f * 128f;
                 
                 var mousePos = new Vector2(ms.X, ms.Y);
 
@@ -222,7 +222,7 @@ namespace TestGame.Scenes {
                     Lights[i].Position = lightCenter + new Vector3(
                         (float)Math.Cos(angle + offset) * localRadius, 
                         (float)Math.Sin(angle + offset) * localRadius,
-                        zFromRadius
+                        zFromRadius * 128f
                     );
                     Lights[i].Color.W = ShowRotatingLights ? 1.0f : 0.0f;
                 }

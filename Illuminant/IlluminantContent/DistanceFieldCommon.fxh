@@ -111,7 +111,7 @@ float sampleDistanceField (
     float3 position
 ) {
     // Interpolate between two Z samples. The xy interpolation is done by the GPU for us.
-    float scaledPositionZ = position.z;
+    float scaledPositionZ = position.z / DistanceFieldExtent.z;
     float slicePosition = clamp(scaledPositionZ * DistanceFieldTextureSliceCount.z, 0, DistanceFieldTextureSliceCount.z - 1);
     float sliceIndex1 = floor(slicePosition);
     float subslice = slicePosition - sliceIndex1;
@@ -138,12 +138,12 @@ float sampleDistanceField (
 
     // HACK: Samples outside the distance field will be wrong if they just
     //  read the closest distance in the field.
-    float3 minVolumeExtent = float3(-99999, -99999, -99999);
-    float3 maxVolumeExtent = float3(99999, 99999, 99999);
+    float3 minVolumeExtent = float3(0, 0, 0);
+    float3 maxVolumeExtent = DistanceFieldExtent;
     float clampedPosition = clamp(position, minVolumeExtent, maxVolumeExtent);
     float distanceToVolume = length(clampedPosition - position);
 
-    return decodedDistance;
+    return decodedDistance; // + distanceToVolume;
 }
 
 float sampleAlongRay (

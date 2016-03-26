@@ -37,10 +37,13 @@ float PointLightPixelCore(
     in float2 ramp          : TEXCOORD1, // radius, ramp length
     in float2 vpos          : VPOS
 ) {
+    // FIXME: Restore terrain Z and ground self-occlusion compensation?
+    /*
     float2 terrainZ = sampleTerrain(vpos);
-
     float shadedZ = terrainZ.y;
-    float3 shadedPixelPosition = float3(worldPosition.xy, shadedZ + 1);
+    */
+
+    float3 shadedPixelPosition = float3(worldPosition.xy, 0);
 
     float lightOpacity = computeLightOpacity(shadedPixelPosition, lightCenter, ramp.x, ramp.y);
     // FIXME: Should we really need to turn on obstruction compensation here?
