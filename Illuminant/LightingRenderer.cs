@@ -580,9 +580,6 @@ namespace Squared.Illuminant {
                 var lightCount = 0;
 
                 foreach (var lightSource in Environment.LightSources) {
-                    if (IsLightInvisible(lightSource))
-                        continue;
-
                     sortedLights.Data[i++] = lightSource;
                     lightCount += 1;
                 }
@@ -712,27 +709,7 @@ namespace Squared.Illuminant {
                 if (Render.Tracing.RenderTrace.EnableTracing)
                     Render.Tracing.RenderTrace.Marker(resultGroup, 9999, "Frame {0:0000} : LightingRenderer {1:X4} : End", frame.Index, this.GetHashCode());
             }
-        }
-        
-        private bool IsLightInvisible (LightSource ls) {
-            if (ls.Position.Z < Environment.GroundZ)
-                return true;
-
-            var posXy = new Vector2(ls.Position.X, ls.Position.Y);
-
-            var isEnclosed = Environment.HeightVolumes.Any(
-                hv => 
-                    (hv.ZBase <= ls.Position.Z) &&
-                    ((hv.ZBase + hv.Height) >= ls.Position.Z) &&
-                    Geometry.PointInPolygon(posXy, hv.Polygon)
-            );
-
-            // FIXME: This is broken when lying on the same axis as a polygon edge, sometimes. :|
-            // if (isEnclosed)
-            //    return true;
-
-            return false;
-        }
+        }        
 
         private void SetTwoPointFiveDParametersInner (EffectParameterCollection p, bool setGBufferTexture, bool setDistanceTexture) {
             p["GroundZ"]           .SetValue(Environment.GroundZ);
@@ -801,8 +778,6 @@ namespace Squared.Illuminant {
             foreach (var ls in Environment.LightSources) {
                 if (i >= FaceMaxLights)
                     break;
-                else if (IsLightInvisible(ls))
-                    continue;
 
                 _LightPositions[i]     = ls.Position;
                 _LightNeutralColors[i] = ls.NeutralColor;
