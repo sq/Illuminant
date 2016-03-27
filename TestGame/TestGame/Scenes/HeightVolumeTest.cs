@@ -10,6 +10,7 @@ using Microsoft.Xna.Framework.Input;
 using Squared.Game;
 using Squared.Illuminant;
 using Squared.Render;
+using Squared.Util;
 
 namespace TestGame.Scenes {
     public class HeightVolumeTest : Scene {
@@ -25,7 +26,7 @@ namespace TestGame.Scenes {
         bool TwoPointFiveD      = true;
         bool ShowRotatingLights = true;
 
-        public const int RotatingLightCount = 4;
+        public const int RotatingLightCount = 64;
 
         public const int MultisampleCount = 0;
         public const int LightmapScaleRatio = 1;
@@ -91,16 +92,17 @@ namespace TestGame.Scenes {
             Lights.Add(light);
             Environment.LightSources.Add(light);
 
-            float opacityScale = Math.Min((float)Math.Pow(16.0 / RotatingLightCount, 1.05), 2);
+            float opacityScale = Math.Min((float)Math.Pow(32.0 / RotatingLightCount, 1.1), 2);
+            float radiusScale  = Arithmetic.Clamp(32.0f / RotatingLightCount, 0.75f, 1.5f);
 
             var rng = new Random(1234);
             for (var i = 0; i < RotatingLightCount; i++) {
                 light = new LightSource {
                     Position = new Vector3(64, 64, rng.NextFloat(0.1f, 2.0f)),
-                    Color = new Vector4((float)rng.NextDouble(0.2f, 0.7f), (float)rng.NextDouble(0.2f, 0.7f), (float)rng.NextDouble(0.2f, 0.7f), 0.5f),
+                    Color = new Vector4((float)rng.NextDouble(0.1f, 0.7f), (float)rng.NextDouble(0.1f, 0.7f), (float)rng.NextDouble(0.1f, 0.7f), 1f),
                     Opacity = opacityScale,
-                    Radius = rng.NextFloat(40, 68),
-                    RampLength = rng.NextFloat(210, 300),
+                    Radius = rng.NextFloat(36, 68) * radiusScale,
+                    RampLength = rng.NextFloat(180, 300) * radiusScale,
                     RampMode = LightSourceRampMode.Exponential
                 };
 
@@ -233,24 +235,33 @@ namespace TestGame.Scenes {
                 var mousePos = new Vector2(ms.X, ms.Y);
 
                 var angle = gameTime.TotalGameTime.TotalSeconds * 0.125f;
-                const float radius = 360f;
+                const float minRadius = 30f;
+                const float maxRadius = 650f;
+                const float centerMinZ = 200;
+                const float outsideMinZ = 40;
 
                 var lightCenter = new Vector3(Width / 2, Height / 2, 0);
 
                 Lights[0].Position = new Vector3(mousePos, LightZ);
                 // Lights[0].RampEnd = 250f * (((1 - LightZ) * 0.25f) + 0.75f);
 
+                int count = Environment.LightSources.Count - 1;
 
-                float stepOffset = (float)((Math.PI * 2) / (Environment.LightSources.Count - 1));
-                float offset = (float)(gameTime.TotalGameTime.TotalSeconds / 16 % 4);
+                float stepOffset = (float)((Math.PI * 2) / count);
+                float timeValue = (float)(gameTime.TotalGameTime.TotalSeconds / 14 % 4);
+                float offset = timeValue;
                 for (int i = 1; i < Environment.LightSources.Count; i++, offset += stepOffset) {
-                    float localRadius = (float)(radius + (radius * Math.Sin(offset * 4f) * 0.5f));
-                    float zFromRadius = 1f + (localRadius * -1f / Width);
+                    float radiusFactor = (float)Math.Abs(Math.Sin(
+                        (i / (float)count * 8.7f) + timeValue
+                    ));
+                    float localRadius = Arithmetic.Lerp(minRadius, maxRadius, radiusFactor);
+                    float localZ = Arithmetic.Lerp(centerMinZ, outsideMinZ, radiusFactor) +
+                        Arithmetic.Pulse(timeValue, 0, 40);
 
                     Lights[i].Position = lightCenter + new Vector3(
                         (float)Math.Cos(angle + offset) * localRadius, 
                         (float)Math.Sin(angle + offset) * localRadius,
-                        zFromRadius * 256f
+                        localZ
                     );
                     Lights[i].Color.W = ShowRotatingLights ? 1.0f : 0.0f;
                 }

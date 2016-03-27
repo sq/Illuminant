@@ -913,7 +913,10 @@ namespace Squared.Illuminant {
                 resultGroup, layerIndex, _GBuffer,
                 // FIXME: Optimize this
                 (dm, _) => {
-                    Materials.PushViewTransform(ViewTransform.CreateOrthographic(Configuration.MaximumRenderSize.First, Configuration.MaximumRenderSize.Second));
+                    Materials.PushViewTransform(ViewTransform.CreateOrthographic(
+                        (int)(Configuration.RenderSize.First / Configuration.GBufferResolution), 
+                        (int)(Configuration.RenderSize.Second / Configuration.GBufferResolution)
+                    ));
                 },
                 (dm, _) => {
                     Materials.PopViewTransform();

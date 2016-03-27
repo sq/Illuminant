@@ -37,15 +37,24 @@ float PointLightPixelCore(
     in float2 worldPosition : TEXCOORD2,
     in float3 lightCenter   : TEXCOORD0,
     in float2 ramp          : TEXCOORD1, // radius, ramp length
-    in float2 vpos          : VPOS
+    in float2 vpos          : VPOS,
+    float     exponential
 ) {
     float3 shadedPixelPosition = sampleGBuffer(vpos);
     shadedPixelPosition.z += SELF_OCCLUSION_HACK;
 
     float lightOpacity = computeLightOpacity(shadedPixelPosition, lightCenter, ramp.x, ramp.y);
-    float tracedOcclusion = coneTrace(lightCenter, ramp, shadedPixelPosition);
 
-    return lightOpacity * tracedOcclusion;
+    if (exponential)
+        lightOpacity *= lightOpacity;
+
+    [branch]
+    if (lightOpacity >= (1.0 / 255.0)) {
+        float tracedOcclusion = coneTrace(lightCenter, ramp, shadedPixelPosition);
+        return lightOpacity * tracedOcclusion;
+    } else {
+        return 0;
+    }
 }
 
 void PointLightPixelShaderLinear(
@@ -57,7 +66,7 @@ void PointLightPixelShaderLinear(
     out float4 result : COLOR0
 ) {
     float distanceOpacity = PointLightPixelCore(
-        worldPosition, lightCenter, ramp, vpos
+        worldPosition, lightCenter, ramp, vpos, 0
     );
 
     float4 lightColorActual = float4(color.rgb * color.a, color.a);
@@ -73,10 +82,8 @@ void PointLightPixelShaderExponential(
     out float4 result : COLOR0
 ) {
     float distanceOpacity = PointLightPixelCore(
-        worldPosition, lightCenter, ramp, vpos
+        worldPosition, lightCenter, ramp, vpos, 1
     );
-
-    distanceOpacity *= distanceOpacity;
 
     float4 lightColorActual = float4(color.rgb * color.a, color.a);
     result = lerp(LightNeutralColor, lightColorActual, distanceOpacity);
@@ -91,7 +98,7 @@ void PointLightPixelShaderLinearRampTexture(
     out float4 result : COLOR0
 ) {
     float distanceOpacity = PointLightPixelCore(
-        worldPosition, lightCenter, ramp, vpos
+        worldPosition, lightCenter, ramp, vpos, 0
     );
 
     distanceOpacity = RampLookup(distanceOpacity);
@@ -109,10 +116,9 @@ void PointLightPixelShaderExponentialRampTexture(
     out float4 result : COLOR0
 ) {
     float distanceOpacity = PointLightPixelCore(
-        worldPosition, lightCenter, ramp, vpos
+        worldPosition, lightCenter, ramp, vpos, 1
     );
 
-    distanceOpacity *= distanceOpacity;
     distanceOpacity = RampLookup(distanceOpacity);
 
     float4 lightColorActual = float4(color.rgb * color.a, color.a);

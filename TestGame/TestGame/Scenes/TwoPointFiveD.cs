@@ -32,7 +32,7 @@ namespace TestGame.Scenes {
         bool ShowLightmap      = true;
         bool ShowDistanceField = false;
         bool Timelapse         = false;
-        bool GBuffer2p5        = false;
+        bool GBuffer2p5        = true;
         bool TwoPointFiveD     = true;
 
         public TwoPointFiveDTest (TestGame game, int width, int height)
@@ -111,7 +111,7 @@ namespace TestGame.Scenes {
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(
-                    1024, 1024,
+                    1024 / LightmapScaleRatio, 1024 / LightmapScaleRatio,
                     1024, 1024, 32
                 ) {
                     DistanceFieldResolution = 0.5f,
@@ -187,8 +187,6 @@ namespace TestGame.Scenes {
         }
         
         public override void Draw (Squared.Render.Frame frame) {
-            const float LightmapScale = 1f;
-
             CreateRenderTargets();
 
             Renderer.Configuration.TwoPointFiveD = TwoPointFiveD;
@@ -205,7 +203,7 @@ namespace TestGame.Scenes {
             using (var bg = BatchGroup.ForRenderTarget(
                 frame, -1, Lightmap,
                 (dm, _) => {
-                    Game.Materials.PushViewTransform(ViewTransform.CreateOrthographic(Width, Height));
+                    Game.Materials.PushViewTransform(ViewTransform.CreateOrthographic(Lightmap.Width, Lightmap.Height));
                 },
                 (dm, _) => {
                     Game.Materials.PopViewTransform();
@@ -223,10 +221,10 @@ namespace TestGame.Scenes {
                     using (var bb = BitmapBatch.New(
                         group, 1,
                         Game.Materials.Get(Game.Materials.ScreenSpaceBitmap, blendState: BlendState.Opaque),
-                        samplerState: SamplerState.PointClamp
+                        samplerState: SamplerState.LinearClamp
                     ))
                         bb.Add(new BitmapDrawCall(
-                            Lightmap, Vector2.Zero
+                            Lightmap, Vector2.Zero, LightmapScaleRatio
                         ));
                 } else {
                     using (var bb = BitmapBatch.New(
