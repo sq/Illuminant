@@ -98,10 +98,12 @@ sampler   DistanceFieldTextureSampler : register(s4) {
 };
 
 float2 computeDistanceFieldSliceUv (
-    float sliceIndex
+    float sliceIndex, 
+    float sliceCountZMinus1, 
+    float invSliceCountX
 ) {
-    sliceIndex = clamp(sliceIndex, 0, DistanceFieldTextureSliceCount.z - 1) * 0.5;
-    float rowIndexF   = sliceIndex / DistanceFieldTextureSliceCount.x;
+    sliceIndex = clamp(sliceIndex, 0, sliceCountZMinus1) * 0.5;
+    float rowIndexF   = sliceIndex * invSliceCountX;
     float rowIndex    = floor(rowIndexF);
     float columnIndex = floor((rowIndexF - rowIndex) * DistanceFieldTextureSliceCount.x);
     float2 indexes = float2(columnIndex, rowIndex);
@@ -118,11 +120,14 @@ float2 computeDistanceFieldSubsliceUv (
 }
 
 float sampleDistanceField (
-    float3 position, float invDistanceFieldExtentZ
+    float3 position, 
+    float invDistanceFieldExtentZ,
+    float sliceCountZMinus1,
+    float invSliceCountX
 ) {
     // Interpolate between two Z samples. The xy interpolation is done by the GPU for us.
     float scaledPositionZ = position.z * invDistanceFieldExtentZ;
-    float slicePosition = clamp(scaledPositionZ * DistanceFieldTextureSliceCount.z, 0, DistanceFieldTextureSliceCount.z - 1);
+    float slicePosition = clamp(scaledPositionZ * DistanceFieldTextureSliceCount.z, 0, sliceCountZMinus1);
     float sliceIndex1 = floor(slicePosition);
     float subslice = slicePosition - sliceIndex1;
     float sliceIndex2 = sliceIndex1 + 1;
@@ -130,10 +135,20 @@ float sampleDistanceField (
     float2 uv = computeDistanceFieldSubsliceUv(position.xy);
     
     float2 sample1 = tex2Dlod(
-        DistanceFieldTextureSampler, float4(uv + computeDistanceFieldSliceUv(sliceIndex1), 0, 0)
+        DistanceFieldTextureSampler, 
+        float4(
+            uv + computeDistanceFieldSliceUv(
+                sliceIndex1, sliceCountZMinus1, invSliceCountX
+            ), 0, 0
+        )
     ).rg;
     float2 sample2 = tex2Dlod(
-        DistanceFieldTextureSampler, float4(uv + computeDistanceFieldSliceUv(sliceIndex2), 0, 0)
+        DistanceFieldTextureSampler, 
+        float4(
+            uv + computeDistanceFieldSliceUv(
+                sliceIndex2, sliceCountZMinus1, invSliceCountX
+            ), 0, 0
+        )
     ).rg;
     
     // FIXME: Somehow this r/g encoding introduces a consistent error along the z-axis compared to the old encoding?
@@ -162,6 +177,8 @@ void coneTraceStep (
     in    float  traceLength,
     in    float3 sphereRadiusSettings,
     in    float  invDistanceFieldExtentZ,
+    in    float  sliceCountZMinus1,
+    in    float  invSliceCountX,
     inout float  traceOffset,
     inout float  visibility,
     inout float  minStepSize,
@@ -171,7 +188,9 @@ void coneTraceStep (
 
     float distanceToObstacle = sampleDistanceField(
         samplePosition,
-        invDistanceFieldExtentZ
+        invDistanceFieldExtentZ,
+        sliceCountZMinus1,
+        invSliceCountX
     );
 
     float localVisibility = 
@@ -224,6 +243,8 @@ float coneTrace (
         minRadius, maxRadius, lightTangentAngle
     );
 
+    float sliceCountZMinus1 = DistanceFieldTextureSliceCount.z - 1;
+    float invSliceCountX = 1.0 / DistanceFieldTextureSliceCount.x;
     float invDistanceFieldExtentZ = 1.0 / DistanceFieldExtent.z;
 
     float visibility = 1.0;
@@ -243,6 +264,7 @@ float coneTrace (
         coneTraceStep(
             shadedPixelPosition, traceVector, traceLength, 
             sphereRadiusSettings, invDistanceFieldExtentZ,
+            sliceCountZMinus1, invSliceCountX,
             traceOffset, visibility, 
             minStepSize, localSphereRadius
         );
