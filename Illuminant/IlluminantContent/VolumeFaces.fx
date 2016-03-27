@@ -28,6 +28,9 @@ void FrontFaceVertexShader (
     worldPosition = position.xyz;
 
     position.y -= ZToYMultiplier * position.z;
+    position.xy -= ViewportPosition;
+    position.xy *= ViewportScale;
+
     result = TransformPosition(float4(position.xy, 0, 1), 0);
     result.z = position.z / DistanceFieldExtent.z;
 }
@@ -88,6 +91,9 @@ void TopFaceVertexShader(
     worldPosition = position.xyz;
 
     position.y -= ZToYMultiplier * position.z;
+    position.xy -= ViewportPosition;
+    position.xy *= ViewportScale;
+
     result = TransformPosition(float4(position.xy, 0, 1), 0);
     result.z = position.z / DistanceFieldExtent.z;
 }

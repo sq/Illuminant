@@ -827,8 +827,17 @@ namespace Squared.Illuminant {
 
             using (var group = BatchGroup.New(
                 resultGroup, layerIndex++,
-                before: (dm, _) => dm.PushStates(),
-                after: (dm, _) => dm.PopStates()
+                before: (dm, _) => {
+                    dm.PushStates();
+                    var vt = Materials.ViewTransform;
+                    // FIXME: This seems backwards, shouldn't it be 1.0 / Configuration.RenderScale?
+                    vt.Scale = new Vector2(Configuration.RenderScale);
+                    Materials.PushViewTransform(ref vt);
+                },
+                after: (dm, _) => {
+                    dm.PopStates();
+                    Materials.PopViewTransform();
+                }
             )) {
                 ClearBatch.AddNew(
                     group, 0, Materials.Clear, clearZ: 0f
