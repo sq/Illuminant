@@ -11,14 +11,15 @@ void HeightVolumeVertexShader (
     result.z = 0;
 }
 
-void HeightVolumePixelShader (    
+void HeightVolumePixelShader (
+    in float2 vpos : VPOS,
     in float2 zRange : TEXCOORD0,
     in float3 worldPosition : TEXCOORD1,
     out float4 color : COLOR0
 ) {
     color = float4(
-        worldPosition.x,
-        worldPosition.y,
+        vpos.x,
+        vpos.y,
         zRange.y,
         1
     );

@@ -39,7 +39,7 @@ float PointLightPixelCore(
     in float2 ramp          : TEXCOORD1, // radius, ramp length
     in float2 vpos          : VPOS
 ) {
-    float3 shadedPixelPosition = sampleGBuffer(worldPosition.xy);
+    float3 shadedPixelPosition = sampleGBuffer(vpos);
     shadedPixelPosition.z += SELF_OCCLUSION_HACK;
 
     float lightOpacity = computeLightOpacity(shadedPixelPosition, lightCenter, ramp.x, ramp.y);

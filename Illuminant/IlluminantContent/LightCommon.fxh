@@ -20,6 +20,8 @@ float3 sampleGBuffer(
 ) {
     float2 uv     = screenPositionPx * GBufferTexelSize;
     float4 sample = tex2Dlod(GBufferSampler, float4(uv, 0, 0));
+    // HACK: Why is this bias necessary?
+    sample.xy += 1;
     return sample.xyz;
 }
 
