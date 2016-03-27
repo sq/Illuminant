@@ -100,10 +100,12 @@ sampler   DistanceFieldTextureSampler : register(s4) {
 float2 computeDistanceFieldSliceUv (
     float sliceIndex
 ) {
-    sliceIndex = clamp(sliceIndex, 0, DistanceFieldTextureSliceCount.z - 1) / 2;
-    float columnIndex = floor(fmod(sliceIndex, DistanceFieldTextureSliceCount.x));
-    float rowIndex    = floor(sliceIndex / DistanceFieldTextureSliceCount.x);
-    return float2(columnIndex * DistanceFieldTextureSliceSize.x, rowIndex * DistanceFieldTextureSliceSize.y);
+    sliceIndex = clamp(sliceIndex, 0, DistanceFieldTextureSliceCount.z - 1) * 0.5;
+    float rowIndexF   = sliceIndex / DistanceFieldTextureSliceCount.x;
+    float rowIndex    = floor(rowIndexF);
+    float columnIndex = floor((rowIndexF - rowIndex) * DistanceFieldTextureSliceCount.x);
+    float2 indexes = float2(columnIndex, rowIndex);
+    return indexes * DistanceFieldTextureSliceSize.xy;
 }
 
 float2 computeDistanceFieldSubsliceUv (
