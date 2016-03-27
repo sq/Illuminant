@@ -54,7 +54,7 @@ namespace TestGame {
                 new TwoPointFiveDTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
             };
 
-            ActiveSceneIndex = 0;
+            ActiveSceneIndex = 1;
         }
 
         protected override void LoadContent () {

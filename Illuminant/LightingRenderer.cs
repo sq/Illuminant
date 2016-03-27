@@ -125,6 +125,9 @@ namespace Squared.Illuminant {
         const int   StencilTrue  = 0xFF;
         const int   StencilFalse = 0x00;
 
+        const SurfaceFormat GBufferFormat       = SurfaceFormat.Vector4;
+        const SurfaceFormat DistanceFieldFormat = SurfaceFormat.Rg32;
+
         public readonly int DistanceFieldSliceWidth, DistanceFieldSliceHeight;
         public readonly int DistanceFieldSlicesX, DistanceFieldSlicesY;
 
@@ -149,7 +152,7 @@ namespace Squared.Illuminant {
                     coordinator.Device, 
                     (int)(Configuration.MaximumRenderSize.First * Configuration.GBufferResolution), 
                     (int)(Configuration.MaximumRenderSize.Second * Configuration.GBufferResolution),
-                    false, SurfaceFormat.HalfVector4, DepthFormat.None, 0, RenderTargetUsage.DiscardContents
+                    false, GBufferFormat, DepthFormat.None, 0, RenderTargetUsage.DiscardContents
                 );
 
                 DistanceFieldSliceWidth = (int)(Configuration.MaximumRenderSize.First * Configuration.DistanceFieldResolution);
@@ -174,7 +177,7 @@ namespace Squared.Illuminant {
                     coordinator.Device,
                     DistanceFieldSliceWidth * DistanceFieldSlicesX, 
                     DistanceFieldSliceHeight * DistanceFieldSlicesY,
-                    false, SurfaceFormat.Rg32, DepthFormat.None, 0, RenderTargetUsage.DiscardContents
+                    false, DistanceFieldFormat, DepthFormat.None, 0, RenderTargetUsage.DiscardContents
                 );
             }
 

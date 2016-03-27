@@ -27,8 +27,8 @@ namespace TestGame.Scenes {
 
         const int ScaleFactor = 1;
 
-        bool ShowGBuffer  = false;
-        bool ShowLightmap      = false;
+        bool ShowGBuffer       = false;
+        bool ShowLightmap      = true;
         bool ShowDistanceField = false;
         bool Timelapse         = false;
         bool TwoPointFiveD     = true;

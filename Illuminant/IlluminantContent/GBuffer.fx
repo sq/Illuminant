@@ -17,10 +17,13 @@ void HeightVolumePixelShader (
     in float3 worldPosition : TEXCOORD1,
     out float4 color : COLOR0
 ) {
+    // HACK: For viz purposes
+    float scale = 1.0 / 1024.0;
+
     color = float4(
-        vpos.x,
-        vpos.y,
-        zRange.y,
+        vpos.x * scale,
+        vpos.y * scale,
+        zRange.y * scale,
         1
     );
 }
