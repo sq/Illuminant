@@ -1,6 +1,6 @@
 #include "..\..\Upstream\Fracture\Squared\RenderLib\Content\GeometryCommon.fxh"
 
-#define SELF_OCCLUSION_HACK 1.1
+#define SELF_OCCLUSION_HACK 1
 
 uniform float  ZToYMultiplier;
 uniform float3 DistanceFieldExtent;
@@ -34,11 +34,8 @@ void HeightVolumePixelShader (
     in float3 worldPosition : TEXCOORD1,
     out float4 color : COLOR0
 ) {
-    // HACK: For viz purposes
-    float scale = 1.0 / 1024.0;
-
     color = float4(
-        worldPosition * scale,
+        worldPosition,
         1
     );
 }

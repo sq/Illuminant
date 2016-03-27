@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -202,11 +203,30 @@ namespace Squared.Illuminant {
                 if (a.Y == b.Y) {
                     aNormal = bNormal = new Vector3(0, 1, 0);
                 } else {
-                    aNormal = new Vector3((a - prior).PerpendicularLeft(), 0);
-                    bNormal = new Vector3((b - a).PerpendicularLeft(), 0);
+                    if (a == prior)
+                        aNormal = Vector3.Zero;
+                    else {
+                        aNormal = new Vector3((a - prior).PerpendicularLeft(), 0);
+                        aNormal.Normalize();
+                    }
+
+                    if (b == a)
+                        bNormal = Vector3.Zero;
+                    else {
+                        bNormal = new Vector3((b - a).PerpendicularLeft(), 0);
+                        bNormal.Normalize();
+                    }
                 }
-                aNormal.Normalize();
-                bNormal.Normalize();
+
+                if (
+                    float.IsNaN(aNormal.X) ||
+                    float.IsNaN(aNormal.Y) ||
+                    float.IsNaN(aNormal.Z) ||
+                    float.IsNaN(bNormal.X) ||
+                    float.IsNaN(bNormal.Y) ||
+                    float.IsNaN(bNormal.Z)
+                )
+                    Debugger.Break();
 
                 var aTop    = new Vector3(a, h2);
                 var aBottom = new Vector3(a, h1);

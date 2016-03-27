@@ -25,7 +25,8 @@ namespace TestGame.Scenes {
         bool TwoPointFiveD      = false;
         bool ShowRotatingLights = true;
 
-        public const int RotatingLightCount = 16;
+        public const int RotatingLightCount = 128;
+
         public const int MultisampleCount = 0;
         public const int LightmapScaleRatio = 1;
 
@@ -65,9 +66,11 @@ namespace TestGame.Scenes {
 
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment,
-                new RendererConfiguration(Width, Height) {
+                new RendererConfiguration(
+                    Width, Height,
+                    Width, Height, 16
+                ) {
                     DistanceFieldResolution = 0.2f,
-                    DistanceFieldSliceCount = 16,
                     DistanceFieldLongStepFactor = 0.75f,
                     DistanceFieldMinStepSize = 1f,
                     DistanceFieldMaxStepCount = 64,
@@ -255,7 +258,19 @@ namespace TestGame.Scenes {
         }
 
         public override string Status {
-	        get { return String.Format("Light Z = {0:0.000}", LightZ); }
+            get {
+                return string.Format(
+                    "L@{1:0000},{2:0000},{0:000.0} {3}", 
+                    LightZ, Lights[0].Position.X, Lights[0].Position.Y,
+                    TwoPointFiveD 
+                        ? (
+                            GBuffer2p5 
+                                ? "GBuffer 2.5D"
+                                : "Geometry 2.5D"
+                        ) 
+                        : "2D"
+                );
+            }
         }
     }
 }

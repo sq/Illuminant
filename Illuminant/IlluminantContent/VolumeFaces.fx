@@ -5,7 +5,7 @@
 // UGH
 #define MAX_LIGHTS 16
 
-#define SELF_OCCLUSION_HACK 1.1
+#define SELF_OCCLUSION_HACK 1
 
 #define EXPONENTIAL                           0
 #define TOP_FACE_RAYCAST_SHADOWS              1

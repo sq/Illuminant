@@ -25,7 +25,8 @@ namespace TestGame.Scenes {
         Texture2D Background;
         float LightZ;
 
-        const int ScaleFactor = 1;
+        const int MultisampleCount = 0;
+        const int LightmapScaleRatio = 1;
 
         bool ShowGBuffer       = false;
         bool ShowLightmap      = true;
@@ -39,10 +40,8 @@ namespace TestGame.Scenes {
         }
 
         private void CreateRenderTargets () {
-            int scaledWidth = (int)Width / ScaleFactor;
-            int scaledHeight = (int)Height / ScaleFactor;
-
-            const int multisampleCount = 0;
+            int scaledWidth = (int)Width / LightmapScaleRatio;
+            int scaledHeight = (int)Height / LightmapScaleRatio;
 
             if (scaledWidth < 4)
                 scaledWidth = 4;
@@ -55,7 +54,7 @@ namespace TestGame.Scenes {
 
                 Lightmap = new RenderTarget2D(
                     Game.GraphicsDevice, scaledWidth, scaledHeight, false,
-                    SurfaceFormat.Rgba64, DepthFormat.Depth24, multisampleCount, 
+                    SurfaceFormat.Rgba64, DepthFormat.Depth24, MultisampleCount, 
                     // YUCK
                     RenderTargetUsage.DiscardContents
                 );
@@ -73,7 +72,7 @@ namespace TestGame.Scenes {
         void Ellipse (Vector2 center, float radiusX, float radiusY, float z1, float height) {
             var numPoints = Math.Max(
                 16,
-                (int)Math.Ceiling((radiusX + radiusY) * 0.55f)
+                (int)Math.Ceiling((radiusX + radiusY) * 0.5f)
             );
 
             var pts = new Vector2[numPoints];
@@ -111,9 +110,11 @@ namespace TestGame.Scenes {
 
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
-                new RendererConfiguration(1024, 1024) {
+                new RendererConfiguration(
+                    1024, 1024,
+                    1024, 1024, 32
+                ) {
                     DistanceFieldResolution = 0.5f,
-                    DistanceFieldSliceCount = 32,
                     DistanceFieldMinStepSize = 1.33f,
                     DistanceFieldMinStepSizeGrowthRate = 0.012f,
                     DistanceFieldLongStepFactor = 0.5f,
@@ -322,7 +323,19 @@ namespace TestGame.Scenes {
         }
 
         public override string Status {
-            get { return String.Format("Light Z = {0:0.000}; Mouse Pos = {1},{2}", LightZ, Lights[0].Position.X, Lights[0].Position.Y); }
+            get {
+                return string.Format(
+                    "L@{1:0000},{2:0000},{0:000.0} {3}", 
+                    LightZ, Lights[0].Position.X, Lights[0].Position.Y,
+                    TwoPointFiveD 
+                        ? (
+                            GBuffer2p5 
+                                ? "GBuffer 2.5D"
+                                : "Geometry 2.5D"
+                        ) 
+                        : "2D"
+                );
+            }
         }
     }
 }
