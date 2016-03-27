@@ -57,6 +57,9 @@ namespace Squared.Illuminant {
         public float DistanceFieldResolution              = 1.0f;
         public float DistanceFieldMaxConeRadius           = 24;
         public bool  DistanceFieldCaching                 = true;
+        // The maximum number of distance field slices to update per frame.
+        // Setting this value too high can crash your video driver.
+        public int   DistanceFieldUpdateRate              = 1;
         public float DistanceFieldOcclusionToOpacityPower = 1;
 
         // The actual number of depth slices allocated for the distance field.
@@ -131,7 +134,8 @@ namespace Squared.Illuminant {
         public readonly DepthStencilState TopFaceDepthStencilState, FrontFaceDepthStencilState;
         public readonly DepthStencilState DistanceInteriorStencilState, DistanceExteriorStencilState;
         public readonly DepthStencilState PointLightDepthStencilState;
-        public readonly BlendState        HeightMax, OddSlice, EvenSlice;
+        public readonly BlendState        OddSlice, EvenSlice;
+        public readonly BlendState        ClearOddSlice, ClearEvenSlice;
 
         private static readonly Dictionary<TextureFilter, SamplerState> RampSamplerStates = new Dictionary<TextureFilter, SamplerState>();
 
@@ -149,6 +153,19 @@ namespace Squared.Illuminant {
 
         public readonly RendererConfiguration Configuration;
         public LightingEnvironment Environment;
+
+        // HACK
+        private int       _DistanceFieldSlicesReady = 0;
+        private int       _NextDistanceFieldSlice   = 0;
+        private bool      _HeightmapReady     = false;
+
+        const int FaceMaxLights = 16;
+
+        private int       _VisibleLightCount  = 0;
+        private Vector3[] _LightPositions     = new Vector3[FaceMaxLights];
+        private Vector3[] _LightProperties    = new Vector3[FaceMaxLights];
+        private Vector4[] _LightNeutralColors = new Vector4[FaceMaxLights];
+        private Vector4[] _LightColors        = new Vector4[FaceMaxLights];
 
         const int   DistanceLimit = 610;
         const int   StencilTrue  = 0xFF;
@@ -204,7 +221,8 @@ namespace Squared.Illuminant {
                     coordinator.Device,
                     DistanceFieldSliceWidth * DistanceFieldSlicesX, 
                     DistanceFieldSliceHeight * DistanceFieldSlicesY,
-                    false, DistanceFieldFormat, DepthFormat.None, 0, RenderTargetUsage.DiscardContents
+                    false, DistanceFieldFormat, DepthFormat.None, 0, 
+                    RenderTargetUsage.PreserveContents
                 );
             }
 
@@ -269,6 +287,20 @@ namespace Squared.Illuminant {
                 ColorBlendFunction = BlendFunction.Max,
                 ColorSourceBlend = Blend.One,
                 ColorDestinationBlend = Blend.One
+            };
+
+            ClearEvenSlice = new BlendState {
+                ColorWriteChannels = ColorWriteChannels.Red,
+                ColorBlendFunction = BlendFunction.Add,
+                ColorSourceBlend = Blend.One,
+                ColorDestinationBlend = Blend.Zero
+            };
+
+            ClearOddSlice = new BlendState {
+                ColorWriteChannels = ColorWriteChannels.Green,
+                ColorBlendFunction = BlendFunction.Add,
+                ColorSourceBlend = Blend.One,
+                ColorDestinationBlend = Blend.Zero
             };
 
             {
@@ -740,18 +772,6 @@ namespace Squared.Illuminant {
             return false;
         }
 
-        // HACK
-        private bool      _DistanceFieldReady = false;
-        private bool      _HeightmapReady     = false;
-
-        const int FaceMaxLights = 16;
-
-        private int       _VisibleLightCount  = 0;
-        private Vector3[] _LightPositions     = new Vector3[FaceMaxLights];
-        private Vector3[] _LightProperties    = new Vector3[FaceMaxLights];
-        private Vector4[] _LightNeutralColors = new Vector4[FaceMaxLights];
-        private Vector4[] _LightColors        = new Vector4[FaceMaxLights];
-
         private void SetTwoPointFiveDParametersInner (EffectParameterCollection p, bool setGBufferTexture, bool setDistanceTexture) {
             p["GroundZ"]           .SetValue(Environment.GroundZ);
             p["ZToYMultiplier"]    .SetValue(
@@ -785,7 +805,7 @@ namespace Squared.Illuminant {
                 Environment.MaximumZ
             ));
             p["DistanceFieldTextureSliceSize"].SetValue(new Vector2(1f / DistanceFieldSlicesX, 1f / DistanceFieldSlicesY));
-            p["DistanceFieldTextureSliceCount"].SetValue(new Vector3(DistanceFieldSlicesX, DistanceFieldSlicesY, Configuration.DistanceFieldSliceCount));
+            p["DistanceFieldTextureSliceCount"].SetValue(new Vector3(DistanceFieldSlicesX, DistanceFieldSlicesY, _DistanceFieldSlicesReady));
 
             var tsize = new Vector2(
                 1f / (Configuration.DistanceFieldSize.First * DistanceFieldSlicesX), 
@@ -893,7 +913,7 @@ namespace Squared.Illuminant {
 
         public void InvalidateFields () {
             _HeightmapReady = false;
-            _DistanceFieldReady = false;
+            _NextDistanceFieldSlice = _DistanceFieldSlicesReady = 0;
         }
 
         public void UpdateFields (IBatchContainer container, int layer) {
@@ -902,9 +922,11 @@ namespace Squared.Illuminant {
                 _HeightmapReady = Configuration.GBufferCaching;
             }
 
-            if (!_DistanceFieldReady) {
+            if (
+                (_DistanceFieldSlicesReady < Configuration.DistanceFieldSliceCount) ||
+                !Configuration.DistanceFieldCaching
+            ) {
                 RenderDistanceField(ref layer, container);
-                _DistanceFieldReady = Configuration.DistanceFieldCaching;
             }
         }
 
@@ -1040,16 +1062,34 @@ namespace Squared.Illuminant {
             using (var rtGroup = BatchGroup.ForRenderTarget(
                 resultGroup, layerIndex++, _DistanceField
             )) {
-                ClearBatch.AddNew(
-                    rtGroup, 0, Materials.Clear, Color.Transparent
-                );
-
                 var vertexDataTextures = new Dictionary<object, Texture2D>();
                 var intParameters = IlluminantMaterials.DistanceFieldInterior.Effect.Parameters;
                 var extParameters = IlluminantMaterials.DistanceFieldExterior.Effect.Parameters;
 
-                for (var slice = 0; slice < Configuration.DistanceFieldSliceCount; slice++)
-                    RenderDistanceFieldSlice(indices, rtGroup, vertexDataTextures, intParameters, extParameters, slice);
+                // We incrementally do a partial update of the distance field.
+                int sliceCount = Configuration.DistanceFieldSliceCount;
+                int slicesToUpdate =
+                    Configuration.DistanceFieldCaching
+                        ? Math.Min(
+                            sliceCount - _DistanceFieldSlicesReady,
+                            Configuration.DistanceFieldUpdateRate
+                        )
+                        : Math.Min(
+                            Configuration.DistanceFieldUpdateRate,
+                            sliceCount
+                        );
+
+                int layer = 0;
+                while (slicesToUpdate > 0) {
+                    RenderDistanceFieldSlice(
+                        indices, rtGroup, vertexDataTextures, 
+                        intParameters, extParameters, 
+                        _NextDistanceFieldSlice, ref layer
+                    );
+
+                    slicesToUpdate--;
+                    _NextDistanceFieldSlice = (_NextDistanceFieldSlice + 1) % sliceCount;
+                }
 
                 foreach (var kvp in vertexDataTextures)
                     Coordinator.DisposeResource(kvp.Value);
@@ -1060,7 +1100,7 @@ namespace Squared.Illuminant {
             short[] indices, BatchGroup rtGroup, 
             Dictionary<object, Texture2D> vertexDataTextures, 
             EffectParameterCollection intParameters, EffectParameterCollection extParameters, 
-            int slice
+            int slice, ref int layer
         ) {
             float sliceZ = (slice / Math.Max(1, (float)(Configuration.DistanceFieldSliceCount - 1))) * Environment.MaximumZ;
             int displaySlice = slice / 2;
@@ -1069,9 +1109,14 @@ namespace Squared.Illuminant {
             var sliceXVirtual = (displaySlice % DistanceFieldSlicesX) * Configuration.DistanceFieldSize.First;
             var sliceYVirtual = (displaySlice / DistanceFieldSlicesX) * Configuration.DistanceFieldSize.Second;
 
-            using (var group = BatchGroup.New(rtGroup, slice + 1,
-                // FIXME: Optimize this
+            bool forceClear = _DistanceFieldSlicesReady == 0;
+
+            Action<DeviceManager, object> beginSliceBatch =
                 (dm, _) => {
+                    if (forceClear)
+                        dm.Device.Clear(Color.Transparent);
+
+                    // TODO: Optimize this
                     var vt = ViewTransform.CreateOrthographic(
                         Configuration.DistanceFieldSize.First * DistanceFieldSlicesX,
                         Configuration.DistanceFieldSize.Second * DistanceFieldSlicesY
@@ -1088,16 +1133,36 @@ namespace Squared.Illuminant {
 
                     SetDistanceFieldParameters(IlluminantMaterials.DistanceFieldInterior.Effect.Parameters, false);
                     SetDistanceFieldParameters(IlluminantMaterials.DistanceFieldExterior.Effect.Parameters, false);
-                },
+                };
+
+            Action<DeviceManager, object> endSliceBatch =
                 (dm, _) => {
                     Materials.PopViewTransform();
-                }
+                };
+
+            var clearBlendState = ((slice % 2) == 0)
+                ? ClearEvenSlice
+                : ClearOddSlice;
+
+            ClearDistanceFieldSlice(
+                indices, clearBlendState,
+                beginSliceBatch, endSliceBatch,
+                rtGroup, layer++
+            );
+
+            using (var group = BatchGroup.New(rtGroup, layer++,
+                beginSliceBatch, endSliceBatch
             )) {
                 if (Render.Tracing.RenderTrace.EnableTracing)
                     Render.Tracing.RenderTrace.Marker(group, -1, "LightingRenderer {0:X4} : Begin Distance Field Slice #{1}", this.GetHashCode(), slice);
 
                 RenderDistanceFieldDistanceFunctions(indices, sliceZ, group);
                 RenderDistanceFieldHeightVolumes(indices, vertexDataTextures, intParameters, extParameters, sliceZ, group);
+
+                _DistanceFieldSlicesReady = Math.Min(
+                    Math.Max(slice + 1, _DistanceFieldSlicesReady),
+                    Configuration.DistanceFieldSliceCount
+                );
 
                 if (Render.Tracing.RenderTrace.EnableTracing)
                     Render.Tracing.RenderTrace.Marker(group, 2, "LightingRenderer {0:X4} : End Distance Field Slice #{1}", this.GetHashCode(), slice);
@@ -1174,10 +1239,37 @@ namespace Squared.Illuminant {
                 }
         }
 
-        private void RenderDistanceFieldDistanceFunctions (short[] indices, float sliceZ, BatchGroup group) {
-            // FIXME
-            return;
+        private void ClearDistanceFieldSlice (
+            short[] indices, 
+            BlendState blendState,
+            Action<DeviceManager, object> beginBatch,
+            Action<DeviceManager, object> endBatch,
+            IBatchContainer container, int layer
+        ) {
+            var verts = new VertexPositionColor[] {
+                new VertexPositionColor(new Vector3(0, 0, 0), Color.Transparent),
+                new VertexPositionColor(new Vector3(Configuration.DistanceFieldSize.First, 0, 0), Color.Transparent),
+                new VertexPositionColor(new Vector3(Configuration.DistanceFieldSize.First, Configuration.DistanceFieldSize.Second, 0), Color.Transparent),
+                new VertexPositionColor(new Vector3(0, Configuration.DistanceFieldSize.Second, 0), Color.Transparent)
+            };
 
+            // HACK: Create a group to attach begin/end callbacks to
+            using (var group = BatchGroup.New(
+                container, layer,
+                beginBatch, endBatch
+            ))
+            using (var batch = PrimitiveBatch<VertexPositionColor>.New(
+                // FIXME: Only clear the current channel
+                group, 0,
+                Materials.Get(Materials.WorldSpaceGeometry, blendState: blendState)
+            ))
+                batch.Add(new PrimitiveDrawCall<VertexPositionColor>(
+                    PrimitiveType.TriangleList,
+                    verts, 0, 4, indices, 0, 2
+                ));
+        }
+
+        private void RenderDistanceFieldDistanceFunctions (short[] indices, float sliceZ, BatchGroup group) {
             var verts = new VertexPositionColor[] {
                 new VertexPositionColor(new Vector3(0, 0, 0), Color.White),
                 new VertexPositionColor(new Vector3(Configuration.DistanceFieldSize.First, 0, 0), Color.White),

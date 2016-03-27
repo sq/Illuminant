@@ -112,7 +112,7 @@ namespace TestGame.Scenes {
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(
                     1024 / LightmapScaleRatio, 1024 / LightmapScaleRatio,
-                    1024, 1024, 32
+                    1024, 1024, 24
                 ) {
                     DistanceFieldResolution = 0.5f,
                     DistanceFieldMinStepSize = 1.33f,
@@ -122,7 +122,8 @@ namespace TestGame.Scenes {
                     DistanceFieldMaxConeRadius = 32,
                     DistanceFieldMaxStepCount = 96,
                     GBufferCaching = true,
-                    DistanceFieldCaching = true
+                    DistanceFieldCaching = false,
+                    DistanceFieldUpdateRate = 1
                 }
             );
 
@@ -172,6 +173,7 @@ namespace TestGame.Scenes {
                     new Vector3(500, 750, 0), new Vector3(50, 100, 20f)
                 ));
 
+            if (false)
             if (true)
                 Environment.Obstructions.Add(new LightObstruction(
                     LightObstructionType.Ellipsoid, 
@@ -191,12 +193,6 @@ namespace TestGame.Scenes {
 
             Renderer.Configuration.TwoPointFiveD = TwoPointFiveD;
             Renderer.Configuration.RenderTwoPointFiveDToGBuffer = GBuffer2p5;
-
-            float time = (float)(Time.Seconds % 6);
-            Renderer.Configuration.DistanceFieldMaxStepCount =
-                Timelapse
-                    ? (int)Arithmetic.Clamp(time * 24, 1, 128)
-                    : 128;
 
             Renderer.UpdateFields(frame, -2);
 
@@ -305,6 +301,16 @@ namespace TestGame.Scenes {
 
                 if (KeyWasPressed(Keys.D))
                     ShowDistanceField = !ShowDistanceField;
+
+                var time = (float)Time.Seconds;
+
+                Renderer.Configuration.DistanceFieldMaxStepCount =
+                    Timelapse
+                        ? (int)Arithmetic.Clamp((time % 6) * 24, 1, 128)
+                        : 128;
+
+                Environment.Obstructions[0].Center =
+                    new Vector3(500, 750, Arithmetic.Pulse(time / 10, 0, 40));
 
                 var ms = Mouse.GetState();
                 Game.IsMouseVisible = true;

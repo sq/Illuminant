@@ -28,7 +28,7 @@ namespace TestGame {
         public SpriteFont Font;
 
         public readonly Scene[] Scenes;
-        public int ActiveSceneIndex = 0;
+        public int ActiveSceneIndex = 1;
 
         private int LastPerformanceStatPrimCount = 0;
 
@@ -53,8 +53,6 @@ namespace TestGame {
                 new HeightVolumeTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new TwoPointFiveDTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
             };
-
-            ActiveSceneIndex = 0;
         }
 
         protected override void LoadContent () {
