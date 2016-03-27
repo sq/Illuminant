@@ -20,7 +20,8 @@ namespace TestGame.Scenes {
 
         public readonly List<LightSource> Lights = new List<LightSource>();
 
-        bool ShowGBuffer   = false;
+        bool ShowGBuffer        = false;
+        bool GBuffer2p5         = false;
         bool TwoPointFiveD      = false;
         bool ShowRotatingLights = true;
 
@@ -70,7 +71,8 @@ namespace TestGame.Scenes {
                     DistanceFieldLongStepFactor = 0.75f,
                     DistanceFieldMinStepSize = 1f,
                     DistanceFieldMaxStepCount = 64,
-                    DistanceFieldCaching = true
+                    DistanceFieldCaching = true,
+                    GBufferCaching = true
                 }
             );
 
@@ -154,6 +156,7 @@ namespace TestGame.Scenes {
             );
 
             Renderer.Configuration.TwoPointFiveD = TwoPointFiveD;
+            Renderer.Configuration.RenderTwoPointFiveDToGBuffer = GBuffer2p5;
 
             CreateRenderTargets();
 
@@ -201,8 +204,15 @@ namespace TestGame.Scenes {
                 if (KeyWasPressed(Keys.G))
                     ShowGBuffer = !ShowGBuffer;
 
-                if (KeyWasPressed(Keys.D2))
+                if (KeyWasPressed(Keys.P)) {
+                    GBuffer2p5 = !GBuffer2p5;
+                    Renderer.InvalidateFields();
+                }
+
+                if (KeyWasPressed(Keys.D2)) {
                     TwoPointFiveD = !TwoPointFiveD;
+                    Renderer.InvalidateFields();
+                }
 
                 if (KeyWasPressed(Keys.R))
                     ShowRotatingLights = !ShowRotatingLights;

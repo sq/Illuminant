@@ -16,42 +16,54 @@ using Squared.Util;
 
 namespace Squared.Illuminant {
     public class RendererConfiguration {
-        public float ClipRegionScale             = 1.0f;
-        public bool  TwoPointFiveD               = false;
+        public float ClipRegionScale               = 1.0f;
+        public bool  TwoPointFiveD                 = false;
+        // If true, 2.5d surfaces are rendered directly to the lightmap, culled via the
+        //  depth buffer. Otherwise, they are rendered to the G-buffer.
+        public bool  RenderTwoPointFiveDToLightmap = true;
 
-        public float GBufferResolution         = 1.0f;
-        public bool  HeightmapCaching            = true;
+        public float GBufferResolution             = 1.0f;
+        public bool  GBufferCaching                = true;
 
         // Individual cone trace steps are not allowed to be any shorter than this.
         // Improves the worst-case performance of the trace and avoids spending forever
         //  stepping short distances around the edges of objects.
         // Setting this to 1 produces the 'best' results but larger values tend to look
         //  just fine. If this is too high you will get banding artifacts.
-        public float DistanceFieldMinStepSize    = 3.0f;
+        public float DistanceFieldMinStepSize             = 3.0f;
         // The minimum step size increases by this much every pixel, so that steps
         //  naturally become longer as the ray gets longer.
         // Making this value too large will introduce banding artifacts.
-        public float DistanceFieldMinStepSizeGrowthRate = 0.01f;
+        public float DistanceFieldMinStepSizeGrowthRate   = 0.01f;
         // Long step distances are scaled by this factor. A factor < 1.0
         //  eliminates banding artifacts in the soft area between full/no shadow,
         //  at the cost of additional cone trace steps.
         // This effectively increases how much time we spend outside of objects,
         //  producing higher quality as a side effect.
         // Only set this above 1.0 if you love goofy looking artifacts
-        public float DistanceFieldLongStepFactor = 1.0f;
+        public float DistanceFieldLongStepFactor          = 1.0f;
         // Terminates a cone trace after this many steps.
         // Mitigates the performance hit for complex traces near the edge of objects.
         // Most traces will not hit this cap.
-        public int   DistanceFieldMaxStepCount   = 64;
-        public float DistanceFieldResolution     = 1.0f;
-        public int   DistanceFieldSliceCount     = 1;
-        public float DistanceFieldMaxConeRadius  = 24;
-        public bool  DistanceFieldCaching        = true;
+        public int   DistanceFieldMaxStepCount            = 64;
+        public float DistanceFieldResolution              = 1.0f;
+        public int   DistanceFieldSliceCount              = 1;
+        public float DistanceFieldMaxConeRadius           = 24;
+        public bool  DistanceFieldCaching                 = true;
         public float DistanceFieldOcclusionToOpacityPower = 1;
 
         // The maximum width and height of the viewport. Controls the size of the
         //  terrain map and distance field.
         public readonly Pair<int> MaximumRenderSize;
+
+        public bool RenderTwoPointFiveDToGBuffer {
+            get {
+                return !RenderTwoPointFiveDToLightmap;
+            }
+            set {
+                RenderTwoPointFiveDToLightmap = !value;
+            }
+        }
 
         public RendererConfiguration (int maxWidth, int maxHeight) {
             MaximumRenderSize = new Pair<int>(maxWidth, maxHeight);
@@ -152,7 +164,7 @@ namespace Squared.Illuminant {
                     coordinator.Device, 
                     (int)(Configuration.MaximumRenderSize.First * Configuration.GBufferResolution), 
                     (int)(Configuration.MaximumRenderSize.Second * Configuration.GBufferResolution),
-                    false, GBufferFormat, DepthFormat.None, 0, RenderTargetUsage.DiscardContents
+                    false, GBufferFormat, DepthFormat.Depth24, 0, RenderTargetUsage.DiscardContents
                 );
 
                 DistanceFieldSliceWidth = (int)(Configuration.MaximumRenderSize.First * Configuration.DistanceFieldResolution);
@@ -296,6 +308,9 @@ namespace Squared.Illuminant {
 
                 materials.Add(IlluminantMaterials.HeightVolume = 
                     new Squared.Render.EffectMaterial(content.Load<Effect>("GBuffer"), "HeightVolume"));
+
+                materials.Add(IlluminantMaterials.HeightVolumeFace = 
+                    new Squared.Render.EffectMaterial(content.Load<Effect>("GBuffer"), "HeightVolumeFace"));
             }
 
 #if SDL2
@@ -547,11 +562,11 @@ namespace Squared.Illuminant {
                 if (Render.Tracing.RenderTrace.EnableTracing)
                     Render.Tracing.RenderTrace.Marker(resultGroup, -9999, "Frame {0:0000} : LightingRenderer {1:X4} : Begin", frame.Index, this.GetHashCode());
 
-                if (Configuration.TwoPointFiveD) {
+                if (Configuration.TwoPointFiveD && Configuration.RenderTwoPointFiveDToLightmap) {
                     if (Render.Tracing.RenderTrace.EnableTracing)
-                        Render.Tracing.RenderTrace.Marker(resultGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Volume Faces", frame.Index, this.GetHashCode());
+                        Render.Tracing.RenderTrace.Marker(resultGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Lightmap 2.5D", frame.Index, this.GetHashCode());
 
-                    RenderTwoPointFiveD(ref layerIndex, resultGroup);
+                    RenderTwoPointFiveDLitSurfaces(ref layerIndex, resultGroup);
                 }
 
                 int i = 0;
@@ -778,7 +793,7 @@ namespace Squared.Illuminant {
             SetTwoPointFiveDParametersInner(topFaceMaterial  .Effect.Parameters, true, true);
         }
 
-        private void RenderTwoPointFiveD (ref int layerIndex, BatchGroup resultGroup) {
+        private void RenderTwoPointFiveDLitSurfaces (ref int layerIndex, BatchGroup resultGroup) {
             // FIXME: Support more than 12 lights
 
             int i = 0;
@@ -857,10 +872,15 @@ namespace Squared.Illuminant {
             }
         }
 
+        public void InvalidateFields () {
+            _HeightmapReady = false;
+            _DistanceFieldReady = false;
+        }
+
         public void UpdateFields (IBatchContainer container, int layer) {
             if (!_HeightmapReady) {
                 RenderGBuffer(ref layer, container);
-                _HeightmapReady = Configuration.HeightmapCaching;
+                _HeightmapReady = Configuration.GBufferCaching;
             }
 
             if (!_DistanceFieldReady) {
@@ -881,11 +901,11 @@ namespace Squared.Illuminant {
                 }
             )) {
                 if (Render.Tracing.RenderTrace.EnableTracing)
-                    Render.Tracing.RenderTrace.Marker(group, -1, "LightingRenderer {0:X4} : Begin Heightmap", this.GetHashCode());
+                    Render.Tracing.RenderTrace.Marker(group, -1, "LightingRenderer {0:X4} : Begin G-Buffer", this.GetHashCode());
 
                 ClearBatch.AddNew(
                     group, 0, Materials.Clear, 
-                    Color.Transparent
+                    Color.Transparent, clearZ: 0
                 );
 
                 using (var batch = PrimitiveBatch<HeightVolumeVertex>.New(
@@ -895,8 +915,22 @@ namespace Squared.Illuminant {
                         // TODO: Depth buffer?
                         dm.Device.DepthStencilState = DepthStencilState.None;
                         dm.Device.BlendState = BlendState.Opaque;
+
+                        var p = IlluminantMaterials.HeightVolumeFace.Effect.Parameters;
+                        p["DistanceFieldExtent"].SetValue(new Vector3(
+                            Configuration.MaximumRenderSize.First,
+                            Configuration.MaximumRenderSize.Second,
+                            Environment.MaximumZ
+                        ));
+                        p["ZToYMultiplier"].SetValue(
+                            Configuration.TwoPointFiveD
+                                ? Environment.ZToYMultiplier
+                                : 0.0f
+                        );
                     }
                 )) {
+
+                    // HACK: Fill in the gbuffer values for the ground plane
                     {
                         var zRange = new Vector2(Environment.GroundZ, Environment.GroundZ);
                         var indices = new short[] {
@@ -909,28 +943,70 @@ namespace Squared.Illuminant {
                             new HeightVolumeVertex(new Vector3(0, Configuration.MaximumRenderSize.Second, Environment.GroundZ), Vector3.Up, zRange)
                         };
 
-                        // HACK: Fill in the gbuffer values for the ground plane
                         batch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
                             PrimitiveType.TriangleList, verts, 0, 4, indices, 0, 2
                         ));
                     }
 
-                    // Rasterize the height volumes in order from lowest to highest.
-                    foreach (var hv in Environment.HeightVolumes.OrderBy(hv => hv.ZBase + hv.Height)) {
-                        var b = hv.Bounds;
-                        var m = hv.Mesh3D;
+                    if (Configuration.TwoPointFiveD && Configuration.RenderTwoPointFiveDToGBuffer) {
+                        if (Render.Tracing.RenderTrace.EnableTracing)
+                            Render.Tracing.RenderTrace.Marker(group, 2, "LightingRenderer {0:X4} : G-Buffer Top Faces", this.GetHashCode());
 
-                        batch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
-                            PrimitiveType.TriangleList,
-                            m, 0, m.Length / 3
-                        ));
+                        if (Render.Tracing.RenderTrace.EnableTracing)
+                            Render.Tracing.RenderTrace.Marker(group, 4, "LightingRenderer {0:X4} : G-Buffer Front Faces", this.GetHashCode());
+
+                        using (var topBatch = PrimitiveBatch<HeightVolumeVertex>.New(
+                            group, 3, Materials.Get(
+                                IlluminantMaterials.HeightVolumeFace,
+                                depthStencilState: TopFaceDepthStencilState,
+                                rasterizerState: RasterizerState.CullNone,
+                                blendState: BlendState.Opaque
+                            )
+                        ))
+                        using (var frontBatch = PrimitiveBatch<HeightVolumeVertex>.New(
+                            group, 5, Materials.Get(
+                                IlluminantMaterials.HeightVolumeFace,
+                                depthStencilState: FrontFaceDepthStencilState,
+                                rasterizerState: RasterizerState.CullNone,
+                                blendState: BlendState.Opaque
+                            )
+                        ))
+                        foreach (var volume in Environment.HeightVolumes.OrderByDescending(hv => hv.ZBase + hv.Height)) {
+                            var ffm3d = volume.GetFrontFaceMesh3D();
+                            if (ffm3d.Count <= 0)
+                                continue;
+
+                            frontBatch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
+                                PrimitiveType.TriangleList,
+                                ffm3d.Array, ffm3d.Offset, ffm3d.Count / 3
+                            ));
+
+                            var m3d = volume.Mesh3D;
+
+                            topBatch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
+                                PrimitiveType.TriangleList,
+                                m3d, 0, m3d.Length / 3
+                            ));
+                        }
+
+                    } else {
+                        // Rasterize the height volumes in order from lowest to highest.
+                        foreach (var hv in Environment.HeightVolumes.OrderBy(hv => hv.ZBase + hv.Height)) {
+                            var b = hv.Bounds;
+                            var m = hv.Mesh3D;
+
+                            batch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
+                                PrimitiveType.TriangleList,
+                                m, 0, m.Length / 3
+                            ));
+                        }
                     }
                 }
 
                 // TODO: Update the heightmap using any SDF light obstructions (maybe only if they're flagged?)
 
                 if (Render.Tracing.RenderTrace.EnableTracing)
-                    Render.Tracing.RenderTrace.Marker(group, 2, "LightingRenderer {0:X4} : End Heightmap", this.GetHashCode());
+                    Render.Tracing.RenderTrace.Marker(group, 4, "LightingRenderer {0:X4} : End G-Buffer", this.GetHashCode());
             }
         }
 
@@ -1158,7 +1234,7 @@ namespace Squared.Illuminant {
         public Squared.Render.EffectMaterial VolumeFrontFace, VolumeTopFace;
         public Squared.Render.EffectMaterial DistanceFieldExterior, DistanceFieldInterior;
         public Squared.Render.EffectMaterial DistanceFunction;
-        public Squared.Render.EffectMaterial HeightVolume;
+        public Squared.Render.EffectMaterial HeightVolume, HeightVolumeFace;
         public Squared.Render.EffectMaterial ScreenSpaceGammaCompressedBitmap, WorldSpaceGammaCompressedBitmap;
         public Squared.Render.EffectMaterial ScreenSpaceToneMappedBitmap, WorldSpaceToneMappedBitmap;
 #if !SDL2

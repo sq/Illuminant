@@ -31,6 +31,7 @@ namespace TestGame.Scenes {
         bool ShowLightmap      = true;
         bool ShowDistanceField = false;
         bool Timelapse         = false;
+        bool GBuffer2p5        = false;
         bool TwoPointFiveD     = true;
 
         public TwoPointFiveDTest (TestGame game, int width, int height)
@@ -119,7 +120,7 @@ namespace TestGame.Scenes {
                     DistanceFieldOcclusionToOpacityPower = 0.5f,
                     DistanceFieldMaxConeRadius = 32,
                     DistanceFieldMaxStepCount = 96,
-                    HeightmapCaching = true,
+                    GBufferCaching = true,
                     DistanceFieldCaching = true
                 }
             );
@@ -190,6 +191,7 @@ namespace TestGame.Scenes {
             CreateRenderTargets();
 
             Renderer.Configuration.TwoPointFiveD = TwoPointFiveD;
+            Renderer.Configuration.RenderTwoPointFiveDToGBuffer = GBuffer2p5;
 
             float time = (float)(Time.Seconds % 6);
             Renderer.Configuration.DistanceFieldMaxStepCount =
@@ -289,10 +291,17 @@ namespace TestGame.Scenes {
                 if (KeyWasPressed(Keys.G))
                     ShowGBuffer = !ShowGBuffer;
 
-                if (KeyWasPressed(Keys.D2))
-                    TwoPointFiveD = !TwoPointFiveD;
+                if (KeyWasPressed(Keys.P)) {
+                    GBuffer2p5 = !GBuffer2p5;
+                    Renderer.InvalidateFields();
+                }
 
-                if (KeyWasPressed(Keys.P))
+                if (KeyWasPressed(Keys.D2)) {
+                    TwoPointFiveD = !TwoPointFiveD;
+                    Renderer.InvalidateFields();
+                }
+
+                if (KeyWasPressed(Keys.T))
                     Timelapse = !Timelapse;
 
                 if (KeyWasPressed(Keys.D))
