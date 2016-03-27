@@ -116,10 +116,11 @@ float2 computeDistanceFieldSubsliceUv (
 }
 
 float sampleDistanceField (
-    float3 position
+    float3 position, 
+    float invDistanceFieldExtentZ
 ) {
     // Interpolate between two Z samples. The xy interpolation is done by the GPU for us.
-    float scaledPositionZ = position.z / DistanceFieldExtent.z;
+    float scaledPositionZ = position.z * invDistanceFieldExtentZ;
     float slicePosition = clamp(scaledPositionZ * DistanceFieldTextureSliceCount.z, 0, DistanceFieldTextureSliceCount.z - 1);
     float sliceIndex1 = floor(slicePosition);
     float subslice = slicePosition - sliceIndex1;
@@ -154,25 +155,19 @@ float sampleDistanceField (
     return decodedDistance + distanceToVolume;
 }
 
-float sampleAlongRay (
-    float3 rayStart, float3 rayDirection, float distance
-) {
-    float3 samplePosition = rayStart + (rayDirection * distance);
-    float sample = sampleDistanceField(samplePosition);
-    return sample;
-}
-
 void coneTraceStep (
-    in    float3 traceStart,
-    in    float3 traceVector,
-    in    float  traceLength,
+    in    float3 traceDirection,
     in    float3 sphereRadiusSettings,
+    in    float  invDistanceFieldExtentZ,
     inout float  traceOffset,
+    inout float3 tracePosition,
     inout float  visibility,
     inout float  minStepSize,
     inout float  localSphereRadius
 ) {
-    float distanceToObstacle = sampleAlongRay(traceStart, traceVector, traceOffset);
+    float distanceToObstacle = sampleDistanceField(
+        tracePosition, invDistanceFieldExtentZ
+    );
 
     float localVisibility = 
         distanceToObstacle / localSphereRadius;
@@ -188,7 +183,8 @@ void coneTraceStep (
         ), minStepSize
     );
 
-    traceOffset = traceOffset + stepSize;
+    traceOffset += stepSize;
+    tracePosition = (traceDirection * stepSize) + tracePosition;
 
     minStepSize = (DistanceFieldMinimumStepSizeGrowthRate * stepSize) + minStepSize;
 
@@ -204,12 +200,14 @@ float coneTrace (
     in float2 lightRamp,
     in float3 shadedPixelPosition
 ) {
-    float traceOffset = TRACE_INITIAL_OFFSET_PX;
-    float minStepSize = max(1, DistanceFieldMinimumStepSize);
-
     float3 traceVector = (lightCenter - shadedPixelPosition);
     float  traceLength = length(traceVector);
-    traceVector = normalize(traceVector);
+    float3 traceDirection = normalize(traceVector);
+
+    float  traceOffset = TRACE_INITIAL_OFFSET_PX;
+    float3 tracePosition = shadedPixelPosition + (traceDirection * traceOffset);
+
+    float minStepSize = max(1, DistanceFieldMinimumStepSize);
 
     float maxTangentAngle = tan(MAX_ANGLE_DEGREES * PI / 180.0f);
     float lightTangentAngle = min(lightRamp.x / traceLength, maxTangentAngle);
@@ -223,6 +221,8 @@ float coneTrace (
     float3 sphereRadiusSettings = float3(
         minRadius, maxRadius, lightTangentAngle
     );
+
+    float invDistanceFieldExtentZ = rcp(DistanceFieldExtent.z);
 
     float visibility = 1.0;
     bool abort = false;
@@ -239,9 +239,9 @@ float coneTrace (
             traceOffset = traceLength;
 
         coneTraceStep(
-            shadedPixelPosition, traceVector, traceLength, 
-            sphereRadiusSettings,
-            traceOffset, visibility, 
+            traceDirection,
+            sphereRadiusSettings, invDistanceFieldExtentZ,
+            traceOffset, tracePosition, visibility, 
             minStepSize, localSphereRadius
         );
         stepCount += 1;
