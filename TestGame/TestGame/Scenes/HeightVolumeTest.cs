@@ -21,11 +21,11 @@ namespace TestGame.Scenes {
         public readonly List<LightSource> Lights = new List<LightSource>();
 
         bool ShowGBuffer        = false;
-        bool GBuffer2p5         = false;
-        bool TwoPointFiveD      = false;
+        bool GBuffer2p5         = true;
+        bool TwoPointFiveD      = true;
         bool ShowRotatingLights = true;
 
-        public const int RotatingLightCount = 128;
+        public const int RotatingLightCount = 4;
 
         public const int MultisampleCount = 0;
         public const int LightmapScaleRatio = 1;
@@ -68,10 +68,10 @@ namespace TestGame.Scenes {
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment,
                 new RendererConfiguration(
                     Width, Height,
-                    Width, Height, 16
+                    Width, Height, 32
                 ) {
-                    DistanceFieldResolution = 0.2f,
-                    DistanceFieldLongStepFactor = 0.75f,
+                    DistanceFieldResolution = 0.5f,
+                    DistanceFieldLongStepFactor = 0.5f,
                     DistanceFieldMinStepSize = 1f,
                     DistanceFieldMaxStepCount = 64,
                     DistanceFieldCaching = true,
@@ -91,7 +91,7 @@ namespace TestGame.Scenes {
             Lights.Add(light);
             Environment.LightSources.Add(light);
 
-            float opacityScale = (float)Math.Pow(16.0 / RotatingLightCount, 1.05);
+            float opacityScale = Math.Min((float)Math.Pow(16.0 / RotatingLightCount, 1.05), 2);
 
             var rng = new Random(1234);
             for (var i = 0; i < RotatingLightCount; i++) {

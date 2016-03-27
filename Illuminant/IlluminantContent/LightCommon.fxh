@@ -9,6 +9,8 @@ uniform float2 GBufferTexelSize;
 Texture2D GBuffer      : register(t2);
 sampler GBufferSampler : register(s2) {
     Texture = (GBuffer);
+    AddressU  = CLAMP;
+    AddressV  = CLAMP;
     MipFilter = POINT;
     MinFilter = POINT;
     MagFilter = POINT;
@@ -18,8 +20,11 @@ sampler GBufferSampler : register(s2) {
 float3 sampleGBuffer(
     float2 screenPositionPx
 ) {
-    float2 uv     = screenPositionPx * GBufferTexelSize;
+    // FIXME: Should we be offsetting distance field samples too?
+    float2 uv     = (screenPositionPx + 0.5) * GBufferTexelSize;
+
     float4 sample = tex2Dlod(GBufferSampler, float4(uv, 0, 0));
+
     return sample.xyz;
 }
 

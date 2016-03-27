@@ -90,6 +90,8 @@ uniform float2 DistanceFieldTextureTexelSize;
 Texture2D DistanceFieldTexture        : register(t4);
 sampler   DistanceFieldTextureSampler : register(s4) {
     Texture = (DistanceFieldTexture);
+    AddressU  = CLAMP;
+    AddressV  = CLAMP;
     MipFilter = POINT;
     MinFilter = DISTANCE_FIELD_FILTER;
     MagFilter = DISTANCE_FIELD_FILTER;
@@ -109,6 +111,7 @@ float2 computeDistanceFieldSubsliceUv (
 ) {
     // HACK: Ensure we don't sample outside of the slice (filtering! >:()
     // FIXME: Why is this 1 and not 0.5?
+    // FIXME: Should we be offsetting the position like we do with gbuffer reads?
     return clamp(positionPx, 1, DistanceFieldExtent.xy - 1) * DistanceFieldTextureTexelSize;
 }
 

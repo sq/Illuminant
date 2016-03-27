@@ -97,7 +97,8 @@ namespace TestGame {
                 frame, Materials, 
                 blendState: BlendState.Opaque, 
                 depthStencilState: DepthStencilState.None, 
-                rasterizerState: RasterizerState.CullNone
+                rasterizerState: RasterizerState.CullNone,
+                layer: 9999
             );
 
             DrawPerformanceStats(ref ir);

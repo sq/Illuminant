@@ -505,8 +505,8 @@ namespace Squared.Illuminant {
                 mi.Effect.Parameters["RampTexture"].SetValue(ls.RampTexture);
 
                 var tsize = new Vector2(
-                    1f / Configuration.MaximumRenderSize.First, 
-                    1f / Configuration.MaximumRenderSize.Second
+                    1f / Configuration.RenderSize.First, 
+                    1f / Configuration.RenderSize.Second
                 );
                 mi.Effect.Parameters["GBufferTexelSize"].SetValue(tsize);
                 mi.Effect.Parameters["GBuffer"].SetValue(GBuffer);
@@ -766,8 +766,8 @@ namespace Squared.Illuminant {
             p["NumLights"]         .SetValue(_VisibleLightCount);
 
             var tsize = new Vector2(
-                1f / (Configuration.RenderSize.First - 1), 
-                1f / (Configuration.RenderSize.Second - 1)
+                1f / Configuration.RenderSize.First, 
+                1f / Configuration.RenderSize.Second
             );
             p["GBufferInvScaleFactor"].SetValue(1f / Configuration.GBufferResolution);
             p["GBufferTexelSize"].SetValue(tsize);
