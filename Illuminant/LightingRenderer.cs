@@ -595,6 +595,10 @@ namespace Squared.Illuminant {
                         (Vector2)lightSource.Position - new Vector2(radius), (Vector2)lightSource.Position + new Vector2(radius)
                     );
 
+                    if (Configuration.TwoPointFiveD) {
+                        lightBounds.TopLeft.Y -= (Environment.MaximumZ * Environment.ZToYMultiplier);
+                    }
+
                     // FIXME: Broken :(
                     if (false) {
                         bool lightWithinVolume = false;

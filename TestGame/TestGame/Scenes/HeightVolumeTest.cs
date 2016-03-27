@@ -25,7 +25,7 @@ namespace TestGame.Scenes {
         bool TwoPointFiveD      = false;
         bool ShowRotatingLights = true;
 
-        public const int RotatingLightCount = 128;
+        public const int RotatingLightCount = 16;
         public const int MultisampleCount = 0;
         public const int LightmapScaleRatio = 1;
 
