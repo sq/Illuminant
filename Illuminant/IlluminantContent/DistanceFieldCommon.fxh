@@ -136,7 +136,9 @@ float sampleDistanceField (
     
     // FIXME: Somehow this r/g encoding introduces a consistent error along the z-axis compared to the old encoding?
     // It seems like floor instead of ceil fixes it but I have no idea why
-    float evenSlice = floor(fmod(sliceIndex1, 2));
+    // float evenSlice = floor(fmod(sliceIndex1, 2));
+
+    float evenSlice = (sliceIndex1 % 2);
    
     float decodedDistance = decodeDistance(lerp(
         lerp(sample1.r, sample1.g, evenSlice),
@@ -146,21 +148,10 @@ float sampleDistanceField (
 
     // HACK: Samples outside the distance field will be wrong if they just
     //  read the closest distance in the field.
-    float3 minVolumeExtent = float3(0, 0, 0);
-    float3 maxVolumeExtent = DistanceFieldExtent;
-    float3 clampedPosition = clamp(position, minVolumeExtent, maxVolumeExtent);
+    float3 clampedPosition = clamp(position, 0, DistanceFieldExtent);
     float distanceToVolume = length(clampedPosition - position);
 
     return decodedDistance + distanceToVolume;
-}
-
-float sampleAlongRay (
-    float3 rayStart, float3 rayDirection, float distance,
-    float  invDistanceFieldExtentZ
-) {
-    float3 samplePosition = rayStart + (rayDirection * distance);
-    float sample = sampleDistanceField(samplePosition, invDistanceFieldExtentZ);
-    return sample;
 }
 
 void coneTraceStep (
@@ -174,8 +165,10 @@ void coneTraceStep (
     inout float  minStepSize,
     inout float  localSphereRadius
 ) {
-    float distanceToObstacle = sampleAlongRay(
-        traceStart, traceVector, traceOffset,
+    float3 samplePosition = traceStart + (traceVector * traceOffset);
+
+    float distanceToObstacle = sampleDistanceField(
+        samplePosition,
         invDistanceFieldExtentZ
     );
 
@@ -253,8 +246,6 @@ float coneTrace (
         );
         stepCount += 1;
     }
-
-    // return stepCount / DistanceFieldMaxStepCount;
 
     // HACK: Force visibility down to 0 if we are going to terminate the trace because we took too many steps.
     float windowStart = max(DistanceFieldMaxStepCount - MAX_STEP_RAMP_WINDOW, 0);
