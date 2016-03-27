@@ -39,8 +39,8 @@ float PointLightPixelCore(
     in float2 ramp          : TEXCOORD1, // radius, ramp length
     in float2 vpos          : VPOS
 ) {
-    float terrainZ = (sampleTerrain(worldPosition.xy) * DistanceFieldExtent.z) + SELF_OCCLUSION_HACK;
-    float3 shadedPixelPosition = float3(worldPosition.xy, terrainZ);
+    float3 shadedPixelPosition = sampleGBuffer(worldPosition.xy);
+    shadedPixelPosition.z += SELF_OCCLUSION_HACK;
 
     float lightOpacity = computeLightOpacity(shadedPixelPosition, lightCenter, ramp.x, ramp.y);
     float tracedOcclusion = coneTrace(lightCenter, ramp, shadedPixelPosition);

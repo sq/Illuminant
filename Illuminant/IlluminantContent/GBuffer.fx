@@ -1,21 +1,27 @@
 #include "..\..\Upstream\Fracture\Squared\RenderLib\Content\GeometryCommon.fxh"
 
-uniform float MaxZ;
-
 void HeightVolumeVertexShader (
     in    float3 position : POSITION0, // x, y, z
     inout float2 zRange   : TEXCOORD0,
+    out   float3 worldPosition : TEXCOORD1,
     out   float4 result   : POSITION0
 ) {
+    worldPosition = float3(position.x, position.y, zRange.y);
     result = TransformPosition(float4(position.xy - ViewportPosition, 0, 1), 0);
     result.z = 0;
 }
 
-void HeightVolumePixelShader (
+void HeightVolumePixelShader (    
     in float2 zRange : TEXCOORD0,
+    in float3 worldPosition : TEXCOORD1,
     out float4 color : COLOR0
 ) {
-    color = zRange.y / MaxZ;
+    color = float4(
+        worldPosition.x,
+        worldPosition.y,
+        zRange.y,
+        1
+    );
 }
 
 technique HeightVolume

@@ -27,7 +27,7 @@ namespace TestGame.Scenes {
 
         const int ScaleFactor = 1;
 
-        bool ShowTerrainDepth  = false;
+        bool ShowGBuffer  = false;
         bool ShowLightmap      = false;
         bool ShowDistanceField = false;
         bool Timelapse         = false;
@@ -229,7 +229,7 @@ namespace TestGame.Scenes {
                     using (var bb = BitmapBatch.New(
                         group, 1,
                         Game.Materials.Get(
-                            ShowTerrainDepth
+                            ShowGBuffer
                                 ? Game.Materials.ScreenSpaceBitmap
                                 : Game.Materials.ScreenSpaceLightmappedBitmap,
                             blendState: BlendState.Opaque
@@ -237,7 +237,7 @@ namespace TestGame.Scenes {
                         samplerState: SamplerState.PointClamp
                     )) {
                         var dc = new BitmapDrawCall(
-                            Background, Vector2.Zero, Color.White * (ShowTerrainDepth ? 0.7f : 1.0f)
+                            Background, Vector2.Zero, Color.White * (ShowGBuffer ? 0.7f : 1.0f)
                         );
                         dc.Textures = new TextureSet(dc.Textures.Texture1, Lightmap);
                         bb.Add(dc);
@@ -263,7 +263,7 @@ namespace TestGame.Scenes {
                         ));
                 }
 
-                if (ShowTerrainDepth) {
+                if (ShowGBuffer) {
                     using (var bb = BitmapBatch.New(
                         group, 4, Game.Materials.Get(
                             Game.Materials.ScreenSpaceBitmap,
@@ -272,8 +272,8 @@ namespace TestGame.Scenes {
                         samplerState: SamplerState.PointClamp
                     ))
                         bb.Add(new BitmapDrawCall(
-                            Renderer.TerrainDepthmap, Vector2.Zero, new Bounds(Vector2.Zero, Vector2.One), 
-                            new Color(255, 0, 0, 255), 1f / Renderer.Configuration.HeightmapResolution
+                            Renderer.GBuffer, Vector2.Zero, new Bounds(Vector2.Zero, Vector2.One), 
+                            Color.White, 1f / Renderer.Configuration.GBufferResolution
                         ));
                 }
             }
@@ -286,8 +286,8 @@ namespace TestGame.Scenes {
                 if (KeyWasPressed(Keys.L))
                     ShowLightmap = !ShowLightmap;
 
-                if (KeyWasPressed(Keys.T))
-                    ShowTerrainDepth = !ShowTerrainDepth;
+                if (KeyWasPressed(Keys.G))
+                    ShowGBuffer = !ShowGBuffer;
 
                 if (KeyWasPressed(Keys.D2))
                     TwoPointFiveD = !TwoPointFiveD;

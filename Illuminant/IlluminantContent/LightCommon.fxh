@@ -3,24 +3,24 @@
 uniform float GroundZ;
 uniform float ZToYMultiplier;
 
-uniform float  HeightmapInvScaleFactor;
-uniform float2 TerrainTextureTexelSize;
+uniform float  GBufferInvScaleFactor;
+uniform float2 GBufferTexelSize;
 
-Texture2D TerrainTexture      : register(t2);
-sampler TerrainTextureSampler : register(s2) {
-    Texture = (TerrainTexture);
+Texture2D GBuffer      : register(t2);
+sampler GBufferSampler : register(s2) {
+    Texture = (GBuffer);
     MipFilter = POINT;
     MinFilter = POINT;
     MagFilter = POINT;
 };
 
-// returns height of the terrain in [0-1] that you should scale
-float sampleTerrain(
-    float2 positionPx
+// returns world position data from the gbuffer at the specified screen position
+float3 sampleGBuffer(
+    float2 screenPositionPx
 ) {
-    float2 uv     = positionPx * TerrainTextureTexelSize;
-    float  sample = tex2Dlod(TerrainTextureSampler, float4(uv, 0, 0)).r;
-    return sample;
+    float2 uv     = screenPositionPx * GBufferTexelSize;
+    float4 sample = tex2Dlod(GBufferSampler, float4(uv, 0, 0));
+    return sample.xyz;
 }
 
 float computeLightOpacity(

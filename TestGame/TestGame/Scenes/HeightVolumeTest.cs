@@ -20,7 +20,7 @@ namespace TestGame.Scenes {
 
         public readonly List<LightSource> Lights = new List<LightSource>();
 
-        bool ShowTerrainDepth   = false;
+        bool ShowGBuffer   = false;
         bool TwoPointFiveD      = false;
         bool ShowRotatingLights = true;
 
@@ -178,18 +178,17 @@ namespace TestGame.Scenes {
             using (var bb = BitmapBatch.New(
                 frame, 1,
                 Game.Materials.Get(Game.Materials.ScreenSpaceBitmap, blendState: BlendState.Opaque),
-                samplerState: ShowTerrainDepth ? SamplerState.PointClamp : SamplerState.LinearClamp
+                samplerState: ShowGBuffer ? SamplerState.PointClamp : SamplerState.LinearClamp
             )) {
                 var dc = new BitmapDrawCall(
-                    ShowTerrainDepth
-                        ? Renderer.TerrainDepthmap
-                        : Lightmap, Vector2.Zero,
-                    ShowTerrainDepth
-                        ? new Color(255, 0, 0, 255)
-                        : Color.White
+                    ShowGBuffer
+                        ? Renderer.GBuffer
+                        : Lightmap, 
+                    Vector2.Zero,
+                    Color.White
                 );
-                if (!ShowTerrainDepth)
-                    dc.ScaleF = LightmapScaleRatio;
+
+                dc.ScaleF = ShowGBuffer ? 1f / Renderer.Configuration.GBufferResolution : LightmapScaleRatio;
 
                 bb.Add(ref dc);
             }
@@ -199,8 +198,8 @@ namespace TestGame.Scenes {
             if (Game.IsActive) {
                 const float step = 0.1f;
 
-                if (KeyWasPressed(Keys.T))
-                    ShowTerrainDepth = !ShowTerrainDepth;
+                if (KeyWasPressed(Keys.G))
+                    ShowGBuffer = !ShowGBuffer;
 
                 if (KeyWasPressed(Keys.D2))
                     TwoPointFiveD = !TwoPointFiveD;

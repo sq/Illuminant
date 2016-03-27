@@ -99,7 +99,8 @@ void TopFacePixelShader(
     float3 normal = float3(0, 0, 1);
     float3 accumulator = float3(0, 0, 0);
 
-    float2 terrainZ = sampleTerrain(worldPosition.xy);
+    // FIXME
+    // float2 terrainZ = sampleTerrain(worldPosition.xy);
 
     [loop]
     for (int i = 0; i < NumLights; i++) {
@@ -109,8 +110,8 @@ void TopFacePixelShader(
 
         bool kill = false;
 
-        if (lightPosition.z < terrainZ.x)
-            kill = true;
+        // if (lightPosition.z < terrainZ.x)
+        //    kill = true;
         if (lightPosition.z < worldPosition.z)
             kill = true;
 
