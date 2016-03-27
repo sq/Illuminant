@@ -26,7 +26,7 @@ namespace TestGame.Scenes {
         bool TwoPointFiveD      = true;
         bool ShowRotatingLights = true;
 
-        public const int RotatingLightCount = 64;
+        public const int RotatingLightCount = 256;
 
         public const int MultisampleCount = 0;
         public const int LightmapScaleRatio = 1;
@@ -72,8 +72,9 @@ namespace TestGame.Scenes {
                     Width, Height, 32
                 ) {
                     DistanceFieldResolution = 0.5f,
-                    DistanceFieldLongStepFactor = 0.5f,
-                    DistanceFieldMinStepSize = 1f,
+                    DistanceFieldLongStepFactor = 0.9f,
+                    DistanceFieldMinStepSize = 1.5f,
+                    DistanceFieldMinStepSizeGrowthRate = 0.05f,
                     DistanceFieldMaxStepCount = 64,
                     DistanceFieldCaching = true,
                     GBufferCaching = true
@@ -110,7 +111,7 @@ namespace TestGame.Scenes {
                 Environment.LightSources.Add(light);
             }
 
-            const float angleStep = (float)(Math.PI / 32);
+            const float angleStep = (float)(Math.PI / 128);
             const int   heightTiers = 8;
             const float minHeight = 0f;
             const float maxHeight = 127f;
