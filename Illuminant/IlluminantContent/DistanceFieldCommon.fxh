@@ -97,6 +97,12 @@ sampler   DistanceFieldTextureSampler : register(s4) {
     MagFilter = DISTANCE_FIELD_FILTER;
 };
 
+struct TraceInfo {
+    float3 start;
+    float3 direction;
+    float  length;
+};
+
 struct TraceVars {
     float sliceCountZMinus1;
     float invSliceCountX;
@@ -175,9 +181,7 @@ float sampleDistanceField (
 }
 
 void coneTraceStep (
-    in    float3 traceStart,
-    in    float3 traceVector,
-    in    float  traceLength,
+    in    TraceInfo trace,
     in    float3 sphereRadiusSettings,
     in    TraceVars vars,
     inout float  traceOffset,
@@ -185,7 +189,7 @@ void coneTraceStep (
     inout float  minStepSize,
     inout float  localSphereRadius
 ) {
-    float3 samplePosition = traceStart + (traceVector * traceOffset);
+    float3 samplePosition = trace.start + (trace.direction * traceOffset);
 
     float distanceToObstacle = sampleDistanceField(
         samplePosition, vars
@@ -221,33 +225,34 @@ float coneTrace (
     in float2 lightRamp,
     in float3 shadedPixelPosition
 ) {
-    float traceOffset = TRACE_INITIAL_OFFSET_PX;
-    float minStepSize = max(1, DistanceFieldMinimumStepSize);
-
-    float3 traceVector = (lightCenter - shadedPixelPosition);
-    float  traceLength = length(traceVector);
-    traceVector = normalize(traceVector);
-
-    float maxTangentAngle = tan(MAX_ANGLE_DEGREES * PI / 180.0f);
-    float lightTangentAngle = min(lightRamp.x / traceLength, maxTangentAngle);
-
-    float minRadius = max(MIN_CONE_RADIUS, 0.1);
-    float maxRadius = clamp(
-        lightRamp.x, minRadius, DistanceFieldMaxConeRadius
-    );
-
-    float localSphereRadius = minRadius;
-    float3 sphereRadiusSettings = float3(
-        minRadius, maxRadius, lightTangentAngle
-    );
-
     TraceVars vars = {
         DistanceFieldTextureSliceCount.z - 1,
         1.0 / DistanceFieldTextureSliceCount.x,
         1.0 / DistanceFieldExtent.z
     };
 
+    TraceInfo trace;
+    float traceOffset = TRACE_INITIAL_OFFSET_PX;
+    trace.start = shadedPixelPosition;
+    float3 traceVector = (lightCenter - trace.start);
+    trace.length = length(traceVector);
+    trace.direction = normalize(traceVector);
+
+    float maxTangentAngle = tan(MAX_ANGLE_DEGREES * PI / 180.0f);
+    float lightTangentAngle = min(lightRamp.x / trace.length, maxTangentAngle);
+
+    float minRadius = max(MIN_CONE_RADIUS, 0.1);
+    float maxRadius = clamp(
+        lightRamp.x, minRadius, DistanceFieldMaxConeRadius
+    );
+    float3 sphereRadiusSettings = float3(
+        minRadius, maxRadius, lightTangentAngle
+    );
+
+    float minStepSize = max(1, DistanceFieldMinimumStepSize);
+    float localSphereRadius = minRadius;
     float visibility = 1.0;
+
     bool abort = false;
 
     float stepCount = 0;
@@ -256,14 +261,13 @@ float coneTrace (
     while (!abort) {
         abort = 
             (stepCount >= DistanceFieldMaxStepCount) ||
-            (traceOffset >= traceLength) || 
+            (traceOffset >= trace.length) || 
             (visibility < FULLY_SHADOWED_THRESHOLD);
         if (abort)
-            traceOffset = traceLength;
+            traceOffset = trace.length;
 
         coneTraceStep(
-            shadedPixelPosition, traceVector, traceLength, 
-            sphereRadiusSettings, vars,
+            trace, sphereRadiusSettings, vars,
             traceOffset, visibility, 
             minStepSize, localSphereRadius
         );
