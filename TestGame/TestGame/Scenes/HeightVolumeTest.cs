@@ -234,7 +234,10 @@ namespace TestGame.Scenes {
                 
                 var mousePos = new Vector2(ms.X, ms.Y);
 
-                var angle = gameTime.TotalGameTime.TotalSeconds * 0.125f;
+                var time = gameTime.TotalGameTime.TotalSeconds;
+                // time = 0;
+
+                var angle = time * 0.125f;
                 const float minRadius = 30f;
                 const float maxRadius = 650f;
                 const float centerMinZ = 200;
@@ -248,7 +251,7 @@ namespace TestGame.Scenes {
                 int count = Environment.LightSources.Count - 1;
 
                 float stepOffset = (float)((Math.PI * 2) / count);
-                float timeValue = (float)(gameTime.TotalGameTime.TotalSeconds / 14 % 4);
+                float timeValue = (float)(time / 14 % 4);
                 float offset = timeValue;
                 for (int i = 1; i < Environment.LightSources.Count; i++, offset += stepOffset) {
                     float radiusFactor = (float)Math.Abs(Math.Sin(

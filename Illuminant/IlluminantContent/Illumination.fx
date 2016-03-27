@@ -53,6 +53,7 @@ float PointLightPixelCore(
         float tracedOcclusion = coneTrace(lightCenter, ramp, shadedPixelPosition);
         return lightOpacity * tracedOcclusion;
     } else {
+        discard;
         return 0;
     }
 }
