@@ -93,7 +93,12 @@ namespace TestGame {
 
             Scenes[ActiveSceneIndex].Draw(frame);
 
-            var ir = new ImperativeRenderer(frame, Materials);
+            var ir = new ImperativeRenderer(
+                frame, Materials, 
+                blendState: BlendState.Opaque, 
+                depthStencilState: DepthStencilState.None, 
+                rasterizerState: RasterizerState.CullNone
+            );
 
             DrawPerformanceStats(ref ir);
         }
@@ -103,18 +108,17 @@ namespace TestGame {
             var layout = Font.LayoutString(PerformanceStats.GetText(this, -LastPerformanceStatPrimCount), scale: scale);
             var layoutSize = layout.Size * scale;
             var position = new Vector2(Graphics.PreferredBackBufferWidth - (232 * scale), 30f).Floor();
+            var dc = layout.DrawCalls;
 
-            // fill quad + text quads + text shadow quads
-            LastPerformanceStatPrimCount = (layout.Count * 4) + 2;
+            // fill quad + text quads
+            LastPerformanceStatPrimCount = (layout.Count * 2) + 2;
 
             ir.FillRectangle(
                 Bounds.FromPositionAndSize(position, layoutSize),
-                Color.Black * 0.45f,
-                layer: 9000
+                Color.Black
             );
             ir.Layer += 1;
-            ir.DrawMultiple(layout, position + Vector2.One, Color.Black, sortKey: 0f, layer: 9001);
-            ir.DrawMultiple(layout, position, Color.White, sortKey: 1f, layer: 9001);
+            ir.DrawMultiple(dc, position);
         }
     }
 
