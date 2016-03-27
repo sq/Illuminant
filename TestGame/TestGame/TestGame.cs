@@ -30,6 +30,8 @@ namespace TestGame {
         public readonly Scene[] Scenes;
         public int ActiveSceneIndex = 0;
 
+        private int LastPerformanceStatPrimCount = 0;
+
         public TestGame () {
             Graphics = new GraphicsDeviceManager(this);
             Graphics.PreferredBackBufferFormat = SurfaceFormat.Color;
@@ -52,7 +54,7 @@ namespace TestGame {
                 new TwoPointFiveDTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
             };
 
-            ActiveSceneIndex = 1;
+            ActiveSceneIndex = 0;
         }
 
         protected override void LoadContent () {
@@ -92,14 +94,18 @@ namespace TestGame {
             Scenes[ActiveSceneIndex].Draw(frame);
 
             var ir = new ImperativeRenderer(frame, Materials);
+
             DrawPerformanceStats(ref ir);
         }
 
         private void DrawPerformanceStats (ref ImperativeRenderer ir) {
             const float scale = 0.75f;
-            var layout = Font.LayoutString(PerformanceStats.GetText(this), scale: scale);
+            var layout = Font.LayoutString(PerformanceStats.GetText(this, -LastPerformanceStatPrimCount), scale: scale);
             var layoutSize = layout.Size * scale;
-            var position = new Vector2(Graphics.PreferredBackBufferWidth - (220 * scale), 30f).Floor();
+            var position = new Vector2(Graphics.PreferredBackBufferWidth - (232 * scale), 30f).Floor();
+
+            // fill quad + text quads + text shadow quads
+            LastPerformanceStatPrimCount = (layout.Count * 4) + 2;
 
             ir.FillRectangle(
                 Bounds.FromPositionAndSize(position, layoutSize),

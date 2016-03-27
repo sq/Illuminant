@@ -21,8 +21,12 @@ namespace TestGame.Scenes {
         public readonly List<LightSource> Lights = new List<LightSource>();
 
         bool ShowTerrainDepth   = false;
-        bool TwoPointFiveD      = true;
-        bool ShowRotatingLights = false;
+        bool TwoPointFiveD      = false;
+        bool ShowRotatingLights = true;
+
+        public const int RotatingLightCount = 8;
+        public const int MultisampleCount = 0;
+        public const int LightmapScaleRatio = 1;
 
         float LightZ = 0;
 
@@ -31,10 +35,8 @@ namespace TestGame.Scenes {
         }
 
         private void CreateRenderTargets () {
-            int scaledWidth = (int)Width;
-            int scaledHeight = (int)Height;
-
-            const int multisampleCount = 0;
+            int scaledWidth = (int)Width / LightmapScaleRatio;
+            int scaledHeight = (int)Height / LightmapScaleRatio;
 
             if (scaledWidth < 4)
                 scaledWidth = 4;
@@ -47,7 +49,7 @@ namespace TestGame.Scenes {
 
                 Lightmap = new RenderTarget2D(
                     Game.GraphicsDevice, scaledWidth, scaledHeight, false,
-                    SurfaceFormat.Color, DepthFormat.Depth24, multisampleCount, 
+                    SurfaceFormat.Rgba64, DepthFormat.Depth24, MultisampleCount, 
                     // YUCK
                     RenderTargetUsage.DiscardContents
                 );
@@ -84,11 +86,14 @@ namespace TestGame.Scenes {
             Lights.Add(light);
             Environment.LightSources.Add(light);
 
+            float opacityScale = (float)Math.Pow(16.0 / RotatingLightCount, 1.05);
+
             var rng = new Random(1234);
-            for (var i = 0; i < 12; i++) {
+            for (var i = 0; i < RotatingLightCount; i++) {
                 light = new LightSource {
                     Position = new Vector3(64, 64, rng.NextFloat(0.1f, 2.0f)),
-                    Color = new Vector4((float)rng.NextDouble(0.2f, 0.7f), (float)rng.NextDouble(0.2f, 0.7f), (float)rng.NextDouble(0.2f, 0.7f), 0.4f),
+                    Color = new Vector4((float)rng.NextDouble(0.2f, 0.7f), (float)rng.NextDouble(0.2f, 0.7f), (float)rng.NextDouble(0.2f, 0.7f), 0.5f),
+                    Opacity = opacityScale,
                     Radius = rng.NextFloat(40, 68),
                     RampLength = rng.NextFloat(210, 300),
                     RampMode = LightSourceRampMode.Exponential
@@ -173,16 +178,21 @@ namespace TestGame.Scenes {
             using (var bb = BitmapBatch.New(
                 frame, 1,
                 Game.Materials.Get(Game.Materials.ScreenSpaceBitmap, blendState: BlendState.Opaque),
-                samplerState: SamplerState.PointClamp
-            ))
-                bb.Add(new BitmapDrawCall(
+                samplerState: SamplerState.LinearClamp
+            )) {
+                var dc = new BitmapDrawCall(
                     ShowTerrainDepth
                         ? Renderer.TerrainDepthmap
                         : Lightmap, Vector2.Zero,
                     ShowTerrainDepth
                         ? new Color(255, 0, 0, 255)
                         : Color.White
-                ));
+                );
+                if (!ShowTerrainDepth)
+                    dc.ScaleF = LightmapScaleRatio;
+
+                bb.Add(ref dc);
+            }
         }
 
         public override void Update (GameTime gameTime) {
@@ -211,7 +221,7 @@ namespace TestGame.Scenes {
                 var mousePos = new Vector2(ms.X, ms.Y);
 
                 var angle = gameTime.TotalGameTime.TotalSeconds * 0.125f;
-                const float radius = 320f;
+                const float radius = 360f;
 
                 var lightCenter = new Vector3(Width / 2, Height / 2, 0);
 
@@ -223,12 +233,12 @@ namespace TestGame.Scenes {
                 float offset = (float)(gameTime.TotalGameTime.TotalSeconds / 16 % 4);
                 for (int i = 1; i < Environment.LightSources.Count; i++, offset += stepOffset) {
                     float localRadius = (float)(radius + (radius * Math.Sin(offset * 4f) * 0.5f));
-                    float zFromRadius = 1.25f + (localRadius * -1f / Width);
+                    float zFromRadius = 1f + (localRadius * -1f / Width);
 
                     Lights[i].Position = lightCenter + new Vector3(
                         (float)Math.Cos(angle + offset) * localRadius, 
                         (float)Math.Sin(angle + offset) * localRadius,
-                        zFromRadius * 192f
+                        zFromRadius * 256f
                     );
                     Lights[i].Color.W = ShowRotatingLights ? 1.0f : 0.0f;
                 }

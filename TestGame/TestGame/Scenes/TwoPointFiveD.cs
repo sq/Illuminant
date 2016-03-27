@@ -28,9 +28,10 @@ namespace TestGame.Scenes {
         const int ScaleFactor = 1;
 
         bool ShowTerrainDepth  = false;
-        bool ShowLightmap      = true;
+        bool ShowLightmap      = false;
         bool ShowDistanceField = false;
-        bool Timelapse         = true;
+        bool Timelapse         = false;
+        bool TwoPointFiveD     = true;
 
         public TwoPointFiveDTest (TestGame game, int width, int height)
             : base(game, 1024, 1024) {
@@ -110,7 +111,6 @@ namespace TestGame.Scenes {
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(1024, 1024) {
-                    TwoPointFiveD = true,
                     DistanceFieldResolution = 0.5f,
                     DistanceFieldSliceCount = 32,
                     DistanceFieldMinStepSize = 1.33f,
@@ -119,6 +119,7 @@ namespace TestGame.Scenes {
                     DistanceFieldOcclusionToOpacityPower = 0.5f,
                     DistanceFieldMaxConeRadius = 32,
                     DistanceFieldMaxStepCount = 96,
+                    HeightmapCaching = true,
                     DistanceFieldCaching = true
                 }
             );
@@ -187,6 +188,8 @@ namespace TestGame.Scenes {
             const float LightmapScale = 1f;
 
             CreateRenderTargets();
+
+            Renderer.Configuration.TwoPointFiveD = TwoPointFiveD;
 
             float time = (float)(Time.Seconds % 6);
             Renderer.Configuration.DistanceFieldMaxStepCount =
@@ -285,6 +288,9 @@ namespace TestGame.Scenes {
 
                 if (KeyWasPressed(Keys.T))
                     ShowTerrainDepth = !ShowTerrainDepth;
+
+                if (KeyWasPressed(Keys.D2))
+                    TwoPointFiveD = !TwoPointFiveD;
 
                 if (KeyWasPressed(Keys.P))
                     Timelapse = !Timelapse;

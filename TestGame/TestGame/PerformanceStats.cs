@@ -29,7 +29,7 @@ namespace ThreefoldTrials.Framework {
             return list.Average();
         }
 
-        private static string GenerateText (MultithreadedGame game) {
+        private static string GenerateText (MultithreadedGame game, int primCountOffset) {
             StringBuilder.Clear();
 
             var drawAverage = GetAverage(DrawSamples);
@@ -40,11 +40,11 @@ namespace ThreefoldTrials.Framework {
             var totalAverage = drawAverage + beginAverage + endAverage + waitAverage;
             var fpsAverage = 1000.0 / totalAverage;
 
-            StringBuilder.AppendFormat("FPS ~{0:0000.0}\r\n", fpsAverage);
-            StringBuilder.AppendFormat("D {0:000.0}\r\n", drawAverage);
-            StringBuilder.AppendFormat("BE {0:000.0}\r\n", beginAverage + endAverage);
-            StringBuilder.AppendFormat("W {0:000.0}\r\n", waitAverage);
-            StringBuilder.AppendFormat("{0:0000} batches\r\n", game.PreviousFrameTiming.BatchCount);
+            StringBuilder.AppendFormat("wait  {0,7:0.00}\r\n", waitAverage);
+            StringBuilder.AppendFormat("ms/f  {0,7:0.00}\r\n", totalAverage);
+            StringBuilder.AppendFormat("FPS  ~{0,7:0.00}\r\n", fpsAverage);
+            StringBuilder.AppendFormat("batch {0,7}\r\n", game.PreviousFrameTiming.BatchCount);
+            StringBuilder.AppendFormat("prim ~{0,7}\r\n", game.PreviousFrameTiming.PrimitiveCount + primCountOffset);
 
             return StringBuilder.ToString();
         }
@@ -58,10 +58,9 @@ namespace ThreefoldTrials.Framework {
             _CachedString = null;
         }
 
-        public static string GetText (MultithreadedGame game) {
-            if (_CachedString == null) {
-                _CachedString = GenerateText(game);
-            }
+        public static string GetText (MultithreadedGame game, int primCountOffset = 0) {
+            if (_CachedString == null)
+                _CachedString = GenerateText(game, primCountOffset);
 
             return _CachedString;
         }
