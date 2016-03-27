@@ -26,10 +26,10 @@ namespace TestGame.Scenes {
         bool TwoPointFiveD      = true;
         bool ShowRotatingLights = true;
 
-        public const int RotatingLightCount = 256;
+        public const int RotatingLightCount = 128;
 
         public const int MultisampleCount = 0;
-        public const int LightmapScaleRatio = 1;
+        public const int LightmapScaleRatio = 2;
 
         float LightZ = 0;
 
@@ -38,8 +38,8 @@ namespace TestGame.Scenes {
         }
 
         private void CreateRenderTargets () {
-            int scaledWidth = (int)Width / LightmapScaleRatio;
-            int scaledHeight = (int)Height / LightmapScaleRatio;
+            int scaledWidth = (int)(Width / LightmapScaleRatio);
+            int scaledHeight = (int)(Height / LightmapScaleRatio);
 
             if (scaledWidth < 4)
                 scaledWidth = 4;
@@ -60,17 +60,15 @@ namespace TestGame.Scenes {
         }
 
         public override void LoadContent () {
-            // Since the spiral is very detailed
-            LightingEnvironment.DefaultSubdivision = 128f;
-
             Environment = new LightingEnvironment();
 
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment,
                 new RendererConfiguration(
-                    Width, Height,
+                    Width / LightmapScaleRatio, Height / LightmapScaleRatio,
                     Width, Height, 32
                 ) {
+                    RenderScale = 1.0f / LightmapScaleRatio,
                     DistanceFieldResolution = 0.5f,
                     DistanceFieldLongStepFactor = 0.9f,
                     DistanceFieldMinStepSize = 1.5f,
@@ -152,15 +150,6 @@ namespace TestGame.Scenes {
         }
         
         public override void Draw (Squared.Render.Frame frame) {
-            const float LightmapScale = 1f;
-
-            Game.Materials.ViewportScale = new Vector2(1f / LightmapScale);
-            Game.Materials.ProjectionMatrix = Matrix.CreateOrthographicOffCenter(
-                0, Width,
-                Height, 0,
-                0, 1
-            );
-
             Renderer.Configuration.TwoPointFiveD = TwoPointFiveD;
             Renderer.Configuration.RenderTwoPointFiveDToGBuffer = GBuffer2p5;
 
@@ -171,7 +160,7 @@ namespace TestGame.Scenes {
             using (var bg = BatchGroup.ForRenderTarget(
                 frame, -1, Lightmap,
                 (dm, _) => {
-                    Game.Materials.PushViewTransform(ViewTransform.CreateOrthographic(Width, Height));
+                    Game.Materials.PushViewTransform(ViewTransform.CreateOrthographic(Lightmap.Width, Lightmap.Height));
                 },
                 (dm, _) => {
                     Game.Materials.PopViewTransform();
@@ -197,7 +186,7 @@ namespace TestGame.Scenes {
                     Color.White
                 );
 
-                dc.ScaleF = ShowGBuffer ? 1f / Renderer.Configuration.GBufferResolution : LightmapScaleRatio;
+                dc.ScaleF = LightmapScaleRatio;
 
                 bb.Add(ref dc);
             }

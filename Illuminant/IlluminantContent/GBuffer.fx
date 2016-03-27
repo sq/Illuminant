@@ -2,6 +2,7 @@
 
 #define SELF_OCCLUSION_HACK 1.5
 
+uniform float  RenderScale;
 uniform float  ZToYMultiplier;
 uniform float3 DistanceFieldExtent;
 

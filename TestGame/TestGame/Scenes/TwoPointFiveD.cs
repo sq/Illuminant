@@ -26,7 +26,7 @@ namespace TestGame.Scenes {
         float LightZ;
 
         const int MultisampleCount = 0;
-        const int LightmapScaleRatio = 1;
+        const int LightmapScaleRatio = 2;
 
         bool ShowGBuffer       = false;
         bool ShowLightmap      = true;
@@ -102,8 +102,6 @@ namespace TestGame.Scenes {
         }
 
         public override void LoadContent () {
-            Game.Materials = new DefaultMaterialSet(Game.Services);
-
             Environment = new LightingEnvironment();
 
             Background = Game.Content.Load<Texture2D>("sc3test");
@@ -114,6 +112,7 @@ namespace TestGame.Scenes {
                     1024 / LightmapScaleRatio, 1024 / LightmapScaleRatio,
                     1024, 1024, 24
                 ) {
+                    RenderScale = 1.0f / LightmapScaleRatio,
                     DistanceFieldResolution = 0.5f,
                     DistanceFieldMinStepSize = 1.33f,
                     DistanceFieldMinStepSizeGrowthRate = 0.012f,
@@ -270,7 +269,7 @@ namespace TestGame.Scenes {
                     ))
                         bb.Add(new BitmapDrawCall(
                             Renderer.GBuffer, Vector2.Zero, new Bounds(Vector2.Zero, Vector2.One), 
-                            Color.White, 1f / Renderer.Configuration.GBufferResolution
+                            Color.White, LightmapScaleRatio
                         ));
                 }
             }

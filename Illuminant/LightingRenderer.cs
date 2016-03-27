@@ -24,13 +24,14 @@ namespace Squared.Illuminant {
         // The maximum width and height of the viewport.
         public readonly Pair<int>    MaximumRenderSize;
 
-        public float ClipRegionScale               = 1.0f;
+        // Scales world coordinates when rendering the G-buffer and lightmap
+        public float RenderScale                   = 1.0f;
+
         public bool  TwoPointFiveD                 = false;
         // If true, 2.5d surfaces are rendered directly to the lightmap, culled via the
         //  depth buffer. Otherwise, they are rendered to the G-buffer.
         public bool  RenderTwoPointFiveDToLightmap = true;
 
-        public float GBufferResolution             = 1.0f;
         public bool  GBufferCaching                = true;
 
         // Individual cone trace steps are not allowed to be any shorter than this.
@@ -190,14 +191,13 @@ namespace Squared.Illuminant {
 
             BeginLightPass     = _BeginLightPass;
             EndLightPass       = _EndLightPass;
-            RestoreScissorRect = _RestoreScissorRect;
             IlluminationBatchSetup = _IlluminationBatchSetup;
 
             lock (coordinator.CreateResourceLock) {
                 _GBuffer = new RenderTarget2D(
                     coordinator.Device, 
-                    (int)(Configuration.MaximumRenderSize.First * Configuration.GBufferResolution), 
-                    (int)(Configuration.MaximumRenderSize.Second * Configuration.GBufferResolution),
+                    Configuration.MaximumRenderSize.First, 
+                    Configuration.MaximumRenderSize.Second,
                     false, GBufferFormat, DepthFormat.Depth24, 0, RenderTargetUsage.DiscardContents
                 );
 
@@ -445,51 +445,12 @@ namespace Squared.Illuminant {
 
         private void _BeginLightPass (DeviceManager device, object userData) {
             device.PushStates();
-            StoredScissorRect = device.Device.ScissorRectangle;
-        }
-
-        private void _RestoreScissorRect (DeviceManager device, object userData) {
-            device.Device.ScissorRectangle = StoredScissorRect;
         }
 
         private void _EndLightPass (DeviceManager device, object userData) {
-            device.Device.ScissorRectangle = StoredScissorRect;
             device.PopStates();
         }
-
-        private Rectangle GetScissorRectForLightSource (DeviceManager device, LightSource ls) {
-            Bounds scissorBounds;
-
-            // FIXME: Replace this with a use of the material set's modelview/projection matrix and device
-            //  viewport to 'project' the clip region to scissor coordinates?
-            var scale = new Vector2(
-                Materials.ViewportScale.X * Configuration.ClipRegionScale,
-                Materials.ViewportScale.Y * Configuration.ClipRegionScale
-            );
-
-            if (ls.ClipRegion.HasValue) {
-                scissorBounds = new Bounds(
-                    (ls.ClipRegion.Value.TopLeft - Materials.ViewportPosition) * scale,
-                    (ls.ClipRegion.Value.BottomRight - Materials.ViewportPosition) * scale
-                );
-            } else {
-                scissorBounds = new Bounds(
-                    ((Vector2)ls.Position - new Vector2(ls.RampLength) - Materials.ViewportPosition) * scale,
-                    ((Vector2)ls.Position + new Vector2(ls.RampLength) - Materials.ViewportPosition) * scale
-                );
-            }
-
-            var scissor = new Rectangle(
-                (int)Math.Floor(scissorBounds.TopLeft.X),
-                (int)Math.Floor(scissorBounds.TopLeft.Y),
-                (int)Math.Ceiling(scissorBounds.Size.X),
-                (int)Math.Ceiling(scissorBounds.Size.Y)
-            );
-
-            var result = Rectangle.Intersect(scissor, StoredScissorRect);
-            return result;
-        }
-
+        
         internal static SamplerState GetRampSamplerState (TextureFilter filter) {
             SamplerState ss;
             lock (RampSamplerStates) {
@@ -556,7 +517,6 @@ namespace Squared.Illuminant {
             }
 
             device.Device.SamplerStates[1] = GetRampSamplerState(ls.RampTextureFilter);
-            device.Device.ScissorRectangle = StoredScissorRect;
         }
 
         PointLightVertex MakePointLightVertex (LightSource lightSource, float intensityScale) {
@@ -646,6 +606,8 @@ namespace Squared.Illuminant {
                         lightBounds.TopLeft.Y -= (Environment.MaximumZ * Environment.ZToYMultiplier);
                     }
 
+                    lightBounds = lightBounds.Scale(Configuration.RenderScale);
+
                     // FIXME: Broken :(
                     if (false) {
                         bool lightWithinVolume = false;
@@ -688,7 +650,7 @@ namespace Squared.Illuminant {
                         batchFirstLightSource = lightSource;
 
                     if (currentLightGroup == null)
-                        currentLightGroup = BatchGroup.New(resultGroup, lightGroupIndex++, before: RestoreScissorRect);
+                        currentLightGroup = BatchGroup.New(resultGroup, lightGroupIndex++);
 
                     Bounds clippedLightBounds;
                     if (lightSource.ClipRegion.HasValue) {
@@ -789,7 +751,7 @@ namespace Squared.Illuminant {
                 1f / Configuration.RenderSize.First, 
                 1f / Configuration.RenderSize.Second
             );
-            p["GBufferInvScaleFactor"].SetValue(1f / Configuration.GBufferResolution);
+            p["GBufferInvScaleFactor"].SetValue(1f);
             p["GBufferTexelSize"].SetValue(tsize);
 
             if (setGBufferTexture)
@@ -936,8 +898,8 @@ namespace Squared.Illuminant {
                 // FIXME: Optimize this
                 (dm, _) => {
                     Materials.PushViewTransform(ViewTransform.CreateOrthographic(
-                        (int)(Configuration.RenderSize.First / Configuration.GBufferResolution), 
-                        (int)(Configuration.RenderSize.Second / Configuration.GBufferResolution)
+                        (int)(Configuration.RenderSize.First / Configuration.RenderScale), 
+                        (int)(Configuration.RenderSize.Second / Configuration.RenderScale)
                     ));
                 },
                 (dm, _) => {
@@ -971,6 +933,7 @@ namespace Squared.Illuminant {
                                 ? Environment.ZToYMultiplier
                                 : 0.0f
                         );
+                        p["RenderScale"].SetValue(Configuration.RenderScale);
                     }
                 )) {
 
@@ -982,9 +945,9 @@ namespace Squared.Illuminant {
                         };            
                         var verts = new HeightVolumeVertex[] {
                             new HeightVolumeVertex(new Vector3(0, 0, Environment.GroundZ), Vector3.Up, zRange),
-                            new HeightVolumeVertex(new Vector3(Configuration.MaximumRenderSize.First, 0, Environment.GroundZ), Vector3.Up, zRange),
-                            new HeightVolumeVertex(new Vector3(Configuration.MaximumRenderSize.First, Configuration.MaximumRenderSize.Second, Environment.GroundZ), Vector3.Up, zRange),
-                            new HeightVolumeVertex(new Vector3(0, Configuration.MaximumRenderSize.Second, Environment.GroundZ), Vector3.Up, zRange)
+                            new HeightVolumeVertex(new Vector3(Configuration.DistanceFieldSize.First, 0, Environment.GroundZ), Vector3.Up, zRange),
+                            new HeightVolumeVertex(new Vector3(Configuration.DistanceFieldSize.First, Configuration.DistanceFieldSize.Second, Environment.GroundZ), Vector3.Up, zRange),
+                            new HeightVolumeVertex(new Vector3(0, Configuration.DistanceFieldSize.Second, Environment.GroundZ), Vector3.Up, zRange)
                         };
 
                         batch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
