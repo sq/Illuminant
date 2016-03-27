@@ -112,7 +112,7 @@ float2 computeDistanceFieldSubsliceUv (
     // HACK: Ensure we don't sample outside of the slice (filtering! >:()
     // FIXME: Why is this 1 and not 0.5?
     // FIXME: Should we be offsetting the position like we do with gbuffer reads?
-    return clamp(positionPx, 1, DistanceFieldExtent.xy - 1) * DistanceFieldTextureTexelSize;
+    return clamp(positionPx + 0.5, 1, DistanceFieldExtent.xy - 1) * DistanceFieldTextureTexelSize;
 }
 
 float sampleDistanceField (

@@ -1,6 +1,6 @@
 #include "..\..\Upstream\Fracture\Squared\RenderLib\Content\GeometryCommon.fxh"
 
-#define SELF_OCCLUSION_HACK 1
+#define SELF_OCCLUSION_HACK 1.5
 
 uniform float  ZToYMultiplier;
 uniform float3 DistanceFieldExtent;
