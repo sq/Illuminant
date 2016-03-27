@@ -97,13 +97,18 @@ sampler   DistanceFieldTextureSampler : register(s4) {
     MagFilter = DISTANCE_FIELD_FILTER;
 };
 
+struct TraceVars {
+    float sliceCountZMinus1;
+    float invSliceCountX;
+    float invDistanceFieldExtentZ;
+};
+
 float2 computeDistanceFieldSliceUv (
     float sliceIndex, 
-    float sliceCountZMinus1, 
-    float invSliceCountX
+    TraceVars vars
 ) {
-    sliceIndex = clamp(sliceIndex, 0, sliceCountZMinus1) * 0.5;
-    float rowIndexF   = sliceIndex * invSliceCountX;
+    sliceIndex = clamp(sliceIndex, 0, vars.sliceCountZMinus1) * 0.5;
+    float rowIndexF   = sliceIndex * vars.invSliceCountX;
     float rowIndex    = floor(rowIndexF);
     float columnIndex = floor((rowIndexF - rowIndex) * DistanceFieldTextureSliceCount.x);
     float2 indexes = float2(columnIndex, rowIndex);
@@ -121,13 +126,11 @@ float2 computeDistanceFieldSubsliceUv (
 
 float sampleDistanceField (
     float3 position, 
-    float invDistanceFieldExtentZ,
-    float sliceCountZMinus1,
-    float invSliceCountX
+    TraceVars vars
 ) {
     // Interpolate between two Z samples. The xy interpolation is done by the GPU for us.
-    float scaledPositionZ = position.z * invDistanceFieldExtentZ;
-    float slicePosition = clamp(scaledPositionZ * DistanceFieldTextureSliceCount.z, 0, sliceCountZMinus1);
+    float scaledPositionZ = position.z * vars.invDistanceFieldExtentZ;
+    float slicePosition = clamp(scaledPositionZ * DistanceFieldTextureSliceCount.z, 0, vars.sliceCountZMinus1);
     float sliceIndex1 = floor(slicePosition);
     float subslice = slicePosition - sliceIndex1;
     float sliceIndex2 = sliceIndex1 + 1;
@@ -138,7 +141,7 @@ float sampleDistanceField (
         DistanceFieldTextureSampler, 
         float4(
             uv + computeDistanceFieldSliceUv(
-                sliceIndex1, sliceCountZMinus1, invSliceCountX
+                sliceIndex1, vars
             ), 0, 0
         )
     ).rg;
@@ -146,7 +149,7 @@ float sampleDistanceField (
         DistanceFieldTextureSampler, 
         float4(
             uv + computeDistanceFieldSliceUv(
-                sliceIndex2, sliceCountZMinus1, invSliceCountX
+                sliceIndex2, vars
             ), 0, 0
         )
     ).rg;
@@ -176,9 +179,7 @@ void coneTraceStep (
     in    float3 traceVector,
     in    float  traceLength,
     in    float3 sphereRadiusSettings,
-    in    float  invDistanceFieldExtentZ,
-    in    float  sliceCountZMinus1,
-    in    float  invSliceCountX,
+    in    TraceVars vars,
     inout float  traceOffset,
     inout float  visibility,
     inout float  minStepSize,
@@ -187,10 +188,7 @@ void coneTraceStep (
     float3 samplePosition = traceStart + (traceVector * traceOffset);
 
     float distanceToObstacle = sampleDistanceField(
-        samplePosition,
-        invDistanceFieldExtentZ,
-        sliceCountZMinus1,
-        invSliceCountX
+        samplePosition, vars
     );
 
     float localVisibility = 
@@ -243,9 +241,11 @@ float coneTrace (
         minRadius, maxRadius, lightTangentAngle
     );
 
-    float sliceCountZMinus1 = DistanceFieldTextureSliceCount.z - 1;
-    float invSliceCountX = 1.0 / DistanceFieldTextureSliceCount.x;
-    float invDistanceFieldExtentZ = 1.0 / DistanceFieldExtent.z;
+    TraceVars vars = {
+        DistanceFieldTextureSliceCount.z - 1,
+        1.0 / DistanceFieldTextureSliceCount.x,
+        1.0 / DistanceFieldExtent.z
+    };
 
     float visibility = 1.0;
     bool abort = false;
@@ -263,8 +263,7 @@ float coneTrace (
 
         coneTraceStep(
             shadedPixelPosition, traceVector, traceLength, 
-            sphereRadiusSettings, invDistanceFieldExtentZ,
-            sliceCountZMinus1, invSliceCountX,
+            sphereRadiusSettings, vars,
             traceOffset, visibility, 
             minStepSize, localSphereRadius
         );
