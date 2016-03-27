@@ -24,7 +24,7 @@ namespace TestGame.Scenes {
         bool TwoPointFiveD      = false;
         bool ShowRotatingLights = true;
 
-        public const int RotatingLightCount = 8;
+        public const int RotatingLightCount = 128;
         public const int MultisampleCount = 0;
         public const int LightmapScaleRatio = 1;
 
@@ -162,7 +162,7 @@ namespace TestGame.Scenes {
             using (var bg = BatchGroup.ForRenderTarget(
                 frame, -1, Lightmap,
                 (dm, _) => {
-                    Game.Materials.PushViewTransform(ViewTransform.CreateOrthographic(Lightmap.Width, Lightmap.Height));
+                    Game.Materials.PushViewTransform(ViewTransform.CreateOrthographic(Width, Height));
                 },
                 (dm, _) => {
                     Game.Materials.PopViewTransform();
@@ -178,7 +178,7 @@ namespace TestGame.Scenes {
             using (var bb = BitmapBatch.New(
                 frame, 1,
                 Game.Materials.Get(Game.Materials.ScreenSpaceBitmap, blendState: BlendState.Opaque),
-                samplerState: SamplerState.LinearClamp
+                samplerState: ShowTerrainDepth ? SamplerState.PointClamp : SamplerState.LinearClamp
             )) {
                 var dc = new BitmapDrawCall(
                     ShowTerrainDepth

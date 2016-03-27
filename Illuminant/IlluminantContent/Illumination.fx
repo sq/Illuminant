@@ -39,7 +39,7 @@ float PointLightPixelCore(
     in float2 ramp          : TEXCOORD1, // radius, ramp length
     in float2 vpos          : VPOS
 ) {
-    float terrainZ = (sampleTerrain(vpos) * DistanceFieldExtent.z) + SELF_OCCLUSION_HACK;
+    float terrainZ = (sampleTerrain(worldPosition.xy) * DistanceFieldExtent.z) + SELF_OCCLUSION_HACK;
     float3 shadedPixelPosition = float3(worldPosition.xy, terrainZ);
 
     float lightOpacity = computeLightOpacity(shadedPixelPosition, lightCenter, ramp.x, ramp.y);
