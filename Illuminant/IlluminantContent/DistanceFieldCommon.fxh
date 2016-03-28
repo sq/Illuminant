@@ -144,7 +144,7 @@ float sampleDistanceField (
     float coarseSliceIndex1 = clamp(sliceIndex1, 0, vars.sliceCountZMinus1) * 0.5;
     float coarseSliceIndex2 = 
         (evenSlice > 0)
-            ? coarseSliceIndex1 + 1
+            ? min(coarseSliceIndex1 + 1, vars.sliceCountZMinus1)
             : coarseSliceIndex1;
    
     float2 uv = computeDistanceFieldSubsliceUv(position.xy);
@@ -153,32 +153,25 @@ float sampleDistanceField (
             coarseSliceIndex1, vars
         ), 0, 0
     );
+    float4 uv2 = float4(
+        uv + computeDistanceFieldSliceUv(
+            coarseSliceIndex2, vars
+        ), 0, 0
+    );
 
-    // TODO: Duplicate slice data across r/g/b/a so we can read in one tex2Dload always
-    
+    // TODO: Duplicate slice data across r/g/b/a so we can read in one tex2Dlod always
+
+    float decodedDistance;
     float2 sample1 = tex2Dlod(
-        DistanceFieldTextureSampler, 
+        DistanceFieldTextureSampler,
         uv1
     ).rg;
+    float2 sample2 = tex2Dlod(
+        DistanceFieldTextureSampler, 
+        uv2
+    ).rg;
 
-    float2 sample2;
-
-    [branch]
-    if (coarseSliceIndex2 != coarseSliceIndex1) {
-        float4 uv2 = float4(
-            uv + computeDistanceFieldSliceUv(
-                coarseSliceIndex2, vars
-            ), 0, 0
-        );
-        sample2 = tex2Dlod(
-            DistanceFieldTextureSampler, 
-            uv2
-        ).rg;
-    } else {
-        sample2 = sample1;
-    }
-    
-    float decodedDistance = decodeDistance(lerp(
+    decodedDistance = decodeDistance(lerp(
         lerp(sample1.r, sample1.g, evenSlice),
         lerp(sample2.g, sample2.r, evenSlice),
         subslice

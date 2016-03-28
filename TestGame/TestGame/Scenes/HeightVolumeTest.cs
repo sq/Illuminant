@@ -21,10 +21,10 @@ namespace TestGame.Scenes {
 
         public readonly List<LightSource> Lights = new List<LightSource>();
 
-        bool ShowGBuffer        = false;
-        bool GBuffer2p5         = true;
-        bool TwoPointFiveD      = true;
-        bool ShowRotatingLights = true;
+        bool ShowGBuffer   = false;
+        bool GBuffer2p5    = true;
+        bool TwoPointFiveD = true;
+        bool Deterministic = true;
 
         public const int RotatingLightCount = 1024;
 
@@ -70,9 +70,9 @@ namespace TestGame.Scenes {
                 ) {
                     RenderScale = 1.0f / LightmapScaleRatio,
                     DistanceFieldResolution = 0.5f,
-                    DistanceFieldLongStepFactor = 0.9f,
+                    DistanceFieldLongStepFactor = 0.8f,
                     DistanceFieldMinStepSize = 1.5f,
-                    DistanceFieldMinStepSizeGrowthRate = 0.05f,
+                    DistanceFieldMinStepSizeGrowthRate = 0.04f,
                     DistanceFieldMaxStepCount = 64,
                     DistanceFieldCaching = true,
                     GBufferCaching = true
@@ -210,7 +210,7 @@ namespace TestGame.Scenes {
                 }
 
                 if (KeyWasPressed(Keys.R))
-                    ShowRotatingLights = !ShowRotatingLights;
+                    Deterministic = !Deterministic;
 
                 var ms = Mouse.GetState();
                 Game.IsMouseVisible = true;
@@ -225,7 +225,8 @@ namespace TestGame.Scenes {
                 var mousePos = new Vector2(ms.X, ms.Y);
 
                 var time = gameTime.TotalGameTime.TotalSeconds;
-                // time = 0;
+                if (Deterministic)
+                    time = 3.3;
 
                 var angle = time * 0.125f;
                 const float minRadius = 30f;
@@ -235,7 +236,10 @@ namespace TestGame.Scenes {
 
                 var lightCenter = new Vector3(Width / 2, Height / 2, 0);
 
-                Lights[0].Position = new Vector3(mousePos, LightZ);
+                if (Deterministic)
+                    Lights[0].Position = new Vector3(350, 900, 170);
+                else
+                    Lights[0].Position = new Vector3(mousePos, LightZ);
                 // Lights[0].RampEnd = 250f * (((1 - LightZ) * 0.25f) + 0.75f);
 
                 int count = Environment.LightSources.Count - 1;
@@ -256,7 +260,6 @@ namespace TestGame.Scenes {
                         (float)Math.Sin(angle + offset) * localRadius,
                         localZ
                     );
-                    Lights[i].Color.W = ShowRotatingLights ? 1.0f : 0.0f;
                 }
             }
         }
