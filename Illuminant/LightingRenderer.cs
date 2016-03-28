@@ -154,7 +154,7 @@ namespace Squared.Illuminant {
         public readonly RendererConfiguration Configuration;
         public LightingEnvironment Environment;
 
-        private readonly Queue<int> _InvalidDistanceFieldSlices = new Queue<int>();
+        private readonly List<int> _InvalidDistanceFieldSlices = new List<int>();
 
         // HACK
         private int       _DistanceFieldSlicesReady = 0;
@@ -857,20 +857,41 @@ namespace Squared.Illuminant {
             }
         }
 
+        private readonly List<int> _SlicesToUpdate = new List<int>();
+
         public void InvalidateFields (
             Bounds3? region = null
         ) {
             _GBufferReady = false;
 
-            // TODO: Invalidate only the affected slices?
-
+            // TODO: Accept an oldRegion, newRegion pair instead of a single update region?
+            // TODO: Invalidate only the affected slices? Need to take into account
+            //  the maximum distance value
+            _SlicesToUpdate.Clear();
             for (var i = 0; i < Configuration.DistanceFieldSliceCount; i++) {
-                // FIXME: Slow
+                // SLOW
+                // FIXME: This means that if the slice is already in the update queue, we won't push it to the front, which kinda sucks.
                 if (_InvalidDistanceFieldSlices.Contains(i))
                     continue;
 
-                _InvalidDistanceFieldSlices.Enqueue(i);
+                _SlicesToUpdate.Add(i);
             }
+
+            if (region != null) {
+                var center = region.Value.Center;
+
+                _SlicesToUpdate.Sort((lhs, rhs) => {
+                    var lhsZ = SliceIndexToZ(lhs);
+                    var rhsZ = SliceIndexToZ(rhs);
+                    var lhsDistance = Math.Abs(lhsZ - center.Z);
+                    var rhsDistance = Math.Abs(rhsZ - center.Z);
+                    return Math.Sign(Math.Round(rhsDistance - lhsDistance, 3));
+                });
+            } else {
+            }
+
+            foreach (var slice in _SlicesToUpdate)
+                _InvalidDistanceFieldSlices.Add(slice);
         }
 
         public void UpdateFields (IBatchContainer container, int layer) {
@@ -1040,7 +1061,8 @@ namespace Squared.Illuminant {
 
                 int layer = 0;
                 while (slicesToUpdate > 0) {
-                    var slice = _InvalidDistanceFieldSlices.Dequeue();
+                    var slice = _InvalidDistanceFieldSlices[0];
+                    _InvalidDistanceFieldSlices.RemoveAt(0);
 
                     RenderDistanceFieldSlice(
                         indices, rtGroup, vertexDataTextures, 
@@ -1056,6 +1078,11 @@ namespace Squared.Illuminant {
             }
         }
 
+        private float SliceIndexToZ (int slice) {
+            float sliceZ = (slice / Math.Max(1, (float)(Configuration.DistanceFieldSliceCount - 1))) * Environment.MaximumZ;
+            return sliceZ;
+        }
+
         private void RenderDistanceFieldSlice (
             short[] indices, BatchGroup rtGroup, 
             Dictionary<object, Texture2D> vertexDataTextures, 
@@ -1063,8 +1090,7 @@ namespace Squared.Illuminant {
             int slice, ref int layer
         ) {
             // TODO: Duplicate slice data across channels for one-sample reads?
-
-            float sliceZ = (slice / Math.Max(1, (float)(Configuration.DistanceFieldSliceCount - 1))) * Environment.MaximumZ;
+            var sliceZ = SliceIndexToZ(slice);
             int displaySlice = slice / 2;
             var sliceX = (displaySlice % DistanceFieldSlicesX) * DistanceFieldSliceWidth;
             var sliceY = (displaySlice / DistanceFieldSlicesX) * DistanceFieldSliceHeight;
@@ -1248,7 +1274,7 @@ namespace Squared.Illuminant {
                 var item = items[i];
                 types[i] = (int)item.Type;
                 centers[i] = item.Center;
-                sizes[i] = item.Size;
+                sizes[i] = item.Radius;
             }
 
             using (var batch = PrimitiveBatch<VertexPositionColor>.New(

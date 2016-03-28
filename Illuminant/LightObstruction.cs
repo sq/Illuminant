@@ -22,17 +22,25 @@ namespace Squared.Illuminant {
         public readonly LightObstructionType Type;
 
         public Vector3 Center;
-        // For some types only the first element of this is used
-        public Vector3 Size;
+        public Vector3 Radius;
 
         public LightObstruction (
             LightObstructionType type,
             Vector3? center = null,
-            Vector3? size = null
+            Vector3? radius = null
         ) {
             Type = type;
             Center = center.GetValueOrDefault(Vector3.Zero);
-            Size = size.GetValueOrDefault(Vector3.Zero);
+            Radius = radius.GetValueOrDefault(Vector3.Zero);
+        }
+
+        public Bounds3 Bounds3 {
+            get {
+                return new Bounds3(
+                    Center - Radius,
+                    Center + Radius
+                );
+            }
         }
     }
 }

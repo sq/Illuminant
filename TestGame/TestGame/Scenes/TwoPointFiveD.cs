@@ -30,11 +30,11 @@ namespace TestGame.Scenes {
 
         bool ShowGBuffer       = false;
         bool ShowLightmap      = true;
-        bool ShowDistanceField = false;
+        bool ShowDistanceField = true;
         bool Timelapse         = false;
         bool GBuffer2p5        = true;
         bool TwoPointFiveD     = true;
-        bool Deterministic     = true;
+        bool Deterministic     = false;
 
         public TwoPointFiveDTest (TestGame game, int width, int height)
             : base(game, 1024, 1024) {
@@ -312,9 +312,15 @@ namespace TestGame.Scenes {
                         : 128;
 
                 if (!Deterministic) {
-                    Environment.Obstructions[0].Center =
+                    var obs = Environment.Obstructions[0];
+                    var oldBox = obs.Bounds3;
+                    obs.Center =
                         new Vector3(500, 750, Arithmetic.Pulse(time / 10, 0, 40));
-                    Renderer.InvalidateFields();
+                    var newBox = obs.Bounds3;
+
+                    Renderer.InvalidateFields(
+                        Bounds3.FromUnion(ref oldBox, ref newBox)
+                    );
                 }
 
                 var ms = Mouse.GetState();
