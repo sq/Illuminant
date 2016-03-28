@@ -28,7 +28,7 @@ namespace TestGame {
         public SpriteFont Font;
 
         public readonly Scene[] Scenes;
-        public int ActiveSceneIndex = 1;
+        public int ActiveSceneIndex = 0;
 
         private int LastPerformanceStatPrimCount = 0;
 
@@ -39,7 +39,7 @@ namespace TestGame {
             Graphics.PreferredBackBufferWidth = 1920;
             Graphics.PreferredBackBufferHeight = 1080;
             Graphics.SynchronizeWithVerticalRetrace = true;
-            Graphics.SynchronizeWithVerticalRetrace = false;
+            // Graphics.SynchronizeWithVerticalRetrace = false;
             Graphics.PreferMultiSampling = false;
 
             Content.RootDirectory = "Content";

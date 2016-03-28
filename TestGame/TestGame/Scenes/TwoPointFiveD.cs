@@ -122,7 +122,7 @@ namespace TestGame.Scenes {
                     DistanceFieldMaxConeRadius = 32,
                     DistanceFieldMaxStepCount = 96,
                     GBufferCaching = true,
-                    DistanceFieldUpdateRate = 1
+                    DistanceFieldUpdateRate = 2
                 }
             );
 
@@ -192,7 +192,6 @@ namespace TestGame.Scenes {
 
             Renderer.Configuration.TwoPointFiveD = TwoPointFiveD;
             Renderer.Configuration.RenderTwoPointFiveDToGBuffer = GBuffer2p5;
-            Renderer.Configuration.DistanceFieldCaching = Deterministic;
 
             Renderer.UpdateFields(frame, -2);
 
@@ -312,9 +311,11 @@ namespace TestGame.Scenes {
                         ? (int)Arithmetic.Clamp((time % 4) * 32, 1, 128)
                         : 128;
 
-                if (!Deterministic)
+                if (!Deterministic) {
                     Environment.Obstructions[0].Center =
                         new Vector3(500, 750, Arithmetic.Pulse(time / 10, 0, 40));
+                    Renderer.InvalidateFields();
+                }
 
                 var ms = Mouse.GetState();
                 Game.IsMouseVisible = true;

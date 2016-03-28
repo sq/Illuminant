@@ -57,7 +57,6 @@ namespace Squared.Illuminant {
         public int   DistanceFieldMaxStepCount            = 64;
         public float DistanceFieldResolution              = 1.0f;
         public float DistanceFieldMaxConeRadius           = 24;
-        public bool  DistanceFieldCaching                 = true;
         // The maximum number of distance field slices to update per frame.
         // Setting this value too high can crash your video driver.
         public int   DistanceFieldUpdateRate              = 1;
@@ -155,10 +154,11 @@ namespace Squared.Illuminant {
         public readonly RendererConfiguration Configuration;
         public LightingEnvironment Environment;
 
+        private readonly Queue<int> _InvalidDistanceFieldSlices = new Queue<int>();
+
         // HACK
         private int       _DistanceFieldSlicesReady = 0;
-        private int       _NextDistanceFieldSlice   = 0;
-        private bool      _HeightmapReady     = false;
+        private bool      _GBufferReady     = false;
 
         const int FaceMaxLights = 16;
 
@@ -857,20 +857,37 @@ namespace Squared.Illuminant {
             }
         }
 
-        public void InvalidateFields () {
-            _HeightmapReady = false;
-            _NextDistanceFieldSlice = _DistanceFieldSlicesReady = 0;
+        public void InvalidateFields (
+            Bounds3? region = null
+        ) {
+            _GBufferReady = false;
+
+            // TODO: Invalidate only the affected slices?
+
+            for (var i = 0; i < Configuration.DistanceFieldSliceCount; i++) {
+                // FIXME: Slow
+                if (_InvalidDistanceFieldSlices.Contains(i))
+                    continue;
+
+                _InvalidDistanceFieldSlices.Enqueue(i);
+            }
         }
 
         public void UpdateFields (IBatchContainer container, int layer) {
-            if (!_HeightmapReady) {
+            if (
+                (_DistanceFieldSlicesReady < Configuration.DistanceFieldSliceCount) &&
+                (_InvalidDistanceFieldSlices.Count == 0)
+            ) {
+                InvalidateFields();
+            }
+
+            if (!_GBufferReady) {
                 RenderGBuffer(ref layer, container);
-                _HeightmapReady = Configuration.GBufferCaching;
+                _GBufferReady = Configuration.GBufferCaching;
             }
 
             if (
-                (_DistanceFieldSlicesReady < Configuration.DistanceFieldSliceCount) ||
-                !Configuration.DistanceFieldCaching
+                (_InvalidDistanceFieldSlices.Count > 0)
             ) {
                 RenderDistanceField(ref layer, container);
             }
@@ -1016,26 +1033,22 @@ namespace Squared.Illuminant {
                 // We incrementally do a partial update of the distance field.
                 int sliceCount = Configuration.DistanceFieldSliceCount;
                 int slicesToUpdate =
-                    Configuration.DistanceFieldCaching
-                        ? Math.Min(
-                            sliceCount - _DistanceFieldSlicesReady,
-                            Configuration.DistanceFieldUpdateRate
-                        )
-                        : Math.Min(
-                            Configuration.DistanceFieldUpdateRate,
-                            sliceCount
-                        );
+                    Math.Min(
+                        Configuration.DistanceFieldUpdateRate,
+                        _InvalidDistanceFieldSlices.Count
+                    );
 
                 int layer = 0;
                 while (slicesToUpdate > 0) {
+                    var slice = _InvalidDistanceFieldSlices.Dequeue();
+
                     RenderDistanceFieldSlice(
                         indices, rtGroup, vertexDataTextures, 
                         intParameters, extParameters, 
-                        _NextDistanceFieldSlice, ref layer
+                        slice, ref layer
                     );
 
                     slicesToUpdate--;
-                    _NextDistanceFieldSlice = (_NextDistanceFieldSlice + 1) % sliceCount;
                 }
 
                 foreach (var kvp in vertexDataTextures)
