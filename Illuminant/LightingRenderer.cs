@@ -1049,6 +1049,8 @@ namespace Squared.Illuminant {
             EffectParameterCollection intParameters, EffectParameterCollection extParameters, 
             int slice, ref int layer
         ) {
+            // TODO: Duplicate slice data across channels for one-sample reads?
+
             float sliceZ = (slice / Math.Max(1, (float)(Configuration.DistanceFieldSliceCount - 1))) * Environment.MaximumZ;
             int displaySlice = slice / 2;
             var sliceX = (displaySlice % DistanceFieldSlicesX) * DistanceFieldSliceWidth;

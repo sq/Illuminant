@@ -110,11 +110,10 @@ struct TraceVars {
 };
 
 float2 computeDistanceFieldSliceUv (
-    float sliceIndex, 
+    float coarseSliceIndex, 
     TraceVars vars
 ) {
-    sliceIndex = clamp(sliceIndex, 0, vars.sliceCountZMinus1) * 0.5;
-    float rowIndexF   = sliceIndex * vars.invSliceCountX;
+    float rowIndexF   = coarseSliceIndex * vars.invSliceCountX;
     float rowIndex    = floor(rowIndexF);
     float columnIndex = floor((rowIndexF - rowIndex) * DistanceFieldTextureSliceCount.x);
     float2 indexes = float2(columnIndex, rowIndex);
@@ -138,34 +137,47 @@ float sampleDistanceField (
     float scaledPositionZ = position.z * vars.invDistanceFieldExtentZ;
     float slicePosition = clamp(scaledPositionZ * DistanceFieldTextureSliceCount.z, 0, vars.sliceCountZMinus1);
     float sliceIndex1 = floor(slicePosition);
-    float subslice = slicePosition - sliceIndex1;
-    float sliceIndex2 = sliceIndex1 + 1;
 
+    float subslice = slicePosition - sliceIndex1;
+    float evenSlice = (sliceIndex1 % 2);
+
+    float coarseSliceIndex1 = clamp(sliceIndex1, 0, vars.sliceCountZMinus1) * 0.5;
+    float coarseSliceIndex2 = 
+        (evenSlice > 0)
+            ? coarseSliceIndex1 + 1
+            : coarseSliceIndex1;
+   
     float2 uv = computeDistanceFieldSubsliceUv(position.xy);
+    float4 uv1 = float4(
+        uv + computeDistanceFieldSliceUv(
+            coarseSliceIndex1, vars
+        ), 0, 0
+    );
+
+    // TODO: Duplicate slice data across r/g/b/a so we can read in one tex2Dload always
     
     float2 sample1 = tex2Dlod(
         DistanceFieldTextureSampler, 
-        float4(
-            uv + computeDistanceFieldSliceUv(
-                sliceIndex1, vars
-            ), 0, 0
-        )
+        uv1
     ).rg;
-    float2 sample2 = tex2Dlod(
-        DistanceFieldTextureSampler, 
-        float4(
-            uv + computeDistanceFieldSliceUv(
-                sliceIndex2, vars
-            ), 0, 0
-        )
-    ).rg;
-    
-    // FIXME: Somehow this r/g encoding introduces a consistent error along the z-axis compared to the old encoding?
-    // It seems like floor instead of ceil fixes it but I have no idea why
-    // float evenSlice = floor(fmod(sliceIndex1, 2));
 
-    float evenSlice = (sliceIndex1 % 2);
-   
+    float2 sample2;
+
+    [branch]
+    if (coarseSliceIndex2 != coarseSliceIndex1) {
+        float4 uv2 = float4(
+            uv + computeDistanceFieldSliceUv(
+                coarseSliceIndex2, vars
+            ), 0, 0
+        );
+        sample2 = tex2Dlod(
+            DistanceFieldTextureSampler, 
+            uv2
+        ).rg;
+    } else {
+        sample2 = sample1;
+    }
+    
     float decodedDistance = decodeDistance(lerp(
         lerp(sample1.r, sample1.g, evenSlice),
         lerp(sample2.g, sample2.r, evenSlice),

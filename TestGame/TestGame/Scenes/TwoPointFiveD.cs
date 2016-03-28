@@ -26,7 +26,7 @@ namespace TestGame.Scenes {
         float LightZ;
 
         const int MultisampleCount = 0;
-        const int LightmapScaleRatio = 2;
+        const int LightmapScaleRatio = 1;
 
         bool ShowGBuffer       = false;
         bool ShowLightmap      = true;
@@ -34,6 +34,7 @@ namespace TestGame.Scenes {
         bool Timelapse         = false;
         bool GBuffer2p5        = true;
         bool TwoPointFiveD     = true;
+        bool Deterministic     = true;
 
         public TwoPointFiveDTest (TestGame game, int width, int height)
             : base(game, 1024, 1024) {
@@ -121,7 +122,6 @@ namespace TestGame.Scenes {
                     DistanceFieldMaxConeRadius = 32,
                     DistanceFieldMaxStepCount = 96,
                     GBufferCaching = true,
-                    DistanceFieldCaching = false,
                     DistanceFieldUpdateRate = 1
                 }
             );
@@ -192,6 +192,7 @@ namespace TestGame.Scenes {
 
             Renderer.Configuration.TwoPointFiveD = TwoPointFiveD;
             Renderer.Configuration.RenderTwoPointFiveDToGBuffer = GBuffer2p5;
+            Renderer.Configuration.DistanceFieldCaching = Deterministic;
 
             Renderer.UpdateFields(frame, -2);
 
@@ -301,15 +302,19 @@ namespace TestGame.Scenes {
                 if (KeyWasPressed(Keys.D))
                     ShowDistanceField = !ShowDistanceField;
 
+                if (KeyWasPressed(Keys.R))
+                    Deterministic = !Deterministic;
+
                 var time = (float)Time.Seconds;
 
                 Renderer.Configuration.DistanceFieldMaxStepCount =
-                    Timelapse
-                        ? (int)Arithmetic.Clamp((time % 6) * 24, 1, 128)
+                    (Timelapse & !Deterministic)
+                        ? (int)Arithmetic.Clamp((time % 4) * 32, 1, 128)
                         : 128;
 
-                Environment.Obstructions[0].Center =
-                    new Vector3(500, 750, Arithmetic.Pulse(time / 10, 0, 40));
+                if (!Deterministic)
+                    Environment.Obstructions[0].Center =
+                        new Vector3(500, 750, Arithmetic.Pulse(time / 10, 0, 40));
 
                 var ms = Mouse.GetState();
                 Game.IsMouseVisible = true;
@@ -321,7 +326,10 @@ namespace TestGame.Scenes {
 
                 var mousePos = new Vector3(ms.X, ms.Y, LightZ);
 
-                Lights[0].Position = mousePos;
+                if (Deterministic)
+                    Lights[0].Position = new Vector3(800, 440, 90);
+                else
+                    Lights[0].Position = mousePos;
             }
         }
 
