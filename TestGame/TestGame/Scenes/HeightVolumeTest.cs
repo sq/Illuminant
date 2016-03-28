@@ -29,7 +29,7 @@ namespace TestGame.Scenes {
         public const int RotatingLightCount = 1024;
 
         public const int MultisampleCount = 0;
-        public const int LightmapScaleRatio = 2;
+        public const int LightmapScaleRatio = 1;
 
         float LightZ = 0;
 
@@ -66,14 +66,14 @@ namespace TestGame.Scenes {
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment,
                 new RendererConfiguration(
                     Width / LightmapScaleRatio, Height / LightmapScaleRatio,
-                    Width, Height, 32
+                    Width, Height, 16
                 ) {
                     RenderScale = 1.0f / LightmapScaleRatio,
                     DistanceFieldResolution = 0.5f,
-                    DistanceFieldLongStepFactor = 0.8f,
-                    DistanceFieldMinStepSize = 1.5f,
-                    DistanceFieldMinStepSizeGrowthRate = 0.04f,
-                    DistanceFieldMaxStepCount = 64,
+                    DistanceFieldLongStepFactor = 0.9f,
+                    DistanceFieldMinStepSize = 1.33f,
+                    DistanceFieldMinStepSizeGrowthRate = 0.035f,
+                    DistanceFieldMaxStepCount = 72,
                     GBufferCaching = true
                 }
             );

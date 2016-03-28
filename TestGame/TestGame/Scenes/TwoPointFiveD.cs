@@ -111,7 +111,7 @@ namespace TestGame.Scenes {
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(
                     1024 / LightmapScaleRatio, 1024 / LightmapScaleRatio,
-                    1024, 1024, 16
+                    1024, 1024, 64
                 ) {
                     RenderScale = 1.0f / LightmapScaleRatio,
                     DistanceFieldResolution = 0.5f,
@@ -123,7 +123,6 @@ namespace TestGame.Scenes {
                     DistanceFieldMaxStepCount = 96,
                     GBufferCaching = true,
                     DistanceFieldUpdateRate = 4,
-                    DistanceFieldZPower = 1f
                 }
             );
 
@@ -314,14 +313,10 @@ namespace TestGame.Scenes {
 
                 if (!Deterministic) {
                     var obs = Environment.Obstructions[0];
-                    var oldBox = obs.Bounds3;
                     obs.Center =
                         new Vector3(500, 750, Arithmetic.Pulse(time / 10, 0, 40));
-                    var newBox = obs.Bounds3;
 
-                    Renderer.InvalidateFields(
-                        Bounds3.FromUnion(ref oldBox, ref newBox)
-                    );
+                    Renderer.InvalidateFields();
                 }
 
                 var ms = Mouse.GetState();
