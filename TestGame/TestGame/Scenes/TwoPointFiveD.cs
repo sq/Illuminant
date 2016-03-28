@@ -29,12 +29,12 @@ namespace TestGame.Scenes {
         const int LightmapScaleRatio = 1;
 
         bool ShowGBuffer       = false;
-        bool ShowLightmap      = true;
-        bool ShowDistanceField = true;
+        bool ShowLightmap      = false;
+        bool ShowDistanceField = false;
         bool Timelapse         = false;
         bool GBuffer2p5        = true;
         bool TwoPointFiveD     = true;
-        bool Deterministic     = false;
+        bool Deterministic     = true;
 
         public TwoPointFiveDTest (TestGame game, int width, int height)
             : base(game, 1024, 1024) {
@@ -111,18 +111,19 @@ namespace TestGame.Scenes {
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(
                     1024 / LightmapScaleRatio, 1024 / LightmapScaleRatio,
-                    1024, 1024, 24
+                    1024, 1024, 16
                 ) {
                     RenderScale = 1.0f / LightmapScaleRatio,
                     DistanceFieldResolution = 0.5f,
                     DistanceFieldMinStepSize = 1.33f,
-                    DistanceFieldMinStepSizeGrowthRate = 0.012f,
+                    DistanceFieldMinStepSizeGrowthRate = 0.011f,
                     DistanceFieldLongStepFactor = 0.5f,
                     DistanceFieldOcclusionToOpacityPower = 0.5f,
                     DistanceFieldMaxConeRadius = 32,
                     DistanceFieldMaxStepCount = 96,
                     GBufferCaching = true,
-                    DistanceFieldUpdateRate = 2
+                    DistanceFieldUpdateRate = 4,
+                    DistanceFieldZPower = 1f
                 }
             );
 
@@ -169,14 +170,14 @@ namespace TestGame.Scenes {
             if (true)
                 Environment.Obstructions.Add(new LightObstruction(
                     LightObstructionType.Box, 
-                    new Vector3(500, 750, 0), new Vector3(50, 100, 20f)
+                    new Vector3(500, 750, 0), new Vector3(50, 100, 15f)
                 ));
 
             if (false)
             if (true)
                 Environment.Obstructions.Add(new LightObstruction(
                     LightObstructionType.Ellipsoid, 
-                    new Vector3(500, 750, 0), new Vector3(90, 45, 20f)
+                    new Vector3(500, 750, 0), new Vector3(90, 45, 15f)
                 ));
 
             if (false)

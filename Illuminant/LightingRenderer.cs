@@ -61,6 +61,9 @@ namespace Squared.Illuminant {
         // Setting this value too high can crash your video driver.
         public int   DistanceFieldUpdateRate              = 1;
         public float DistanceFieldOcclusionToOpacityPower = 1;
+        // Z coordinates are raised to this exponent as a way to adjust precision
+        //  across the coordinate space
+        public float DistanceFieldZPower                  = 1.0f;
 
         // The actual number of depth slices allocated for the distance field.
         public int DistanceFieldSliceCount {
@@ -168,7 +171,7 @@ namespace Squared.Illuminant {
         private Vector4[] _LightNeutralColors = new Vector4[FaceMaxLights];
         private Vector4[] _LightColors        = new Vector4[FaceMaxLights];
 
-        const int   DistanceLimit = 610;
+        const int   DistanceLimit = 520;
         const int   StencilTrue  = 0xFF;
         const int   StencilFalse = 0x00;
 
@@ -758,6 +761,9 @@ namespace Squared.Illuminant {
             p["DistanceFieldOcclusionToOpacityPower"].SetValue(Configuration.DistanceFieldOcclusionToOpacityPower);
             p["DistanceFieldMaxConeRadius"].SetValue(Configuration.DistanceFieldMaxConeRadius);
             p["DistanceFieldMaxStepCount"].SetValue((float)Configuration.DistanceFieldMaxStepCount);
+            p["DistanceFieldInvZPower"].SetValue(1.0f / Configuration.DistanceFieldZPower);
+
+            p["RenderScale"].SetValue(Configuration.RenderScale);
 
             if (setDistanceTexture)
                 p["DistanceFieldTexture"].SetValue(_DistanceField);
@@ -857,41 +863,18 @@ namespace Squared.Illuminant {
             }
         }
 
-        private readonly List<int> _SlicesToUpdate = new List<int>();
-
         public void InvalidateFields (
+            // TODO: Maybe remove this since I'm not sure it's useful at all.
             Bounds3? region = null
         ) {
             _GBufferReady = false;
 
-            // TODO: Accept an oldRegion, newRegion pair instead of a single update region?
-            // TODO: Invalidate only the affected slices? Need to take into account
-            //  the maximum distance value
-            _SlicesToUpdate.Clear();
             for (var i = 0; i < Configuration.DistanceFieldSliceCount; i++) {
-                // SLOW
-                // FIXME: This means that if the slice is already in the update queue, we won't push it to the front, which kinda sucks.
                 if (_InvalidDistanceFieldSlices.Contains(i))
                     continue;
 
-                _SlicesToUpdate.Add(i);
+                _InvalidDistanceFieldSlices.Add(i);
             }
-
-            if (region != null) {
-                var center = region.Value.Center;
-
-                _SlicesToUpdate.Sort((lhs, rhs) => {
-                    var lhsZ = SliceIndexToZ(lhs);
-                    var rhsZ = SliceIndexToZ(rhs);
-                    var lhsDistance = Math.Abs(lhsZ - center.Z);
-                    var rhsDistance = Math.Abs(rhsZ - center.Z);
-                    return Math.Sign(Math.Round(rhsDistance - lhsDistance, 3));
-                });
-            } else {
-            }
-
-            foreach (var slice in _SlicesToUpdate)
-                _InvalidDistanceFieldSlices.Add(slice);
         }
 
         public void UpdateFields (IBatchContainer container, int layer) {
@@ -966,10 +949,10 @@ namespace Squared.Illuminant {
                             0, 1, 3, 1, 2, 3
                         };            
                         var verts = new HeightVolumeVertex[] {
-                            new HeightVolumeVertex(new Vector3(0, 0, Environment.GroundZ), Vector3.Up, zRange),
-                            new HeightVolumeVertex(new Vector3(Configuration.DistanceFieldSize.First, 0, Environment.GroundZ), Vector3.Up, zRange),
-                            new HeightVolumeVertex(new Vector3(Configuration.DistanceFieldSize.First, Configuration.DistanceFieldSize.Second, Environment.GroundZ), Vector3.Up, zRange),
-                            new HeightVolumeVertex(new Vector3(0, Configuration.DistanceFieldSize.Second, Environment.GroundZ), Vector3.Up, zRange)
+                            new HeightVolumeVertex(new Vector3(0, 0, Environment.GroundZ), Vector3.UnitZ, zRange),
+                            new HeightVolumeVertex(new Vector3(Configuration.DistanceFieldSize.First, 0, Environment.GroundZ), Vector3.UnitZ, zRange),
+                            new HeightVolumeVertex(new Vector3(Configuration.DistanceFieldSize.First, Configuration.DistanceFieldSize.Second, Environment.GroundZ), Vector3.UnitZ, zRange),
+                            new HeightVolumeVertex(new Vector3(0, Configuration.DistanceFieldSize.Second, Environment.GroundZ), Vector3.UnitZ, zRange)
                         };
 
                         batch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
@@ -1079,8 +1062,11 @@ namespace Squared.Illuminant {
         }
 
         private float SliceIndexToZ (int slice) {
-            float sliceZ = (slice / Math.Max(1, (float)(Configuration.DistanceFieldSliceCount - 1))) * Environment.MaximumZ;
-            return sliceZ;
+            float sliceZ = (slice / Math.Max(1, (float)(Configuration.DistanceFieldSliceCount - 1)));
+
+            float scaledSliceZ = (float)Math.Pow(sliceZ, Configuration.DistanceFieldZPower);
+
+            return scaledSliceZ * Environment.MaximumZ;
         }
 
         private void RenderDistanceFieldSlice (

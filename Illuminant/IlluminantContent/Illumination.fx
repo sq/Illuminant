@@ -40,10 +40,19 @@ float PointLightPixelCore(
     in float2 vpos          : VPOS,
     float     exponential
 ) {
-    float3 shadedPixelPosition = sampleGBuffer(vpos);
+    float3 shadedPixelPosition;
+    float3 shadedPixelNormal;
+    sampleGBuffer(
+        vpos,
+        shadedPixelPosition, shadedPixelNormal
+    );
+
     shadedPixelPosition.z += SELF_OCCLUSION_HACK;
 
-    float lightOpacity = computeLightOpacity(shadedPixelPosition, lightCenter, ramp.x, ramp.y);
+    float lightOpacity = computeLightOpacity(
+        shadedPixelPosition, shadedPixelNormal,
+        lightCenter, ramp.x, ramp.y
+    );
 
     if (exponential)
         lightOpacity *= lightOpacity;

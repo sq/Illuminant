@@ -148,7 +148,7 @@ namespace Squared.Illuminant {
                         from p in Geometry.Triangulate(Polygon) 
                         from v in p
                         select new HeightVolumeVertex(
-                            new Vector3(v, h2), Vector3.Up, range
+                            new Vector3(v, h2), Vector3.UnitZ, range
                         )
                     ).ToArray();
                 } else {

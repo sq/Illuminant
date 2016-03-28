@@ -6,7 +6,7 @@
 
 // Maximum distance
 // Smaller values increase the precision of distance values but slow down traces
-#define DISTANCE_MAX 600
+#define DISTANCE_MAX 512
 
 // Filtering dramatically increases the precision of the distance field,
 //  *and* it's mathematically correct!
@@ -82,6 +82,8 @@ uniform float  DistanceFieldLongStepFactor;
 // The world position that corresponds to a distance field texture coordinate of [1,1,1]
 uniform float3 DistanceFieldExtent;
 
+uniform float  DistanceFieldInvZPower;
+
 uniform float  DistanceFieldInvScaleFactor;
 uniform float3 DistanceFieldTextureSliceCount;
 uniform float2 DistanceFieldTextureSliceSize;
@@ -134,18 +136,20 @@ float sampleDistanceField (
     TraceVars vars
 ) {
     // Interpolate between two Z samples. The xy interpolation is done by the GPU for us.
-    float scaledPositionZ = position.z * vars.invDistanceFieldExtentZ;
-    float slicePosition = clamp(scaledPositionZ * DistanceFieldTextureSliceCount.z, 0, vars.sliceCountZMinus1);
+    // linear [0-ZMax] -> linear [0-1]
+    float linearPositionZ = position.z * vars.invDistanceFieldExtentZ;
+    // linear [0-1] -> nonlinear [0-1]
+    float nonlinearPositionZ = pow(linearPositionZ, DistanceFieldInvZPower);
+    // nonlinear [0-1] -> [0-NumZSlices)
+    float slicePosition = clamp(nonlinearPositionZ * DistanceFieldTextureSliceCount.z, 0, vars.sliceCountZMinus1);
     float sliceIndex1 = floor(slicePosition);
+    float sliceIndex2 = ceil(slicePosition);
 
     float subslice = slicePosition - sliceIndex1;
     float evenSlice = (sliceIndex1 % 2);
 
     float coarseSliceIndex1 = clamp(sliceIndex1, 0, vars.sliceCountZMinus1) * 0.5;
-    float coarseSliceIndex2 = 
-        (evenSlice > 0)
-            ? min(coarseSliceIndex1 + 1, vars.sliceCountZMinus1)
-            : coarseSliceIndex1;
+    float coarseSliceIndex2 = clamp(sliceIndex2, 0, vars.sliceCountZMinus1) * 0.5;
    
     float2 uv = computeDistanceFieldSubsliceUv(position.xy);
     float4 uv1 = float4(

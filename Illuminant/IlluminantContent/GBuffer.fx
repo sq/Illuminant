@@ -7,9 +7,10 @@ uniform float  ZToYMultiplier;
 uniform float3 DistanceFieldExtent;
 
 void HeightVolumeVertexShader (
-    in  float3 position      : POSITION0, // x, y, z
-    out float3 worldPosition : TEXCOORD1,
-    out float4 result        : POSITION0
+    in  float3   position      : POSITION0, // x, y, z
+    inout float3 normal        : NORMAL0, 
+    out float3   worldPosition : TEXCOORD1,
+    out float4   result        : POSITION0
 ) {
     worldPosition = position;
     result = TransformPosition(float4(position.xy - ViewportPosition, 0, 1), 0);
@@ -17,10 +18,10 @@ void HeightVolumeVertexShader (
 }
 
 void HeightVolumeFaceVertexShader(
-    in  float3 position      : POSITION0, // x, y, z
-    in  float3 normal        : NORMAL0,
-    out float3 worldPosition : TEXCOORD1,
-    out float4 result        : POSITION0
+    in    float3 position      : POSITION0, // x, y, z
+    inout float3 normal        : NORMAL0,
+    out   float3 worldPosition : TEXCOORD1,
+    out   float4 result        : POSITION0
 ) {
     // HACK: Offset away from the surface to prevent self occlusion
     worldPosition = position + (SELF_OCCLUSION_HACK * normal);
@@ -31,13 +32,19 @@ void HeightVolumeFaceVertexShader(
 }
 
 void HeightVolumePixelShader (
-    in float2 vpos : VPOS,
+    in float2 vpos          : VPOS,
+    in float3 normal        : NORMAL0,
     in float3 worldPosition : TEXCOORD1,
-    out float4 color : COLOR0
+    out float4 color        : COLOR0
 ) {
+    // HACK: We drop the world x axis and the normal y axis,
+    //  and reconstruct those two values when sampling the g-buffer
     color = float4(
-        worldPosition,
-        1
+        // HACK: For visualization
+        (normal.x / 2) + 0.5,
+        (normal.z / 2) + 0.5,
+        worldPosition.y,
+        worldPosition.z
     );
 }
 
