@@ -26,10 +26,10 @@ namespace TestGame.Scenes {
         bool TwoPointFiveD = true;
         bool Deterministic = true;
 
-        public const int RotatingLightCount = 1024;
+        public const int RotatingLightCount = 4096;
 
         public const int MultisampleCount = 0;
-        public const int LightmapScaleRatio = 1;
+        public const int LightmapScaleRatio = 6;
 
         float LightZ = 0;
 
@@ -78,7 +78,7 @@ namespace TestGame.Scenes {
             );
 
             var light = new LightSource {
-                Position = new Vector2(64, 64),
+                Position = new Vector3(64, 64, 0),
                 Color = new Vector4(1f, 1f, 1f, 1f),
                 Opacity = 0.5f,
                 Radius = 60,

@@ -66,26 +66,4 @@ namespace Squared.Illuminant {
             Lines.Clear();
         }
     }
-
-    internal class ReceivedLightIntersectionTester : ILineWriter {
-        public LightPosition ReceiverPosition, LightPosition;
-        public bool FoundIntersection;
-
-        public void Reset (LightPosition receiverPosition, LightPosition lightPosition) {
-            ReceiverPosition = receiverPosition;
-            LightPosition = lightPosition;
-            FoundIntersection = false;
-        }
-
-        public void Write (
-            Vector2 a, Vector2 aHeights,
-            Vector2 b, Vector2 bHeights
-        ) {
-            // FIXME: This is probably wrong
-            var _a = new Vector3(a, aHeights.Y);
-            var _b = new Vector3(b, bHeights.Y);
-
-            FoundIntersection |= Geometry.DoLinesIntersect(_a, _b, LightPosition, ReceiverPosition);
-        }
-    }
 }

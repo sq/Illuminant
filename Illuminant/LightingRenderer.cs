@@ -94,13 +94,6 @@ namespace Squared.Illuminant {
     }
 
     public class LightingRenderer : IDisposable {
-        private class LightSourceComparer : IComparer<LightSource> {
-            public int Compare (LightSource lhs, LightSource rhs) {
-                int result = ((int)lhs.Mode).CompareTo(((int)rhs.Mode));
-                return result;
-            }
-        }
-
         private struct PointLightRecord {
             public int VertexOffset, IndexOffset, VertexCount, IndexCount;
         }
@@ -116,8 +109,6 @@ namespace Squared.Illuminant {
         public readonly DepthStencilState PointLightDepthStencilState;
         public readonly BlendState        OddSlice, EvenSlice;
         public readonly BlendState        ClearOddSlice, ClearEvenSlice;
-
-        private readonly LightSourceComparer LightSourceComparerInstance = new LightSourceComparer();
 
         private PointLightVertex[] PointLightVertices = new PointLightVertex[128];
         private short[] PointLightIndices = null;
@@ -404,28 +395,8 @@ namespace Squared.Illuminant {
             device.PopStates();
         }
 
-        private void _IlluminationBatchSetup (DeviceManager device, object lightSource) {
-            var ls = (LightSource)lightSource;
-
-            switch (ls.Mode) {
-                case LightSourceMode.Additive:
-                    device.Device.BlendState = RenderStates.AdditiveBlend;
-                    break;
-                case LightSourceMode.Subtractive:
-                    device.Device.BlendState = RenderStates.SubtractiveBlend;
-                    break;
-                case LightSourceMode.Alpha:
-                    device.Device.BlendState = BlendState.AlphaBlend;
-                    break;
-                case LightSourceMode.Max:
-                    device.Device.BlendState = RenderStates.MaxBlend;
-                    break;
-                case LightSourceMode.Min:
-                    device.Device.BlendState = RenderStates.MinBlend;
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException("Mode");
-            }
+        private void _IlluminationBatchSetup (DeviceManager device, object userData) {
+            device.Device.BlendState = RenderStates.AdditiveBlend;
 
             foreach (var mi in PointLightMaterialsInner) {
                 var tsize = new Vector2(
@@ -491,7 +462,6 @@ namespace Squared.Illuminant {
             }
 
             int vertexOffset = 0, indexOffset = 0;
-            LightSource batchFirstLightSource = null;
             BatchGroup currentLightGroup = null;
 
             int layerIndex = 0;
@@ -516,8 +486,6 @@ namespace Squared.Illuminant {
                     lightCount += 1;
                 }
 
-                Array.Sort(sortedLights.Data, 0, lightCount, LightSourceComparerInstance);
-
                 int lightGroupIndex = 1;
 
                 for (i = 0; i < lightCount; i++) {
@@ -527,31 +495,14 @@ namespace Squared.Illuminant {
                         continue;
 
                     float radius = lightSource.Radius + lightSource.RampLength;
-                    var lightBounds = new Bounds(
-                        (Vector2)lightSource.Position - new Vector2(radius), (Vector2)lightSource.Position + new Vector2(radius)
-                    );
+                    var lightBounds3 = lightSource.Bounds;
+                    var lightBounds = lightBounds3.XY;
 
-                    if (Configuration.TwoPointFiveD) {
+                    // Expand the bounding box upward to account for 2.5D perspective
+                    if (Configuration.TwoPointFiveD)
                         lightBounds.TopLeft.Y -= (Environment.MaximumZ * Environment.ZToYMultiplier);
-                    }
 
                     lightBounds = lightBounds.Scale(Configuration.RenderScale);
-
-                    if (batchFirstLightSource != null) {
-                        var needFlush =
-                            (batchFirstLightSource.Mode != lightSource.Mode) ||
-                            (batchFirstLightSource.RampMode != lightSource.RampMode);
-
-                        if (needFlush) {
-                            if (Render.Tracing.RenderTrace.EnableTracing)
-                                Render.Tracing.RenderTrace.Marker(currentLightGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Point Light Flush", frame.Index, this.GetHashCode(), PointLightBatchBuffer.Count);
-                            FlushPointLightBatch(ref currentLightGroup, ref batchFirstLightSource, ref layerIndex);
-                            indexOffset = 0;
-                        }
-                    }
-
-                    if (batchFirstLightSource == null)
-                        batchFirstLightSource = lightSource;
 
                     if (currentLightGroup == null)
                         currentLightGroup = BatchGroup.New(resultGroup, lightGroupIndex++);
@@ -601,7 +552,7 @@ namespace Squared.Illuminant {
                     if (Render.Tracing.RenderTrace.EnableTracing)
                         Render.Tracing.RenderTrace.Marker(currentLightGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Point Light Flush ({2} point(s))", frame.Index, this.GetHashCode(), PointLightBatchBuffer.Count);
 
-                    FlushPointLightBatch(ref currentLightGroup, ref batchFirstLightSource, ref layerIndex);
+                    FlushPointLightBatch(ref currentLightGroup, ref layerIndex);
                 }
 
                 if (Render.Tracing.RenderTrace.EnableTracing)
@@ -1178,13 +1129,13 @@ namespace Squared.Illuminant {
                 ));
         }
 
-        private void FlushPointLightBatch (ref BatchGroup lightGroup, ref LightSource batchFirstLightSource, ref int layerIndex) {
+        private void FlushPointLightBatch (ref BatchGroup lightGroup, ref int layerIndex) {
             if (lightGroup == null)
                 return;
 
             using (var pb = PrimitiveBatch<PointLightVertex>.New(
                 lightGroup, layerIndex++, 
-                IlluminantMaterials.PointLight, IlluminationBatchSetup, batchFirstLightSource
+                IlluminantMaterials.PointLight, IlluminationBatchSetup
             )) {
                 foreach (var record in PointLightBatchBuffer) {
                     var pointLightDrawCall = new PrimitiveDrawCall<PointLightVertex>(
@@ -1198,7 +1149,6 @@ namespace Squared.Illuminant {
 
             lightGroup.Dispose();
             lightGroup = null;
-            batchFirstLightSource = null;
             PointLightBatchBuffer.Clear();
         }
     }
