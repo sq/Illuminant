@@ -62,12 +62,11 @@ float decodeDistance (float encodedDistance) {
 }
 
 struct DistanceFieldSettings {
+    // StepLimit, MinimumLength, MinimumLengthGrowthRate, LongFactor
+    float4 Step;
+
     float  MaxConeRadius;
-    float  MaxStepCount;
     float  OcclusionToOpacityPower;
-    float  MinimumStepSize;
-    float  MinimumStepSizeGrowthRate;
-    float  LongStepFactor;
     float  InvZPower;
     float  InvScaleFactor;
     float3 Extent;
@@ -203,13 +202,13 @@ void coneTraceStep (
             //  of partial visibility areas
             (distanceToObstacle < 0)
                 ? 1
-                : DistanceField.LongStepFactor
+                : DistanceField.Step.w
         ), minStepSize
     );
 
     traceOffset = traceOffset + stepSize;
 
-    minStepSize = (DistanceField.MinimumStepSizeGrowthRate * stepSize) + minStepSize;
+    minStepSize = (DistanceField.Step.z * stepSize) + minStepSize;
 
     // Sadly doing this with the reciprocal instead doesn't work :|
     localSphereRadius = min(
@@ -247,7 +246,7 @@ float coneTrace (
         minRadius, maxRadius, lightTangentAngle
     );
 
-    float minStepSize = max(1, DistanceField.MinimumStepSize);
+    float minStepSize = max(1, DistanceField.Step.y);
     float localSphereRadius = minRadius;
     float visibility = 1.0;
 
@@ -258,7 +257,7 @@ float coneTrace (
     [loop]
     while (!abort) {
         abort = 
-            (stepCount >= DistanceField.MaxStepCount) ||
+            (stepCount >= DistanceField.Step.x) ||
             (traceOffset >= trace.length) || 
             (visibility < FULLY_SHADOWED_THRESHOLD);
         if (abort)
@@ -273,7 +272,7 @@ float coneTrace (
     }
 
     // HACK: Force visibility down to 0 if we are going to terminate the trace because we took too many steps.
-    float windowStart = max(DistanceField.MaxStepCount - MAX_STEP_RAMP_WINDOW, 0);
+    float windowStart = max(DistanceField.Step.x - MAX_STEP_RAMP_WINDOW, 0);
     float stepWindowVisibility = (1.0 - (stepCount - windowStart) / MAX_STEP_RAMP_WINDOW);
     visibility = min(visibility, stepWindowVisibility);
 

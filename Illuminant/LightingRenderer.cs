@@ -651,13 +651,16 @@ namespace Squared.Illuminant {
             );
             s["TextureTexelSize"].SetValue(tsize);
             s["InvScaleFactor"].SetValue(1f / Configuration.DistanceFieldResolution);
-            s["MinimumStepSize"].SetValue(Configuration.DistanceFieldMinStepSize);
-            s["MinimumStepSizeGrowthRate"].SetValue(Configuration.DistanceFieldMinStepSizeGrowthRate);
-            s["LongStepFactor"].SetValue(Configuration.DistanceFieldLongStepFactor);
             s["OcclusionToOpacityPower"].SetValue(Configuration.DistanceFieldOcclusionToOpacityPower);
             s["MaxConeRadius"].SetValue(Configuration.DistanceFieldMaxConeRadius);
-            s["MaxStepCount"].SetValue((float)Configuration.DistanceFieldMaxStepCount);
             s["InvZPower"].SetValue(1.0f / Configuration.DistanceFieldZPower);
+
+            s["Step"].SetValue(new Vector4(
+                (float)Configuration.DistanceFieldMaxStepCount,
+                Configuration.DistanceFieldMinStepSize,
+                Configuration.DistanceFieldMinStepSizeGrowthRate,
+                Configuration.DistanceFieldLongStepFactor
+            ));
 
             p["RenderScale"].SetValue(Configuration.RenderScale);
 
