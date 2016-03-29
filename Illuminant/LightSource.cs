@@ -16,9 +16,6 @@ namespace Squared.Illuminant {
         private LightPosition _Position;
         private Bounds3 _Bounds;
         private float _RampLength = 1;
-        private Texture2D _RampTexture = null;
-
-        internal int _RampTextureID;
 
         public LightPosition Position {
             get {
@@ -46,19 +43,6 @@ namespace Squared.Illuminant {
             }
         }
 
-        public Texture2D RampTexture {
-            get {
-                return _RampTexture;
-            }
-            set {
-                _RampTexture = value;
-                if (value == null)
-                    _RampTextureID = 0;
-                else
-                    _RampTextureID = value.GetHashCode();
-            }
-        }
-
         public LightSource () {
             UpdateBounds();
         }
@@ -71,18 +55,10 @@ namespace Squared.Illuminant {
         // Note that this color is a Vector4 so that you can use HDR (greater than one) lighting values.
         // Alpha is *not* premultiplied (maybe it should be?)
         public Vector4 Color = Vector4.One;
-        // The color the light ramps down to. You can use this to approximate ambient light when using LightSourceMode.Max/Min/Replace.
-        public Vector4 NeutralColor = Vector4.Zero;
         // The size of the light source.
         public float Radius = 0;
-        // An optional rectangular clipping region to constrain the light source's light.
-        public Bounds? ClipRegion = null;
         // A separate opacity factor that you can use to easily fade lights in/out.
         public float Opacity = 1.0f;
-        // An optional Nx1 texture used as a lookup table for the light's brightness ramp. You can use this for more precise control over the brightness ramp.
-        // FIXME: NOT supported by receivers presently!
-        // The filter used when reading from the ramp texture (if one was provided). Linear is ideal if your ramp texture is small, in order to improve quality.
-        public TextureFilter RampTextureFilter = TextureFilter.Linear;
 
         void UpdateBounds () {
             var sz = (Vector3.One * (Radius + RampLength));

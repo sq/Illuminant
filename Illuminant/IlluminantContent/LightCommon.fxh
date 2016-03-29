@@ -1,5 +1,3 @@
-#include "RampCommon.fxh"
-
 #define DOT_OFFSET     0.5
 #define DOT_RAMP_RANGE 0.2
 #define DISTANCE_FUDGE 1.1

@@ -9,9 +9,6 @@ shared float2 ViewportPosition;
 shared float4x4 ProjectionMatrix;
 shared float4x4 ModelViewMatrix;
 
-uniform float4 LightNeutralColor;
-uniform float3 LightCenter;
-
 uniform float Time;
 
 float4 ApplyTransform (float3 position) {
@@ -79,8 +76,8 @@ void PointLightPixelShaderLinear(
         worldPosition, lightCenter, ramp, vpos, 0
     );
 
-    float4 lightColorActual = float4(color.rgb * color.a, color.a);
-    result = lerp(LightNeutralColor, lightColorActual, distanceOpacity);
+    float4 lightColorActual = float4(color.rgb * color.a * distanceOpacity, color.a * distanceOpacity);
+    result = lightColorActual;
 }
 
 void PointLightPixelShaderExponential(
@@ -95,44 +92,8 @@ void PointLightPixelShaderExponential(
         worldPosition, lightCenter, ramp, vpos, 1
     );
 
-    float4 lightColorActual = float4(color.rgb * color.a, color.a);
-    result = lerp(LightNeutralColor, lightColorActual, distanceOpacity);
-}
-
-void PointLightPixelShaderLinearRampTexture(
-    in float2 worldPosition: TEXCOORD2,
-    in float3 lightCenter : TEXCOORD0,
-    in float2 ramp : TEXCOORD1, // start, end
-    in float4 color : COLOR0,
-    in  float2 vpos : VPOS,
-    out float4 result : COLOR0
-) {
-    float distanceOpacity = PointLightPixelCore(
-        worldPosition, lightCenter, ramp, vpos, 0
-    );
-
-    distanceOpacity = RampLookup(distanceOpacity);
-
-    float4 lightColorActual = float4(color.rgb * color.a, color.a);
-    result = lerp(LightNeutralColor, lightColorActual, distanceOpacity);
-}
-
-void PointLightPixelShaderExponentialRampTexture(
-    in float2 worldPosition : TEXCOORD2,
-    in float3 lightCenter : TEXCOORD0,
-    in float2 ramp : TEXCOORD1, // start, end
-    in float4 color : COLOR0,
-    in  float2 vpos : VPOS,
-    out float4 result : COLOR0
-) {
-    float distanceOpacity = PointLightPixelCore(
-        worldPosition, lightCenter, ramp, vpos, 1
-    );
-
-    distanceOpacity = RampLookup(distanceOpacity);
-
-    float4 lightColorActual = float4(color.rgb * color.a, color.a);
-    result = lerp(LightNeutralColor, lightColorActual, distanceOpacity);
+    float4 lightColorActual = float4(color.rgb * color.a * distanceOpacity, color.a * distanceOpacity);
+    result = lightColorActual;
 }
 
 technique PointLightLinear {
@@ -148,21 +109,5 @@ technique PointLightExponential {
     {
         vertexShader = compile vs_3_0 PointLightVertexShader();
         pixelShader = compile ps_3_0 PointLightPixelShaderExponential();
-    }
-}
-
-technique PointLightLinearRampTexture {
-    pass P0
-    {
-        vertexShader = compile vs_3_0 PointLightVertexShader();
-        pixelShader = compile ps_3_0 PointLightPixelShaderLinearRampTexture();
-    }
-}
-
-technique PointLightExponentialRampTexture {
-    pass P0
-    {
-        vertexShader = compile vs_3_0 PointLightVertexShader();
-        pixelShader = compile ps_3_0 PointLightPixelShaderExponentialRampTexture();
     }
 }

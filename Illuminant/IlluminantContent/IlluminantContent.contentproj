@@ -51,20 +51,8 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="RampBitmap.fx">
-      <Name>RampBitmap</Name>
-      <Importer>EffectImporter</Importer>
-      <Processor>EffectProcessor</Processor>
-    </Compile>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="DistanceFieldCommon.fxh">
       <Name>DistanceFieldCommon</Name>
-    </None>
-    <None Include="RampCommon.fxh">
-      <Name>RampCommon</Name>
-      <Importer>EffectImporter</Importer>
-      <Processor>EffectProcessor</Processor>
     </None>
   </ItemGroup>
   <ItemGroup>

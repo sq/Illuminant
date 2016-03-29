@@ -13,7 +13,6 @@
 
 uniform float3 LightPositions    [MAX_LIGHTS];
 uniform float3 LightProperties   [MAX_LIGHTS]; // ramp_start, ramp_end, exponential
-uniform float4 LightNeutralColors[MAX_LIGHTS];
 uniform float4 LightColors       [MAX_LIGHTS];
 
 uniform int    NumLights;
@@ -79,8 +78,8 @@ void FrontFacePixelShader (
         opacity *= ComputeRaycastedShadowOpacity(lightPosition, properties.xy, worldPosition + (normal * SELF_OCCLUSION_HACK));
 #endif
 
-        float4 lightColor = lerp(LightNeutralColors[i], LightColors[i], opacity);
-        accumulator += lightColor.rgb * lightColor.a;
+        float4 lightColor = LightColors[i];
+        accumulator += lightColor.rgb * lightColor.a * opacity;
     }
 
     color = float4(accumulator, 1.0);
@@ -145,8 +144,8 @@ void TopFacePixelShader(
         opacity *= ComputeRaycastedShadowOpacity(lightPosition, properties.xy, worldPosition + float3(0, 0, SELF_OCCLUSION_HACK));
 #endif
 
-        float4 lightColor = lerp(LightNeutralColors[i], LightColors[i], opacity);
-        accumulator += lightColor.rgb * lightColor.a;
+        float4 lightColor = LightColors[i];
+        accumulator += lightColor.rgb * lightColor.a * opacity;
     }
 
     color = float4(accumulator, 1.0);
