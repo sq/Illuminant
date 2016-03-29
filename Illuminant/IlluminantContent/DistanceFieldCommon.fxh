@@ -89,8 +89,8 @@ uniform float3 DistanceFieldTextureSliceCount;
 uniform float2 DistanceFieldTextureSliceSize;
 uniform float2 DistanceFieldTextureTexelSize;
 
-Texture2D DistanceFieldTexture        : register(t4);
-sampler   DistanceFieldTextureSampler : register(s4) {
+Texture2D DistanceFieldTexture        : register(t1);
+sampler   DistanceFieldTextureSampler : register(s1) {
     Texture = (DistanceFieldTexture);
     AddressU  = CLAMP;
     AddressV  = CLAMP;

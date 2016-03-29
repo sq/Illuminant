@@ -6,8 +6,8 @@ uniform float2 PixelSize;
 uniform float  SliceZ;
 uniform int    NumVertices;
 
-Texture2D VertexDataTexture : register(t5);
-sampler   VertexDataSampler : register(s5) {
+Texture2D VertexDataTexture : register(t0);
+sampler   VertexDataSampler : register(s0) {
     Texture = (VertexDataTexture);
     MipFilter = POINT;
     MinFilter = POINT;

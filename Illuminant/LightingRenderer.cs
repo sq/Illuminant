@@ -121,8 +121,6 @@ namespace Squared.Illuminant {
         public readonly BlendState        OddSlice, EvenSlice;
         public readonly BlendState        ClearOddSlice, ClearEvenSlice;
 
-        private static readonly Dictionary<TextureFilter, SamplerState> RampSamplerStates = new Dictionary<TextureFilter, SamplerState>();
-
         private readonly LightSourceComparer LightSourceComparerInstance = new LightSourceComparer();
 
         private PointLightVertex[] PointLightVertices = new PointLightVertex[128];
@@ -415,21 +413,6 @@ namespace Squared.Illuminant {
 
         private void _EndLightPass (DeviceManager device, object userData) {
             device.PopStates();
-        }
-        
-        internal static SamplerState GetRampSamplerState (TextureFilter filter) {
-            SamplerState ss;
-            lock (RampSamplerStates) {
-                if (!RampSamplerStates.TryGetValue(filter, out ss))
-                    RampSamplerStates[filter] = ss = new SamplerState {
-                        Filter = filter,
-                        AddressU = TextureAddressMode.Clamp,
-                        AddressV = TextureAddressMode.Clamp,
-                        AddressW = TextureAddressMode.Clamp
-                    };
-            }
-
-            return ss;
         }
 
         private void _IlluminationBatchSetup (DeviceManager device, object lightSource) {
@@ -1087,12 +1070,12 @@ namespace Squared.Illuminant {
 
             // Rasterize the height volumes in sequential order.
             // FIXME: Depth buffer/stencil buffer tricks should work for generating this SDF, but don't?
-            using (var interiorGroup = BatchGroup.ForRenderTarget(group, 1, _DistanceField, (dm, _) => {
+            using (var interiorGroup = BatchGroup.New(group, 1, (dm, _) => {
                 dm.Device.RasterizerState = RenderStates.ScissorOnly;
                 dm.Device.DepthStencilState = DepthStencilState.None;
                 SetDistanceFieldParameters(intParameters, false);
             }))
-            using (var exteriorGroup = BatchGroup.ForRenderTarget(group, 2, _DistanceField, (dm, _) => {
+            using (var exteriorGroup = BatchGroup.New(group, 2, (dm, _) => {
                 dm.Device.RasterizerState = RenderStates.ScissorOnly;
                 dm.Device.DepthStencilState = DepthStencilState.None;
                 SetDistanceFieldParameters(extParameters, false);
