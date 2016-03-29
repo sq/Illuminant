@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -63,6 +64,7 @@ namespace Squared.Illuminant {
                 return _ZBase;
             }
             set {
+                _FrontFaceMesh3D = null;
                 _ZBase = value;
             }
         }
@@ -72,6 +74,7 @@ namespace Squared.Illuminant {
                 return _Height;
             }
             set {
+                _FrontFaceMesh3D = null;
                 _Height = value;
             }
         }
@@ -116,6 +119,8 @@ namespace Squared.Illuminant {
 
     public class SimpleHeightVolume : HeightVolumeBase {
         private static readonly short[] _FrontFaceIndices;
+
+        private ArraySegment<HeightVolumeVertex> _FrontFaceMesh3DSegment;
 
         static SimpleHeightVolume () {
             _FrontFaceIndices = new short[2048 * 6];
@@ -163,16 +168,25 @@ namespace Squared.Illuminant {
         }
 
         public override ArraySegment<HeightVolumeVertex> GetFrontFaceMesh3D () {
-            if (_FrontFaceMesh3D == null) {
-                var count = (Polygon.Count * 6);
-                _FrontFaceMesh3D = new HeightVolumeVertex[count];
-            }
-
             var h1 = ZBase;
             var h2 = ZBase + Height;
-            var actualCount = 0;
-
             var zRange = new Vector2(h1, h2);
+
+            if (_FrontFaceMesh3D != null) {
+                if (
+                    (_FrontFaceMesh3D[0].ZRange != zRange) ||
+                    (_FrontFaceMesh3D[1].ZRange != zRange)
+                )
+                    throw new InvalidDataException();
+
+                // FIXME
+                return _FrontFaceMesh3DSegment;
+            }
+
+            var count = (Polygon.Count * 6);
+            _FrontFaceMesh3D = new HeightVolumeVertex[count];
+
+            var actualCount = 0;
 
             for (int i = 0, j = 0; j < Polygon.Count; j += 1) {
                 var priorEdge = Polygon.GetEdge(j - 1);
@@ -244,7 +258,7 @@ namespace Squared.Illuminant {
                 actualCount += 6;
             }
 
-            return new ArraySegment<HeightVolumeVertex>(_FrontFaceMesh3D, 0, actualCount);
+            return _FrontFaceMesh3DSegment = new ArraySegment<HeightVolumeVertex>(_FrontFaceMesh3D, 0, actualCount);
         }
     }
 }

@@ -844,11 +844,6 @@ namespace Squared.Illuminant {
                 using (var batch = PrimitiveBatch<HeightVolumeVertex>.New(
                     group, 1, IlluminantMaterials.HeightVolume,
                     (dm, _) => {
-                        dm.Device.RasterizerState = RasterizerState.CullNone;
-                        // TODO: Depth buffer?
-                        dm.Device.DepthStencilState = DepthStencilState.None;
-                        dm.Device.BlendState = BlendState.Opaque;
-
                         var p = IlluminantMaterials.HeightVolumeFace.Effect.Parameters;
                         p["DistanceFieldExtent"].SetValue(new Vector3(
                             Configuration.DistanceFieldSize.First,
@@ -910,12 +905,12 @@ namespace Squared.Illuminant {
                             if (ffm3d.Count <= 0)
                                 continue;
 
+                            var m3d = volume.Mesh3D;
+
                             frontBatch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
                                 PrimitiveType.TriangleList,
                                 ffm3d.Array, ffm3d.Offset, ffm3d.Count / 3
                             ));
-
-                            var m3d = volume.Mesh3D;
 
                             topBatch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
                                 PrimitiveType.TriangleList,
@@ -940,7 +935,7 @@ namespace Squared.Illuminant {
                 // TODO: Update the heightmap using any SDF light obstructions (maybe only if they're flagged?)
 
                 if (Render.Tracing.RenderTrace.EnableTracing)
-                    Render.Tracing.RenderTrace.Marker(group, 4, "LightingRenderer {0:X4} : End G-Buffer", this.GetHashCode());
+                    Render.Tracing.RenderTrace.Marker(group, 6, "LightingRenderer {0:X4} : End G-Buffer", this.GetHashCode());
             }
         }
 
