@@ -96,7 +96,6 @@
     <Compile Include="LightingEnvironment.cs" />
     <Compile Include="LightObstruction.cs" />
     <Compile Include="LightSource.cs" />
-    <Compile Include="ParticleLightManager.cs" />
     <Compile Include="ParticleRenderer.cs" />
     <Compile Include="ParticleSystem.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

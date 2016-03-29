@@ -93,7 +93,7 @@ namespace Squared.Illuminant {
         }
     }
 
-    public class LightingRenderer : IDisposable {
+    public sealed class LightingRenderer : IDisposable {
         private struct PointLightRecord {
             public int VertexOffset, IndexOffset, VertexCount, IndexCount;
         }
@@ -113,12 +113,11 @@ namespace Squared.Illuminant {
         private PointLightVertex[] PointLightVertices = new PointLightVertex[128];
         private short[] PointLightIndices = null;
         private readonly List<PointLightRecord> PointLightBatchBuffer = new List<PointLightRecord>(128);
-        private Rectangle StoredScissorRect;
 
         private readonly RenderTarget2D _GBuffer;
         private readonly RenderTarget2D _DistanceField;
 
-        private readonly Action<DeviceManager, object> BeginLightPass, EndLightPass, RestoreScissorRect, IlluminationBatchSetup;
+        private readonly Action<DeviceManager, object> BeginLightPass, EndLightPass, IlluminationBatchSetup;
 
         public readonly RendererConfiguration Configuration;
         public LightingEnvironment Environment;
@@ -350,6 +349,8 @@ namespace Squared.Illuminant {
         }
 
         public void Dispose () {
+            _DistanceField.Dispose();
+            _GBuffer.Dispose();
         }
 
         public RenderTarget2D GBuffer {

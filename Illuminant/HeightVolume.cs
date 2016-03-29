@@ -11,37 +11,6 @@ using Squared.Game;
 using Squared.Util;
 
 namespace Squared.Illuminant {
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct HeightVolumeVertex : IVertexType {
-        public Vector3 Position;
-        public Vector3 Normal;
-        public Vector2 ZRange;
-
-        public static VertexDeclaration _VertexDeclaration;
-
-        static HeightVolumeVertex () {
-            var tThis = typeof(HeightVolumeVertex);
-
-            _VertexDeclaration = new VertexDeclaration(
-                new VertexElement(Marshal.OffsetOf(tThis, "Position").ToInt32(), VertexElementFormat.Vector3, VertexElementUsage.Position, 0),
-                new VertexElement(Marshal.OffsetOf(tThis, "Normal").ToInt32(),   VertexElementFormat.Vector3, VertexElementUsage.Normal, 0),
-                new VertexElement(Marshal.OffsetOf(tThis, "ZRange").ToInt32(),   VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 0)
-            );
-        }
-
-        public HeightVolumeVertex (Vector3 position, Vector3 normal, Vector2 zRange) {
-            Position = position;
-            Normal = normal;
-            ZRange = zRange;
-        }
-
-        public VertexDeclaration VertexDeclaration {
-            get {
-                return _VertexDeclaration;
-            }
-        }
-    }
-
     public abstract class HeightVolumeBase : IHasBounds {
         public bool IsObstruction = true;
 
