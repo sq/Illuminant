@@ -61,33 +61,22 @@ float decodeDistance (float encodedDistance) {
     return (DISTANCE_ZERO - encodedDistance) * DISTANCE_MAX;
 }
 
-// The maximum radius of the cone
-uniform float  DistanceFieldMaxConeRadius;
+struct DistanceFieldSettings {
+    float  MaxConeRadius;
+    float  MaxStepCount;
+    float  OcclusionToOpacityPower;
+    float  MinimumStepSize;
+    float  MinimumStepSizeGrowthRate;
+    float  LongStepFactor;
+    float  InvZPower;
+    float  InvScaleFactor;
+    float3 Extent;
+    float3 TextureSliceCount;
+    float2 TextureSliceSize;
+    float2 TextureTexelSize;
+};
 
-// The maximum number of steps to take when cone tracing
-uniform float  DistanceFieldMaxStepCount;
-
-// Occlusion values are mapped to opacity values via this exponent
-uniform float  DistanceFieldOcclusionToOpacityPower;
-
-// Traces always walk at least this many pixels per step
-uniform float  DistanceFieldMinimumStepSize;
-
-// The minimum step size increases by this much per pixel traveled along the ray
-uniform float  DistanceFieldMinimumStepSizeGrowthRate;
-
-// Scales the length of long steps taken outside objects
-uniform float  DistanceFieldLongStepFactor;
-
-// The world position that corresponds to a distance field texture coordinate of [1,1,1]
-uniform float3 DistanceFieldExtent;
-
-uniform float  DistanceFieldInvZPower;
-
-uniform float  DistanceFieldInvScaleFactor;
-uniform float3 DistanceFieldTextureSliceCount;
-uniform float2 DistanceFieldTextureSliceSize;
-uniform float2 DistanceFieldTextureTexelSize;
+uniform DistanceFieldSettings DistanceField;
 
 Texture2D DistanceFieldTexture        : register(t1);
 sampler   DistanceFieldTextureSampler : register(s1) {
@@ -117,9 +106,9 @@ float2 computeDistanceFieldSliceUv (
 ) {
     float rowIndexF   = coarseSliceIndex * vars.invSliceCountX;
     float rowIndex    = floor(rowIndexF);
-    float columnIndex = floor((rowIndexF - rowIndex) * DistanceFieldTextureSliceCount.x);
+    float columnIndex = floor((rowIndexF - rowIndex) * DistanceField.TextureSliceCount.x);
     float2 indexes = float2(columnIndex, rowIndex);
-    return indexes * DistanceFieldTextureSliceSize.xy;
+    return indexes * DistanceField.TextureSliceSize.xy;
 }
 
 float2 computeDistanceFieldSubsliceUv (
@@ -128,7 +117,7 @@ float2 computeDistanceFieldSubsliceUv (
     // HACK: Ensure we don't sample outside of the slice (filtering! >:()
     // FIXME: Why is this 1 and not 0.5?
     // FIXME: Should we be offsetting the position like we do with gbuffer reads?
-    return clamp(positionPx + 0.5, 1, DistanceFieldExtent.xy - 1) * DistanceFieldTextureTexelSize;
+    return clamp(positionPx + 0.5, 1, DistanceField.Extent.xy - 1) * DistanceField.TextureTexelSize;
 }
 
 float sampleDistanceField (
@@ -139,9 +128,9 @@ float sampleDistanceField (
     // linear [0-ZMax] -> linear [0-1]
     float linearPositionZ = position.z * vars.invDistanceFieldExtentZ;
     // linear [0-1] -> nonlinear [0-1]
-    float nonlinearPositionZ = pow(linearPositionZ, DistanceFieldInvZPower);
+    float nonlinearPositionZ = pow(linearPositionZ, DistanceField.InvZPower);
     // nonlinear [0-1] -> [0-NumZSlices)
-    float slicePosition = clamp(nonlinearPositionZ * DistanceFieldTextureSliceCount.z, 0, vars.sliceCountZMinus1);
+    float slicePosition = clamp(nonlinearPositionZ * DistanceField.TextureSliceCount.z, 0, vars.sliceCountZMinus1);
     float sliceIndex1 = floor(slicePosition);
     float sliceIndex2 = ceil(slicePosition);
 
@@ -183,7 +172,7 @@ float sampleDistanceField (
 
     // HACK: Samples outside the distance field will be wrong if they just
     //  read the closest distance in the field.
-    float3 clampedPosition = clamp(position, 0, DistanceFieldExtent);
+    float3 clampedPosition = clamp(position, 0, DistanceField.Extent);
     float distanceToVolume = length(clampedPosition - position);
 
     return decodedDistance + distanceToVolume;
@@ -214,13 +203,13 @@ void coneTraceStep (
             //  of partial visibility areas
             (distanceToObstacle < 0)
                 ? 1
-                : DistanceFieldLongStepFactor
+                : DistanceField.LongStepFactor
         ), minStepSize
     );
 
     traceOffset = traceOffset + stepSize;
 
-    minStepSize = (DistanceFieldMinimumStepSizeGrowthRate * stepSize) + minStepSize;
+    minStepSize = (DistanceField.MinimumStepSizeGrowthRate * stepSize) + minStepSize;
 
     // Sadly doing this with the reciprocal instead doesn't work :|
     localSphereRadius = min(
@@ -235,9 +224,9 @@ float coneTrace (
     in float3 shadedPixelPosition
 ) {
     TraceVars vars = {
-        DistanceFieldTextureSliceCount.z - 1,
-        1.0 / DistanceFieldTextureSliceCount.x,
-        1.0 / DistanceFieldExtent.z
+        DistanceField.TextureSliceCount.z - 1,
+        1.0 / DistanceField.TextureSliceCount.x,
+        1.0 / DistanceField.Extent.z
     };
 
     TraceInfo trace;
@@ -252,13 +241,13 @@ float coneTrace (
 
     float minRadius = max(MIN_CONE_RADIUS, 0.1);
     float maxRadius = clamp(
-        lightRamp.x, minRadius, DistanceFieldMaxConeRadius
+        lightRamp.x, minRadius, DistanceField.MaxConeRadius
     );
     float3 sphereRadiusSettings = float3(
         minRadius, maxRadius, lightTangentAngle
     );
 
-    float minStepSize = max(1, DistanceFieldMinimumStepSize);
+    float minStepSize = max(1, DistanceField.MinimumStepSize);
     float localSphereRadius = minRadius;
     float visibility = 1.0;
 
@@ -269,7 +258,7 @@ float coneTrace (
     [loop]
     while (!abort) {
         abort = 
-            (stepCount >= DistanceFieldMaxStepCount) ||
+            (stepCount >= DistanceField.MaxStepCount) ||
             (traceOffset >= trace.length) || 
             (visibility < FULLY_SHADOWED_THRESHOLD);
         if (abort)
@@ -284,7 +273,7 @@ float coneTrace (
     }
 
     // HACK: Force visibility down to 0 if we are going to terminate the trace because we took too many steps.
-    float windowStart = max(DistanceFieldMaxStepCount - MAX_STEP_RAMP_WINDOW, 0);
+    float windowStart = max(DistanceField.MaxStepCount - MAX_STEP_RAMP_WINDOW, 0);
     float stepWindowVisibility = (1.0 - (stepCount - windowStart) / MAX_STEP_RAMP_WINDOW);
     visibility = min(visibility, stepWindowVisibility);
 
@@ -294,6 +283,6 @@ float coneTrace (
             (UNSHADOWED_THRESHOLD - FULLY_SHADOWED_THRESHOLD),
             0, 1
         ), 
-        DistanceFieldOcclusionToOpacityPower
+        DistanceField.OcclusionToOpacityPower
     );
 }

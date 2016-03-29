@@ -4,6 +4,7 @@
 
 uniform float  RenderScale;
 uniform float  ZToYMultiplier;
+// FIXME: Use the shared header?
 uniform float3 DistanceFieldExtent;
 
 void HeightVolumeVertexShader (

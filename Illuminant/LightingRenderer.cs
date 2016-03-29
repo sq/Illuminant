@@ -635,27 +635,29 @@ namespace Squared.Illuminant {
         }
 
         private void SetDistanceFieldParameters (EffectParameterCollection p, bool setDistanceTexture) {
-            p["DistanceFieldExtent"].SetValue(new Vector3(
+            var s = p["DistanceField"].StructureMembers;
+
+            s["Extent"].SetValue(new Vector3(
                 Configuration.DistanceFieldSize.First,
                 Configuration.DistanceFieldSize.Second,
                 Environment.MaximumZ
             ));
-            p["DistanceFieldTextureSliceSize"].SetValue(new Vector2(1f / DistanceFieldSlicesX, 1f / DistanceFieldSlicesY));
-            p["DistanceFieldTextureSliceCount"].SetValue(new Vector3(DistanceFieldSlicesX, DistanceFieldSlicesY, _DistanceFieldSlicesReady));
+            s["TextureSliceSize"].SetValue(new Vector2(1f / DistanceFieldSlicesX, 1f / DistanceFieldSlicesY));
+            s["TextureSliceCount"].SetValue(new Vector3(DistanceFieldSlicesX, DistanceFieldSlicesY, _DistanceFieldSlicesReady));
 
             var tsize = new Vector2(
                 1f / (Configuration.DistanceFieldSize.First * DistanceFieldSlicesX), 
                 1f / (Configuration.DistanceFieldSize.Second * DistanceFieldSlicesY)
             );
-            p["DistanceFieldTextureTexelSize"].SetValue(tsize);
-            p["DistanceFieldInvScaleFactor"].SetValue(1f / Configuration.DistanceFieldResolution);
-            p["DistanceFieldMinimumStepSize"].SetValue(Configuration.DistanceFieldMinStepSize);
-            p["DistanceFieldMinimumStepSizeGrowthRate"].SetValue(Configuration.DistanceFieldMinStepSizeGrowthRate);
-            p["DistanceFieldLongStepFactor"].SetValue(Configuration.DistanceFieldLongStepFactor);
-            p["DistanceFieldOcclusionToOpacityPower"].SetValue(Configuration.DistanceFieldOcclusionToOpacityPower);
-            p["DistanceFieldMaxConeRadius"].SetValue(Configuration.DistanceFieldMaxConeRadius);
-            p["DistanceFieldMaxStepCount"].SetValue((float)Configuration.DistanceFieldMaxStepCount);
-            p["DistanceFieldInvZPower"].SetValue(1.0f / Configuration.DistanceFieldZPower);
+            s["TextureTexelSize"].SetValue(tsize);
+            s["InvScaleFactor"].SetValue(1f / Configuration.DistanceFieldResolution);
+            s["MinimumStepSize"].SetValue(Configuration.DistanceFieldMinStepSize);
+            s["MinimumStepSizeGrowthRate"].SetValue(Configuration.DistanceFieldMinStepSizeGrowthRate);
+            s["LongStepFactor"].SetValue(Configuration.DistanceFieldLongStepFactor);
+            s["OcclusionToOpacityPower"].SetValue(Configuration.DistanceFieldOcclusionToOpacityPower);
+            s["MaxConeRadius"].SetValue(Configuration.DistanceFieldMaxConeRadius);
+            s["MaxStepCount"].SetValue((float)Configuration.DistanceFieldMaxStepCount);
+            s["InvZPower"].SetValue(1.0f / Configuration.DistanceFieldZPower);
 
             p["RenderScale"].SetValue(Configuration.RenderScale);
 

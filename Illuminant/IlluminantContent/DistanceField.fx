@@ -64,7 +64,7 @@ void InteriorPixelShader (
     in  float2 zRange : TEXCOORD0,
     in  float2 vpos : VPOS
 ) {
-    vpos *= DistanceFieldInvScaleFactor;
+    vpos *= DistanceField.InvScaleFactor;
     vpos += ViewportPosition;
 
     float resultDistance;
@@ -82,7 +82,7 @@ void ExteriorPixelShader (
     in  float2 zRange : TEXCOORD0,
     in  float2 vpos  : VPOS
 ) {
-    vpos *= DistanceFieldInvScaleFactor;
+    vpos *= DistanceField.InvScaleFactor;
     vpos += ViewportPosition;
     float resultDistance = computeDistance(vpos, zRange);
     color = encodeDistance(resultDistance);

@@ -31,7 +31,7 @@ void FrontFaceVertexShader (
     position.xy *= ViewportScale;
 
     result = TransformPosition(float4(position.xy, 0, 1), 0);
-    result.z = position.z / DistanceFieldExtent.z;
+    result.z = position.z / DistanceField.Extent.z;
 }
 
 float ComputeRaycastedShadowOcclusionSample (
@@ -97,7 +97,7 @@ void TopFaceVertexShader(
     position.xy *= ViewportScale;
 
     result = TransformPosition(float4(position.xy, 0, 1), 0);
-    result.z = position.z / DistanceFieldExtent.z;
+    result.z = position.z / DistanceField.Extent.z;
 }
 
 void TopFacePixelShader(

@@ -69,7 +69,7 @@ void DistanceFunctionPixelShader (
     out float4 color : COLOR0,
     in  float2 vpos  : VPOS
 ) {
-    vpos *= DistanceFieldInvScaleFactor;
+    vpos *= DistanceField.InvScaleFactor;
     vpos += ViewportPosition;
 
     float resultDistance = computeDistance(vpos);
