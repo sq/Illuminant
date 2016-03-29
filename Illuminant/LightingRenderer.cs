@@ -110,6 +110,8 @@ namespace Squared.Illuminant {
 
         private readonly Action<DeviceManager, object> BeginLightPass, EndLightPass, IlluminationBatchSetup;
 
+        private readonly object _LightBufferLock = new object();
+
         public readonly RendererConfiguration Configuration;
         public LightingEnvironment Environment;
 
@@ -369,6 +371,10 @@ namespace Squared.Illuminant {
         }
 
         private void _IlluminationBatchSetup (DeviceManager device, object userData) {
+            var lightCount = (int)userData;
+            lock (_LightBufferLock)
+                PointLightVertexBuffer.SetData(PointLightVertices, 0, lightCount * 4, SetDataOptions.Discard);
+
             device.Device.BlendState = RenderStates.AdditiveBlend;
 
             foreach (var mi in PointLightMaterialsInner) {
@@ -409,6 +415,7 @@ namespace Squared.Illuminant {
                 PointLightVertex vertex;
                 int lightCount = Environment.LightSources.Count;
 
+                lock (_LightBufferLock)
                 for (int i = 0, j = 0; i < lightCount; i++) {
                     var lightSource = Environment.LightSources[i];
 
@@ -447,11 +454,8 @@ namespace Squared.Illuminant {
                     if (Render.Tracing.RenderTrace.EnableTracing)
                         Render.Tracing.RenderTrace.Marker(resultGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Render {2} light source(s)", frame.Index, this.GetHashCode(), lightCount);
 
-                    lock (frame.RenderManager.UseResourceLock)
-                        PointLightVertexBuffer.SetData(PointLightVertices, 0, lightCount * 4, SetDataOptions.Discard);
-
                     using (var nb = NativeBatch.New(
-                        resultGroup, layerIndex++, IlluminantMaterials.PointLight, IlluminationBatchSetup
+                        resultGroup, layerIndex++, IlluminantMaterials.PointLight, IlluminationBatchSetup, lightCount
                     ))
                         nb.Add(new NativeDrawCall(
                             PrimitiveType.TriangleList, 
