@@ -175,7 +175,7 @@ namespace Squared.Illuminant {
                     coordinator.Device, 
                     Configuration.MaximumRenderSize.First, 
                     Configuration.MaximumRenderSize.Second,
-                    false, GBufferFormat, DepthFormat.Depth24, 0, RenderTargetUsage.DiscardContents
+                    false, GBufferFormat, DepthFormat.Depth24, 0, RenderTargetUsage.PlatformContents
                 );
 
                 DistanceFieldSliceWidth = (int)(Configuration.DistanceFieldSize.First * Configuration.DistanceFieldResolution);
@@ -199,7 +199,7 @@ namespace Squared.Illuminant {
                     DistanceFieldSliceWidth * DistanceFieldSlicesX, 
                     DistanceFieldSliceHeight * DistanceFieldSlicesY,
                     false, DistanceFieldFormat, DepthFormat.None, 0, 
-                    RenderTargetUsage.PreserveContents
+                    RenderTargetUsage.PlatformContents
                 );
             }
 

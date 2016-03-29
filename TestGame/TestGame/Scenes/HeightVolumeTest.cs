@@ -53,8 +53,7 @@ namespace TestGame.Scenes {
                 Lightmap = new RenderTarget2D(
                     Game.GraphicsDevice, scaledWidth, scaledHeight, false,
                     SurfaceFormat.Rgba64, DepthFormat.Depth24, MultisampleCount, 
-                    // YUCK
-                    RenderTargetUsage.DiscardContents
+                    RenderTargetUsage.PlatformContents
                 );
             }
         }
