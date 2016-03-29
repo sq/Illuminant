@@ -29,41 +29,4 @@ namespace Squared.Illuminant {
             LightSources.Clear();
         }
     }
-
-    public class CroppedListLineWriter : ILineWriter {
-        public struct Line {
-            public readonly Vector2 A, B;
-            public readonly Vector2 AHeights, BHeights;
-
-            public Line (Vector2 a, Vector2 aHeights, Vector2 b, Vector2 bHeights) {
-                A = a; 
-                B = b;
-                AHeights = aHeights;
-                BHeights = bHeights;
-            }
-        }
-
-        public Bounds? CropBounds;
-        public readonly UnorderedList<Line> Lines = new UnorderedList<Line>();
-
-        public void Write (Vector2 a, Vector2 aHeights, Vector2 b, Vector2 bHeights) {
-            if (CropBounds.HasValue) {
-                // constructor doesn't get inlined here :(
-                Bounds lineBounds;
-                lineBounds.TopLeft.X = Math.Min(a.X, b.X);
-                lineBounds.TopLeft.Y = Math.Min(a.Y, b.Y);
-                lineBounds.BottomRight.X = Math.Max(a.X, b.X);
-                lineBounds.BottomRight.Y = Math.Max(a.Y, b.Y);
-
-                if (!CropBounds.Value.Intersects(lineBounds))
-                    return;
-            }
-
-            Lines.Add(new Line(a, aHeights, b, bHeights));
-        }
-
-        public void Reset () {
-            Lines.Clear();
-        }
-    }
 }

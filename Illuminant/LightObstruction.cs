@@ -6,13 +6,6 @@ using Microsoft.Xna.Framework;
 using Squared.Game;
 
 namespace Squared.Illuminant {
-    public interface ILineWriter {
-        void Write (
-            Vector2 a, Vector2 aHeights,
-            Vector2 b, Vector2 bHeights
-        );
-    }
-
     public enum LightObstructionType {
         Ellipsoid,
         Box

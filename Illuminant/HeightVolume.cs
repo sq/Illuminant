@@ -68,22 +68,6 @@ namespace Squared.Illuminant {
                         : 0;
             }
         }
-
-        public virtual void GenerateLines (ILineWriter output) {
-            if (!IsObstruction) 
-                return;
-
-            var heights = new Vector2(ZBase, ZBase + Height);
-
-            for (var i = 0; i < Polygon.Count; i++) {
-                var e = Polygon.GetEdge(i);
-
-                output.Write(
-                    e.Start, heights,
-                    e.End, heights
-                );
-            }
-        }
     }
 
     public class SimpleHeightVolume : HeightVolumeBase {
