@@ -1,6 +1,8 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual Studio 2010
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.24720.0
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Illuminant", "Illuminant.csproj", "{E86544AD-5974-4FEE-B96F-71331EFAB054}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestGame", "..\TestGame\TestGame\TestGame.csproj", "{B689A415-A94D-4B41-9DAE-8A542EFB76B4}"
@@ -23,6 +25,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DummyContentContainer", "..\Upstream\Fracture\Squared\DummyContentContainer\DummyContentContainer.csproj", "{EAB7FAD6-0915-4134-8331-A2A1F84C6274}"
 EndProject
 Global
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
+	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x86 = Debug|x86
 		Mono|x86 = Mono|x86

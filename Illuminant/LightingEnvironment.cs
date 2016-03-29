@@ -9,16 +9,12 @@ using Squared.Util;
 
 namespace Squared.Illuminant {
     public class LightingEnvironment {
-        // If you have very detailed obstruction geometry, set this lower to reduce GPU load.
-        // For coarse geometry you might want to set this higher to reduce CPU load and memory usage.
-        public static float DefaultSubdivision = 128f;
-
-        public readonly SpatialCollection<LightSource> LightSources = new SpatialCollection<LightSource>(DefaultSubdivision);
+        public readonly List<LightSource> LightSources = new List<LightSource>();
         // SDF objects that define obstructions to be rendered into the distance field
         public readonly List<LightObstruction> Obstructions = new List<LightObstruction>();
         // Polygonal meshes that define 3D volumes that are rendered into the distance field
         // In 2.5d mode the volumes' top and front faces are also rendered directly into the scene
-        public readonly SpatialCollection<HeightVolumeBase> HeightVolumes = new SpatialCollection<HeightVolumeBase>(DefaultSubdivision);
+        public readonly List<HeightVolumeBase> HeightVolumes = new List<HeightVolumeBase>();
 
         // The Z value of the ground plane.
         public float GroundZ = 0f;

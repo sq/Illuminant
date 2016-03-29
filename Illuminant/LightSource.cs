@@ -8,9 +8,7 @@ using Squared.Game;
 using Squared.Util;
 
 namespace Squared.Illuminant {
-    public class LightSource : IHasBounds, ISpatialCollectionChild {
-        private readonly HashSet<WeakReference> Parents = new HashSet<WeakReference>();
-      
+    public class LightSource : IHasBounds {
         public object UserData;
 
         private LightPosition _Position;
@@ -66,21 +64,6 @@ namespace Squared.Illuminant {
                 _Position - sz,
                 _Position + sz
             );
-
-            foreach (var wr in Parents) {
-                var sc = wr.Target as SpatialCollection<LightSource>;
-
-                if (sc != null)
-                    sc.UpdateItemBounds(this);
-            }
-        }
-
-        public void AddedToCollection (WeakReference collection) {
-            Parents.Add(collection);
-        }
-
-        public void RemovedFromCollection (WeakReference collection) {
-            Parents.Remove(collection);
         }
 
         Bounds IHasBounds.Bounds {

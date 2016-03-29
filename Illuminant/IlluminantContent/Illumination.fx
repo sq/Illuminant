@@ -20,7 +20,7 @@ void PointLightVertexShader(
     in float2 position : POSITION0,
     inout float4 color : COLOR0,
     inout float3 lightCenter : TEXCOORD0,
-    inout float2 ramp : TEXCOORD1,
+    inout float3 rampAndExponential : TEXCOORD1,
     out float2 worldPosition : TEXCOORD2,
     out float4 result : POSITION0
 ) {
@@ -64,50 +64,26 @@ float PointLightPixelCore(
     }
 }
 
-void PointLightPixelShaderLinear(
+void PointLightPixelShader(
     in float2 worldPosition : TEXCOORD2,
     in float3 lightCenter : TEXCOORD0,
-    in float2 ramp : TEXCOORD1, // start, end
+    in float3 rampAndExponential : TEXCOORD1, // start, end, exp
     in float4 color : COLOR0,
     in  float2 vpos : VPOS,
     out float4 result : COLOR0
 ) {
     float distanceOpacity = PointLightPixelCore(
-        worldPosition, lightCenter, ramp, vpos, 0
+        worldPosition, lightCenter, rampAndExponential.xy, vpos, rampAndExponential.z
     );
 
     float4 lightColorActual = float4(color.rgb * color.a * distanceOpacity, color.a * distanceOpacity);
     result = lightColorActual;
 }
 
-void PointLightPixelShaderExponential(
-    in float2 worldPosition : TEXCOORD2,
-    in float3 lightCenter : TEXCOORD0,
-    in float2 ramp : TEXCOORD1, // start, end
-    in float4 color : COLOR0,
-    in  float2 vpos : VPOS,
-    out float4 result : COLOR0
-) {
-    float distanceOpacity = PointLightPixelCore(
-        worldPosition, lightCenter, ramp, vpos, 1
-    );
-
-    float4 lightColorActual = float4(color.rgb * color.a * distanceOpacity, color.a * distanceOpacity);
-    result = lightColorActual;
-}
-
-technique PointLightLinear {
+technique PointLight {
     pass P0
     {
         vertexShader = compile vs_3_0 PointLightVertexShader();
-        pixelShader = compile ps_3_0 PointLightPixelShaderLinear();
-    }
-}
-
-technique PointLightExponential {
-    pass P0
-    {
-        vertexShader = compile vs_3_0 PointLightVertexShader();
-        pixelShader = compile ps_3_0 PointLightPixelShaderExponential();
+        pixelShader = compile ps_3_0 PointLightPixelShader();
     }
 }

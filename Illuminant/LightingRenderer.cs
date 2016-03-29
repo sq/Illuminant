@@ -97,10 +97,6 @@ namespace Squared.Illuminant {
         private class LightSourceComparer : IComparer<LightSource> {
             public int Compare (LightSource lhs, LightSource rhs) {
                 int result = ((int)lhs.Mode).CompareTo(((int)rhs.Mode));
-
-                if (result == 0)
-                    result = ((int)lhs.RampMode).CompareTo(((int)rhs.RampMode));
-
                 return result;
             }
         }
@@ -295,19 +291,12 @@ namespace Squared.Illuminant {
 
                 PointLightMaterialsInner = new[] {
                     new Squared.Render.EffectMaterial(
-                        content.Load<Effect>("Illumination"), "PointLightExponential"
-                    ),
-                    new Squared.Render.EffectMaterial(
-                        content.Load<Effect>("Illumination"), "PointLightLinear"
+                        content.Load<Effect>("Illumination"), "PointLight"
                     )
                 };
 
-                materials.Add(IlluminantMaterials.PointLightExponential = new DelegateMaterial(
+                materials.Add(IlluminantMaterials.PointLight = new DelegateMaterial(
                     PointLightMaterialsInner[0], dBegin, dEnd
-                ));
-
-                materials.Add(IlluminantMaterials.PointLightLinear = new DelegateMaterial(
-                    PointLightMaterialsInner[1], dBegin, dEnd
                 ));
 
                 materials.Add(IlluminantMaterials.VolumeTopFace = 
@@ -464,7 +453,10 @@ namespace Squared.Illuminant {
             vertex.LightCenter = lightSource.Position;
             vertex.Color = lightSource.Color;
             vertex.Color.W *= (lightSource.Opacity * intensityScale);
-            vertex.Ramp = new Vector2(lightSource.Radius, lightSource.RampLength);
+            vertex.RampAndExponential = new Vector3(
+                lightSource.Radius, lightSource.RampLength,
+                (lightSource.RampMode == LightSourceRampMode.Exponential) ? 1f : 0f
+            );
             return vertex;
         }
 
@@ -544,27 +536,6 @@ namespace Squared.Illuminant {
                     }
 
                     lightBounds = lightBounds.Scale(Configuration.RenderScale);
-
-                    // FIXME: Broken :(
-                    if (false) {
-                        bool lightWithinVolume = false;
-
-                        // If the light is contained within a height volume that encompasses it in all 3 dimensions, cull it
-                        using (var e = Environment.HeightVolumes.GetItemsFromBounds(lightBounds))
-                        while (e.MoveNext()) {
-                            if (
-                                e.Current.Item.IsObstruction && 
-                                (e.Current.Item.Height > lightSource.Position.Z) &&
-                                Geometry.PointInPolygon((Vector2)lightSource.Position, e.Current.Item.Polygon)
-                            ) {
-                                lightWithinVolume = true;
-                                break;
-                            }
-                        }
-
-                        if (lightWithinVolume)
-                            continue;
-                    }
 
                     if (batchFirstLightSource != null) {
                         var needFlush =
@@ -1206,15 +1177,15 @@ namespace Squared.Illuminant {
             if (lightGroup == null)
                 return;
 
-            Material material;
-            material = batchFirstLightSource.RampMode == LightSourceRampMode.Linear
-                ? IlluminantMaterials.PointLightLinear
-                : IlluminantMaterials.PointLightExponential;
-
-            using (var pb = PrimitiveBatch<PointLightVertex>.New(lightGroup, layerIndex++, material, IlluminationBatchSetup, batchFirstLightSource)) {
+            using (var pb = PrimitiveBatch<PointLightVertex>.New(
+                lightGroup, layerIndex++, 
+                IlluminantMaterials.PointLight, IlluminationBatchSetup, batchFirstLightSource
+            )) {
                 foreach (var record in PointLightBatchBuffer) {
                     var pointLightDrawCall = new PrimitiveDrawCall<PointLightVertex>(
-                        PrimitiveType.TriangleList, PointLightVertices, record.VertexOffset, record.VertexCount, PointLightIndices, record.IndexOffset, record.IndexCount / 3
+                        PrimitiveType.TriangleList, 
+                        PointLightVertices, record.VertexOffset, record.VertexCount, 
+                        PointLightIndices, record.IndexOffset, record.IndexCount / 3
                     );
                     pb.Add(pointLightDrawCall);
                 }
@@ -1230,7 +1201,7 @@ namespace Squared.Illuminant {
     public class IlluminantMaterials {
         public readonly DefaultMaterialSet MaterialSet;
 
-        public Material PointLightLinear, PointLightExponential;
+        public Material PointLight;
         public Squared.Render.EffectMaterial VolumeFrontFace, VolumeTopFace;
         public Squared.Render.EffectMaterial DistanceFieldExterior, DistanceFieldInterior;
         public Squared.Render.EffectMaterial DistanceFunction;
