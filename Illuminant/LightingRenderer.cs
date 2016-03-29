@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
@@ -28,10 +29,6 @@ namespace Squared.Illuminant {
         public float RenderScale                   = 1.0f;
 
         public bool  TwoPointFiveD                 = false;
-        // If true, 2.5d surfaces are rendered directly to the lightmap, culled via the
-        //  depth buffer. Otherwise, they are rendered to the G-buffer.
-        public bool  RenderTwoPointFiveDToLightmap = true;
-
         public bool  GBufferCaching                = true;
 
         // Individual cone trace steps are not allowed to be any shorter than this.
@@ -72,16 +69,7 @@ namespace Squared.Illuminant {
 
         // The current width and height of the viewport (and gbuffer).
         // Must not be larger than MaximumRenderSize.
-        public Pair<int> RenderSize;
-
-        public bool RenderTwoPointFiveDToGBuffer {
-            get {
-                return !RenderTwoPointFiveDToLightmap;
-            }
-            set {
-                RenderTwoPointFiveDToLightmap = !value;
-            }
-        }
+        public Pair<int> RenderSize;        
 
         public RendererConfiguration (
             int maxWidth, int maxHeight,
@@ -94,9 +82,12 @@ namespace Squared.Illuminant {
     }
 
     public sealed class LightingRenderer : IDisposable {
-        private struct PointLightRecord {
-            public int VertexOffset, IndexOffset, VertexCount, IndexCount;
-        }
+        public const int MaximumLightCount = 8192;
+
+        const int        DistanceLimit = 520;
+
+        const SurfaceFormat GBufferFormat       = SurfaceFormat.Vector4;
+        const SurfaceFormat DistanceFieldFormat = SurfaceFormat.Rg32;
 
         // HACK: If your projection matrix and your actual viewport/RT don't match in dimensions, you need to set this to compensate. :/
         // Scissor rects are fussy.
@@ -110,9 +101,9 @@ namespace Squared.Illuminant {
         public readonly BlendState        OddSlice, EvenSlice;
         public readonly BlendState        ClearOddSlice, ClearEvenSlice;
 
-        private PointLightVertex[] PointLightVertices = new PointLightVertex[128];
-        private short[] PointLightIndices = null;
-        private readonly List<PointLightRecord> PointLightBatchBuffer = new List<PointLightRecord>(128);
+        private readonly DynamicVertexBuffer PointLightVertexBuffer;
+        private readonly IndexBuffer         PointLightIndexBuffer;
+        private readonly PointLightVertex[]  PointLightVertices = new PointLightVertex[MaximumLightCount * 4];
 
         private readonly RenderTarget2D _GBuffer;
         private readonly RenderTarget2D _DistanceField;
@@ -125,22 +116,8 @@ namespace Squared.Illuminant {
         private readonly List<int> _InvalidDistanceFieldSlices = new List<int>();
 
         // HACK
-        private int       _DistanceFieldSlicesReady = 0;
-        private bool      _GBufferReady     = false;
-
-        const int FaceMaxLights = 16;
-
-        private int       _VisibleLightCount  = 0;
-        private Vector3[] _LightPositions     = new Vector3[FaceMaxLights];
-        private Vector3[] _LightProperties    = new Vector3[FaceMaxLights];
-        private Vector4[] _LightColors        = new Vector4[FaceMaxLights];
-
-        const int   DistanceLimit = 520;
-        const int   StencilTrue  = 0xFF;
-        const int   StencilFalse = 0x00;
-
-        const SurfaceFormat GBufferFormat       = SurfaceFormat.Vector4;
-        const SurfaceFormat DistanceFieldFormat = SurfaceFormat.Rg32;
+        private int         _DistanceFieldSlicesReady = 0;
+        private bool        _GBufferReady     = false;
 
         public readonly int DistanceFieldSliceWidth, DistanceFieldSliceHeight;
         public readonly int DistanceFieldSlicesX, DistanceFieldSlicesY;
@@ -161,12 +138,15 @@ namespace Squared.Illuminant {
             IlluminationBatchSetup = _IlluminationBatchSetup;
 
             lock (coordinator.CreateResourceLock) {
-                _GBuffer = new RenderTarget2D(
-                    coordinator.Device, 
-                    Configuration.MaximumRenderSize.First, 
-                    Configuration.MaximumRenderSize.Second,
-                    false, GBufferFormat, DepthFormat.Depth24, 0, RenderTargetUsage.PlatformContents
+                PointLightVertexBuffer = new DynamicVertexBuffer(
+                    coordinator.Device, typeof(PointLightVertex), 
+                    PointLightVertices.Length, BufferUsage.WriteOnly
                 );
+                PointLightIndexBuffer = new IndexBuffer(
+                    coordinator.Device, IndexElementSize.SixteenBits, MaximumLightCount * 6, BufferUsage.WriteOnly
+                );
+
+                FillIndexBuffer();
 
                 DistanceFieldSliceWidth = (int)(Configuration.DistanceFieldSize.First * Configuration.DistanceFieldResolution);
                 DistanceFieldSliceHeight = (int)(Configuration.DistanceFieldSize.Second * Configuration.DistanceFieldResolution);
@@ -191,6 +171,13 @@ namespace Squared.Illuminant {
                     false, DistanceFieldFormat, DepthFormat.None, 0, 
                     RenderTargetUsage.PlatformContents
                 );
+
+                _GBuffer = new RenderTarget2D(
+                    coordinator.Device, 
+                    Configuration.MaximumRenderSize.First, 
+                    Configuration.MaximumRenderSize.Second,
+                    false, GBufferFormat, DepthFormat.Depth24, 0, RenderTargetUsage.PlatformContents
+                );
             }
 
             TopFaceDepthStencilState = new DepthStencilState {
@@ -212,35 +199,7 @@ namespace Squared.Illuminant {
                 DepthBufferEnable = true,
                 DepthBufferFunction = CompareFunction.GreaterEqual,
                 DepthBufferWriteEnable = false
-            };
-
-            DistanceInteriorStencilState = new DepthStencilState {
-                StencilEnable = true,
-                StencilPass = StencilOperation.Replace,
-                StencilFail = StencilOperation.Keep,
-                StencilFunction = CompareFunction.Always,
-
-                ReferenceStencil = StencilTrue,
-                StencilMask = StencilTrue,
-                StencilWriteMask = StencilTrue,
-
-                DepthBufferEnable = true,
-                DepthBufferFunction = CompareFunction.LessEqual,
-                DepthBufferWriteEnable = true
-            };
-
-            DistanceExteriorStencilState = new DepthStencilState {
-                StencilEnable = true,
-                StencilFunction = CompareFunction.Equal,
-
-                ReferenceStencil = StencilFalse,
-                StencilMask = StencilTrue,
-                StencilWriteMask = StencilFalse,
-
-                DepthBufferEnable = true,
-                DepthBufferFunction = CompareFunction.LessEqual,
-                DepthBufferWriteEnable = true,
-            };
+            };            
 
             EvenSlice = new BlendState {
                 ColorWriteChannels = ColorWriteChannels.Red,
@@ -288,12 +247,6 @@ namespace Squared.Illuminant {
                 materials.Add(IlluminantMaterials.PointLight = new DelegateMaterial(
                     PointLightMaterialsInner[0], dBegin, dEnd
                 ));
-
-                materials.Add(IlluminantMaterials.VolumeTopFace = 
-                    new Squared.Render.EffectMaterial(content.Load<Effect>("VolumeFaces"), "VolumeTopFace"));
-
-                materials.Add(IlluminantMaterials.VolumeFrontFace = 
-                    new Squared.Render.EffectMaterial(content.Load<Effect>("VolumeFaces"), "VolumeFrontFace"));
 
                 materials.Add(IlluminantMaterials.DistanceFieldExterior = 
                     new Squared.Render.EffectMaterial(content.Load<Effect>("DistanceField"), "Exterior"));
@@ -348,7 +301,26 @@ namespace Squared.Illuminant {
             Environment = environment;
         }
 
+        private void FillIndexBuffer () {
+            var buf = new short[PointLightIndexBuffer.IndexCount];
+            int i = 0, j = 0;
+            while (i < buf.Length) {
+                buf[i++] = (short)(j + 0);
+                buf[i++] = (short)(j + 1);
+                buf[i++] = (short)(j + 3);
+                buf[i++] = (short)(j + 1);
+                buf[i++] = (short)(j + 2);
+                buf[i++] = (short)(j + 3);
+
+                j += 4;
+            }
+
+            PointLightIndexBuffer.SetData(buf);
+        }
+
         public void Dispose () {
+            PointLightVertexBuffer.Dispose();
+            PointLightIndexBuffer.Dispose();
             _DistanceField.Dispose();
             _GBuffer.Dispose();
         }
@@ -420,18 +392,6 @@ namespace Squared.Illuminant {
             }
         }
 
-        PointLightVertex MakePointLightVertex (LightSource lightSource, float intensityScale) {
-            var vertex = new PointLightVertex();
-            vertex.LightCenter = lightSource.Position;
-            vertex.Color = lightSource.Color;
-            vertex.Color.W *= (lightSource.Opacity * intensityScale);
-            vertex.RampAndExponential = new Vector3(
-                lightSource.Radius, lightSource.RampLength,
-                (lightSource.RampMode == LightSourceRampMode.Exponential) ? 1f : 0f
-            );
-            return vertex;
-        }
-
         /// <summary>
         /// Renders all light sources into the target batch container on the specified layer.
         /// </summary>
@@ -440,60 +400,17 @@ namespace Squared.Illuminant {
         /// <param name="layer">The layer to render lighting into.</param>
         /// <param name="intensityScale">A factor to scale the intensity of all light sources. You can use this to rescale the intensity of light values for HDR.</param>
         public void RenderLighting (Frame frame, IBatchContainer container, int layer, float intensityScale = 1.0f) {
-            // FIXME
-            var pointLightVertexCount = Environment.LightSources.Count * 4;
-            var pointLightIndexCount = Environment.LightSources.Count * 6;
-            if (PointLightVertices.Length < pointLightVertexCount)
-                PointLightVertices = new PointLightVertex[1 << (int)Math.Ceiling(Math.Log(pointLightVertexCount, 2))];
-
-            if ((PointLightIndices == null) || (PointLightIndices.Length < pointLightIndexCount)) {
-                PointLightIndices = new short[pointLightIndexCount];
-
-                int i = 0, j = 0;
-                while (i < pointLightIndexCount) {
-                    PointLightIndices[i++] = (short)(j + 0);
-                    PointLightIndices[i++] = (short)(j + 1);
-                    PointLightIndices[i++] = (short)(j + 3);
-                    PointLightIndices[i++] = (short)(j + 1);
-                    PointLightIndices[i++] = (short)(j + 2);
-                    PointLightIndices[i++] = (short)(j + 3);
-
-                    j += 4;
-                }
-            }
-
-            int vertexOffset = 0, indexOffset = 0;
-            BatchGroup currentLightGroup = null;
-
             int layerIndex = 0;
 
-            using (var sortedLights = BufferPool<LightSource>.Allocate(Environment.LightSources.Count))
             using (var resultGroup = BatchGroup.New(container, layer, before: BeginLightPass, after: EndLightPass)) {
                 if (Render.Tracing.RenderTrace.EnableTracing)
                     Render.Tracing.RenderTrace.Marker(resultGroup, -9999, "Frame {0:0000} : LightingRenderer {1:X4} : Begin", frame.Index, this.GetHashCode());
 
-                if (Configuration.TwoPointFiveD && Configuration.RenderTwoPointFiveDToLightmap) {
-                    if (Render.Tracing.RenderTrace.EnableTracing)
-                        Render.Tracing.RenderTrace.Marker(resultGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Lightmap 2.5D", frame.Index, this.GetHashCode());
+                PointLightVertex vertex;
+                int lightCount = Environment.LightSources.Count;
 
-                    RenderTwoPointFiveDLitSurfaces(ref layerIndex, resultGroup);
-                }
-
-                int i = 0;
-                var lightCount = 0;
-
-                foreach (var lightSource in Environment.LightSources) {
-                    sortedLights.Data[i++] = lightSource;
-                    lightCount += 1;
-                }
-
-                int lightGroupIndex = 1;
-
-                for (i = 0; i < lightCount; i++) {
-                    var lightSource = sortedLights.Data[i];
-
-                    if (lightSource.Opacity <= 0)
-                        continue;
+                for (int i = 0, j = 0; i < lightCount; i++) {
+                    var lightSource = Environment.LightSources[i];
 
                     float radius = lightSource.Radius + lightSource.RampLength;
                     var lightBounds3 = lightSource.Bounds;
@@ -505,55 +422,42 @@ namespace Squared.Illuminant {
 
                     lightBounds = lightBounds.Scale(Configuration.RenderScale);
 
-                    if (currentLightGroup == null)
-                        currentLightGroup = BatchGroup.New(resultGroup, lightGroupIndex++);
-
-                    var vertex = MakePointLightVertex(lightSource, intensityScale);
+                    vertex.LightCenter = lightSource.Position;
+                    vertex.Color = lightSource.Color;
+                    vertex.Color.W *= (lightSource.Opacity * intensityScale);
+                    vertex.RampAndExponential = new Vector3(
+                        lightSource.Radius, lightSource.RampLength,
+                        (lightSource.RampMode == LightSourceRampMode.Exponential) ? 1f : 0f
+                    );
 
                     vertex.Position = lightBounds.TopLeft;
-                    PointLightVertices[vertexOffset++] = vertex;
+                    PointLightVertices[j++] = vertex;
 
                     vertex.Position = lightBounds.TopRight;
-                    PointLightVertices[vertexOffset++] = vertex;
+                    PointLightVertices[j++] = vertex;
 
                     vertex.Position = lightBounds.BottomRight;
-                    PointLightVertices[vertexOffset++] = vertex;
+                    PointLightVertices[j++] = vertex;
 
                     vertex.Position = lightBounds.BottomLeft;
-                    PointLightVertices[vertexOffset++] = vertex;
-
-                    var newRecord = new PointLightRecord {
-                        VertexOffset = vertexOffset - 4,
-                        IndexOffset = indexOffset,
-                        VertexCount = 4,
-                        IndexCount = 6
-                    };
-
-                    if (PointLightBatchBuffer.Count > 0) {
-                        var oldRecord = PointLightBatchBuffer[PointLightBatchBuffer.Count - 1];
-
-                        if (
-                            (newRecord.VertexOffset == oldRecord.VertexOffset + oldRecord.VertexCount) &&
-                            (newRecord.IndexOffset == oldRecord.IndexOffset + oldRecord.IndexCount)
-                        ) {
-                            oldRecord.VertexCount += newRecord.VertexCount;
-                            oldRecord.IndexCount += newRecord.IndexCount;
-                            PointLightBatchBuffer[PointLightBatchBuffer.Count - 1] = oldRecord;
-                        } else {
-                            PointLightBatchBuffer.Add(newRecord);
-                        }
-                    } else {
-                        PointLightBatchBuffer.Add(newRecord);
-                    }
-
-                    indexOffset += 6;
+                    PointLightVertices[j++] = vertex;
                 }
 
-                if (PointLightBatchBuffer.Count > 0) {
+                if (lightCount > 0) {
                     if (Render.Tracing.RenderTrace.EnableTracing)
-                        Render.Tracing.RenderTrace.Marker(currentLightGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Point Light Flush ({2} point(s))", frame.Index, this.GetHashCode(), PointLightBatchBuffer.Count);
+                        Render.Tracing.RenderTrace.Marker(resultGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Render {2} light source(s)", frame.Index, this.GetHashCode(), lightCount);
 
-                    FlushPointLightBatch(ref currentLightGroup, ref layerIndex);
+                    lock (frame.RenderManager.UseResourceLock)
+                        PointLightVertexBuffer.SetData(PointLightVertices, 0, lightCount * 4, SetDataOptions.Discard);
+
+                    using (var nb = NativeBatch.New(
+                        resultGroup, layerIndex++, IlluminantMaterials.PointLight, IlluminationBatchSetup
+                    ))
+                        nb.Add(new NativeDrawCall(
+                            PrimitiveType.TriangleList, 
+                            PointLightVertexBuffer, 0,
+                            PointLightIndexBuffer, 0, 0, lightCount * 4, 0, lightCount * 2                            
+                        ));
                 }
 
                 if (Render.Tracing.RenderTrace.EnableTracing)
@@ -568,10 +472,6 @@ namespace Squared.Illuminant {
                     ? Environment.ZToYMultiplier
                     : 0.0f
             );
-            p["LightPositions"]    .SetValue(_LightPositions);
-            p["LightProperties"]   .SetValue(_LightProperties);
-            p["LightColors"]       .SetValue(_LightColors);
-            p["NumLights"]         .SetValue(_VisibleLightCount);
 
             var tsize = new Vector2(
                 1f / Configuration.RenderSize.First, 
@@ -626,92 +526,7 @@ namespace Squared.Illuminant {
 
             SetTwoPointFiveDParametersInner(frontFaceMaterial.Effect.Parameters, true, true);
             SetTwoPointFiveDParametersInner(topFaceMaterial  .Effect.Parameters, true, true);
-        }
-
-        private void RenderTwoPointFiveDLitSurfaces (ref int layerIndex, BatchGroup resultGroup) {
-            // FIXME: Support more than 12 lights
-
-            int i = 0;
-            foreach (var ls in Environment.LightSources) {
-                if (i >= FaceMaxLights)
-                    break;
-
-                _LightPositions[i]     = ls.Position;
-                _LightColors[i]        = ls.Color;
-                _LightColors[i].W     *= ls.Opacity;
-                _LightProperties[i]    = new Vector3(
-                    ls.Radius, ls.RampLength,
-                    (ls.RampMode == LightSourceRampMode.Exponential)
-                        ? 1
-                        : 0
-                );
-
-                i += 1;
-            }
-
-            _VisibleLightCount = i;
-
-            for (; i < FaceMaxLights; i++) {
-                _LightPositions[i] = _LightProperties[i] = Vector3.Zero;
-                _LightColors[i] = Vector4.Zero;
-            }
-
-            using (var group = BatchGroup.New(
-                resultGroup, layerIndex++,
-                before: (dm, _) => {
-                    dm.PushStates();
-                    var vt = Materials.ViewTransform;
-                    // FIXME: This seems backwards, shouldn't it be 1.0 / Configuration.RenderScale?
-                    vt.Scale = new Vector2(Configuration.RenderScale);
-                    Materials.PushViewTransform(ref vt);
-                },
-                after: (dm, _) => {
-                    dm.PopStates();
-                    Materials.PopViewTransform();
-                }
-            )) {
-                ClearBatch.AddNew(
-                    group, 0, Materials.Clear, clearZ: 0f
-                );
-
-                using (var topBatch = PrimitiveBatch<HeightVolumeVertex>.New(
-                    group, 1, Materials.Get(
-                        IlluminantMaterials.VolumeTopFace,                    
-                        depthStencilState: TopFaceDepthStencilState,
-                        rasterizerState: RasterizerState.CullNone,
-                        blendState: BlendState.Opaque
-                    ),
-                    batchSetup: SetTwoPointFiveDParameters
-                ))
-                using (var frontBatch = PrimitiveBatch<HeightVolumeVertex>.New(
-                    group, 2, Materials.Get(
-                        IlluminantMaterials.VolumeFrontFace,
-                        depthStencilState: FrontFaceDepthStencilState,
-                        rasterizerState: RasterizerState.CullNone,
-                        blendState: BlendState.Opaque
-                    ),
-                    batchSetup: SetTwoPointFiveDParameters
-                )) {
-                    foreach (var volume in Environment.HeightVolumes.OrderByDescending(hv => hv.ZBase + hv.Height)) {
-                        var ffm3d = volume.GetFrontFaceMesh3D();
-                        if (ffm3d.Count <= 0)
-                            continue;
-
-                        frontBatch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
-                            PrimitiveType.TriangleList,
-                            ffm3d.Array, ffm3d.Offset, ffm3d.Count / 3
-                        ));
-
-                        var m3d = volume.Mesh3D;
-
-                        topBatch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
-                            PrimitiveType.TriangleList,
-                            m3d, 0, m3d.Length / 3
-                        ));
-                    }
-                }
-            }
-        }
+        }        
 
         public void InvalidateFields (
             // TODO: Maybe remove this since I'm not sure it's useful at all.
@@ -805,7 +620,7 @@ namespace Squared.Illuminant {
                         ));
                     }
 
-                    if (Configuration.TwoPointFiveD && Configuration.RenderTwoPointFiveDToGBuffer) {
+                    if (Configuration.TwoPointFiveD) {
                         if (Render.Tracing.RenderTrace.EnableTracing)
                             Render.Tracing.RenderTrace.Marker(group, 2, "LightingRenderer {0:X4} : G-Buffer Top Faces", this.GetHashCode());
 
@@ -1128,29 +943,6 @@ namespace Squared.Illuminant {
                     PrimitiveType.TriangleList,
                     verts, 0, 4, indices, 0, 2
                 ));
-        }
-
-        private void FlushPointLightBatch (ref BatchGroup lightGroup, ref int layerIndex) {
-            if (lightGroup == null)
-                return;
-
-            using (var pb = PrimitiveBatch<PointLightVertex>.New(
-                lightGroup, layerIndex++, 
-                IlluminantMaterials.PointLight, IlluminationBatchSetup
-            )) {
-                foreach (var record in PointLightBatchBuffer) {
-                    var pointLightDrawCall = new PrimitiveDrawCall<PointLightVertex>(
-                        PrimitiveType.TriangleList, 
-                        PointLightVertices, record.VertexOffset, record.VertexCount, 
-                        PointLightIndices, record.IndexOffset, record.IndexCount / 3
-                    );
-                    pb.Add(pointLightDrawCall);
-                }
-            }
-
-            lightGroup.Dispose();
-            lightGroup = null;
-            PointLightBatchBuffer.Clear();
         }
     }
 

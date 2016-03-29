@@ -22,14 +22,13 @@ namespace TestGame.Scenes {
         public readonly List<LightSource> Lights = new List<LightSource>();
 
         bool ShowGBuffer   = false;
-        bool GBuffer2p5    = true;
         bool TwoPointFiveD = true;
         bool Deterministic = true;
 
-        public const int RotatingLightCount = 4096;
+        public const int RotatingLightCount = 1024;
 
         public const int MultisampleCount = 0;
-        public const int LightmapScaleRatio = 6;
+        public const int LightmapScaleRatio = 1;
 
         float LightZ = 0;
 
@@ -149,7 +148,6 @@ namespace TestGame.Scenes {
         
         public override void Draw (Squared.Render.Frame frame) {
             Renderer.Configuration.TwoPointFiveD = TwoPointFiveD;
-            Renderer.Configuration.RenderTwoPointFiveDToGBuffer = GBuffer2p5;
 
             CreateRenderTargets();
 
@@ -196,11 +194,6 @@ namespace TestGame.Scenes {
 
                 if (KeyWasPressed(Keys.G))
                     ShowGBuffer = !ShowGBuffer;
-
-                if (KeyWasPressed(Keys.P)) {
-                    GBuffer2p5 = !GBuffer2p5;
-                    Renderer.InvalidateFields();
-                }
 
                 if (KeyWasPressed(Keys.D2)) {
                     TwoPointFiveD = !TwoPointFiveD;
@@ -268,11 +261,7 @@ namespace TestGame.Scenes {
                     "L@{1:0000},{2:0000},{0:000.0} {3}", 
                     LightZ, Lights[0].Position.X, Lights[0].Position.Y,
                     TwoPointFiveD 
-                        ? (
-                            GBuffer2p5 
-                                ? "GBuffer 2.5D"
-                                : "Geometry 2.5D"
-                        ) 
+                        ? "2.5D"
                         : "2D"
                 );
             }

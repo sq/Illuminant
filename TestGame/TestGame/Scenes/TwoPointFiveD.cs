@@ -32,7 +32,6 @@ namespace TestGame.Scenes {
         bool ShowLightmap      = false;
         bool ShowDistanceField = false;
         bool Timelapse         = false;
-        bool GBuffer2p5        = true;
         bool TwoPointFiveD     = true;
         bool Deterministic     = true;
 
@@ -190,7 +189,6 @@ namespace TestGame.Scenes {
             CreateRenderTargets();
 
             Renderer.Configuration.TwoPointFiveD = TwoPointFiveD;
-            Renderer.Configuration.RenderTwoPointFiveDToGBuffer = GBuffer2p5;
 
             Renderer.UpdateFields(frame, -2);
 
@@ -284,11 +282,6 @@ namespace TestGame.Scenes {
                 if (KeyWasPressed(Keys.G))
                     ShowGBuffer = !ShowGBuffer;
 
-                if (KeyWasPressed(Keys.P)) {
-                    GBuffer2p5 = !GBuffer2p5;
-                    Renderer.InvalidateFields();
-                }
-
                 if (KeyWasPressed(Keys.D2)) {
                     TwoPointFiveD = !TwoPointFiveD;
                     Renderer.InvalidateFields();
@@ -341,11 +334,7 @@ namespace TestGame.Scenes {
                     "L@{1:0000},{2:0000},{0:000.0} {3}", 
                     LightZ, Lights[0].Position.X, Lights[0].Position.Y,
                     TwoPointFiveD 
-                        ? (
-                            GBuffer2p5 
-                                ? "GBuffer 2.5D"
-                                : "Geometry 2.5D"
-                        ) 
+                        ? "2.5D"
                         : "2D"
                 );
             }

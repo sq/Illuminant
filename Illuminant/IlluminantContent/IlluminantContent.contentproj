@@ -56,14 +56,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="VolumeFaces.fx">
-      <Name>VolumeFaces</Name>
-      <Importer>EffectImporter</Importer>
-      <Processor>EffectProcessor</Processor>
-      <ProcessorParameters_DebugMode>Optimize</ProcessorParameters_DebugMode>
-    </Compile>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="LightCommon.fxh">
       <Name>LightCommon</Name>
       <Importer>EffectImporter</Importer>
