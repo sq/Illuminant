@@ -67,7 +67,6 @@ struct DistanceFieldSettings {
 
     float  MaxConeRadius;
     float  OcclusionToOpacityPower;
-    float  InvZPower;
     float  InvScaleFactor;
     float3 Extent;
     float3 TextureSliceCount;
@@ -119,6 +118,16 @@ float2 computeDistanceFieldSubsliceUv (
     return clamp(positionPx + 0.5, 1, DistanceField.Extent.xy - 1) * DistanceField.TextureTexelSize;
 }
 
+static const int packedSliceCount = 2;
+
+static const float4 sliceMasks[packedSliceCount] = {
+    float4(1, 0, 0, 0),
+    float4(0, 1, 0, 0) /*,
+    float4(0, 0, 1, 0),
+    float4(0, 0, 0, 1),
+    */
+};
+
 float sampleDistanceField (
     float3 position, 
     TraceVars vars
@@ -126,18 +135,13 @@ float sampleDistanceField (
     // Interpolate between two Z samples. The xy interpolation is done by the GPU for us.
     // linear [0-ZMax] -> linear [0-1]
     float linearPositionZ = position.z * vars.invDistanceFieldExtentZ;
-    // linear [0-1] -> nonlinear [0-1]
-    float nonlinearPositionZ = pow(linearPositionZ, DistanceField.InvZPower);
-    // nonlinear [0-1] -> [0-NumZSlices)
-    float slicePosition = clamp(nonlinearPositionZ * DistanceField.TextureSliceCount.z, 0, vars.sliceCountZMinus1);
+    // linear [0-1] -> [0-NumZSlices)
+    float slicePosition = clamp(linearPositionZ * DistanceField.TextureSliceCount.z, 0, vars.sliceCountZMinus1);
     float sliceIndex1 = floor(slicePosition);
     float sliceIndex2 = ceil(slicePosition);
 
-    float subslice = slicePosition - sliceIndex1;
-    float evenSlice = (sliceIndex1 % 2);
-
-    float coarseSliceIndex1 = clamp(sliceIndex1, 0, vars.sliceCountZMinus1) * 0.5;
-    float coarseSliceIndex2 = clamp(sliceIndex2, 0, vars.sliceCountZMinus1) * 0.5;
+    float coarseSliceIndex1 = clamp(sliceIndex1, 0, vars.sliceCountZMinus1) * (1.0 / packedSliceCount);
+    float coarseSliceIndex2 = clamp(sliceIndex2, 0, vars.sliceCountZMinus1) * (1.0 / packedSliceCount);
    
     float2 uv = computeDistanceFieldSubsliceUv(position.xy);
     float4 uv1 = float4(
@@ -151,23 +155,29 @@ float sampleDistanceField (
         ), 0, 0
     );
 
-    // TODO: Duplicate slice data across r/g/b/a so we can read in one tex2Dlod always
-
-    float decodedDistance;
-    float2 sample1 = tex2Dlod(
+    float4 sample1 = tex2Dlod(
         DistanceFieldTextureSampler,
         uv1
-    ).rg;
-    float2 sample2 = tex2Dlod(
+    );
+    float4 sample2 = tex2Dlod(
         DistanceFieldTextureSampler, 
         uv2
-    ).rg;
+    );
 
-    decodedDistance = decodeDistance(lerp(
-        lerp(sample1.r, sample1.g, evenSlice),
-        lerp(sample2.g, sample2.r, evenSlice),
+    float sliceMaskIndex1 = sliceIndex1 % packedSliceCount;
+    float sliceMaskIndex2 = sliceMaskIndex1 + 1;
+    if (sliceMaskIndex2 >= packedSliceCount)
+        sliceMaskIndex2 = 0;
+
+    float subslice = slicePosition - sliceIndex1;
+
+    float blendedSample = lerp(
+        dot(sample1, sliceMasks[sliceMaskIndex1]),
+        dot(sample2, sliceMasks[sliceMaskIndex2]),
         subslice
-    ));
+    );
+
+    float decodedDistance = decodeDistance(blendedSample);
 
     // HACK: Samples outside the distance field will be wrong if they just
     //  read the closest distance in the field.

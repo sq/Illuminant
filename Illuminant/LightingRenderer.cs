@@ -58,9 +58,6 @@ namespace Squared.Illuminant {
         // Setting this value too high can crash your video driver.
         public int   DistanceFieldUpdateRate              = 1;
         public float DistanceFieldOcclusionToOpacityPower = 1;
-        // Z coordinates are raised to this exponent as a way to adjust precision
-        //  across the coordinate space
-        public float DistanceFieldZPower                  = 1.0f;
 
         // The actual number of depth slices allocated for the distance field.
         public int DistanceFieldSliceCount {
@@ -84,6 +81,8 @@ namespace Squared.Illuminant {
     public sealed class LightingRenderer : IDisposable {
         public const int MaximumLightCount = 8192;
 
+        public const int PackedSliceCount = 2;
+
         const int        DistanceLimit = 520;
 
         const SurfaceFormat GBufferFormat       = SurfaceFormat.Vector4;
@@ -98,8 +97,8 @@ namespace Squared.Illuminant {
         public readonly DepthStencilState TopFaceDepthStencilState, FrontFaceDepthStencilState;
         public readonly DepthStencilState DistanceInteriorStencilState, DistanceExteriorStencilState;
         public readonly DepthStencilState PointLightDepthStencilState;
-        public readonly BlendState        OddSlice, EvenSlice;
-        public readonly BlendState        ClearOddSlice, ClearEvenSlice;
+        public readonly BlendState[]      PackedSlice      = new BlendState[4];
+        public readonly BlendState[]      ClearPackedSlice = new BlendState[4];
 
         private readonly DynamicVertexBuffer PointLightVertexBuffer;
         private readonly IndexBuffer         PointLightIndexBuffer;
@@ -155,13 +154,13 @@ namespace Squared.Illuminant {
                 int maxSlicesX = 4096 / DistanceFieldSliceWidth;
                 int maxSlicesY = 4096 / DistanceFieldSliceHeight;
                 // HACK: We encode odd/even slices in the red and green channels
-                int maxSlices = maxSlicesX * maxSlicesY * 2;
+                int maxSlices = maxSlicesX * maxSlicesY * PackedSliceCount;
                 
                 // HACK: If they ask for too many slices we give them as many as we can.
                 int numSlices = Math.Min(Configuration.DistanceFieldSize.Third, maxSlices);
                 Configuration.DistanceFieldSliceCount = numSlices;
 
-                int effectiveSliceCount = (numSlices + 1) / 2;
+                int effectiveSliceCount = (int)Math.Ceiling(numSlices / (float)PackedSliceCount);
 
                 DistanceFieldSlicesX = Math.Min(maxSlicesX, effectiveSliceCount);
                 DistanceFieldSlicesY = Math.Max((int)Math.Ceiling(effectiveSliceCount / (float)maxSlicesX), 1);
@@ -201,34 +200,24 @@ namespace Squared.Illuminant {
                 DepthBufferEnable = true,
                 DepthBufferFunction = CompareFunction.GreaterEqual,
                 DepthBufferWriteEnable = false
-            };            
-
-            EvenSlice = new BlendState {
-                ColorWriteChannels = ColorWriteChannels.Red,
-                ColorBlendFunction = BlendFunction.Max,
-                ColorSourceBlend = Blend.One,
-                ColorDestinationBlend = Blend.One
             };
 
-            OddSlice = new BlendState {
-                ColorWriteChannels = ColorWriteChannels.Green,
-                ColorBlendFunction = BlendFunction.Max,
-                ColorSourceBlend = Blend.One,
-                ColorDestinationBlend = Blend.One
-            };
+            for (int i = 0; i < 4; i++) {
+                var writeChannels = (ColorWriteChannels)(1 << i);
 
-            ClearEvenSlice = new BlendState {
-                ColorWriteChannels = ColorWriteChannels.Red,
-                ColorBlendFunction = BlendFunction.Add,
-                ColorSourceBlend = Blend.One,
-                ColorDestinationBlend = Blend.Zero
-            };
+                PackedSlice[i] = new BlendState {
+                    ColorWriteChannels = writeChannels,
+                    ColorBlendFunction = BlendFunction.Max,
+                    ColorSourceBlend = Blend.One,
+                    ColorDestinationBlend = Blend.One
+                };
 
-            ClearOddSlice = new BlendState {
-                ColorWriteChannels = ColorWriteChannels.Green,
-                ColorBlendFunction = BlendFunction.Add,
-                ColorSourceBlend = Blend.One,
-                ColorDestinationBlend = Blend.Zero
+                ClearPackedSlice[i] = new BlendState {
+                    ColorWriteChannels = writeChannels,
+                    ColorBlendFunction = BlendFunction.Add,
+                    ColorSourceBlend = Blend.One,
+                    ColorDestinationBlend = Blend.Zero
+                };
             };
 
             {
@@ -509,7 +498,6 @@ namespace Squared.Illuminant {
             s["InvScaleFactor"].SetValue(1f / Configuration.DistanceFieldResolution);
             s["OcclusionToOpacityPower"].SetValue(Configuration.DistanceFieldOcclusionToOpacityPower);
             s["MaxConeRadius"].SetValue(Configuration.DistanceFieldMaxConeRadius);
-            s["InvZPower"].SetValue(1.0f / Configuration.DistanceFieldZPower);
 
             s["Step"].SetValue(new Vector4(
                 (float)Configuration.DistanceFieldMaxStepCount,
@@ -727,10 +715,7 @@ namespace Squared.Illuminant {
 
         private float SliceIndexToZ (int slice) {
             float sliceZ = (slice / Math.Max(1, (float)(Configuration.DistanceFieldSliceCount - 1)));
-
-            float scaledSliceZ = (float)Math.Pow(sliceZ, Configuration.DistanceFieldZPower);
-
-            return scaledSliceZ * Environment.MaximumZ;
+            return sliceZ * Environment.MaximumZ;
         }
 
         private void RenderDistanceFieldSlice (
@@ -741,7 +726,7 @@ namespace Squared.Illuminant {
         ) {
             // TODO: Duplicate slice data across channels for one-sample reads?
             var sliceZ = SliceIndexToZ(slice);
-            int displaySlice = slice / 2;
+            int displaySlice = slice / PackedSliceCount;
             var sliceX = (displaySlice % DistanceFieldSlicesX) * DistanceFieldSliceWidth;
             var sliceY = (displaySlice / DistanceFieldSlicesX) * DistanceFieldSliceHeight;
             var sliceXVirtual = (displaySlice % DistanceFieldSlicesX) * Configuration.DistanceFieldSize.First;
@@ -765,9 +750,7 @@ namespace Squared.Illuminant {
                     dm.Device.ScissorRectangle = new Rectangle(
                         sliceX, sliceY, DistanceFieldSliceWidth, DistanceFieldSliceHeight
                     );
-                    dm.Device.BlendState = ((slice % 2) == 0)
-                        ? EvenSlice
-                        : OddSlice;
+                    dm.Device.BlendState = PackedSlice[(slice % PackedSliceCount)];
 
                     SetDistanceFieldParameters(IlluminantMaterials.DistanceFieldInterior.Effect.Parameters, false);
                     SetDistanceFieldParameters(IlluminantMaterials.DistanceFieldExterior.Effect.Parameters, false);
@@ -778,9 +761,7 @@ namespace Squared.Illuminant {
                     Materials.PopViewTransform();
                 };
 
-            var clearBlendState = ((slice % 2) == 0)
-                ? ClearEvenSlice
-                : ClearOddSlice;
+            var clearBlendState = ClearPackedSlice[(slice % PackedSliceCount)];
 
             ClearDistanceFieldSlice(
                 indices, clearBlendState,
