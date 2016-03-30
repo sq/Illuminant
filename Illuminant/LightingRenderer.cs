@@ -81,12 +81,12 @@ namespace Squared.Illuminant {
     public sealed class LightingRenderer : IDisposable {
         public const int MaximumLightCount = 8192;
 
-        public const int PackedSliceCount = 2;
+        public const int PackedSliceCount = 4;
 
         const int        DistanceLimit = 520;
 
         const SurfaceFormat GBufferFormat       = SurfaceFormat.Vector4;
-        const SurfaceFormat DistanceFieldFormat = SurfaceFormat.Rg32;
+        const SurfaceFormat DistanceFieldFormat = SurfaceFormat.Rgba64;
 
         // HACK: If your projection matrix and your actual viewport/RT don't match in dimensions, you need to set this to compensate. :/
         // Scissor rects are fussy.
@@ -207,6 +207,9 @@ namespace Squared.Illuminant {
 
                 PackedSlice[i] = new BlendState {
                     ColorWriteChannels = writeChannels,
+                    AlphaBlendFunction = BlendFunction.Max,
+                    AlphaSourceBlend = Blend.One,
+                    AlphaDestinationBlend = Blend.One,
                     ColorBlendFunction = BlendFunction.Max,
                     ColorSourceBlend = Blend.One,
                     ColorDestinationBlend = Blend.One
@@ -214,6 +217,9 @@ namespace Squared.Illuminant {
 
                 ClearPackedSlice[i] = new BlendState {
                     ColorWriteChannels = writeChannels,
+                    AlphaBlendFunction = BlendFunction.Add,
+                    AlphaSourceBlend = Blend.One,
+                    AlphaDestinationBlend = Blend.Zero,
                     ColorBlendFunction = BlendFunction.Add,
                     ColorSourceBlend = Blend.One,
                     ColorDestinationBlend = Blend.Zero

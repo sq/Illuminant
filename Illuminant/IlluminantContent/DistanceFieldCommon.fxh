@@ -118,14 +118,13 @@ float2 computeDistanceFieldSubsliceUv (
     return clamp(positionPx + 0.5, 1, DistanceField.Extent.xy - 1) * DistanceField.TextureTexelSize;
 }
 
-static const int packedSliceCount = 2;
+static const int packedSliceCount = 4;
 
 static const float4 sliceMasks[packedSliceCount] = {
     float4(1, 0, 0, 0),
-    float4(0, 1, 0, 0) /*,
+    float4(0, 1, 0, 0),
     float4(0, 0, 1, 0),
-    float4(0, 0, 0, 1),
-    */
+    float4(0, 0, 0, 1)
 };
 
 float sampleDistanceField (
