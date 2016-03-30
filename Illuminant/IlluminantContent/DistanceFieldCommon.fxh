@@ -118,14 +118,8 @@ float2 computeDistanceFieldSubsliceUv (
     return clamp(positionPx + 0.5, 1, DistanceField.Extent.xy - 1) * DistanceField.TextureTexelSize;
 }
 
-static const int packedSliceCount = 4;
-
-static const float4 sliceMasks[packedSliceCount] = {
-    float4(1, 0, 0, 0),
-    float4(0, 1, 0, 0),
-    float4(0, 0, 1, 0),
-    float4(0, 0, 0, 1)
-};
+// FIXME: I hard-coded this below because I'm a bad person
+static const int packedSliceCount = 3;
 
 float sampleDistanceField (
     float3 position, 
@@ -154,26 +148,36 @@ float sampleDistanceField (
         ), 0, 0
     );
 
-    float4 sample1 = tex2Dlod(
+    float4 sample1packed = tex2Dlod(
         DistanceFieldTextureSampler,
         uv1
     );
-    float4 sample2 = tex2Dlod(
+    float4 sample2packed = tex2Dlod(
         DistanceFieldTextureSampler, 
         uv2
     );
 
     float sliceMaskIndex1 = sliceIndex1 % packedSliceCount;
-    float sliceMaskIndex2 = sliceMaskIndex1 + 1;
-    if (sliceMaskIndex2 >= packedSliceCount)
-        sliceMaskIndex2 = 0;
+    float sample1, sample2;
+
+    // This is hard-coded for three slices (r/g/b)
+    if (sliceMaskIndex1 < 2) {
+        if (sliceMaskIndex1 < 1) {            
+            sample1 = sample1packed.r;
+            sample2 = sample2packed.g;
+        } else {
+            sample1 = sample1packed.g;
+            sample2 = sample2packed.b;
+        }
+    } else {
+        sample1 = sample1packed.b;
+        sample2 = sample2packed.r;
+    }
 
     float subslice = slicePosition - sliceIndex1;
 
     float blendedSample = lerp(
-        dot(sample1, sliceMasks[sliceMaskIndex1]),
-        dot(sample2, sliceMasks[sliceMaskIndex2]),
-        subslice
+        sample1, sample2, subslice
     );
 
     float decodedDistance = decodeDistance(blendedSample);

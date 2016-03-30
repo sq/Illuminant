@@ -80,8 +80,7 @@ namespace Squared.Illuminant {
 
     public sealed class LightingRenderer : IDisposable {
         public const int MaximumLightCount = 8192;
-
-        public const int PackedSliceCount = 4;
+        public const int PackedSliceCount = 3;
 
         const int        DistanceLimit = 520;
 
@@ -705,10 +704,34 @@ namespace Squared.Illuminant {
                     var slice = _InvalidDistanceFieldSlices[0];
                     _InvalidDistanceFieldSlices.RemoveAt(0);
 
+                    var physicalSlice = slice / PackedSliceCount;
+                    var sliceZ = SliceIndexToZ(slice);
+
+                    // TODO: Render four slices at once by writing to all channels in one go?
                     RenderDistanceFieldSlice(
                         indices, rtGroup, vertexDataTextures, 
-                        intParameters, extParameters, 
-                        slice, ref layer
+                        intParameters, extParameters,
+                        physicalSlice, slice % PackedSliceCount, sliceZ,
+                        ref layer
+                    );
+
+                    // Every 'r' channel slice should always be mirrored into the previous slice's 'a' channel
+                    // This ensures that we can always access a slice & its neighbor in a single texture load.
+                    if (
+                        ((slice % PackedSliceCount) == 0) &&
+                        (slice > 0)
+                    ) {
+                        RenderDistanceFieldSlice(
+                            indices, rtGroup, vertexDataTextures,
+                            intParameters, extParameters,
+                            physicalSlice - 1, 3, sliceZ,
+                            ref layer
+                        );
+                    }
+
+                    _DistanceFieldSlicesReady = Math.Min(
+                        Math.Max(slice + 1, _DistanceFieldSlicesReady),
+                        Configuration.DistanceFieldSliceCount
                     );
 
                     slicesToUpdate--;
@@ -727,16 +750,14 @@ namespace Squared.Illuminant {
         private void RenderDistanceFieldSlice (
             short[] indices, BatchGroup rtGroup, 
             Dictionary<object, Texture2D> vertexDataTextures, 
-            EffectParameterCollection intParameters, EffectParameterCollection extParameters, 
-            int slice, ref int layer
+            EffectParameterCollection intParameters, EffectParameterCollection extParameters,
+            int physicalSliceIndex, int maskIndex, float sliceZ, 
+            ref int layer
         ) {
-            // TODO: Duplicate slice data across channels for one-sample reads?
-            var sliceZ = SliceIndexToZ(slice);
-            int displaySlice = slice / PackedSliceCount;
-            var sliceX = (displaySlice % DistanceFieldSlicesX) * DistanceFieldSliceWidth;
-            var sliceY = (displaySlice / DistanceFieldSlicesX) * DistanceFieldSliceHeight;
-            var sliceXVirtual = (displaySlice % DistanceFieldSlicesX) * Configuration.DistanceFieldSize.First;
-            var sliceYVirtual = (displaySlice / DistanceFieldSlicesX) * Configuration.DistanceFieldSize.Second;
+            var sliceX = (physicalSliceIndex % DistanceFieldSlicesX) * DistanceFieldSliceWidth;
+            var sliceY = (physicalSliceIndex / DistanceFieldSlicesX) * DistanceFieldSliceHeight;
+            var sliceXVirtual = (physicalSliceIndex % DistanceFieldSlicesX) * Configuration.DistanceFieldSize.First;
+            var sliceYVirtual = (physicalSliceIndex / DistanceFieldSlicesX) * Configuration.DistanceFieldSize.Second;
 
             bool forceClear = _DistanceFieldSlicesReady == 0;
 
@@ -756,7 +777,7 @@ namespace Squared.Illuminant {
                     dm.Device.ScissorRectangle = new Rectangle(
                         sliceX, sliceY, DistanceFieldSliceWidth, DistanceFieldSliceHeight
                     );
-                    dm.Device.BlendState = PackedSlice[(slice % PackedSliceCount)];
+                    dm.Device.BlendState = PackedSlice[maskIndex];
 
                     SetDistanceFieldParameters(IlluminantMaterials.DistanceFieldInterior.Effect.Parameters, false);
                     SetDistanceFieldParameters(IlluminantMaterials.DistanceFieldExterior.Effect.Parameters, false);
@@ -767,7 +788,7 @@ namespace Squared.Illuminant {
                     Materials.PopViewTransform();
                 };
 
-            var clearBlendState = ClearPackedSlice[(slice % PackedSliceCount)];
+            var clearBlendState = ClearPackedSlice[maskIndex];
 
             ClearDistanceFieldSlice(
                 indices, clearBlendState,
@@ -779,18 +800,13 @@ namespace Squared.Illuminant {
                 beginSliceBatch, endSliceBatch
             )) {
                 if (Render.Tracing.RenderTrace.EnableTracing)
-                    Render.Tracing.RenderTrace.Marker(group, -1, "LightingRenderer {0:X4} : Begin Distance Field Slice #{1}", this.GetHashCode(), slice);
+                    Render.Tracing.RenderTrace.Marker(group, -1, "LightingRenderer {0:X4} : Begin Distance Field Slice Z={1} Idx={2}", this.GetHashCode(), sliceZ, physicalSliceIndex);
 
                 RenderDistanceFieldDistanceFunctions(indices, sliceZ, group);
                 RenderDistanceFieldHeightVolumes(indices, vertexDataTextures, intParameters, extParameters, sliceZ, group);
 
-                _DistanceFieldSlicesReady = Math.Min(
-                    Math.Max(slice + 1, _DistanceFieldSlicesReady),
-                    Configuration.DistanceFieldSliceCount
-                );
-
                 if (Render.Tracing.RenderTrace.EnableTracing)
-                    Render.Tracing.RenderTrace.Marker(group, 2, "LightingRenderer {0:X4} : End Distance Field Slice #{1}", this.GetHashCode(), slice);
+                    Render.Tracing.RenderTrace.Marker(group, 2, "LightingRenderer {0:X4} : End Distance Field Slice Z={1} Idx={2}", this.GetHashCode(), sliceZ, physicalSliceIndex);
             }
         }
 
