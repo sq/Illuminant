@@ -130,51 +130,36 @@ float sampleDistanceField (
     float linearPositionZ = position.z * vars.invDistanceFieldExtentZ;
     // linear [0-1] -> [0-NumZSlices)
     float slicePosition = clamp(linearPositionZ * DistanceField.TextureSliceCount.z, 0, vars.sliceCountZMinus1);
-    float sliceIndex1 = floor(slicePosition);
-    float sliceIndex2 = ceil(slicePosition);
+    float virtualSliceIndex = floor(slicePosition);
 
-    float coarseSliceIndex1 = clamp(sliceIndex1, 0, vars.sliceCountZMinus1) * (1.0 / packedSliceCount);
-    float coarseSliceIndex2 = clamp(sliceIndex2, 0, vars.sliceCountZMinus1) * (1.0 / packedSliceCount);
+    float physicalSliceIndex = clamp(virtualSliceIndex, 0, vars.sliceCountZMinus1) * (1.0 / packedSliceCount);
    
-    float2 uv = computeDistanceFieldSubsliceUv(position.xy);
-    float4 uv1 = float4(
-        uv + computeDistanceFieldSliceUv(
-            coarseSliceIndex1, vars
-        ), 0, 0
-    );
-    float4 uv2 = float4(
-        uv + computeDistanceFieldSliceUv(
-            coarseSliceIndex2, vars
-        ), 0, 0
+    float4 uv = float4(
+        computeDistanceFieldSubsliceUv(position.xy) +
+          computeDistanceFieldSliceUv(physicalSliceIndex, vars),
+        0, 0
     );
 
-    float4 sample1packed = tex2Dlod(
-        DistanceFieldTextureSampler,
-        uv1
-    );
-    float4 sample2packed = tex2Dlod(
-        DistanceFieldTextureSampler, 
-        uv2
-    );
+    float4 packedSample = tex2Dlod(DistanceFieldTextureSampler, uv);
 
-    float sliceMaskIndex1 = sliceIndex1 % packedSliceCount;
+    float maskPatternIndex = virtualSliceIndex % packedSliceCount;
     float sample1, sample2;
 
     // This is hard-coded for three slices (r/g/b)
-    if (sliceMaskIndex1 < 2) {
-        if (sliceMaskIndex1 < 1) {            
-            sample1 = sample1packed.r;
-            sample2 = sample2packed.g;
+    {
+        if (maskPatternIndex >= 2) {
+            sample1 = packedSample.b;
+            sample2 = packedSample.a;
+        } else if (maskPatternIndex >= 1) {
+            sample1 = packedSample.g;
+            sample2 = packedSample.b;
         } else {
-            sample1 = sample1packed.g;
-            sample2 = sample2packed.b;
+            sample1 = packedSample.r;
+            sample2 = packedSample.g;
         }
-    } else {
-        sample1 = sample1packed.b;
-        sample2 = sample2packed.r;
     }
 
-    float subslice = slicePosition - sliceIndex1;
+    float subslice = slicePosition - virtualSliceIndex;
 
     float blendedSample = lerp(
         sample1, sample2, subslice
