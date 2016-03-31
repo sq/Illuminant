@@ -1,26 +1,30 @@
-struct TraceInfo {
+struct TraceParameters {
     float3 start;
     float3 direction;
     float  length;
+    float3 radiusSettings;
+};
+
+struct TraceState {
+    float offset;
+    float minStepSize;
+    float localSphereRadius;
 };
 
 void coneTraceStep(
-    in    TraceInfo trace,
-    in    float3 sphereRadiusSettings,
-    in    TraceVars vars,
-    inout float  traceOffset,
-    inout float  visibility,
-    inout float  minStepSize,
-    inout float  localSphereRadius
+    in    TraceParameters        trace,
+    in    DistanceFieldConstants vars,
+    inout TraceState             state,
+    inout float                  visibility
 ) {
-    float3 samplePosition = trace.start + (trace.direction * traceOffset);
+    float3 samplePosition = trace.start + (trace.direction * state.offset);
 
     float distanceToObstacle = sampleDistanceField(
         samplePosition, vars
     );
 
     float localVisibility =
-        distanceToObstacle / localSphereRadius;
+        distanceToObstacle / state.localSphereRadius;
     visibility = min(visibility, localVisibility);
 
     float stepSize = max(
@@ -30,17 +34,17 @@ void coneTraceStep(
             (distanceToObstacle < 0)
             ? 1
             : DistanceField.Step.w
-            ), minStepSize
+            ), state.minStepSize
         );
 
-    traceOffset = traceOffset + stepSize;
+    state.offset = state.offset + stepSize;
 
-    minStepSize = (DistanceField.Step.z * stepSize) + minStepSize;
+    state.minStepSize = (DistanceField.Step.z * stepSize) + state.minStepSize;
 
     // Sadly doing this with the reciprocal instead doesn't work :|
-    localSphereRadius = min(
-        sphereRadiusSettings.y,
-        (sphereRadiusSettings.z * stepSize) + localSphereRadius
+    state.localSphereRadius = min(
+        trace.radiusSettings.y,
+        (trace.radiusSettings.z * stepSize) + state.localSphereRadius
     );
 }
 
@@ -49,52 +53,53 @@ float coneTrace(
     in float2 lightRamp,
     in float3 shadedPixelPosition
 ) {
-    TraceVars vars = {
+    DistanceFieldConstants vars = {
         DistanceField.TextureSliceCount.z - 1,
         1.0 / DistanceField.TextureSliceCount.x,
         1.0 / DistanceField.Extent.z
     };
 
-    TraceInfo trace;
-    float traceOffset = TRACE_INITIAL_OFFSET_PX;
-    trace.start = shadedPixelPosition;
-    float3 traceVector = (lightCenter - trace.start);
-    trace.length = length(traceVector);
-    trace.direction = normalize(traceVector);
+    TraceParameters trace;
+    {
+        trace.start = shadedPixelPosition;
+        float3 traceVector = (lightCenter - trace.start);
+        trace.length = length(traceVector);
+        trace.direction = normalize(traceVector);
+    }
 
-    float maxTangentAngle = tan(MAX_ANGLE_DEGREES * PI / 180.0f);
-    float lightTangentAngle = min(lightRamp.x / trace.length, maxTangentAngle);
+    {
+        float maxTangentAngle = tan(MAX_ANGLE_DEGREES * PI / 180.0f);
+        float lightTangentAngle = min(lightRamp.x / trace.length, maxTangentAngle);
 
-    float minRadius = max(MIN_CONE_RADIUS, 0.1);
-    float maxRadius = clamp(
-        lightRamp.x, minRadius, DistanceField.MaxConeRadius
-    );
-    float3 sphereRadiusSettings = float3(
-        minRadius, maxRadius, lightTangentAngle
-    );
+        float minRadius = max(MIN_CONE_RADIUS, 0.1);
+        float maxRadius = clamp(
+            lightRamp.x, minRadius, DistanceField.MaxConeRadius
+        );
 
-    float minStepSize = max(1, DistanceField.Step.y);
-    float localSphereRadius = minRadius;
-    float visibility = 1.0;
+        trace.radiusSettings = float3(
+            minRadius, maxRadius, lightTangentAngle
+        );
+    }
+
+    TraceState state;
+    state.offset = TRACE_INITIAL_OFFSET_PX;
+    state.minStepSize = max(1, DistanceField.Step.y);
+    state.localSphereRadius = trace.radiusSettings.x;
 
     bool abort = false;
-
     float stepCount = 0;
+    float visibility = 1.0;
 
     [loop]
     while (!abort) {
         abort =
             (stepCount >= DistanceField.Step.x) ||
-            (traceOffset >= trace.length) ||
+            (state.offset >= trace.length) ||
             (visibility < FULLY_SHADOWED_THRESHOLD);
         if (abort)
-            traceOffset = trace.length;
+            state.offset = trace.length;
 
-        coneTraceStep(
-            trace, sphereRadiusSettings, vars,
-            traceOffset, visibility,
-            minStepSize, localSphereRadius
-        );
+        coneTraceStep(trace, vars, state, visibility);
         stepCount += 1;
     }
 

@@ -86,7 +86,7 @@ sampler   DistanceFieldTextureSampler : register(s1) {
     MagFilter = DISTANCE_FIELD_FILTER;
 };
 
-struct TraceVars {
+struct DistanceFieldConstants {
     float sliceCountZMinus1;
     float invSliceCountX;
     float invDistanceFieldExtentZ;
@@ -94,7 +94,7 @@ struct TraceVars {
 
 float2 computeDistanceFieldSliceUv (
     float coarseSliceIndex, 
-    TraceVars vars
+    DistanceFieldConstants vars
 ) {
     float rowIndexF   = coarseSliceIndex * vars.invSliceCountX;
     float rowIndex    = floor(rowIndexF);
@@ -117,7 +117,7 @@ static const int packedSliceCount = 3;
 
 float sampleDistanceField (
     float3 position, 
-    TraceVars vars
+    DistanceFieldConstants vars
 ) {
     // Interpolate between two Z samples. The xy interpolation is done by the GPU for us.
     // linear [0-ZMax] -> linear [0-1]
