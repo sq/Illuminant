@@ -18,7 +18,7 @@ void coneTraceStep(
     in    float                  sign,
     inout float                  visibility
 ) {
-    float3 samplePosition = trace.start + (trace.direction * state.offset);
+    float3 samplePosition = trace.start + (trace.direction * clamp(state.offset, 0, trace.length));
 
     float distanceToObstacle = sampleDistanceField(
         samplePosition, vars
@@ -95,14 +95,15 @@ float coneTrace(
 
     [loop]
     while (!abort) {
-        coneTraceStep(trace, vars, head, 1, visibility);
-        coneTraceStep(trace, vars, tail, -1, visibility);
-
-        stepCount += 1;
         abort =
             (stepCount >= DistanceField.Step.x) ||
             (head.offset >= tail.offset) ||
             (visibility < FULLY_SHADOWED_THRESHOLD);
+
+        coneTraceStep(trace, vars, head, 1, visibility);
+        coneTraceStep(trace, vars, tail, -1, visibility);
+
+        stepCount += 1;
     }
 
     // HACK: Force visibility down to 0 if we are going to terminate the trace because we took too many steps.
