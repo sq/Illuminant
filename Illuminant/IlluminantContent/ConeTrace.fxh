@@ -30,8 +30,8 @@ struct TraceParameters {
 void coneTraceStep(
     in    TraceParameters        trace,
     in    DistanceFieldConstants vars,
-    inout float                  offset,
     in    float                  sign,
+    inout float                  offset,
     inout float                  visibility
 ) {
     float3 samplePosition = trace.start + (trace.direction * offset);
@@ -40,10 +40,10 @@ void coneTraceStep(
         samplePosition, vars
     );
 
-    float localSphereRadius = clamp(
-        (trace.misc.y * offset) + MIN_CONE_RADIUS,
-        MIN_CONE_RADIUS, trace.misc.x
+    float localSphereRadius = min(
+        (trace.misc.y * offset) + MIN_CONE_RADIUS, trace.misc.x
     );
+
     float localVisibility = distanceToObstacle / localSphereRadius;
     visibility = min(visibility, localVisibility);
 
@@ -54,13 +54,12 @@ void coneTraceStep(
             // Steps outside of objects can be scaled to be longer/shorter to adjust the quality
             //  of partial visibility areas
             (distanceToObstacle < 0)
-            ? 1
-            : DistanceField.Step.w
-            ), minStepSize
-        );
+                ? 1
+                : DistanceField.Step.w
+        ), minStepSize
+    );
 
-    float signedStepSize = stepSize * sign;
-    offset += signedStepSize;
+    offset += stepSize * sign;
 }
 
 float coneTrace(
@@ -114,8 +113,8 @@ float coneTrace(
             head = tail = (head + tail) / 2.0;
         }
 
-        coneTraceStep(trace, vars, head, 1, visibility);
-        coneTraceStep(trace, vars, tail, -1, visibility);
+        coneTraceStep(trace, vars,  1, head, visibility);
+        coneTraceStep(trace, vars, -1, tail, visibility);
 
         stepCount += 1;
     }
