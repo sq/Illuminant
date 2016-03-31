@@ -51,6 +51,9 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="ConeTrace.fxh">
+      <Name>ConeTrace</Name>
+    </None>
     <None Include="DistanceFieldCommon.fxh">
       <Name>DistanceFieldCommon</Name>
     </None>

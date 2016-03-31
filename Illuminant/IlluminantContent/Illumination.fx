@@ -1,5 +1,6 @@
 #include "LightCommon.fxh"
 #include "DistanceFieldCommon.fxh"
+#include "ConeTrace.fxh"
 
 #define SELF_OCCLUSION_HACK 1.1
 
