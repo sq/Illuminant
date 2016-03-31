@@ -87,7 +87,7 @@ float coneTrace(
 
     tail.offset = trace.length;
     tail.minStepSize = head.minStepSize;
-    tail.localSphereRadius = trace.radiusSettings.y;
+    tail.localSphereRadius = trace.radiusSettings.x + (trace.radiusSettings.z * trace.length);
 
     bool abort = false;
     float stepCount = 0;
@@ -95,18 +95,14 @@ float coneTrace(
 
     [loop]
     while (!abort) {
+        coneTraceStep(trace, vars, head, 1, visibility);
+        coneTraceStep(trace, vars, tail, -1, visibility);
+
+        stepCount += 1;
         abort =
             (stepCount >= DistanceField.Step.x) ||
             (head.offset >= tail.offset) ||
             (visibility < FULLY_SHADOWED_THRESHOLD);
-
-        // HACK
-        if (abort)
-            head.offset = trace.length;
-
-        coneTraceStep(trace, vars, head, 1, visibility);
-        // coneTraceStep(trace, vars, tail, -1, visibility);
-        stepCount += 1;
     }
 
     // HACK: Force visibility down to 0 if we are going to terminate the trace because we took too many steps.
