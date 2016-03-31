@@ -23,31 +23,24 @@
 struct TraceParameters {
     float3 start;
     float3 direction;
-    // maxRadius, lightTangentAngle, minStepSize
-    float3 misc;
 };
 
 void coneTraceStep(
-    in    TraceParameters        trace,
-    in    DistanceFieldConstants vars,
-    in    float                  sign,
-    inout float                  offset,
-    inout float                  visibility
+    // maxRadius, lightTangentAngle, minStepSize
+    in    float3 config,
+    in    float  sign,
+    in    float  distanceToObstacle,
+    inout float  offset,
+    inout float  visibility
 ) {
-    float3 samplePosition = trace.start + (trace.direction * offset);
-
-    float distanceToObstacle = sampleDistanceField(
-        samplePosition, vars
-    );
-
     float localSphereRadius = min(
-        (trace.misc.y * offset) + MIN_CONE_RADIUS, trace.misc.x
+        (config.y * offset) + MIN_CONE_RADIUS, config.x
     );
 
     float localVisibility = distanceToObstacle / localSphereRadius;
     visibility = min(visibility, localVisibility);
 
-    float minStepSize = trace.misc.z + (DistanceField.Step.z * offset);
+    float minStepSize = config.z + (DistanceField.Step.z * offset);
 
     float stepSize = max(
         abs(distanceToObstacle) * (
@@ -73,14 +66,14 @@ float coneTrace(
         1.0 / DistanceField.Extent.z
     };
 
-    TraceParameters trace;
-    float traceLength;
+    float  traceLength;
+    float3 traceDirection;
+    float3 config;
 
     {
-        trace.start = shadedPixelPosition;
-        float3 traceVector = (lightCenter - trace.start);
+        float3 traceVector = (lightCenter - shadedPixelPosition);
         traceLength = length(traceVector);
-        trace.direction = traceVector / traceLength;
+        traceDirection = traceVector / traceLength;
 
         float maxTangentAngle = tan(MAX_ANGLE_DEGREES * PI / 180.0f);
         float lightTangentAngle = min(lightRamp.x / traceLength, maxTangentAngle);
@@ -89,13 +82,13 @@ float coneTrace(
             lightRamp.x, MIN_CONE_RADIUS, DistanceField.MaxConeRadius
         );
 
-        trace.misc = float3(
+        config = float3(
             maxRadius, lightTangentAngle, max(1, DistanceField.Step.y)
         );
     }
 
     float head, tail;
-    head = min(TRACE_INITIAL_OFFSET_PX, traceLength);
+    head = TRACE_INITIAL_OFFSET_PX;
     tail = traceLength;
 
     bool abort = false;
@@ -104,19 +97,17 @@ float coneTrace(
 
     [loop]
     while (!abort) {
+        float headSample = sampleDistanceField(shadedPixelPosition + (traceDirection * head), vars);
+        float tailSample = sampleDistanceField(shadedPixelPosition + (traceDirection * tail), vars);
+
+        coneTraceStep(config,  1, headSample, head, visibility);
+        coneTraceStep(config, -1, tailSample, tail, visibility);
+
+        stepCount += 1;
         abort =
             (stepCount >= DistanceField.Step.x) ||
             (head >= tail) ||
             (visibility < FULLY_SHADOWED_THRESHOLD);
-
-        if (abort) {
-            head = tail = (head + tail) / 2.0;
-        }
-
-        coneTraceStep(trace, vars,  1, head, visibility);
-        coneTraceStep(trace, vars, -1, tail, visibility);
-
-        stepCount += 1;
     }
 
     // HACK: Force visibility down to 0 if we are going to terminate the trace because we took too many steps.
