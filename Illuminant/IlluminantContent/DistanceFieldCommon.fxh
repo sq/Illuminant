@@ -90,9 +90,6 @@ float2 computeDistanceFieldSubsliceUv (
     return clamp(positionPx + 0.5, 1, DistanceField.Extent.xy - 1) * DistanceField.TextureTexelSize;
 }
 
-// FIXME: I hard-coded this below because I'm a bad person
-static const int packedSliceCount = 3;
-
 float sampleDistanceField (
     float3 position, 
     DistanceFieldConstants vars
@@ -104,7 +101,7 @@ float sampleDistanceField (
     float slicePosition = clamp(linearPositionZ * DistanceField.TextureSliceCount.z, 0, vars.sliceCountZMinus1);
     float virtualSliceIndex = floor(slicePosition);
 
-    float physicalSliceIndex = virtualSliceIndex * (1.0 / packedSliceCount);
+    float physicalSliceIndex = virtualSliceIndex * (1.0 / 3);
    
     float4 uv = float4(
         computeDistanceFieldSubsliceUv(position.xy) +
@@ -114,8 +111,9 @@ float sampleDistanceField (
 
     float4 packedSample = tex2Dlod(DistanceFieldTextureSampler, uv);
 
-    float maskPatternIndex = virtualSliceIndex % packedSliceCount;
+    float maskPatternIndex = virtualSliceIndex % 3;
     float sample1, sample2;
+    float subslice = slicePosition - virtualSliceIndex;
 
     // This is hard-coded for three slices (r/g/b)
     {
@@ -130,8 +128,6 @@ float sampleDistanceField (
             sample2 = packedSample.g;
         }
     }
-
-    float subslice = slicePosition - virtualSliceIndex;
 
     float blendedSample = lerp(
         sample1, sample2, subslice
