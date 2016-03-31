@@ -15,6 +15,7 @@ void coneTraceStep(
     in    TraceParameters        trace,
     in    DistanceFieldConstants vars,
     inout TraceState             state,
+    in    float                  sign,
     inout float                  visibility
 ) {
     float3 samplePosition = trace.start + (trace.direction * state.offset);
@@ -24,7 +25,7 @@ void coneTraceStep(
     );
 
     float localVisibility =
-        distanceToObstacle / state.localSphereRadius;
+        distanceToObstacle / clamp(state.localSphereRadius, trace.radiusSettings.x, trace.radiusSettings.y);
     visibility = min(visibility, localVisibility);
 
     float stepSize = max(
@@ -37,15 +38,13 @@ void coneTraceStep(
             ), state.minStepSize
         );
 
-    state.offset = state.offset + stepSize;
+    float signedStepSize = stepSize * sign;
+    state.offset = state.offset + signedStepSize;
 
     state.minStepSize = (DistanceField.Step.z * stepSize) + state.minStepSize;
 
     // Sadly doing this with the reciprocal instead doesn't work :|
-    state.localSphereRadius = min(
-        trace.radiusSettings.y,
-        (trace.radiusSettings.z * stepSize) + state.localSphereRadius
-    );
+    state.localSphereRadius = (trace.radiusSettings.z * signedStepSize) + state.localSphereRadius;
 }
 
 float coneTrace(
@@ -81,10 +80,14 @@ float coneTrace(
         );
     }
 
-    TraceState state;
-    state.offset = TRACE_INITIAL_OFFSET_PX;
-    state.minStepSize = max(1, DistanceField.Step.y);
-    state.localSphereRadius = trace.radiusSettings.x;
+    TraceState head, tail;
+    head.offset = TRACE_INITIAL_OFFSET_PX;
+    head.minStepSize = max(1, DistanceField.Step.y);
+    head.localSphereRadius = trace.radiusSettings.x;
+
+    tail.offset = trace.length;
+    tail.minStepSize = head.minStepSize;
+    tail.localSphereRadius = trace.radiusSettings.y;
 
     bool abort = false;
     float stepCount = 0;
@@ -94,12 +97,15 @@ float coneTrace(
     while (!abort) {
         abort =
             (stepCount >= DistanceField.Step.x) ||
-            (state.offset >= trace.length) ||
+            (head.offset >= tail.offset) ||
             (visibility < FULLY_SHADOWED_THRESHOLD);
-        if (abort)
-            state.offset = trace.length;
 
-        coneTraceStep(trace, vars, state, visibility);
+        // HACK
+        if (abort)
+            head.offset = trace.length;
+
+        coneTraceStep(trace, vars, head, 1, visibility);
+        // coneTraceStep(trace, vars, tail, -1, visibility);
         stepCount += 1;
     }
 
