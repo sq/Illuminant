@@ -93,44 +93,47 @@ float coneTrace(
 
     bool abort = false, abort1 = false, abort2 = false;
     float stepCount = 0;
-    float visibility1 = 1.0, visibility2 = 1.0;
+    float visibility = 1.0;
+
+    float aSample, bSample, cSample, dSample;
 
     [loop]
     while (!abort) {
-        a = min(a, center);
-        b = max(b, TRACE_INITIAL_OFFSET_PX);
-        c = min(c, traceLength);
-        d = max(d, center);
+        aSample = sampleDistanceField(shadedPixelPosition + (traceDirection * a), vars);
+        bSample = sampleDistanceField(shadedPixelPosition + (traceDirection * b), vars);
+        cSample = sampleDistanceField(shadedPixelPosition + (traceDirection * c), vars);
+        dSample = sampleDistanceField(shadedPixelPosition + (traceDirection * d), vars);
 
         [branch]
         if (!abort1) {
-            float aSample = sampleDistanceField(shadedPixelPosition + (traceDirection * a), vars);
-            float bSample = sampleDistanceField(shadedPixelPosition + (traceDirection * b), vars);
-            coneTraceStep(config, 1, aSample, a, visibility1);
-            coneTraceStep(config, -1, bSample, b, visibility1);
+            coneTraceStep(config, 1, aSample, a, visibility);
+            coneTraceStep(config, -1, bSample, b, visibility);
+            //a = min(a, center);
+            b = max(b, TRACE_INITIAL_OFFSET_PX);
         }
 
         [branch]
         if (!abort2) {
-            float cSample = sampleDistanceField(shadedPixelPosition + (traceDirection * c), vars);
-            float dSample = sampleDistanceField(shadedPixelPosition + (traceDirection * d), vars);
-            coneTraceStep(config,  1, cSample, c, visibility2);
-            coneTraceStep(config, -1, dSample, d, visibility2);
+            coneTraceStep(config, 1, cSample, c, visibility);
+            coneTraceStep(config, -1, dSample, d, visibility);
+            c = min(c, traceLength);
+            //d = max(d, center);
         }
 
-        abort1 = (a >= b) || (visibility1 < FULLY_SHADOWED_THRESHOLD);
-        abort2 = (c >= d) || (visibility2 < FULLY_SHADOWED_THRESHOLD);
+        abort1 = (a >= b);
+        abort2 = (c >= d);
 
         stepCount += 1;
         abort =
             (stepCount >= DistanceField.Step.x) ||
-            abort1 && abort2;
+            (visibility < FULLY_SHADOWED_THRESHOLD) ||
+            (abort1 && abort2);
     }
 
     // HACK: Force visibility down to 0 if we are going to terminate the trace because we took too many steps.
     float windowStart = max(DistanceField.Step.x - MAX_STEP_RAMP_WINDOW, 0);
     float stepWindowVisibility = (1.0 - (stepCount - windowStart) / MAX_STEP_RAMP_WINDOW);
-    float visibility = min(min(visibility1, visibility2), stepWindowVisibility);
+    visibility = min(visibility, stepWindowVisibility);
 
     return pow(
         clamp(
