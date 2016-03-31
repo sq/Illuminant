@@ -2,12 +2,12 @@ struct TraceParameters {
     float3 start;
     float3 direction;
     float  length;
+    float  minStepSize;
     float3 radiusSettings;
 };
 
 struct TraceState {
     float offset;
-    float minStepSize;
     float localSphereRadius;
 };
 
@@ -28,6 +28,8 @@ void coneTraceStep(
         distanceToObstacle / clamp(state.localSphereRadius, trace.radiusSettings.x, trace.radiusSettings.y);
     visibility = min(visibility, localVisibility);
 
+    float minStepSize = trace.minStepSize + (DistanceField.Step.z * state.offset);
+
     float stepSize = max(
         abs(distanceToObstacle) * (
             // Steps outside of objects can be scaled to be longer/shorter to adjust the quality
@@ -35,13 +37,11 @@ void coneTraceStep(
             (distanceToObstacle < 0)
             ? 1
             : DistanceField.Step.w
-            ), state.minStepSize
+            ), minStepSize
         );
 
     float signedStepSize = stepSize * sign;
     state.offset = state.offset + signedStepSize;
-
-    state.minStepSize = (DistanceField.Step.z * stepSize) + state.minStepSize;
 
     // Sadly doing this with the reciprocal instead doesn't work :|
     state.localSphereRadius = (trace.radiusSettings.z * signedStepSize) + state.localSphereRadius;
@@ -64,6 +64,7 @@ float coneTrace(
         float3 traceVector = (lightCenter - trace.start);
         trace.length = length(traceVector);
         trace.direction = normalize(traceVector);
+        trace.minStepSize = max(1, DistanceField.Step.y);
     }
 
     {
@@ -82,11 +83,9 @@ float coneTrace(
 
     TraceState head, tail;
     head.offset = TRACE_INITIAL_OFFSET_PX;
-    head.minStepSize = max(1, DistanceField.Step.y);
     head.localSphereRadius = trace.radiusSettings.x;
 
-    tail.offset = trace.length;
-    tail.minStepSize = head.minStepSize;
+    tail.offset = trace.length - TRACE_INITIAL_OFFSET_PX;
     tail.localSphereRadius = trace.radiusSettings.x + (trace.radiusSettings.z * trace.length);
 
     bool abort = false;
@@ -97,10 +96,16 @@ float coneTrace(
     while (!abort) {
         abort =
             (stepCount >= DistanceField.Step.x) ||
-            (head.offset >= tail.offset) ||
+            (head.offset >= trace.length) ||
+            (tail.offset <= TRACE_INITIAL_OFFSET_PX) ||
             (visibility < FULLY_SHADOWED_THRESHOLD);
 
-        coneTraceStep(trace, vars, head, 1, visibility);
+        if (abort) {
+            head.offset = trace.length;
+            tail.offset = TRACE_INITIAL_OFFSET_PX;
+        }
+
+        // coneTraceStep(trace, vars, head, 1, visibility);
         coneTraceStep(trace, vars, tail, -1, visibility);
 
         stepCount += 1;
