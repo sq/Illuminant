@@ -85,9 +85,11 @@ float coneTrace(
         );
     }
 
-    float head, tail;
-    head = TRACE_INITIAL_OFFSET_PX;
-    tail = traceLength;
+    float center = traceLength / 2.0;
+    float a, b, c, d;
+    a = TRACE_INITIAL_OFFSET_PX;
+    b = c = center;
+    d = traceLength;
 
     bool abort = false;
     float stepCount = 0;
@@ -95,16 +97,25 @@ float coneTrace(
 
     [loop]
     while (!abort) {
-        float headSample = sampleDistanceField(shadedPixelPosition + (traceDirection * head), vars);
-        float tailSample = sampleDistanceField(shadedPixelPosition + (traceDirection * tail), vars);
+        a = min(a, center);
+        b = max(b, TRACE_INITIAL_OFFSET_PX);
+        c = min(c, traceLength);
+        d = max(d, center);
 
-        coneTraceStep(config,  1, headSample, head, visibility);
-        coneTraceStep(config, -1, tailSample, tail, visibility);
+        float aSample = sampleDistanceField(shadedPixelPosition + (traceDirection * a), vars);
+        float bSample = sampleDistanceField(shadedPixelPosition + (traceDirection * b), vars);
+        float cSample = sampleDistanceField(shadedPixelPosition + (traceDirection * c), vars);
+        float dSample = sampleDistanceField(shadedPixelPosition + (traceDirection * d), vars);
+
+        coneTraceStep(config,  1, aSample, a, visibility);
+        coneTraceStep(config, -1, bSample, b, visibility);
+        coneTraceStep(config,  1, cSample, c, visibility);
+        coneTraceStep(config, -1, dSample, d, visibility);
 
         stepCount += 1;
         abort =
             (stepCount >= DistanceField.Step.x) ||
-            (head >= tail) ||
+            ((a >= b) && (c >= d)) ||
             (visibility < FULLY_SHADOWED_THRESHOLD);
     }
 
