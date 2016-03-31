@@ -40,16 +40,14 @@ void coneTraceStep(
     float localVisibility = distanceToObstacle / localSphereRadius;
     visibility = min(visibility, localVisibility);
 
-    float minStepSize = config.z + (DistanceField.Step.z * offset);
-
     float stepSize = max(
         abs(distanceToObstacle) * (
             // Steps outside of objects can be scaled to be longer/shorter to adjust the quality
             //  of partial visibility areas
             (distanceToObstacle < 0)
                 ? 1
-                : DistanceField.Step.w
-        ), minStepSize
+                : DistanceField.Step.z
+        ), config.z
     );
 
     offset += stepSize * sign;

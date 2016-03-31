@@ -70,7 +70,6 @@ namespace TestGame.Scenes {
                     DistanceFieldResolution = 0.5f,
                     DistanceFieldLongStepFactor = 0.9f,
                     DistanceFieldMinStepSize = 1.33f,
-                    DistanceFieldMinStepSizeGrowthRate = 0.035f,
                     DistanceFieldMaxStepCount = 72,
                     GBufferCaching = true
                 }

@@ -40,8 +40,8 @@ float decodeDistance (float encodedDistance) {
 }
 
 struct DistanceFieldSettings {
-    // StepLimit, MinimumLength, MinimumLengthGrowthRate, LongFactor
-    float4 Step;
+    // StepLimit, MinimumLength, LongStepFactor
+    float3 Step;
 
     float  MaxConeRadius;
     float  OcclusionToOpacityPower;

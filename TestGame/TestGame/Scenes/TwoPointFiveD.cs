@@ -27,6 +27,7 @@ namespace TestGame.Scenes {
 
         const int MultisampleCount = 0;
         const int LightmapScaleRatio = 1;
+        const int MaxStepCount = 128;
 
         bool ShowGBuffer       = false;
         bool ShowLightmap      = false;
@@ -113,12 +114,10 @@ namespace TestGame.Scenes {
                 ) {
                     RenderScale = 1.0f / LightmapScaleRatio,
                     DistanceFieldResolution = 0.5f,
-                    DistanceFieldMinStepSize = 1.33f,
-                    DistanceFieldMinStepSizeGrowthRate = 0.011f,
+                    DistanceFieldMinStepSize = 1f,
                     DistanceFieldLongStepFactor = 0.5f,
                     DistanceFieldOcclusionToOpacityPower = 0.5f,
-                    DistanceFieldMaxConeRadius = 32,
-                    DistanceFieldMaxStepCount = 96,
+                    DistanceFieldMaxConeRadius = 48,
                     GBufferCaching = true,
                     DistanceFieldUpdateRate = 4,
                 }
@@ -300,8 +299,8 @@ namespace TestGame.Scenes {
 
                 Renderer.Configuration.DistanceFieldMaxStepCount =
                     (Timelapse & !Deterministic)
-                        ? (int)Arithmetic.Clamp((time % 4) * 32, 1, 128)
-                        : 128;
+                        ? (int)Arithmetic.Clamp((time % 12) * (MaxStepCount / 11.0f), 1, MaxStepCount)
+                        : MaxStepCount;
 
                 if (!Deterministic) {
                     var obs = Environment.Obstructions[0];

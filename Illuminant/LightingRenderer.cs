@@ -37,10 +37,6 @@ namespace Squared.Illuminant {
         // Setting this to 1 produces the 'best' results but larger values tend to look
         //  just fine. If this is too high you will get banding artifacts.
         public float DistanceFieldMinStepSize             = 3.0f;
-        // The minimum step size increases by this much every pixel, so that steps
-        //  naturally become longer as the ray gets longer.
-        // Making this value too large will introduce banding artifacts.
-        public float DistanceFieldMinStepSizeGrowthRate   = 0.01f;
         // Long step distances are scaled by this factor. A factor < 1.0
         //  eliminates banding artifacts in the soft area between full/no shadow,
         //  at the cost of additional cone trace steps.
@@ -504,10 +500,9 @@ namespace Squared.Illuminant {
             s["OcclusionToOpacityPower"].SetValue(Configuration.DistanceFieldOcclusionToOpacityPower);
             s["MaxConeRadius"].SetValue(Configuration.DistanceFieldMaxConeRadius);
 
-            s["Step"].SetValue(new Vector4(
+            s["Step"].SetValue(new Vector3(
                 (float)Configuration.DistanceFieldMaxStepCount,
                 Configuration.DistanceFieldMinStepSize,
-                Configuration.DistanceFieldMinStepSizeGrowthRate,
                 Configuration.DistanceFieldLongStepFactor
             ));
 
