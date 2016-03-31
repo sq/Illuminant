@@ -108,7 +108,6 @@ float coneTrace(
         if (!abort1) {
             coneTraceStep(config, 1, aSample, a, visibility);
             coneTraceStep(config, -1, bSample, b, visibility);
-            //a = min(a, center);
             b = max(b, TRACE_INITIAL_OFFSET_PX);
         }
 
@@ -117,7 +116,6 @@ float coneTrace(
             coneTraceStep(config, 1, cSample, c, visibility);
             coneTraceStep(config, -1, dSample, d, visibility);
             c = min(c, traceLength);
-            //d = max(d, center);
         }
 
         abort1 = (a >= b);

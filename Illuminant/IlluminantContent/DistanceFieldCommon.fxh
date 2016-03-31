@@ -71,10 +71,10 @@ struct DistanceFieldConstants {
 };
 
 float2 computeDistanceFieldSliceUv (
-    float coarseSliceIndex, 
-    DistanceFieldConstants vars
+    float coarseSliceIndex,
+    float invSliceCountX
 ) {
-    float rowIndexF   = coarseSliceIndex * vars.invSliceCountX;
+    float rowIndexF   = coarseSliceIndex * invSliceCountX;
     float rowIndex    = floor(rowIndexF);
     float columnIndex = floor((rowIndexF - rowIndex) * DistanceField.TextureSliceCount.x);
     float2 indexes = float2(columnIndex, rowIndex);
@@ -104,11 +104,11 @@ float sampleDistanceField (
     float slicePosition = clamp(linearPositionZ * DistanceField.TextureSliceCount.z, 0, vars.sliceCountZMinus1);
     float virtualSliceIndex = floor(slicePosition);
 
-    float physicalSliceIndex = clamp(virtualSliceIndex, 0, vars.sliceCountZMinus1) * (1.0 / packedSliceCount);
+    float physicalSliceIndex = virtualSliceIndex * (1.0 / packedSliceCount);
    
     float4 uv = float4(
         computeDistanceFieldSubsliceUv(position.xy) +
-          computeDistanceFieldSliceUv(physicalSliceIndex, vars),
+          computeDistanceFieldSliceUv(physicalSliceIndex, vars.invSliceCountX),
         0, 0
     );
 
