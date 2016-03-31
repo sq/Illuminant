@@ -12,28 +12,6 @@
 //  *and* it's mathematically correct!
 #define DISTANCE_FIELD_FILTER LINEAR
 
-// The minimum and maximum approximate cone tracing radius
-// The radius increases as the cone approaches the light source
-// Raising the maximum produces soft shadows, but if it's too large you will get artifacts.
-// A larger minimum increases the size of the AO 'blobs' around distant obstructions.
-#define MIN_CONE_RADIUS 0.5
-#define MAX_ANGLE_DEGREES 10
-// See uniforms for the other two constants
-
-// As we approach the maximum number of steps we ramp visibility down to 0.
-// Otherwise, we get gross 'false visibility' artifacts inside early-terminated traces
-//  (most, if not all, early-terminated traces are occluded in practice)
-#define MAX_STEP_RAMP_WINDOW 2
-
-// HACK: Start the trace a certain number of pixels (along the trace) away from the shaded point.
-// This mitigates erroneous self-occlusion
-// This works better if you offset the shaded point forwards along the surface normal.
-#define TRACE_INITIAL_OFFSET_PX 1
-
-// We threshold shadow values from cone tracing to eliminate 'almost obstructed' and 'almost unobstructed' artifacts
-#define FULLY_SHADOWED_THRESHOLD 0.1
-#define UNSHADOWED_THRESHOLD 0.95
-
 
 float closestPointOnEdgeAsFactor (
     float2 pt, float2 edgeStart, float2 edgeEnd

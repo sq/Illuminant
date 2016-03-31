@@ -322,7 +322,7 @@ namespace TestGame.Scenes {
                 var mousePos = new Vector3(ms.X, ms.Y, LightZ);
 
                 if (Deterministic)
-                    Lights[0].Position = new Vector3(800, 440, 90);
+                    Lights[0].Position = new Vector3(671, 394, 97.5f);
                 else
                     Lights[0].Position = mousePos;
             }

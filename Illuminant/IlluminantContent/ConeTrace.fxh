@@ -1,34 +1,53 @@
+// The minimum and maximum approximate cone tracing radius
+// The radius increases as the cone approaches the light source
+// Raising the maximum produces soft shadows, but if it's too large you will get artifacts.
+// A larger minimum increases the size of the AO 'blobs' around distant obstructions.
+#define MIN_CONE_RADIUS 0.5
+#define MAX_ANGLE_DEGREES 10
+// See uniforms for the other two constants
+
+// As we approach the maximum number of steps we ramp visibility down to 0.
+// Otherwise, we get gross 'false visibility' artifacts inside early-terminated traces
+//  (most, if not all, early-terminated traces are occluded in practice)
+#define MAX_STEP_RAMP_WINDOW 2
+
+// HACK: Start the trace a certain number of pixels (along the trace) away from the shaded point.
+// This mitigates erroneous self-occlusion
+// This works better if you offset the shaded point forwards along the surface normal.
+#define TRACE_INITIAL_OFFSET_PX 1
+
+// We threshold shadow values from cone tracing to eliminate 'almost obstructed' and 'almost unobstructed' artifacts
+#define FULLY_SHADOWED_THRESHOLD 0.1
+#define UNSHADOWED_THRESHOLD 0.95
+
 struct TraceParameters {
     float3 start;
     float3 direction;
-    float  length;
-    float  minStepSize;
-    float3 radiusSettings;
-};
-
-struct TraceState {
-    float offset;
-    float localSphereRadius;
+    // maxRadius, lightTangentAngle, minStepSize
+    float3 misc;
 };
 
 void coneTraceStep(
     in    TraceParameters        trace,
     in    DistanceFieldConstants vars,
-    inout TraceState             state,
+    inout float                  offset,
     in    float                  sign,
     inout float                  visibility
 ) {
-    float3 samplePosition = trace.start + (trace.direction * clamp(state.offset, 0, trace.length));
+    float3 samplePosition = trace.start + (trace.direction * offset);
 
     float distanceToObstacle = sampleDistanceField(
         samplePosition, vars
     );
 
-    float localVisibility =
-        distanceToObstacle / clamp(state.localSphereRadius, trace.radiusSettings.x, trace.radiusSettings.y);
+    float localSphereRadius = clamp(
+        (trace.misc.y * offset) + MIN_CONE_RADIUS,
+        MIN_CONE_RADIUS, trace.misc.x
+    );
+    float localVisibility = distanceToObstacle / localSphereRadius;
     visibility = min(visibility, localVisibility);
 
-    float minStepSize = trace.minStepSize + (DistanceField.Step.z * state.offset);
+    float minStepSize = trace.misc.z + (DistanceField.Step.z * offset);
 
     float stepSize = max(
         abs(distanceToObstacle) * (
@@ -41,10 +60,7 @@ void coneTraceStep(
         );
 
     float signedStepSize = stepSize * sign;
-    state.offset = state.offset + signedStepSize;
-
-    // Sadly doing this with the reciprocal instead doesn't work :|
-    state.localSphereRadius = (trace.radiusSettings.z * signedStepSize) + state.localSphereRadius;
+    offset += signedStepSize;
 }
 
 float coneTrace(
@@ -59,34 +75,29 @@ float coneTrace(
     };
 
     TraceParameters trace;
+    float traceLength;
+
     {
         trace.start = shadedPixelPosition;
         float3 traceVector = (lightCenter - trace.start);
-        trace.length = length(traceVector);
-        trace.direction = normalize(traceVector);
-        trace.minStepSize = max(1, DistanceField.Step.y);
-    }
+        traceLength = length(traceVector);
+        trace.direction = traceVector / traceLength;
 
-    {
         float maxTangentAngle = tan(MAX_ANGLE_DEGREES * PI / 180.0f);
-        float lightTangentAngle = min(lightRamp.x / trace.length, maxTangentAngle);
+        float lightTangentAngle = min(lightRamp.x / traceLength, maxTangentAngle);
 
-        float minRadius = max(MIN_CONE_RADIUS, 0.1);
         float maxRadius = clamp(
-            lightRamp.x, minRadius, DistanceField.MaxConeRadius
+            lightRamp.x, MIN_CONE_RADIUS, DistanceField.MaxConeRadius
         );
 
-        trace.radiusSettings = float3(
-            minRadius, maxRadius, lightTangentAngle
+        trace.misc = float3(
+            maxRadius, lightTangentAngle, max(1, DistanceField.Step.y)
         );
     }
 
-    TraceState head, tail;
-    head.offset = TRACE_INITIAL_OFFSET_PX;
-    head.localSphereRadius = trace.radiusSettings.x;
-
-    tail.offset = trace.length - TRACE_INITIAL_OFFSET_PX;
-    tail.localSphereRadius = trace.radiusSettings.x + (trace.radiusSettings.z * trace.length);
+    float head, tail;
+    head = min(TRACE_INITIAL_OFFSET_PX, traceLength);
+    tail = traceLength;
 
     bool abort = false;
     float stepCount = 0;
@@ -96,16 +107,14 @@ float coneTrace(
     while (!abort) {
         abort =
             (stepCount >= DistanceField.Step.x) ||
-            (head.offset >= trace.length) ||
-            (tail.offset <= TRACE_INITIAL_OFFSET_PX) ||
+            (head >= tail) ||
             (visibility < FULLY_SHADOWED_THRESHOLD);
 
         if (abort) {
-            head.offset = trace.length;
-            tail.offset = TRACE_INITIAL_OFFSET_PX;
+            head = tail = (head + tail) / 2.0;
         }
 
-        // coneTraceStep(trace, vars, head, 1, visibility);
+        coneTraceStep(trace, vars, head, 1, visibility);
         coneTraceStep(trace, vars, tail, -1, visibility);
 
         stepCount += 1;
