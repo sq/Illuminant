@@ -66,19 +66,18 @@ sampler   DistanceFieldTextureSampler : register(s1) {
 
 struct DistanceFieldConstants {
     float sliceCountZMinus1;
-    float invSliceCountX;
+    float invSliceCountXTimesOneThird;
     float zToSliceIndex;
 };
 
 float2 computeDistanceFieldSliceUv (
-    float coarseSliceIndex,
-    float invSliceCountX
+    float virtualSliceIndex,
+    float invSliceCountXTimesOneThird
 ) {
-    float rowIndexF   = coarseSliceIndex * invSliceCountX;
+    float rowIndexF   = virtualSliceIndex * invSliceCountXTimesOneThird;
     float rowIndex    = floor(rowIndexF);
     float columnIndex = floor((rowIndexF - rowIndex) * DistanceField.TextureSliceCount.x);
-    float2 indexes = float2(columnIndex, rowIndex);
-    return indexes * DistanceField.TextureSliceSize.xy;
+    return float2(columnIndex, rowIndex) * DistanceField.TextureSliceSize.xy;
 }
 
 float sampleDistanceField (
@@ -89,14 +88,12 @@ float sampleDistanceField (
     // linear [0-1] -> [0-NumZSlices)
     float slicePosition = clamp(position.z * vars.zToSliceIndex, 0, vars.sliceCountZMinus1);
     float virtualSliceIndex = floor(slicePosition);
-
-    float physicalSliceIndex = virtualSliceIndex * (1.0 / 3);
     
     float3 clampedPosition = clamp(position + float3(1, 1, 0), 1, DistanceField.Extent - 1);
     float distanceToVolume = length(clampedPosition - position);
 
     float4 uv = float4(
-        computeDistanceFieldSliceUv(physicalSliceIndex, vars.invSliceCountX) +
+        computeDistanceFieldSliceUv(virtualSliceIndex, vars.invSliceCountXTimesOneThird) +
             (clampedPosition.xy * DistanceField.TextureTexelSize),
         0, 0
     );
