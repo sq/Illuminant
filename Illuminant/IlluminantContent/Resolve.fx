@@ -59,10 +59,10 @@ void LightingResolvePixelShader(
         zBL = shadedPositionBL.z;
         zBR = shadedPositionBR.z;
 
-        normTL = shadedNormalTL.y;
-        normTR = shadedNormalTR.y;
-        normBL = shadedNormalBL.y;
-        normBR = shadedNormalBR.y;
+        normTL = shadedNormalTL.z;
+        normTR = shadedNormalTR.z;
+        normBL = shadedNormalBL.z;
+        normBR = shadedNormalBR.z;
     }
 
     float2 rcpSize = 1.0 / BitmapTextureSize;
@@ -73,17 +73,35 @@ void LightingResolvePixelShader(
     lightBL = tex2D(PointSampler, float2(topLeftTexels.x, bottomRightTexels.y) * rcpSize);
     lightBR = tex2D(PointSampler, bottomRightTexels * rcpSize);
 
-    float weightTL = (1 - xyWeight.x) * (1 - xyWeight.y),
-        weightTR = xyWeight.x * (1 - xyWeight.y), 
-        weightBL = (1 - xyWeight.x) * xyWeight.y, 
-        weightBR = xyWeight.x * xyWeight.y;
+    bool facingUp = (normTL > 0.99) && (normTR > 0.99) && (normBL > 0.99) && (normBR > 0.99);
+    bool facingForward = (normTL < 0.01) && (normTR < 0.01) && (normBL < 0.01) && (normBR < 0.01);
+
+    float selectTL = 1, selectTR, selectBL, selectBR;
+
+    if (!facingForward) {
+        // Filter across upward-facing pixels if they have the same Z
+        // HACK: We also handle any pixels not classified as forward or up
+        selectTR = (zTR == zTL);
+        selectBL = (zBL == zTL);
+        selectBR = (zBR == zTL);
+    } else {
+        // HACK: Always filter forward-facing pixels. Is this right?
+        selectTR = 1;
+        selectBL = 1;
+        selectBR = 1;
+    }
+
+    float weightTL = ((1 - xyWeight.x) * (1 - xyWeight.y)) * selectTL,
+        weightTR = (xyWeight.x * (1 - xyWeight.y)) * selectTR,
+        weightBL = ((1 - xyWeight.x) * xyWeight.y) * selectBL, 
+        weightBR = (xyWeight.x * xyWeight.y) * selectBR;
 
     float4 interpolatedLight = (
         (lightTL * weightTL) +
         (lightTR * weightTR) +
         (lightBL * weightBL) +
         (lightBR * weightBR)
-    );
+    ) * (1.0 / (weightTL + weightTR + weightBL + weightBR + 0.00001));
 
     result = multiplyColor * interpolatedLight; 
     result += (addColor * result.a);
