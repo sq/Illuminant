@@ -82,46 +82,29 @@ float coneTrace(
         );
     }
 
-    float a, b, c, d;
+    float a, b;
     a = TRACE_INITIAL_OFFSET_PX;
-    // Putting this at the center is not optimal, at least for my stress test.
-    // Sort of makes sense.
-    b = c = traceLength * 0.3;
-    d = traceLength;
+    b = traceLength;
 
-    bool abort = false, abort1 = false, abort2 = false;
+    bool abort = false;
     float stepCount = 0;
     float visibility = 1.0;
 
-    float aSample, bSample, cSample, dSample;
+    float aSample, bSample;
 
     [loop]
     while (!abort) {
         aSample = sampleDistanceField(shadedPixelPosition + (traceDirection * a), vars);
         bSample = sampleDistanceField(shadedPixelPosition + (traceDirection * b), vars);
-        cSample = sampleDistanceField(shadedPixelPosition + (traceDirection * c), vars);
-        dSample = sampleDistanceField(shadedPixelPosition + (traceDirection * d), vars);
 
-        [branch]
-        if (!abort1) {
-            a += coneTraceStep(config, aSample, a, visibility);
-            b -= coneTraceStep(config, bSample, b, visibility);
-        }
-
-        [branch]
-        if (!abort2) {
-            c += coneTraceStep(config, cSample, c, visibility);
-            d -= coneTraceStep(config, dSample, d, visibility);
-        }
-
-        abort1 = (a >= b);
-        abort2 = (c >= d);
+        a += coneTraceStep(config, aSample, a, visibility);
+        b -= coneTraceStep(config, bSample, b, visibility);
 
         stepCount += 1;
         abort =
             (stepCount >= DistanceField.Step.x) ||
             (visibility < FULLY_SHADOWED_THRESHOLD) ||
-            (abort1 && abort2);
+            (a >= b);
     }
 
     // HACK: Force visibility down to 0 if we are going to terminate the trace because we took too many steps.
