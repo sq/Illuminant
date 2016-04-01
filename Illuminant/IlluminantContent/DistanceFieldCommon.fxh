@@ -67,7 +67,7 @@ sampler   DistanceFieldTextureSampler : register(s1) {
 struct DistanceFieldConstants {
     float sliceCountZMinus1;
     float invSliceCountX;
-    float invDistanceFieldExtentZ;
+    float zToSliceIndex;
 };
 
 float2 computeDistanceFieldSliceUv (
@@ -86,10 +86,8 @@ float sampleDistanceField (
     DistanceFieldConstants vars
 ) {
     // Interpolate between two Z samples. The xy interpolation is done by the GPU for us.
-    // linear [0-ZMax] -> linear [0-1]
-    float linearPositionZ = position.z * vars.invDistanceFieldExtentZ;
     // linear [0-1] -> [0-NumZSlices)
-    float slicePosition = clamp(linearPositionZ * DistanceField.TextureSliceCount.z, 0, vars.sliceCountZMinus1);
+    float slicePosition = clamp(position.z * vars.zToSliceIndex, 0, vars.sliceCountZMinus1);
     float virtualSliceIndex = floor(slicePosition);
 
     float physicalSliceIndex = virtualSliceIndex * (1.0 / 3);
@@ -106,25 +104,18 @@ float sampleDistanceField (
     float4 packedSample = tex2Dlod(DistanceFieldTextureSampler, uv);
 
     float maskPatternIndex = virtualSliceIndex % 3;
-    float sample1, sample2;
     float subslice = slicePosition - virtualSliceIndex;
 
-    // This is hard-coded for three slices (r/g/b)
-    {
-        if (maskPatternIndex >= 2) {
-            sample1 = packedSample.b;
-            sample2 = packedSample.a;
-        } else if (maskPatternIndex >= 1) {
-            sample1 = packedSample.g;
-            sample2 = packedSample.b;
-        } else {
-            sample1 = packedSample.r;
-            sample2 = packedSample.g;
-        }
-    }
+    float2 samples;
+    if (maskPatternIndex >= 2)
+        samples = packedSample.ba;
+    else if (maskPatternIndex >= 1)
+        samples = packedSample.gb;
+    else
+        samples = packedSample.rg;
 
     float blendedSample = lerp(
-        sample1, sample2, subslice
+        samples.x, samples.y, subslice
     );
 
     float decodedDistance = decodeDistance(blendedSample);

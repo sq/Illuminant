@@ -55,7 +55,7 @@ float coneTrace(
     DistanceFieldConstants vars = {
         DistanceField.TextureSliceCount.z - 1,
         1.0 / DistanceField.TextureSliceCount.x,
-        1.0 / DistanceField.Extent.z
+        (1.0 / DistanceField.Extent.z) * DistanceField.TextureSliceCount.z
     };
 
     float  traceLength;
