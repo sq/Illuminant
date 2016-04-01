@@ -92,7 +92,7 @@ float sampleDistanceField (
 
     float physicalSliceIndex = virtualSliceIndex * (1.0 / 3);
     
-    float3 clampedPosition = clamp(position, 1, DistanceField.Extent - 1);
+    float3 clampedPosition = clamp(position + float3(1, 1, 0), 1, DistanceField.Extent - 1);
     float distanceToVolume = length(clampedPosition - position);
 
     float4 uv = float4(
