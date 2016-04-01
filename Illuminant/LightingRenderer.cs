@@ -263,6 +263,9 @@ namespace Squared.Illuminant {
 
                 materials.Add(IlluminantMaterials.HeightVolumeFace = 
                     new Squared.Render.EffectMaterial(content.Load<Effect>("GBuffer"), "HeightVolumeFace"));
+
+                materials.Add(IlluminantMaterials.LightingResolve = 
+                    new Squared.Render.EffectMaterial(content.Load<Effect>("Resolve"), "LightingResolve"));
             }
 
 #if SDL2
@@ -506,7 +509,20 @@ namespace Squared.Illuminant {
         /// <param name="renderer">The renderer used to resolve the lighting.</param>
         /// <param name="drawCall">A draw call used as a template to resolve the lighting.</param>
         public void ResolveLighting (ref ImperativeRenderer ir, BitmapDrawCall drawCall) {
-            ir.Draw(drawCall);
+            if (drawCall.Texture != _Lightmap)
+                throw new NotImplementedException("Non-direct resolve not yet implemented");
+
+            var m = IlluminantMaterials.LightingResolve;
+            var sg = ir.MakeSubgroup(before: (dm, _) => {
+                var tsize = new Vector2(
+                    1f / Configuration.RenderSize.First * Configuration.RenderScale, 
+                    1f / Configuration.RenderSize.Second * Configuration.RenderScale
+                );
+                m.Effect.Parameters["GBufferTexelSize"].SetValue(tsize);
+                m.Effect.Parameters["GBuffer"].SetValue(_GBuffer);
+                m.Effect.Parameters["RenderScale"].SetValue(1f / Configuration.RenderScale);
+            });
+            sg.Draw(drawCall, material: m);
         }
 
         private void SetTwoPointFiveDParametersInner (EffectParameterCollection p, bool setGBufferTexture, bool setDistanceTexture) {
@@ -563,11 +579,9 @@ namespace Squared.Illuminant {
         }
 
         private void SetTwoPointFiveDParameters (DeviceManager dm, object _) {
-            var frontFaceMaterial = IlluminantMaterials.VolumeFrontFace;
-            var topFaceMaterial   = IlluminantMaterials.VolumeTopFace;
-
-            SetTwoPointFiveDParametersInner(frontFaceMaterial.Effect.Parameters, true, true);
-            SetTwoPointFiveDParametersInner(topFaceMaterial  .Effect.Parameters, true, true);
+            SetTwoPointFiveDParametersInner(IlluminantMaterials.VolumeFrontFace.Effect.Parameters, true, true);
+            SetTwoPointFiveDParametersInner(IlluminantMaterials.VolumeTopFace.Effect.Parameters  , true, true);
+            SetTwoPointFiveDParametersInner(IlluminantMaterials.LightingResolve.Effect.Parameters, true, true);
         }        
 
         public void InvalidateFields (
@@ -1006,6 +1020,7 @@ namespace Squared.Illuminant {
         public Squared.Render.EffectMaterial DistanceFieldExterior, DistanceFieldInterior;
         public Squared.Render.EffectMaterial DistanceFunction;
         public Squared.Render.EffectMaterial HeightVolume, HeightVolumeFace;
+        public Squared.Render.EffectMaterial LightingResolve;
         public Squared.Render.EffectMaterial ScreenSpaceGammaCompressedBitmap, WorldSpaceGammaCompressedBitmap;
         public Squared.Render.EffectMaterial ScreenSpaceToneMappedBitmap, WorldSpaceToneMappedBitmap;
 

@@ -16,11 +16,11 @@ void GammaCompressedPixelShader(
     in float2 texBR : TEXCOORD2,
     out float4 result : COLOR0
 ) {
-	addColor.rgb *= addColor.a;
-	addColor.a = 0;
+    addColor.rgb *= addColor.a;
+    addColor.a = 0;
 
-	result = multiplyColor * (tex2D(TextureSampler, clamp(texCoord, texTL, texBR)) * InverseScaleFactor);
-	result += (addColor * result.a);
+    result = multiplyColor * (tex2D(TextureSampler, clamp(texCoord, texTL, texBR)) * InverseScaleFactor);
+    result += (addColor * result.a);
 
     float resultLuminance = dot(result, RGBToLuminance);
     float scaledLuminance = (resultLuminance * MiddleGray) / AverageLuminance;
@@ -85,11 +85,11 @@ void ToneMappedPixelShader(
     in float2 texBR : TEXCOORD2,
     out float4 result : COLOR0
 ) {
-	addColor.rgb *= addColor.a;
-	addColor.a = 0;
+    addColor.rgb *= addColor.a;
+    addColor.a = 0;
 
-	result = multiplyColor * (tex2D(TextureSampler, clamp(texCoord, texTL, texBR)) * InverseScaleFactor);
-	result += (addColor * result.a);
+    result = multiplyColor * (tex2D(TextureSampler, clamp(texCoord, texTL, texBR)) * InverseScaleFactor);
+    result += (addColor * result.a);
 
     result = float4(Uncharted2Tonemap(result.rgb * Exposure) / Uncharted2Tonemap1(WhitePoint), result.a);
 }

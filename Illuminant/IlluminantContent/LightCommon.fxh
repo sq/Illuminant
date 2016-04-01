@@ -5,7 +5,7 @@
 uniform float GroundZ;
 uniform float ZToYMultiplier;
 
-uniform float RenderScale;
+uniform float  RenderScale;
 uniform float  GBufferInvScaleFactor;
 uniform float2 GBufferTexelSize;
 
