@@ -25,12 +25,11 @@ struct TraceParameters {
     float3 direction;
 };
 
-void coneTraceStep(
+float coneTraceStep(
     // maxRadius, lightTangentAngle, minStepSize
     in    float3 config,
-    in    float  sign,
     in    float  distanceToObstacle,
-    inout float  offset,
+    in    float  offset,
     inout float  visibility
 ) {
     float localSphereRadius = min(
@@ -40,7 +39,7 @@ void coneTraceStep(
     float localVisibility = distanceToObstacle / localSphereRadius;
     visibility = min(visibility, localVisibility);
 
-    float stepSize = max(
+    return max(
         abs(distanceToObstacle) * (
             // Steps outside of objects can be scaled to be longer/shorter to adjust the quality
             //  of partial visibility areas
@@ -49,8 +48,6 @@ void coneTraceStep(
                 : DistanceField.Step.z
         ), config.z
     );
-
-    offset += stepSize * sign;
 }
 
 float coneTrace(
@@ -85,10 +82,9 @@ float coneTrace(
         );
     }
 
-    float center = traceLength / 2.0;
     float a, b, c, d;
     a = TRACE_INITIAL_OFFSET_PX;
-    b = c = center;
+    b = c = traceLength / 2.0;
     d = traceLength;
 
     bool abort = false, abort1 = false, abort2 = false;
@@ -106,14 +102,14 @@ float coneTrace(
 
         [branch]
         if (!abort1) {
-            coneTraceStep(config, 1, aSample, a, visibility);
-            coneTraceStep(config, -1, bSample, b, visibility);
+            a += coneTraceStep(config, aSample, a, visibility);
+            b -= coneTraceStep(config, bSample, b, visibility);
         }
 
         [branch]
         if (!abort2) {
-            coneTraceStep(config, 1, cSample, c, visibility);
-            coneTraceStep(config, -1, dSample, d, visibility);
+            c += coneTraceStep(config, cSample, c, visibility);
+            d -= coneTraceStep(config, dSample, d, visibility);
         }
 
         abort1 = (a >= b);
