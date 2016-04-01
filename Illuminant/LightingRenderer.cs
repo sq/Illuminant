@@ -82,6 +82,7 @@ namespace Squared.Illuminant {
 
         const SurfaceFormat GBufferFormat       = SurfaceFormat.Vector4;
         const SurfaceFormat DistanceFieldFormat = SurfaceFormat.Rgba64;
+        const SurfaceFormat LightmapFormat      = SurfaceFormat.Rgba64;
 
         // HACK: If your projection matrix and your actual viewport/RT don't match in dimensions, you need to set this to compensate. :/
         // Scissor rects are fussy.
@@ -101,6 +102,7 @@ namespace Squared.Illuminant {
 
         private readonly RenderTarget2D _GBuffer;
         private readonly RenderTarget2D _DistanceField;
+        private readonly RenderTarget2D _Lightmap;
 
         private readonly Action<DeviceManager, object> BeginLightPass, EndLightPass, IlluminationBatchSetup;
 
@@ -173,6 +175,13 @@ namespace Squared.Illuminant {
                     Configuration.MaximumRenderSize.First, 
                     Configuration.MaximumRenderSize.Second,
                     false, GBufferFormat, DepthFormat.Depth24, 0, RenderTargetUsage.PlatformContents
+                );
+
+                _Lightmap = new RenderTarget2D(
+                    coordinator.Device, 
+                    Configuration.MaximumRenderSize.First, 
+                    Configuration.MaximumRenderSize.Second,
+                    false, LightmapFormat, DepthFormat.None, 0, RenderTargetUsage.PlatformContents
                 );
             }
 
@@ -315,6 +324,7 @@ namespace Squared.Illuminant {
             PointLightIndexBuffer.Dispose();
             _DistanceField.Dispose();
             _GBuffer.Dispose();
+            _Lightmap.Dispose();
         }
 
         public RenderTarget2D GBuffer {
@@ -326,6 +336,12 @@ namespace Squared.Illuminant {
         public RenderTarget2D DistanceField {
             get {
                 return _DistanceField;
+            }
+        }
+
+        public RenderTarget2D Lightmap {
+            get {
+                return _Lightmap;
             }
         }
 
@@ -353,10 +369,16 @@ namespace Squared.Illuminant {
         }
 
         private void _BeginLightPass (DeviceManager device, object userData) {
+            var vt = ViewTransform.CreateOrthographic(
+                _Lightmap.Width, _Lightmap.Height
+            );
+
             device.PushStates();
+            Materials.PushViewTransform(ref vt);
         }
 
         private void _EndLightPass (DeviceManager device, object userData) {
+            Materials.PopViewTransform();
             device.PopStates();
         }
 
@@ -389,21 +411,23 @@ namespace Squared.Illuminant {
         }
 
         /// <summary>
-        /// Renders all light sources into the target batch container on the specified layer.
+        /// Updates the lightmap in the target batch container on the specified layer.
+        /// To display lighting, use ResolveLighting.
         /// </summary>
-        /// <param name="frame">Necessary for bookkeeping.</param>
         /// <param name="container">The batch container to render lighting into.</param>
         /// <param name="layer">The layer to render lighting into.</param>
         /// <param name="intensityScale">A factor to scale the intensity of all light sources. You can use this to rescale the intensity of light values for HDR.</param>
-        public void RenderLighting (Frame frame, IBatchContainer container, int layer, float intensityScale = 1.0f) {
+        public void RenderLighting (IBatchContainer container, int layer, float intensityScale = 1.0f) {
             int layerIndex = 0;
 
-            using (var resultGroup = BatchGroup.New(container, layer, before: BeginLightPass, after: EndLightPass)) {
+            using (var resultGroup = BatchGroup.ForRenderTarget(container, layer, Lightmap, before: BeginLightPass, after: EndLightPass)) {
                 if (Render.Tracing.RenderTrace.EnableTracing)
-                    Render.Tracing.RenderTrace.Marker(resultGroup, -9999, "Frame {0:0000} : LightingRenderer {1:X4} : Begin", frame.Index, this.GetHashCode());
+                    Render.Tracing.RenderTrace.Marker(resultGroup, -9999, "LightingRenderer {0:X4} : Begin", this.GetHashCode());
 
                 PointLightVertex vertex;
                 int lightCount = Environment.LightSources.Count;
+
+                ClearBatch.AddNew(resultGroup, -1, Materials.Clear, Color.Transparent);
 
                 lock (_LightBufferLock)
                 for (int i = 0, j = 0; i < lightCount; i++) {
@@ -442,7 +466,7 @@ namespace Squared.Illuminant {
 
                 if (lightCount > 0) {
                     if (Render.Tracing.RenderTrace.EnableTracing)
-                        Render.Tracing.RenderTrace.Marker(resultGroup, layerIndex++, "Frame {0:0000} : LightingRenderer {1:X4} : Render {2} light source(s)", frame.Index, this.GetHashCode(), lightCount);
+                        Render.Tracing.RenderTrace.Marker(resultGroup, layerIndex++, "LightingRenderer {0:X4} : Render {1} light source(s)", this.GetHashCode(), lightCount);
 
                     using (var nb = NativeBatch.New(
                         resultGroup, layerIndex++, IlluminantMaterials.PointLight, IlluminationBatchSetup, lightCount
@@ -455,9 +479,35 @@ namespace Squared.Illuminant {
                 }
 
                 if (Render.Tracing.RenderTrace.EnableTracing)
-                    Render.Tracing.RenderTrace.Marker(resultGroup, 9999, "Frame {0:0000} : LightingRenderer {1:X4} : End", frame.Index, this.GetHashCode());
+                    Render.Tracing.RenderTrace.Marker(resultGroup, 9999, "LightingRenderer {0:X4} : End", this.GetHashCode());
             }
-        }        
+        }
+
+        /// <summary>
+        /// Resolves the current lightmap into the specified batch container on the specified layer.
+        /// The provided draw call determines the position and size of the resolved lightmap.
+        /// If the provided draw call's texture is not LightingRenderer.Lightmap, it will be modulated by the resolved lightmap.
+        /// </summary>
+        /// <param name="container">The batch container to resolve lighting into.</param>
+        /// <param name="layer">The layer to resolve lighting into.</param>
+        /// <param name="drawCall">A draw call used as a template to resolve the lighting.</param>
+        public void ResolveLighting (IBatchContainer container, int layer, BitmapDrawCall drawCall) {
+            var ir = new ImperativeRenderer(
+                container, Materials, layer
+            );
+            ResolveLighting(ref ir, drawCall);
+        }
+
+        /// <summary>
+        /// Resolves the current lightmap via the provided renderer.
+        /// The provided draw call determines the position and size of the resolved lightmap.
+        /// If the provided draw call's texture is not LightingRenderer.Lightmap, it will be modulated by the resolved lightmap.
+        /// </summary>
+        /// <param name="renderer">The renderer used to resolve the lighting.</param>
+        /// <param name="drawCall">A draw call used as a template to resolve the lighting.</param>
+        public void ResolveLighting (ref ImperativeRenderer ir, BitmapDrawCall drawCall) {
+            ir.Draw(drawCall);
+        }
 
         private void SetTwoPointFiveDParametersInner (EffectParameterCollection p, bool setGBufferTexture, bool setDistanceTexture) {
             p["GroundZ"]           .SetValue(Environment.GroundZ);

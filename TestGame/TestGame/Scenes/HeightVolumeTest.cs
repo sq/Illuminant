@@ -37,21 +37,13 @@ namespace TestGame.Scenes {
         }
 
         private void CreateRenderTargets () {
-            int scaledWidth = (int)(Width / LightmapScaleRatio);
-            int scaledHeight = (int)(Height / LightmapScaleRatio);
-
-            if (scaledWidth < 4)
-                scaledWidth = 4;
-            if (scaledHeight < 4)
-                scaledHeight = 4;
-
-            if ((Lightmap == null) || (scaledWidth != Lightmap.Width) || (scaledHeight != Lightmap.Height)) {
+            if (Lightmap == null) {
                 if (Lightmap != null)
                     Lightmap.Dispose();
 
                 Lightmap = new RenderTarget2D(
-                    Game.GraphicsDevice, scaledWidth, scaledHeight, false,
-                    SurfaceFormat.Rgba64, DepthFormat.Depth24, MultisampleCount, 
+                    Game.GraphicsDevice, Width, Height, false,
+                    SurfaceFormat.Color, DepthFormat.None, MultisampleCount, 
                     RenderTargetUsage.PlatformContents
                 );
             }
@@ -155,15 +147,19 @@ namespace TestGame.Scenes {
             using (var bg = BatchGroup.ForRenderTarget(
                 frame, -1, Lightmap,
                 (dm, _) => {
-                    Game.Materials.PushViewTransform(ViewTransform.CreateOrthographic(Lightmap.Width, Lightmap.Height));
+                    Game.Materials.PushViewTransform(ViewTransform.CreateOrthographic(
+                        Width, Height
+                    ));
                 },
                 (dm, _) => {
                     Game.Materials.PopViewTransform();
                 }
             )) {
-                ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black, clearZ: 0);
+                ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black);
 
-                Renderer.RenderLighting(frame, bg, 1, intensityScale: 1);
+                Renderer.RenderLighting(bg, 1, intensityScale: 1);
+
+                Renderer.ResolveLighting(bg, 2, new BitmapDrawCall(Renderer.Lightmap, Vector2.Zero, LightmapScaleRatio));
             };
 
             ClearBatch.AddNew(frame, 0, Game.Materials.Clear, clearColor: Color.Black);
@@ -180,8 +176,6 @@ namespace TestGame.Scenes {
                     Vector2.Zero,
                     Color.White
                 );
-
-                dc.ScaleF = LightmapScaleRatio;
 
                 bb.Add(ref dc);
             }
