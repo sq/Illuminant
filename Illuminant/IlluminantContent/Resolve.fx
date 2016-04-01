@@ -2,6 +2,13 @@
 #include "LightCommon.fxh"
 #include "DistanceFieldCommon.fxh"
 
+sampler LinearSampler : register(s6) {
+    Texture = (BitmapTexture);
+    MipFilter = POINT;
+    MinFilter = LINEAR;
+    MagFilter = LINEAR;
+};
+
 sampler PointSampler : register(s7) {
     Texture = (BitmapTexture);
     MipFilter = POINT;
@@ -27,8 +34,8 @@ void LightingResolvePixelShader(
     float2 bottomRightTexels = ceil(coordTexels);
     float2 xyWeight = coordTexels - topLeftTexels;
 
-    float zTL, zTR, zBL, zBR;
-    float normTL, normTR, normBL, normBR;
+    float z[4];
+    float normal[4];
 
     {
         float3 shadedPositionTL, shadedPositionTR, shadedPositionBL, shadedPositionBR;
@@ -54,56 +61,33 @@ void LightingResolvePixelShader(
             shadedPositionBR, shadedNormalBR
         );
 
-        zTL = shadedPositionTL.z;
-        zTR = shadedPositionTR.z;
-        zBL = shadedPositionBL.z;
-        zBR = shadedPositionBR.z;
-
-        normTL = shadedNormalTL.z;
-        normTR = shadedNormalTR.z;
-        normBL = shadedNormalBL.z;
-        normBR = shadedNormalBR.z;
+        z[0] = shadedPositionTL.z;
+        z[1] = shadedPositionTR.z;
+        z[2] = shadedPositionBL.z;
+        z[3] = shadedPositionBR.z;
     }
 
     float2 rcpSize = 1.0 / BitmapTextureSize;
     float4 lightTL, lightTR, lightBL, lightBR;
 
-    lightTL = tex2D(PointSampler, topLeftTexels * rcpSize);
-    lightTR = tex2D(PointSampler, float2(bottomRightTexels.x, topLeftTexels.y) * rcpSize);
-    lightBL = tex2D(PointSampler, float2(topLeftTexels.x, bottomRightTexels.y) * rcpSize);
-    lightBR = tex2D(PointSampler, bottomRightTexels * rcpSize);
+    float4 samplePoint = tex2D(PointSampler, coord);
+    float4 sampleLinear = tex2D(LinearSampler, coord);
 
-    bool facingUp = (normTL > 0.99) && (normTR > 0.99) && (normBL > 0.99) && (normBR > 0.99);
-    bool facingForward = (normTL < 0.01) && (normTR < 0.01) && (normBL < 0.01) && (normBR < 0.01);
+    const float windowStart = 1.5;
+    const float windowSize  = 1.5;
+    const float windowEnd   = windowStart + windowSize;
 
-    float selectTL = 1, selectTR, selectBL, selectBR;
+    // HACK
+    float averageZ = (z[0] + z[1] + z[2] + z[3]) / 4;
+    float blendWeight = (((
+        clamp(abs(z[0] - averageZ), windowStart, windowEnd) +
+        clamp(abs(z[1] - averageZ), windowStart, windowEnd) +
+        clamp(abs(z[2] - averageZ), windowStart, windowEnd) +
+        clamp(abs(z[3] - averageZ), windowStart, windowEnd)
+    ) / 4) - windowStart) / windowSize;
 
-    if (!facingForward) {
-        // Filter across upward-facing pixels if they have the same Z
-        // HACK: We also handle any pixels not classified as forward or up
-        selectTR = (zTR == zTL);
-        selectBL = (zBL == zTL);
-        selectBR = (zBR == zTL);
-    } else {
-        // HACK: Always filter forward-facing pixels. Is this right?
-        selectTR = 1;
-        selectBL = 1;
-        selectBR = 1;
-    }
+    result = lerp(sampleLinear, samplePoint, blendWeight) * multiplyColor;
 
-    float weightTL = ((1 - xyWeight.x) * (1 - xyWeight.y)) * selectTL,
-        weightTR = (xyWeight.x * (1 - xyWeight.y)) * selectTR,
-        weightBL = ((1 - xyWeight.x) * xyWeight.y) * selectBL, 
-        weightBR = (xyWeight.x * xyWeight.y) * selectBR;
-
-    float4 interpolatedLight = (
-        (lightTL * weightTL) +
-        (lightTR * weightTR) +
-        (lightBL * weightBL) +
-        (lightBR * weightBR)
-    ) * (1.0 / (weightTL + weightTR + weightBL + weightBR + 0.00001));
-
-    result = multiplyColor * interpolatedLight; 
     result += (addColor * result.a);
 }
 
