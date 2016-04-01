@@ -40,13 +40,10 @@ float coneTraceStep(
     visibility = min(visibility, localVisibility);
 
     return max(
-        abs(distanceToObstacle) * (
-            // Steps outside of objects can be scaled to be longer/shorter to adjust the quality
-            //  of partial visibility areas
-            (distanceToObstacle < 0)
-                ? 1
-                : DistanceField.Step.z
-        ), config.z
+        // the abs() actually makes this faster somehow, but
+        //  it shouldn't ever be needed? :/
+        abs(distanceToObstacle) * DistanceField.Step.z,
+        config.z
     );
 }
 
