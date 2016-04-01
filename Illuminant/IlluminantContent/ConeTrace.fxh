@@ -84,7 +84,9 @@ float coneTrace(
 
     float a, b, c, d;
     a = TRACE_INITIAL_OFFSET_PX;
-    b = c = traceLength / 2.0;
+    // Putting this at the center is not optimal, at least for my stress test.
+    // Sort of makes sense.
+    b = c = traceLength * 0.3;
     d = traceLength;
 
     bool abort = false, abort1 = false, abort2 = false;
