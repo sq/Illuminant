@@ -81,15 +81,6 @@ float2 computeDistanceFieldSliceUv (
     return indexes * DistanceField.TextureSliceSize.xy;
 }
 
-float2 computeDistanceFieldSubsliceUv (
-    float2 positionPx
-) {
-    // HACK: Ensure we don't sample outside of the slice (filtering! >:()
-    // FIXME: Why is this 1 and not 0.5?
-    // FIXME: Should we be offsetting the position like we do with gbuffer reads?
-    return clamp(positionPx + 0.5, 1, DistanceField.Extent.xy - 1) * DistanceField.TextureTexelSize;
-}
-
 float sampleDistanceField (
     float3 position, 
     DistanceFieldConstants vars
@@ -102,10 +93,13 @@ float sampleDistanceField (
     float virtualSliceIndex = floor(slicePosition);
 
     float physicalSliceIndex = virtualSliceIndex * (1.0 / 3);
-   
+    
+    float3 clampedPosition = clamp(position, 1, DistanceField.Extent - 1);
+    float distanceToVolume = length(clampedPosition - position);
+
     float4 uv = float4(
-        computeDistanceFieldSubsliceUv(position.xy) +
-          computeDistanceFieldSliceUv(physicalSliceIndex, vars.invSliceCountX),
+        computeDistanceFieldSliceUv(physicalSliceIndex, vars.invSliceCountX) +
+            (clampedPosition.xy * DistanceField.TextureTexelSize),
         0, 0
     );
 
@@ -137,8 +131,5 @@ float sampleDistanceField (
 
     // HACK: Samples outside the distance field will be wrong if they just
     //  read the closest distance in the field.
-    float3 clampedPosition = clamp(position, 0, DistanceField.Extent);
-    float distanceToVolume = length(clampedPosition - position);
-
     return decodedDistance + distanceToVolume;
 }
