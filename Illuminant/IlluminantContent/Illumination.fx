@@ -116,6 +116,9 @@ void LightBinPixelShader(
     result = 0;
     float v = texelSize.y * binIndex;
 
+    result.a = 1;
+    result.r += lightCount / 32;
+
     [loop]
     for (float i = 0; i < lightCount; i++) {
         float4 uv = float4(i * texelSize.x * 3, v, 0, 0);
@@ -128,9 +131,12 @@ void LightBinPixelShader(
 
         float4 lightColor = tex2Dlod(LightBinSampler, uv);
 
+        /*
         float opacity = SphereLightPixelCore(
             lightCenter, rampAndExponential.xy, vpos, rampAndExponential.z
         );
+        */
+        float opacity = 1.0;
 
         float4 lightColorActual = float4(
             lightColor.rgb * lightColor.a * opacity, 

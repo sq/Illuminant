@@ -208,7 +208,7 @@ namespace Squared.Illuminant {
                     coordinator.Device, 
                     MaxLightsPerBin * PixelsPerLightBinEntry, 
                     defaultLightBinTextureHeight, 
-                    false, SurfaceFormat.HalfVector4
+                    false, SurfaceFormat.Vector4
                 );
 
                 LightBinVertexBuffer = new DynamicVertexBuffer(
@@ -504,7 +504,7 @@ namespace Squared.Illuminant {
             int bufferSize = LightBinTexture.Width * LightBinTexture.Height;
             int lightBinCount = 0, maxLightBinCount = 0;
 
-            using (var texels = BufferPool<HalfVector4>.Allocate(bufferSize))
+            using (var texels = BufferPool<Vector4>.Allocate(bufferSize))
             using (var binCounts = BufferPool<int>.Allocate(MaxLightBinCount))
             using (var binBounds = BufferPool<Bounds>.Allocate(MaxLightBinCount)) {
                 Array.Clear(binCounts.Data, 0, MaxLightBinCount);
@@ -512,35 +512,41 @@ namespace Squared.Illuminant {
                 for (int j = 0; j < MaxLightBinCount; j++)
                     binBounds.Data[j] = GetLightBinBounds(j);
 
+                int rowWidth = MaxLightsPerBin * PixelsPerLightBinEntry;
+
                 // Place lights into bins
                 // FIXME: This is obscenely slow
-                Parallel.For(0, lightCount, (i) => {
-                    var lightSource = Environment.LightSources[i];
+                Parallel.For(0, MaxLightBinCount, (j) => {
+                    var baseTexelIndex = (j * rowWidth);
+                    var currentBinBounds = binBounds.Data[j];
+                    var count = 0;
 
-                    Bounds lightBounds;
-                    BuildSphereLightVertex(lightSource, intensityScale, out lightVertex, out lightBounds);
+                    foreach (var lightSource in Environment.LightSources) {
+                        Bounds lightBounds;
+                        BuildSphereLightVertex(lightSource, intensityScale, out lightVertex, out lightBounds);
 
-                    for (int j = 0; j < MaxLightBinCount; j++) {
                         // TODO: Do a sphere-box intersection to cull more lights
-                        if (!lightBounds.Intersects(binBounds.Data[j]))
+                        if (!lightBounds.Intersects(currentBinBounds))
                             continue;
 
-                        var newCount = Interlocked.Increment(ref binCounts.Data[j]);
-                        var texelIndex = ((newCount - 1) * PixelsPerLightBinEntry) +
-                            (j * MaxLightsPerBin * PixelsPerLightBinEntry);
+                        var texelIndex = baseTexelIndex + (count * PixelsPerLightBinEntry);
 
-                        texels.Data[texelIndex + 0] = new HalfVector4(
+                        texels.Data[texelIndex + 0] = new Vector4(
                             lightVertex.LightCenter.X, lightVertex.LightCenter.Y,
                             lightVertex.LightCenter.Z, 0
                         );
 
-                        texels.Data[texelIndex + 1] = new HalfVector4(
+                        texels.Data[texelIndex + 1] = new Vector4(
                             lightVertex.RampAndExponential.X, lightVertex.RampAndExponential.Y,
                             lightVertex.RampAndExponential.Z, 0
                         );
 
-                        texels.Data[texelIndex + 2] = new HalfVector4(lightVertex.Color);
+                        texels.Data[texelIndex + 2] = lightVertex.Color;
+
+                        count += 1;
                     }
+
+                    binCounts.Data[j] = count;
                 });
 
                 // Generate vertex data for bins that aren't empty
