@@ -33,8 +33,9 @@ float computeDistance (
 
     [loop]
     for (int i = 0; i < NumVertices; i++) {
-        float2 edgeA = tex2Dlod(VertexDataSampler, float4(i * indexMultiplier, 0, 0, 0)).rg;
-        float2 edgeB = tex2Dlod(VertexDataSampler, float4((i + 1) * indexMultiplier, 0, 0, 0)).rg;
+        float4 packedEdge = tex2Dlod(VertexDataSampler, float4(i * indexMultiplier, 0, 0, 0));
+        float2 edgeA = packedEdge.xy;
+        float2 edgeB = packedEdge.zw;
 
         float2 closest = closestPointOnEdge(vpos, edgeA, edgeB);
         float2 closestDeltaXy = (vpos - closest);

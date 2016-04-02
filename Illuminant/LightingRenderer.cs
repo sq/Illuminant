@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Graphics.PackedVector;
 using Squared.Game;
 using Squared.Render;
 using Squared.Render.Convenience;
@@ -99,6 +100,9 @@ namespace Squared.Illuminant {
         private readonly DynamicVertexBuffer PointLightVertexBuffer;
         private readonly IndexBuffer         PointLightIndexBuffer;
         private readonly PointLightVertex[]  PointLightVertices = new PointLightVertex[MaximumLightCount * 4];
+
+        private readonly Dictionary<Polygon, Texture2D> HeightVolumeVertexData = 
+            new Dictionary<Polygon, Texture2D>(new ReferenceComparer<Polygon>());
 
         private readonly RenderTarget2D _GBuffer;
         private readonly RenderTarget2D _DistanceField;
@@ -325,9 +329,12 @@ namespace Squared.Illuminant {
         public void Dispose () {
             PointLightVertexBuffer.Dispose();
             PointLightIndexBuffer.Dispose();
-            _DistanceField.Dispose();
-            _GBuffer.Dispose();
-            _Lightmap.Dispose();
+            Coordinator.DisposeResource(_DistanceField);
+            Coordinator.DisposeResource(_GBuffer);
+            Coordinator.DisposeResource(_Lightmap);
+
+            foreach (var kvp in HeightVolumeVertexData)
+                Coordinator.DisposeResource(kvp.Value);
         }
 
         public RenderTarget2D GBuffer {
@@ -746,7 +753,6 @@ namespace Squared.Illuminant {
             using (var rtGroup = BatchGroup.ForRenderTarget(
                 resultGroup, layerIndex++, _DistanceField
             )) {
-                var vertexDataTextures = new Dictionary<object, Texture2D>();
                 var intParameters = IlluminantMaterials.DistanceFieldInterior.Effect.Parameters;
                 var extParameters = IlluminantMaterials.DistanceFieldExterior.Effect.Parameters;
 
@@ -768,7 +774,7 @@ namespace Squared.Illuminant {
 
                     // TODO: Render four slices at once by writing to all channels in one go?
                     RenderDistanceFieldSlice(
-                        indices, rtGroup, vertexDataTextures, 
+                        indices, rtGroup,
                         intParameters, extParameters,
                         physicalSlice, slice % PackedSliceCount, sliceZ,
                         ref layer
@@ -781,7 +787,7 @@ namespace Squared.Illuminant {
                         (slice > 0)
                     ) {
                         RenderDistanceFieldSlice(
-                            indices, rtGroup, vertexDataTextures,
+                            indices, rtGroup,
                             intParameters, extParameters,
                             physicalSlice - 1, 3, sliceZ,
                             ref layer
@@ -795,9 +801,6 @@ namespace Squared.Illuminant {
 
                     slicesToUpdate--;
                 }
-
-                foreach (var kvp in vertexDataTextures)
-                    Coordinator.DisposeResource(kvp.Value);
             }
         }
 
@@ -808,7 +811,6 @@ namespace Squared.Illuminant {
 
         private void RenderDistanceFieldSlice (
             short[] indices, BatchGroup rtGroup, 
-            Dictionary<object, Texture2D> vertexDataTextures, 
             EffectParameterCollection intParameters, EffectParameterCollection extParameters,
             int physicalSliceIndex, int maskIndex, float sliceZ, 
             ref int layer
@@ -862,14 +864,14 @@ namespace Squared.Illuminant {
                     Render.Tracing.RenderTrace.Marker(group, -1, "LightingRenderer {0:X4} : Begin Distance Field Slice Z={1} Idx={2}", this.GetHashCode(), sliceZ, physicalSliceIndex);
 
                 RenderDistanceFieldDistanceFunctions(indices, sliceZ, group);
-                RenderDistanceFieldHeightVolumes(indices, vertexDataTextures, intParameters, extParameters, sliceZ, group);
+                RenderDistanceFieldHeightVolumes(indices, intParameters, extParameters, sliceZ, group);
 
                 if (Render.Tracing.RenderTrace.EnableTracing)
                     Render.Tracing.RenderTrace.Marker(group, 2, "LightingRenderer {0:X4} : End Distance Field Slice Z={1} Idx={2}", this.GetHashCode(), sliceZ, physicalSliceIndex);
             }
         }
 
-        private void RenderDistanceFieldHeightVolumes (short[] indices, Dictionary<object, Texture2D> vertexDataTextures, EffectParameterCollection intParameters, EffectParameterCollection extParameters, float sliceZ, BatchGroup group) {
+        private void RenderDistanceFieldHeightVolumes (short[] indices, EffectParameterCollection intParameters, EffectParameterCollection extParameters, float sliceZ, BatchGroup group) {
             int i = 1;
 
             // Rasterize the height volumes in sequential order.
@@ -899,13 +901,26 @@ namespace Squared.Illuminant {
 
                     Texture2D vertexDataTexture;
 
-                    if (!vertexDataTextures.TryGetValue(p, out vertexDataTexture))
+                    // FIXME: Handle position/zrange updates
+                    if (!HeightVolumeVertexData.TryGetValue(p, out vertexDataTexture)) {
                         lock (Coordinator.CreateResourceLock) {
-                            vertexDataTexture = new Texture2D(Coordinator.Device, p.Count, 1, false, SurfaceFormat.Vector2);
-                            vertexDataTextures[p] = vertexDataTexture;
+                            vertexDataTexture = new Texture2D(Coordinator.Device, p.Count, 1, false, SurfaceFormat.HalfVector4);
+                            HeightVolumeVertexData[p] = vertexDataTexture;
                         }
 
-                    vertexDataTexture.SetData(p.GetVertices());
+                        lock (Coordinator.UseResourceLock)
+                        using (var vertices = BufferPool<HalfVector4>.Allocate(p.Count)) {
+                            for (var j = 0; j < p.Count; j++) {
+                                var edgeA = p[j];
+                                var edgeB = p[Arithmetic.Wrap(j + 1, 0, p.Count - 1)];
+                                vertices.Data[j] = new HalfVector4(
+                                    edgeA.X, edgeA.Y, edgeB.X, edgeB.Y
+                                );
+                            }
+
+                            vertexDataTexture.SetData(vertices.Data, 0, p.Count);
+                        }
+                    }
 
                     using (var batch = PrimitiveBatch<HeightVolumeVertex>.New(
                         interiorGroup, i, IlluminantMaterials.DistanceFieldInterior,

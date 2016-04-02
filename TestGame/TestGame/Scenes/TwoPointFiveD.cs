@@ -26,7 +26,7 @@ namespace TestGame.Scenes {
         float LightZ;
 
         const int MultisampleCount = 0;
-        const int LightmapScaleRatio = 1;
+        const int LightmapScaleRatio = 8;
         const int MaxStepCount = 128;
 
         bool ShowGBuffer       = false;
@@ -169,7 +169,7 @@ namespace TestGame.Scenes {
                 ));
 
             if (false)
-                Environment.HeightVolumes.Clear();
+            Environment.HeightVolumes.Clear();
 
             Environment.GroundZ = 0;
             Environment.MaximumZ = 128;
