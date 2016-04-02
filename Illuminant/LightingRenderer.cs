@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
@@ -97,7 +98,6 @@ namespace Squared.Illuminant {
 
         private readonly DynamicVertexBuffer SphereLightVertexBuffer;
         private readonly IndexBuffer         SphereLightIndexBuffer;
-        private readonly SphereLightVertex[] SphereLightVertices = new SphereLightVertex[MaximumLightCount * 4];
 
         private readonly Dictionary<Polygon, Texture2D> HeightVolumeVertexData =
             new Dictionary<Polygon, Texture2D>(new ReferenceComparer<Polygon>());
@@ -112,7 +112,7 @@ namespace Squared.Illuminant {
         private readonly RenderTarget2D _DistanceField;
         private readonly RenderTarget2D _Lightmap;
 
-        private readonly Action<DeviceManager, object> BeginLightPass, EndLightPass, IlluminationBatchSetup;
+        private readonly Action<DeviceManager, object> BeginLightPass, EndLightPass;
 
         private readonly object _LightBufferLock = new object();
 
@@ -141,12 +141,11 @@ namespace Squared.Illuminant {
 
             BeginLightPass     = _BeginLightPass;
             EndLightPass       = _EndLightPass;
-            IlluminationBatchSetup = _IlluminationBatchSetup;
 
             lock (coordinator.CreateResourceLock) {
                 SphereLightVertexBuffer = new DynamicVertexBuffer(
                     coordinator.Device, typeof(SphereLightVertex), 
-                    SphereLightVertices.Length, BufferUsage.WriteOnly
+                    MaximumLightCount * 4, BufferUsage.WriteOnly
                 );
                 SphereLightIndexBuffer = new IndexBuffer(
                     coordinator.Device, IndexElementSize.SixteenBits, MaximumLightCount * 6, BufferUsage.WriteOnly
@@ -405,11 +404,8 @@ namespace Squared.Illuminant {
             device.PopStates();
         }
 
-        private void _IlluminationBatchSetup (DeviceManager device, object userData) {
+        private void IlluminationBatchSetup (DeviceManager device, object userData) {
             var lightCount = (int)userData;
-            lock (_LightBufferLock)
-                SphereLightVertexBuffer.SetData(SphereLightVertices, 0, lightCount * 4, SetDataOptions.Discard);
-
             device.Device.BlendState = RenderStates.AdditiveBlend;
 
             var mi = SphereLightMaterialInner;
@@ -430,6 +426,11 @@ namespace Squared.Illuminant {
             mi.Effect.Parameters["Time"].SetValue((float)Time.Seconds);
 
             SetDistanceFieldParameters(mi.Effect.Parameters, true);
+            Monitor.Enter(_LightBufferLock);
+        }
+
+        private void IlluminationBatchTeardown (DeviceManager device, object userData) {
+            Monitor.Exit(_LightBufferLock);
         }
 
         /// <summary>
@@ -485,7 +486,8 @@ namespace Squared.Illuminant {
                     Render.Tracing.RenderTrace.Marker(resultGroup, layerIndex++, "LightingRenderer {0:X4} : Render {1} light source(s)", this.GetHashCode(), lightCount);
 
                 using (var nb = NativeBatch.New(
-                    resultGroup, layerIndex++, IlluminantMaterials.SphereLight, IlluminationBatchSetup, lightCount
+                    resultGroup, layerIndex++, IlluminantMaterials.SphereLight, 
+                    IlluminationBatchSetup, IlluminationBatchTeardown, lightCount
                 ))
                     nb.Add(new NativeDrawCall(
                         PrimitiveType.TriangleList,
@@ -501,24 +503,28 @@ namespace Squared.Illuminant {
             int lightCount = Environment.LightSources.Count;
 
             SphereLightVertex vertex;
-            lock (_LightBufferLock)
-            for (int i = 0, j = 0; i < lightCount; i++) {
-                var lightSource = Environment.LightSources[i];
+            using (var buffer = BufferPool<SphereLightVertex>.Allocate(lightCount * 4)) {
+                for (int i = 0, j = 0; i < lightCount; i++) {
+                    var lightSource = Environment.LightSources[i];
 
-                Bounds lightBounds;
-                BuildSphereLightVertex(lightSource, intensityScale, out vertex, out lightBounds);
+                    Bounds lightBounds;
+                    BuildSphereLightVertex(lightSource, intensityScale, out vertex, out lightBounds);
 
-                vertex.Position = lightBounds.TopLeft;
-                SphereLightVertices[j++] = vertex;
+                    vertex.Position = lightBounds.TopLeft;
+                    buffer.Data[j++] = vertex;
 
-                vertex.Position = lightBounds.TopRight;
-                SphereLightVertices[j++] = vertex;
+                    vertex.Position = lightBounds.TopRight;
+                    buffer.Data[j++] = vertex;
 
-                vertex.Position = lightBounds.BottomRight;
-                SphereLightVertices[j++] = vertex;
+                    vertex.Position = lightBounds.BottomRight;
+                    buffer.Data[j++] = vertex;
 
-                vertex.Position = lightBounds.BottomLeft;
-                SphereLightVertices[j++] = vertex;
+                    vertex.Position = lightBounds.BottomLeft;
+                    buffer.Data[j++] = vertex;
+                }
+
+                lock (_LightBufferLock)
+                    SphereLightVertexBuffer.SetData(buffer.Data, 0, lightCount * 4);
             }
 
             if (lightCount > 0) {
@@ -526,7 +532,8 @@ namespace Squared.Illuminant {
                     Render.Tracing.RenderTrace.Marker(resultGroup, layerIndex++, "LightingRenderer {0:X4} : Render {1} light source(s)", this.GetHashCode(), lightCount);
 
                 using (var nb = NativeBatch.New(
-                    resultGroup, layerIndex++, IlluminantMaterials.SphereLight, IlluminationBatchSetup, lightCount
+                    resultGroup, layerIndex++, IlluminantMaterials.SphereLight, 
+                    IlluminationBatchSetup, IlluminationBatchTeardown, lightCount
                 ))
                     nb.Add(new NativeDrawCall(
                         PrimitiveType.TriangleList,
