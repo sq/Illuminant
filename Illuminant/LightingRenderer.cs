@@ -89,7 +89,7 @@ namespace Squared.Illuminant {
         public readonly DefaultMaterialSet Materials;
         public readonly RenderCoordinator Coordinator;
         public readonly IlluminantMaterials IlluminantMaterials;
-        public readonly Render.EffectMaterial SphereLightMaterialInner;
+        public readonly Render.EffectMaterial SphereLightMaterialInner, LightBinMaterialInner;
         public readonly DepthStencilState TopFaceDepthStencilState, FrontFaceDepthStencilState;
         public readonly DepthStencilState DistanceInteriorStencilState, DistanceExteriorStencilState;
         public readonly DepthStencilState SphereLightDepthStencilState;
@@ -106,7 +106,7 @@ namespace Squared.Illuminant {
         const int PixelsPerLightBinEntry = 3;
         private readonly Texture2D           LightBinTexture;
         private readonly DynamicVertexBuffer LightBinVertexBuffer;
-        private readonly int                 MaxLightBinCount;
+        private readonly int                 MaxLightBinCount, MaxLightBinCountX, MaxLightBinCountY;
 
         private readonly RenderTarget2D _GBuffer;
         private readonly RenderTarget2D _DistanceField;
@@ -191,8 +191,9 @@ namespace Squared.Illuminant {
                     false, LightmapFormat, DepthFormat.None, 0, RenderTargetUsage.PlatformContents
                 );
 
-                MaxLightBinCount = (int)Math.Ceiling(Configuration.MaximumRenderSize.First / (float)LightBinSize) *
-                    (int)Math.Ceiling(Configuration.MaximumRenderSize.Second / (float)LightBinSize);
+                MaxLightBinCountX = (int)Math.Ceiling(Configuration.MaximumRenderSize.First / (float)LightBinSize);
+                MaxLightBinCountY = (int)Math.Ceiling(Configuration.MaximumRenderSize.Second / (float)LightBinSize);
+                MaxLightBinCount = MaxLightBinCountX * MaxLightBinCountY;
 
                 // Bins packed with tons of lights will make this texture become wider, but that should be rare
                 const int defaultLightBinLightCount = 64;
@@ -203,6 +204,11 @@ namespace Squared.Illuminant {
                     defaultLightBinLightCount * PixelsPerLightBinEntry, 
                     defaultLightBinTextureHeight, 
                     false, SurfaceFormat.HalfVector4
+                );
+
+                LightBinVertexBuffer = new DynamicVertexBuffer(
+                    coordinator.Device, typeof(LightBinVertex), 
+                    MaxLightBinCount * 4, BufferUsage.WriteOnly
                 );
             }
 
@@ -261,8 +267,15 @@ namespace Squared.Illuminant {
                 SphereLightMaterialInner =
                     new Render.EffectMaterial(content.Load<Effect>("Illumination"), "SphereLight");
 
+                LightBinMaterialInner =
+                    new Render.EffectMaterial(content.Load<Effect>("Illumination"), "LightBin");
+
                 materials.Add(IlluminantMaterials.SphereLight = new DelegateMaterial(
                     SphereLightMaterialInner, dBegin, dEnd
+                ));
+
+                materials.Add(IlluminantMaterials.LightBin = new DelegateMaterial(
+                    LightBinMaterialInner, dBegin, dEnd
                 ));
 
                 materials.Add(IlluminantMaterials.DistanceFieldExterior = 
@@ -339,8 +352,10 @@ namespace Squared.Illuminant {
         }
 
         public void Dispose () {
-            SphereLightVertexBuffer.Dispose();
-            SphereLightIndexBuffer.Dispose();
+            Coordinator.DisposeResource(SphereLightVertexBuffer);
+            Coordinator.DisposeResource(SphereLightIndexBuffer);
+            Coordinator.DisposeResource(LightBinVertexBuffer);
+            Coordinator.DisposeResource(LightBinTexture);
             Coordinator.DisposeResource(_DistanceField);
             Coordinator.DisposeResource(_GBuffer);
             Coordinator.DisposeResource(_Lightmap);
@@ -408,24 +423,26 @@ namespace Squared.Illuminant {
             var lightCount = (int)userData;
             device.Device.BlendState = RenderStates.AdditiveBlend;
 
-            var mi = SphereLightMaterialInner;
-            var tsize = new Vector2(
-                1f / Configuration.RenderSize.First, 
-                1f / Configuration.RenderSize.Second
-            );
-            mi.Effect.Parameters["GBufferTexelSize"].SetValue(tsize);
-            mi.Effect.Parameters["GBuffer"].SetValue(GBuffer);
+            foreach (var mi in new [] { SphereLightMaterialInner, LightBinMaterialInner }) {
+                var tsize = new Vector2(
+                    1f / Configuration.RenderSize.First, 
+                    1f / Configuration.RenderSize.Second
+                );
+                mi.Effect.Parameters["GBufferTexelSize"].SetValue(tsize);
+                mi.Effect.Parameters["GBuffer"].SetValue(GBuffer);
 
-            mi.Effect.Parameters["GroundZ"].SetValue(Environment.GroundZ);
-            mi.Effect.Parameters["ZToYMultiplier"].SetValue(
-                Configuration.TwoPointFiveD
-                    ? Environment.ZToYMultiplier
-                    : 0.0f
-            );
+                mi.Effect.Parameters["GroundZ"].SetValue(Environment.GroundZ);
+                mi.Effect.Parameters["ZToYMultiplier"].SetValue(
+                    Configuration.TwoPointFiveD
+                        ? Environment.ZToYMultiplier
+                        : 0.0f
+                );
 
-            mi.Effect.Parameters["Time"].SetValue((float)Time.Seconds);
+                mi.Effect.Parameters["Time"].SetValue((float)Time.Seconds);
 
-            SetDistanceFieldParameters(mi.Effect.Parameters, true);
+                SetDistanceFieldParameters(mi.Effect.Parameters, true);
+            }
+
             Monitor.Enter(_LightBufferLock);
         }
 
@@ -460,10 +477,20 @@ namespace Squared.Illuminant {
             }
         }
 
+        private Bounds GetLightBinBounds (int index) {
+            int x = index % MaxLightBinCountX;
+            int y = index / MaxLightBinCountX;
+
+            return Bounds.FromPositionAndSize(
+                new Vector2(x * LightBinSize, y * LightBinSize),
+                new Vector2(LightBinSize)
+            );
+        }
+
         private void RenderBinnedSphereLights (float intensityScale, ref int layerIndex, BatchGroup resultGroup) {
             int lightCount = Environment.LightSources.Count;
 
-            SphereLightVertex vertex;
+            SphereLightVertex lightVertex;
             int bufferSize = LightBinTexture.Width * LightBinTexture.Height;
             int lightBinCount = 0;
 
@@ -474,7 +501,7 @@ namespace Squared.Illuminant {
                     var lightSource = Environment.LightSources[i];
 
                     Bounds lightBounds;
-                    BuildSphereLightVertex(lightSource, intensityScale, out vertex, out lightBounds);
+                    BuildSphereLightVertex(lightSource, intensityScale, out lightVertex, out lightBounds);
 
                 }
 
@@ -482,13 +509,31 @@ namespace Squared.Illuminant {
                     LightBinTexture.SetData(texels.Data, 0, bufferSize);
 
                 // Generate vertex data for bins that aren't empty
-                using (var lightBinVertices = BufferPool<LightBinVertex>.Allocate(MaxLightBinCount)) {
-                    for (int i = 0; i < MaxLightBinCount; i++) {
+                using (var lightBinVertices = BufferPool<LightBinVertex>.Allocate(MaxLightBinCount * 4)) {
+                    for (int i = 0, j = 0; i < MaxLightBinCount; i++) {
                         lightBinCount += 1;
+
+                        var binBounds = GetLightBinBounds(i);
+
+                        var vertex = new LightBinVertex();
+                        vertex.BinIndex = i;
+                        vertex.LightCount = 0;
+
+                        vertex.Position = binBounds.TopLeft;
+                        lightBinVertices.Data[j++] = vertex;
+
+                        vertex.Position = binBounds.TopRight;
+                        lightBinVertices.Data[j++] = vertex;
+
+                        vertex.Position = binBounds.BottomRight;
+                        lightBinVertices.Data[j++] = vertex;
+
+                        vertex.Position = binBounds.BottomLeft;
+                        lightBinVertices.Data[j++] = vertex;
                     }
 
                     lock (_LightBufferLock)
-                        LightBinVertexBuffer.SetData(lightBinVertices.Data, 0, lightBinCount * 4);
+                        LightBinVertexBuffer.SetData(lightBinVertices.Data, 0, MaxLightBinCount * 4, SetDataOptions.Discard);
                 }
             }
 
@@ -497,7 +542,7 @@ namespace Squared.Illuminant {
                     Render.Tracing.RenderTrace.Marker(resultGroup, layerIndex++, "LightingRenderer {0:X4} : Render {1} light source(s)", this.GetHashCode(), lightCount);
 
                 using (var nb = NativeBatch.New(
-                    resultGroup, layerIndex++, IlluminantMaterials.SphereLight, 
+                    resultGroup, layerIndex++, IlluminantMaterials.LightBin, 
                     IlluminationBatchSetup, IlluminationBatchTeardown, lightCount
                 ))
                     nb.Add(new NativeDrawCall(
@@ -1110,7 +1155,7 @@ namespace Squared.Illuminant {
     public class IlluminantMaterials {
         public readonly DefaultMaterialSet MaterialSet;
 
-        public Material SphereLight;
+        public Material SphereLight, LightBin;
         public Squared.Render.EffectMaterial VolumeFrontFace, VolumeTopFace;
         public Squared.Render.EffectMaterial DistanceFieldExterior, DistanceFieldInterior;
         public Squared.Render.EffectMaterial DistanceFunction;

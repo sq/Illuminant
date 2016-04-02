@@ -94,8 +94,10 @@ void SphereLightPixelShader(
 }
 
 void LightBinVertexShader(
-    in float2 position : POSITION0,
-    out float4 result  : POSITION0
+    in    float2 position   : POSITION0,
+    inout float  lightCount : TEXCOORD0,
+    inout float  binIndex   : TEXCOORD1,
+    out   float4 result     : POSITION0
 ) {
     // FIXME: Z
     float4 transformedPosition = ApplyTransform(float3(position, 0));
@@ -114,6 +116,8 @@ void LightBinPixelShader(
     for (float i = 0; i < lightCount; i++) {
         float uv = float2(i * LightBinTextureSize.x, v);
     }
+
+    result = float4(lightCount / 64, binIndex / 512, 0, 1);
 
     /*
     float opacity = SphereLightPixelCore(
@@ -134,5 +138,13 @@ technique SphereLight {
     {
         vertexShader = compile vs_3_0 SphereLightVertexShader();
         pixelShader  = compile ps_3_0 SphereLightPixelShader();
+    }
+}
+
+technique LightBin {
+    pass P0
+    {
+        vertexShader = compile vs_3_0 LightBinVertexShader();
+        pixelShader  = compile ps_3_0 LightBinPixelShader();
     }
 }

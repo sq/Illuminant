@@ -63,7 +63,8 @@ namespace TestGame.Scenes {
                     DistanceFieldLongStepFactor = 0.95f,
                     DistanceFieldMinStepSize = 1.5f,
                     DistanceFieldMaxStepCount = 72,
-                    GBufferCaching = true
+                    GBufferCaching = true,
+                    LightBinning = true
                 }
             );
 

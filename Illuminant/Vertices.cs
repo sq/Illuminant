@@ -21,10 +21,10 @@ namespace Squared.Illuminant {
             var tThis = typeof(SphereLightVertex);
 
             _VertexDeclaration = new VertexDeclaration(
-                new VertexElement(Marshal.OffsetOf(tThis, "Position").ToInt32(), VertexElementFormat.Vector2, VertexElementUsage.Position, 0),
+                new VertexElement(Marshal.OffsetOf(tThis, "Position").ToInt32(),    VertexElementFormat.Vector2, VertexElementUsage.Position, 0),
                 new VertexElement(Marshal.OffsetOf(tThis, "LightCenter").ToInt32(), VertexElementFormat.Vector3, VertexElementUsage.TextureCoordinate, 0),
                 new VertexElement(Marshal.OffsetOf(tThis, "RampAndExponential").ToInt32(), VertexElementFormat.Vector3, VertexElementUsage.TextureCoordinate, 1),
-                new VertexElement(Marshal.OffsetOf(tThis, "Color").ToInt32(), VertexElementFormat.Vector4, VertexElementUsage.Color, 0)
+                new VertexElement(Marshal.OffsetOf(tThis, "Color").ToInt32(),       VertexElementFormat.Vector4, VertexElementUsage.Color, 0)
             );
         }
 
@@ -38,18 +38,18 @@ namespace Squared.Illuminant {
     public struct LightBinVertex : IVertexType {
         // FIXME: Shouldn't this be V3? Blech
         public Vector2 Position;
-        public float   LightCenter;
+        public float   LightCount;
         public float   BinIndex;
 
         public static VertexDeclaration _VertexDeclaration;
 
         static LightBinVertex () {
-            var tThis = typeof(SphereLightVertex);
+            var tThis = typeof(LightBinVertex);
 
             _VertexDeclaration = new VertexDeclaration(
-                new VertexElement(Marshal.OffsetOf(tThis, "Position").ToInt32(), VertexElementFormat.Vector2, VertexElementUsage.Position, 0),
-                new VertexElement(Marshal.OffsetOf(tThis, "LightCenter").ToInt32(), VertexElementFormat.Single, VertexElementUsage.TextureCoordinate, 0),
-                new VertexElement(Marshal.OffsetOf(tThis, "BinIndex").ToInt32(), VertexElementFormat.Single, VertexElementUsage.TextureCoordinate, 1)
+                new VertexElement(Marshal.OffsetOf(tThis, "Position").ToInt32(),   VertexElementFormat.Vector2, VertexElementUsage.Position, 0),
+                new VertexElement(Marshal.OffsetOf(tThis, "LightCount").ToInt32(), VertexElementFormat.Single, VertexElementUsage.TextureCoordinate, 0),
+                new VertexElement(Marshal.OffsetOf(tThis, "BinIndex").ToInt32(),   VertexElementFormat.Single, VertexElementUsage.TextureCoordinate, 1)
             );
         }
 
