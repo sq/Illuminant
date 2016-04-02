@@ -17,14 +17,17 @@ namespace Squared.Illuminant {
         public float   Radius = 0;
         // The size of the falloff around the light source.
         public float   RampLength = 1;
-        // Controls the nature of the light's distance falloff. Exponential produces falloff that is more realistic (square of distance or whatever) but not necessarily as expected.
-        public LightSourceRampMode RampMode = LightSourceRampMode.Linear;
         // The color of the light's illumination.
         // Note that this color is a Vector4 so that you can use HDR (greater than one) lighting values.
         // Alpha is *not* premultiplied (maybe it should be?)
         public Vector4 Color = Vector4.One;
         // A separate opacity factor that you can use to easily fade lights in/out.
-        public float Opacity = 1.0f;
+        public float   Opacity = 1.0f;
+        public bool    CastsShadows = true;
+        // Uniformly obscures light if it is within N pixels of any obstacle.
+        public float   AmbientOcclusionRadius = 0;
+        // Controls the nature of the light's distance falloff. Exponential produces falloff that is more realistic (square of distance or whatever) but not necessarily as expected.
+        public LightSourceRampMode RampMode = LightSourceRampMode.Linear;
 
         public Bounds3 Bounds {
             get {
@@ -35,7 +38,11 @@ namespace Squared.Illuminant {
     }
 
     public enum LightSourceRampMode {
+        // Linear falloff once outside radius
         Linear,
-        Exponential
+        // Exponential falloff once outside radius
+        Exponential,
+        // Constant full brightness within radius
+        None
     }
 }

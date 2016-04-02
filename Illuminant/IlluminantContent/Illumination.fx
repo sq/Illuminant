@@ -18,25 +18,24 @@ float4 ApplyTransform (float3 position) {
 }
 
 void SphereLightVertexShader(
-    in float2 position : POSITION0,
-    inout float4 color : COLOR0,
-    inout float3 lightCenter : TEXCOORD0,
-    inout float3 rampAndExponential : TEXCOORD1,
-    out float2 worldPosition : TEXCOORD2,
-    out float4 result : POSITION0
+    in float2 position            : POSITION0,
+    inout float4 color            : COLOR0,
+    inout float4 lightCenterAndAO : TEXCOORD0,
+    inout float4 lightProperties  : TEXCOORD1,
+    out float2 worldPosition      : TEXCOORD2,
+    out float4 result             : POSITION0
 ) {
     worldPosition = position;
     // FIXME: Z
-    float4 transformedPosition = ApplyTransform(float3(position, lightCenter.z));
+    float4 transformedPosition = ApplyTransform(float3(position, lightCenterAndAO.z));
     result = float4(transformedPosition.xy, 0, transformedPosition.w);
 }
 
 float SphereLightPixelCore(
-    in float2 worldPosition : TEXCOORD2,
-    in float3 lightCenter   : TEXCOORD0,
-    in float2 ramp          : TEXCOORD1, // radius, ramp length
-    in float2 vpos          : VPOS,
-    float     exponential
+    in float2 worldPosition    : TEXCOORD2,
+    in float4 lightCenterAndAO : TEXCOORD0,
+    in float4 lightProperties  : TEXCOORD1, // radius, ramp length, ramp mode, enable shadows
+    in float2 vpos             : VPOS
 ) {
     float3 shadedPixelPosition;
     float3 shadedPixelNormal;
@@ -47,15 +46,33 @@ float SphereLightPixelCore(
 
     float lightOpacity = computeSphereLightOpacity(
         shadedPixelPosition, shadedPixelNormal,
-        lightCenter, ramp.x, ramp.y, exponential
+        lightCenterAndAO.xyz, lightProperties
     );
 
     const float opacityThreshold = (0.5 / 255.0);
+    bool visible = (lightOpacity >= opacityThreshold);
+
+    DistanceFieldConstants vars = makeDistanceFieldConstants();
 
     [branch]
-    if (lightOpacity >= opacityThreshold) {
-        float tracedOcclusion = coneTrace(lightCenter, ramp, shadedPixelPosition + (SELF_OCCLUSION_HACK * shadedPixelNormal));
-        return lightOpacity * tracedOcclusion;
+    if (lightCenterAndAO.w >= 0.5) {
+        float distance = sampleDistanceField(shadedPixelPosition, vars);
+        float aoRamp = clamp(distance / lightCenterAndAO.w, 0, 1);
+        lightOpacity *= aoRamp;
+        visible = (lightOpacity >= opacityThreshold);
+    }
+
+    bool traceShadows = (visible && lightProperties.w);
+
+    [branch]
+    if (traceShadows) {
+        lightOpacity *= coneTrace(lightCenterAndAO.xyz, lightProperties.xy, shadedPixelPosition + (SELF_OCCLUSION_HACK * shadedPixelNormal), vars);
+        visible = (lightOpacity >= opacityThreshold);
+    }
+
+    [branch]
+    if (visible) {
+        return lightOpacity;
     } else {
         discard;
         return 0;
@@ -63,15 +80,15 @@ float SphereLightPixelCore(
 }
 
 void SphereLightPixelShader(
-    in float2 worldPosition : TEXCOORD2,
-    in float3 lightCenter : TEXCOORD0,
-    in float3 rampAndExponential : TEXCOORD1, // start, end, exp
-    in float4 color : COLOR0,
-    in  float2 vpos : VPOS,
-    out float4 result : COLOR0
+    in  float2 worldPosition    : TEXCOORD2,
+    in  float4 lightCenterAndAO : TEXCOORD0,
+    in  float4 lightProperties  : TEXCOORD1,
+    in  float4 color            : COLOR0,
+    in  float2 vpos             : VPOS,
+    out float4 result           : COLOR0
 ) {
     float opacity = SphereLightPixelCore(
-        worldPosition, lightCenter, rampAndExponential.xy, vpos, rampAndExponential.z
+        worldPosition, lightCenterAndAO, lightProperties, vpos
     );
 
     float4 lightColorActual = float4(color.rgb * color.a * opacity, color.a * opacity);

@@ -443,12 +443,16 @@ namespace Squared.Illuminant {
 
                     lightBounds = lightBounds.Scale(Configuration.RenderScale);
 
-                    vertex.LightCenter = lightSource.Position;
+                    vertex.LightCenterAndAO = new Vector4(
+                        lightSource.Position,
+                        lightSource.AmbientOcclusionRadius
+                    );
                     vertex.Color = lightSource.Color;
                     vertex.Color.W *= (lightSource.Opacity * intensityScale);
-                    vertex.RampAndExponential = new Vector3(
+                    vertex.LightProperties = new Vector4(
                         lightSource.Radius, lightSource.RampLength,
-                        (lightSource.RampMode == LightSourceRampMode.Exponential) ? 1f : 0f
+                        (float)(int)lightSource.RampMode,
+                        lightSource.CastsShadows ? 1f : 0f
                     );
 
                     vertex.Position = lightBounds.TopLeft;

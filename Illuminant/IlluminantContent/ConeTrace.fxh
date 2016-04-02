@@ -47,17 +47,22 @@ float coneTraceStep(
     );
 }
 
-float coneTrace(
-    in float3 lightCenter,
-    in float2 lightRamp,
-    in float3 shadedPixelPosition
-) {
-    DistanceFieldConstants vars = {
+DistanceFieldConstants makeDistanceFieldConstants() {
+    DistanceFieldConstants result = {
         DistanceField.TextureSliceCount.z - 1,
         (1.0 / DistanceField.TextureSliceCount.x) * (1.0 / 3.0),
         (1.0 / DistanceField.Extent.z) * DistanceField.TextureSliceCount.z
     };
 
+    return result;
+}
+
+float coneTrace(
+    in float3 lightCenter,
+    in float2 lightRamp,
+    in float3 shadedPixelPosition,
+    in DistanceFieldConstants vars
+) {
     float  traceLength;
     float3 traceDirection;
     float3 config;

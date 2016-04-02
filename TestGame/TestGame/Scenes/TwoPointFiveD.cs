@@ -129,10 +129,8 @@ namespace TestGame.Scenes {
             var light2 = new LightSource {
                 Position = new Vector3(1024, 800, 320f),
                 Color = new Vector4(0.2f, 0.4f, 0.6f, 0.4f),
-                // FIXME: Implement directional lights and make this one
-                Radius = 64,
-                RampLength = 2048,
-                RampMode = LightSourceRampMode.Linear
+                Radius = 2048,
+                RampMode = LightSourceRampMode.None
             };
 
             Lights.Add(light2);
@@ -141,10 +139,8 @@ namespace TestGame.Scenes {
             var light3 = new LightSource {
                 Position = new Vector3(500, 150, 220f),
                 Color = new Vector4(0.6f, 0.4f, 0.2f, 0.33f),
-                // FIXME: Implement directional lights and make this one
-                Radius = 64,
-                RampLength = 2048,
-                RampMode = LightSourceRampMode.Linear
+                Radius = 2048,
+                RampMode = LightSourceRampMode.None
             };
 
             Lights.Add(light3);

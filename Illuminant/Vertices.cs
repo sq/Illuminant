@@ -11,8 +11,8 @@ namespace Squared.Illuminant {
     public struct SphereLightVertex : IVertexType {
         // FIXME: Shouldn't this be V3? Blech
         public Vector2 Position;
-        public Vector3 LightCenter;
-        public Vector3 RampAndExponential;
+        public Vector4 LightCenterAndAO;
+        public Vector4 LightProperties;
         public Vector4 Color;
 
         public static VertexDeclaration _VertexDeclaration;
@@ -22,8 +22,8 @@ namespace Squared.Illuminant {
 
             _VertexDeclaration = new VertexDeclaration(
                 new VertexElement(Marshal.OffsetOf(tThis, "Position").ToInt32(), VertexElementFormat.Vector2, VertexElementUsage.Position, 0),
-                new VertexElement(Marshal.OffsetOf(tThis, "LightCenter").ToInt32(), VertexElementFormat.Vector3, VertexElementUsage.TextureCoordinate, 0),
-                new VertexElement(Marshal.OffsetOf(tThis, "RampAndExponential").ToInt32(), VertexElementFormat.Vector3, VertexElementUsage.TextureCoordinate, 1),
+                new VertexElement(Marshal.OffsetOf(tThis, "LightCenterAndAO").ToInt32(), VertexElementFormat.Vector4, VertexElementUsage.TextureCoordinate, 0),
+                new VertexElement(Marshal.OffsetOf(tThis, "LightProperties").ToInt32(), VertexElementFormat.Vector4, VertexElementUsage.TextureCoordinate, 1),
                 new VertexElement(Marshal.OffsetOf(tThis, "Color").ToInt32(), VertexElementFormat.Vector4, VertexElementUsage.Color, 0)
             );
         }

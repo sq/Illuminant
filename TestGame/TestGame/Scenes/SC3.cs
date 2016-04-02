@@ -60,7 +60,7 @@ namespace TestGame.Scenes {
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(
                     Width / LightmapScaleRatio, Height / LightmapScaleRatio,
-                    Width, Height, 64
+                    Width, Height, 16
                 ) {
                     RenderScale = 1.0f / LightmapScaleRatio,
                     DistanceFieldResolution = 0.5f,
@@ -76,17 +76,50 @@ namespace TestGame.Scenes {
             var light = new LightSource {
                 Position = new Vector3(64, 64, 0.7f),
                 Color = new Vector4(1f, 1f, 1f, 0.5f),
-                Radius = 24,
-                RampLength = 550,
-                RampMode = LightSourceRampMode.Exponential
+                Radius = 250,
+                RampLength = 700,
+                RampMode = LightSourceRampMode.Linear,
+                AmbientOcclusionRadius = 9.25f
             };
 
             Lights.Add(light);
             Environment.LightSources.Add(light);
 
+            var ambientLight = new LightSource {
+                Position = new Vector3(Width / 2f, Height / 2f, 0f),
+                Color = new Vector4(0f, 0.8f, 0.6f, 0.1f),
+                Radius = 8192,
+                RampLength = 0,
+                RampMode = LightSourceRampMode.None,
+                CastsShadows = false,
+                AmbientOcclusionRadius = 9.25f
+            };
+
+            Lights.Add(ambientLight);
+            Environment.LightSources.Add(ambientLight);
+
+            BuildObstacles();
+
             Environment.GroundZ = 0;
             Environment.MaximumZ = 128;
             Environment.ZToYMultiplier = 2.5f;
+        }
+
+        private void Pillar (float x, float y) {
+            Environment.Obstructions.Add(new LightObstruction(
+                LightObstructionType.Ellipsoid,
+                new Vector3(x, y, 0),
+                new Vector3(20, 10, 80) 
+            ));
+        }
+
+        private void BuildObstacles () {
+            Pillar(722, 186);
+            Pillar(848, 208);
+            Pillar(928, 334);
+            Pillar(888, 480);
+            Pillar(721, 521);
+            Pillar(591, 501);
         }
         
         public override void Draw (Squared.Render.Frame frame) {
@@ -139,6 +172,12 @@ namespace TestGame.Scenes {
                         dc.Textures = new TextureSet(dc.Textures.Texture1, Lightmap);
                         bb.Add(dc);
                     }
+
+                    using (var bb = BitmapBatch.New(
+                        group, 2,
+                        Game.Materials.Get(Game.Materials.ScreenSpaceBitmap, blendState: BlendState.AlphaBlend)
+                    ))
+                        bb.Add(new BitmapDrawCall(Foreground, Vector2.Zero));
                 }
 
                 if (ShowDistanceField) {
@@ -197,7 +236,7 @@ namespace TestGame.Scenes {
                 var ms = Mouse.GetState();
                 Game.IsMouseVisible = true;
 
-                LightZ = (ms.ScrollWheelValue / 4096.0f) * Environment.MaximumZ;
+                LightZ = (ms.ScrollWheelValue / 1024.0f) * Environment.MaximumZ;
 
                 if (LightZ < 0.01f)
                     LightZ = 0.01f;
@@ -205,7 +244,7 @@ namespace TestGame.Scenes {
                 var mousePos = new Vector3(ms.X, ms.Y, LightZ);
 
                 if (Deterministic)
-                    Lights[0].Position = new Vector3(671, 394, 97.5f);
+                    Lights[0].Position = new Vector3(Width / 2f, Height / 2f, 380f);
                 else
                     Lights[0].Position = mousePos;
             }

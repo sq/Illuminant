@@ -46,37 +46,23 @@ void sampleGBuffer(
 
 float computeSphereLightOpacity(
     float3 shadedPixelPosition, float3 shadedPixelNormal,
-    float3 lightCenter, float lightRadius, float lightRampLength, float exponential
+    float3 lightCenter, float4 lightProperties
 ) {
+    float  lightRadius     = lightProperties.x;
+    float  lightRampLength = lightProperties.y;
+    float  falloffMode     = lightProperties.z;
+
     float3 distance3      = shadedPixelPosition - lightCenter;
     float  distance       = length(distance3);
     float  distanceFactor = 1 - clamp((distance - lightRadius) / lightRampLength, 0, 1);
 
-    if (exponential)
+    [flatten]
+    if (falloffMode >= 2)
+        distanceFactor = 1 - clamp(distance - lightRadius, 0, 1);
+    else if (falloffMode >= 1)
         distanceFactor *= distanceFactor;
 
     float3 lightNormal  = distance3 / distance;
-
-    /*
-    float3 crossProduct = cross(shadedPixelNormal, lightNormal);
-    float3 lightEdgeA   = lightCenter + (crossProduct * lightRadius);
-    float3 lightEdgeB   = lightCenter - (crossProduct * lightRadius);
-
-    // HACK: Because we are modeling a spherical light source instead of a point light, simply
-    //  using the dot product of the light vector & surface normal won't be sufficient.
-    // We compute the cross product of the light vector & surface normal to get an additional
-    //  pair of vectors that we can use to select points on the surface of the light source,
-    //  and then also compute dot products for the vector between those additional points and
-    //  the shaded point.
-    // This (maybe?) approximates whether light from the sphere can reach the point, for our
-    //  purposes.
-    float  dotA = dot(-normalize(shadedPixelPosition - lightEdgeA), shadedPixelNormal);
-    float  dotB = dot(-normalize(shadedPixelPosition - lightEdgeB), shadedPixelNormal);
-    float  dotC = dot(-lightNormal, shadedPixelNormal);
-
-    // FIXME: If the light center is inside the surface we get a gross dark blob
-    float  d = max(max(dotA, dotB), dotC);
-    */
 
     float d = dot(-lightNormal, shadedPixelNormal);
 
