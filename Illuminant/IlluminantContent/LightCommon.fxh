@@ -83,7 +83,6 @@ float computeLightOpacity(
     // HACK: We allow the light to be somewhat behind the surface without occluding it,
     //  and we want a smooth ramp between occluded and not-occluded
     float  normalFactor = pow(clamp((d + DOT_OFFSET) / DOT_RAMP_RANGE, 0, 1), DOT_EXPONENT);
-    return normalFactor;
 
     return normalFactor * distanceFactor;
 }
