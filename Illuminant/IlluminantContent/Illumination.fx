@@ -117,7 +117,7 @@ void LightBinPixelShader(
         float uv = float2(i * LightBinTextureSize.x, v);
     }
 
-    result = float4(lightCount / 64, binIndex / 512, 0, 1);
+    result = float4(pow(lightCount / 8, 0.7), 0, 0.1, 1);
 
     /*
     float opacity = SphereLightPixelCore(

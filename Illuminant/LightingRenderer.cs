@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
@@ -22,6 +23,8 @@ namespace Squared.Illuminant {
 
         // The maximum width and height of the viewport.
         public readonly Pair<int>    MaximumRenderSize;
+
+        public readonly int          LightBinSize;
 
         // Scales world coordinates when rendering the G-buffer and lightmap
         public float RenderScale                          = 1.0f;
@@ -65,11 +68,13 @@ namespace Squared.Illuminant {
 
         public RendererConfiguration (
             int maxWidth, int maxHeight,
-            int distanceFieldWidth, int distanceFieldHeight, int distanceFieldDepth
+            int distanceFieldWidth, int distanceFieldHeight, int distanceFieldDepth,
+            int lightBinSize = 64
         ) {
             MaximumRenderSize = new Pair<int>(maxWidth, maxHeight);
             DistanceFieldSize = new Triplet<int>(distanceFieldWidth, distanceFieldHeight, distanceFieldDepth);
             RenderSize = MaximumRenderSize;
+            LightBinSize = lightBinSize;
         }
     }
 
@@ -78,7 +83,6 @@ namespace Squared.Illuminant {
         public const int PackedSliceCount = 3;
 
         const int        DistanceLimit = 520;
-        const int        LightBinSize  = 64;
 
         const SurfaceFormat GBufferFormat       = SurfaceFormat.Vector4;
         const SurfaceFormat DistanceFieldFormat = SurfaceFormat.Rgba64;
@@ -104,7 +108,9 @@ namespace Squared.Illuminant {
 
         // float3 center, float3 rampAndExponential, float4 color = 10 -> round to 12 elements -> 3 (Half)Vector4s
         const int PixelsPerLightBinEntry = 3;
-        private readonly Texture2D           LightBinTexture;
+        const int MaxLightsPerBin        = 512;
+
+        private          Texture2D           LightBinTexture;
         private readonly DynamicVertexBuffer LightBinVertexBuffer;
         private readonly int                 MaxLightBinCount, MaxLightBinCountX, MaxLightBinCountY;
 
@@ -191,17 +197,16 @@ namespace Squared.Illuminant {
                     false, LightmapFormat, DepthFormat.None, 0, RenderTargetUsage.PlatformContents
                 );
 
-                MaxLightBinCountX = (int)Math.Ceiling(Configuration.MaximumRenderSize.First / (float)LightBinSize);
-                MaxLightBinCountY = (int)Math.Ceiling(Configuration.MaximumRenderSize.Second / (float)LightBinSize);
+                MaxLightBinCountX = (int)Math.Ceiling(Configuration.MaximumRenderSize.First / (float)Configuration.LightBinSize);
+                MaxLightBinCountY = (int)Math.Ceiling(Configuration.MaximumRenderSize.Second / (float)Configuration.LightBinSize);
                 MaxLightBinCount = MaxLightBinCountX * MaxLightBinCountY;
 
                 // Bins packed with tons of lights will make this texture become wider, but that should be rare
-                const int defaultLightBinLightCount = 64;
                 int defaultLightBinTextureHeight = MaxLightBinCount;
 
                 LightBinTexture = new Texture2D(
                     coordinator.Device, 
-                    defaultLightBinLightCount * PixelsPerLightBinEntry, 
+                    MaxLightsPerBin * PixelsPerLightBinEntry, 
                     defaultLightBinTextureHeight, 
                     false, SurfaceFormat.HalfVector4
                 );
@@ -443,6 +448,11 @@ namespace Squared.Illuminant {
                 SetDistanceFieldParameters(mi.Effect.Parameters, true);
             }
 
+            LightBinMaterialInner.Effect.Parameters["LightBinTexture"].SetValue(LightBinTexture);
+            LightBinMaterialInner.Effect.Parameters["LightBinTextureSize"].SetValue(
+                new Vector2(LightBinTexture.Width, LightBinTexture.Height)
+            );
+
             Monitor.Enter(_LightBufferLock);
         }
 
@@ -482,8 +492,8 @@ namespace Squared.Illuminant {
             int y = index / MaxLightBinCountX;
 
             return Bounds.FromPositionAndSize(
-                new Vector2(x * LightBinSize, y * LightBinSize),
-                new Vector2(LightBinSize)
+                new Vector2(x * Configuration.LightBinSize, y * Configuration.LightBinSize),
+                new Vector2(Configuration.LightBinSize)
             );
         }
 
@@ -492,48 +502,82 @@ namespace Squared.Illuminant {
 
             SphereLightVertex lightVertex;
             int bufferSize = LightBinTexture.Width * LightBinTexture.Height;
-            int lightBinCount = 0;
+            int lightBinCount = 0, maxLightBinCount = 0;
 
             using (var texels = BufferPool<HalfVector4>.Allocate(bufferSize))
-            using (var binCounts = BufferPool<int>.Allocate(MaxLightBinCount)) {
+            using (var binCounts = BufferPool<int>.Allocate(MaxLightBinCount))
+            using (var binBounds = BufferPool<Bounds>.Allocate(MaxLightBinCount)) {
+                Array.Clear(binCounts.Data, 0, MaxLightBinCount);
+
+                for (int j = 0; j < MaxLightBinCount; j++)
+                    binBounds.Data[j] = GetLightBinBounds(j);
+
                 // Place lights into bins
-                for (int i = 0, j = 0; i < lightCount; i++) {
+                // FIXME: This is obscenely slow
+                Parallel.For(0, lightCount, (i) => {
                     var lightSource = Environment.LightSources[i];
 
                     Bounds lightBounds;
                     BuildSphereLightVertex(lightSource, intensityScale, out lightVertex, out lightBounds);
 
-                }
+                    for (int j = 0; j < MaxLightBinCount; j++) {
+                        // TODO: Do a sphere-box intersection to cull more lights
+                        if (!lightBounds.Intersects(binBounds.Data[j]))
+                            continue;
 
-                lock (_LightBufferLock)
-                    LightBinTexture.SetData(texels.Data, 0, bufferSize);
+                        var newCount = Interlocked.Increment(ref binCounts.Data[j]);
+                        var texelIndex = ((newCount - 1) * PixelsPerLightBinEntry) +
+                            (j * MaxLightsPerBin * PixelsPerLightBinEntry);
+
+                        texels.Data[texelIndex + 0] = new HalfVector4(
+                            lightVertex.LightCenter.X, lightVertex.LightCenter.Y,
+                            lightVertex.LightCenter.Z, 0
+                        );
+
+                        texels.Data[texelIndex + 1] = new HalfVector4(
+                            lightVertex.RampAndExponential.X, lightVertex.RampAndExponential.Y,
+                            lightVertex.RampAndExponential.Z, 0
+                        );
+
+                        texels.Data[texelIndex + 2] = new HalfVector4(lightVertex.Color);
+                    }
+                });
 
                 // Generate vertex data for bins that aren't empty
+                // FIXME: This is kinda slow too
                 using (var lightBinVertices = BufferPool<LightBinVertex>.Allocate(MaxLightBinCount * 4)) {
                     for (int i = 0, j = 0; i < MaxLightBinCount; i++) {
+                        int numLights = binCounts.Data[i];
+                        if (numLights < 1)
+                            continue;
+
                         lightBinCount += 1;
 
-                        var binBounds = GetLightBinBounds(i);
+                        maxLightBinCount = Math.Max(i, numLights);
+
+                        var bounds = binBounds.Data[i];
 
                         var vertex = new LightBinVertex();
                         vertex.BinIndex = i;
-                        vertex.LightCount = 0;
+                        vertex.LightCount = binCounts.Data[i];
 
-                        vertex.Position = binBounds.TopLeft;
+                        vertex.Position = bounds.TopLeft;
                         lightBinVertices.Data[j++] = vertex;
 
-                        vertex.Position = binBounds.TopRight;
+                        vertex.Position = bounds.TopRight;
                         lightBinVertices.Data[j++] = vertex;
 
-                        vertex.Position = binBounds.BottomRight;
+                        vertex.Position = bounds.BottomRight;
                         lightBinVertices.Data[j++] = vertex;
 
-                        vertex.Position = binBounds.BottomLeft;
+                        vertex.Position = bounds.BottomLeft;
                         lightBinVertices.Data[j++] = vertex;
                     }
 
-                    lock (_LightBufferLock)
+                    lock (_LightBufferLock) {
                         LightBinVertexBuffer.SetData(lightBinVertices.Data, 0, MaxLightBinCount * 4, SetDataOptions.Discard);
+                        LightBinTexture.SetData(texels.Data, 0, bufferSize);
+                    }
                 }
             }
 
