@@ -108,7 +108,7 @@ namespace Squared.Illuminant {
 
         // float3 center, float3 rampAndExponential, float4 color = 10 -> round to 12 elements -> 3 (Half)Vector4s
         const int PixelsPerLightBinEntry = 3;
-        const int MaxLightsPerBin        = 512;
+        const int MaxLightsPerBin        = 256;
 
         private readonly Texture2D           LightBinTexture;
         private readonly Vector4[]           LightBinTexels; 
@@ -507,7 +507,6 @@ namespace Squared.Illuminant {
         private void RenderBinnedSphereLights (float intensityScale, ref int layerIndex, BatchGroup resultGroup) {
             int lightCount = Environment.LightSources.Count;
 
-            SphereLightVertex lightVertex;
             int bufferSize = LightBinTexture.Width * LightBinTexture.Height;
             int lightBinCount = 0, maxLightBinCount = 0;
 
@@ -523,25 +522,23 @@ namespace Squared.Illuminant {
 
                 // Place lights into bins
                 // FIXME: This is obscenely slow
-                // lock (_LightBufferLock)
-                Parallel.For(0, MaxLightBinCount, new ParallelOptions {
-                    MaxDegreeOfParallelism = 12
-                }, (j) => {
+                lock (_LightBufferLock)
+                Parallel.For(0, MaxLightBinCount, (j) => {
                     var baseTexelIndex = (j * rowWidth);
                     var currentBinBounds = binBounds.Data[j];
                     var count = 0;
-                    var rng = new Random();
                     
                     foreach (var lightSource in Environment.LightSources) {
                         if (count >= MaxLightsPerBin)
                             continue;
 
                         Bounds lightBounds;
+                        SphereLightVertex lightVertex;
                         BuildSphereLightVertex(lightSource, intensityScale, out lightVertex, out lightBounds);
 
                         // TODO: Do a sphere-box intersection to cull more lights
-                        //if (!lightBounds.Intersects(currentBinBounds))
-                        //    continue;
+                        if (!lightBounds.Intersects(currentBinBounds))
+                            continue;
 
                         var texelIndex = (j * rowWidth) + (count * PixelsPerLightBinEntry);
 
@@ -562,51 +559,6 @@ namespace Squared.Illuminant {
 
                     binCounts.Data[j] = count;
                 });
-
-                // Array.Clear(binCounts.Data, 0, binCounts.Data.Length);
-
-                if (false)
-                for (int j = 0; j < MaxLightBinCount; j++) {
-                    var baseTexelIndex = (j * rowWidth);
-                    var currentBinBounds = binBounds.Data[j];
-                    var count = 0;
-                    
-                    foreach (var lightSource in Environment.LightSources) {
-                        if (count >= MaxLightsPerBin)
-                            continue;
-
-                        Bounds lightBounds;
-                        BuildSphereLightVertex(lightSource, intensityScale, out lightVertex, out lightBounds);
-
-                        // TODO: Do a sphere-box intersection to cull more lights
-                        //if (!lightBounds.Intersects(currentBinBounds))
-                        //    continue;
-
-                        var texelIndex = (j * rowWidth) + (count * PixelsPerLightBinEntry);
-
-                        if (LightBinTexels[texelIndex + 0] != new Vector4(
-                            lightVertex.LightCenter.X, lightVertex.LightCenter.Y,
-                            lightVertex.LightCenter.Z, 0
-                        )) {
-                            Console.WriteLine("Bad texel at " + (texelIndex + 0));
-                        }
-
-                        if (LightBinTexels[texelIndex + 1] != new Vector4(
-                            lightVertex.RampAndExponential.X, lightVertex.RampAndExponential.Y,
-                            lightVertex.RampAndExponential.Z, 0
-                        )) {
-                            Console.WriteLine("Bad texel at " + (texelIndex + 1));
-                        }
-
-                        if (LightBinTexels[texelIndex + 2] != lightVertex.Color) {
-                            Console.WriteLine("Bad texel at " + (texelIndex + 2));
-                        }
-
-                        count += 1;
-                    }
-
-                    binCounts.Data[j] = count;
-                };
 
                 // Generate vertex data for bins that aren't empty
                 // FIXME: This is kinda slow too

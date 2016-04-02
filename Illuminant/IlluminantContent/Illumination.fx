@@ -114,10 +114,6 @@ void LightBinPixelShader(
     out float4 result   : COLOR0
 ) {
     float2 texelSize = 1.0 / LightBinTextureSize;
-    float v = texelSize.y * binIndex;
-
-    result = 0;
-
     float3 shadedPixelPosition;
     float3 shadedPixelNormal;
     sampleGBuffer(
@@ -125,15 +121,9 @@ void LightBinPixelShader(
         shadedPixelPosition, shadedPixelNormal
     );
 
-    float4 uv = float4(vpos * texelSize, 0, 0);
-
-    result.rgb = tex2Dlod(LightBinSampler, uv).rgb;
-    result.a = 1;
-
-    uv = float4(0, v, 0, 0);
-    float i = 0;
-    // for (float i = 0; i < lightCount; i++) {
-    if (false) {
+    result = 0;
+    float4 uv = float4(0, texelSize.y * binIndex, 0, 0);
+    for (float i = 0; i < lightCount; i++) {
         float3 lightCenter = tex2Dlod(LightBinSampler, uv).xyz;
         uv.x += texelSize.x;
         float3 rampAndExponential = tex2Dlod(LightBinSampler, uv).xyz;
@@ -141,14 +131,11 @@ void LightBinPixelShader(
         float4 lightColor = tex2Dlod(LightBinSampler, uv);
         uv.x += texelSize.x;
 
-        result.rgb += (lightColor.rgb);
-        result.a += 1;
-
-        /*
         float opacity = SphereLightPixelCore(
             lightCenter, rampAndExponential.xy, rampAndExponential.z,
             shadedPixelPosition, shadedPixelNormal
         );
+        opacity = 1.0;
 
         float4 lightColorActual = float4(
             lightColor.rgb * lightColor.a * opacity, 
@@ -156,9 +143,7 @@ void LightBinPixelShader(
         );
 
         result += lightColorActual;
-        */
     }
-    // }
 
     /*
     if (result.a < OpacityThreshold) {

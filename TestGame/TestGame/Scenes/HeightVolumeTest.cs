@@ -25,7 +25,7 @@ namespace TestGame.Scenes {
         bool TwoPointFiveD = true;
         bool Deterministic = true;
 
-        public const int RotatingLightCount = 1024;
+        public const int RotatingLightCount = 256;
 
         public const int MultisampleCount = 0;
         public const int LightmapScaleRatio = 1;
@@ -56,7 +56,7 @@ namespace TestGame.Scenes {
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment,
                 new RendererConfiguration(
                     Width / LightmapScaleRatio, Height / LightmapScaleRatio,
-                    Width, Height, 16
+                    Width, Height, 64
                 ) {
                     RenderScale = 1.0f / LightmapScaleRatio,
                     DistanceFieldResolution = 0.5f,

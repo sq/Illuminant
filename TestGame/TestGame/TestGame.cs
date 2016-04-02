@@ -28,7 +28,7 @@ namespace TestGame {
         public SpriteFont Font;
 
         public readonly Scene[] Scenes;
-        public int ActiveSceneIndex = 1;
+        public int ActiveSceneIndex = 0;
 
         private int LastPerformanceStatPrimCount = 0;
 
@@ -45,7 +45,7 @@ namespace TestGame {
             Content.RootDirectory = "Content";
 
             UseThreadedDraw = true;
-            IsFixedTimeStep = false;
+            IsFixedTimeStep = true;
 
             if (IsFixedTimeStep) {
                 TargetElapsedTime = TimeSpan.FromSeconds(1.0 / 30);

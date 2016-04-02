@@ -30,7 +30,7 @@ namespace TestGame.Scenes {
         const int MaxStepCount = 128;
 
         bool ShowGBuffer       = false;
-        bool ShowLightmap      = false;
+        bool ShowLightmap      = true;
         bool ShowDistanceField = false;
         bool Timelapse         = false;
         bool TwoPointFiveD     = true;
@@ -102,7 +102,7 @@ namespace TestGame.Scenes {
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(
                     1024 / LightmapScaleRatio, 1024 / LightmapScaleRatio,
-                    1024, 1024, 64, 32
+                    1024, 1024, 64, 16
                 ) {
                     RenderScale = 1.0f / LightmapScaleRatio,
                     DistanceFieldResolution = 0.5f,
