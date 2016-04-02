@@ -46,16 +46,10 @@ void SphereLightVertexShader(
 float SphereLightPixelCore(
     in float3 lightCenter   : TEXCOORD0,
     in float2 ramp          : TEXCOORD1, // radius, ramp length
-    in float2 vpos          : VPOS,
-    float     exponential
+    float     exponential,
+    float3    shadedPixelPosition,
+    float3    shadedPixelNormal
 ) {
-    float3 shadedPixelPosition;
-    float3 shadedPixelNormal;
-    sampleGBuffer(
-        vpos,
-        shadedPixelPosition, shadedPixelNormal
-    );
-
     float lightOpacity = computeSphereLightOpacity(
         shadedPixelPosition, shadedPixelNormal,
         lightCenter, ramp.x, ramp.y, exponential
@@ -81,8 +75,16 @@ void SphereLightPixelShader(
     in  float2 vpos              : VPOS,
     out float4 result            : COLOR0
 ) {
+    float3 shadedPixelPosition;
+    float3 shadedPixelNormal;
+    sampleGBuffer(
+        vpos,
+        shadedPixelPosition, shadedPixelNormal
+    );
+
     float opacity = SphereLightPixelCore(
-        lightCenter, rampAndExponential.xy, vpos, rampAndExponential.z
+        lightCenter, rampAndExponential.xy, rampAndExponential.z, 
+        shadedPixelPosition, shadedPixelNormal
     );
 
     if (opacity < OpacityThreshold) {
@@ -119,6 +121,13 @@ void LightBinPixelShader(
     result.a = 1;
     result.r += lightCount / 32;
 
+    float3 shadedPixelPosition;
+    float3 shadedPixelNormal;
+    sampleGBuffer(
+        vpos,
+        shadedPixelPosition, shadedPixelNormal
+    );
+
     [loop]
     for (float i = 0; i < lightCount; i++) {
         float4 uv = float4(i * texelSize.x * 3, v, 0, 0);
@@ -130,13 +139,12 @@ void LightBinPixelShader(
         uv.x += texelSize.x;
 
         float4 lightColor = tex2Dlod(LightBinSampler, uv);
+        result += lightColor;
 
-        /*
         float opacity = SphereLightPixelCore(
-            lightCenter, rampAndExponential.xy, vpos, rampAndExponential.z
+            lightCenter, rampAndExponential.xy, rampAndExponential.z,
+            shadedPixelPosition, shadedPixelNormal
         );
-        */
-        float opacity = 1.0;
 
         float4 lightColorActual = float4(
             lightColor.rgb * lightColor.a * opacity, 
@@ -146,12 +154,10 @@ void LightBinPixelShader(
         result += lightColorActual;
     }
 
-    /*
     if (result.a < OpacityThreshold) {
         discard;
         result = 0;
     }
-    */
 }
 
 technique SphereLight {
