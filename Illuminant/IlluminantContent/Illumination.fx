@@ -44,7 +44,6 @@ void SphereLightVertexShader(
 }
 
 float SphereLightPixelCore(
-    in float2 worldPosition : TEXCOORD2,
     in float3 lightCenter   : TEXCOORD0,
     in float2 ramp          : TEXCOORD1, // radius, ramp length
     in float2 vpos          : VPOS,
@@ -62,12 +61,14 @@ float SphereLightPixelCore(
         lightCenter, ramp.x, ramp.y, exponential
     );
 
-    float tracedOcclusion = 0;
+    float tracedOcclusion = 1;
 
+    /*
     [branch]
     if (lightOpacity >= OpacityThreshold) {
         tracedOcclusion = coneTrace(lightCenter, ramp, shadedPixelPosition + (SELF_OCCLUSION_HACK * shadedPixelNormal));
     }
+    */
 
     return lightOpacity * tracedOcclusion;
 }
@@ -81,7 +82,7 @@ void SphereLightPixelShader(
     out float4 result            : COLOR0
 ) {
     float opacity = SphereLightPixelCore(
-        worldPosition, lightCenter, rampAndExponential.xy, vpos, rampAndExponential.z
+        lightCenter, rampAndExponential.xy, vpos, rampAndExponential.z
     );
 
     if (opacity < OpacityThreshold) {
@@ -110,27 +111,41 @@ void LightBinPixelShader(
     in  float2 vpos       : VPOS,
     out float4 result     : COLOR0
 ) {
-    result = 0;
-    float v = LightBinTextureSize.y * binIndex;
+    float2 texelSize = 1.0 / LightBinTextureSize;
 
+    result = 0;
+    float v = texelSize.y * binIndex;
+
+    [loop]
     for (float i = 0; i < lightCount; i++) {
-        float uv = float2(i * LightBinTextureSize.x, v);
+        float4 uv = float4(i * texelSize.x * 3, v, 0, 0);
+
+        float3 lightCenter = tex2Dlod(LightBinSampler, uv).xyz;
+        uv.x += texelSize.x;
+
+        float3 rampAndExponential = tex2Dlod(LightBinSampler, uv).xyz;
+        uv.x += texelSize.x;
+
+        float4 lightColor = tex2Dlod(LightBinSampler, uv);
+
+        float opacity = SphereLightPixelCore(
+            lightCenter, rampAndExponential.xy, vpos, rampAndExponential.z
+        );
+
+        float4 lightColorActual = float4(
+            lightColor.rgb * lightColor.a * opacity, 
+            lightColor.a * opacity
+        );
+
+        result += lightColorActual;
     }
 
-    result = float4(pow(lightCount / 8, 0.7), 0, 0.1, 1);
-
     /*
-    float opacity = SphereLightPixelCore(
-        worldPosition, lightCenter, rampAndExponential.xy, vpos, rampAndExponential.z
-    );
-
-    float4 lightColorActual = float4(color.rgb * color.a * opacity, color.a * opacity);
-    */
-
     if (result.a < OpacityThreshold) {
         discard;
         result = 0;
     }
+    */
 }
 
 technique SphereLight {
