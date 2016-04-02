@@ -108,7 +108,7 @@ namespace Squared.Illuminant {
 
         // float3 center, float3 rampAndExponential, float4 color = 10 -> round to 12 elements -> 3 (Half)Vector4s
         const int PixelsPerLightBinEntry = 3;
-        const int MaxLightsPerBin        = 64;
+        const int MaxLightsPerBin        = 512;
 
         private readonly Texture2D           LightBinTexture;
         private readonly Vector4[]           LightBinTexels; 
@@ -195,7 +195,7 @@ namespace Squared.Illuminant {
                     coordinator.Device, 
                     Configuration.MaximumRenderSize.First, 
                     Configuration.MaximumRenderSize.Second,
-                    false, LightmapFormat, DepthFormat.None, 0, RenderTargetUsage.PlatformContents
+                    false, LightmapFormat, DepthFormat.None, 0, RenderTargetUsage.DiscardContents
                 );
 
                 MaxLightBinCountX = (int)Math.Ceiling(Configuration.MaximumRenderSize.First / (float)Configuration.LightBinSize);
@@ -453,14 +453,14 @@ namespace Squared.Illuminant {
                 SetDistanceFieldParameters(mi.Effect.Parameters, true);
             }
 
-            LightBinTexture.SetData(LightBinTexels);
-
             LightBinMaterialInner.Effect.Parameters["LightBinTexture"].SetValue(LightBinTexture);
             LightBinMaterialInner.Effect.Parameters["LightBinTextureSize"].SetValue(
                 new Vector2(LightBinTexture.Width, LightBinTexture.Height)
             );
 
             Monitor.Enter(_LightBufferLock);
+
+            LightBinTexture.SetData(LightBinTexels);
         }
 
         private void IlluminationBatchTeardown (DeviceManager device, object userData) {
@@ -514,6 +514,7 @@ namespace Squared.Illuminant {
             using (var binCounts = BufferPool<int>.Allocate(MaxLightBinCount))
             using (var binBounds = BufferPool<Bounds>.Allocate(MaxLightBinCount)) {
                 Array.Clear(binCounts.Data, 0, MaxLightBinCount);
+                Array.Clear(LightBinTexels, 0, LightBinTexels.Length);
 
                 for (int j = 0; j < MaxLightBinCount; j++)
                     binBounds.Data[j] = GetLightBinBounds(j);
@@ -522,20 +523,27 @@ namespace Squared.Illuminant {
 
                 // Place lights into bins
                 // FIXME: This is obscenely slow
-                Parallel.For(0, MaxLightBinCount, (j) => {
+                // lock (_LightBufferLock)
+                Parallel.For(0, MaxLightBinCount, new ParallelOptions {
+                    MaxDegreeOfParallelism = 12
+                }, (j) => {
                     var baseTexelIndex = (j * rowWidth);
                     var currentBinBounds = binBounds.Data[j];
                     var count = 0;
-
+                    var rng = new Random();
+                    
                     foreach (var lightSource in Environment.LightSources) {
+                        if (count >= MaxLightsPerBin)
+                            continue;
+
                         Bounds lightBounds;
                         BuildSphereLightVertex(lightSource, intensityScale, out lightVertex, out lightBounds);
 
                         // TODO: Do a sphere-box intersection to cull more lights
-                        if (!lightBounds.Intersects(currentBinBounds))
-                            continue;
+                        //if (!lightBounds.Intersects(currentBinBounds))
+                        //    continue;
 
-                        var texelIndex = baseTexelIndex + (count * PixelsPerLightBinEntry);
+                        var texelIndex = (j * rowWidth) + (count * PixelsPerLightBinEntry);
 
                         LightBinTexels[texelIndex + 0] = new Vector4(
                             lightVertex.LightCenter.X, lightVertex.LightCenter.Y,
@@ -554,6 +562,51 @@ namespace Squared.Illuminant {
 
                     binCounts.Data[j] = count;
                 });
+
+                // Array.Clear(binCounts.Data, 0, binCounts.Data.Length);
+
+                if (false)
+                for (int j = 0; j < MaxLightBinCount; j++) {
+                    var baseTexelIndex = (j * rowWidth);
+                    var currentBinBounds = binBounds.Data[j];
+                    var count = 0;
+                    
+                    foreach (var lightSource in Environment.LightSources) {
+                        if (count >= MaxLightsPerBin)
+                            continue;
+
+                        Bounds lightBounds;
+                        BuildSphereLightVertex(lightSource, intensityScale, out lightVertex, out lightBounds);
+
+                        // TODO: Do a sphere-box intersection to cull more lights
+                        //if (!lightBounds.Intersects(currentBinBounds))
+                        //    continue;
+
+                        var texelIndex = (j * rowWidth) + (count * PixelsPerLightBinEntry);
+
+                        if (LightBinTexels[texelIndex + 0] != new Vector4(
+                            lightVertex.LightCenter.X, lightVertex.LightCenter.Y,
+                            lightVertex.LightCenter.Z, 0
+                        )) {
+                            Console.WriteLine("Bad texel at " + (texelIndex + 0));
+                        }
+
+                        if (LightBinTexels[texelIndex + 1] != new Vector4(
+                            lightVertex.RampAndExponential.X, lightVertex.RampAndExponential.Y,
+                            lightVertex.RampAndExponential.Z, 0
+                        )) {
+                            Console.WriteLine("Bad texel at " + (texelIndex + 1));
+                        }
+
+                        if (LightBinTexels[texelIndex + 2] != lightVertex.Color) {
+                            Console.WriteLine("Bad texel at " + (texelIndex + 2));
+                        }
+
+                        count += 1;
+                    }
+
+                    binCounts.Data[j] = count;
+                };
 
                 // Generate vertex data for bins that aren't empty
                 // FIXME: This is kinda slow too
