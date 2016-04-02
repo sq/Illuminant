@@ -12,8 +12,8 @@ sampler   VertexDataSampler : register(s0) {
     MipFilter = POINT;
     MinFilter = POINT;
     MagFilter = POINT;
-    AddressU  = WRAP;
-    AddressV  = WRAP;
+    AddressU  = CLAMP;
+    AddressV  = CLAMP;
 };
 
 void DistanceVertexShader (
@@ -25,6 +25,35 @@ void DistanceVertexShader (
     result.z = 0;
 }
 
+float computeDistanceToEdge (
+    float2 vpos, float2 zRange, float u
+) {
+    float4 packedEdge = tex2Dlod(VertexDataSampler, float4(u, 0, 0, 0));
+    float2 edgeA = packedEdge.xy;
+    float2 edgeB = packedEdge.zw;
+
+    float2 closest = closestPointOnEdge(vpos, edgeA, edgeB);
+    float2 closestDeltaXy = (vpos - closest);
+    float deltaMinZ = SliceZ - zRange.x;
+    float deltaMaxZ = SliceZ - zRange.y;
+
+    float closestDeltaZ;
+    if ((SliceZ >= zRange.x) && (SliceZ <= zRange.y)) {
+        closestDeltaZ = 0;
+    }
+    else if (abs(deltaMinZ) > abs(deltaMaxZ)) {
+        closestDeltaZ = deltaMaxZ;
+    }
+    else {
+        closestDeltaZ = deltaMinZ;
+    }
+
+    float3 closestDelta = float3(closestDeltaXy.x, closestDeltaXy.y, closestDeltaZ);
+    float  closestDistance = length(closestDelta);
+
+    return closestDistance;
+}
+
 float computeDistance (
     float2 vpos, float2 zRange
 ) {
@@ -33,34 +62,11 @@ float computeDistance (
 
     [loop]
     for (int i = 0; i < NumVertices; i += 4) {
-        [unroll]
-        for (int j = 0, l = min(NumVertices - i, 4); j < l; j++) {
-            int index = i + j;
-            float4 packedEdge = tex2Dlod(VertexDataSampler, float4(index * indexMultiplier, 0, 0, 0));
-            float2 edgeA = packedEdge.xy;
-            float2 edgeB = packedEdge.zw;
-
-            float2 closest = closestPointOnEdge(vpos, edgeA, edgeB);
-            float2 closestDeltaXy = (vpos - closest);
-            float deltaMinZ = SliceZ - zRange.x;
-            float deltaMaxZ = SliceZ - zRange.y;
-
-            float closestDeltaZ;
-            if ((SliceZ >= zRange.x) && (SliceZ <= zRange.y)) {
-                closestDeltaZ = 0;
-            }
-            else if (abs(deltaMinZ) > abs(deltaMaxZ)) {
-                closestDeltaZ = deltaMaxZ;
-            }
-            else {
-                closestDeltaZ = deltaMinZ;
-            }
-
-            float3 closestDelta = float3(closestDeltaXy.x, closestDeltaXy.y, closestDeltaZ);
-            float  closestDistance = length(closestDelta);
-
-            resultDistance = min(resultDistance, closestDistance);
-        }
+        // fxc can't handle unrolling loops without spending 30 minutes, yaaaaaaaaaay
+        resultDistance = min(resultDistance, computeDistanceToEdge(vpos, zRange, (i + 0) * indexMultiplier));
+        resultDistance = min(resultDistance, computeDistanceToEdge(vpos, zRange, (i + 1) * indexMultiplier));
+        resultDistance = min(resultDistance, computeDistanceToEdge(vpos, zRange, (i + 2) * indexMultiplier));
+        resultDistance = min(resultDistance, computeDistanceToEdge(vpos, zRange, (i + 3) * indexMultiplier));
     }
 
     return resultDistance;
