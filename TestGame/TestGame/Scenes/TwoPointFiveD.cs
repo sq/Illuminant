@@ -26,7 +26,7 @@ namespace TestGame.Scenes {
         float LightZ;
 
         const int MultisampleCount = 0;
-        const int LightmapScaleRatio = 8;
+        const int LightmapScaleRatio = 2;
         const int MaxStepCount = 128;
 
         bool ShowGBuffer       = false;
@@ -111,7 +111,7 @@ namespace TestGame.Scenes {
                     DistanceFieldOcclusionToOpacityPower = 0.7f,
                     DistanceFieldMaxConeRadius = 64,
                     GBufferCaching = true,
-                    DistanceFieldUpdateRate = 32,
+                    DistanceFieldUpdateRate = 16,
                 }
             );
 

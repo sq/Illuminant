@@ -28,7 +28,7 @@ namespace TestGame.Scenes {
         public const int RotatingLightCount = 1024;
 
         public const int MultisampleCount = 0;
-        public const int LightmapScaleRatio = 4;
+        public const int LightmapScaleRatio = 1;
 
         float LightZ = 0;
 

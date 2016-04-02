@@ -50,8 +50,10 @@ float PointLightPixelCore(
         lightCenter, ramp.x, ramp.y, exponential
     );
 
+    const float opacityThreshold = (0.5 / 255.0);
+
     [branch]
-    if (lightOpacity >= (1.0 / 255.0)) {
+    if (lightOpacity >= opacityThreshold) {
         float tracedOcclusion = coneTrace(lightCenter, ramp, shadedPixelPosition + (SELF_OCCLUSION_HACK * shadedPixelNormal));
         return lightOpacity * tracedOcclusion;
     } else {
