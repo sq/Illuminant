@@ -108,8 +108,8 @@ namespace TestGame.Scenes {
                     DistanceFieldResolution = 0.5f,
                     DistanceFieldMinStepSize = 1f,
                     DistanceFieldLongStepFactor = 0.5f,
-                    DistanceFieldOcclusionToOpacityPower = 0.5f,
-                    DistanceFieldMaxConeRadius = 48,
+                    DistanceFieldOcclusionToOpacityPower = 0.7f,
+                    DistanceFieldMaxConeRadius = 32,
                     GBufferCaching = true,
                     DistanceFieldUpdateRate = 4,
                 }

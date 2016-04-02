@@ -49,7 +49,6 @@ float PointLightPixelCore(
         shadedPixelPosition, shadedPixelNormal,
         lightCenter, ramp.x, ramp.y, exponential
     );
-    return lightOpacity;
 
     [branch]
     if (lightOpacity >= (1.0 / 255.0)) {
