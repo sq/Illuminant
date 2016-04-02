@@ -1,5 +1,6 @@
-#define DOT_OFFSET     0.5
-#define DOT_RAMP_RANGE 0.2
+#define DOT_OFFSET     0.0
+#define DOT_RAMP_RANGE 0.5
+#define DOT_EXPONENT   0.9
 #define DISTANCE_FUDGE 1.1
 
 uniform float GroundZ;
@@ -41,20 +42,25 @@ void sampleGBuffer(
 
 float computeLightOpacity(
     float3 shadedPixelPosition, float3 shadedPixelNormal,
-    float3 lightCenter, float lightRadius, float lightRampLength
+    float3 lightCenter, float lightRadius, float lightRampLength, float exponential
 ) {
     float3 distance3      = shadedPixelPosition - lightCenter;
-    float  distance       = length(distance3) - lightRadius;
-    float  distanceFactor = 1 - clamp(distance / lightRampLength, 0, 1);
+    float  distance       = length(distance3);
+    float3 distanceVector = distance3 / distance;
+    float  distanceFactor = 1 - clamp((distance - lightRadius) / lightRampLength, 0, 1);
 
-    // HACK: Do a fudged dot product test to ramp out light coming from behind a surface
-    float3 fudgedDistance = normalize(distance3);
-    if (distance3.z >= -(DISTANCE_FUDGE + lightRadius))
-        fudgedDistance.z = 0;
+    if (exponential)
+        distanceFactor *= distanceFactor;
 
-    float  d              = dot(-fudgedDistance, shadedPixelNormal);
+    /*
+
+    float  d            = dot(-distanceVector, shadedPixelNormal);
     // HACK: We allow the light to be somewhat behind the surface without occluding it,
     //  and we want a smooth ramp between occluded and not-occluded
-    float  normalFactor   = clamp((d + DOT_OFFSET) / DOT_RAMP_RANGE, 0, 1);
-    return normalFactor * distanceFactor;
+    float  normalFactor = pow(clamp((d + DOT_OFFSET) / DOT_RAMP_RANGE, 0, 1), DOT_EXPONENT);
+    // HACK: * would be more accurate
+    return min(normalFactor, distanceFactor);
+    */
+
+    return distanceFactor;
 }

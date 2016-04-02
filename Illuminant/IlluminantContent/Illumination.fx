@@ -45,19 +45,19 @@ float PointLightPixelCore(
         shadedPixelPosition, shadedPixelNormal
     );
 
-    shadedPixelPosition.z += SELF_OCCLUSION_HACK;
+    // shadedPixelPosition += SELF_OCCLUSION_HACK;
+
+    // float3 cp = cross(shadedPixelNormal, distanceVector);
+
 
     float lightOpacity = computeLightOpacity(
         shadedPixelPosition, shadedPixelNormal,
-        lightCenter, ramp.x, ramp.y
+        lightCenter, ramp.x, ramp.y, exponential
     );
-
-    if (exponential)
-        lightOpacity *= lightOpacity;
 
     [branch]
     if (lightOpacity >= (1.0 / 255.0)) {
-        float tracedOcclusion = coneTrace(lightCenter, ramp, shadedPixelPosition);
+        float tracedOcclusion = coneTrace(lightCenter, ramp, shadedPixelPosition + (SELF_OCCLUSION_HACK * shadedPixelNormal));
         return lightOpacity * tracedOcclusion;
     } else {
         discard;
@@ -73,11 +73,11 @@ void PointLightPixelShader(
     in  float2 vpos : VPOS,
     out float4 result : COLOR0
 ) {
-    float distanceOpacity = PointLightPixelCore(
+    float opacity = PointLightPixelCore(
         worldPosition, lightCenter, rampAndExponential.xy, vpos, rampAndExponential.z
     );
 
-    float4 lightColorActual = float4(color.rgb * color.a * distanceOpacity, color.a * distanceOpacity);
+    float4 lightColorActual = float4(color.rgb * color.a * opacity, color.a * opacity);
     result = lightColorActual;
 }
 
