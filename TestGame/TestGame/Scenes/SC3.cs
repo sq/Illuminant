@@ -66,8 +66,9 @@ namespace TestGame.Scenes {
                     DistanceFieldResolution = 0.5f,
                     DistanceFieldMinStepSize = 1f,
                     DistanceFieldLongStepFactor = 0.5f,
-                    DistanceFieldOcclusionToOpacityPower = 0.7f,
-                    DistanceFieldMaxConeRadius = 64,
+                    DistanceFieldOcclusionToOpacityPower = 0.8f,
+                    DistanceFieldMaxConeRadius = 16,
+                    // DistanceFieldConeGrowthFactor = 0.4f,
                     GBufferCaching = true,
                     DistanceFieldUpdateRate = 2
                 }
@@ -76,10 +77,10 @@ namespace TestGame.Scenes {
             var light = new LightSource {
                 Position = new Vector3(64, 64, 0.7f),
                 Color = new Vector4(1f, 1f, 1f, 0.5f),
-                Radius = 250,
-                RampLength = 700,
+                Radius = 400,
+                RampLength = 200,
                 RampMode = LightSourceRampMode.Linear,
-                AmbientOcclusionRadius = 9.25f
+                AmbientOcclusionRadius = 12f
             };
 
             Lights.Add(light);
@@ -87,12 +88,11 @@ namespace TestGame.Scenes {
 
             var ambientLight = new LightSource {
                 Position = new Vector3(Width / 2f, Height / 2f, 0f),
-                Color = new Vector4(0f, 0.8f, 0.6f, 0.1f),
+                Color = new Vector4(0f, 0.8f, 0.6f, 0.2f),
                 Radius = 8192,
                 RampLength = 0,
                 RampMode = LightSourceRampMode.None,
                 CastsShadows = false,
-                AmbientOcclusionRadius = 9.25f
             };
 
             Lights.Add(ambientLight);
@@ -109,7 +109,7 @@ namespace TestGame.Scenes {
             Environment.Obstructions.Add(new LightObstruction(
                 LightObstructionType.Ellipsoid,
                 new Vector3(x, y, 0),
-                new Vector3(20, 10, 80) 
+                new Vector3(18, 8, 100) 
             ));
         }
 
@@ -244,7 +244,7 @@ namespace TestGame.Scenes {
                 var mousePos = new Vector3(ms.X, ms.Y, LightZ);
 
                 if (Deterministic)
-                    Lights[0].Position = new Vector3(Width / 2f, Height / 2f, 380f);
+                    Lights[0].Position = new Vector3(Width / 2f, Height / 2f, 200f);
                 else
                     Lights[0].Position = mousePos;
             }

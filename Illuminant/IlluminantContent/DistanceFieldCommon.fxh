@@ -44,6 +44,7 @@ struct DistanceFieldSettings {
     float3 Step;
 
     float  MaxConeRadius;
+    float  ConeGrowthFactor;
     float  OcclusionToOpacityPower;
     float  InvScaleFactor;
     float3 Extent;
@@ -69,6 +70,16 @@ struct DistanceFieldConstants {
     float invSliceCountXTimesOneThird;
     float zToSliceIndex;
 };
+
+DistanceFieldConstants makeDistanceFieldConstants() {
+    DistanceFieldConstants result = {
+        DistanceField.TextureSliceCount.z - 1,
+        (1.0 / DistanceField.TextureSliceCount.x) * (1.0 / 3.0),
+        (1.0 / DistanceField.Extent.z) * DistanceField.TextureSliceCount.z
+    };
+
+    return result;
+}
 
 float2 computeDistanceFieldSliceUv (
     float virtualSliceIndex,

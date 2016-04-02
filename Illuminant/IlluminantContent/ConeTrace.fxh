@@ -2,8 +2,7 @@
 // The radius increases as the cone approaches the light source
 // Raising the maximum produces soft shadows, but if it's too large you will get artifacts.
 // A larger minimum increases the size of the AO 'blobs' around distant obstructions.
-#define MIN_CONE_RADIUS 0.5
-#define MAX_ANGLE_DEGREES 10
+#define MIN_CONE_RADIUS 0.33
 // See uniforms for the other two constants
 
 // As we approach the maximum number of steps we ramp visibility down to 0.
@@ -47,16 +46,6 @@ float coneTraceStep(
     );
 }
 
-DistanceFieldConstants makeDistanceFieldConstants() {
-    DistanceFieldConstants result = {
-        DistanceField.TextureSliceCount.z - 1,
-        (1.0 / DistanceField.TextureSliceCount.x) * (1.0 / 3.0),
-        (1.0 / DistanceField.Extent.z) * DistanceField.TextureSliceCount.z
-    };
-
-    return result;
-}
-
 float coneTrace(
     in float3 lightCenter,
     in float2 lightRamp,
@@ -72,15 +61,15 @@ float coneTrace(
         traceLength = length(traceVector);
         traceDirection = traceVector / traceLength;
 
-        float maxTangentAngle = tan(MAX_ANGLE_DEGREES * PI / 180.0f);
-        float lightTangentAngle = min(lightRamp.x / traceLength, maxTangentAngle);
-
         float maxRadius = clamp(
             lightRamp.x, MIN_CONE_RADIUS, DistanceField.MaxConeRadius
-        );
+            );
+        float rampLength           = max(lightRamp.y, 16);
+        float radiusGrowthPerPixel = maxRadius / rampLength
+            * DistanceField.ConeGrowthFactor;
 
         config = float3(
-            maxRadius, lightTangentAngle, max(1, DistanceField.Step.y)
+            maxRadius, radiusGrowthPerPixel, max(1, DistanceField.Step.y)
         );
     }
 

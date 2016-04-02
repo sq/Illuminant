@@ -47,6 +47,7 @@ namespace Squared.Illuminant {
         public int   DistanceFieldMaxStepCount            = 64;
         public float DistanceFieldResolution              = 1.0f;
         public float DistanceFieldMaxConeRadius           = 24;
+        public float DistanceFieldConeGrowthFactor        = 1.0f;
         // The maximum number of distance field slices to update per frame.
         // Setting this value too high can crash your video driver.
         public int   DistanceFieldUpdateRate              = 1;
@@ -566,6 +567,7 @@ namespace Squared.Illuminant {
             s["InvScaleFactor"].SetValue(1f / Configuration.DistanceFieldResolution);
             s["OcclusionToOpacityPower"].SetValue(Configuration.DistanceFieldOcclusionToOpacityPower);
             s["MaxConeRadius"].SetValue(Configuration.DistanceFieldMaxConeRadius);
+            s["ConeGrowthFactor"].SetValue(Configuration.DistanceFieldConeGrowthFactor);
 
             s["Step"].SetValue(new Vector3(
                 (float)Configuration.DistanceFieldMaxStepCount,

@@ -109,7 +109,7 @@ namespace TestGame.Scenes {
                     DistanceFieldMinStepSize = 1f,
                     DistanceFieldLongStepFactor = 0.5f,
                     DistanceFieldOcclusionToOpacityPower = 0.7f,
-                    DistanceFieldMaxConeRadius = 64,
+                    DistanceFieldMaxConeRadius = 24,
                     GBufferCaching = true,
                     DistanceFieldUpdateRate = 16,
                 }
