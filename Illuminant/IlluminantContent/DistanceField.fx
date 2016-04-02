@@ -26,7 +26,7 @@ void DistanceVertexShader (
 }
 
 float computeDistanceToEdge (
-    float2 vpos, float2 zRange, float u
+    float2 vpos, float closestDeltaZ, float u
 ) {
     float4 packedEdge = tex2Dlod(VertexDataSampler, float4(u, 0, 0, 0));
     float2 edgeA = packedEdge.xy;
@@ -34,6 +34,20 @@ float computeDistanceToEdge (
 
     float2 closest = closestPointOnEdge(vpos, edgeA, edgeB);
     float2 closestDeltaXy = (vpos - closest);
+
+    float3 closestDelta = float3(closestDeltaXy.x, closestDeltaXy.y, closestDeltaZ);
+    float  closestDistance = length(closestDelta);
+
+    return closestDistance;
+}
+
+float computeDistance (
+    float2 vpos, float2 zRange
+) {
+    float resultDistance = 99999;
+    float indexMultiplier = 1.0 / NumVertices;
+    float u = 0;
+
     float deltaMinZ = SliceZ - zRange.x;
     float deltaMaxZ = SliceZ - zRange.y;
 
@@ -48,25 +62,17 @@ float computeDistanceToEdge (
         closestDeltaZ = deltaMinZ;
     }
 
-    float3 closestDelta = float3(closestDeltaXy.x, closestDeltaXy.y, closestDeltaZ);
-    float  closestDistance = length(closestDelta);
-
-    return closestDistance;
-}
-
-float computeDistance (
-    float2 vpos, float2 zRange
-) {
-    float resultDistance = 99999;
-    float indexMultiplier = 1.0 / NumVertices;
-
     [loop]
     for (int i = 0; i < NumVertices; i += 4) {
         // fxc can't handle unrolling loops without spending 30 minutes, yaaaaaaaaaay
-        resultDistance = min(resultDistance, computeDistanceToEdge(vpos, zRange, (i + 0) * indexMultiplier));
-        resultDistance = min(resultDistance, computeDistanceToEdge(vpos, zRange, (i + 1) * indexMultiplier));
-        resultDistance = min(resultDistance, computeDistanceToEdge(vpos, zRange, (i + 2) * indexMultiplier));
-        resultDistance = min(resultDistance, computeDistanceToEdge(vpos, zRange, (i + 3) * indexMultiplier));
+        resultDistance = min(resultDistance, computeDistanceToEdge(vpos, closestDeltaZ, u));
+        u += indexMultiplier;
+        resultDistance = min(resultDistance, computeDistanceToEdge(vpos, closestDeltaZ, u));
+        u += indexMultiplier;
+        resultDistance = min(resultDistance, computeDistanceToEdge(vpos, closestDeltaZ, u));
+        u += indexMultiplier;
+        resultDistance = min(resultDistance, computeDistanceToEdge(vpos, closestDeltaZ, u));
+        u += indexMultiplier;
     }
 
     return resultDistance;
