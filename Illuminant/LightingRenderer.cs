@@ -460,14 +460,16 @@ namespace Squared.Illuminant {
             }
         }
 
-        private int RenderBinnedSphereLights (float intensityScale, ref int layerIndex, BatchGroup resultGroup) {
+        private void RenderBinnedSphereLights (float intensityScale, ref int layerIndex, BatchGroup resultGroup) {
             int lightCount = Environment.LightSources.Count;
 
             SphereLightVertex vertex;
             int bufferSize = LightBinTexture.Width * LightBinTexture.Height;
+            int lightBinCount = 0;
 
             using (var texels = BufferPool<HalfVector4>.Allocate(bufferSize))
             using (var binCounts = BufferPool<int>.Allocate(MaxLightBinCount)) {
+                // Place lights into bins
                 for (int i = 0, j = 0; i < lightCount; i++) {
                     var lightSource = Environment.LightSources[i];
 
@@ -476,12 +478,21 @@ namespace Squared.Illuminant {
 
                 }
 
-                lock (_LightBufferLock) {
+                lock (_LightBufferLock)
                     LightBinTexture.SetData(texels.Data, 0, bufferSize);
+
+                // Generate vertex data for bins that aren't empty
+                using (var lightBinVertices = BufferPool<LightBinVertex>.Allocate(MaxLightBinCount)) {
+                    for (int i = 0; i < MaxLightBinCount; i++) {
+                        lightBinCount += 1;
+                    }
+
+                    lock (_LightBufferLock)
+                        LightBinVertexBuffer.SetData(lightBinVertices.Data, 0, lightBinCount * 4);
                 }
             }
 
-            if (lightCount > 0) {
+            if (lightBinCount > 0) {
                 if (Render.Tracing.RenderTrace.EnableTracing)
                     Render.Tracing.RenderTrace.Marker(resultGroup, layerIndex++, "LightingRenderer {0:X4} : Render {1} light source(s)", this.GetHashCode(), lightCount);
 
@@ -491,15 +502,13 @@ namespace Squared.Illuminant {
                 ))
                     nb.Add(new NativeDrawCall(
                         PrimitiveType.TriangleList,
-                        SphereLightVertexBuffer, 0,
-                        SphereLightIndexBuffer, 0, 0, lightCount * 4, 0, lightCount * 2
+                        LightBinVertexBuffer, 0,
+                        SphereLightIndexBuffer, 0, 0, lightBinCount * 4, 0, lightBinCount * 2
                     ));
             }
-
-            return layerIndex;
         }
 
-        private int RenderSphereLights (float intensityScale, ref int layerIndex, BatchGroup resultGroup) {
+        private void RenderSphereLights (float intensityScale, ref int layerIndex, BatchGroup resultGroup) {
             int lightCount = Environment.LightSources.Count;
 
             SphereLightVertex vertex;
@@ -541,8 +550,6 @@ namespace Squared.Illuminant {
                         SphereLightIndexBuffer, 0, 0, lightCount * 4, 0, lightCount * 2
                     ));
             }
-
-            return layerIndex;
         }
 
         private void BuildSphereLightVertex (LightSource lightSource, float intensityScale, out SphereLightVertex vertex, out Bounds lightBounds) {
