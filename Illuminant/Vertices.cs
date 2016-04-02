@@ -48,8 +48,8 @@ namespace Squared.Illuminant {
 
             _VertexDeclaration = new VertexDeclaration(
                 new VertexElement(Marshal.OffsetOf(tThis, "Position").ToInt32(),   VertexElementFormat.Vector2, VertexElementUsage.Position, 0),
-                new VertexElement(Marshal.OffsetOf(tThis, "LightCount").ToInt32(), VertexElementFormat.Single, VertexElementUsage.TextureCoordinate, 0),
-                new VertexElement(Marshal.OffsetOf(tThis, "BinIndex").ToInt32(),   VertexElementFormat.Single, VertexElementUsage.TextureCoordinate, 1)
+                new VertexElement(Marshal.OffsetOf(tThis, "LightCount").ToInt32(), VertexElementFormat.Single, VertexElementUsage.BlendIndices, 0),
+                new VertexElement(Marshal.OffsetOf(tThis, "BinIndex").ToInt32(),   VertexElementFormat.Single, VertexElementUsage.BlendIndices, 1)
             );
         }
 

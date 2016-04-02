@@ -98,8 +98,8 @@ void SphereLightPixelShader(
 
 void LightBinVertexShader(
     in    float2 position   : POSITION0,
-    inout float  lightCount : TEXCOORD0,
-    inout float  binIndex   : TEXCOORD1,
+    inout int    lightCount : BLENDINDICES0,
+    inout int    binIndex   : BLENDINDICES1,
     out   float4 result     : POSITION0
 ) {
     // FIXME: Z
@@ -108,18 +108,17 @@ void LightBinVertexShader(
 }
 
 void LightBinPixelShader(
-    in  float  lightCount : TEXCOORD0,
-    in  float  binIndex   : TEXCOORD1,
-    in  float2 vpos       : VPOS,
-    out float4 result     : COLOR0
+    in  int  lightCount : BLENDINDICES0,
+    in  int  binIndex   : BLENDINDICES1,
+    in  float2 vpos     : VPOS,
+    out float4 result   : COLOR0
 ) {
     float2 texelSize = 1.0 / LightBinTextureSize;
 
     result = 0;
     float v = texelSize.y * binIndex;
 
-    result.a = 1;
-    result.r += lightCount / 32;
+    result.a = 0;
 
     float3 shadedPixelPosition;
     float3 shadedPixelNormal;
@@ -135,6 +134,11 @@ void LightBinPixelShader(
         float3 lightCenter = tex2Dlod(LightBinSampler, uv).xyz;
         uv.x += texelSize.x;
 
+        result.rgb += lightCenter / 1024;
+
+        result.a += 1;
+
+        /*
         float3 rampAndExponential = tex2Dlod(LightBinSampler, uv).xyz;
         uv.x += texelSize.x;
 
@@ -148,16 +152,19 @@ void LightBinPixelShader(
 
         float4 lightColorActual = float4(
             lightColor.rgb * lightColor.a * opacity, 
-            lightColor.a * opacity
+            opacity
         );
 
         result += lightColorActual;
+        */
     }
 
+    /*
     if (result.a < OpacityThreshold) {
         discard;
         result = 0;
     }
+    */
 }
 
 technique SphereLight {
