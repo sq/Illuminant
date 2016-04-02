@@ -45,15 +45,11 @@ float PointLightPixelCore(
         shadedPixelPosition, shadedPixelNormal
     );
 
-    // shadedPixelPosition += SELF_OCCLUSION_HACK;
-
-    // float3 cp = cross(shadedPixelNormal, distanceVector);
-
-
     float lightOpacity = computeLightOpacity(
         shadedPixelPosition, shadedPixelNormal,
         lightCenter, ramp.x, ramp.y, exponential
     );
+    return lightOpacity;
 
     [branch]
     if (lightOpacity >= (1.0 / 255.0)) {
