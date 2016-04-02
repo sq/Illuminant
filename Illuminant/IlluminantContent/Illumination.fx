@@ -3,6 +3,7 @@
 #include "ConeTrace.fxh"
 
 #define SELF_OCCLUSION_HACK 1.1
+static const float OpacityThreshold = (0.5 / 255.0);
 
 shared float2 ViewportScale;
 shared float2 ViewportPosition;
@@ -12,22 +13,33 @@ shared float4x4 ModelViewMatrix;
 
 uniform float Time;
 
+Texture2D LightBinTexture : register(t7);
+sampler   LightBinSampler : register(s7) {
+    Texture = (LightBinTexture);
+    MipFilter = POINT;
+    MinFilter = POINT;
+    MagFilter = POINT;
+};
+
+uniform float2 LightBinTextureSize;
+
+
 float4 ApplyTransform (float3 position) {
     float3 localPosition = ((position - float3(ViewportPosition.xy, 0)) * float3(ViewportScale, 1));
     return mul(mul(float4(localPosition.xyz, 1), ModelViewMatrix), ProjectionMatrix);
 }
 
 void SphereLightVertexShader(
-    in float2 position : POSITION0,
-    inout float4 color : COLOR0,
-    inout float3 lightCenter : TEXCOORD0,
+    in float2 position              : POSITION0,
+    inout float4 color              : COLOR0,
+    inout float3 lightCenter        : TEXCOORD0,
     inout float3 rampAndExponential : TEXCOORD1,
-    out float2 worldPosition : TEXCOORD2,
-    out float4 result : POSITION0
+    out float2 worldPosition        : TEXCOORD2,
+    out float4 result               : POSITION0
 ) {
     worldPosition = position;
     // FIXME: Z
-    float4 transformedPosition = ApplyTransform(float3(position, lightCenter.z));
+    float4 transformedPosition = ApplyTransform(float3(position, 0));
     result = float4(transformedPosition.xy, 0, transformedPosition.w);
 }
 
@@ -50,32 +62,71 @@ float SphereLightPixelCore(
         lightCenter, ramp.x, ramp.y, exponential
     );
 
-    const float opacityThreshold = (0.5 / 255.0);
+    float tracedOcclusion = 0;
 
     [branch]
-    if (lightOpacity >= opacityThreshold) {
-        float tracedOcclusion = coneTrace(lightCenter, ramp, shadedPixelPosition + (SELF_OCCLUSION_HACK * shadedPixelNormal));
-        return lightOpacity * tracedOcclusion;
-    } else {
-        discard;
-        return 0;
+    if (lightOpacity >= OpacityThreshold) {
+        tracedOcclusion = coneTrace(lightCenter, ramp, shadedPixelPosition + (SELF_OCCLUSION_HACK * shadedPixelNormal));
     }
+
+    return lightOpacity * tracedOcclusion;
 }
 
 void SphereLightPixelShader(
-    in float2 worldPosition : TEXCOORD2,
-    in float3 lightCenter : TEXCOORD0,
+    in float2 worldPosition      : TEXCOORD2,
+    in float3 lightCenter        : TEXCOORD0,
     in float3 rampAndExponential : TEXCOORD1, // start, end, exp
-    in float4 color : COLOR0,
-    in  float2 vpos : VPOS,
-    out float4 result : COLOR0
+    in float4 color              : COLOR0,
+    in  float2 vpos              : VPOS,
+    out float4 result            : COLOR0
 ) {
     float opacity = SphereLightPixelCore(
         worldPosition, lightCenter, rampAndExponential.xy, vpos, rampAndExponential.z
     );
 
+    if (opacity < OpacityThreshold) {
+        discard;
+        result = 0;
+    } {
+        float4 lightColorActual = float4(color.rgb * color.a * opacity, color.a * opacity);
+        result = lightColorActual;
+    }
+}
+
+void LightBinVertexShader(
+    in float2 position : POSITION0,
+    out float4 result  : POSITION0
+) {
+    // FIXME: Z
+    float4 transformedPosition = ApplyTransform(float3(position, 0));
+    result = float4(transformedPosition.xy, 0, transformedPosition.w);
+}
+
+void LightBinPixelShader(
+    in  float  lightCount : TEXCOORD0,
+    in  float  binIndex   : TEXCOORD1,
+    in  float2 vpos       : VPOS,
+    out float4 result     : COLOR0
+) {
+    result = 0;
+    float v = LightBinTextureSize.y * binIndex;
+
+    for (float i = 0; i < lightCount; i++) {
+        float uv = float2(i * LightBinTextureSize.x, v);
+    }
+
+    /*
+    float opacity = SphereLightPixelCore(
+        worldPosition, lightCenter, rampAndExponential.xy, vpos, rampAndExponential.z
+    );
+
     float4 lightColorActual = float4(color.rgb * color.a * opacity, color.a * opacity);
-    result = lightColorActual;
+    */
+
+    if (result.a < OpacityThreshold) {
+        discard;
+        result = 0;
+    }
 }
 
 technique SphereLight {

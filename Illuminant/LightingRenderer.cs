@@ -23,10 +23,11 @@ namespace Squared.Illuminant {
         public readonly Pair<int>    MaximumRenderSize;
 
         // Scales world coordinates when rendering the G-buffer and lightmap
-        public float RenderScale                   = 1.0f;
-
-        public bool  TwoPointFiveD                 = false;
-        public bool  GBufferCaching                = true;
+        public float RenderScale                          = 1.0f;
+        
+        public bool  TwoPointFiveD                        = false;
+        public bool  GBufferCaching                       = true;
+        public bool  LightBinning                         = false;
 
         // Individual cone trace steps are not allowed to be any shorter than this.
         // Improves the worst-case performance of the trace and avoids spending forever
@@ -76,6 +77,7 @@ namespace Squared.Illuminant {
         public const int PackedSliceCount = 3;
 
         const int        DistanceLimit = 520;
+        const int        LightBinSize  = 64;
 
         const SurfaceFormat GBufferFormat       = SurfaceFormat.Vector4;
         const SurfaceFormat DistanceFieldFormat = SurfaceFormat.Rgba64;
@@ -97,8 +99,13 @@ namespace Squared.Illuminant {
         private readonly IndexBuffer         SphereLightIndexBuffer;
         private readonly SphereLightVertex[] SphereLightVertices = new SphereLightVertex[MaximumLightCount * 4];
 
-        private readonly Dictionary<Polygon, Texture2D> HeightVolumeVertexData = 
+        private readonly Dictionary<Polygon, Texture2D> HeightVolumeVertexData =
             new Dictionary<Polygon, Texture2D>(new ReferenceComparer<Polygon>());
+
+        // float3 center, float3 rampAndExponential, float4 color = 10 -> round to 12 elements -> 3 (Half)Vector4s
+        const int PixelsPerLightBinEntry = 3;
+        private readonly Texture2D LightBinTexture;
+        private readonly int       MaxLightBinCount;
 
         private readonly RenderTarget2D _GBuffer;
         private readonly RenderTarget2D _DistanceField;
@@ -182,6 +189,20 @@ namespace Squared.Illuminant {
                     Configuration.MaximumRenderSize.First, 
                     Configuration.MaximumRenderSize.Second,
                     false, LightmapFormat, DepthFormat.None, 0, RenderTargetUsage.PlatformContents
+                );
+
+                MaxLightBinCount = (int)Math.Ceiling(Configuration.MaximumRenderSize.First / (float)LightBinSize) *
+                    (int)Math.Ceiling(Configuration.MaximumRenderSize.Second / (float)LightBinSize);
+
+                // Bins packed with tons of lights will make this texture become wider, but that should be rare
+                const int defaultLightBinLightCount = 64;
+                int defaultLightBinTextureHeight = MaxLightBinCount;
+
+                LightBinTexture = new Texture2D(
+                    coordinator.Device, 
+                    defaultLightBinLightCount * PixelsPerLightBinEntry, 
+                    defaultLightBinTextureHeight, 
+                    false, SurfaceFormat.HalfVector4
                 );
             }
 
