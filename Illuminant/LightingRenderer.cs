@@ -104,8 +104,9 @@ namespace Squared.Illuminant {
 
         // float3 center, float3 rampAndExponential, float4 color = 10 -> round to 12 elements -> 3 (Half)Vector4s
         const int PixelsPerLightBinEntry = 3;
-        private readonly Texture2D LightBinTexture;
-        private readonly int       MaxLightBinCount;
+        private readonly Texture2D           LightBinTexture;
+        private readonly DynamicVertexBuffer LightBinVertexBuffer;
+        private readonly int                 MaxLightBinCount;
 
         private readonly RenderTarget2D _GBuffer;
         private readonly RenderTarget2D _DistanceField;
@@ -445,63 +446,117 @@ namespace Squared.Illuminant {
                 if (Render.Tracing.RenderTrace.EnableTracing)
                     Render.Tracing.RenderTrace.Marker(resultGroup, -9999, "LightingRenderer {0:X4} : Begin", this.GetHashCode());
 
-                SphereLightVertex vertex;
-                int lightCount = Environment.LightSources.Count;
-
                 ClearBatch.AddNew(resultGroup, -1, Materials.Clear, Color.Transparent);
 
-                lock (_LightBufferLock)
-                for (int i = 0, j = 0; i < lightCount; i++) {
-                    var lightSource = Environment.LightSources[i];
-
-                    float radius = lightSource.Radius + lightSource.RampLength;
-                    var lightBounds3 = lightSource.Bounds;
-                    var lightBounds = lightBounds3.XY;
-
-                    // Expand the bounding box upward to account for 2.5D perspective
-                    if (Configuration.TwoPointFiveD)
-                        lightBounds.TopLeft.Y -= (Environment.MaximumZ * Environment.ZToYMultiplier);
-
-                    lightBounds = lightBounds.Scale(Configuration.RenderScale);
-
-                    vertex.LightCenter = lightSource.Position;
-                    vertex.Color = lightSource.Color;
-                    vertex.Color.W *= (lightSource.Opacity * intensityScale);
-                    vertex.RampAndExponential = new Vector3(
-                        lightSource.Radius, lightSource.RampLength,
-                        (lightSource.RampMode == LightSourceRampMode.Exponential) ? 1f : 0f
-                    );
-
-                    vertex.Position = lightBounds.TopLeft;
-                    SphereLightVertices[j++] = vertex;
-
-                    vertex.Position = lightBounds.TopRight;
-                    SphereLightVertices[j++] = vertex;
-
-                    vertex.Position = lightBounds.BottomRight;
-                    SphereLightVertices[j++] = vertex;
-
-                    vertex.Position = lightBounds.BottomLeft;
-                    SphereLightVertices[j++] = vertex;
-                }
-
-                if (lightCount > 0) {
-                    if (Render.Tracing.RenderTrace.EnableTracing)
-                        Render.Tracing.RenderTrace.Marker(resultGroup, layerIndex++, "LightingRenderer {0:X4} : Render {1} light source(s)", this.GetHashCode(), lightCount);
-
-                    using (var nb = NativeBatch.New(
-                        resultGroup, layerIndex++, IlluminantMaterials.SphereLight, IlluminationBatchSetup, lightCount
-                    ))
-                        nb.Add(new NativeDrawCall(
-                            PrimitiveType.TriangleList, 
-                            SphereLightVertexBuffer, 0,
-                            SphereLightIndexBuffer, 0, 0, lightCount * 4, 0, lightCount * 2                            
-                        ));
+                if (Configuration.LightBinning) {
+                    RenderBinnedSphereLights(intensityScale, ref layerIndex, resultGroup);
+                } else {
+                    RenderSphereLights(intensityScale, ref layerIndex, resultGroup);
                 }
 
                 if (Render.Tracing.RenderTrace.EnableTracing)
                     Render.Tracing.RenderTrace.Marker(resultGroup, 9999, "LightingRenderer {0:X4} : End", this.GetHashCode());
             }
+        }
+
+        private int RenderBinnedSphereLights (float intensityScale, ref int layerIndex, BatchGroup resultGroup) {
+            int lightCount = Environment.LightSources.Count;
+
+            SphereLightVertex vertex;
+            int bufferSize = LightBinTexture.Width * LightBinTexture.Height;
+
+            using (var texels = BufferPool<HalfVector4>.Allocate(bufferSize))
+            using (var binCounts = BufferPool<int>.Allocate(MaxLightBinCount)) {
+                for (int i = 0, j = 0; i < lightCount; i++) {
+                    var lightSource = Environment.LightSources[i];
+
+                    Bounds lightBounds;
+                    BuildSphereLightVertex(lightSource, intensityScale, out vertex, out lightBounds);
+
+                }
+
+                lock (_LightBufferLock) {
+                    LightBinTexture.SetData(texels.Data, 0, bufferSize);
+                }
+            }
+
+            if (lightCount > 0) {
+                if (Render.Tracing.RenderTrace.EnableTracing)
+                    Render.Tracing.RenderTrace.Marker(resultGroup, layerIndex++, "LightingRenderer {0:X4} : Render {1} light source(s)", this.GetHashCode(), lightCount);
+
+                using (var nb = NativeBatch.New(
+                    resultGroup, layerIndex++, IlluminantMaterials.SphereLight, IlluminationBatchSetup, lightCount
+                ))
+                    nb.Add(new NativeDrawCall(
+                        PrimitiveType.TriangleList,
+                        SphereLightVertexBuffer, 0,
+                        SphereLightIndexBuffer, 0, 0, lightCount * 4, 0, lightCount * 2
+                    ));
+            }
+
+            return layerIndex;
+        }
+
+        private int RenderSphereLights (float intensityScale, ref int layerIndex, BatchGroup resultGroup) {
+            int lightCount = Environment.LightSources.Count;
+
+            SphereLightVertex vertex;
+            lock (_LightBufferLock)
+            for (int i = 0, j = 0; i < lightCount; i++) {
+                var lightSource = Environment.LightSources[i];
+
+                Bounds lightBounds;
+                BuildSphereLightVertex(lightSource, intensityScale, out vertex, out lightBounds);
+
+                vertex.Position = lightBounds.TopLeft;
+                SphereLightVertices[j++] = vertex;
+
+                vertex.Position = lightBounds.TopRight;
+                SphereLightVertices[j++] = vertex;
+
+                vertex.Position = lightBounds.BottomRight;
+                SphereLightVertices[j++] = vertex;
+
+                vertex.Position = lightBounds.BottomLeft;
+                SphereLightVertices[j++] = vertex;
+            }
+
+            if (lightCount > 0) {
+                if (Render.Tracing.RenderTrace.EnableTracing)
+                    Render.Tracing.RenderTrace.Marker(resultGroup, layerIndex++, "LightingRenderer {0:X4} : Render {1} light source(s)", this.GetHashCode(), lightCount);
+
+                using (var nb = NativeBatch.New(
+                    resultGroup, layerIndex++, IlluminantMaterials.SphereLight, IlluminationBatchSetup, lightCount
+                ))
+                    nb.Add(new NativeDrawCall(
+                        PrimitiveType.TriangleList,
+                        SphereLightVertexBuffer, 0,
+                        SphereLightIndexBuffer, 0, 0, lightCount * 4, 0, lightCount * 2
+                    ));
+            }
+
+            return layerIndex;
+        }
+
+        private void BuildSphereLightVertex (LightSource lightSource, float intensityScale, out SphereLightVertex vertex, out Bounds lightBounds) {
+            float radius = lightSource.Radius + lightSource.RampLength;
+            var lightBounds3 = lightSource.Bounds;
+
+            lightBounds = lightBounds3.XY;
+            // Expand the bounding box upward to account for 2.5D perspective
+            if (Configuration.TwoPointFiveD)
+                lightBounds.TopLeft.Y -= (Environment.MaximumZ * Environment.ZToYMultiplier);
+
+            lightBounds = lightBounds.Scale(Configuration.RenderScale);
+
+            vertex = new SphereLightVertex();
+            vertex.LightCenter = lightSource.Position;
+            vertex.Color = lightSource.Color;
+            vertex.Color.W *= (lightSource.Opacity * intensityScale);
+            vertex.RampAndExponential = new Vector3(
+                lightSource.Radius, lightSource.RampLength,
+                (lightSource.RampMode == LightSourceRampMode.Exponential) ? 1f : 0f
+            );
         }
 
         /// <summary>
