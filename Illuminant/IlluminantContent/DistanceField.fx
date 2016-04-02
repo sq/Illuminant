@@ -32,29 +32,35 @@ float computeDistance (
     float indexMultiplier = 1.0 / NumVertices;
 
     [loop]
-    for (int i = 0; i < NumVertices; i++) {
-        float4 packedEdge = tex2Dlod(VertexDataSampler, float4(i * indexMultiplier, 0, 0, 0));
-        float2 edgeA = packedEdge.xy;
-        float2 edgeB = packedEdge.zw;
+    for (int i = 0; i < NumVertices; i += 4) {
+        [unroll]
+        for (int j = 0, l = min(NumVertices - i, 4); j < l; j++) {
+            int index = i + j;
+            float4 packedEdge = tex2Dlod(VertexDataSampler, float4(index * indexMultiplier, 0, 0, 0));
+            float2 edgeA = packedEdge.xy;
+            float2 edgeB = packedEdge.zw;
 
-        float2 closest = closestPointOnEdge(vpos, edgeA, edgeB);
-        float2 closestDeltaXy = (vpos - closest);
-        float deltaMinZ = SliceZ - zRange.x;
-        float deltaMaxZ = SliceZ - zRange.y;
+            float2 closest = closestPointOnEdge(vpos, edgeA, edgeB);
+            float2 closestDeltaXy = (vpos - closest);
+            float deltaMinZ = SliceZ - zRange.x;
+            float deltaMaxZ = SliceZ - zRange.y;
 
-        float closestDeltaZ;
-        if ((SliceZ >= zRange.x) && (SliceZ <= zRange.y)) {
-            closestDeltaZ = 0;
-        } else if (abs(deltaMinZ) > abs(deltaMaxZ)) {
-            closestDeltaZ = deltaMaxZ;
-        } else {
-            closestDeltaZ = deltaMinZ;
+            float closestDeltaZ;
+            if ((SliceZ >= zRange.x) && (SliceZ <= zRange.y)) {
+                closestDeltaZ = 0;
+            }
+            else if (abs(deltaMinZ) > abs(deltaMaxZ)) {
+                closestDeltaZ = deltaMaxZ;
+            }
+            else {
+                closestDeltaZ = deltaMinZ;
+            }
+
+            float3 closestDelta = float3(closestDeltaXy.x, closestDeltaXy.y, closestDeltaZ);
+            float  closestDistance = length(closestDelta);
+
+            resultDistance = min(resultDistance, closestDistance);
         }
-
-        float3 closestDelta = float3(closestDeltaXy.x, closestDeltaXy.y, closestDeltaZ);
-        float  closestDistance = length(closestDelta);
-
-        resultDistance = min(resultDistance, closestDistance);
     }
 
     return resultDistance;
