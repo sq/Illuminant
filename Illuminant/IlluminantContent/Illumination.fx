@@ -17,7 +17,7 @@ float4 ApplyTransform (float3 position) {
     return mul(mul(float4(localPosition.xyz, 1), ModelViewMatrix), ProjectionMatrix);
 }
 
-void PointLightVertexShader(
+void SphereLightVertexShader(
     in float2 position : POSITION0,
     inout float4 color : COLOR0,
     inout float3 lightCenter : TEXCOORD0,
@@ -31,7 +31,7 @@ void PointLightVertexShader(
     result = float4(transformedPosition.xy, 0, transformedPosition.w);
 }
 
-float PointLightPixelCore(
+float SphereLightPixelCore(
     in float2 worldPosition : TEXCOORD2,
     in float3 lightCenter   : TEXCOORD0,
     in float2 ramp          : TEXCOORD1, // radius, ramp length
@@ -45,7 +45,7 @@ float PointLightPixelCore(
         shadedPixelPosition, shadedPixelNormal
     );
 
-    float lightOpacity = computeLightOpacity(
+    float lightOpacity = computeSphereLightOpacity(
         shadedPixelPosition, shadedPixelNormal,
         lightCenter, ramp.x, ramp.y, exponential
     );
@@ -62,7 +62,7 @@ float PointLightPixelCore(
     }
 }
 
-void PointLightPixelShader(
+void SphereLightPixelShader(
     in float2 worldPosition : TEXCOORD2,
     in float3 lightCenter : TEXCOORD0,
     in float3 rampAndExponential : TEXCOORD1, // start, end, exp
@@ -70,7 +70,7 @@ void PointLightPixelShader(
     in  float2 vpos : VPOS,
     out float4 result : COLOR0
 ) {
-    float opacity = PointLightPixelCore(
+    float opacity = SphereLightPixelCore(
         worldPosition, lightCenter, rampAndExponential.xy, vpos, rampAndExponential.z
     );
 
@@ -78,10 +78,10 @@ void PointLightPixelShader(
     result = lightColorActual;
 }
 
-technique PointLight {
+technique SphereLight {
     pass P0
     {
-        vertexShader = compile vs_3_0 PointLightVertexShader();
-        pixelShader = compile ps_3_0 PointLightPixelShader();
+        vertexShader = compile vs_3_0 SphereLightVertexShader();
+        pixelShader  = compile ps_3_0 SphereLightPixelShader();
     }
 }

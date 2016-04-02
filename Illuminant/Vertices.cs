@@ -8,7 +8,7 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace Squared.Illuminant {
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct PointLightVertex : IVertexType {
+    public struct SphereLightVertex : IVertexType {
         // FIXME: Shouldn't this be V3? Blech
         public Vector2 Position;
         public Vector3 LightCenter;
@@ -17,8 +17,8 @@ namespace Squared.Illuminant {
 
         public static VertexDeclaration _VertexDeclaration;
 
-        static PointLightVertex () {
-            var tThis = typeof(PointLightVertex);
+        static SphereLightVertex () {
+            var tThis = typeof(SphereLightVertex);
 
             _VertexDeclaration = new VertexDeclaration(
                 new VertexElement(Marshal.OffsetOf(tThis, "Position").ToInt32(), VertexElementFormat.Vector2, VertexElementUsage.Position, 0),

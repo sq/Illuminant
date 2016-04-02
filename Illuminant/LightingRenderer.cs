@@ -2,11 +2,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
@@ -90,16 +86,16 @@ namespace Squared.Illuminant {
         public readonly DefaultMaterialSet Materials;
         public readonly RenderCoordinator Coordinator;
         public readonly IlluminantMaterials IlluminantMaterials;
-        public readonly Squared.Render.EffectMaterial[] PointLightMaterialsInner;
+        public readonly Render.EffectMaterial SphereLightMaterialInner;
         public readonly DepthStencilState TopFaceDepthStencilState, FrontFaceDepthStencilState;
         public readonly DepthStencilState DistanceInteriorStencilState, DistanceExteriorStencilState;
-        public readonly DepthStencilState PointLightDepthStencilState;
+        public readonly DepthStencilState SphereLightDepthStencilState;
         public readonly BlendState[]      PackedSlice      = new BlendState[4];
         public readonly BlendState[]      ClearPackedSlice = new BlendState[4];
 
-        private readonly DynamicVertexBuffer PointLightVertexBuffer;
-        private readonly IndexBuffer         PointLightIndexBuffer;
-        private readonly PointLightVertex[]  PointLightVertices = new PointLightVertex[MaximumLightCount * 4];
+        private readonly DynamicVertexBuffer SphereLightVertexBuffer;
+        private readonly IndexBuffer         SphereLightIndexBuffer;
+        private readonly SphereLightVertex[] SphereLightVertices = new SphereLightVertex[MaximumLightCount * 4];
 
         private readonly Dictionary<Polygon, Texture2D> HeightVolumeVertexData = 
             new Dictionary<Polygon, Texture2D>(new ReferenceComparer<Polygon>());
@@ -140,11 +136,11 @@ namespace Squared.Illuminant {
             IlluminationBatchSetup = _IlluminationBatchSetup;
 
             lock (coordinator.CreateResourceLock) {
-                PointLightVertexBuffer = new DynamicVertexBuffer(
-                    coordinator.Device, typeof(PointLightVertex), 
-                    PointLightVertices.Length, BufferUsage.WriteOnly
+                SphereLightVertexBuffer = new DynamicVertexBuffer(
+                    coordinator.Device, typeof(SphereLightVertex), 
+                    SphereLightVertices.Length, BufferUsage.WriteOnly
                 );
-                PointLightIndexBuffer = new IndexBuffer(
+                SphereLightIndexBuffer = new IndexBuffer(
                     coordinator.Device, IndexElementSize.SixteenBits, MaximumLightCount * 6, BufferUsage.WriteOnly
                 );
 
@@ -203,11 +199,9 @@ namespace Squared.Illuminant {
                 DepthBufferWriteEnable = true
             };
             
-            PointLightDepthStencilState = new DepthStencilState {
+            SphereLightDepthStencilState = new DepthStencilState {
                 StencilEnable = false,
-                DepthBufferEnable = true,
-                DepthBufferFunction = CompareFunction.GreaterEqual,
-                DepthBufferWriteEnable = false
+                DepthBufferEnable = false
             };
 
             for (int i = 0; i < 4; i++) {
@@ -237,20 +231,17 @@ namespace Squared.Illuminant {
             {
                 var dBegin = new[] {
                     MaterialUtil.MakeDelegate(
-                        rasterizerState: RenderStates.ScissorOnly, 
-                        depthStencilState: PointLightDepthStencilState
+                        rasterizerState: RasterizerState.CullNone,
+                        depthStencilState: SphereLightDepthStencilState
                     )
                 };
                 Action<DeviceManager>[] dEnd = null;
 
-                PointLightMaterialsInner = new[] {
-                    new Squared.Render.EffectMaterial(
-                        content.Load<Effect>("Illumination"), "PointLight"
-                    )
-                };
+                SphereLightMaterialInner =
+                    new Render.EffectMaterial(content.Load<Effect>("Illumination"), "SphereLight");
 
-                materials.Add(IlluminantMaterials.PointLight = new DelegateMaterial(
-                    PointLightMaterialsInner[0], dBegin, dEnd
+                materials.Add(IlluminantMaterials.SphereLight = new DelegateMaterial(
+                    SphereLightMaterialInner, dBegin, dEnd
                 ));
 
                 materials.Add(IlluminantMaterials.DistanceFieldExterior = 
@@ -310,7 +301,7 @@ namespace Squared.Illuminant {
         }
 
         private void FillIndexBuffer () {
-            var buf = new short[PointLightIndexBuffer.IndexCount];
+            var buf = new short[SphereLightIndexBuffer.IndexCount];
             int i = 0, j = 0;
             while (i < buf.Length) {
                 buf[i++] = (short)(j + 0);
@@ -323,12 +314,12 @@ namespace Squared.Illuminant {
                 j += 4;
             }
 
-            PointLightIndexBuffer.SetData(buf);
+            SphereLightIndexBuffer.SetData(buf);
         }
 
         public void Dispose () {
-            PointLightVertexBuffer.Dispose();
-            PointLightIndexBuffer.Dispose();
+            SphereLightVertexBuffer.Dispose();
+            SphereLightIndexBuffer.Dispose();
             Coordinator.DisposeResource(_DistanceField);
             Coordinator.DisposeResource(_GBuffer);
             Coordinator.DisposeResource(_Lightmap);
@@ -395,29 +386,28 @@ namespace Squared.Illuminant {
         private void _IlluminationBatchSetup (DeviceManager device, object userData) {
             var lightCount = (int)userData;
             lock (_LightBufferLock)
-                PointLightVertexBuffer.SetData(PointLightVertices, 0, lightCount * 4, SetDataOptions.Discard);
+                SphereLightVertexBuffer.SetData(SphereLightVertices, 0, lightCount * 4, SetDataOptions.Discard);
 
             device.Device.BlendState = RenderStates.AdditiveBlend;
 
-            foreach (var mi in PointLightMaterialsInner) {
-                var tsize = new Vector2(
-                    1f / Configuration.RenderSize.First, 
-                    1f / Configuration.RenderSize.Second
-                );
-                mi.Effect.Parameters["GBufferTexelSize"].SetValue(tsize);
-                mi.Effect.Parameters["GBuffer"].SetValue(GBuffer);
+            var mi = SphereLightMaterialInner;
+            var tsize = new Vector2(
+                1f / Configuration.RenderSize.First, 
+                1f / Configuration.RenderSize.Second
+            );
+            mi.Effect.Parameters["GBufferTexelSize"].SetValue(tsize);
+            mi.Effect.Parameters["GBuffer"].SetValue(GBuffer);
 
-                mi.Effect.Parameters["GroundZ"].SetValue(Environment.GroundZ);
-                mi.Effect.Parameters["ZToYMultiplier"].SetValue(
-                    Configuration.TwoPointFiveD
-                        ? Environment.ZToYMultiplier
-                        : 0.0f
-                );
+            mi.Effect.Parameters["GroundZ"].SetValue(Environment.GroundZ);
+            mi.Effect.Parameters["ZToYMultiplier"].SetValue(
+                Configuration.TwoPointFiveD
+                    ? Environment.ZToYMultiplier
+                    : 0.0f
+            );
 
-                mi.Effect.Parameters["Time"].SetValue((float)Time.Seconds);
+            mi.Effect.Parameters["Time"].SetValue((float)Time.Seconds);
 
-                SetDistanceFieldParameters(mi.Effect.Parameters, true);
-            }
+            SetDistanceFieldParameters(mi.Effect.Parameters, true);
         }
 
         /// <summary>
@@ -434,7 +424,7 @@ namespace Squared.Illuminant {
                 if (Render.Tracing.RenderTrace.EnableTracing)
                     Render.Tracing.RenderTrace.Marker(resultGroup, -9999, "LightingRenderer {0:X4} : Begin", this.GetHashCode());
 
-                PointLightVertex vertex;
+                SphereLightVertex vertex;
                 int lightCount = Environment.LightSources.Count;
 
                 ClearBatch.AddNew(resultGroup, -1, Materials.Clear, Color.Transparent);
@@ -462,16 +452,16 @@ namespace Squared.Illuminant {
                     );
 
                     vertex.Position = lightBounds.TopLeft;
-                    PointLightVertices[j++] = vertex;
+                    SphereLightVertices[j++] = vertex;
 
                     vertex.Position = lightBounds.TopRight;
-                    PointLightVertices[j++] = vertex;
+                    SphereLightVertices[j++] = vertex;
 
                     vertex.Position = lightBounds.BottomRight;
-                    PointLightVertices[j++] = vertex;
+                    SphereLightVertices[j++] = vertex;
 
                     vertex.Position = lightBounds.BottomLeft;
-                    PointLightVertices[j++] = vertex;
+                    SphereLightVertices[j++] = vertex;
                 }
 
                 if (lightCount > 0) {
@@ -479,12 +469,12 @@ namespace Squared.Illuminant {
                         Render.Tracing.RenderTrace.Marker(resultGroup, layerIndex++, "LightingRenderer {0:X4} : Render {1} light source(s)", this.GetHashCode(), lightCount);
 
                     using (var nb = NativeBatch.New(
-                        resultGroup, layerIndex++, IlluminantMaterials.PointLight, IlluminationBatchSetup, lightCount
+                        resultGroup, layerIndex++, IlluminantMaterials.SphereLight, IlluminationBatchSetup, lightCount
                     ))
                         nb.Add(new NativeDrawCall(
                             PrimitiveType.TriangleList, 
-                            PointLightVertexBuffer, 0,
-                            PointLightIndexBuffer, 0, 0, lightCount * 4, 0, lightCount * 2                            
+                            SphereLightVertexBuffer, 0,
+                            SphereLightIndexBuffer, 0, 0, lightCount * 4, 0, lightCount * 2                            
                         ));
                 }
 
@@ -1030,7 +1020,7 @@ namespace Squared.Illuminant {
     public class IlluminantMaterials {
         public readonly DefaultMaterialSet MaterialSet;
 
-        public Material PointLight;
+        public Material SphereLight;
         public Squared.Render.EffectMaterial VolumeFrontFace, VolumeTopFace;
         public Squared.Render.EffectMaterial DistanceFieldExterior, DistanceFieldInterior;
         public Squared.Render.EffectMaterial DistanceFunction;

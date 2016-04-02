@@ -44,7 +44,7 @@ void sampleGBuffer(
     ));
 }
 
-float computeLightOpacity(
+float computeSphereLightOpacity(
     float3 shadedPixelPosition, float3 shadedPixelNormal,
     float3 lightCenter, float lightRadius, float lightRampLength, float exponential
 ) {
