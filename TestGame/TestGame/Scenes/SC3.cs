@@ -98,6 +98,11 @@ namespace TestGame.Scenes {
             Lights.Add(ambientLight);
             Environment.LightSources.Add(ambientLight);
 
+            Environment.Billboards.Add(new Billboard {
+                Position = Vector3.Zero,
+                Texture = Foreground
+            });
+
             BuildObstacles();
 
             Environment.GroundZ = 0;

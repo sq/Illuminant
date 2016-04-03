@@ -65,4 +65,31 @@ namespace Squared.Illuminant {
             }
         }
     }
+
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    public struct BillboardVertex : IVertexType {
+        public Vector3 Position;
+        public Vector2 TexCoord;
+        public Vector3 Normal;
+        public Vector3 WorldPosition;
+
+        public static VertexDeclaration _VertexDeclaration;
+
+        static BillboardVertex () {
+            var tThis = typeof(BillboardVertex);
+
+            _VertexDeclaration = new VertexDeclaration(
+                new VertexElement(Marshal.OffsetOf(tThis, "Position").ToInt32(), VertexElementFormat.Vector3, VertexElementUsage.Position, 0),
+                new VertexElement(Marshal.OffsetOf(tThis, "TexCoord").ToInt32(), VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 0),
+                new VertexElement(Marshal.OffsetOf(tThis, "Normal").ToInt32(),   VertexElementFormat.Vector3, VertexElementUsage.Normal, 0),
+                new VertexElement(Marshal.OffsetOf(tThis, "WorldPosition").ToInt32(),   VertexElementFormat.Vector3, VertexElementUsage.TextureCoordinate, 1)
+            );
+        }
+
+        public VertexDeclaration VertexDeclaration {
+            get {
+                return _VertexDeclaration;
+            }
+        }
+    }
 }

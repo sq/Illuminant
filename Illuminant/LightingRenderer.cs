@@ -260,6 +260,9 @@ namespace Squared.Illuminant {
                 materials.Add(IlluminantMaterials.HeightVolumeFace = 
                     new Squared.Render.EffectMaterial(content.Load<Effect>("GBuffer"), "HeightVolumeFace"));
 
+                materials.Add(IlluminantMaterials.Billboard = 
+                    new Squared.Render.EffectMaterial(content.Load<Effect>("GBufferBitmap"), "Billboard"));
+
                 materials.Add(IlluminantMaterials.LightingResolve = 
                     new Squared.Render.EffectMaterial(content.Load<Effect>("Resolve"), "LightingResolve"));
             }
@@ -525,28 +528,7 @@ namespace Squared.Illuminant {
                 m.Effect.Parameters["RenderScale"].SetValue(1f / Configuration.RenderScale);
             });
             sg.Draw(drawCall, material: m);
-        }
-
-        private void SetTwoPointFiveDParametersInner (EffectParameterCollection p, bool setGBufferTexture, bool setDistanceTexture) {
-            p["GroundZ"]           .SetValue(Environment.GroundZ);
-            p["ZToYMultiplier"]    .SetValue(
-                Configuration.TwoPointFiveD
-                    ? Environment.ZToYMultiplier
-                    : 0.0f
-            );
-
-            var tsize = new Vector2(
-                1f / Configuration.RenderSize.First, 
-                1f / Configuration.RenderSize.Second
-            );
-            p["GBufferInvScaleFactor"].SetValue(1f);
-            p["GBufferTexelSize"].SetValue(tsize);
-
-            if (setGBufferTexture)
-                p["GBuffer"].SetValue(GBuffer);
-
-            SetDistanceFieldParameters(p, setDistanceTexture);
-        }
+        }        
 
         private void SetDistanceFieldParameters (EffectParameterCollection p, bool setDistanceTexture) {
             var s = p["DistanceField"].StructureMembers;
@@ -580,12 +562,6 @@ namespace Squared.Illuminant {
             if (setDistanceTexture)
                 p["DistanceFieldTexture"].SetValue(_DistanceField);
         }
-
-        private void SetTwoPointFiveDParameters (DeviceManager dm, object _) {
-            SetTwoPointFiveDParametersInner(IlluminantMaterials.VolumeFrontFace.Effect.Parameters, true, true);
-            SetTwoPointFiveDParametersInner(IlluminantMaterials.VolumeTopFace.Effect.Parameters  , true, true);
-            SetTwoPointFiveDParametersInner(IlluminantMaterials.LightingResolve.Effect.Parameters, true, true);
-        }        
 
         public void InvalidateFields (
             // TODO: Maybe remove this since I'm not sure it's useful at all.
@@ -702,22 +678,26 @@ namespace Squared.Illuminant {
                                 blendState: BlendState.Opaque
                             )
                         ))
-                        foreach (var volume in Environment.HeightVolumes.OrderByDescending(hv => hv.ZBase + hv.Height)) {
-                            var ffm3d = volume.GetFrontFaceMesh3D();
-                            if (ffm3d.Count <= 0)
-                                continue;
+                        {
+                            foreach (var volume in Environment.HeightVolumes.OrderByDescending(hv => hv.ZBase + hv.Height)) {
+                                var ffm3d = volume.GetFrontFaceMesh3D();
+                                if (ffm3d.Count <= 0)
+                                    continue;
 
-                            var m3d = volume.Mesh3D;
+                                var m3d = volume.Mesh3D;
 
-                            frontBatch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
-                                PrimitiveType.TriangleList,
-                                ffm3d.Array, ffm3d.Offset, ffm3d.Count / 3
-                            ));
+                                frontBatch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
+                                    PrimitiveType.TriangleList,
+                                    ffm3d.Array, ffm3d.Offset, ffm3d.Count / 3
+                                ));
 
-                            topBatch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
-                                PrimitiveType.TriangleList,
-                                m3d, 0, m3d.Length / 3
-                            ));
+                                topBatch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
+                                    PrimitiveType.TriangleList,
+                                    m3d, 0, m3d.Length / 3
+                                ));
+                            }
+
+                            RenderGBufferBillboards(group, 7);
                         }
 
                     } else {
@@ -738,6 +718,70 @@ namespace Squared.Illuminant {
 
                 if (Render.Tracing.RenderTrace.EnableTracing)
                     Render.Tracing.RenderTrace.Marker(group, 6, "LightingRenderer {0:X4} : End G-Buffer", this.GetHashCode());
+            }
+        }
+
+        private void RenderGBufferBillboards (IBatchContainer container, int layerIndex) {
+            var indices = new short[] {
+                0, 1, 3, 1, 2, 3
+            };            
+            foreach (var billboard in Environment.Billboards) {
+                var tl   = billboard.Position;
+                var size = new Vector3(billboard.Size, 0);
+                var normal = Vector3.Forward;
+                var verts = new BillboardVertex[] {
+                    new BillboardVertex {
+                        Position = tl,
+                        Normal = normal,
+                        WorldPosition = tl,
+                        TexCoord = Vector2.Zero
+                    },
+                    new BillboardVertex {
+                        Position = tl + new Vector3(size.X, 0, 0),
+                        Normal = normal,
+                        WorldPosition = tl + new Vector3(size.X, 0, 0),
+                        TexCoord = new Vector2(1, 0)
+                    },
+                    new BillboardVertex {
+                        Position = tl,
+                        Normal = normal,
+                        WorldPosition = tl,
+                        TexCoord = Vector2.One
+                    },
+                    new BillboardVertex {
+                        Position = tl + new Vector3(0, size.Y, 0),
+                        Normal = normal,
+                        WorldPosition = tl + new Vector3(0, size.Y, 0),
+                        TexCoord = new Vector2(0, 1)
+                    }
+                };
+
+                using (var batch = PrimitiveBatch<BillboardVertex>.New(
+                    container, layerIndex++, Materials.Get(
+                        IlluminantMaterials.Billboard,
+                        depthStencilState: DepthStencilState.None,
+                        rasterizerState: RasterizerState.CullNone,
+                        blendState: BlendState.Opaque
+                    ), (dm, _) => {
+                        var p = IlluminantMaterials.Billboard.Effect.Parameters;
+                        p["DistanceFieldExtent"].SetValue(new Vector3(
+                            Configuration.DistanceFieldSize.First,
+                            Configuration.DistanceFieldSize.Second,
+                            Environment.MaximumZ
+                        ));
+                        p["ZToYMultiplier"].SetValue(
+                            Configuration.TwoPointFiveD
+                                ? Environment.ZToYMultiplier
+                                : 0.0f
+                        );
+                        p["RenderScale"].SetValue(Configuration.RenderScale);
+                        p["Texture"].SetValue(billboard.Texture);
+                    }
+                )) {
+                    batch.Add(new PrimitiveDrawCall<BillboardVertex>(
+                        PrimitiveType.TriangleList, verts, 0, 4, indices, 0, 2
+                    ));
+                }
             }
         }
 
@@ -1027,10 +1071,9 @@ namespace Squared.Illuminant {
         public readonly DefaultMaterialSet MaterialSet;
 
         public Material SphereLight;
-        public Squared.Render.EffectMaterial VolumeFrontFace, VolumeTopFace;
         public Squared.Render.EffectMaterial DistanceFieldExterior, DistanceFieldInterior;
         public Squared.Render.EffectMaterial DistanceFunction;
-        public Squared.Render.EffectMaterial HeightVolume, HeightVolumeFace;
+        public Squared.Render.EffectMaterial HeightVolume, HeightVolumeFace, Billboard;
         public Squared.Render.EffectMaterial LightingResolve;
         public Squared.Render.EffectMaterial ScreenSpaceGammaCompressedBitmap, WorldSpaceGammaCompressedBitmap;
         public Squared.Render.EffectMaterial ScreenSpaceToneMappedBitmap, WorldSpaceToneMappedBitmap;

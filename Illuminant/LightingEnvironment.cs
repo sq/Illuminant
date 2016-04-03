@@ -15,6 +15,7 @@ namespace Squared.Illuminant {
         // Polygonal meshes that define 3D volumes that are rendered into the distance field
         // In 2.5d mode the volumes' top and front faces are also rendered directly into the scene
         public readonly List<HeightVolumeBase> HeightVolumes = new List<HeightVolumeBase>();
+        public readonly List<Billboard> Billboards = new List<Billboard>();
 
         // The Z value of the ground plane.
         public float GroundZ = 0f;

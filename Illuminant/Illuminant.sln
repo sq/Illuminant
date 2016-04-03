@@ -25,9 +25,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DummyContentContainer", "..\Upstream\Fracture\Squared\DummyContentContainer\DummyContentContainer.csproj", "{EAB7FAD6-0915-4134-8331-A2A1F84C6274}"
 EndProject
 Global
-	GlobalSection(Performance) = preSolution
-		HasPerformanceSessions = true
-	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x86 = Debug|x86
 		Mono|x86 = Mono|x86
