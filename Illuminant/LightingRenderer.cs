@@ -431,7 +431,7 @@ namespace Squared.Illuminant {
                 SphereLightVertex vertex;
                 int lightCount = Environment.Lights.Count;
 
-                ClearBatch.AddNew(resultGroup, -1, Materials.Clear, Color.Transparent);
+                ClearBatch.AddNew(resultGroup, -1, Materials.Clear, new Color(0, 0, 0, 1f));
 
                 lock (_LightBufferLock)
                 for (int i = 0, j = 0; i < lightCount; i++) {
@@ -728,30 +728,30 @@ namespace Squared.Illuminant {
             foreach (var billboard in Environment.Billboards) {
                 var tl   = billboard.Position;
                 var size = new Vector3(billboard.Size, 0);
-                var normal = Vector3.Forward;
+                var normal = Vector3.UnitY;
                 var verts = new BillboardVertex[] {
                     new BillboardVertex {
                         Position = tl,
                         Normal = normal,
-                        WorldPosition = tl,
+                        WorldPosition = tl + new Vector3(0, 0, size.Y * Environment.ZToYMultiplier),
                         TexCoord = Vector2.Zero
                     },
                     new BillboardVertex {
                         Position = tl + new Vector3(size.X, 0, 0),
                         Normal = normal,
-                        WorldPosition = tl + new Vector3(size.X, 0, 0),
+                        WorldPosition = tl + new Vector3(size.X, 0, size.Y * Environment.ZToYMultiplier),
                         TexCoord = new Vector2(1, 0)
                     },
                     new BillboardVertex {
                         Position = tl + size,
                         Normal = normal,
-                        WorldPosition = tl + size,
+                        WorldPosition = tl + new Vector3(size.X),
                         TexCoord = Vector2.One
                     },
                     new BillboardVertex {
                         Position = tl + new Vector3(0, size.Y, 0),
                         Normal = normal,
-                        WorldPosition = tl + new Vector3(0, size.Y, 0),
+                        WorldPosition = tl,
                         TexCoord = new Vector2(0, 1)
                     }
                 };

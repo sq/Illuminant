@@ -50,8 +50,8 @@ void BillboardPixelShader(
         // HACK: For visualization
         (normal.x / 2) + 0.5,
         (normal.z / 2) + 0.5,
-        worldPosition.y,
-        worldPosition.z
+        worldPosition.y / 1024,
+        worldPosition.z / 1024
     );
 }
 

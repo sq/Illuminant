@@ -95,9 +95,7 @@ namespace TestGame.Scenes {
                 CastsShadows = false,
             };
 
-            if (false) {
-                Environment.Lights.Add(ambientLight);
-            }
+            Environment.Lights.Add(ambientLight);
 
             Environment.Billboards.Add(new Billboard {
                 Position = Vector3.Zero,
@@ -172,7 +170,7 @@ namespace TestGame.Scenes {
                             blendState: 
                                 ShowGBuffer
                                 ? BlendState.Opaque
-                                : BlendState.AlphaBlend
+                                : BlendState.Opaque
                         ),
                         samplerState: SamplerState.PointClamp
                     )) {
@@ -184,9 +182,10 @@ namespace TestGame.Scenes {
 
                         if (!ShowGBuffer) {
                             dc = new BitmapDrawCall(
-                                Foreground, Vector2.Zero, Color.White
+                                Foreground, Vector2.Zero
                             );
                             dc.Textures = new TextureSet(dc.Textures.Texture1, Lightmap);
+                            dc.SortOrder = 1;
                             bb.Add(dc);
                         }
                     }

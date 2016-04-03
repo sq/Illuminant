@@ -89,6 +89,8 @@ void LightingResolvePixelShader(
     result = lerp(sampleLinear, samplePoint, blendWeight) * multiplyColor;
 
     result += (addColor * result.a);
+
+    result.a = 1;
 }
 
 technique LightingResolve

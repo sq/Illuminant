@@ -35,7 +35,7 @@ void sampleGBuffer(
 
     float4 sample = tex2Dlod(GBufferSampler, float4(uv, 0, 0));
 
-    worldPosition = float3(screenPositionPx.x / RenderScale, sample.z, sample.w);
+    worldPosition = float3(screenPositionPx.x / RenderScale, sample.z * 1024, sample.w * 1024);
 
     // HACK: Reconstruct the y normal from the z normal
     float normalZ = (sample.y - 0.5) * 2;
