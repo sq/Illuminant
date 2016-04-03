@@ -429,13 +429,13 @@ namespace Squared.Illuminant {
                     Render.Tracing.RenderTrace.Marker(resultGroup, -9999, "LightingRenderer {0:X4} : Begin", this.GetHashCode());
 
                 SphereLightVertex vertex;
-                int lightCount = Environment.LightSources.Count;
+                int lightCount = Environment.Lights.Count;
 
                 ClearBatch.AddNew(resultGroup, -1, Materials.Clear, Color.Transparent);
 
                 lock (_LightBufferLock)
                 for (int i = 0, j = 0; i < lightCount; i++) {
-                    var lightSource = Environment.LightSources[i];
+                    var lightSource = Environment.Lights[i];
 
                     float radius = lightSource.Radius + lightSource.RampLength;
                     var lightBounds3 = lightSource.Bounds;
@@ -656,11 +656,11 @@ namespace Squared.Illuminant {
                     }
 
                     if (Configuration.TwoPointFiveD) {
-                        if (Render.Tracing.RenderTrace.EnableTracing)
+                        if (Render.Tracing.RenderTrace.EnableTracing) {
                             Render.Tracing.RenderTrace.Marker(group, 2, "LightingRenderer {0:X4} : G-Buffer Top Faces", this.GetHashCode());
-
-                        if (Render.Tracing.RenderTrace.EnableTracing)
                             Render.Tracing.RenderTrace.Marker(group, 4, "LightingRenderer {0:X4} : G-Buffer Front Faces", this.GetHashCode());
+                            Render.Tracing.RenderTrace.Marker(group, 6, "LightingRenderer {0:X4} : G-Buffer Billboards", this.GetHashCode());
+                        }
 
                         using (var topBatch = PrimitiveBatch<HeightVolumeVertex>.New(
                             group, 3, Materials.Get(
@@ -717,7 +717,7 @@ namespace Squared.Illuminant {
                 // TODO: Update the heightmap using any SDF light obstructions (maybe only if they're flagged?)
 
                 if (Render.Tracing.RenderTrace.EnableTracing)
-                    Render.Tracing.RenderTrace.Marker(group, 6, "LightingRenderer {0:X4} : End G-Buffer", this.GetHashCode());
+                    Render.Tracing.RenderTrace.Marker(group, 9999, "LightingRenderer {0:X4} : End G-Buffer", this.GetHashCode());
             }
         }
 
@@ -743,9 +743,9 @@ namespace Squared.Illuminant {
                         TexCoord = new Vector2(1, 0)
                     },
                     new BillboardVertex {
-                        Position = tl,
+                        Position = tl + size,
                         Normal = normal,
-                        WorldPosition = tl,
+                        WorldPosition = tl + size,
                         TexCoord = Vector2.One
                     },
                     new BillboardVertex {
@@ -775,7 +775,7 @@ namespace Squared.Illuminant {
                                 : 0.0f
                         );
                         p["RenderScale"].SetValue(Configuration.RenderScale);
-                        p["Texture"].SetValue(billboard.Texture);
+                        p["Mask"].SetValue(billboard.Texture);
                     }
                 )) {
                     batch.Add(new PrimitiveDrawCall<BillboardVertex>(

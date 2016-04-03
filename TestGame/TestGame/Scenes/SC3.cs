@@ -69,7 +69,8 @@ namespace TestGame.Scenes {
                     DistanceFieldOcclusionToOpacityPower = 0.8f,
                     DistanceFieldMaxConeRadius = 16,
                     // DistanceFieldConeGrowthFactor = 0.4f,
-                    GBufferCaching = true,
+                    GBufferCaching = false,
+                    TwoPointFiveD = true,
                     DistanceFieldUpdateRate = 2
                 }
             );
@@ -83,8 +84,7 @@ namespace TestGame.Scenes {
                 AmbientOcclusionRadius = 12f
             };
 
-            Lights.Add(light);
-            Environment.LightSources.Add(light);
+            Environment.Lights.Add(light);
 
             var ambientLight = new LightSource {
                 Position = new Vector3(Width / 2f, Height / 2f, 0f),
@@ -95,11 +95,13 @@ namespace TestGame.Scenes {
                 CastsShadows = false,
             };
 
-            Lights.Add(ambientLight);
-            Environment.LightSources.Add(ambientLight);
+            if (false) {
+                Environment.Lights.Add(ambientLight);
+            }
 
             Environment.Billboards.Add(new Billboard {
                 Position = Vector3.Zero,
+                Size = new Vector2(Foreground.Width, Foreground.Height),
                 Texture = Foreground
             });
 
@@ -167,7 +169,10 @@ namespace TestGame.Scenes {
                             ShowGBuffer
                                 ? Game.Materials.ScreenSpaceBitmap
                                 : Game.Materials.ScreenSpaceLightmappedBitmap,
-                            blendState: BlendState.Opaque
+                            blendState: 
+                                ShowGBuffer
+                                ? BlendState.Opaque
+                                : BlendState.AlphaBlend
                         ),
                         samplerState: SamplerState.PointClamp
                     )) {
@@ -176,13 +181,15 @@ namespace TestGame.Scenes {
                         );
                         dc.Textures = new TextureSet(dc.Textures.Texture1, Lightmap);
                         bb.Add(dc);
-                    }
 
-                    using (var bb = BitmapBatch.New(
-                        group, 2,
-                        Game.Materials.Get(Game.Materials.ScreenSpaceBitmap, blendState: BlendState.AlphaBlend)
-                    ))
-                        bb.Add(new BitmapDrawCall(Foreground, Vector2.Zero));
+                        if (!ShowGBuffer) {
+                            dc = new BitmapDrawCall(
+                                Foreground, Vector2.Zero, Color.White
+                            );
+                            dc.Textures = new TextureSet(dc.Textures.Texture1, Lightmap);
+                            bb.Add(dc);
+                        }
+                    }
                 }
 
                 if (ShowDistanceField) {
@@ -249,9 +256,9 @@ namespace TestGame.Scenes {
                 var mousePos = new Vector3(ms.X, ms.Y, LightZ);
 
                 if (Deterministic)
-                    Lights[0].Position = new Vector3(Width / 2f, Height / 2f, 200f);
+                    Environment.Lights[0].Position = new Vector3(Width / 2f, Height / 2f, 200f);
                 else
-                    Lights[0].Position = mousePos;
+                    Environment.Lights[0].Position = mousePos;
             }
         }
 
@@ -259,7 +266,7 @@ namespace TestGame.Scenes {
             get {
                 return string.Format(
                     "L@{1:0000},{2:0000},{0:000.0}", 
-                    LightZ, Lights[0].Position.X, Lights[0].Position.Y
+                    LightZ, Environment.Lights[0].Position.X, Environment.Lights[0].Position.Y
                 );
             }
         }

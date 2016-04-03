@@ -77,7 +77,7 @@ namespace TestGame.Scenes {
             };
 
             Lights.Add(light);
-            Environment.LightSources.Add(light);
+            Environment.Lights.Add(light);
 
             float opacityScale = Math.Min((float)Math.Pow(32.0 / RotatingLightCount, 1.1), 2);
             float radiusScale  = Arithmetic.Clamp(32.0f / RotatingLightCount, 0.75f, 1.5f);
@@ -94,7 +94,7 @@ namespace TestGame.Scenes {
                 };
 
                 Lights.Add(light);
-                Environment.LightSources.Add(light);
+                Environment.Lights.Add(light);
             }
 
             const float angleStep = (float)(Math.PI / 128);
@@ -226,12 +226,12 @@ namespace TestGame.Scenes {
                     Lights[0].Position = new Vector3(mousePos, LightZ);
                 // Lights[0].RampEnd = 250f * (((1 - LightZ) * 0.25f) + 0.75f);
 
-                int count = Environment.LightSources.Count - 1;
+                int count = Environment.Lights.Count - 1;
 
                 float stepOffset = (float)((Math.PI * 2) / count);
                 float timeValue = (float)(time / 14 % 4);
                 float offset = timeValue;
-                for (int i = 1; i < Environment.LightSources.Count; i++, offset += stepOffset) {
+                for (int i = 1; i < Environment.Lights.Count; i++, offset += stepOffset) {
                     float radiusFactor = (float)Math.Abs(Math.Sin(
                         (i / (float)count * 8.7f) + timeValue
                     ));

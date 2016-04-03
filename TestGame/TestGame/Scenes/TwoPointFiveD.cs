@@ -124,7 +124,7 @@ namespace TestGame.Scenes {
             };
 
             Lights.Add(light);
-            Environment.LightSources.Add(light);
+            Environment.Lights.Add(light);
 
             var light2 = new LightSource {
                 Position = new Vector3(1024, 800, 320f),
@@ -134,7 +134,7 @@ namespace TestGame.Scenes {
             };
 
             Lights.Add(light2);
-            Environment.LightSources.Add(light2);
+            Environment.Lights.Add(light2);
 
             var light3 = new LightSource {
                 Position = new Vector3(500, 150, 220f),
@@ -144,7 +144,7 @@ namespace TestGame.Scenes {
             };
 
             Lights.Add(light3);
-            Environment.LightSources.Add(light3);
+            Environment.Lights.Add(light3);
 
             Rect(new Vector2(330, 337), new Vector2(Width, 394), 0f, 55f);
 

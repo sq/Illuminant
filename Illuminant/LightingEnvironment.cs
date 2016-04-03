@@ -9,7 +9,7 @@ using Squared.Util;
 
 namespace Squared.Illuminant {
     public class LightingEnvironment {
-        public readonly List<LightSource> LightSources = new List<LightSource>();
+        public readonly List<LightSource> Lights = new List<LightSource>();
         // SDF objects that define obstructions to be rendered into the distance field
         public readonly List<LightObstruction> Obstructions = new List<LightObstruction>();
         // Polygonal meshes that define 3D volumes that are rendered into the distance field
@@ -27,7 +27,7 @@ namespace Squared.Illuminant {
         public float ZToYMultiplier = 0f;
 
         public void Clear () {
-            LightSources.Clear();
+            Lights.Clear();
         }
     }
 }
