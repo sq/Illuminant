@@ -727,31 +727,33 @@ namespace Squared.Illuminant {
             };            
             foreach (var billboard in Environment.Billboards) {
                 var tl   = billboard.Position;
-                var size = new Vector3(billboard.Size, 0);
+                var size = billboard.Size;
+                var bl = tl + new Vector3(0, size.Y, 0);
+                var tr = tl + new Vector3(size.X, 0, 0);
                 var normal = Vector3.UnitY;
                 var verts = new BillboardVertex[] {
                     new BillboardVertex {
                         Position = tl,
                         Normal = normal,
-                        WorldPosition = tl + new Vector3(0, 0, size.Y),
+                        WorldPosition = tl + new Vector3(0, 0, size.Z),
                         TexCoord = Vector2.Zero
                     },
                     new BillboardVertex {
-                        Position = tl + new Vector3(size.X, 0, 0),
+                        Position = tr,
                         Normal = normal,
-                        WorldPosition = tl + new Vector3(size.X, 0, size.Y),
+                        WorldPosition = tl + new Vector3(size.X, 0, size.Z),
                         TexCoord = new Vector2(1, 0)
                     },
                     new BillboardVertex {
                         Position = tl + size,
                         Normal = normal,
-                        WorldPosition = tl + new Vector3(size.X, 0, 0),
+                        WorldPosition = tl + new Vector3(size.X, size.Y, 0),
                         TexCoord = Vector2.One
                     },
                     new BillboardVertex {
-                        Position = tl + new Vector3(0, size.Y, 0),
+                        Position = bl,
                         Normal = normal,
-                        WorldPosition = tl,
+                        WorldPosition = bl,
                         TexCoord = new Vector2(0, 1)
                     }
                 };
@@ -776,6 +778,8 @@ namespace Squared.Illuminant {
                         );
                         p["RenderScale"].SetValue(Configuration.RenderScale);
                         p["Mask"].SetValue(billboard.Texture);
+
+                        dm.CurrentMaterial.Flush();
                     }
                 )) {
                     batch.Add(new PrimitiveDrawCall<BillboardVertex>(

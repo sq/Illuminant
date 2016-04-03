@@ -26,8 +26,6 @@ void BillboardVertexShader(
 ) {
     // HACK: Offset away from the surface to prevent self occlusion
     worldPosition += (SELF_OCCLUSION_HACK * normal);
-
-    position.y -= ZToYMultiplier * position.z;
     result = TransformPosition(float4(position.xy - ViewportPosition, 0, 1), 0);
     result.z = position.z / DistanceFieldExtent.z;
 }

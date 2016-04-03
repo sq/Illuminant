@@ -35,6 +35,21 @@ namespace Squared.Illuminant {
                 return new Bounds3(Position - size, Position + size);
             }
         }
+
+        public LightSource Clone () {
+            var result = new LightSource {
+                UserData = UserData,
+                Position = Position,
+                Radius = Radius,
+                RampLength = RampLength,
+                Color = Color,
+                Opacity = Opacity,
+                CastsShadows = CastsShadows,
+                AmbientOcclusionRadius = AmbientOcclusionRadius,
+                RampMode = RampMode
+            };
+            return result;
+        }
     }
 
     public enum LightSourceRampMode {

@@ -16,14 +16,16 @@ using Squared.Util;
 
 namespace TestGame.Scenes {
     public class SC3 : Scene {
-        LightingEnvironment Environment;
-        LightingRenderer Renderer;
+        LightingEnvironment Environment, ForegroundEnvironment;
+        LightingRenderer Renderer, ForegroundRenderer;
 
-        RenderTarget2D Lightmap;
+        RenderTarget2D Lightmap, ForegroundLightmap;
 
         public readonly List<LightSource> Lights = new List<LightSource>();
 
         Texture2D Background, Foreground;
+        Texture2D Tree;
+        Texture2D[] Pillars;
         float LightZ;
 
         const int LightmapScaleRatio = 1;
@@ -48,13 +50,31 @@ namespace TestGame.Scenes {
                     RenderTargetUsage.PlatformContents
                 );
             }
+
+            if (ForegroundLightmap == null) {
+                if (ForegroundLightmap != null)
+                    ForegroundLightmap.Dispose();
+
+                ForegroundLightmap = new RenderTarget2D(
+                    Game.GraphicsDevice, Width, Height, false,
+                    SurfaceFormat.Color, DepthFormat.None, 0, 
+                    RenderTargetUsage.PlatformContents
+                );
+            }
         }
 
         public override void LoadContent () {
             Environment = new LightingEnvironment();
+            ForegroundEnvironment = new LightingEnvironment();
 
             Background = Game.Content.Load<Texture2D>("bg_noshadows");
             Foreground = Game.Content.Load<Texture2D>("fg");
+            Tree = Game.Content.Load<Texture2D>("tree");
+            Pillars = new[] {
+                Game.Content.Load<Texture2D>("pillar1"),
+                Game.Content.Load<Texture2D>("pillar2"),
+                Game.Content.Load<Texture2D>("pillar3"),
+            };
 
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
@@ -68,8 +88,23 @@ namespace TestGame.Scenes {
                     DistanceFieldLongStepFactor = 0.5f,
                     DistanceFieldOcclusionToOpacityPower = 0.8f,
                     DistanceFieldMaxConeRadius = 16,
-                    // DistanceFieldConeGrowthFactor = 0.4f,
-                    GBufferCaching = false,
+                    TwoPointFiveD = true,
+                    DistanceFieldUpdateRate = 2
+                }
+            );
+
+            ForegroundRenderer = new LightingRenderer(
+                Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
+                new RendererConfiguration(
+                    Width / LightmapScaleRatio, Height / LightmapScaleRatio,
+                    Width, Height, 2
+                ) {
+                    RenderScale = 1.0f / LightmapScaleRatio,
+                    DistanceFieldResolution = 0.5f,
+                    DistanceFieldMinStepSize = 1f,
+                    DistanceFieldLongStepFactor = 0.5f,
+                    DistanceFieldOcclusionToOpacityPower = 0.8f,
+                    DistanceFieldMaxConeRadius = 16,
                     TwoPointFiveD = true,
                     DistanceFieldUpdateRate = 2
                 }
@@ -81,10 +116,14 @@ namespace TestGame.Scenes {
                 Radius = 400,
                 RampLength = 200,
                 RampMode = LightSourceRampMode.Linear,
-                AmbientOcclusionRadius = 12f
+                AmbientOcclusionRadius = 16f
             };
 
             Environment.Lights.Add(light);
+
+            light = light.Clone();
+            light.AmbientOcclusionRadius = 0;
+            ForegroundEnvironment.Lights.Add(light);
 
             var ambientLight = new LightSource {
                 Position = new Vector3(Width / 2f, Height / 2f, 0f),
@@ -97,40 +136,46 @@ namespace TestGame.Scenes {
 
             Environment.Lights.Add(ambientLight);
 
-            Environment.Billboards.Add(new Billboard {
-                Position = Vector3.Zero,
-                Size = new Vector2(Foreground.Width, Foreground.Height),
-                Texture = Foreground
-            });
+            ambientLight = ambientLight.Clone();
+            ambientLight.CastsShadows = false;
+            ForegroundEnvironment.Lights.Add(ambientLight);
 
             BuildObstacles();
 
-            Environment.GroundZ = 0;
-            Environment.MaximumZ = 128;
-            Environment.ZToYMultiplier = 2.5f;
+            Environment.GroundZ = ForegroundEnvironment.GroundZ = 0;
+            Environment.MaximumZ = ForegroundEnvironment.MaximumZ = 128;
+            Environment.ZToYMultiplier = ForegroundEnvironment.ZToYMultiplier = 2.5f;
         }
 
-        private void Pillar (float x, float y) {
+        private void Pillar (float x, float y, int textureIndex) {
             Environment.Obstructions.Add(new LightObstruction(
                 LightObstructionType.Ellipsoid,
                 new Vector3(x, y, 0),
                 new Vector3(18, 8, 100) 
             ));
+
+            var tex = Pillars[textureIndex];
+            ForegroundEnvironment.Billboards.Add(new Billboard {
+                Position = new Vector3(x - (tex.Width * 0.5f), y - tex.Height + 11, 0),
+                Size = new Vector3(tex.Width, tex.Height, 0),
+                Texture = tex
+            });
         }
 
         private void BuildObstacles () {
-            Pillar(722, 186);
-            Pillar(848, 208);
-            Pillar(928, 334);
-            Pillar(888, 480);
-            Pillar(721, 521);
-            Pillar(591, 501);
+            Pillar(722, 186, 2);
+            Pillar(849, 209, 0);
+            Pillar(927, 335, 0);
+            Pillar(888, 480, 1);
+            Pillar(723, 526, 2);
+            Pillar(593, 505, 2);
         }
         
         public override void Draw (Squared.Render.Frame frame) {
             CreateRenderTargets();
 
             Renderer.UpdateFields(frame, -2);
+            ForegroundRenderer.UpdateFields(frame, -2);
 
             using (var bg = BatchGroup.ForRenderTarget(
                 frame, -1, Lightmap,
@@ -145,9 +190,27 @@ namespace TestGame.Scenes {
             )) {
                 ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black);
 
-                Renderer.RenderLighting(bg, 1, intensityScale: 1);
+                Renderer.RenderLighting(bg, 1);
 
                 Renderer.ResolveLighting(bg, 2, new BitmapDrawCall(Renderer.Lightmap, Vector2.Zero, LightmapScaleRatio));
+            };
+
+            using (var fg = BatchGroup.ForRenderTarget(
+                frame, -1, ForegroundLightmap,
+                (dm, _) => {
+                    Game.Materials.PushViewTransform(ViewTransform.CreateOrthographic(
+                        Width, Height
+                    ));
+                },
+                (dm, _) => {
+                    Game.Materials.PopViewTransform();
+                }
+            )) {
+                ClearBatch.AddNew(fg, 0, Game.Materials.Clear, clearColor: Color.Black);
+
+                ForegroundRenderer.RenderLighting(fg, 1);
+
+                ForegroundRenderer.ResolveLighting(fg, 2, new BitmapDrawCall(ForegroundRenderer.Lightmap, Vector2.Zero, LightmapScaleRatio));
             };
 
             using (var group = BatchGroup.New(frame, 0)) {
@@ -184,7 +247,7 @@ namespace TestGame.Scenes {
                             dc = new BitmapDrawCall(
                                 Foreground, Vector2.Zero
                             );
-                            dc.Textures = new TextureSet(dc.Textures.Texture1, Lightmap);
+                            dc.Textures = new TextureSet(dc.Textures.Texture1, ForegroundLightmap);
                             dc.SortOrder = 1;
                             bb.Add(dc);
                         }
@@ -219,7 +282,7 @@ namespace TestGame.Scenes {
                         samplerState: SamplerState.PointClamp
                     ))
                         bb.Add(new BitmapDrawCall(
-                            Renderer.GBuffer, Vector2.Zero, new Bounds(Vector2.Zero, Vector2.One), 
+                            ForegroundRenderer.GBuffer, Vector2.Zero, new Bounds(Vector2.Zero, Vector2.One), 
                             Color.White, LightmapScaleRatio
                         ));
                 }
@@ -255,9 +318,11 @@ namespace TestGame.Scenes {
                 var mousePos = new Vector3(ms.X, ms.Y, LightZ);
 
                 if (Deterministic)
-                    Environment.Lights[0].Position = new Vector3(Width / 2f, Height / 2f, 200f);
+                    Environment.Lights[0].Position = ForegroundEnvironment.Lights[0].Position = 
+                        new Vector3(Width / 2f, Height / 2f, 200f);
                 else
-                    Environment.Lights[0].Position = mousePos;
+                    Environment.Lights[0].Position = ForegroundEnvironment.Lights[0].Position = 
+                        mousePos;
             }
         }
 
