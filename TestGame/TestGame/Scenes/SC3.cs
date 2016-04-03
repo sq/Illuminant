@@ -94,7 +94,7 @@ namespace TestGame.Scenes {
             );
 
             ForegroundRenderer = new LightingRenderer(
-                Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
+                Game.Content, Game.RenderCoordinator, Game.Materials, ForegroundEnvironment, 
                 new RendererConfiguration(
                     Width / LightmapScaleRatio, Height / LightmapScaleRatio,
                     Width, Height, 2
@@ -165,8 +165,8 @@ namespace TestGame.Scenes {
         private void BuildObstacles () {
             Pillar(722, 186, 2);
             Pillar(849, 209, 0);
-            Pillar(927, 335, 0);
-            Pillar(888, 480, 1);
+            Pillar(927, 337, 0);
+            Pillar(888, 482, 1);
             Pillar(723, 526, 2);
             Pillar(593, 505, 2);
         }

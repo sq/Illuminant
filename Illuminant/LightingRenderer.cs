@@ -696,9 +696,9 @@ namespace Squared.Illuminant {
                                     m3d, 0, m3d.Length / 3
                                 ));
                             }
-
-                            RenderGBufferBillboards(group, 7);
                         }
+
+                        RenderGBufferBillboards(group, 7);
 
                     } else {
                         // Rasterize the height volumes in order from lowest to highest.
