@@ -733,19 +733,19 @@ namespace Squared.Illuminant {
                     new BillboardVertex {
                         Position = tl,
                         Normal = normal,
-                        WorldPosition = tl + new Vector3(0, 0, size.Y * Environment.ZToYMultiplier),
+                        WorldPosition = tl + new Vector3(0, 0, size.Y),
                         TexCoord = Vector2.Zero
                     },
                     new BillboardVertex {
                         Position = tl + new Vector3(size.X, 0, 0),
                         Normal = normal,
-                        WorldPosition = tl + new Vector3(size.X, 0, size.Y * Environment.ZToYMultiplier),
+                        WorldPosition = tl + new Vector3(size.X, 0, size.Y),
                         TexCoord = new Vector2(1, 0)
                     },
                     new BillboardVertex {
                         Position = tl + size,
                         Normal = normal,
-                        WorldPosition = tl + new Vector3(size.X),
+                        WorldPosition = tl + new Vector3(size.X, 0, 0),
                         TexCoord = Vector2.One
                     },
                     new BillboardVertex {

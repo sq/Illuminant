@@ -21,11 +21,11 @@ void BillboardVertexShader(
     in    float3 position      : POSITION0, // x, y, z
     inout float2 texCoord      : TEXCOORD0,
     inout float3 normal        : NORMAL0,
-    out   float3 worldPosition : TEXCOORD1,
+    inout float3 worldPosition : TEXCOORD1,
     out   float4 result        : POSITION0
 ) {
     // HACK: Offset away from the surface to prevent self occlusion
-    worldPosition = position + (SELF_OCCLUSION_HACK * normal);
+    worldPosition += (SELF_OCCLUSION_HACK * normal);
 
     position.y -= ZToYMultiplier * position.z;
     result = TransformPosition(float4(position.xy - ViewportPosition, 0, 1), 0);
