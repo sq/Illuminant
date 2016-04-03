@@ -30,67 +30,73 @@ void LightingResolvePixelShader(
     float2 coord       = clamp(texCoord, texTL, texBR);
     float2 coordTexels = coord * BitmapTextureSize;
 
-    float2 topLeftTexels     = floor(coordTexels);
-    float2 bottomRightTexels = ceil(coordTexels);
-    float2 xyWeight = coordTexels - topLeftTexels;
-
-    float z[4];
-    float normal[4];
-
-    {
-        float3 shadedPositionTL, shadedPositionTR, shadedPositionBL, shadedPositionBR;
-        float3 shadedNormalTL,   shadedNormalTR,   shadedNormalBL,   shadedNormalBR;
-
-        sampleGBuffer(
-            topLeftTexels * RenderScale,
-            shadedPositionTL, shadedNormalTL
-        );
-
-        sampleGBuffer(
-            float2(bottomRightTexels.x, topLeftTexels.y) * RenderScale,
-            shadedPositionTR, shadedNormalTR
-        );
-
-        sampleGBuffer(
-            float2(topLeftTexels.x, bottomRightTexels.y) * RenderScale,
-            shadedPositionBL, shadedNormalBL
-        );
-
-        sampleGBuffer(
-            bottomRightTexels * RenderScale,
-            shadedPositionBR, shadedNormalBR
-        );
-
-        z[0] = shadedPositionTL.z;
-        z[1] = shadedPositionTR.z;
-        z[2] = shadedPositionBL.z;
-        z[3] = shadedPositionBR.z;
-    }
-
-    float2 rcpSize = 1.0 / BitmapTextureSize;
-    float4 lightTL, lightTR, lightBL, lightBR;
-
     float4 samplePoint = tex2D(PointSampler, coord);
     float4 sampleLinear = tex2D(LinearSampler, coord);
 
-    const float windowStart = 1.5;
-    const float windowSize  = 1.5;
-    const float windowEnd   = windowStart + windowSize;
+    [branch]
+    if (samplePoint.a > 0) {
+        float2 topLeftTexels     = floor(coordTexels);
+        float2 bottomRightTexels = ceil(coordTexels);
+        float2 xyWeight = coordTexels - topLeftTexels;
 
-    // HACK
-    float averageZ = (z[0] + z[1] + z[2] + z[3]) / 4;
-    float blendWeight = (((
-        clamp(abs(z[0] - averageZ), windowStart, windowEnd) +
-        clamp(abs(z[1] - averageZ), windowStart, windowEnd) +
-        clamp(abs(z[2] - averageZ), windowStart, windowEnd) +
-        clamp(abs(z[3] - averageZ), windowStart, windowEnd)
-    ) / 4) - windowStart) / windowSize;
+        float z[4];
+        float normal[4];
 
-    result = lerp(sampleLinear, samplePoint, blendWeight) * multiplyColor;
+        {
+            float3 shadedPositionTL, shadedPositionTR, shadedPositionBL, shadedPositionBR;
+            float3 shadedNormalTL,   shadedNormalTR,   shadedNormalBL,   shadedNormalBR;
 
-    result += (addColor * result.a);
+            sampleGBuffer(
+                topLeftTexels * RenderScale,
+                shadedPositionTL, shadedNormalTL
+            );
 
-    result.a = 1;
+            sampleGBuffer(
+                float2(bottomRightTexels.x, topLeftTexels.y) * RenderScale,
+                shadedPositionTR, shadedNormalTR
+            );
+
+            sampleGBuffer(
+                float2(topLeftTexels.x, bottomRightTexels.y) * RenderScale,
+                shadedPositionBL, shadedNormalBL
+            );
+
+            sampleGBuffer(
+                bottomRightTexels * RenderScale,
+                shadedPositionBR, shadedNormalBR
+            );
+
+            z[0] = shadedPositionTL.z;
+            z[1] = shadedPositionTR.z;
+            z[2] = shadedPositionBL.z;
+            z[3] = shadedPositionBR.z;
+        }
+
+        float2 rcpSize = 1.0 / BitmapTextureSize;
+        float4 lightTL, lightTR, lightBL, lightBR;
+    
+        const float windowStart = 1.5;
+        const float windowSize  = 1.5;
+        const float windowEnd   = windowStart + windowSize;
+
+        // HACK
+        float averageZ = (z[0] + z[1] + z[2] + z[3]) / 4;
+        float blendWeight = (((
+            clamp(abs(z[0] - averageZ), windowStart, windowEnd) +
+            clamp(abs(z[1] - averageZ), windowStart, windowEnd) +
+            clamp(abs(z[2] - averageZ), windowStart, windowEnd) +
+            clamp(abs(z[3] - averageZ), windowStart, windowEnd)
+        ) / 4) - windowStart) / windowSize;
+
+        result = lerp(sampleLinear, samplePoint, blendWeight) * multiplyColor;
+
+        result += (addColor * result.a);
+
+        result.a = 1;
+    } else {
+        result = 0;
+        discard;
+    }
 }
 
 technique LightingResolve

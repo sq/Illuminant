@@ -27,6 +27,7 @@ namespace Squared.Illuminant {
 
         public bool  TwoPointFiveD                 = false;
         public bool  GBufferCaching                = true;
+        public bool  RenderGroundPlane             = true;
 
         // Individual cone trace steps are not allowed to be any shorter than this.
         // Improves the worst-case performance of the trace and avoids spending forever
@@ -431,7 +432,9 @@ namespace Squared.Illuminant {
                 SphereLightVertex vertex;
                 int lightCount = Environment.Lights.Count;
 
-                ClearBatch.AddNew(resultGroup, -1, Materials.Clear, new Color(0, 0, 0, 1f));
+                ClearBatch.AddNew(
+                    resultGroup, -1, Materials.Clear, new Color(0, 0, 0, Configuration.RenderGroundPlane ? 1f : 0f)
+                );
 
                 lock (_LightBufferLock)
                 for (int i = 0, j = 0; i < lightCount; i++) {
@@ -477,7 +480,7 @@ namespace Squared.Illuminant {
                         Render.Tracing.RenderTrace.Marker(resultGroup, layerIndex++, "LightingRenderer {0:X4} : Render {1} light source(s)", this.GetHashCode(), lightCount);
 
                     using (var nb = NativeBatch.New(
-                        resultGroup, layerIndex++, IlluminantMaterials.SphereLight, IlluminationBatchSetup, lightCount
+                        resultGroup, layerIndex++, IlluminantMaterials.SphereLight, IlluminationBatchSetup, userData: lightCount
                     ))
                         nb.Add(new NativeDrawCall(
                             PrimitiveType.TriangleList, 
@@ -642,12 +645,25 @@ namespace Squared.Illuminant {
                         var zRange = new Vector2(Environment.GroundZ, Environment.GroundZ);
                         var indices = new short[] {
                             0, 1, 3, 1, 2, 3
-                        };            
+                        };
+                        var tl = new Vector3(0, 0, Environment.GroundZ);
+                        var tr = new Vector3(Configuration.DistanceFieldSize.First, 0, Environment.GroundZ);
+                        var br = new Vector3(Configuration.DistanceFieldSize.First, Configuration.DistanceFieldSize.Second, Environment.GroundZ);
+                        var bl = new Vector3(0, Configuration.DistanceFieldSize.Second, Environment.GroundZ);
+
+                        if (Configuration.RenderGroundPlane == false) {
+                            var huge = new Vector3(0, 0, -99999);
+                            tl += huge;
+                            tr += huge;
+                            br += huge;
+                            bl += huge;
+                        }
+
                         var verts = new HeightVolumeVertex[] {
-                            new HeightVolumeVertex(new Vector3(0, 0, Environment.GroundZ), Vector3.UnitZ, zRange),
-                            new HeightVolumeVertex(new Vector3(Configuration.DistanceFieldSize.First, 0, Environment.GroundZ), Vector3.UnitZ, zRange),
-                            new HeightVolumeVertex(new Vector3(Configuration.DistanceFieldSize.First, Configuration.DistanceFieldSize.Second, Environment.GroundZ), Vector3.UnitZ, zRange),
-                            new HeightVolumeVertex(new Vector3(0, Configuration.DistanceFieldSize.Second, Environment.GroundZ), Vector3.UnitZ, zRange)
+                            new HeightVolumeVertex(tl, Vector3.UnitZ, zRange),
+                            new HeightVolumeVertex(tr, Vector3.UnitZ, zRange),
+                            new HeightVolumeVertex(br, Vector3.UnitZ, zRange),
+                            new HeightVolumeVertex(bl, Vector3.UnitZ, zRange)
                         };
 
                         batch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
@@ -728,31 +744,38 @@ namespace Squared.Illuminant {
             foreach (var billboard in Environment.Billboards) {
                 var tl   = billboard.Position;
                 var size = billboard.Size;
+                var normal1 = billboard.Normal;
+                var normal2 = billboard.Normal;
                 var bl = tl + new Vector3(0, size.Y, 0);
                 var tr = tl + new Vector3(size.X, 0, 0);
-                var normal = Vector3.UnitY;
+
+                if (billboard.CylinderNormals) {
+                    normal1.X = 0;
+                    normal2.X = 1;
+                }
+
                 var verts = new BillboardVertex[] {
                     new BillboardVertex {
                         Position = tl,
-                        Normal = normal,
-                        WorldPosition = tl + new Vector3(0, 0, size.Z),
+                        Normal = normal1,
+                        WorldPosition = bl + new Vector3(0, 0, size.Z),
                         TexCoord = Vector2.Zero
                     },
                     new BillboardVertex {
                         Position = tr,
-                        Normal = normal,
-                        WorldPosition = tl + new Vector3(size.X, 0, size.Z),
+                        Normal = normal2,
+                        WorldPosition = bl + new Vector3(size.X, 0, size.Z),
                         TexCoord = new Vector2(1, 0)
                     },
                     new BillboardVertex {
                         Position = tl + size,
-                        Normal = normal,
-                        WorldPosition = tl + new Vector3(size.X, size.Y, 0),
+                        Normal = normal2,
+                        WorldPosition = bl + new Vector3(size.X, 0, 0),
                         TexCoord = Vector2.One
                     },
                     new BillboardVertex {
                         Position = bl,
-                        Normal = normal,
+                        Normal = normal1,
                         WorldPosition = bl,
                         TexCoord = new Vector2(0, 1)
                     }

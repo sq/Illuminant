@@ -106,7 +106,9 @@ namespace TestGame.Scenes {
                     DistanceFieldOcclusionToOpacityPower = 0.8f,
                     DistanceFieldMaxConeRadius = 16,
                     TwoPointFiveD = true,
-                    DistanceFieldUpdateRate = 2
+                    // RenderGroundPlane = false,
+                    DistanceFieldUpdateRate = 2,
+                    // GBufferCaching = false
                 }
             );
 
@@ -137,7 +139,6 @@ namespace TestGame.Scenes {
             Environment.Lights.Add(ambientLight);
 
             ambientLight = ambientLight.Clone();
-            ambientLight.CastsShadows = false;
             ForegroundEnvironment.Lights.Add(ambientLight);
 
             BuildObstacles();
@@ -148,17 +149,21 @@ namespace TestGame.Scenes {
         }
 
         private void Pillar (float x, float y, int textureIndex) {
-            Environment.Obstructions.Add(new LightObstruction(
+            var obs = new LightObstruction(
                 LightObstructionType.Ellipsoid,
                 new Vector3(x, y, 0),
-                new Vector3(18, 8, 100) 
-            ));
+                new Vector3(18, 8, 100)
+            );
+            Environment.Obstructions.Add(obs);
+            ForegroundEnvironment.Obstructions.Add(obs);
 
             var tex = Pillars[textureIndex];
             ForegroundEnvironment.Billboards.Add(new Billboard {
-                Position = new Vector3(x - (tex.Width * 0.5f), y - tex.Height + 11, 0),
+                Position = new Vector3(x - (tex.Width * 0.5f), y - tex.Height + 12, 0),
+                Normal = Vector3.UnitZ,
                 Size = new Vector3(tex.Width, tex.Height, 0),
-                Texture = tex
+                Texture = tex,
+                CylinderNormals = true
             });
         }
 
@@ -206,7 +211,7 @@ namespace TestGame.Scenes {
                     Game.Materials.PopViewTransform();
                 }
             )) {
-                ClearBatch.AddNew(fg, 0, Game.Materials.Clear, clearColor: Color.Black);
+                ClearBatch.AddNew(fg, 0, Game.Materials.Clear, clearColor: new Color(0.5f, 0.5f, 0.5f, 1f));
 
                 ForegroundRenderer.RenderLighting(fg, 1);
 
@@ -219,10 +224,15 @@ namespace TestGame.Scenes {
                 if (ShowLightmap) {
                     using (var bb = BitmapBatch.New(
                         group, 1,
-                        Game.Materials.Get(Game.Materials.ScreenSpaceBitmap, blendState: BlendState.Opaque),
+                        Game.Materials.Get(Game.Materials.ScreenSpaceBitmap, blendState: BlendState.AlphaBlend),
                         samplerState: SamplerState.LinearClamp
-                    ))
+                    )) {
                         bb.Add(new BitmapDrawCall(Lightmap, Vector2.Zero));
+
+                        var dc = new BitmapDrawCall(ForegroundLightmap, Vector2.Zero);
+                        dc.SortOrder = 1;
+                        bb.Add(dc);
+                    }
                 } else {
                     using (var bb = BitmapBatch.New(
                         group, 1,
@@ -233,7 +243,7 @@ namespace TestGame.Scenes {
                             blendState: 
                                 ShowGBuffer
                                 ? BlendState.Opaque
-                                : BlendState.Opaque
+                                : BlendState.AlphaBlend
                         ),
                         samplerState: SamplerState.PointClamp
                     )) {

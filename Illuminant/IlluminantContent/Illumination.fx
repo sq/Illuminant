@@ -44,22 +44,23 @@ float SphereLightPixelCore(
         shadedPixelPosition, shadedPixelNormal
     );
 
+    bool  distanceCull = false;
     float lightOpacity = computeSphereLightOpacity(
         shadedPixelPosition, shadedPixelNormal,
-        lightCenterAndAO.xyz, lightProperties
+        lightCenterAndAO.xyz, lightProperties,
+        distanceCull
     );
 
-    const float opacityThreshold = (0.5 / 255.0);
-    bool visible = (lightOpacity >= opacityThreshold);
+    bool visible = (!distanceCull) && 
+        (shadedPixelPosition.x > -9999);
 
     DistanceFieldConstants vars = makeDistanceFieldConstants();
 
     [branch]
-    if (lightCenterAndAO.w >= 0.5) {
+    if ((lightCenterAndAO.w >= 0.5) && visible) {
         float distance = sampleDistanceField(shadedPixelPosition, vars);
         float aoRamp = clamp(distance / lightCenterAndAO.w, 0, 1);
         lightOpacity *= aoRamp;
-        visible = (lightOpacity >= opacityThreshold);
     }
 
     bool traceShadows = (visible && lightProperties.w);
@@ -67,10 +68,11 @@ float SphereLightPixelCore(
     [branch]
     if (traceShadows) {
         lightOpacity *= coneTrace(lightCenterAndAO.xyz, lightProperties.xy, shadedPixelPosition + (SELF_OCCLUSION_HACK * shadedPixelNormal), vars);
-        visible = (lightOpacity >= opacityThreshold);
     }
 
     [branch]
+    // HACK: Don't cull pixels unless they were killed by distance falloff.
+    // This ensures that billboards are always lit.
     if (visible) {
         return lightOpacity;
     } else {
@@ -91,7 +93,7 @@ void SphereLightPixelShader(
         worldPosition, lightCenterAndAO, lightProperties, vpos
     );
 
-    float4 lightColorActual = float4(color.rgb * color.a * opacity, color.a * opacity);
+    float4 lightColorActual = float4(color.rgb * color.a * opacity, 1);
     result = lightColorActual;
 }
 

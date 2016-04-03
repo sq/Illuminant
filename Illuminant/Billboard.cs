@@ -8,7 +8,9 @@ namespace Squared.Illuminant {
     public class Billboard {
         public Texture2D Texture;
         public Vector3   Position;
+        public Vector3   Normal;
         public Vector3   Size;
+        public bool      CylinderNormals;
         // TODO: Texcoords?
     }
 }

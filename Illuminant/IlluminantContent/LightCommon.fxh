@@ -46,7 +46,8 @@ void sampleGBuffer(
 
 float computeSphereLightOpacity(
     float3 shadedPixelPosition, float3 shadedPixelNormal,
-    float3 lightCenter, float4 lightProperties
+    float3 lightCenter, float4 lightProperties,
+    out bool distanceFalloff 
 ) {
     float  lightRadius     = lightProperties.x;
     float  lightRampLength = lightProperties.y;
@@ -56,19 +57,23 @@ float computeSphereLightOpacity(
     float  distance       = length(distance3);
     float  distanceFactor = 1 - clamp((distance - lightRadius) / lightRampLength, 0, 1);
 
-    [flatten]
-    if (falloffMode >= 2)
-        distanceFactor = 1 - clamp(distance - lightRadius, 0, 1);
-    else if (falloffMode >= 1)
-        distanceFactor *= distanceFactor;
-
-    float3 lightNormal  = distance3 / distance;
+    float3 lightNormal = distance3 / distance;
 
     float d = dot(-lightNormal, shadedPixelNormal);
 
     // HACK: We allow the light to be somewhat behind the surface without occluding it,
     //  and we want a smooth ramp between occluded and not-occluded
     float  normalFactor = pow(clamp((d + DOT_OFFSET) / DOT_RAMP_RANGE, 0, 1), DOT_EXPONENT);
+
+    [flatten]
+    if (falloffMode >= 2) {
+        distanceFactor = 1 - clamp(distance - lightRadius, 0, 1);
+        normalFactor = 1;
+    } else if (falloffMode >= 1) {
+        distanceFactor *= distanceFactor;
+    }
+
+    distanceFalloff = (distanceFactor <= 0);
 
     return normalFactor * distanceFactor;
 }

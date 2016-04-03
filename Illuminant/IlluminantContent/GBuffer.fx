@@ -8,20 +8,23 @@ uniform float  ZToYMultiplier;
 uniform float3 DistanceFieldExtent;
 
 void HeightVolumeVertexShader (
-    in  float3   position      : POSITION0, // x, y, z
-    inout float3 normal        : NORMAL0, 
-    out float3   worldPosition : TEXCOORD1,
-    out float4   result        : POSITION0
+    in    float3   position      : POSITION0, // x, y, z
+    inout float3   normal        : NORMAL0, 
+    out   bool     dead          : TEXCOORD2,
+    out   float3   worldPosition : TEXCOORD1,
+    out   float4   result        : POSITION0
 ) {
     worldPosition = position;
     result = TransformPosition(float4(position.xy - ViewportPosition, 0, 1), 0);
     result.z = 0;
+    dead = worldPosition.z < -9999;
 }
 
 void HeightVolumeFaceVertexShader(
     in    float3 position      : POSITION0, // x, y, z
     inout float3 normal        : NORMAL0,
     out   float3 worldPosition : TEXCOORD1,
+    out   bool   dead          : TEXCOORD2,
     out   float4 result        : POSITION0
 ) {
     // HACK: Offset away from the surface to prevent self occlusion
@@ -30,23 +33,33 @@ void HeightVolumeFaceVertexShader(
     position.y -= ZToYMultiplier * position.z;
     result = TransformPosition(float4(position.xy - ViewportPosition, 0, 1), 0);
     result.z = position.z / DistanceFieldExtent.z;
+    dead = false;
 }
 
 void HeightVolumePixelShader (
     in float2 vpos          : VPOS,
     in float3 normal        : NORMAL0,
     in float3 worldPosition : TEXCOORD1,
+    in bool   dead          : TEXCOORD2,
     out float4 color        : COLOR0
 ) {
-    // HACK: We drop the world x axis and the normal y axis,
-    //  and reconstruct those two values when sampling the g-buffer
-    color = float4(
-        // HACK: For visualization
-        (normal.x / 2) + 0.5,
-        (normal.z / 2) + 0.5,
-        worldPosition.y / 1024,
-        worldPosition.z / 1024
-    );
+    if (dead) {
+        color = float4(
+            0, 0,
+            -99999,
+            -99999
+        );
+    } else {
+        // HACK: We drop the world x axis and the normal y axis,
+        //  and reconstruct those two values when sampling the g-buffer
+        color = float4(
+            // HACK: For visualization
+            (normal.x / 2) + 0.5,
+            (normal.z / 2) + 0.5,
+            worldPosition.y / 1024,
+            worldPosition.z / 1024
+        );
+    }
 }
 
 technique HeightVolume
