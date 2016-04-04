@@ -113,6 +113,9 @@ namespace TestGame.Scenes {
         float LightZ;
 
         const int LightmapScaleRatio = 3;
+        // We scale down the range of lighting values by this much, so that we
+        //  have additional values past 1.0 to use for HDR calculations
+        const float HDRRangeFactor = 4;
 
         bool VisualizeForeground = false;
         bool ShowGBuffer         = false;
@@ -308,19 +311,21 @@ namespace TestGame.Scenes {
 
             // Compute a scale factor based on our expected peak brightness (because of 
             //  projectiles piling up, plus overlap between main light and ambient)
-            float scaleFactor = (1.0f - Arithmetic.Clamp(Projectiles.Count / 320f, 0f, 0.55f)) * 0.9f;
+            float exposure = 
+                (1.0f - Arithmetic.Clamp(Projectiles.Count / 320f, 0f, 0.55f)) 
+                * 0.9f;
 
             var hdrConfiguration = new HDRConfiguration {
                 Mode = HDRMode.ToneMap,
-                InverseScaleFactor = 1.0f / scaleFactor,
+                InverseScaleFactor = HDRRangeFactor,
                 ToneMapping = {
-                    Exposure = scaleFactor,
+                    Exposure = exposure,
                     WhitePoint = 1.0f
                 }
             };
 
-            Renderer.RenderLighting(frame, -2, scaleFactor);
-            ForegroundRenderer.RenderLighting(frame, -2, scaleFactor);
+            Renderer.RenderLighting(frame, -2, 1.0f / HDRRangeFactor);
+            ForegroundRenderer.RenderLighting(frame, -2, 1.0f / HDRRangeFactor);
 
             using (var bg = BatchGroup.ForRenderTarget(
                 frame, -1, Lightmap,
@@ -482,7 +487,7 @@ namespace TestGame.Scenes {
                 ir.DrawString(
                     Game.Font, string.Format(
                         "Exposure: {0:00.000}\r\nProjectiles: {1:0000}", 
-                        1f / scaleFactor, Projectiles.Count
+                        exposure, Projectiles.Count
                     ), new Vector2(3, 3), scale: 0.5f
                 );
             }

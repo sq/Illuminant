@@ -126,7 +126,7 @@ namespace Squared.Illuminant {
                     coordinator.Device, 
                     Configuration.MaximumRenderSize.First, 
                     Configuration.MaximumRenderSize.Second,
-                    false,
+                    true,
                     Configuration.HighQuality
                         ? SurfaceFormat.Rgba64
                         : SurfaceFormat.Color,
