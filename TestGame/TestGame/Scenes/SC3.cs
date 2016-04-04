@@ -16,6 +16,87 @@ using Squared.Util;
 
 namespace TestGame.Scenes {
     public class SC3 : Scene {
+        private static Random RNG = new Random();
+
+        public class Projectile {
+            public const float TargetVelocity = 4.25f; // +1f
+            public const int AccelerateDuration = 100;
+            public const int SeekDuration = 220;
+            public const int FadeDuration = 45;
+
+            private static int _NextIndex;
+
+            public readonly int Index;
+            public readonly LightSource Light;
+            public readonly Vector3 Source, Target;
+            public readonly float Size;
+
+            public Vector3 Velocity;
+            public int     Age;
+            public int     Life = FadeDuration;
+
+            public Projectile (Vector3 source, Vector3 target) {
+                Index = _NextIndex++;
+
+                Source = source;
+                Target = target;
+
+                Size = RNG.NextFloat(0.85f, 1.05f);
+
+                Velocity = new Vector3(
+                    RNG.NextFloat(-1, 1),
+                    RNG.NextFloat(-1, 1),
+                    RNG.NextFloat(-1, 1)
+                );
+                Velocity.Normalize();
+                Velocity *= RNG.NextFloat(2.25f, 3.6f);
+
+                var position = source + (Velocity * RNG.NextFloat(0.3f, 0.8f));
+
+                Light = new LightSource {
+                    Position = position,
+                    CastsShadows = true,
+                    AmbientOcclusionRadius = 0,
+                    Color = new Vector4(
+                        RNG.NextFloat(0.5f, 1.0f),
+                        RNG.NextFloat(0.5f, 1.0f),
+                        RNG.NextFloat(0.5f, 1.0f),
+                        0.1f * Size
+                    ),
+                    Opacity = 1,
+                    Radius = 3f * Size,
+                    RampLength = 160f * Size,
+                    RampMode = LightSourceRampMode.Exponential
+                };
+            }
+
+            public bool Update () {
+                var nextPosition = Light.Position + Velocity;
+                var targetVector = Target - nextPosition;
+                var distance = targetVector.Length();
+                targetVector /= distance;
+                var targetVelocity = (TargetVelocity * Arithmetic.Clamp(Age / (float)AccelerateDuration, 0, 1)) + 1f;
+                targetVector *= Math.Min(distance, targetVelocity);
+
+                Velocity = Arithmetic.Lerp(Velocity, targetVector, Age / (float)SeekDuration);
+
+                if (distance <= 1.5f) {
+                    Velocity = Vector3.Zero;
+                    Light.Position = Target;
+                    Life -= 1;
+                } else {
+                    Light.Position = nextPosition;
+                }
+
+                Age += 1;
+
+                float opacity = Arithmetic.Clamp(Life / (float)FadeDuration, 0f, 1f);
+                Light.Opacity = (float)Math.Pow(opacity, 0.85);
+
+                return Life > 0;
+            }
+        }
+
         LightingEnvironment Environment, ForegroundEnvironment;
         LightingRenderer Renderer, ForegroundRenderer;
 
@@ -23,9 +104,12 @@ namespace TestGame.Scenes {
 
         public readonly List<LightSource> Lights = new List<LightSource>();
 
+        public readonly UnorderedList<Projectile> Projectiles = new UnorderedList<Projectile>();
+
         Texture2D Background, Foreground, BackgroundMask;
         Texture2D[] Trees;
         Texture2D[] Pillars;
+        Texture2D Spark;
         float LightZ;
 
         const int LightmapScaleRatio = 1;
@@ -71,6 +155,7 @@ namespace TestGame.Scenes {
             Background = Game.Content.Load<Texture2D>("bg_noshadows");
             BackgroundMask = Game.Content.Load<Texture2D>("bg_mask");
             Foreground = Game.Content.Load<Texture2D>("fg");
+
             Trees = new[] {
                 Game.Content.Load<Texture2D>("tree1")
             };
@@ -79,6 +164,8 @@ namespace TestGame.Scenes {
                 Game.Content.Load<Texture2D>("pillar2"),
                 Game.Content.Load<Texture2D>("pillar3"),
             };
+
+            Spark = Game.Content.Load<Texture2D>("spark");
 
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
@@ -120,9 +207,9 @@ namespace TestGame.Scenes {
 
             var light = new LightSource {
                 Position = new Vector3(64, 64, 0.7f),
-                Color = new Vector4(1f, 1f, 1f, 0.4f),
-                Radius = 200,
-                RampLength = 500,
+                Color = new Vector4(1f, 1f, 1f, 0.3f),
+                Radius = 160,
+                RampLength = 360,
                 RampMode = LightSourceRampMode.Exponential,
                 AmbientOcclusionRadius = 16f
             };
@@ -135,7 +222,7 @@ namespace TestGame.Scenes {
 
             var ambientLight = new LightSource {
                 Position = new Vector3(Width / 2f, Height / 2f, 128),
-                Color = new Vector4(0f, 0.8f, 0.6f, 0.2f),
+                Color = new Vector4(0f, 0.8f, 0.6f, 0.1f),
                 Radius = 8192,
                 RampLength = 0,
                 RampMode = LightSourceRampMode.None,
@@ -303,6 +390,40 @@ namespace TestGame.Scenes {
                             bb.Add(dc);
                         }
                     }
+
+                    using (var addBatch = BitmapBatch.New(
+                        group, 3,
+                        Game.Materials.Get(
+                            Game.Materials.ScreenSpaceBitmap, blendState: BlendState.Additive
+                        ),
+                        SamplerState.LinearClamp
+                    ))
+                    using (var alphaBatch = BitmapBatch.New(
+                        group, 2,
+                        Game.Materials.Get(
+                            Game.Materials.ScreenSpaceBitmap, blendState: BlendState.AlphaBlend
+                        ),
+                        SamplerState.LinearClamp
+                    )) {
+                        foreach (var proj in Projectiles) {
+                            var pos = proj.Light.Position;
+                            var color = proj.Light.Color;
+                            var xy = new Vector2(pos.X, pos.Y - (Environment.ZToYMultiplier * (pos.Z - Environment.GroundZ)));
+                            float opacity = proj.Light.Opacity * color.W * 2.8f;
+                            color.X *= opacity;
+                            color.Y *= opacity;
+                            color.Z *= opacity;
+                            color.W = opacity;
+
+                            var dc = new BitmapDrawCall(Spark, xy, new Color(color));
+                            dc.Origin = new Vector2(0.5f, 0.5f);
+                            dc.ScaleF = 0.5f * proj.Size;
+                            dc.Rotation = ((proj.Index * 4) + proj.Age) / 24f;
+
+                            addBatch.Add(dc);
+                            alphaBatch.Add(dc);
+                        }
+                    }
                 }
 
                 if (ShowDistanceField) {
@@ -377,12 +498,30 @@ namespace TestGame.Scenes {
 
                 var mousePos = new Vector3(ms.X, ms.Y, LightZ);
 
+                Projectile proj;
+                if (ms.LeftButton == ButtonState.Pressed) {
+                    var projectileTarget = new Vector3(636, 275, 80f);
+                    proj = new Projectile(mousePos, projectileTarget);
+                    Environment.Lights.Add(proj.Light);
+                    ForegroundEnvironment.Lights.Add(proj.Light);
+                    Projectiles.Add(proj);
+                }
+
                 if (Deterministic)
                     Environment.Lights[0].Position = ForegroundEnvironment.Lights[0].Position = 
                         new Vector3(Width / 2f, Height / 2f, 200f);
                 else
                     Environment.Lights[0].Position = ForegroundEnvironment.Lights[0].Position = 
                         mousePos;
+
+                using (var e = Projectiles.GetEnumerator())
+                while (e.GetNext(out proj)) {
+                    if (!proj.Update()) {
+                        Environment.Lights.Remove(proj.Light);
+                        ForegroundEnvironment.Lights.Remove(proj.Light);
+                        e.RemoveCurrent();
+                    }
+                }
             }
         }
 
