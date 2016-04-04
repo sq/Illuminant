@@ -202,9 +202,6 @@ namespace TestGame.Scenes {
                 }
             );
 
-            Renderer.Configuration.GBufferCaching =
-                ForegroundRenderer.Configuration.GBufferCaching = false;
-
             var light = new LightSource {
                 Position = new Vector3(64, 64, 0.7f),
                 Color = new Vector4(1f, 1f, 1f, 0.3f),
@@ -222,7 +219,7 @@ namespace TestGame.Scenes {
 
             var ambientLight = new LightSource {
                 Position = new Vector3(Width / 2f, Height / 2f, 128),
-                Color = new Vector4(0f, 0.8f, 0.6f, 0.1f),
+                Color = new Vector4(0.33f, 0.85f, 0.65f, 0.15f),
                 Radius = 8192,
                 RampLength = 0,
                 RampMode = LightSourceRampMode.None,
@@ -309,6 +306,17 @@ namespace TestGame.Scenes {
             Renderer.UpdateFields(frame, -2);
             ForegroundRenderer.UpdateFields(frame, -2);
 
+            float scaleFactor = 1.0f - Arithmetic.Clamp(Projectiles.Count / 220f, 0f, 0.45f);
+
+            var hdrConfiguration = new HDRConfiguration {
+                Mode = HDRMode.ToneMap,
+                InverseScaleFactor = 1.0f / scaleFactor,
+                ToneMapping = {
+                    Exposure = scaleFactor,
+                    WhitePoint = 1.0f
+                }
+            };
+
             using (var bg = BatchGroup.ForRenderTarget(
                 frame, -1, Lightmap,
                 (dm, _) => {
@@ -322,9 +330,13 @@ namespace TestGame.Scenes {
             )) {
                 ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black);
 
-                Renderer.RenderLighting(bg, 1);
+                Renderer.RenderLighting(bg, 1, scaleFactor);
 
-                Renderer.ResolveLighting(bg, 2, new BitmapDrawCall(Renderer.Lightmap, Vector2.Zero, LightmapScaleRatio));
+                Renderer.ResolveLighting(
+                    bg, 2, 
+                    new BitmapDrawCall(Renderer.Lightmap, Vector2.Zero, LightmapScaleRatio),
+                    hdrConfiguration
+                );
             };
 
             using (var fg = BatchGroup.ForRenderTarget(
@@ -340,9 +352,13 @@ namespace TestGame.Scenes {
             )) {
                 ClearBatch.AddNew(fg, 0, Game.Materials.Clear, clearColor: new Color(0.5f, 0.5f, 0.5f, 1f));
 
-                ForegroundRenderer.RenderLighting(fg, 1);
+                ForegroundRenderer.RenderLighting(fg, 1, scaleFactor);
 
-                ForegroundRenderer.ResolveLighting(fg, 2, new BitmapDrawCall(ForegroundRenderer.Lightmap, Vector2.Zero, LightmapScaleRatio));
+                ForegroundRenderer.ResolveLighting(
+                    fg, 2, 
+                    new BitmapDrawCall(ForegroundRenderer.Lightmap, Vector2.Zero, LightmapScaleRatio),
+                    hdrConfiguration
+                );
             };
 
             using (var group = BatchGroup.New(frame, 0)) {
@@ -356,8 +372,8 @@ namespace TestGame.Scenes {
                     )) {
                         bb.Add(new BitmapDrawCall(                            
                             VisualizeForeground 
-                                ? ForegroundRenderer.Lightmap
-                                : Renderer.Lightmap, 
+                                ? ForegroundLightmap
+                                : Lightmap, 
                             Vector2.Zero
                         ));
                     }

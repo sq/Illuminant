@@ -17,6 +17,8 @@ sampler PointSampler : register(s7) {
     MagFilter = POINT;
 };
 
+uniform float InverseScaleFactor;
+
 float4 ResolveCommon(
     in float4 multiplyColor : COLOR0,
     in float4 addColor : COLOR1,
@@ -90,7 +92,7 @@ float4 ResolveCommon(
             clamp(abs(z[3] - averageZ), windowStart, windowEnd)
         ) / 4) - windowStart) / windowSize;
 
-        result = lerp(sampleLinear, samplePoint, blendWeight) * multiplyColor;
+        result = lerp(sampleLinear, samplePoint, blendWeight) * InverseScaleFactor * multiplyColor;
 
         result += (addColor * result.a);
 

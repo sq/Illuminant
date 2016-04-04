@@ -93,6 +93,7 @@
   <ItemGroup>
     <Compile Include="Billboard.cs" />
     <Compile Include="HeightVolume.cs" />
+    <Compile Include="IlluminantMaterials.cs" />
     <Compile Include="LightingRenderer.cs" />
     <Compile Include="LightingEnvironment.cs" />
     <Compile Include="LightObstruction.cs" />

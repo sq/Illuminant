@@ -13,66 +13,6 @@ using Squared.Render.Convenience;
 using Squared.Util;
 
 namespace Squared.Illuminant {
-    public class RendererConfiguration {
-        // The size of the distance field (x/y/z).
-        // Your actual z coordinates are scaled to fit into the z range of the field.
-        // If the x/y resolution of the field is too high the z resolution may be reduced.
-        public readonly Triplet<int> DistanceFieldSize;
-
-        // The maximum width and height of the viewport.
-        public readonly Pair<int>    MaximumRenderSize;
-
-        // Scales world coordinates when rendering the G-buffer and lightmap
-        public float RenderScale                   = 1.0f;
-
-        public bool  TwoPointFiveD                 = false;
-        public bool  GBufferCaching                = true;
-        public bool  RenderGroundPlane             = true;
-
-        // Individual cone trace steps are not allowed to be any shorter than this.
-        // Improves the worst-case performance of the trace and avoids spending forever
-        //  stepping short distances around the edges of objects.
-        // Setting this to 1 produces the 'best' results but larger values tend to look
-        //  just fine. If this is too high you will get banding artifacts.
-        public float DistanceFieldMinStepSize             = 3.0f;
-        // Long step distances are scaled by this factor. A factor < 1.0
-        //  eliminates banding artifacts in the soft area between full/no shadow,
-        //  at the cost of additional cone trace steps.
-        // This effectively increases how much time we spend outside of objects,
-        //  producing higher quality as a side effect.
-        // Only set this above 1.0 if you love goofy looking artifacts
-        public float DistanceFieldLongStepFactor          = 1.0f;
-        // Terminates a cone trace after this many steps.
-        // Mitigates the performance hit for complex traces near the edge of objects.
-        // Most traces will not hit this cap.
-        public int   DistanceFieldMaxStepCount            = 64;
-        public float DistanceFieldResolution              = 1.0f;
-        public float DistanceFieldMaxConeRadius           = 24;
-        public float DistanceFieldConeGrowthFactor        = 1.0f;
-        // The maximum number of distance field slices to update per frame.
-        // Setting this value too high can crash your video driver.
-        public int   DistanceFieldUpdateRate              = 1;
-        public float DistanceFieldOcclusionToOpacityPower = 1;
-
-        // The actual number of depth slices allocated for the distance field.
-        public int DistanceFieldSliceCount {
-            get; internal set;
-        }
-
-        // The current width and height of the viewport (and gbuffer).
-        // Must not be larger than MaximumRenderSize.
-        public Pair<int> RenderSize;        
-
-        public RendererConfiguration (
-            int maxWidth, int maxHeight,
-            int distanceFieldWidth, int distanceFieldHeight, int distanceFieldDepth
-        ) {
-            MaximumRenderSize = new Pair<int>(maxWidth, maxHeight);
-            DistanceFieldSize = new Triplet<int>(distanceFieldWidth, distanceFieldHeight, distanceFieldDepth);
-            RenderSize = MaximumRenderSize;
-        }
-    }
-
     public sealed class LightingRenderer : IDisposable {
         public const int MaximumLightCount = 8192;
         public const int PackedSliceCount = 3;
@@ -269,25 +209,14 @@ namespace Squared.Illuminant {
 
                 materials.Add(IlluminantMaterials.LightingResolve = 
                     new Squared.Render.EffectMaterial(content.Load<Effect>("Resolve"), "LightingResolve"));
+
+                materials.Add(IlluminantMaterials.GammaCompressedLightingResolve = 
+                    new Squared.Render.EffectMaterial(content.Load<Effect>("Resolve"), "GammaCompressedLightingResolve"));
+
+                materials.Add(IlluminantMaterials.ToneMappedLightingResolve = 
+                    new Squared.Render.EffectMaterial(content.Load<Effect>("Resolve"), "ToneMappedLightingResolve"));
             }
 
-#if SDL2
-            materials.Add(IlluminantMaterials.ScreenSpaceGammaCompressedBitmap = new Squared.Render.EffectMaterial(
-                content.Load<Effect>("ScreenSpaceGammaCompressedBitmap"), "ScreenSpaceGammaCompressedBitmap"
-            ));
-
-            materials.Add(IlluminantMaterials.WorldSpaceGammaCompressedBitmap = new Squared.Render.EffectMaterial(
-                content.Load<Effect>("WorldSpaceGammaCompressedBitmap"), "WorldSpaceGammaCompressedBitmap"
-            ));
-
-            materials.Add(IlluminantMaterials.ScreenSpaceToneMappedBitmap = new Squared.Render.EffectMaterial(
-                content.Load<Effect>("ScreenSpaceToneMappedBitmap"), "ScreenSpaceToneMappedBitmap"
-            ));
-
-            materials.Add(IlluminantMaterials.WorldSpaceToneMappedBitmap = new Squared.Render.EffectMaterial(
-                content.Load<Effect>("WorldSpaceToneMappedBitmap"), "WorldSpaceToneMappedBitmap"
-            ));
-#else
             materials.Add(IlluminantMaterials.ScreenSpaceGammaCompressedBitmap = new Squared.Render.EffectMaterial(
                 content.Load<Effect>("HDRBitmap"), "ScreenSpaceGammaCompressedBitmap"
             ));
@@ -303,7 +232,6 @@ namespace Squared.Illuminant {
             materials.Add(IlluminantMaterials.WorldSpaceToneMappedBitmap = new Squared.Render.EffectMaterial(
                 content.Load<Effect>("HDRBitmap"), "WorldSpaceToneMappedBitmap"
             ));
-#endif
 
             Environment = environment;
         }
@@ -505,11 +433,11 @@ namespace Squared.Illuminant {
         /// <param name="container">The batch container to resolve lighting into.</param>
         /// <param name="layer">The layer to resolve lighting into.</param>
         /// <param name="drawCall">A draw call used as a template to resolve the lighting.</param>
-        public void ResolveLighting (IBatchContainer container, int layer, BitmapDrawCall drawCall) {
+        public void ResolveLighting (IBatchContainer container, int layer, BitmapDrawCall drawCall, HDRConfiguration? hdr = null) {
             var ir = new ImperativeRenderer(
                 container, Materials, layer
             );
-            ResolveLighting(ref ir, drawCall);
+            ResolveLighting(ref ir, drawCall, hdr);
         }
 
         /// <summary>
@@ -519,11 +447,18 @@ namespace Squared.Illuminant {
         /// </summary>
         /// <param name="renderer">The renderer used to resolve the lighting.</param>
         /// <param name="drawCall">A draw call used as a template to resolve the lighting.</param>
-        public void ResolveLighting (ref ImperativeRenderer ir, BitmapDrawCall drawCall) {
+        public void ResolveLighting (ref ImperativeRenderer ir, BitmapDrawCall drawCall, HDRConfiguration? hdr = null) {
             if (drawCall.Texture != _Lightmap)
                 throw new NotImplementedException("Non-direct resolve not yet implemented");
 
-            var m = IlluminantMaterials.LightingResolve;
+            Render.EffectMaterial m;
+            if (hdr.Value.Mode == HDRMode.GammaCompress)
+                m = IlluminantMaterials.GammaCompressedLightingResolve;
+            else if (hdr.Value.Mode == HDRMode.ToneMap)
+                m = IlluminantMaterials.ToneMappedLightingResolve;
+            else
+                m = IlluminantMaterials.LightingResolve;
+
             var sg = ir.MakeSubgroup(before: (dm, _) => {
                 var tsize = new Vector2(
                     1f / Configuration.RenderSize.First * Configuration.RenderScale, 
@@ -532,7 +467,24 @@ namespace Squared.Illuminant {
                 m.Effect.Parameters["GBufferTexelSize"].SetValue(tsize);
                 m.Effect.Parameters["GBuffer"].SetValue(_GBuffer);
                 m.Effect.Parameters["RenderScale"].SetValue(1f / Configuration.RenderScale);
+
+                if (hdr.HasValue) {
+                    if (hdr.Value.Mode == HDRMode.GammaCompress)
+                        IlluminantMaterials.SetGammaCompressionParameters(
+                            hdr.Value.InverseScaleFactor,
+                            hdr.Value.GammaCompression.MiddleGray,
+                            hdr.Value.GammaCompression.AverageLuminance,
+                            hdr.Value.GammaCompression.MaximumLuminance
+                        );
+                    else if (hdr.Value.Mode == HDRMode.ToneMap)
+                        IlluminantMaterials.SetToneMappingParameters(
+                            hdr.Value.InverseScaleFactor,
+                            hdr.Value.ToneMapping.Exposure,
+                            hdr.Value.ToneMapping.WhitePoint
+                        );
+                }
             });
+
             sg.Draw(drawCall, material: m);
         }        
 
@@ -969,72 +921,72 @@ namespace Squared.Illuminant {
                 dm.Device.DepthStencilState = DepthStencilState.None;
                 SetDistanceFieldParameters(extParameters, false);
             }))
-                foreach (var hv in Environment.HeightVolumes) {
-                    var p = hv.Polygon;
-                    var m = hv.Mesh3D;
-                    var b = hv.Bounds.Expand(DistanceLimit, DistanceLimit);
-                    var zRange = new Vector2(hv.ZBase, hv.ZBase + hv.Height);
+            foreach (var hv in Environment.HeightVolumes) {
+                var p = hv.Polygon;
+                var m = hv.Mesh3D;
+                var b = hv.Bounds.Expand(DistanceLimit, DistanceLimit);
+                var zRange = new Vector2(hv.ZBase, hv.ZBase + hv.Height);
 
-                    var boundingBoxVertices = new HeightVolumeVertex[] {
-                        new HeightVolumeVertex(new Vector3(b.TopLeft, 0), Vector3.Up, zRange),
-                        new HeightVolumeVertex(new Vector3(b.TopRight, 0), Vector3.Up, zRange),
-                        new HeightVolumeVertex(new Vector3(b.BottomRight, 0), Vector3.Up, zRange),
-                        new HeightVolumeVertex(new Vector3(b.BottomLeft, 0), Vector3.Up, zRange)
-                    };
+                var boundingBoxVertices = new HeightVolumeVertex[] {
+                    new HeightVolumeVertex(new Vector3(b.TopLeft, 0), Vector3.Up, zRange),
+                    new HeightVolumeVertex(new Vector3(b.TopRight, 0), Vector3.Up, zRange),
+                    new HeightVolumeVertex(new Vector3(b.BottomRight, 0), Vector3.Up, zRange),
+                    new HeightVolumeVertex(new Vector3(b.BottomLeft, 0), Vector3.Up, zRange)
+                };
 
-                    Texture2D vertexDataTexture;
+                Texture2D vertexDataTexture;
 
-                    // FIXME: Handle position/zrange updates
-                    if (!HeightVolumeVertexData.TryGetValue(p, out vertexDataTexture)) {
-                        lock (Coordinator.CreateResourceLock) {
-                            vertexDataTexture = new Texture2D(Coordinator.Device, p.Count, 1, false, SurfaceFormat.HalfVector4);
-                            HeightVolumeVertexData[p] = vertexDataTexture;
-                        }
-
-                        lock (Coordinator.UseResourceLock)
-                        using (var vertices = BufferPool<HalfVector4>.Allocate(p.Count)) {
-                            for (var j = 0; j < p.Count; j++) {
-                                var edgeA = p[j];
-                                var edgeB = p[Arithmetic.Wrap(j + 1, 0, p.Count - 1)];
-                                vertices.Data[j] = new HalfVector4(
-                                    edgeA.X, edgeA.Y, edgeB.X, edgeB.Y
-                                );
-                            }
-
-                            vertexDataTexture.SetData(vertices.Data, 0, p.Count);
-                        }
+                // FIXME: Handle position/zrange updates
+                if (!HeightVolumeVertexData.TryGetValue(p, out vertexDataTexture)) {
+                    lock (Coordinator.CreateResourceLock) {
+                        vertexDataTexture = new Texture2D(Coordinator.Device, p.Count, 1, false, SurfaceFormat.HalfVector4);
+                        HeightVolumeVertexData[p] = vertexDataTexture;
                     }
 
-                    using (var batch = PrimitiveBatch<HeightVolumeVertex>.New(
-                        interiorGroup, i, IlluminantMaterials.DistanceFieldInterior,
-                        (dm, _) => {
-                            intParameters["NumVertices"].SetValue(p.Count);
-                            intParameters["VertexDataTexture"].SetValue(vertexDataTexture);
-                            intParameters["SliceZ"].SetValue(sliceZ);
-                            IlluminantMaterials.DistanceFieldInterior.Flush();
+                    lock (Coordinator.UseResourceLock)
+                    using (var vertices = BufferPool<HalfVector4>.Allocate(p.Count)) {
+                        for (var j = 0; j < p.Count; j++) {
+                            var edgeA = p[j];
+                            var edgeB = p[Arithmetic.Wrap(j + 1, 0, p.Count - 1)];
+                            vertices.Data[j] = new HalfVector4(
+                                edgeA.X, edgeA.Y, edgeB.X, edgeB.Y
+                            );
                         }
-                    ))
-                        batch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
-                            PrimitiveType.TriangleList,
-                            m, 0, m.Length / 3
-                        ));
 
-                    using (var batch = PrimitiveBatch<HeightVolumeVertex>.New(
-                        exteriorGroup, i, IlluminantMaterials.DistanceFieldExterior,
-                        (dm, _) => {
-                            extParameters["NumVertices"].SetValue(p.Count);
-                            extParameters["VertexDataTexture"].SetValue(vertexDataTexture);
-                            extParameters["SliceZ"].SetValue(sliceZ);
-                            IlluminantMaterials.DistanceFieldExterior.Flush();
-                        }
-                    ))
-                        batch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
-                            PrimitiveType.TriangleList,
-                            boundingBoxVertices, 0, boundingBoxVertices.Length, indices, 0, indices.Length / 3
-                        ));
-
-                    i++;
+                        vertexDataTexture.SetData(vertices.Data, 0, p.Count);
+                    }
                 }
+
+                using (var batch = PrimitiveBatch<HeightVolumeVertex>.New(
+                    interiorGroup, i, IlluminantMaterials.DistanceFieldInterior,
+                    (dm, _) => {
+                        intParameters["NumVertices"].SetValue(p.Count);
+                        intParameters["VertexDataTexture"].SetValue(vertexDataTexture);
+                        intParameters["SliceZ"].SetValue(sliceZ);
+                        IlluminantMaterials.DistanceFieldInterior.Flush();
+                    }
+                ))
+                    batch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
+                        PrimitiveType.TriangleList,
+                        m, 0, m.Length / 3
+                    ));
+
+                using (var batch = PrimitiveBatch<HeightVolumeVertex>.New(
+                    exteriorGroup, i, IlluminantMaterials.DistanceFieldExterior,
+                    (dm, _) => {
+                        extParameters["NumVertices"].SetValue(p.Count);
+                        extParameters["VertexDataTexture"].SetValue(vertexDataTexture);
+                        extParameters["SliceZ"].SetValue(sliceZ);
+                        IlluminantMaterials.DistanceFieldExterior.Flush();
+                    }
+                ))
+                    batch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
+                        PrimitiveType.TriangleList,
+                        boundingBoxVertices, 0, boundingBoxVertices.Length, indices, 0, indices.Length / 3
+                    ));
+
+                i++;
+            }
         }
 
         private void ClearDistanceFieldSlice (
@@ -1110,75 +1062,84 @@ namespace Squared.Illuminant {
         }
     }
 
-    public class IlluminantMaterials {
-        public readonly DefaultMaterialSet MaterialSet;
+    public class RendererConfiguration {
+        // The size of the distance field (x/y/z).
+        // Your actual z coordinates are scaled to fit into the z range of the field.
+        // If the x/y resolution of the field is too high the z resolution may be reduced.
+        public readonly Triplet<int> DistanceFieldSize;
 
-        public Material SphereLight;
-        public Render.EffectMaterial DistanceFieldExterior, DistanceFieldInterior;
-        public Render.EffectMaterial DistanceFunction;
-        public Render.EffectMaterial HeightVolume, HeightVolumeFace;
-        public Render.EffectMaterial MaskBillboard, GDataBillboard;
-        public Render.EffectMaterial LightingResolve;
-        public Render.EffectMaterial ScreenSpaceGammaCompressedBitmap, WorldSpaceGammaCompressedBitmap;
-        public Render.EffectMaterial ScreenSpaceToneMappedBitmap, WorldSpaceToneMappedBitmap;
+        // The maximum width and height of the viewport.
+        public readonly Pair<int>    MaximumRenderSize;
 
-        internal readonly Effect[] EffectsToSetGammaCompressionParametersOn;
-        internal readonly Effect[] EffectsToSetToneMappingParametersOn;
+        // Scales world coordinates when rendering the G-buffer and lightmap
+        public float RenderScale                   = 1.0f;
 
-        internal IlluminantMaterials (DefaultMaterialSet materialSet) {
-            MaterialSet = materialSet;
+        public bool  TwoPointFiveD                 = false;
+        public bool  GBufferCaching                = true;
+        public bool  RenderGroundPlane             = true;
 
-            EffectsToSetGammaCompressionParametersOn = new Effect[2];
-            EffectsToSetToneMappingParametersOn = new Effect[2];
+        // Individual cone trace steps are not allowed to be any shorter than this.
+        // Improves the worst-case performance of the trace and avoids spending forever
+        //  stepping short distances around the edges of objects.
+        // Setting this to 1 produces the 'best' results but larger values tend to look
+        //  just fine. If this is too high you will get banding artifacts.
+        public float DistanceFieldMinStepSize             = 3.0f;
+        // Long step distances are scaled by this factor. A factor < 1.0
+        //  eliminates banding artifacts in the soft area between full/no shadow,
+        //  at the cost of additional cone trace steps.
+        // This effectively increases how much time we spend outside of objects,
+        //  producing higher quality as a side effect.
+        // Only set this above 1.0 if you love goofy looking artifacts
+        public float DistanceFieldLongStepFactor          = 1.0f;
+        // Terminates a cone trace after this many steps.
+        // Mitigates the performance hit for complex traces near the edge of objects.
+        // Most traces will not hit this cap.
+        public int   DistanceFieldMaxStepCount            = 64;
+        public float DistanceFieldResolution              = 1.0f;
+        public float DistanceFieldMaxConeRadius           = 24;
+        public float DistanceFieldConeGrowthFactor        = 1.0f;
+        // The maximum number of distance field slices to update per frame.
+        // Setting this value too high can crash your video driver.
+        public int   DistanceFieldUpdateRate              = 1;
+        public float DistanceFieldOcclusionToOpacityPower = 1;
+
+        // The actual number of depth slices allocated for the distance field.
+        public int DistanceFieldSliceCount {
+            get; internal set;
         }
 
-        /// <summary>
-        /// Updates the gamma compression parameters for the gamma compressed bitmap materials. You should call this in batch setup when using the materials.
-        /// </summary>
-        /// <param name="inverseScaleFactor">If you scaled down the intensity of your light sources for HDR rendering, use this to invert the scale. All other parameters are applied to the resulting scaled value.</param>
-        /// <param name="middleGray">I don't know what this does. Impossible to find a paper that actually describes this formula. :/ Try 0.6.</param>
-        /// <param name="averageLuminance">The average luminance of the entire scene. You can compute this by scaling the entire scene down or using light receivers.</param>
-        /// <param name="maximumLuminance">The maximum luminance. Luminance values above this threshold will remain above 1.0 after gamma compression.</param>
-        public void SetGammaCompressionParameters (float inverseScaleFactor, float middleGray, float averageLuminance, float maximumLuminance) {
-            const float min = 1 / 256f;
-            const float max = 99999f;
+        // The current width and height of the viewport (and gbuffer).
+        // Must not be larger than MaximumRenderSize.
+        public Pair<int> RenderSize;        
 
-            middleGray = MathHelper.Clamp(middleGray, 0.0f, max);
-            averageLuminance = MathHelper.Clamp(averageLuminance, min, max);
-            maximumLuminance = MathHelper.Clamp(maximumLuminance, min, max);
+        public RendererConfiguration (
+            int maxWidth, int maxHeight,
+            int distanceFieldWidth, int distanceFieldHeight, int distanceFieldDepth
+        ) {
+            MaximumRenderSize = new Pair<int>(maxWidth, maxHeight);
+            DistanceFieldSize = new Triplet<int>(distanceFieldWidth, distanceFieldHeight, distanceFieldDepth);
+            RenderSize = MaximumRenderSize;
+        }
+    }
 
-            EffectsToSetGammaCompressionParametersOn[0] = ScreenSpaceGammaCompressedBitmap.Effect;
-            EffectsToSetGammaCompressionParametersOn[1] = WorldSpaceGammaCompressedBitmap.Effect;
-
-            foreach (var effect in EffectsToSetGammaCompressionParametersOn) {
-                effect.Parameters["InverseScaleFactor"].SetValue(inverseScaleFactor);
-                effect.Parameters["MiddleGray"].SetValue(middleGray);
-                effect.Parameters["AverageLuminance"].SetValue(averageLuminance);
-                effect.Parameters["MaximumLuminanceSquared"].SetValue(maximumLuminance * maximumLuminance);
-            }
+    public struct HDRConfiguration {
+        public struct GammaCompressionConfiguration {
+            public float MiddleGray, AverageLuminance, MaximumLuminance;
         }
 
-        /// <summary>
-        /// Updates the tone mapping parameters for the tone mapped bitmap materials. You should call this in batch setup when using the materials.
-        /// </summary>
-        /// <param name="inverseScaleFactor">If you scaled down the intensity of your light sources for HDR rendering, use this to invert the scale. All other parameters are applied to the resulting scaled value.</param>
-        /// <param name="exposure">A factor to multiply incoming values to make them brighter or darker.</param>
-        /// <param name="whitePoint">The white point to set as the threshold above which any values become 1.0.</param>
-        public void SetToneMappingParameters (float inverseScaleFactor, float exposure, float whitePoint) {
-            const float min = 1 / 256f;
-            const float max = 99999f;
-
-            exposure = MathHelper.Clamp(exposure, min, max);
-            whitePoint = MathHelper.Clamp(whitePoint, min, max);
-
-            EffectsToSetToneMappingParametersOn[0] = ScreenSpaceToneMappedBitmap.Effect;
-            EffectsToSetToneMappingParametersOn[1] = WorldSpaceToneMappedBitmap.Effect;
-
-            foreach (var effect in EffectsToSetToneMappingParametersOn) {
-                effect.Parameters["InverseScaleFactor"].SetValue(inverseScaleFactor);
-                effect.Parameters["Exposure"].SetValue(exposure);
-                effect.Parameters["WhitePoint"].SetValue(whitePoint);
-            }
+        public struct ToneMappingConfiguration {
+            public float Exposure, WhitePoint;
         }
+
+        public HDRMode Mode;
+        public float InverseScaleFactor;
+        public GammaCompressionConfiguration GammaCompression;
+        public ToneMappingConfiguration ToneMapping;
+    }
+
+    public enum HDRMode {
+        None,
+        GammaCompress,
+        ToneMap
     }
 }
