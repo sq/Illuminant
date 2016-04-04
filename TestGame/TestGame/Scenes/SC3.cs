@@ -120,9 +120,9 @@ namespace TestGame.Scenes {
 
             var light = new LightSource {
                 Position = new Vector3(64, 64, 0.7f),
-                Color = new Vector4(1f, 1f, 1f, 1f),
-                Radius = 48,
-                RampLength = 64,
+                Color = new Vector4(1f, 1f, 1f, 0.4f),
+                Radius = 200,
+                RampLength = 500,
                 RampMode = LightSourceRampMode.Exponential,
                 AmbientOcclusionRadius = 16f
             };

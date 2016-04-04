@@ -817,6 +817,8 @@ namespace Squared.Illuminant {
                         );
                         p["RenderScale"].SetValue(Configuration.RenderScale);
                         p["Mask"].SetValue(billboard.Texture);
+
+                        material.Flush();
                     }
                 )) {
                     batch.Add(new PrimitiveDrawCall<BillboardVertex>(
