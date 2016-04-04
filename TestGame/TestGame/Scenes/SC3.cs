@@ -112,9 +112,11 @@ namespace TestGame.Scenes {
                     TwoPointFiveD = true,
                     // RenderGroundPlane = false,
                     DistanceFieldUpdateRate = 2,
-                    // GBufferCaching = false
                 }
             );
+
+            Renderer.Configuration.GBufferCaching =
+                ForegroundRenderer.Configuration.GBufferCaching = false;
 
             var light = new LightSource {
                 Position = new Vector3(64, 64, 0.7f),

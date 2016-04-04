@@ -750,6 +750,7 @@ namespace Squared.Illuminant {
                 var tr = tl + new Vector3(size.X, 0, 0);
 
                 if (billboard.CylinderNormals) {
+                    // FIXME: Linear filtering = not a cylinder?
                     normal1.X = 0;
                     normal2.X = 1;
                 }

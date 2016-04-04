@@ -37,27 +37,31 @@ void HeightVolumeFaceVertexShader(
 }
 
 void HeightVolumePixelShader (
-    in float2 vpos          : VPOS,
-    in float3 normal        : NORMAL0,
-    in float3 worldPosition : TEXCOORD1,
-    in bool   dead          : TEXCOORD2,
-    out float4 color        : COLOR0
+    in float2  vpos          : VPOS,
+    in float3  normal        : NORMAL0,
+    in float3  worldPosition : TEXCOORD1,
+    in bool    dead          : TEXCOORD2,
+    out float4 result        : COLOR0
 ) {
     if (dead) {
-        color = float4(
+        result = float4(
             0, 0,
             -99999,
             -99999
         );
     } else {
+        float wp = worldPosition.y;
+        float sp = vpos.y;
+        float relativeY = wp - sp;
+
         // HACK: We drop the world x axis and the normal y axis,
         //  and reconstruct those two values when sampling the g-buffer
-        color = float4(
+        result = float4(
             // HACK: For visualization
             (normal.x / 2) + 0.5,
             (normal.z / 2) + 0.5,
-            worldPosition.y / 1024,
-            worldPosition.z / 1024
+            (relativeY / 512),
+            (worldPosition.z / 512)
         );
     }
 }
