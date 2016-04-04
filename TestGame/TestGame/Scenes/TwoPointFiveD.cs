@@ -101,7 +101,7 @@ namespace TestGame.Scenes {
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(
-                    1024 / LightmapScaleRatio, 1024 / LightmapScaleRatio,
+                    1024 / LightmapScaleRatio, 1024 / LightmapScaleRatio, true,
                     1024, 1024, 64
                 ) {
                     RenderScale = 1.0f / LightmapScaleRatio,

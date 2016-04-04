@@ -19,10 +19,6 @@ namespace Squared.Illuminant {
 
         const int        DistanceLimit = 520;
 
-        const SurfaceFormat GBufferFormat       = SurfaceFormat.Vector4;
-        const SurfaceFormat DistanceFieldFormat = SurfaceFormat.Rgba64;
-        const SurfaceFormat LightmapFormat      = SurfaceFormat.Rgba64;
-
         // HACK: If your projection matrix and your actual viewport/RT don't match in dimensions, you need to set this to compensate. :/
         // Scissor rects are fussy.
         public readonly DefaultMaterialSet Materials;
@@ -108,7 +104,9 @@ namespace Squared.Illuminant {
                     coordinator.Device,
                     DistanceFieldSliceWidth * DistanceFieldSlicesX, 
                     DistanceFieldSliceHeight * DistanceFieldSlicesY,
-                    false, DistanceFieldFormat, DepthFormat.None, 0, 
+                    false, 
+                    SurfaceFormat.Rgba64,
+                    DepthFormat.None, 0, 
                     RenderTargetUsage.PlatformContents
                 );
 
@@ -116,14 +114,22 @@ namespace Squared.Illuminant {
                     coordinator.Device, 
                     Configuration.MaximumRenderSize.First, 
                     Configuration.MaximumRenderSize.Second,
-                    false, GBufferFormat, DepthFormat.Depth24, 0, RenderTargetUsage.PlatformContents
+                    false, 
+                    Configuration.HighQuality
+                        ? SurfaceFormat.Vector4
+                        : SurfaceFormat.HalfVector4,
+                    DepthFormat.Depth24, 0, RenderTargetUsage.PlatformContents
                 );
 
                 _Lightmap = new RenderTarget2D(
                     coordinator.Device, 
                     Configuration.MaximumRenderSize.First, 
                     Configuration.MaximumRenderSize.Second,
-                    false, LightmapFormat, DepthFormat.None, 0, RenderTargetUsage.PlatformContents
+                    false,
+                    Configuration.HighQuality
+                        ? SurfaceFormat.Rgba64
+                        : SurfaceFormat.Color,
+                    DepthFormat.None, 0, RenderTargetUsage.PlatformContents
                 );
             }
 
@@ -1071,6 +1077,8 @@ namespace Squared.Illuminant {
         // The maximum width and height of the viewport.
         public readonly Pair<int>    MaximumRenderSize;
 
+        public readonly bool         HighQuality;
+
         // Scales world coordinates when rendering the G-buffer and lightmap
         public float RenderScale                   = 1.0f;
 
@@ -1113,9 +1121,10 @@ namespace Squared.Illuminant {
         public Pair<int> RenderSize;        
 
         public RendererConfiguration (
-            int maxWidth, int maxHeight,
+            int maxWidth, int maxHeight, bool highQuality,
             int distanceFieldWidth, int distanceFieldHeight, int distanceFieldDepth
         ) {
+            HighQuality = highQuality;
             MaximumRenderSize = new Pair<int>(maxWidth, maxHeight);
             DistanceFieldSize = new Triplet<int>(distanceFieldWidth, distanceFieldHeight, distanceFieldDepth);
             RenderSize = MaximumRenderSize;

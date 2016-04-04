@@ -170,7 +170,7 @@ namespace TestGame.Scenes {
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(
-                    Width / LightmapScaleRatio, Height / LightmapScaleRatio,
+                    Width / LightmapScaleRatio, Height / LightmapScaleRatio, true,
                     Width, Height, 16
                 ) {
                     RenderScale = 1.0f / LightmapScaleRatio,
@@ -187,7 +187,7 @@ namespace TestGame.Scenes {
             ForegroundRenderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, ForegroundEnvironment, 
                 new RendererConfiguration(
-                    Width / LightmapScaleRatio, Height / LightmapScaleRatio,
+                    Width / LightmapScaleRatio, Height / LightmapScaleRatio, true,
                     Width, Height, 9
                 ) {
                     RenderScale = 1.0f / LightmapScaleRatio,
