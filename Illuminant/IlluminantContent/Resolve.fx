@@ -1,6 +1,7 @@
 #include "..\..\Upstream\Fracture\Squared\RenderLib\Content\BitmapCommon.fxh"
 #include "LightCommon.fxh"
 #include "DistanceFieldCommon.fxh"
+#include "HDR.fxh"
 
 sampler LinearSampler : register(s6) {
     Texture = (BitmapTexture);
@@ -16,18 +17,19 @@ sampler PointSampler : register(s7) {
     MagFilter = POINT;
 };
 
-void LightingResolvePixelShader(
-    in float4 multiplyColor : COLOR0, 
-    in float4 addColor : COLOR1, 
+float4 ResolveCommon(
+    in float4 multiplyColor : COLOR0,
+    in float4 addColor : COLOR1,
     in float2 texCoord : TEXCOORD0,
     in float2 texTL : TEXCOORD1,
-    in float2 texBR : TEXCOORD2,
-    out float4 result : COLOR0
+    in float2 texBR : TEXCOORD2
 ) {
+    float4 result;
+
     addColor.rgb *= addColor.a;
     addColor.a = 0;
 
-    float2 coord       = clamp(texCoord, texTL, texBR);
+    float2 coord = clamp(texCoord, texTL, texBR);
     float2 coordTexels = coord * BitmapTextureSize;
 
     float4 samplePoint = tex2D(PointSampler, coord);
@@ -35,7 +37,7 @@ void LightingResolvePixelShader(
 
     [branch]
     if (samplePoint.a > 0) {
-        float2 topLeftTexels     = floor(coordTexels);
+        float2 topLeftTexels = floor(coordTexels);
         float2 bottomRightTexels = ceil(coordTexels);
         float2 xyWeight = coordTexels - topLeftTexels;
 
@@ -44,7 +46,7 @@ void LightingResolvePixelShader(
 
         {
             float3 shadedPositionTL, shadedPositionTR, shadedPositionBL, shadedPositionBR;
-            float3 shadedNormalTL,   shadedNormalTR,   shadedNormalBL,   shadedNormalBR;
+            float3 shadedNormalTL, shadedNormalTR, shadedNormalBL, shadedNormalBR;
 
             sampleGBuffer(
                 topLeftTexels * RenderScale,
@@ -74,10 +76,10 @@ void LightingResolvePixelShader(
 
         float2 rcpSize = 1.0 / BitmapTextureSize;
         float4 lightTL, lightTR, lightBL, lightBR;
-    
+
         const float windowStart = 1.5;
-        const float windowSize  = 1.5;
-        const float windowEnd   = windowStart + windowSize;
+        const float windowSize = 1.5;
+        const float windowEnd = windowStart + windowSize;
 
         // HACK
         float averageZ = (z[0] + z[1] + z[2] + z[3]) / 4;
@@ -93,10 +95,66 @@ void LightingResolvePixelShader(
         result += (addColor * result.a);
 
         result.a = 1;
-    } else {
-        result = 0;
-        discard;
+        return result;
     }
+    else {
+        discard;
+        return 0;
+    }
+}
+
+void LightingResolvePixelShader(
+    in float4 multiplyColor : COLOR0,
+    in float4 addColor : COLOR1,
+    in float2 texCoord : TEXCOORD0,
+    in float2 texTL : TEXCOORD1,
+    in float2 texBR : TEXCOORD2,
+    out float4 result : COLOR0
+) {
+    result = ResolveCommon(
+        multiplyColor,
+        addColor,
+        texCoord,
+        texTL,
+        texBR
+    );
+}
+
+void GammaCompressedLightingResolvePixelShader(
+    in float4 multiplyColor : COLOR0,
+    in float4 addColor : COLOR1,
+    in float2 texCoord : TEXCOORD0,
+    in float2 texTL : TEXCOORD1,
+    in float2 texBR : TEXCOORD2,
+    out float4 result : COLOR0
+) {
+    result = ResolveCommon(
+        multiplyColor,
+        addColor,
+        texCoord,
+        texTL,
+        texBR
+    );
+    result = GammaCompress(result);
+}
+
+void ToneMappedLightingResolvePixelShader(
+    in float4 multiplyColor : COLOR0,
+    in float4 addColor : COLOR1,
+    in float2 texCoord : TEXCOORD0,
+    in float2 texTL : TEXCOORD1,
+    in float2 texBR : TEXCOORD2,
+    out float4 result : COLOR0
+) {
+    result = ResolveCommon(
+        multiplyColor,
+        addColor,
+        texCoord,
+        texTL,
+        texBR
+        );
+
+    result = float4(Uncharted2Tonemap(result.rgb * Exposure) / Uncharted2Tonemap1(WhitePoint), result.a);
 }
 
 technique LightingResolve
@@ -105,5 +163,23 @@ technique LightingResolve
     {
         vertexShader = compile vs_3_0 WorldSpaceVertexShader();
         pixelShader = compile ps_3_0 LightingResolvePixelShader();
+    }
+}
+
+technique GammaCompressedLightingResolve
+{
+    pass P0
+    {
+        vertexShader = compile vs_3_0 WorldSpaceVertexShader();
+        pixelShader = compile ps_3_0 GammaCompressedLightingResolvePixelShader();
+    }
+}
+
+technique ToneMappedLightingResolve
+{
+    pass P0
+    {
+        vertexShader = compile vs_3_0 WorldSpaceVertexShader();
+        pixelShader = compile ps_3_0 ToneMappedLightingResolvePixelShader();
     }
 }
