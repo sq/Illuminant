@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
@@ -366,7 +367,6 @@ namespace Squared.Illuminant {
                 if (Render.Tracing.RenderTrace.EnableTracing)
                     Render.Tracing.RenderTrace.Marker(resultGroup, -9999, "LightingRenderer {0:X4} : Begin", this.GetHashCode());
 
-                SphereLightVertex vertex;
                 int lightCount = Environment.Lights.Count;
 
                 ClearBatch.AddNew(
@@ -374,7 +374,7 @@ namespace Squared.Illuminant {
                 );
 
                 lock (_LightBufferLock)
-                for (int i = 0, j = 0; i < lightCount; i++) {
+                Parallel.For(0, lightCount, (i) => {
                     var lightSource = Environment.Lights[i];
 
                     float radius = lightSource.Radius + lightSource.RampLength;
@@ -387,6 +387,7 @@ namespace Squared.Illuminant {
 
                     lightBounds = lightBounds.Scale(Configuration.RenderScale);
 
+                    SphereLightVertex vertex;
                     vertex.LightCenterAndAO = new Vector4(
                         lightSource.Position,
                         lightSource.AmbientOcclusionRadius
@@ -399,6 +400,7 @@ namespace Squared.Illuminant {
                         lightSource.CastsShadows ? 1f : 0f
                     );
 
+                    int j = i * 4;
                     vertex.Position = lightBounds.TopLeft;
                     SphereLightVertices[j++] = vertex;
 
@@ -410,7 +412,7 @@ namespace Squared.Illuminant {
 
                     vertex.Position = lightBounds.BottomLeft;
                     SphereLightVertices[j++] = vertex;
-                }
+                });
 
                 if (lightCount > 0) {
                     if (Render.Tracing.RenderTrace.EnableTracing)
