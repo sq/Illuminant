@@ -51,7 +51,7 @@ void HeightVolumePixelShader (
         );
     } else {
         float wp = worldPosition.y;
-        float sp = vpos.y;
+        float sp = vpos.y / RenderScale;
         float relativeY = wp - sp;
 
         // HACK: We drop the world x axis and the normal y axis,

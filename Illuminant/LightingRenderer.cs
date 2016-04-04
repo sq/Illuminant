@@ -637,6 +637,9 @@ namespace Squared.Illuminant {
                                 : 0.0f
                         );
                         p["RenderScale"].SetValue(Configuration.RenderScale);
+                        IlluminantMaterials.HeightVolume.Effect.Parameters["RenderScale"].SetValue(
+                            Configuration.RenderScale
+                        );
                     }
                 )) {
 
