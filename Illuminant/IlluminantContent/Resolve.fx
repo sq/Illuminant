@@ -51,22 +51,22 @@ float4 ResolveCommon(
             float3 shadedNormalTL, shadedNormalTR, shadedNormalBL, shadedNormalBR;
 
             sampleGBuffer(
-                topLeftTexels * RenderScale,
+                topLeftTexels / RenderScale,
                 shadedPositionTL, shadedNormalTL
             );
 
             sampleGBuffer(
-                float2(bottomRightTexels.x, topLeftTexels.y) * RenderScale,
+                float2(bottomRightTexels.x, topLeftTexels.y) / RenderScale,
                 shadedPositionTR, shadedNormalTR
             );
 
             sampleGBuffer(
-                float2(topLeftTexels.x, bottomRightTexels.y) * RenderScale,
+                float2(topLeftTexels.x, bottomRightTexels.y) / RenderScale,
                 shadedPositionBL, shadedNormalBL
             );
 
             sampleGBuffer(
-                bottomRightTexels * RenderScale,
+                bottomRightTexels / RenderScale,
                 shadedPositionBR, shadedNormalBR
             );
 

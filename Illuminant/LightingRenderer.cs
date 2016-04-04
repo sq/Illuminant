@@ -472,7 +472,7 @@ namespace Squared.Illuminant {
                 );
                 m.Effect.Parameters["GBufferTexelSize"].SetValue(tsize);
                 m.Effect.Parameters["GBuffer"].SetValue(_GBuffer);
-                m.Effect.Parameters["RenderScale"].SetValue(1f / Configuration.RenderScale);
+                m.Effect.Parameters["RenderScale"].SetValue(Configuration.RenderScale);
 
                 if (hdr.HasValue) {
                     if (hdr.Value.Mode == HDRMode.GammaCompress)

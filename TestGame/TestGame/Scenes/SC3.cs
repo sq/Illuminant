@@ -112,7 +112,7 @@ namespace TestGame.Scenes {
         Texture2D Spark;
         float LightZ;
 
-        const int LightmapScaleRatio = 1;
+        const int LightmapScaleRatio = 3;
 
         bool VisualizeForeground = false;
         bool ShowGBuffer         = false;
@@ -303,8 +303,8 @@ namespace TestGame.Scenes {
         public override void Draw (Squared.Render.Frame frame) {
             CreateRenderTargets();
 
-            Renderer.UpdateFields(frame, -2);
-            ForegroundRenderer.UpdateFields(frame, -2);
+            Renderer.UpdateFields(frame, -3);
+            ForegroundRenderer.UpdateFields(frame, -3);
 
             // Compute a scale factor based on our expected peak brightness (because of 
             //  projectiles piling up, plus overlap between main light and ambient)
@@ -319,6 +319,9 @@ namespace TestGame.Scenes {
                 }
             };
 
+            Renderer.RenderLighting(frame, -2, scaleFactor);
+            ForegroundRenderer.RenderLighting(frame, -2, scaleFactor);
+
             using (var bg = BatchGroup.ForRenderTarget(
                 frame, -1, Lightmap,
                 (dm, _) => {
@@ -331,8 +334,6 @@ namespace TestGame.Scenes {
                 }
             )) {
                 ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black);
-
-                Renderer.RenderLighting(bg, 1, scaleFactor);
 
                 Renderer.ResolveLighting(
                     bg, 2, 
@@ -353,8 +354,6 @@ namespace TestGame.Scenes {
                 }
             )) {
                 ClearBatch.AddNew(fg, 0, Game.Materials.Clear, clearColor: new Color(0.5f, 0.5f, 0.5f, 1f));
-
-                ForegroundRenderer.RenderLighting(fg, 1, scaleFactor);
 
                 ForegroundRenderer.ResolveLighting(
                     fg, 2, 
@@ -412,14 +411,7 @@ namespace TestGame.Scenes {
                     using (var addBatch = BitmapBatch.New(
                         group, 3,
                         Game.Materials.Get(
-                            Game.Materials.ScreenSpaceBitmap, blendState: BlendState.Additive
-                        ),
-                        SamplerState.LinearClamp
-                    ))
-                    using (var alphaBatch = BitmapBatch.New(
-                        group, 2,
-                        Game.Materials.Get(
-                            Game.Materials.ScreenSpaceBitmap, blendState: BlendState.AlphaBlend
+                            Game.Materials.ScreenSpaceBitmap, blendState: RenderStates.AdditiveBlend
                         ),
                         SamplerState.LinearClamp
                     )) {
@@ -427,7 +419,7 @@ namespace TestGame.Scenes {
                             var pos = proj.Light.Position;
                             var color = proj.Light.Color;
                             var xy = new Vector2(pos.X, pos.Y - (Environment.ZToYMultiplier * (pos.Z - Environment.GroundZ)));
-                            float opacity = proj.Light.Opacity * color.W * 2.8f;
+                            float opacity = proj.Light.Opacity * color.W * 4f;
                             color.X *= opacity;
                             color.Y *= opacity;
                             color.Z *= opacity;
@@ -435,11 +427,10 @@ namespace TestGame.Scenes {
 
                             var dc = new BitmapDrawCall(Spark, xy, new Color(color));
                             dc.Origin = new Vector2(0.5f, 0.5f);
-                            dc.ScaleF = 0.5f * proj.Size;
+                            dc.ScaleF = 0.4f * proj.Size;
                             dc.Rotation = ((proj.Index * 4) + proj.Age) / 24f;
 
                             addBatch.Add(dc);
-                            alphaBatch.Add(dc);
                         }
                     }
                 }
