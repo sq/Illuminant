@@ -21,7 +21,7 @@ namespace Squared.Illuminant {
         public float GroundZ = 0f;
 
         // The Z value of the sky plane. Objects above this will not be represented in the distance field.
-        public float MaximumZ = 1f;
+        public float MaximumZ = 128f;
 
         // Offsets Y coordinates by (Z * -ZToYMultiplier) if TwoPointFiveD is enabled
         public float ZToYMultiplier = 0f;

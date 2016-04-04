@@ -121,8 +121,8 @@ namespace TestGame.Scenes {
             var light = new LightSource {
                 Position = new Vector3(64, 64, 0.7f),
                 Color = new Vector4(1f, 1f, 1f, 0.5f),
-                Radius = 250,
-                RampLength = 650,
+                Radius = 220,
+                RampLength = 620,
                 RampMode = LightSourceRampMode.Exponential,
                 AmbientOcclusionRadius = 16f
             };
@@ -157,7 +157,9 @@ namespace TestGame.Scenes {
                 Position = Vector3.Zero,
                 Size = new Vector3(Width, Height, 0),
                 Normal = Vector3.UnitY,
-                Texture = BackgroundMask
+                Texture = BackgroundMask,
+                DataScale = 60,
+                Type = BillboardType.GBufferData
             });
         }
 

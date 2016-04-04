@@ -21,6 +21,7 @@ void BillboardVertexShader(
     in    float3 position       : POSITION0, // x, y, z
     inout float2 texCoord       : TEXCOORD0,
     inout float3 normal         : NORMAL0,
+    inout float  dataScale      : NORMAL1,
     inout float3 worldPosition  : TEXCOORD1,
     out   float3 screenPosition : TEXCOORD2,
     out   float4 result         : POSITION0
@@ -52,7 +53,6 @@ void MaskBillboardPixelShader(
     // HACK: We drop the world x axis and the normal y axis,
     //  and reconstruct those two values when sampling the g-buffer
     result = float4(
-        // HACK: For visualization
         (normal.x / 2) + 0.5,
         (normal.z / 2) + 0.5,
         (relativeY / 512),
@@ -65,25 +65,25 @@ void GDataBillboardPixelShader(
     in float3 worldPosition  : TEXCOORD1,
     in float3 screenPosition : TEXCOORD2,
     in float3 normal         : NORMAL0,
+    in float  dataScale      : NORMAL1,
     out float4 result        : COLOR0
 ) {
-    float alpha = tex2D(MaskSampler, texCoord).a;
+    float4 data = tex2D(MaskSampler, texCoord);
+    float alpha = data.a;
 
-    const float discardThreshold = (1.0 / 255.0);
+    const float discardThreshold = (127.0 / 255.0);
     clip(alpha - discardThreshold);
 
-    float wp = worldPosition.y;
-    float sp = screenPosition.y;
-    float relativeY = wp - sp;
+    float yOffset = data.b * dataScale;
+    float effectiveZ = worldPosition.z + (yOffset / ZToYMultiplier);
 
     // HACK: We drop the world x axis and the normal y axis,
     //  and reconstruct those two values when sampling the g-buffer
     result = float4(
-        // HACK: For visualization
-        (normal.x / 2) + 0.5,
-        (normal.z / 2) + 0.5,
-        (relativeY / 512),
-        (worldPosition.z / 512)
+        data.r,
+        data.g,
+        yOffset / 512,
+        effectiveZ / 512
     );
 }
 

@@ -766,25 +766,29 @@ namespace Squared.Illuminant {
                         Position = tl,
                         Normal = normal1,
                         WorldPosition = bl + new Vector3(0, 0, size.Z),
-                        TexCoord = Vector2.Zero
+                        TexCoord = Vector2.Zero,
+                        DataScale = billboard.DataScale,
                     },
                     new BillboardVertex {
                         Position = tr,
                         Normal = normal2,
                         WorldPosition = bl + new Vector3(size.X, 0, size.Z),
-                        TexCoord = new Vector2(1, 0)
+                        TexCoord = new Vector2(1, 0),
+                        DataScale = billboard.DataScale,
                     },
                     new BillboardVertex {
                         Position = tl + size,
                         Normal = normal2,
                         WorldPosition = bl + new Vector3(size.X, 0, 0),
-                        TexCoord = Vector2.One
+                        TexCoord = Vector2.One,
+                        DataScale = billboard.DataScale,
                     },
                     new BillboardVertex {
                         Position = bl,
                         Normal = normal1,
                         WorldPosition = bl,
-                        TexCoord = new Vector2(0, 1)
+                        TexCoord = new Vector2(0, 1),
+                        DataScale = billboard.DataScale,
                     }
                 };
 

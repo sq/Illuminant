@@ -57,7 +57,6 @@ void HeightVolumePixelShader (
         // HACK: We drop the world x axis and the normal y axis,
         //  and reconstruct those two values when sampling the g-buffer
         result = float4(
-            // HACK: For visualization
             (normal.x / 2) + 0.5,
             (normal.z / 2) + 0.5,
             (relativeY / 512),
