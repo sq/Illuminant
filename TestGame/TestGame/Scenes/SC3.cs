@@ -204,7 +204,7 @@ namespace TestGame.Scenes {
 
             var light = new LightSource {
                 Position = new Vector3(64, 64, 0.7f),
-                Color = new Vector4(1f, 1f, 1f, 0.3f),
+                Color = new Vector4(1f, 1f, 1f, 0.5f),
                 Radius = 160,
                 RampLength = 360,
                 RampMode = LightSourceRampMode.Exponential,
@@ -306,7 +306,9 @@ namespace TestGame.Scenes {
             Renderer.UpdateFields(frame, -2);
             ForegroundRenderer.UpdateFields(frame, -2);
 
-            float scaleFactor = 1.0f - Arithmetic.Clamp(Projectiles.Count / 220f, 0f, 0.45f);
+            // Compute a scale factor based on our expected peak brightness (because of 
+            //  projectiles piling up, plus overlap between main light and ambient)
+            float scaleFactor = (1.0f - Arithmetic.Clamp(Projectiles.Count / 320f, 0f, 0.55f)) * 0.9f;
 
             var hdrConfiguration = new HDRConfiguration {
                 Mode = HDRMode.ToneMap,
@@ -480,6 +482,18 @@ namespace TestGame.Scenes {
                             Color.White, LightmapScaleRatio
                         ));
                 }
+
+                var ir = new ImperativeRenderer(
+                    frame, Game.Materials, 9999,
+                    blendState: BlendState.Opaque,
+                    samplerState: SamplerState.LinearClamp
+                );
+                ir.DrawString(
+                    Game.Font, string.Format(
+                        "Exposure: {0:00.000}\r\nProjectiles: {1:0000}", 
+                        1f / scaleFactor, Projectiles.Count
+                    ), new Vector2(3, 3), scale: 0.5f
+                );
             }
         }
 
