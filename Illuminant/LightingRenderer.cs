@@ -458,9 +458,9 @@ namespace Squared.Illuminant {
                 throw new NotImplementedException("Non-direct resolve not yet implemented");
 
             Render.EffectMaterial m;
-            if (hdr.Value.Mode == HDRMode.GammaCompress)
+            if (hdr.HasValue && hdr.Value.Mode == HDRMode.GammaCompress)
                 m = IlluminantMaterials.GammaCompressedLightingResolve;
-            else if (hdr.Value.Mode == HDRMode.ToneMap)
+            else if (hdr.HasValue && hdr.Value.Mode == HDRMode.ToneMap)
                 m = IlluminantMaterials.ToneMappedLightingResolve;
             else
                 m = IlluminantMaterials.LightingResolve;
@@ -473,18 +473,21 @@ namespace Squared.Illuminant {
                 m.Effect.Parameters["GBufferTexelSize"].SetValue(tsize);
                 m.Effect.Parameters["GBuffer"].SetValue(_GBuffer);
                 m.Effect.Parameters["RenderScale"].SetValue(Configuration.RenderScale);
+                m.Effect.Parameters["InverseScaleFactor"].SetValue(
+                    hdr.HasValue
+                        ? hdr.Value.InverseScaleFactor
+                        : 1.0f
+                );
 
                 if (hdr.HasValue) {
                     if (hdr.Value.Mode == HDRMode.GammaCompress)
                         IlluminantMaterials.SetGammaCompressionParameters(
-                            hdr.Value.InverseScaleFactor,
                             hdr.Value.GammaCompression.MiddleGray,
                             hdr.Value.GammaCompression.AverageLuminance,
                             hdr.Value.GammaCompression.MaximumLuminance
                         );
                     else if (hdr.Value.Mode == HDRMode.ToneMap)
                         IlluminantMaterials.SetToneMappingParameters(
-                            hdr.Value.InverseScaleFactor,
                             hdr.Value.ToneMapping.Exposure,
                             hdr.Value.ToneMapping.WhitePoint
                         );

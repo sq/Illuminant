@@ -35,11 +35,10 @@ namespace Squared.Illuminant {
         /// <summary>
         /// Updates the gamma compression parameters for the gamma compressed bitmap materials. You should call this in batch setup when using the materials.
         /// </summary>
-        /// <param name="inverseScaleFactor">If you scaled down the intensity of your light sources for HDR rendering, use this to invert the scale. All other parameters are applied to the resulting scaled value.</param>
         /// <param name="middleGray">I don't know what this does. Impossible to find a paper that actually describes this formula. :/ Try 0.6.</param>
         /// <param name="averageLuminance">The average luminance of the entire scene. You can compute this by scaling the entire scene down or using light receivers.</param>
         /// <param name="maximumLuminance">The maximum luminance. Luminance values above this threshold will remain above 1.0 after gamma compression.</param>
-        public void SetGammaCompressionParameters (float inverseScaleFactor, float middleGray, float averageLuminance, float maximumLuminance) {
+        public void SetGammaCompressionParameters (float middleGray, float averageLuminance, float maximumLuminance) {
             const float min = 1 / 256f;
             const float max = 99999f;
 
@@ -52,7 +51,6 @@ namespace Squared.Illuminant {
             EffectsToSetGammaCompressionParametersOn[2] = GammaCompressedLightingResolve.Effect;
 
             foreach (var effect in EffectsToSetGammaCompressionParametersOn) {
-                effect.Parameters["InverseScaleFactor"].SetValue(inverseScaleFactor);
                 effect.Parameters["MiddleGray"].SetValue(middleGray);
                 effect.Parameters["AverageLuminance"].SetValue(averageLuminance);
                 effect.Parameters["MaximumLuminanceSquared"].SetValue(maximumLuminance * maximumLuminance);
@@ -62,10 +60,9 @@ namespace Squared.Illuminant {
         /// <summary>
         /// Updates the tone mapping parameters for the tone mapped bitmap materials. You should call this in batch setup when using the materials.
         /// </summary>
-        /// <param name="inverseScaleFactor">If you scaled down the intensity of your light sources for HDR rendering, use this to invert the scale. All other parameters are applied to the resulting scaled value.</param>
         /// <param name="exposure">A factor to multiply incoming values to make them brighter or darker.</param>
         /// <param name="whitePoint">The white point to set as the threshold above which any values become 1.0.</param>
-        public void SetToneMappingParameters (float inverseScaleFactor, float exposure, float whitePoint) {
+        public void SetToneMappingParameters (float exposure, float whitePoint) {
             const float min = 1 / 256f;
             const float max = 99999f;
 
@@ -77,7 +74,6 @@ namespace Squared.Illuminant {
             EffectsToSetToneMappingParametersOn[2] = ToneMappedLightingResolve.Effect;
 
             foreach (var effect in EffectsToSetToneMappingParametersOn) {
-                effect.Parameters["InverseScaleFactor"].SetValue(inverseScaleFactor);
                 effect.Parameters["Exposure"].SetValue(exposure);
                 effect.Parameters["WhitePoint"].SetValue(whitePoint);
             }
