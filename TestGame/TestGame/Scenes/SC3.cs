@@ -120,9 +120,9 @@ namespace TestGame.Scenes {
 
             var light = new LightSource {
                 Position = new Vector3(64, 64, 0.7f),
-                Color = new Vector4(1f, 1f, 1f, 0.5f),
-                Radius = 220,
-                RampLength = 620,
+                Color = new Vector4(1f, 1f, 1f, 1f),
+                Radius = 48,
+                RampLength = 64,
                 RampMode = LightSourceRampMode.Exponential,
                 AmbientOcclusionRadius = 16f
             };
@@ -370,10 +370,10 @@ namespace TestGame.Scenes {
                 var ms = Mouse.GetState();
                 Game.IsMouseVisible = true;
 
-                LightZ = ((ms.ScrollWheelValue / 1024.0f) * Environment.MaximumZ) + Environment.GroundZ;
+                LightZ = ((ms.ScrollWheelValue / 4096.0f) * Environment.MaximumZ) + Environment.GroundZ;
 
-                if (LightZ < 0.01f)
-                    LightZ = 0.01f;
+                if (LightZ < -64f)
+                    LightZ = -64f;
 
                 var mousePos = new Vector3(ms.X, ms.Y, LightZ);
 
