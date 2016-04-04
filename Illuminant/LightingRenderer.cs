@@ -261,8 +261,11 @@ namespace Squared.Illuminant {
                 materials.Add(IlluminantMaterials.HeightVolumeFace = 
                     new Squared.Render.EffectMaterial(content.Load<Effect>("GBuffer"), "HeightVolumeFace"));
 
-                materials.Add(IlluminantMaterials.Billboard = 
-                    new Squared.Render.EffectMaterial(content.Load<Effect>("GBufferBitmap"), "Billboard"));
+                materials.Add(IlluminantMaterials.MaskBillboard = 
+                    new Squared.Render.EffectMaterial(content.Load<Effect>("GBufferBitmap"), "MaskBillboard"));
+
+                materials.Add(IlluminantMaterials.GDataBillboard = 
+                    new Squared.Render.EffectMaterial(content.Load<Effect>("GBufferBitmap"), "GDataBillboard"));
 
                 materials.Add(IlluminantMaterials.LightingResolve = 
                     new Squared.Render.EffectMaterial(content.Load<Effect>("Resolve"), "LightingResolve"));
@@ -785,14 +788,19 @@ namespace Squared.Illuminant {
                     }
                 };
 
+                var material =
+                    billboard.Type == BillboardType.Mask
+                        ? IlluminantMaterials.MaskBillboard
+                        : IlluminantMaterials.GDataBillboard;
+
                 using (var batch = PrimitiveBatch<BillboardVertex>.New(
                     container, layerIndex++, Materials.Get(
-                        IlluminantMaterials.Billboard,
+                        material,
                         depthStencilState: DepthStencilState.None,
                         rasterizerState: RasterizerState.CullNone,
                         blendState: BlendState.Opaque
                     ), (dm, _) => {
-                        var p = IlluminantMaterials.Billboard.Effect.Parameters;
+                        var p = material.Effect.Parameters;
                         p["DistanceFieldExtent"].SetValue(new Vector3(
                             Configuration.DistanceFieldSize.First,
                             Configuration.DistanceFieldSize.Second,
@@ -805,8 +813,6 @@ namespace Squared.Illuminant {
                         );
                         p["RenderScale"].SetValue(Configuration.RenderScale);
                         p["Mask"].SetValue(billboard.Texture);
-
-                        dm.CurrentMaterial.Flush();
                     }
                 )) {
                     batch.Add(new PrimitiveDrawCall<BillboardVertex>(
@@ -1102,12 +1108,13 @@ namespace Squared.Illuminant {
         public readonly DefaultMaterialSet MaterialSet;
 
         public Material SphereLight;
-        public Squared.Render.EffectMaterial DistanceFieldExterior, DistanceFieldInterior;
-        public Squared.Render.EffectMaterial DistanceFunction;
-        public Squared.Render.EffectMaterial HeightVolume, HeightVolumeFace, Billboard;
-        public Squared.Render.EffectMaterial LightingResolve;
-        public Squared.Render.EffectMaterial ScreenSpaceGammaCompressedBitmap, WorldSpaceGammaCompressedBitmap;
-        public Squared.Render.EffectMaterial ScreenSpaceToneMappedBitmap, WorldSpaceToneMappedBitmap;
+        public Render.EffectMaterial DistanceFieldExterior, DistanceFieldInterior;
+        public Render.EffectMaterial DistanceFunction;
+        public Render.EffectMaterial HeightVolume, HeightVolumeFace;
+        public Render.EffectMaterial MaskBillboard, GDataBillboard;
+        public Render.EffectMaterial LightingResolve;
+        public Render.EffectMaterial ScreenSpaceGammaCompressedBitmap, WorldSpaceGammaCompressedBitmap;
+        public Render.EffectMaterial ScreenSpaceToneMappedBitmap, WorldSpaceToneMappedBitmap;
 
         internal readonly Effect[] EffectsToSetGammaCompressionParametersOn;
         internal readonly Effect[] EffectsToSetToneMappingParametersOn;

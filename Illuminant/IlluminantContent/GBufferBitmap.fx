@@ -33,7 +33,7 @@ void BillboardVertexShader(
     result.z = position.z / DistanceFieldExtent.z;
 }
 
-void BillboardPixelShader(
+void MaskBillboardPixelShader(
     in float2 texCoord       : TEXCOORD0,
     in float3 worldPosition  : TEXCOORD1,
     in float3 screenPosition : TEXCOORD2,
@@ -60,11 +60,47 @@ void BillboardPixelShader(
     );
 }
 
-technique Billboard
+void GDataBillboardPixelShader(
+    in float2 texCoord       : TEXCOORD0,
+    in float3 worldPosition  : TEXCOORD1,
+    in float3 screenPosition : TEXCOORD2,
+    in float3 normal         : NORMAL0,
+    out float4 result        : COLOR0
+) {
+    float alpha = tex2D(MaskSampler, texCoord).a;
+
+    const float discardThreshold = (1.0 / 255.0);
+    clip(alpha - discardThreshold);
+
+    float wp = worldPosition.y;
+    float sp = screenPosition.y;
+    float relativeY = wp - sp;
+
+    // HACK: We drop the world x axis and the normal y axis,
+    //  and reconstruct those two values when sampling the g-buffer
+    result = float4(
+        // HACK: For visualization
+        (normal.x / 2) + 0.5,
+        (normal.z / 2) + 0.5,
+        (relativeY / 512),
+        (worldPosition.z / 512)
+    );
+}
+
+technique MaskBillboard
 {
     pass P0
     {
         vertexShader = compile vs_3_0 BillboardVertexShader();
-        pixelShader = compile ps_3_0 BillboardPixelShader();
+        pixelShader = compile ps_3_0 MaskBillboardPixelShader();
+    }
+}
+
+technique GDataBillboard
+{
+    pass P0
+    {
+        vertexShader = compile vs_3_0 BillboardVertexShader();
+        pixelShader = compile ps_3_0 GDataBillboardPixelShader();
     }
 }
