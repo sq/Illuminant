@@ -140,11 +140,12 @@ namespace Squared.Illuminant {
 
                 if (Configuration.EnableBrightnessEstimation) {
                     var width = Configuration.MaximumRenderSize.First / 2;
-                    var ratio = (float)width / Configuration.MaximumRenderSize.First;
-                    var height = (int)(Configuration.MaximumRenderSize.Second * ratio);
+                    var height = Configuration.MaximumRenderSize.Second / 2;
+
                     _PreviousLightmap = new RenderTarget2D(
                         coordinator.Device, 
                         width, height, true,
+                        // TODO: Use SurfaceFormat.Single and do RGB->Gray conversion in shader
                         Configuration.HighQuality
                             ? SurfaceFormat.Rgba64
                             : SurfaceFormat.Color,
