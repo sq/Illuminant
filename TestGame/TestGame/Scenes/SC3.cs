@@ -114,11 +114,11 @@ namespace TestGame.Scenes {
 
         const int ExposureSampleCount = 45;
 
-        const int BackgroundScaleRatio = 4;
-        const int ForegroundScaleRatio = 6;
+        const int BackgroundScaleRatio = 2;
+        const int ForegroundScaleRatio = 2;
         // We scale down the range of lighting values by this much, so that we
         //  have additional values past 1.0 to use for HDR calculations
-        const float HDRRangeFactor = 3;
+        const float HDRRangeFactor = 4;
 
         bool VisualizeForeground = false;
         bool ShowGBuffer         = false;
@@ -516,7 +516,7 @@ namespace TestGame.Scenes {
                 );
                 ir.DrawString(
                     Game.Font, string.Format(
-@"Exposure {0:00.000}\r\n
+@"Exposure {0:00.000}
 {1:0000} Projectiles",
                         exposure, Projectiles.Count
                     ), new Vector2(3, 3), scale: 0.5f
