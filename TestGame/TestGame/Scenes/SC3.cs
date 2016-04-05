@@ -114,7 +114,8 @@ namespace TestGame.Scenes {
 
         const int ExposureSampleCount = 45;
 
-        const int LightmapScaleRatio = 3;
+        const int BackgroundScaleRatio = 4;
+        const int ForegroundScaleRatio = 6;
         // We scale down the range of lighting values by this much, so that we
         //  have additional values past 1.0 to use for HDR calculations
         const float HDRRangeFactor = 12;
@@ -175,10 +176,10 @@ namespace TestGame.Scenes {
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(
-                    Width / LightmapScaleRatio, Height / LightmapScaleRatio, true,
+                    Width / BackgroundScaleRatio, Height / BackgroundScaleRatio, true,
                     Width, Height, 16, true
                 ) {
-                    RenderScale = 1.0f / LightmapScaleRatio,
+                    RenderScale = 1.0f / BackgroundScaleRatio,
                     DistanceFieldResolution = 0.5f,
                     DistanceFieldMinStepSize = 1f,
                     DistanceFieldLongStepFactor = 0.5f,
@@ -192,10 +193,10 @@ namespace TestGame.Scenes {
             ForegroundRenderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, ForegroundEnvironment, 
                 new RendererConfiguration(
-                    Width / LightmapScaleRatio, Height / LightmapScaleRatio, true,
+                    Width / ForegroundScaleRatio, Height / ForegroundScaleRatio, true,
                     Width, Height, 9
                 ) {
-                    RenderScale = 1.0f / LightmapScaleRatio,
+                    RenderScale = 1.0f / ForegroundScaleRatio,
                     DistanceFieldResolution = 0.5f,
                     DistanceFieldMinStepSize = 1f,
                     DistanceFieldLongStepFactor = 0.5f,
@@ -360,7 +361,7 @@ namespace TestGame.Scenes {
 
                 Renderer.ResolveLighting(
                     bg, 2, 
-                    new BitmapDrawCall(Renderer.Lightmap, Vector2.Zero, LightmapScaleRatio),
+                    new BitmapDrawCall(Renderer.Lightmap, Vector2.Zero, BackgroundScaleRatio),
                     hdrConfiguration
                 );
             };
@@ -380,7 +381,7 @@ namespace TestGame.Scenes {
 
                 ForegroundRenderer.ResolveLighting(
                     fg, 2, 
-                    new BitmapDrawCall(ForegroundRenderer.Lightmap, Vector2.Zero, LightmapScaleRatio),
+                    new BitmapDrawCall(ForegroundRenderer.Lightmap, Vector2.Zero, ForegroundScaleRatio),
                     hdrConfiguration
                 );
             };
@@ -493,7 +494,10 @@ namespace TestGame.Scenes {
                                 ? ForegroundRenderer.GBuffer
                                 : Renderer.GBuffer, 
                             Vector2.Zero, new Bounds(Vector2.Zero, Vector2.One), 
-                            Color.White, LightmapScaleRatio
+                            Color.White, 
+                            VisualizeForeground
+                                ? ForegroundScaleRatio
+                                : BackgroundScaleRatio
                         ));
                 }
 

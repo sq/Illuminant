@@ -17,6 +17,8 @@ sampler PointSampler : register(s7) {
     MagFilter = POINT;
 };
 
+#define FAST_RESOLVE
+
 uniform float InverseScaleFactor;
 
 float4 ResolveCommon(
@@ -34,9 +36,12 @@ float4 ResolveCommon(
     float4 coord = float4(clamp(texCoord, texTL, texBR), 0, 0);
     float2 coordTexels = coord.xy * BitmapTextureSize;
 
-    float4 samplePoint = tex2Dlod(PointSampler, coord);
     float4 sampleLinear = tex2Dlod(LinearSampler, coord);
 
+#ifdef FAST_RESOLVE
+    result = sampleLinear;
+#else
+    float4 samplePoint = tex2Dlod(PointSampler, coord);
     [branch]
     if (samplePoint.a > 0) {
         float2 topLeftTexels = floor(coordTexels);
@@ -92,17 +97,17 @@ float4 ResolveCommon(
             clamp(abs(z[3] - averageZ), windowStart, windowEnd)
         ) / 4) - windowStart) / windowSize;
 
-        result = lerp(sampleLinear, samplePoint, blendWeight) * InverseScaleFactor * multiplyColor;
-
-        result += (addColor * result.a);
-
-        result.a = 1;
-        return result;
+        result = lerp(sampleLinear, samplePoint, blendWeight);
     }
     else {
         discard;
         return 0;
     }
+#endif
+    result *= InverseScaleFactor * multiplyColor;
+    result += (addColor * result.a);
+    result.a = 1;
+    return result;
 }
 
 void LightingResolvePixelShader(
