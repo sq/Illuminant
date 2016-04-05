@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
@@ -43,6 +44,7 @@ namespace Squared.Illuminant {
         private readonly RenderTarget2D _GBuffer;
         private readonly RenderTarget2D _DistanceField;
         private readonly RenderTarget2D _Lightmap;
+        private readonly RenderTarget2D _PreviousLightmap;
 
         private readonly Action<DeviceManager, object> BeginLightPass, EndLightPass, IlluminationBatchSetup;
 
@@ -127,12 +129,24 @@ namespace Squared.Illuminant {
                     coordinator.Device, 
                     Configuration.MaximumRenderSize.First, 
                     Configuration.MaximumRenderSize.Second,
-                    Configuration.EnableBrightnessEstimation,
+                    false,
                     Configuration.HighQuality
                         ? SurfaceFormat.Rgba64
                         : SurfaceFormat.Color,
                     DepthFormat.None, 0, RenderTargetUsage.PlatformContents
                 );
+
+                if (Configuration.EnableBrightnessEstimation)
+                    _PreviousLightmap = new RenderTarget2D(
+                        coordinator.Device, 
+                        Configuration.MaximumRenderSize.First / 2, 
+                        Configuration.MaximumRenderSize.Second / 2,
+                        true,
+                        Configuration.HighQuality
+                            ? SurfaceFormat.Rgba64
+                            : SurfaceFormat.Color,
+                        DepthFormat.None, 0, RenderTargetUsage.PlatformContents
+                    );
             }
 
             TopFaceDepthStencilState = new DepthStencilState {
@@ -343,38 +357,41 @@ namespace Squared.Illuminant {
         }
 
         /// <summary>
-        /// Analyzes the internal lighting buffer.
+        /// Analyzes the internal lighting buffer. This operation is asynchronous so that you do not stall on
+        ///  a previous/in-flight draw operation.
         /// </summary>
         /// <param name="scaleFactor">Scale factor for the lighting values (you want 1.0f / intensityFactor, probably)</param>
         /// <param name="threshold">Threshold for overexposed values (after scaling). 1.0f is reasonable.</param>
         /// <param name="accuracyFactor">Governs how many pixels will be analyzed. Higher values are lower accuracy (but faster).</param>
         /// <returns>LightmapInfo containing the minimum, average, and maximum light values, along with an overexposed pixel ratio [0-1].</returns>
-        public LightmapInfo EstimateBrightness (
+        public async Task<LightmapInfo> EstimateBrightness (
             float scaleFactor, float threshold, 
             int accuracyFactor = 3
         ) {
             if (!Configuration.EnableBrightnessEstimation)
                 throw new InvalidOperationException("Brightness estimation must be enabled");
 
-            var levelIndex = Math.Min(accuracyFactor, Lightmap.LevelCount - 1);
+            var levelIndex = Math.Min(accuracyFactor, _PreviousLightmap.LevelCount - 1);
             var divisor = (int)Math.Pow(2, levelIndex);
-            var levelWidth = Lightmap.Width / divisor;
-            var levelHeight = Lightmap.Height / divisor;
+            var levelWidth = _PreviousLightmap.Width / divisor;
+            var levelHeight = _PreviousLightmap.Height / divisor;
             var count = levelWidth * levelHeight * 
                 (Configuration.HighQuality
                     ? 8
                     : 4);
 
             using (var buffer = BufferPool<byte>.Allocate(count)) {
-                Coordinator.WaitForActiveDraw();
-                lock (Coordinator.UseResourceLock) {
-                    Lightmap.GetData(
-                        levelIndex, null,
-                        buffer.Data, 0, count
-                    );
-                }
+                // TODO: Replace this with some sort of 'BeforePresent' primitive?
+                return await Task.Run(() => {
+                    // HACK: We lock on the lightmap to avoid directly trampling over a draw operation on the lightmap
+                    lock (_PreviousLightmap)
+                        _PreviousLightmap.GetData(
+                            levelIndex, null,
+                            buffer.Data, 0, count
+                        );
 
-                return AnalyzeLightmap(buffer, count, scaleFactor, threshold);
+                    return AnalyzeLightmap(buffer, count, scaleFactor, threshold);
+                });
             }
         }
 
@@ -470,79 +487,108 @@ namespace Squared.Illuminant {
         public void RenderLighting (IBatchContainer container, int layer, float intensityScale = 1.0f) {
             int layerIndex = 0;
 
-            using (var resultGroup = BatchGroup.ForRenderTarget(container, layer, Lightmap, before: BeginLightPass, after: EndLightPass)) {
-                if (Render.Tracing.RenderTrace.EnableTracing)
-                    Render.Tracing.RenderTrace.Marker(resultGroup, -9999, "LightingRenderer {0:X4} : Begin", this.GetHashCode());
+            using (var outerGroup = BatchGroup.New(container, layer)) {
+                using (var resultGroup = BatchGroup.ForRenderTarget(outerGroup, 0, _Lightmap, before: BeginLightPass, after: EndLightPass)) {
+                    if (Render.Tracing.RenderTrace.EnableTracing)
+                        Render.Tracing.RenderTrace.Marker(resultGroup, -9999, "LightingRenderer {0:X4} : Begin", this.GetHashCode());
 
-                int lightCount = Environment.Lights.Count;
+                    int lightCount = Environment.Lights.Count;
 
-                ClearBatch.AddNew(
-                    resultGroup, -1, Materials.Clear, new Color(0, 0, 0, Configuration.RenderGroundPlane ? 1f : 0f)
-                );
+                    ClearBatch.AddNew(
+                        resultGroup, -1, Materials.Clear, new Color(0, 0, 0, Configuration.RenderGroundPlane ? 1f : 0f)
+                    );
 
-                lock (_LightBufferLock)
-                Parallel.For(0, lightCount, (i) => {
-                    var lightSource = Environment.Lights[i];
+                    lock (_LightBufferLock)
+                    Parallel.For(0, lightCount, (i) => {
+                        var lightSource = Environment.Lights[i];
 
-                    float radius = lightSource.Radius + lightSource.RampLength;
-                    var lightBounds3 = lightSource.Bounds;
-                    var lightBounds = lightBounds3.XY;
+                        float radius = lightSource.Radius + lightSource.RampLength;
+                        var lightBounds3 = lightSource.Bounds;
+                        var lightBounds = lightBounds3.XY;
 
-                    // Expand the bounding box upward to account for 2.5D perspective
-                    if (Configuration.TwoPointFiveD) {
-                        var offset = Math.Min(
-                            lightSource.Radius + lightSource.RampLength,
-                            Environment.MaximumZ
+                        // Expand the bounding box upward to account for 2.5D perspective
+                        if (Configuration.TwoPointFiveD) {
+                            var offset = Math.Min(
+                                lightSource.Radius + lightSource.RampLength,
+                                Environment.MaximumZ
+                            );
+                            // FIXME: Is this right?
+                            lightBounds.TopLeft.Y -= (offset / Environment.ZToYMultiplier);
+                        }
+
+                        lightBounds = lightBounds.Scale(Configuration.RenderScale);
+
+                        SphereLightVertex vertex;
+                        vertex.LightCenterAndAO = new Vector4(
+                            lightSource.Position,
+                            lightSource.AmbientOcclusionRadius
                         );
-                        // FIXME: Is this right?
-                        lightBounds.TopLeft.Y -= (offset / Environment.ZToYMultiplier);
+                        vertex.Color = lightSource.Color;
+                        vertex.Color.W *= (lightSource.Opacity * intensityScale);
+                        vertex.LightProperties = new Vector4(
+                            lightSource.Radius, lightSource.RampLength,
+                            (float)(int)lightSource.RampMode,
+                            lightSource.CastsShadows ? 1f : 0f
+                        );
+
+                        int j = i * 4;
+                        vertex.Position = lightBounds.TopLeft;
+                        SphereLightVertices[j++] = vertex;
+
+                        vertex.Position = lightBounds.TopRight;
+                        SphereLightVertices[j++] = vertex;
+
+                        vertex.Position = lightBounds.BottomRight;
+                        SphereLightVertices[j++] = vertex;
+
+                        vertex.Position = lightBounds.BottomLeft;
+                        SphereLightVertices[j++] = vertex;
+                    });
+
+                    if (lightCount > 0) {
+                        if (Render.Tracing.RenderTrace.EnableTracing)
+                            Render.Tracing.RenderTrace.Marker(resultGroup, layerIndex++, "LightingRenderer {0:X4} : Render {1} light source(s)", this.GetHashCode(), lightCount);
+
+                        using (var nb = NativeBatch.New(
+                            resultGroup, layerIndex++, IlluminantMaterials.SphereLight, IlluminationBatchSetup, userData: lightCount
+                        ))
+                            nb.Add(new NativeDrawCall(
+                                PrimitiveType.TriangleList,
+                                SphereLightVertexBuffer, 0,
+                                SphereLightIndexBuffer, 0, 0, lightCount * 4, 0, lightCount * 2
+                            ));
                     }
 
-                    lightBounds = lightBounds.Scale(Configuration.RenderScale);
-
-                    SphereLightVertex vertex;
-                    vertex.LightCenterAndAO = new Vector4(
-                        lightSource.Position,
-                        lightSource.AmbientOcclusionRadius
-                    );
-                    vertex.Color = lightSource.Color;
-                    vertex.Color.W *= (lightSource.Opacity * intensityScale);
-                    vertex.LightProperties = new Vector4(
-                        lightSource.Radius, lightSource.RampLength,
-                        (float)(int)lightSource.RampMode,
-                        lightSource.CastsShadows ? 1f : 0f
-                    );
-
-                    int j = i * 4;
-                    vertex.Position = lightBounds.TopLeft;
-                    SphereLightVertices[j++] = vertex;
-
-                    vertex.Position = lightBounds.TopRight;
-                    SphereLightVertices[j++] = vertex;
-
-                    vertex.Position = lightBounds.BottomRight;
-                    SphereLightVertices[j++] = vertex;
-
-                    vertex.Position = lightBounds.BottomLeft;
-                    SphereLightVertices[j++] = vertex;
-                });
-
-                if (lightCount > 0) {
                     if (Render.Tracing.RenderTrace.EnableTracing)
-                        Render.Tracing.RenderTrace.Marker(resultGroup, layerIndex++, "LightingRenderer {0:X4} : Render {1} light source(s)", this.GetHashCode(), lightCount);
-
-                    using (var nb = NativeBatch.New(
-                        resultGroup, layerIndex++, IlluminantMaterials.SphereLight, IlluminationBatchSetup, userData: lightCount
-                    ))
-                        nb.Add(new NativeDrawCall(
-                            PrimitiveType.TriangleList, 
-                            SphereLightVertexBuffer, 0,
-                            SphereLightIndexBuffer, 0, 0, lightCount * 4, 0, lightCount * 2                            
-                        ));
+                        Render.Tracing.RenderTrace.Marker(resultGroup, 9999, "LightingRenderer {0:X4} : End", this.GetHashCode());
                 }
 
-                if (Render.Tracing.RenderTrace.EnableTracing)
-                    Render.Tracing.RenderTrace.Marker(resultGroup, 9999, "LightingRenderer {0:X4} : End", this.GetHashCode());
+                // HACK: We make a copy of the new lightmap so that brightness estimation can read it, without
+                //  stalling on the current lightmap being rendered
+                if (Configuration.EnableBrightnessEstimation)
+                using (var copyGroup = BatchGroup.ForRenderTarget(
+                    outerGroup, 1, _PreviousLightmap,
+                    (dm, _) => {
+                        // HACK: We lock on the lightmap during the actual draw operation, just to be sure
+                        Monitor.Enter(_PreviousLightmap);
+                        Materials.PushViewTransform(ViewTransform.CreateOrthographic(_PreviousLightmap.Width, _PreviousLightmap.Height));
+                    },
+                    (dm, _) => {
+                        Materials.PopViewTransform();
+                        Monitor.Exit(_PreviousLightmap);
+                    }
+                )) {
+                    if (Render.Tracing.RenderTrace.EnableTracing)
+                        Render.Tracing.RenderTrace.Marker(copyGroup, -1, "LightingRenderer {0:X4} : Generate HDR Buffer", this.GetHashCode());
+
+                    var ir = new ImperativeRenderer(
+                        copyGroup, Materials, 
+                        blendState: BlendState.Opaque,
+                        samplerState: SamplerState.LinearClamp
+                    );
+                    ir.Clear(color: Color.Transparent);
+                    ir.Draw(_Lightmap, Vector2.Zero, scale: new Vector2(0.5f, 0.5f));
+                }
             }
         }
 

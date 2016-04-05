@@ -118,7 +118,7 @@ namespace TestGame.Scenes {
         const int ForegroundScaleRatio = 6;
         // We scale down the range of lighting values by this much, so that we
         //  have additional values past 1.0 to use for HDR calculations
-        const float HDRRangeFactor = 12;
+        const float HDRRangeFactor = 3;
 
         bool VisualizeForeground = false;
         bool ShowGBuffer         = false;
@@ -308,15 +308,10 @@ namespace TestGame.Scenes {
             Tree(173, 505, 0);
             Tree(383, 605, 0);
         }
-        
-        public override void Draw (Squared.Render.Frame frame) {
-            CreateRenderTargets();
 
-            Renderer.UpdateFields(frame, -3);
-            ForegroundRenderer.UpdateFields(frame, -3);
-
+        private async void DoEstimateBrightness () {
             const float targetAverageBrightness = 0.33f;
-            var lightmapInfo = Renderer.EstimateBrightness(HDRRangeFactor, targetAverageBrightness, 3);
+            var lightmapInfo = await Renderer.EstimateBrightness(HDRRangeFactor, targetAverageBrightness, 2);
 
             // HACK: Ramp between the average and maximum based on the number of overexposed pixels
             float peakValue = Arithmetic.Lerp(
@@ -324,6 +319,7 @@ namespace TestGame.Scenes {
             );
             // Set an exposure to try and balance the scene brightness
             // TODO: Set a white point?
+            lock (ExposureSamples)
             if (peakValue > 0) {
                 float immediateExposure = targetAverageBrightness / peakValue;
                 if (ExposureSamples.Count >= ExposureSampleCount)
@@ -331,8 +327,19 @@ namespace TestGame.Scenes {
 
                 ExposureSamples.Enqueue(immediateExposure);
             }
+        }
+        
+        public override void Draw (Squared.Render.Frame frame) {
+            CreateRenderTargets();
 
-            float exposure = ExposureSamples.Average();
+            Renderer.UpdateFields(frame, -16);
+            ForegroundRenderer.UpdateFields(frame, -16);
+
+            DoEstimateBrightness();
+
+            float exposure;
+            lock (ExposureSamples)
+                exposure = ExposureSamples.Average();
 
             var hdrConfiguration = new HDRConfiguration {
                 Mode = HDRMode.ToneMap,
@@ -343,11 +350,12 @@ namespace TestGame.Scenes {
                 }
             };
 
-            Renderer.RenderLighting(frame, -2, 1.0f / HDRRangeFactor);
-            ForegroundRenderer.RenderLighting(frame, -2, 1.0f / HDRRangeFactor);
+            int layer = -8;
+            Renderer.RenderLighting(frame, layer, 1.0f / HDRRangeFactor);
+            ForegroundRenderer.RenderLighting(frame, layer++, 1.0f / HDRRangeFactor);
 
             using (var bg = BatchGroup.ForRenderTarget(
-                frame, -1, Lightmap,
+                frame, layer++, Lightmap,
                 (dm, _) => {
                     Game.Materials.PushViewTransform(ViewTransform.CreateOrthographic(
                         Width, Height
@@ -360,14 +368,14 @@ namespace TestGame.Scenes {
                 ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black);
 
                 Renderer.ResolveLighting(
-                    bg, 2, 
+                    bg, 1, 
                     new BitmapDrawCall(Renderer.Lightmap, Vector2.Zero, BackgroundScaleRatio),
                     hdrConfiguration
                 );
             };
 
             using (var fg = BatchGroup.ForRenderTarget(
-                frame, -1, ForegroundLightmap,
+                frame, layer++, ForegroundLightmap,
                 (dm, _) => {
                     Game.Materials.PushViewTransform(ViewTransform.CreateOrthographic(
                         Width, Height
@@ -380,13 +388,13 @@ namespace TestGame.Scenes {
                 ClearBatch.AddNew(fg, 0, Game.Materials.Clear, clearColor: new Color(0.5f, 0.5f, 0.5f, 1f));
 
                 ForegroundRenderer.ResolveLighting(
-                    fg, 2, 
+                    fg, 1, 
                     new BitmapDrawCall(ForegroundRenderer.Lightmap, Vector2.Zero, ForegroundScaleRatio),
                     hdrConfiguration
                 );
             };
 
-            using (var group = BatchGroup.New(frame, 0)) {
+            using (var group = BatchGroup.New(frame, layer++)) {
                 ClearBatch.AddNew(group, 0, Game.Materials.Clear, clearColor: Color.Blue);
 
                 if (ShowLightmap) {
@@ -502,21 +510,15 @@ namespace TestGame.Scenes {
                 }
 
                 var ir = new ImperativeRenderer(
-                    frame, Game.Materials, 9999,
+                    frame, Game.Materials, layer++,
                     blendState: BlendState.Opaque,
                     samplerState: SamplerState.LinearClamp
                 );
                 ir.DrawString(
                     Game.Font, string.Format(
 @"Exposure {0:00.000}\r\n
-{1:0000} Projectiles\r\n
-Min {2:0.000} Max  {3:0.000}\r\n
-Avg {4:0.000} Peak {5:0.000}",
-                        exposure, Projectiles.Count,
-                        lightmapInfo.Minimum,
-                        lightmapInfo.Maximum,
-                        lightmapInfo.Mean,
-                        peakValue
+{1:0000} Projectiles",
+                        exposure, Projectiles.Count
                     ), new Vector2(3, 3), scale: 0.5f
                 );
             }

@@ -193,7 +193,6 @@ namespace TestGame.Scenes {
                 ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black);
 
                 Renderer.RenderLighting(bg, 1);
-
                 Renderer.ResolveLighting(bg, 2, new BitmapDrawCall(Renderer.Lightmap, Vector2.Zero, LightmapScaleRatio));
             };
 
