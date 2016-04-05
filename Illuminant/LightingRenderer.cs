@@ -46,6 +46,8 @@ namespace Squared.Illuminant {
         private readonly RenderTarget2D _Lightmap;
         private readonly RenderTarget2D _PreviousLightmap;
 
+        private byte[] _ReadbackBuffer;
+
         private readonly Action<DeviceManager, object> BeginLightPass, EndLightPass, IlluminationBatchSetup;
 
         private readonly object _LightBufferLock = new object();
@@ -136,17 +138,19 @@ namespace Squared.Illuminant {
                     DepthFormat.None, 0, RenderTargetUsage.PlatformContents
                 );
 
-                if (Configuration.EnableBrightnessEstimation)
+                if (Configuration.EnableBrightnessEstimation) {
+                    var width = Configuration.MaximumRenderSize.First / 2;
+                    var ratio = (float)width / Configuration.MaximumRenderSize.First;
+                    var height = (int)(Configuration.MaximumRenderSize.Second * ratio);
                     _PreviousLightmap = new RenderTarget2D(
                         coordinator.Device, 
-                        Configuration.MaximumRenderSize.First / 2, 
-                        Configuration.MaximumRenderSize.Second / 2,
-                        true,
+                        width, height, true,
                         Configuration.HighQuality
                             ? SurfaceFormat.Rgba64
                             : SurfaceFormat.Color,
                         DepthFormat.None, 0, RenderTargetUsage.PlatformContents
                     );
+                }
             }
 
             TopFaceDepthStencilState = new DepthStencilState {
@@ -298,22 +302,6 @@ namespace Squared.Illuminant {
         private const int GreenScaleFactor = (int)(0.587 * LuminanceScaleFactor);
         private const int BlueScaleFactor = (int)(0.114 * LuminanceScaleFactor);
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void AnalyzeStep (
-            int red, int green, int blue,
-            int luminanceThreshold,
-            ref int overThresholdCount, ref long sum, 
-            ref int min, ref int max
-        ) {
-            int luminance = ((red * RedScaleFactor) + (green * GreenScaleFactor) + (blue * BlueScaleFactor)) / 65536;
-            min = Math.Min(min, luminance);
-            max = Math.Max(max, luminance);
-            sum += luminance;
-
-            if (luminance >= luminanceThreshold)
-                overThresholdCount += 1;
-        }
-
         private unsafe LightmapInfo AnalyzeLightmap (
             byte[] buffer, int count, 
             float scaleFactor, float threshold
@@ -333,23 +321,26 @@ namespace Squared.Illuminant {
                 var pRgba = (ushort*)pBuffer;
 
                 for (int i = 0; i < pixelCount; i++, pRgba += 4) {
-                    AnalyzeStep(
-                        pRgba[0], pRgba[1], pRgba[2],
-                        luminanceThreshold,
-                        ref overThresholdCount, ref sum,
-                        ref min, ref max
-                    );
+                    int luminance = ((pRgba[0] * RedScaleFactor) + (pRgba[1] * GreenScaleFactor) + (pRgba[2] * BlueScaleFactor)) / 65536;
+                    min = Math.Min(min, luminance);
+                    max = Math.Max(max, luminance);
+                    sum += luminance;
+
+                    if (luminance >= luminanceThreshold)
+                        overThresholdCount += 1;
                 }                
             } else {
                 var pRgba = pBuffer;
 
                 for (int i = 0; i < pixelCount; i++, pRgba += 4) {
-                    AnalyzeStep(
-                        pRgba[0] * 257, pRgba[1] * 257, pRgba[2] * 257,
-                        luminanceThreshold,
-                        ref overThresholdCount, ref sum,
-                        ref min, ref max
-                    );
+                    int luminance = ((pRgba[0] * 257 * RedScaleFactor) + (pRgba[1] * 257 * GreenScaleFactor) + (pRgba[2] * 257 * BlueScaleFactor)) / 65536;
+                    min = Math.Min(min, luminance);
+                    max = Math.Max(max, luminance);
+                    sum += luminance;
+
+                    if (luminance >= luminanceThreshold)
+                        overThresholdCount += 1;
+
                 }                
             }
 
@@ -371,7 +362,8 @@ namespace Squared.Illuminant {
         /// <param name="threshold">Threshold for overexposed values (after scaling). 1.0f is reasonable.</param>
         /// <param name="accuracyFactor">Governs how many pixels will be analyzed. Higher values are lower accuracy (but faster).</param>
         /// <returns>LightmapInfo containing the minimum, average, and maximum light values, along with an overexposed pixel ratio [0-1].</returns>
-        public Task<LightmapInfo> EstimateBrightness (
+        public void EstimateBrightness (
+            Action<LightmapInfo> onComplete,
             float scaleFactor, float threshold, 
             int accuracyFactor = 3
         ) {
@@ -387,23 +379,18 @@ namespace Squared.Illuminant {
                     ? 8
                     : 4);
 
-            var tcs = new TaskCompletionSource<LightmapInfo>();
+            if (_ReadbackBuffer == null)
+                _ReadbackBuffer = new byte[count];
 
-            var buffer = BufferPool<byte>.Allocate(count);
-            Coordinator.BeforePresent(() => {
+            Coordinator.AfterPresent(() => {
                 _PreviousLightmap.GetData(
                     levelIndex, null,
-                    buffer.Data, 0, count
+                    _ReadbackBuffer, 0, count
                 );
 
-                ThreadPool.QueueUserWorkItem((_) => {
-                    var result = AnalyzeLightmap(buffer, count, scaleFactor, threshold);
-                    buffer.Dispose();
-                    tcs.SetResult(result);
-                });
+                var result = AnalyzeLightmap(_ReadbackBuffer, count, scaleFactor, threshold);
+                onComplete(result);
             });
-
-            return tcs.Task;
         }
 
         public RenderTarget2D GBuffer {
@@ -499,7 +486,31 @@ namespace Squared.Illuminant {
             int layerIndex = 0;
 
             using (var outerGroup = BatchGroup.New(container, layer)) {
-                using (var resultGroup = BatchGroup.ForRenderTarget(outerGroup, 0, _Lightmap, before: BeginLightPass, after: EndLightPass)) {
+                // HACK: We make a copy of the previous lightmap so that brightness estimation can read it, without
+                //  stalling on the current lightmap being rendered
+                if (Configuration.EnableBrightnessEstimation)
+                using (var copyGroup = BatchGroup.ForRenderTarget(
+                    outerGroup, 0, _PreviousLightmap,
+                    (dm, _) => {
+                        Materials.PushViewTransform(ViewTransform.CreateOrthographic(_PreviousLightmap.Width, _PreviousLightmap.Height));
+                    },
+                    (dm, _) => {
+                        Materials.PopViewTransform();
+                    }
+                )) {
+                    if (Render.Tracing.RenderTrace.EnableTracing)
+                        Render.Tracing.RenderTrace.Marker(copyGroup, -1, "LightingRenderer {0:X4} : Generate HDR Buffer", this.GetHashCode());
+
+                    var ir = new ImperativeRenderer(
+                        copyGroup, Materials, 
+                        blendState: BlendState.Opaque,
+                        samplerState: SamplerState.LinearClamp
+                    );
+                    ir.Clear(color: Color.Transparent);
+                    ir.Draw(_Lightmap, new Rectangle(0, 0, _PreviousLightmap.Width, _PreviousLightmap.Height));
+                }
+
+                using (var resultGroup = BatchGroup.ForRenderTarget(outerGroup, 1, _Lightmap, before: BeginLightPass, after: EndLightPass)) {
                     if (Render.Tracing.RenderTrace.EnableTracing)
                         Render.Tracing.RenderTrace.Marker(resultGroup, -9999, "LightingRenderer {0:X4} : Begin", this.GetHashCode());
 
@@ -509,10 +520,11 @@ namespace Squared.Illuminant {
                         resultGroup, -1, Materials.Clear, new Color(0, 0, 0, Configuration.RenderGroundPlane ? 1f : 0f)
                     );
 
-                    lock (_LightBufferLock)
-                    Parallel.For(0, lightCount, (i) => {
-                        var lightSource = Environment.Lights[i];
+                    int j = 0;
 
+                    // TODO: Use threads?
+                    lock (_LightBufferLock)
+                    foreach (var lightSource in Environment.Lights) {
                         float radius = lightSource.Radius + lightSource.RampLength;
                         var lightBounds3 = lightSource.Bounds;
                         var lightBounds = lightBounds3.XY;
@@ -542,7 +554,6 @@ namespace Squared.Illuminant {
                             lightSource.CastsShadows ? 1f : 0f
                         );
 
-                        int j = i * 4;
                         vertex.Position = lightBounds.TopLeft;
                         SphereLightVertices[j++] = vertex;
 
@@ -554,7 +565,7 @@ namespace Squared.Illuminant {
 
                         vertex.Position = lightBounds.BottomLeft;
                         SphereLightVertices[j++] = vertex;
-                    });
+                    };
 
                     if (lightCount > 0) {
                         if (Render.Tracing.RenderTrace.EnableTracing)
@@ -572,30 +583,6 @@ namespace Squared.Illuminant {
 
                     if (Render.Tracing.RenderTrace.EnableTracing)
                         Render.Tracing.RenderTrace.Marker(resultGroup, 9999, "LightingRenderer {0:X4} : End", this.GetHashCode());
-                }
-
-                // HACK: We make a copy of the new lightmap so that brightness estimation can read it, without
-                //  stalling on the current lightmap being rendered
-                if (Configuration.EnableBrightnessEstimation)
-                using (var copyGroup = BatchGroup.ForRenderTarget(
-                    outerGroup, 1, _PreviousLightmap,
-                    (dm, _) => {
-                        Materials.PushViewTransform(ViewTransform.CreateOrthographic(_PreviousLightmap.Width, _PreviousLightmap.Height));
-                    },
-                    (dm, _) => {
-                        Materials.PopViewTransform();
-                    }
-                )) {
-                    if (Render.Tracing.RenderTrace.EnableTracing)
-                        Render.Tracing.RenderTrace.Marker(copyGroup, -1, "LightingRenderer {0:X4} : Generate HDR Buffer", this.GetHashCode());
-
-                    var ir = new ImperativeRenderer(
-                        copyGroup, Materials, 
-                        blendState: BlendState.Opaque,
-                        samplerState: SamplerState.LinearClamp
-                    );
-                    ir.Clear(color: Color.Transparent);
-                    ir.Draw(_Lightmap, Vector2.Zero, scale: new Vector2(0.5f, 0.5f));
                 }
             }
         }

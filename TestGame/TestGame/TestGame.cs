@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Text;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Content;
@@ -109,20 +110,24 @@ namespace TestGame {
 
         private void DrawPerformanceStats (ref ImperativeRenderer ir) {
             const float scale = 0.75f;
-            var layout = Font.LayoutString(PerformanceStats.GetText(this, -LastPerformanceStatPrimCount), scale: scale);
-            var layoutSize = layout.Size * scale;
-            var position = new Vector2(Graphics.PreferredBackBufferWidth - (232 * scale), 30f).Floor();
-            var dc = layout.DrawCalls;
+            var text = PerformanceStats.GetText(this, -LastPerformanceStatPrimCount);
 
-            // fill quad + text quads
-            LastPerformanceStatPrimCount = (layout.Count * 2) + 2;
+            using (var buffer = BufferPool<BitmapDrawCall>.Allocate(text.Length)) {
+                var layout = Font.LayoutString(text, buffer, scale: scale);
+                var layoutSize = layout.Size * scale;
+                var position = new Vector2(Graphics.PreferredBackBufferWidth - (232 * scale), 30f).Floor();
+                var dc = layout.DrawCalls;
 
-            ir.FillRectangle(
-                Bounds.FromPositionAndSize(position, layoutSize),
-                Color.Black
-            );
-            ir.Layer += 1;
-            ir.DrawMultiple(dc, position);
+                // fill quad + text quads
+                LastPerformanceStatPrimCount = (layout.Count * 2) + 2;
+
+                ir.FillRectangle(
+                    Bounds.FromPositionAndSize(position, layoutSize),
+                    Color.Black
+                );
+                ir.Layer += 1;
+                ir.DrawMultiple(dc, position);
+            }
         }
     }
 

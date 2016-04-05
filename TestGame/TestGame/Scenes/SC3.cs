@@ -114,8 +114,8 @@ namespace TestGame.Scenes {
 
         const int ExposureSampleCount = 40;
 
-        const int BackgroundScaleRatio = 4;
-        const int ForegroundScaleRatio = 2;
+        const int BackgroundScaleRatio = 1;
+        const int ForegroundScaleRatio = 1;
         // We scale down the range of lighting values by this much, so that we
         //  have additional values past 1.0 to use for HDR calculations
         const float HDRRangeFactor = 4;
@@ -315,10 +315,9 @@ namespace TestGame.Scenes {
             Tree(221, 526, 1);
         }
 
-        private async void DoEstimateBrightness () {
-            const float targetAverageBrightness = 0.33f;
-            var lightmapInfo = await Renderer.EstimateBrightness(HDRRangeFactor, targetAverageBrightness, 2);
+        const float TargetAverageBrightness = 0.33f;
 
+        private void HandleEstimatedBrightness (LightmapInfo lightmapInfo) {
             // HACK: Ramp between the average and maximum based on the number of overexposed pixels
             float peakValue = Arithmetic.Lerp(
                 lightmapInfo.Mean, lightmapInfo.Maximum, lightmapInfo.Overexposed * 2.75f
@@ -328,7 +327,7 @@ namespace TestGame.Scenes {
             lock (ExposureSamples)
             if (peakValue > 0) {
                 float immediateExposure = Arithmetic.Clamp(
-                    targetAverageBrightness / peakValue,
+                    TargetAverageBrightness / peakValue,
                     0.33f, 1.33f
                 );
                 if (ExposureSamples.Count >= ExposureSampleCount)
@@ -344,7 +343,10 @@ namespace TestGame.Scenes {
             Renderer.UpdateFields(frame, -16);
             ForegroundRenderer.UpdateFields(frame, -16);
 
-            DoEstimateBrightness();
+            Renderer.EstimateBrightness(
+                HandleEstimatedBrightness,
+                HDRRangeFactor, TargetAverageBrightness, 3
+            );
 
             float exposure;
             lock (ExposureSamples)
