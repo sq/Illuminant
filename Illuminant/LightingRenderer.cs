@@ -256,6 +256,12 @@ namespace Squared.Illuminant {
             ));
 
             Environment = environment;
+
+            Coordinator.DeviceReset += Coordinator_DeviceReset;
+        }
+
+        private void Coordinator_DeviceReset (object sender, EventArgs e) {
+            InvalidateFields();
         }
 
         private void FillIndexBuffer () {
