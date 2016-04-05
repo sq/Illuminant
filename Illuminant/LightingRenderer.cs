@@ -282,11 +282,12 @@ namespace Squared.Illuminant {
         }
 
         public void Dispose () {
-            SphereLightVertexBuffer.Dispose();
-            SphereLightIndexBuffer.Dispose();
+            Coordinator.DisposeResource(SphereLightVertexBuffer);
+            Coordinator.DisposeResource(SphereLightIndexBuffer);
             Coordinator.DisposeResource(_DistanceField);
             Coordinator.DisposeResource(_GBuffer);
             Coordinator.DisposeResource(_Lightmap);
+            Coordinator.DisposeResource(_PreviousLightmap);
 
             foreach (var kvp in HeightVolumeVertexData)
                 Coordinator.DisposeResource(kvp.Value);
