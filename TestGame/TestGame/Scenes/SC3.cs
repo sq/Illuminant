@@ -112,10 +112,10 @@ namespace TestGame.Scenes {
         Texture2D Spark;
         float LightZ;
 
-        const int ExposureSampleCount = 45;
+        const int ExposureSampleCount = 40;
 
         const int BackgroundScaleRatio = 2;
-        const int ForegroundScaleRatio = 2;
+        const int ForegroundScaleRatio = 1;
         // We scale down the range of lighting values by this much, so that we
         //  have additional values past 1.0 to use for HDR calculations
         const float HDRRangeFactor = 4;
@@ -163,7 +163,8 @@ namespace TestGame.Scenes {
             Foreground = Game.Content.Load<Texture2D>("fg");
 
             Trees = new[] {
-                Game.Content.Load<Texture2D>("tree1")
+                Game.Content.Load<Texture2D>("tree1"),
+                Game.Content.Load<Texture2D>("tree2")
             };
             Pillars = new[] {
                 Game.Content.Load<Texture2D>("pillar1"),
@@ -181,10 +182,10 @@ namespace TestGame.Scenes {
                 ) {
                     RenderScale = 1.0f / BackgroundScaleRatio,
                     DistanceFieldResolution = 0.5f,
-                    DistanceFieldMinStepSize = 1f,
-                    DistanceFieldLongStepFactor = 0.5f,
-                    DistanceFieldOcclusionToOpacityPower = 1.4f,
-                    DistanceFieldMaxConeRadius = 48,
+                    DistanceFieldMinStepSize = 2.1f,
+                    DistanceFieldLongStepFactor = 0.75f,
+                    DistanceFieldOcclusionToOpacityPower = 1.3f,
+                    DistanceFieldMaxConeRadius = 36,
                     TwoPointFiveD = true,
                     DistanceFieldUpdateRate = 2                    
                 }
@@ -198,10 +199,10 @@ namespace TestGame.Scenes {
                 ) {
                     RenderScale = 1.0f / ForegroundScaleRatio,
                     DistanceFieldResolution = 0.5f,
-                    DistanceFieldMinStepSize = 1f,
-                    DistanceFieldLongStepFactor = 0.5f,
-                    DistanceFieldOcclusionToOpacityPower = 1.4f,
-                    DistanceFieldMaxConeRadius = 48,
+                    DistanceFieldMinStepSize = 2.1f,
+                    DistanceFieldLongStepFactor = 0.75f,
+                    DistanceFieldOcclusionToOpacityPower = 1.3f,
+                    DistanceFieldMaxConeRadius = 36,
                     TwoPointFiveD = true,
                     // RenderGroundPlane = false,
                     DistanceFieldUpdateRate = 2,
@@ -243,14 +244,17 @@ namespace TestGame.Scenes {
 
             BuildObstacles();
 
-            Environment.Billboards.Add(new Billboard {
+            var terrainBillboard = new Billboard {
                 Position = Vector3.Zero,
                 Size = new Vector3(Width, Height, 0),
                 Normal = Vector3.UnitY,
                 Texture = BackgroundMask,
                 DataScale = 60,
                 Type = BillboardType.GBufferData
-            });
+            };
+
+            Environment.Billboards.Add(terrainBillboard);
+            ForegroundEnvironment.Billboards.Add(terrainBillboard);
 
             for (int i = 0; i < Math.Min(4, ExposureSampleCount); i++)
                 ExposureSamples.Enqueue(1.0f);
@@ -260,7 +264,7 @@ namespace TestGame.Scenes {
             var obs = new LightObstruction(
                 LightObstructionType.Ellipsoid,
                 new Vector3(x, y, Environment.GroundZ),
-                new Vector3(18, 8, 100)
+                new Vector3(18, 8, 80)
             );
             Environment.Obstructions.Add(obs);
             ForegroundEnvironment.Obstructions.Add(obs);
@@ -279,7 +283,7 @@ namespace TestGame.Scenes {
             var obs = new LightObstruction(
                 LightObstructionType.Ellipsoid,
                 new Vector3(x, y, Environment.GroundZ),
-                new Vector3(19, 13, 80)
+                new Vector3(19, 13, 65)
             );
             Environment.Obstructions.Add(obs);
             ForegroundEnvironment.Obstructions.Add(obs);
@@ -306,7 +310,9 @@ namespace TestGame.Scenes {
             Tree(298, 399, 0);
             Tree(426, 421, 0);
             Tree(173, 505, 0);
-            Tree(383, 605, 0);
+            Tree(383, 609, 0);
+            Tree(556, 314, 1);
+            Tree(221, 526, 1);
         }
 
         private async void DoEstimateBrightness () {
@@ -321,7 +327,10 @@ namespace TestGame.Scenes {
             // TODO: Set a white point?
             lock (ExposureSamples)
             if (peakValue > 0) {
-                float immediateExposure = targetAverageBrightness / peakValue;
+                float immediateExposure = Arithmetic.Clamp(
+                    targetAverageBrightness / peakValue,
+                    0.33f, 1.33f
+                );
                 if (ExposureSamples.Count >= ExposureSampleCount)
                     ExposureSamples.Dequeue();
 
@@ -424,14 +433,16 @@ namespace TestGame.Scenes {
                         ),
                         samplerState: SamplerState.PointClamp
                     )) {
-                        var dc = new BitmapDrawCall(
-                            Background, Vector2.Zero, Color.White * (ShowGBuffer ? 0.7f : 1.0f)
-                        );
-                        dc.Textures = new TextureSet(dc.Textures.Texture1, Lightmap);
-                        bb.Add(dc);
+                        if (!VisualizeForeground) {
+                            var dc = new BitmapDrawCall(
+                                Background, Vector2.Zero, Color.White * (ShowGBuffer ? 0.7f : 1.0f)
+                            );
+                            dc.Textures = new TextureSet(dc.Textures.Texture1, Lightmap);
+                            bb.Add(dc);
+                        }
 
                         if (!ShowGBuffer) {
-                            dc = new BitmapDrawCall(
+                            var dc = new BitmapDrawCall(
                                 Foreground, Vector2.Zero
                             );
                             dc.Textures = new TextureSet(dc.Textures.Texture1, ForegroundLightmap);
