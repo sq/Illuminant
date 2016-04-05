@@ -489,8 +489,14 @@ namespace Squared.Illuminant {
                     var lightBounds = lightBounds3.XY;
 
                     // Expand the bounding box upward to account for 2.5D perspective
-                    if (Configuration.TwoPointFiveD)
-                        lightBounds.TopLeft.Y -= (Environment.MaximumZ * Environment.ZToYMultiplier);
+                    if (Configuration.TwoPointFiveD) {
+                        var offset = Math.Min(
+                            lightSource.Radius + lightSource.RampLength,
+                            Environment.MaximumZ
+                        );
+                        // FIXME: Is this right?
+                        lightBounds.TopLeft.Y -= (offset / Environment.ZToYMultiplier);
+                    }
 
                     lightBounds = lightBounds.Scale(Configuration.RenderScale);
 
