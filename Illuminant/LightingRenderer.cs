@@ -371,7 +371,7 @@ namespace Squared.Illuminant {
         /// <param name="threshold">Threshold for overexposed values (after scaling). 1.0f is reasonable.</param>
         /// <param name="accuracyFactor">Governs how many pixels will be analyzed. Higher values are lower accuracy (but faster).</param>
         /// <returns>LightmapInfo containing the minimum, average, and maximum light values, along with an overexposed pixel ratio [0-1].</returns>
-        public async Task<LightmapInfo> EstimateBrightness (
+        public Task<LightmapInfo> EstimateBrightness (
             float scaleFactor, float threshold, 
             int accuracyFactor = 3
         ) {
@@ -387,19 +387,23 @@ namespace Squared.Illuminant {
                     ? 8
                     : 4);
 
-            using (var buffer = BufferPool<byte>.Allocate(count)) {
-                // TODO: Replace this with some sort of 'BeforePresent' primitive?
-                return await Task.Run(() => {
-                    // HACK: We lock on the lightmap to avoid directly trampling over a draw operation on the lightmap
-                    lock (_PreviousLightmap)
-                        _PreviousLightmap.GetData(
-                            levelIndex, null,
-                            buffer.Data, 0, count
-                        );
+            var tcs = new TaskCompletionSource<LightmapInfo>();
 
-                    return AnalyzeLightmap(buffer, count, scaleFactor, threshold);
+            var buffer = BufferPool<byte>.Allocate(count);
+            Coordinator.BeforePresent(() => {
+                _PreviousLightmap.GetData(
+                    levelIndex, null,
+                    buffer.Data, 0, count
+                );
+
+                ThreadPool.QueueUserWorkItem((_) => {
+                    var result = AnalyzeLightmap(buffer, count, scaleFactor, threshold);
+                    buffer.Dispose();
+                    tcs.SetResult(result);
                 });
-            }
+            });
+
+            return tcs.Task;
         }
 
         public RenderTarget2D GBuffer {
@@ -576,13 +580,10 @@ namespace Squared.Illuminant {
                 using (var copyGroup = BatchGroup.ForRenderTarget(
                     outerGroup, 1, _PreviousLightmap,
                     (dm, _) => {
-                        // HACK: We lock on the lightmap during the actual draw operation, just to be sure
-                        Monitor.Enter(_PreviousLightmap);
                         Materials.PushViewTransform(ViewTransform.CreateOrthographic(_PreviousLightmap.Width, _PreviousLightmap.Height));
                     },
                     (dm, _) => {
                         Materials.PopViewTransform();
-                        Monitor.Exit(_PreviousLightmap);
                     }
                 )) {
                     if (Render.Tracing.RenderTrace.EnableTracing)

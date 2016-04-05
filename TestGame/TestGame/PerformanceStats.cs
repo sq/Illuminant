@@ -9,10 +9,11 @@ namespace ThreefoldTrials.Framework {
         private static readonly StringBuilder StringBuilder = new StringBuilder();
         private static string _CachedString = null;
 
-        public const int SampleCount = 240;
+        public const int SampleCount = 200;
         public static readonly List<double> WaitSamples = new List<double>(),
             BeginDrawSamples = new List<double>(),
             DrawSamples = new List<double>(),
+            BeforePresentSamples = new List<double>(),
             EndDrawSamples = new List<double>();
 
         public static void PushSample (List<double> list, double sample) {
@@ -34,6 +35,7 @@ namespace ThreefoldTrials.Framework {
 
             var drawAverage = GetAverage(DrawSamples);
             var beginAverage = GetAverage(BeginDrawSamples);
+            var bpAverage = GetAverage(BeforePresentSamples);
             var endAverage = GetAverage(EndDrawSamples);
             var waitAverage = GetAverage(WaitSamples);
 
@@ -41,6 +43,7 @@ namespace ThreefoldTrials.Framework {
             var fpsAverage = 1000.0 / totalAverage;
 
             StringBuilder.AppendFormat("wait  {0,7:0.00}\r\n", waitAverage);
+            StringBuilder.AppendFormat("bp    {0,7:0.00}\r\n", bpAverage);
             StringBuilder.AppendFormat("ms/f  {0,7:0.00}\r\n", totalAverage);
             StringBuilder.AppendFormat("FPS  ~{0,7:0.00}\r\n", fpsAverage);
             StringBuilder.AppendFormat("batch {0,7}\r\n", game.PreviousFrameTiming.BatchCount);
@@ -53,6 +56,7 @@ namespace ThreefoldTrials.Framework {
             PushSample(WaitSamples, game.PreviousFrameTiming.Wait.TotalMilliseconds);
             PushSample(BeginDrawSamples, game.PreviousFrameTiming.BeginDraw.TotalMilliseconds);
             PushSample(DrawSamples, game.PreviousFrameTiming.Draw.TotalMilliseconds);
+            PushSample(BeforePresentSamples, game.PreviousFrameTiming.BeforePresent.TotalMilliseconds);
             PushSample(EndDrawSamples, game.PreviousFrameTiming.EndDraw.TotalMilliseconds);
 
             _CachedString = null;

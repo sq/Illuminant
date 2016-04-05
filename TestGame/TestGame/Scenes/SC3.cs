@@ -114,8 +114,8 @@ namespace TestGame.Scenes {
 
         const int ExposureSampleCount = 40;
 
-        const int BackgroundScaleRatio = 2;
-        const int ForegroundScaleRatio = 1;
+        const int BackgroundScaleRatio = 4;
+        const int ForegroundScaleRatio = 2;
         // We scale down the range of lighting values by this much, so that we
         //  have additional values past 1.0 to use for HDR calculations
         const float HDRRangeFactor = 4;
