@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
@@ -126,7 +127,7 @@ namespace Squared.Illuminant {
                     coordinator.Device, 
                     Configuration.MaximumRenderSize.First, 
                     Configuration.MaximumRenderSize.Second,
-                    true,
+                    Configuration.EnableBrightnessEstimation,
                     Configuration.HighQuality
                         ? SurfaceFormat.Rgba64
                         : SurfaceFormat.Color,
@@ -269,6 +270,112 @@ namespace Squared.Illuminant {
 
             foreach (var kvp in HeightVolumeVertexData)
                 Coordinator.DisposeResource(kvp.Value);
+        }
+
+        private const int LuminanceScaleFactor = 8192;
+        private const int RedScaleFactor = (int)(0.299 * LuminanceScaleFactor);
+        private const int GreenScaleFactor = (int)(0.587 * LuminanceScaleFactor);
+        private const int BlueScaleFactor = (int)(0.114 * LuminanceScaleFactor);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void AnalyzeStep (
+            int red, int green, int blue,
+            int luminanceThreshold,
+            ref int overThresholdCount, ref long sum, 
+            ref int min, ref int max
+        ) {
+            int luminance = ((red * RedScaleFactor) + (green * GreenScaleFactor) + (blue * BlueScaleFactor)) / 65536;
+            min = Math.Min(min, luminance);
+            max = Math.Max(max, luminance);
+            sum += luminance;
+
+            if (luminance >= luminanceThreshold)
+                overThresholdCount += 1;
+        }
+
+        private unsafe LightmapInfo AnalyzeLightmap (
+            byte[] buffer, int count, 
+            float scaleFactor, float threshold
+        ) {
+            int overThresholdCount = 0, min = int.MaxValue, max = 0;
+            long sum = 0;
+
+            int pixelCount = count / 
+                (Configuration.HighQuality
+                    ? 8
+                    : 4);
+
+            int luminanceThreshold = (int)(threshold * LuminanceScaleFactor / scaleFactor);
+
+            fixed (byte* pBuffer = buffer)
+            if (Configuration.HighQuality) {
+                var pRgba = (ushort*)pBuffer;
+
+                for (int i = 0; i < pixelCount; i++, pRgba += 4) {
+                    AnalyzeStep(
+                        pRgba[0], pRgba[1], pRgba[2],
+                        luminanceThreshold,
+                        ref overThresholdCount, ref sum,
+                        ref min, ref max
+                    );
+                }                
+            } else {
+                var pRgba = pBuffer;
+
+                for (int i = 0; i < pixelCount; i++, pRgba += 4) {
+                    AnalyzeStep(
+                        pRgba[0] * 257, pRgba[1] * 257, pRgba[2] * 257,
+                        luminanceThreshold,
+                        ref overThresholdCount, ref sum,
+                        ref min, ref max
+                    );
+                }                
+            }
+
+            var effectiveScaleFactor = (1.0f / LuminanceScaleFactor) * scaleFactor;
+
+            return new LightmapInfo {
+                Overexposed = overThresholdCount / (float)pixelCount,
+                Minimum = min * effectiveScaleFactor,
+                Maximum = max * effectiveScaleFactor,
+                Mean = (sum * effectiveScaleFactor) / pixelCount
+            };
+        }
+
+        /// <summary>
+        /// Analyzes the internal lighting buffer.
+        /// </summary>
+        /// <param name="scaleFactor">Scale factor for the lighting values (you want 1.0f / intensityFactor, probably)</param>
+        /// <param name="threshold">Threshold for overexposed values (after scaling). 1.0f is reasonable.</param>
+        /// <param name="accuracyFactor">Governs how many pixels will be analyzed. Higher values are lower accuracy (but faster).</param>
+        /// <returns>LightmapInfo containing the minimum, average, and maximum light values, along with an overexposed pixel ratio [0-1].</returns>
+        public LightmapInfo EstimateBrightness (
+            float scaleFactor, float threshold, 
+            int accuracyFactor = 3
+        ) {
+            if (!Configuration.EnableBrightnessEstimation)
+                throw new InvalidOperationException("Brightness estimation must be enabled");
+
+            var levelIndex = Math.Min(accuracyFactor, Lightmap.LevelCount - 1);
+            var divisor = (int)Math.Pow(2, levelIndex);
+            var levelWidth = Lightmap.Width / divisor;
+            var levelHeight = Lightmap.Height / divisor;
+            var count = levelWidth * levelHeight * 
+                (Configuration.HighQuality
+                    ? 8
+                    : 4);
+
+            using (var buffer = BufferPool<byte>.Allocate(count)) {
+                Coordinator.WaitForActiveDraw();
+                lock (Coordinator.UseResourceLock) {
+                    Lightmap.GetData(
+                        levelIndex, null,
+                        buffer.Data, 0, count
+                    );
+                }
+
+                return AnalyzeLightmap(buffer, count, scaleFactor, threshold);
+            }
         }
 
         public RenderTarget2D GBuffer {
@@ -1082,7 +1189,11 @@ namespace Squared.Illuminant {
         // The maximum width and height of the viewport.
         public readonly Pair<int>    MaximumRenderSize;
 
+        // Uses a high-precision g-buffer and internal lightmap.
         public readonly bool         HighQuality;
+        // Generates downscaled versions of the internal lightmap that the
+        //  renderer can use to estimate the brightness of the scene for HDR.
+        public readonly bool         EnableBrightnessEstimation;
 
         // Scales world coordinates when rendering the G-buffer and lightmap
         public float RenderScale                   = 1.0f;
@@ -1127,12 +1238,14 @@ namespace Squared.Illuminant {
 
         public RendererConfiguration (
             int maxWidth, int maxHeight, bool highQuality,
-            int distanceFieldWidth, int distanceFieldHeight, int distanceFieldDepth
+            int distanceFieldWidth, int distanceFieldHeight, int distanceFieldDepth,
+            bool enableBrightnessEstimation = false
         ) {
             HighQuality = highQuality;
             MaximumRenderSize = new Pair<int>(maxWidth, maxHeight);
             DistanceFieldSize = new Triplet<int>(distanceFieldWidth, distanceFieldHeight, distanceFieldDepth);
             RenderSize = MaximumRenderSize;
+            EnableBrightnessEstimation = enableBrightnessEstimation;
         }
     }
 
@@ -1155,5 +1268,10 @@ namespace Squared.Illuminant {
         None,
         GammaCompress,
         ToneMap
+    }
+
+    public struct LightmapInfo {
+        public float Minimum, Maximum, Mean;
+        public float Overexposed;
     }
 }

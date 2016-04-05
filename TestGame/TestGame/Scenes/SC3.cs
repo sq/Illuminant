@@ -103,8 +103,8 @@ namespace TestGame.Scenes {
         RenderTarget2D Lightmap, ForegroundLightmap;
 
         public readonly List<LightSource> Lights = new List<LightSource>();
-
         public readonly UnorderedList<Projectile> Projectiles = new UnorderedList<Projectile>();
+        public readonly Queue<float> ExposureSamples = new Queue<float>(ExposureSampleCount);
 
         Texture2D Background, Foreground, BackgroundMask;
         Texture2D[] Trees;
@@ -112,10 +112,12 @@ namespace TestGame.Scenes {
         Texture2D Spark;
         float LightZ;
 
+        const int ExposureSampleCount = 45;
+
         const int LightmapScaleRatio = 3;
         // We scale down the range of lighting values by this much, so that we
         //  have additional values past 1.0 to use for HDR calculations
-        const float HDRRangeFactor = 4;
+        const float HDRRangeFactor = 12;
 
         bool VisualizeForeground = false;
         bool ShowGBuffer         = false;
@@ -174,7 +176,7 @@ namespace TestGame.Scenes {
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(
                     Width / LightmapScaleRatio, Height / LightmapScaleRatio, true,
-                    Width, Height, 16
+                    Width, Height, 16, true
                 ) {
                     RenderScale = 1.0f / LightmapScaleRatio,
                     DistanceFieldResolution = 0.5f,
@@ -183,7 +185,7 @@ namespace TestGame.Scenes {
                     DistanceFieldOcclusionToOpacityPower = 1.4f,
                     DistanceFieldMaxConeRadius = 48,
                     TwoPointFiveD = true,
-                    DistanceFieldUpdateRate = 2
+                    DistanceFieldUpdateRate = 2                    
                 }
             );
 
@@ -248,6 +250,9 @@ namespace TestGame.Scenes {
                 DataScale = 60,
                 Type = BillboardType.GBufferData
             });
+
+            for (int i = 0; i < Math.Min(4, ExposureSampleCount); i++)
+                ExposureSamples.Enqueue(1.0f);
         }
 
         private void Pillar (float x, float y, int textureIndex) {
@@ -309,11 +314,24 @@ namespace TestGame.Scenes {
             Renderer.UpdateFields(frame, -3);
             ForegroundRenderer.UpdateFields(frame, -3);
 
-            // Compute a scale factor based on our expected peak brightness (because of 
-            //  projectiles piling up, plus overlap between main light and ambient)
-            float exposure = 
-                (1.0f - Arithmetic.Clamp(Projectiles.Count / 320f, 0f, 0.55f)) 
-                * 0.9f;
+            const float targetAverageBrightness = 0.33f;
+            var lightmapInfo = Renderer.EstimateBrightness(HDRRangeFactor, targetAverageBrightness, 3);
+
+            // HACK: Ramp between the average and maximum based on the number of overexposed pixels
+            float peakValue = Arithmetic.Lerp(
+                lightmapInfo.Mean, lightmapInfo.Maximum, lightmapInfo.Overexposed * 2.75f
+            );
+            // Set an exposure to try and balance the scene brightness
+            // TODO: Set a white point?
+            if (peakValue > 0) {
+                float immediateExposure = targetAverageBrightness / peakValue;
+                if (ExposureSamples.Count >= ExposureSampleCount)
+                    ExposureSamples.Dequeue();
+
+                ExposureSamples.Enqueue(immediateExposure);
+            }
+
+            float exposure = ExposureSamples.Average();
 
             var hdrConfiguration = new HDRConfiguration {
                 Mode = HDRMode.ToneMap,
@@ -486,8 +504,15 @@ namespace TestGame.Scenes {
                 );
                 ir.DrawString(
                     Game.Font, string.Format(
-                        "Exposure: {0:00.000}\r\nProjectiles: {1:0000}", 
-                        exposure, Projectiles.Count
+@"Exposure {0:00.000}\r\n
+{1:0000} Projectiles\r\n
+Min {2:0.000} Max  {3:0.000}\r\n
+Avg {4:0.000} Peak {5:0.000}",
+                        exposure, Projectiles.Count,
+                        lightmapInfo.Minimum,
+                        lightmapInfo.Maximum,
+                        lightmapInfo.Mean,
+                        peakValue
                     ), new Vector2(3, 3), scale: 0.5f
                 );
             }

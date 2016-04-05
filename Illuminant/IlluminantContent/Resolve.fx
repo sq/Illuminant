@@ -31,11 +31,11 @@ float4 ResolveCommon(
     addColor.rgb *= addColor.a;
     addColor.a = 0;
 
-    float2 coord = clamp(texCoord, texTL, texBR);
-    float2 coordTexels = coord * BitmapTextureSize;
+    float4 coord = float4(clamp(texCoord, texTL, texBR), 0, 0);
+    float2 coordTexels = coord.xy * BitmapTextureSize;
 
-    float4 samplePoint = tex2D(PointSampler, coord);
-    float4 sampleLinear = tex2D(LinearSampler, coord);
+    float4 samplePoint = tex2Dlod(PointSampler, coord);
+    float4 sampleLinear = tex2Dlod(LinearSampler, coord);
 
     [branch]
     if (samplePoint.a > 0) {
