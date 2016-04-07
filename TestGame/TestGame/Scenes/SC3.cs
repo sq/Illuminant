@@ -262,7 +262,7 @@ namespace TestGame.Scenes {
 
         private void Pillar (float x, float y, int textureIndex) {
             var obs = new LightObstruction(
-                LightObstructionType.Ellipsoid,
+                LightObstructionType.Box,
                 new Vector3(x, y, Environment.GroundZ),
                 new Vector3(18, 8, 80)
             );
@@ -339,6 +339,11 @@ namespace TestGame.Scenes {
         
         public override void Draw (Squared.Render.Frame frame) {
             CreateRenderTargets();
+
+            if (true) {
+                Renderer.InvalidateFields();
+                ForegroundRenderer.InvalidateFields();
+            }
 
             Renderer.UpdateFields(frame, -16);
             ForegroundRenderer.UpdateFields(frame, -16);

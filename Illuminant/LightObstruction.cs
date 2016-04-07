@@ -8,14 +8,17 @@ using Squared.Game;
 namespace Squared.Illuminant {
     public enum LightObstructionType {
         Ellipsoid,
-        Box
+        Box,
+        Cylinder,
+
+        MAX = Cylinder
     }
 
     public class LightObstruction {
         public readonly LightObstructionType Type;
 
         public Vector3 Center;
-        public Vector3 Radius;
+        public Vector3 Size;
 
         public LightObstruction (
             LightObstructionType type,
@@ -24,14 +27,14 @@ namespace Squared.Illuminant {
         ) {
             Type = type;
             Center = center.GetValueOrDefault(Vector3.Zero);
-            Radius = radius.GetValueOrDefault(Vector3.Zero);
+            Size = radius.GetValueOrDefault(Vector3.Zero);
         }
 
         public Bounds3 Bounds3 {
             get {
                 return new Bounds3(
-                    Center - Radius,
-                    Center + Radius
+                    Center - Size,
+                    Center + Size
                 );
             }
         }

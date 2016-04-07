@@ -26,7 +26,7 @@ namespace TestGame.Scenes {
         float LightZ;
 
         const int MultisampleCount = 0;
-        const int LightmapScaleRatio = 4;
+        const int LightmapScaleRatio = 2;
         const int MaxStepCount = 128;
 
         bool ShowGBuffer       = false;
@@ -158,14 +158,13 @@ namespace TestGame.Scenes {
                 ));
 
             if (false)
-            if (true)
                 Environment.Obstructions.Add(new LightObstruction(
                     LightObstructionType.Ellipsoid, 
-                    new Vector3(500, 750, 0), new Vector3(90, 45, 15f)
+                    new Vector3(500, 750, 0), new Vector3(90, 45, 30f)
                 ));
 
-            if (false)
-            Environment.HeightVolumes.Clear();
+            if (true)
+                Environment.HeightVolumes.Clear();
 
             Environment.GroundZ = 0;
             Environment.MaximumZ = 128;

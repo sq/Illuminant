@@ -19,15 +19,15 @@ namespace Squared.Illuminant {
     public sealed class LightingRenderer : IDisposable {
         public const int MaximumLightCount = 8192;
         public const int PackedSliceCount = 3;
+        public const int MaximumDistanceFunctionCount = 8192;
 
         const int        DistanceLimit = 520;
-
+        
         // HACK: If your projection matrix and your actual viewport/RT don't match in dimensions, you need to set this to compensate. :/
         // Scissor rects are fussy.
         public readonly DefaultMaterialSet Materials;
         public readonly RenderCoordinator Coordinator;
         public readonly IlluminantMaterials IlluminantMaterials;
-        public readonly Render.EffectMaterial SphereLightMaterialInner;
         public readonly DepthStencilState TopFaceDepthStencilState, FrontFaceDepthStencilState;
         public readonly DepthStencilState DistanceInteriorStencilState, DistanceExteriorStencilState;
         public readonly DepthStencilState SphereLightDepthStencilState;
@@ -35,8 +35,12 @@ namespace Squared.Illuminant {
         public readonly BlendState[]      ClearPackedSlice = new BlendState[4];
 
         private readonly DynamicVertexBuffer SphereLightVertexBuffer;
-        private readonly IndexBuffer         SphereLightIndexBuffer;
+        private readonly IndexBuffer         QuadIndexBuffer;
         private readonly SphereLightVertex[] SphereLightVertices = new SphereLightVertex[MaximumLightCount * 4];
+
+        private readonly DynamicVertexBuffer      DistanceFunctionVertexBuffer;
+        private readonly DistanceFunctionVertex[] DistanceFunctionVertices = 
+            new DistanceFunctionVertex[MaximumDistanceFunctionCount * 4];
 
         private readonly Dictionary<Polygon, Texture2D> HeightVolumeVertexData = 
             new Dictionary<Polygon, Texture2D>(new ReferenceComparer<Polygon>());
@@ -84,8 +88,12 @@ namespace Squared.Illuminant {
                     coordinator.Device, typeof(SphereLightVertex), 
                     SphereLightVertices.Length, BufferUsage.WriteOnly
                 );
-                SphereLightIndexBuffer = new IndexBuffer(
+                QuadIndexBuffer = new IndexBuffer(
                     coordinator.Device, IndexElementSize.SixteenBits, MaximumLightCount * 6, BufferUsage.WriteOnly
+                );
+                DistanceFunctionVertexBuffer = new DynamicVertexBuffer(
+                    coordinator.Device, typeof(DistanceFunctionVertex),
+                    DistanceFunctionVertices.Length, BufferUsage.WriteOnly
                 );
 
                 FillIndexBuffer();
@@ -197,6 +205,14 @@ namespace Squared.Illuminant {
                 };
             };
 
+            LoadMaterials(materials, content);
+
+            Environment = environment;
+
+            Coordinator.DeviceReset += Coordinator_DeviceReset;
+        }
+
+        private void LoadMaterials (MaterialSetBase materials, ContentManager content) {
             {
                 var dBegin = new[] {
                     MaterialUtil.MakeDelegate(
@@ -206,11 +222,11 @@ namespace Squared.Illuminant {
                 };
                 Action<DeviceManager>[] dEnd = null;
 
-                SphereLightMaterialInner =
+                var slmi =
                     new Render.EffectMaterial(content.Load<Effect>("Illumination"), "SphereLight");
 
                 materials.Add(IlluminantMaterials.SphereLight = new DelegateMaterial(
-                    SphereLightMaterialInner, dBegin, dEnd
+                    slmi, dBegin, dEnd
                 ));
 
                 materials.Add(IlluminantMaterials.DistanceFieldExterior = 
@@ -219,8 +235,16 @@ namespace Squared.Illuminant {
                 materials.Add(IlluminantMaterials.DistanceFieldInterior = 
                     new Squared.Render.EffectMaterial(content.Load<Effect>("DistanceField"), "Interior"));
 
-                materials.Add(IlluminantMaterials.DistanceFunction = 
-                    new Squared.Render.EffectMaterial(content.Load<Effect>("DistanceFunction"), "DistanceFunction"));
+                IlluminantMaterials.DistanceFunctionTypes = new Render.EffectMaterial[(int)LightObstructionType.MAX + 1];
+
+                foreach (var i in Enum.GetValues(typeof(LightObstructionType))) {
+                    var name = Enum.GetName(typeof(LightObstructionType), i);
+                    if (name == "MAX")
+                        continue;
+
+                    materials.Add(IlluminantMaterials.DistanceFunctionTypes[(int)i] = 
+                        new Squared.Render.EffectMaterial(content.Load<Effect>("DistanceFunction"), name));
+                }
 
                 materials.Add(IlluminantMaterials.HeightVolume = 
                     new Squared.Render.EffectMaterial(content.Load<Effect>("GBuffer"), "HeightVolume"));
@@ -259,10 +283,6 @@ namespace Squared.Illuminant {
             materials.Add(IlluminantMaterials.WorldSpaceToneMappedBitmap = new Squared.Render.EffectMaterial(
                 content.Load<Effect>("HDRBitmap"), "WorldSpaceToneMappedBitmap"
             ));
-
-            Environment = environment;
-
-            Coordinator.DeviceReset += Coordinator_DeviceReset;
         }
 
         private void Coordinator_DeviceReset (object sender, EventArgs e) {
@@ -270,7 +290,7 @@ namespace Squared.Illuminant {
         }
 
         private void FillIndexBuffer () {
-            var buf = new short[SphereLightIndexBuffer.IndexCount];
+            var buf = new short[QuadIndexBuffer.IndexCount];
             int i = 0, j = 0;
             while (i < buf.Length) {
                 buf[i++] = (short)(j + 0);
@@ -283,12 +303,12 @@ namespace Squared.Illuminant {
                 j += 4;
             }
 
-            SphereLightIndexBuffer.SetData(buf);
+            QuadIndexBuffer.SetData(buf);
         }
 
         public void Dispose () {
             Coordinator.DisposeResource(SphereLightVertexBuffer);
-            Coordinator.DisposeResource(SphereLightIndexBuffer);
+            Coordinator.DisposeResource(QuadIndexBuffer);
             Coordinator.DisposeResource(_DistanceField);
             Coordinator.DisposeResource(_GBuffer);
             Coordinator.DisposeResource(_Lightmap);
@@ -456,24 +476,28 @@ namespace Squared.Illuminant {
 
             device.Device.BlendState = RenderStates.AdditiveBlend;
 
-            var mi = SphereLightMaterialInner;
+            var mi = (Render.EffectMaterial)(
+                ((DelegateMaterial)IlluminantMaterials.SphereLight).BaseMaterial
+            );
+            var p = mi.Effect.Parameters;
+
             var tsize = new Vector2(
                 1f / Configuration.RenderSize.First, 
                 1f / Configuration.RenderSize.Second
             );
-            mi.Effect.Parameters["GBufferTexelSize"].SetValue(tsize);
-            mi.Effect.Parameters["GBuffer"].SetValue(GBuffer);
+            p["GBufferTexelSize"].SetValue(tsize);
+            p["GBuffer"].SetValue(GBuffer);
 
-            mi.Effect.Parameters["GroundZ"].SetValue(Environment.GroundZ);
-            mi.Effect.Parameters["ZToYMultiplier"].SetValue(
+            p["GroundZ"].SetValue(Environment.GroundZ);
+            p["ZToYMultiplier"].SetValue(
                 Configuration.TwoPointFiveD
                     ? Environment.ZToYMultiplier
                     : 0.0f
             );
 
-            mi.Effect.Parameters["Time"].SetValue((float)Time.Seconds);
+            p["Time"].SetValue((float)Time.Seconds);
 
-            SetDistanceFieldParameters(mi.Effect.Parameters, true);
+            SetDistanceFieldParameters(p, true);
         }
 
         /// <summary>
@@ -578,7 +602,7 @@ namespace Squared.Illuminant {
                             nb.Add(new NativeDrawCall(
                                 PrimitiveType.TriangleList,
                                 SphereLightVertexBuffer, 0,
-                                SphereLightIndexBuffer, 0, 0, lightCount * 4, 0, lightCount * 2
+                                QuadIndexBuffer, 0, 0, lightCount * 4, 0, lightCount * 2
                             ));
                     }
 
@@ -1043,6 +1067,9 @@ namespace Squared.Illuminant {
 
                     SetDistanceFieldParameters(IlluminantMaterials.DistanceFieldInterior.Effect.Parameters, false);
                     SetDistanceFieldParameters(IlluminantMaterials.DistanceFieldExterior.Effect.Parameters, false);
+
+                    foreach (var m in IlluminantMaterials.DistanceFunctionTypes)
+                        SetDistanceFieldParameters(m.Effect.Parameters, false);
                 };
 
             Action<DeviceManager, object> endSliceBatch =
@@ -1068,7 +1095,7 @@ namespace Squared.Illuminant {
                 RenderDistanceFieldHeightVolumes(indices, intParameters, extParameters, sliceZ, group);
 
                 if (Render.Tracing.RenderTrace.EnableTracing)
-                    Render.Tracing.RenderTrace.Marker(group, 2, "LightingRenderer {0:X4} : End Distance Field Slice Z={1} Idx={2}", this.GetHashCode(), sliceZ, physicalSliceIndex);
+                    Render.Tracing.RenderTrace.Marker(group, 9999, "LightingRenderer {0:X4} : End Distance Field Slice Z={1} Idx={2}", this.GetHashCode(), sliceZ, physicalSliceIndex);
             }
         }
 
@@ -1185,46 +1212,110 @@ namespace Squared.Illuminant {
                 ));
         }
 
+        // HACK
+        bool DidUploadDistanceFieldBuffer = false;
+
         private void RenderDistanceFieldDistanceFunctions (short[] indices, float sliceZ, BatchGroup group) {
-            var verts = new VertexPositionColor[] {
-                new VertexPositionColor(new Vector3(0, 0, 0), Color.White),
-                new VertexPositionColor(new Vector3(Configuration.DistanceFieldSize.First, 0, 0), Color.White),
-                new VertexPositionColor(new Vector3(Configuration.DistanceFieldSize.First, Configuration.DistanceFieldSize.Second, 0), Color.White),
-                new VertexPositionColor(new Vector3(0, Configuration.DistanceFieldSize.Second, 0), Color.White)
-            };
-
             var items = Environment.Obstructions;
-            var types = new float[items.Count];
-            var centers = new Vector3[items.Count];
-            var sizes = new Vector3[items.Count];
+            if (items.Count <= 0)
+                return;
 
-            for (int i = 0; i < items.Count; i++) {
-                var item = items[i];
-                types[i] = (int)item.Type;
-                centers[i] = item.Center;
-                sizes[i] = item.Radius;
-            }
+            // todo: shrink these per-instance?
+            var tl = new Vector3(0, 0, 0);
+            var tr = new Vector3(Configuration.DistanceFieldSize.First, 0, 0);
+            var br = new Vector3(Configuration.DistanceFieldSize.First, Configuration.DistanceFieldSize.Second, 0);
+            var bl = new Vector3(0, Configuration.DistanceFieldSize.Second, 0);
 
-            using (var batch = PrimitiveBatch<VertexPositionColor>.New(
-                group, 1, IlluminantMaterials.DistanceFunction,
-                (dm, _) => {
-                    var p = IlluminantMaterials.DistanceFunction.Effect.Parameters;
+            var numTypes    = (int)LightObstructionType.MAX + 1;
+            var batches     = new NativeBatch[numTypes];
+            var firstOffset = new int[numTypes];
+            var primCount   = new int[numTypes];
 
-                    p["NumDistanceObjects"].SetValue(items.Count);
-                    p["DistanceObjectTypes"].SetValue(types);
-                    p["DistanceObjectCenters"].SetValue(centers);
-                    p["DistanceObjectSizes"].SetValue(sizes);
-                    p["SliceZ"].SetValue(sliceZ);
+            try {
+                for (int i = 0; i < numTypes; i++) {
+                    var m = IlluminantMaterials.DistanceFunctionTypes[i];
 
-                    SetDistanceFieldParameters(p, false);
+                    Action<DeviceManager, object> setup = null;
 
-                    IlluminantMaterials.DistanceFunction.Flush();
+                    setup = (dm, _) => {
+                        m.Effect.Parameters["SliceZ"].SetValue(sliceZ);
+                        m.Flush();
+
+                        lock (DistanceFunctionVertices) {
+                            if (DidUploadDistanceFieldBuffer)
+                                return;
+
+                            DistanceFunctionVertexBuffer.SetData(DistanceFunctionVertices, 0, items.Count * 4, SetDataOptions.Discard);
+                            DidUploadDistanceFieldBuffer = true;
+                        }
+                    };
+
+                    if (Render.Tracing.RenderTrace.EnableTracing)
+                        Render.Tracing.RenderTrace.Marker(group, (i * 2), "LightingRenderer {0:X4} : Render {1}(s)", GetHashCode(), (LightObstructionType)i);
+                    
+                    batches[i] = NativeBatch.New(
+                        group, (i * 2) + 1, m, setup
+                    );
+                    firstOffset[i] = -1;
                 }
-            ))
-                batch.Add(new PrimitiveDrawCall<VertexPositionColor>(
-                    PrimitiveType.TriangleList,
-                    verts, 0, 4, indices, 0, 2
-                ));
+
+                // HACK: Sort all the functions by type, fill the VB with each group,
+                //  then issue a single draw for each
+                using (var buffer = BufferPool<LightObstruction>.Allocate(items.Count))
+                lock (DistanceFunctionVertices) {
+                    items.CopyTo(buffer.Data);
+                    Array.Sort(buffer.Data, (lhs, rhs) => {
+                        if (rhs == null) {
+                            return (lhs == null) ? 0 : -1;
+                        } else if (lhs == null) {
+                            return 0;
+                        }
+
+                        return ((int)lhs.Type) - ((int)rhs.Type);
+                    });
+
+                    DidUploadDistanceFieldBuffer = false;
+
+                    int j = 0;
+                    for (int i = 0; i < items.Count; i++) {
+                        var item = items[i];
+                        var type = (int)item.Type;
+
+                        if (firstOffset[type] == -1)
+                            firstOffset[type] = j;
+
+                        primCount[type] += 2;
+
+                        DistanceFunctionVertices[j++] = new DistanceFunctionVertex(
+                            tl, item.Center, item.Size
+                        );
+                        DistanceFunctionVertices[j++] = new DistanceFunctionVertex(
+                            tr, item.Center, item.Size
+                        );
+                        DistanceFunctionVertices[j++] = new DistanceFunctionVertex(
+                            br, item.Center, item.Size
+                        );
+                        DistanceFunctionVertices[j++] = new DistanceFunctionVertex(
+                            bl, item.Center, item.Size
+                        );
+                    }
+
+                    for (int i = 0; i < numTypes; i++) {
+                        if (primCount[i] <= 0)
+                            continue;
+
+                        batches[i].Add(new NativeDrawCall(
+                            PrimitiveType.TriangleList,
+                            DistanceFunctionVertexBuffer, 0, 
+                            QuadIndexBuffer, firstOffset[i], 0, primCount[i] * 2,
+                            0, primCount[i]
+                        ));
+                    }
+                }
+            } finally {
+                foreach (var batch in batches)
+                    batch.Dispose();
+            }
         }
     }
 

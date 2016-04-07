@@ -14,7 +14,7 @@ namespace Squared.Illuminant {
 
         public Material SphereLight;
         public Render.EffectMaterial DistanceFieldExterior, DistanceFieldInterior;
-        public Render.EffectMaterial DistanceFunction;
+        public Render.EffectMaterial[] DistanceFunctionTypes;
         public Render.EffectMaterial HeightVolume, HeightVolumeFace;
         public Render.EffectMaterial MaskBillboard, GDataBillboard;
         public Render.EffectMaterial LightingResolve, 

@@ -2,85 +2,98 @@
 #include "LightCommon.fxh"
 #include "DistanceFieldCommon.fxh"
 
-#define MAX_DISTANCE_OBJECTS 16
-
-#define TYPE_ELLIPSOID 0
-#define TYPE_BOX       1
-
 uniform float2 PixelSize;
 uniform float  SliceZ;
 
-uniform int    NumDistanceObjects;
-
-uniform float  DistanceObjectTypes[MAX_DISTANCE_OBJECTS];
-uniform float3 DistanceObjectCenters[MAX_DISTANCE_OBJECTS];
-uniform float3 DistanceObjectSizes[MAX_DISTANCE_OBJECTS];
-
 void DistanceFunctionVertexShader(
-    in    float3 position      : POSITION0, // x, y, z
-    out   float4 result : POSITION0
+    in    float3 position : POSITION0, // x, y, z
+    inout float3 center   : POSITION1,
+    inout float3 size     : POSITION2,
+    out   float4 result   : POSITION0
 ) {
     result = TransformPosition(float4(position.xy - ViewportPosition, 0, 1), 0);
     result.z = position.z;
 }
 
-float evaluateFunction (
-    float3 position,
-    float type, float3 center, float3 size
-) {
-    position -= center;
-
-    type = floor(type);
-
-    if (type == TYPE_ELLIPSOID) {
-        float l = length(position / size) - 1.0;
-        return l * min(min(size.x, size.y), size.z);
-    } else if (type == TYPE_BOX) {
-        float3 d = abs(position) - size;
-        return
-            min(
-                max(d.x, max(d.y, d.z)),
-                0.0
-            ) + length(max(d, 0.0));
-    }
-
-    // FIXME
-    return 0;
-}
-
-float computeDistance (
-    float2 vpos
-) {
-    float3 worldPosition = float3(vpos.x, vpos.y, SliceZ);
-    float resultDistance = 999999;
-
-    [loop]
-    for (int i = 0; i < NumDistanceObjects; i++) {
-        resultDistance = min(resultDistance, evaluateFunction(
-            worldPosition,
-            DistanceObjectTypes[i], DistanceObjectCenters[i], DistanceObjectSizes[i]
-        ));
-    }
-
-    return resultDistance;
-}
-
-void DistanceFunctionPixelShader (
-    out float4 color : COLOR0,
-    in  float2 vpos  : VPOS
-) {
+float3 getPosition (in float2 vpos, in float3 center) {
     vpos *= DistanceField.InvScaleFactor;
     vpos += ViewportPosition;
+    float3 result = float3(vpos, SliceZ);
+    result -= center;
+    return result;
+}
 
-    float resultDistance = computeDistance(vpos);
+void BoxPixelShader (
+    out float4 color  : COLOR0,
+    in  float2 vpos   : VPOS,
+    in  float3 center : POSITION1,
+    in  float3 size   : POSITION2
+) {
+    float3 position = getPosition(vpos, center);
+
+    float3 d = abs(position) - size;
+    float resultDistance = 
+        min(
+            max(d.x, max(d.y, d.z)),
+            0.0
+        ) + length(max(d, 0.0)
+    );
+
     color = encodeDistance(resultDistance);
 }
 
-technique DistanceFunction
+void EllipsoidPixelShader(
+    out float4 color  : COLOR0,
+    in  float2 vpos   : VPOS,
+    in  float3 center : POSITION1,
+    in  float3 radius : POSITION2
+) {
+    float3 position = getPosition(vpos, center);
+
+    float l = length(position / radius) - 1.0;
+    float resultDistance =
+        l * min(min(radius.x, radius.y), radius.z);
+
+    color = encodeDistance(resultDistance);
+}
+
+void CylinderPixelShader(
+    out float4 color  : COLOR0,
+    in  float2 vpos   : VPOS,
+    in  float3 center : POSITION1,
+    in  float3 size   : POSITION2
+) {
+    float3 position = getPosition(vpos, center);
+
+    float resultDistance =
+        length(position.xz - center.xy) - center.z;
+
+    color = encodeDistance(resultDistance);
+}
+
+technique Box
 {
     pass P0
     {
         vertexShader = compile vs_3_0 DistanceFunctionVertexShader();
-        pixelShader = compile ps_3_0 DistanceFunctionPixelShader();
+        pixelShader  = compile ps_3_0 BoxPixelShader();
+    }
+}
+
+technique Ellipsoid
+{
+    pass P0
+    {
+        vertexShader = compile vs_3_0 DistanceFunctionVertexShader();
+        pixelShader  = compile ps_3_0 EllipsoidPixelShader();
+    }
+}
+
+technique Cylinder
+{
+    pass P0
+    {
+        vertexShader = compile vs_3_0 DistanceFunctionVertexShader();
+        pixelShader  = compile ps_3_0 CylinderPixelShader();
     }
 }
