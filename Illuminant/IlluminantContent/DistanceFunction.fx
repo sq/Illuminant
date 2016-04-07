@@ -65,8 +65,20 @@ void CylinderPixelShader(
 ) {
     float3 position = getPosition(vpos, center);
 
-    float resultDistance =
-        length(position.xz - center.xy) - center.z;
+    // HACK: Inigo's formula for this doesn't seem to work, so TIME TO WING IT
+
+    float l = length(position.xy / size.xy) - 1.0;
+    float distanceXy = l * min(size.x, size.y);
+    float distanceZ = abs(position.z / size.z) - 1.0;
+
+    float resultDistance;
+    if ((distanceXy <= 0) && (distanceZ <= 0)) {
+        resultDistance = max(distanceXy, distanceZ * size.z);
+    } else if (distanceZ <= 0) {
+        resultDistance = distanceXy;
+    } else {
+        resultDistance = distanceZ * size.z;
+    }
 
     color = encodeDistance(resultDistance);
 }

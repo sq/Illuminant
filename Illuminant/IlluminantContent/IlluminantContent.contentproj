@@ -78,7 +78,7 @@
       <Name>DistanceFunction</Name>
       <Importer>EffectImporter</Importer>
       <Processor>EffectProcessor</Processor>
-      <ProcessorParameters_DebugMode>Optimize</ProcessorParameters_DebugMode>
+      <ProcessorParameters_DebugMode>Debug</ProcessorParameters_DebugMode>
     </Compile>
   </ItemGroup>
   <ItemGroup>

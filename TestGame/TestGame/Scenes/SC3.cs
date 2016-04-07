@@ -262,7 +262,7 @@ namespace TestGame.Scenes {
 
         private void Pillar (float x, float y, int textureIndex) {
             var obs = new LightObstruction(
-                LightObstructionType.Box,
+                LightObstructionType.Cylinder,
                 new Vector3(x, y, Environment.GroundZ),
                 new Vector3(18, 8, 80)
             );
@@ -281,7 +281,7 @@ namespace TestGame.Scenes {
 
         private void Tree (float x, float y, int textureIndex) {
             var obs = new LightObstruction(
-                LightObstructionType.Ellipsoid,
+                LightObstructionType.Cylinder,
                 new Vector3(x, y, Environment.GroundZ),
                 new Vector3(19, 13, 65)
             );
