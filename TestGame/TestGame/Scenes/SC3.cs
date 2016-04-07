@@ -195,7 +195,7 @@ namespace TestGame.Scenes {
                 Game.Content, Game.RenderCoordinator, Game.Materials, ForegroundEnvironment, 
                 new RendererConfiguration(
                     Width / ForegroundScaleRatio, Height / ForegroundScaleRatio, true,
-                    Width, Height, 9
+                    Width, Height, 12
                 ) {
                     RenderScale = 1.0f / ForegroundScaleRatio,
                     DistanceFieldResolution = 0.5f,
@@ -261,15 +261,17 @@ namespace TestGame.Scenes {
         }
 
         private void Pillar (float x, float y, int textureIndex) {
+            var tex = Pillars[textureIndex];
+
             var obs = new LightObstruction(
                 LightObstructionType.Cylinder,
-                new Vector3(x, y, Environment.GroundZ),
-                new Vector3(18, 8, 80)
+                // HACK: Is it right to need a fudge factor here?
+                new Vector3(x, y - 5, Environment.GroundZ),
+                new Vector3(18, 8, tex.Height)
             );
             Environment.Obstructions.Add(obs);
             ForegroundEnvironment.Obstructions.Add(obs);
 
-            var tex = Pillars[textureIndex];
             ForegroundEnvironment.Billboards.Add(new Billboard {
                 Position = new Vector3(x - (tex.Width * 0.5f), y - tex.Height + 12, 0),
                 Normal = Vector3.UnitZ,
@@ -283,7 +285,7 @@ namespace TestGame.Scenes {
             var obs = new LightObstruction(
                 LightObstructionType.Cylinder,
                 new Vector3(x, y, Environment.GroundZ),
-                new Vector3(19, 13, 65)
+                new Vector3(64, 6, 65)
             );
             Environment.Obstructions.Add(obs);
             ForegroundEnvironment.Obstructions.Add(obs);

@@ -50,6 +50,7 @@ void EllipsoidPixelShader(
 ) {
     float3 position = getPosition(vpos, center);
 
+    // FIXME: Why is this a sphere???????????
     float l = length(position / radius) - 1.0;
     float resultDistance =
         l * min(min(radius.x, radius.y), radius.z);
@@ -65,20 +66,11 @@ void CylinderPixelShader(
 ) {
     float3 position = getPosition(vpos, center);
 
-    // HACK: Inigo's formula for this doesn't seem to work, so TIME TO WING IT
+    float3 p = position.xzy;
+    float2 h = size.xz;
 
-    float l = length(position.xy / size.xy) - 1.0;
-    float distanceXy = l * min(size.x, size.y);
-    float distanceZ = abs(position.z / size.z) - 1.0;
-
-    float resultDistance;
-    if ((distanceXy <= 0) && (distanceZ <= 0)) {
-        resultDistance = max(distanceXy, distanceZ * size.z);
-    } else if (distanceZ <= 0) {
-        resultDistance = distanceXy;
-    } else {
-        resultDistance = distanceZ * size.z;
-    }
+    float2 d = abs(float2(length(p.xz), p.y)) - h;
+    float resultDistance = min(max(d.x, d.y), 0.0) + length(max(d, 0.0));
 
     color = encodeDistance(resultDistance);
 }
