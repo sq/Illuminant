@@ -197,6 +197,31 @@ namespace TestGame.Scenes {
             }
         }
 
+        private Vector3 DeltaFromKeys (
+            float speed,
+            Keys minusX, Keys plusX,
+            Keys minusY, Keys plusY,
+            Keys minusZ, Keys plusZ
+        ) {
+            var ks = Game.KeyboardState;
+            var result = Vector3.Zero;
+
+            if (ks.IsKeyDown(minusX))
+                result.X -= speed;
+            if (ks.IsKeyDown(plusX))
+                result.X += speed;
+            if (ks.IsKeyDown(minusY))
+                result.Y -= speed;
+            if (ks.IsKeyDown(plusY))
+                result.Y += speed;
+            if (ks.IsKeyDown(minusZ))
+                result.Z -= speed;
+            if (ks.IsKeyDown(plusZ))
+                result.Z += speed;
+
+            return result;
+        }
+
         public override void Update (GameTime gameTime) {
             if (Game.IsActive) {
                 var time = (float)Time.Seconds;
@@ -215,26 +240,28 @@ namespace TestGame.Scenes {
                 if (KeyWasPressed(Keys.D3))
                     ShowDistanceField = !ShowDistanceField;
 
-                var translation = Vector3.Zero;
-
                 const float speed = 1;
+                var translation = DeltaFromKeys(
+                    speed,
+                    Keys.A, Keys.D,
+                    Keys.W, Keys.S,
+                    Keys.F, Keys.R
+                );
+                var growth = DeltaFromKeys(
+                    speed,
+                    Keys.J, Keys.L,
+                    Keys.I, Keys.K,
+                    Keys.OemSemicolon, Keys.P
+                );
 
-                var ks = Game.KeyboardState;
-                if (ks.IsKeyDown(Keys.W))
-                    translation.Y -= speed;
-                if (ks.IsKeyDown(Keys.S))
-                    translation.Y += speed;
-                if (ks.IsKeyDown(Keys.A))
-                    translation.X -= speed;
-                if (ks.IsKeyDown(Keys.D))
-                    translation.X += speed;
-                if (ks.IsKeyDown(Keys.F))
-                    translation.Z -= speed;
-                if (ks.IsKeyDown(Keys.R))
-                    translation.Z += speed;
-
-                if (translation.LengthSquared() > 0) {
-                    Environment.Obstructions[SelectedObject].Center += translation;
+                if ((translation.LengthSquared() > 0) || (growth.LengthSquared() > 0)) {
+                    var obs = Environment.Obstructions[SelectedObject];
+                    obs.Center += translation;
+                    obs.Size = new Vector3(
+                        Math.Max(1, obs.Size.X + growth.X),
+                        Math.Max(1, obs.Size.Y + growth.Y),
+                        Math.Max(1, obs.Size.Z + growth.Z)
+                    );
                     Renderer.InvalidateFields();
                 }
             }
