@@ -67,7 +67,7 @@ void FunctionSurfacePixelShader(
         float3 normal = estimateNormal(estimatedIntersection, vars);
         float normalDotLight = dot(normal, LightDirection);
         if (normalDotLight > 0)
-            result.rgb += LightColor * normalDotLight * color;
+            result.rgb += LightColor * normalDotLight * color.rgb;
     }
     else {
         result = 0;

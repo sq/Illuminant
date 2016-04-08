@@ -720,6 +720,7 @@ namespace Squared.Illuminant {
                 Configuration.DistanceFieldSize.Second,
                 Environment.MaximumZ
             );
+            var halfTexel = new Vector3(-0.5f * (1.0f / extent.X), -0.5f * (1.0f / extent.Y), 0);
 
             // HACK: Pick an appropriate length that will always travel through the whole field
             var rayLength = extent.Length() * 1.5f;
@@ -763,25 +764,25 @@ namespace Squared.Illuminant {
 
             var verts = new VisualizeDistanceFieldVertex[] {
                 new VisualizeDistanceFieldVertex {
-                    Position = tl,
+                    Position = tl + halfTexel,
                     RayStart = worldTL,
                     RayVector = rayVector,
                     Color = _color
                 },
                 new VisualizeDistanceFieldVertex {
-                    Position = tr,
+                    Position = tr + halfTexel,
                     RayStart = worldTR,
                     RayVector = rayVector,
                     Color = _color
                 },
                 new VisualizeDistanceFieldVertex {
-                    Position = br,
+                    Position = br + halfTexel,
                     RayStart = worldBR,
                     RayVector = rayVector,
                     Color = _color
                 },
                 new VisualizeDistanceFieldVertex {
-                    Position = bl,
+                    Position = bl + halfTexel,
                     RayStart = worldBL,
                     RayVector = rayVector,
                     Color = _color

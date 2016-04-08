@@ -285,7 +285,7 @@ namespace TestGame.Scenes {
             var obs = new LightObstruction(
                 LightObstructionType.Cylinder,
                 new Vector3(x, y, Environment.GroundZ),
-                new Vector3(64, 6, 65)
+                new Vector3(12, 6, 65)
             );
             Environment.Obstructions.Add(obs);
             ForegroundEnvironment.Obstructions.Add(obs);
