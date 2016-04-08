@@ -269,6 +269,9 @@ namespace Squared.Illuminant {
 
                 materials.Add(IlluminantMaterials.ObjectSurfaces = 
                     new Squared.Render.EffectMaterial(content.Load<Effect>("VisualizeDistanceField"), "ObjectSurfaces"));
+
+                materials.Add(IlluminantMaterials.ObjectOutlines = 
+                    new Squared.Render.EffectMaterial(content.Load<Effect>("VisualizeDistanceField"), "ObjectOutlines"));
             }
 
             materials.Add(IlluminantMaterials.ScreenSpaceGammaCompressedBitmap = new Squared.Render.EffectMaterial(
@@ -692,7 +695,9 @@ namespace Squared.Illuminant {
         public void VisualizeDistanceField (
             Bounds rectangle, 
             Vector3 viewDirection,
-            IBatchContainer container, int layerIndex
+            IBatchContainer container, int layerIndex,
+            VisualizationMode mode = VisualizationMode.Surfaces,
+            BlendState blendState = null
         ) {
             var indices = new short[] {
                 0, 1, 3, 1, 2, 3
@@ -769,16 +774,27 @@ namespace Squared.Illuminant {
                 }
             };
 
-            var material = IlluminantMaterials.ObjectSurfaces;
+            var ambientColor = new Vector3(0.05f, 0.1f, 0.1f);
+            var lightDirection = new Vector3(0, -0.5f, -1.0f);
+            lightDirection.Normalize();
+
+            var material = 
+                mode == VisualizationMode.Outlines
+                    ? IlluminantMaterials.ObjectOutlines
+                    : IlluminantMaterials.ObjectSurfaces;
+
             using (var batch = PrimitiveBatch<VisualizeDistanceFieldVertex>.New(
                 container, layerIndex++, Materials.Get(
                     material,
                     depthStencilState: DepthStencilState.None,
                     rasterizerState: RasterizerState.CullNone,
-                    blendState: BlendState.Opaque
+                    blendState: blendState ?? BlendState.AlphaBlend
                 ), (dm, _) => {
                     var p = material.Effect.Parameters;
                     SetDistanceFieldParameters(p, true);
+                    p["AmbientColor"].SetValue(ambientColor);
+                    p["LightDirection"].SetValue(lightDirection);
+                    p["LightColor"].SetValue(new Vector3(0.7f));
                     material.Flush();
                 }
             )) {
@@ -1524,5 +1540,10 @@ namespace Squared.Illuminant {
     public struct LightmapInfo {
         public float Minimum, Maximum, Mean;
         public float Overexposed;
+    }
+
+    public enum VisualizationMode {
+        Surfaces,
+        Outlines
     }
 }

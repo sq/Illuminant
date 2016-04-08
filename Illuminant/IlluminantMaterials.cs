@@ -21,7 +21,7 @@ namespace Squared.Illuminant {
             GammaCompressedLightingResolve, ToneMappedLightingResolve;
         public Render.EffectMaterial ScreenSpaceGammaCompressedBitmap, WorldSpaceGammaCompressedBitmap;
         public Render.EffectMaterial ScreenSpaceToneMappedBitmap, WorldSpaceToneMappedBitmap;
-        public Render.EffectMaterial ObjectSurfaces;
+        public Render.EffectMaterial ObjectSurfaces, ObjectOutlines;
 
         internal readonly Effect[] EffectsToSetGammaCompressionParametersOn;
         internal readonly Effect[] EffectsToSetToneMappingParametersOn;
