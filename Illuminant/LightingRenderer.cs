@@ -272,6 +272,12 @@ namespace Squared.Illuminant {
 
                 materials.Add(IlluminantMaterials.ObjectOutlines = 
                     new Squared.Render.EffectMaterial(content.Load<Effect>("VisualizeDistanceField"), "ObjectOutlines"));
+
+                materials.Add(IlluminantMaterials.FunctionSurface = 
+                    new Squared.Render.EffectMaterial(content.Load<Effect>("VisualizeDistanceFunction"), "FunctionSurface"));
+
+                materials.Add(IlluminantMaterials.FunctionOutline = 
+                    new Squared.Render.EffectMaterial(content.Load<Effect>("VisualizeDistanceFunction"), "FunctionOutline"));
             }
 
             materials.Add(IlluminantMaterials.ScreenSpaceGammaCompressedBitmap = new Squared.Render.EffectMaterial(
@@ -696,8 +702,10 @@ namespace Squared.Illuminant {
             Bounds rectangle, 
             Vector3 viewDirection,
             IBatchContainer container, int layerIndex,
+            LightObstruction singleObject = null,
             VisualizationMode mode = VisualizationMode.Surfaces,
-            BlendState blendState = null
+            BlendState blendState = null,
+            Vector4? color = null
         ) {
             var indices = new short[] {
                 0, 1, 3, 1, 2, 3
@@ -751,26 +759,32 @@ namespace Squared.Illuminant {
             worldBL = worldBL * extent;
             worldBR = worldBR * extent;
 
+            var _color = color.GetValueOrDefault(Vector4.One);
+
             var verts = new VisualizeDistanceFieldVertex[] {
                 new VisualizeDistanceFieldVertex {
                     Position = tl,
                     RayStart = worldTL,
-                    RayVector = rayVector
+                    RayVector = rayVector,
+                    Color = _color
                 },
                 new VisualizeDistanceFieldVertex {
                     Position = tr,
                     RayStart = worldTR,
-                    RayVector = rayVector
+                    RayVector = rayVector,
+                    Color = _color
                 },
                 new VisualizeDistanceFieldVertex {
                     Position = br,
                     RayStart = worldBR,
-                    RayVector = rayVector
+                    RayVector = rayVector,
+                    Color = _color
                 },
                 new VisualizeDistanceFieldVertex {
                     Position = bl,
                     RayStart = worldBL,
-                    RayVector = rayVector
+                    RayVector = rayVector,
+                    Color = _color
                 }
             };
 
@@ -778,10 +792,17 @@ namespace Squared.Illuminant {
             var lightDirection = new Vector3(0, -0.5f, -1.0f);
             lightDirection.Normalize();
 
-            var material = 
-                mode == VisualizationMode.Outlines
+            Render.EffectMaterial material = null;
+
+            if (singleObject != null) {
+                material = mode == VisualizationMode.Outlines
+                    ? IlluminantMaterials.FunctionOutline
+                    : IlluminantMaterials.FunctionSurface;
+            } else {
+                material = mode == VisualizationMode.Outlines
                     ? IlluminantMaterials.ObjectOutlines
                     : IlluminantMaterials.ObjectSurfaces;
+            }
 
             using (var batch = PrimitiveBatch<VisualizeDistanceFieldVertex>.New(
                 container, layerIndex++, Materials.Get(
@@ -795,6 +816,13 @@ namespace Squared.Illuminant {
                     p["AmbientColor"].SetValue(ambientColor);
                     p["LightDirection"].SetValue(lightDirection);
                     p["LightColor"].SetValue(new Vector3(0.75f));
+
+                    if (singleObject != null) {
+                        p["FunctionType"].SetValue((int)singleObject.Type);
+                        p["FunctionCenter"].SetValue(singleObject.Center);
+                        p["FunctionSize"].SetValue(singleObject.Size);
+                    }
+
                     material.Flush();
                 }
             )) {
@@ -1406,7 +1434,7 @@ namespace Squared.Illuminant {
 
                     int j = 0;
                     for (int i = 0; i < items.Count; i++) {
-                        var item = items[i];
+                        var item = buffer.Data[i];
                         var type = (int)item.Type;
 
                         if (firstOffset[type] == -1)

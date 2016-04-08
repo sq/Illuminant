@@ -22,6 +22,7 @@ void VisualizeVertexShader(
     in float3 position       : POSITION0,
     inout float3 rayStart    : POSITION1,
     inout float3 rayVector   : POSITION2,
+    inout float4 color       : COLOR0,
     out float3 worldPosition : TEXCOORD2,
     out float4 result        : POSITION0
 ) {
@@ -34,6 +35,7 @@ void ObjectSurfacesPixelShader(
     in  float2 worldPosition : TEXCOORD2,
     in  float3 rayStart : POSITION1,
     in  float3 rayVector : POSITION2,
+    in  float4 color : COLOR0,
     in  float2 vpos : VPOS,
     out float4 result : COLOR0
 ) {
@@ -47,7 +49,7 @@ void ObjectSurfacesPixelShader(
         float3 normal = estimateNormal(estimatedIntersection, vars);
         float normalDotLight = dot(normal, LightDirection);
         if (normalDotLight > 0)
-            result.rgb += LightColor * normalDotLight;
+            result.rgb += LightColor * normalDotLight * color;
     }
     else {
         result = 0;
@@ -59,6 +61,7 @@ void ObjectOutlinesPixelShader(
     in  float2 worldPosition : TEXCOORD2,
     in  float3 rayStart : POSITION1,
     in  float3 rayVector : POSITION2,
+    in  float4 color : COLOR0,
     in  float2 vpos : VPOS,
     out float4 result : COLOR0
 ) {
@@ -66,7 +69,7 @@ void ObjectOutlinesPixelShader(
 
     float a = traceOutlines(rayStart, rayVector, vars);
 
-    result = float4(a, a, a, a);
+    result = float4(a, a, a, a) * color;
 
     if (a <= 0)
         discard;

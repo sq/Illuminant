@@ -1,7 +1,7 @@
 #define MIN_STEP_SIZE 3
 #define SMALL_STEP_FACTOR 1
 #define EPSILON 0.05
-#define OUTLINE_SIZE 2
+#define OUTLINE_SIZE 1.5
 
 uniform float3 AmbientColor;
 uniform float3 LightDirection;

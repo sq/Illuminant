@@ -140,20 +140,27 @@ namespace TestGame.Scenes {
 
             Environment.Obstructions.Add(new LightObstruction(
                 LightObstructionType.Ellipsoid,
-                offset, new Vector3(24, 8, 8)
+                offset, new Vector3(12, 12, 36)
             ));
         }
 
         private void Visualize (Frame frame, Bounds rect, Vector3 gaze) {
             if (ShowSurfaces)
                 Renderer.VisualizeDistanceField(
-                    rect, gaze, frame, 2, VisualizationMode.Surfaces
+                    rect, gaze, frame, 2, mode: VisualizationMode.Surfaces
                 );
 
             if (ShowOutlines)
                 Renderer.VisualizeDistanceField(
-                    rect, gaze, frame, 3, VisualizationMode.Outlines
+                    rect, gaze, frame, 3, mode: VisualizationMode.Outlines
                 );
+
+            var obj = Environment.Obstructions[SelectedObject];
+            Renderer.VisualizeDistanceField(
+                rect, gaze, frame, 4, obj, 
+                VisualizationMode.Outlines, BlendState.AlphaBlend,
+                color: new Vector4(0.15f, 0.4f, 0.0f, 0.15f)
+            );
 
             var ir = new ImperativeRenderer(frame, Game.Materials, 4, blendState: BlendState.AlphaBlend, autoIncrementLayer: true);
             var text = gaze.ToString();
@@ -165,7 +172,6 @@ namespace TestGame.Scenes {
             Renderer.UpdateFields(frame, -1);
 
             ClearBatch.AddNew(frame, 0, Game.Materials.Clear, new Color(0, 32 / 255.0f, 32 / 255.0f, 1));
-
 
             foreach (var vp in Viewports)
                 Visualize(frame, vp.Rectangle, vp.ViewAngle);

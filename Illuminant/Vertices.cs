@@ -131,6 +131,7 @@ namespace Squared.Illuminant {
         public Vector3 Position;
         public Vector3 RayStart;
         public Vector3 RayVector;
+        public Vector4 Color;
 
         public static VertexDeclaration _VertexDeclaration;
 
@@ -140,14 +141,16 @@ namespace Squared.Illuminant {
             _VertexDeclaration = new VertexDeclaration(
                 new VertexElement(Marshal.OffsetOf(tThis, "Position").ToInt32(),  VertexElementFormat.Vector3, VertexElementUsage.Position, 0),
                 new VertexElement(Marshal.OffsetOf(tThis, "RayStart").ToInt32(),  VertexElementFormat.Vector3, VertexElementUsage.Position, 1),
-                new VertexElement(Marshal.OffsetOf(tThis, "RayVector").ToInt32(), VertexElementFormat.Vector3, VertexElementUsage.Position, 2)
+                new VertexElement(Marshal.OffsetOf(tThis, "RayVector").ToInt32(), VertexElementFormat.Vector3, VertexElementUsage.Position, 2),
+                new VertexElement(Marshal.OffsetOf(tThis, "Color").ToInt32(), VertexElementFormat.Vector4, VertexElementUsage.Color, 0)
             );
         }
 
-        public VisualizeDistanceFieldVertex (Vector3 position, Vector3 rayStart, Vector3 rayVector) {
+        public VisualizeDistanceFieldVertex (Vector3 position, Vector3 rayStart, Vector3 rayVector, Vector4 color) {
             Position = position;
             RayStart = rayStart;
             RayVector = rayVector;
+            Color = color;
         }
 
         public VertexDeclaration VertexDeclaration {
