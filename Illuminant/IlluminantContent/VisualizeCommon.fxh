@@ -1,7 +1,6 @@
-#define MIN_STEP_SIZE 3
 #define SMALL_STEP_FACTOR 1
-#define EPSILON 0.05
-#define OUTLINE_SIZE 1.5
+#define EPSILON 0.5
+#define OUTLINE_SIZE 1.8
 
 uniform float3 AmbientColor;
 uniform float3 LightDirection;
@@ -37,15 +36,16 @@ bool traceSurface (
     float positionAlongRay = 0;
     float rayLength = length(rayVector);
     float3 rayDirection = rayVector / rayLength;
-    float minStepSize = MIN_STEP_SIZE;
 
     [loop]
     while (positionAlongRay <= rayLength) {
         float3 samplePosition = rayStart + (rayDirection * positionAlongRay);
         float distance = SAMPLE(samplePosition, vars);
 
+        float minStepSize = max(2.5, (positionAlongRay / rayLength) * 12);
+
         [branch]
-        if (distance <= EPSILON) {
+        if (distance <= minStepSize) {
             // HACK: Estimate a likely intersection point
             intersectionDistance = positionAlongRay + distance;
             estimatedIntersection = rayStart + (rayDirection * intersectionDistance);
@@ -71,7 +71,6 @@ float traceOutlines (
     float positionAlongRay = 0;
     float rayLength = length(rayVector);
     float3 rayDirection = rayVector / rayLength;
-    float minStepSize = MIN_STEP_SIZE;
 
     [loop]
     while (positionAlongRay <= rayLength) {
@@ -83,10 +82,11 @@ float traceOutlines (
         if (distance < -OUTLINE_SIZE)
             break;
 
-        float stepSize = max(MIN_STEP_SIZE, abs(distance) * SMALL_STEP_FACTOR);
+        float minStepSize = max(2.5, (positionAlongRay / rayLength) * 12);
+        float stepSize = max(minStepSize, abs(distance) * SMALL_STEP_FACTOR);
         positionAlongRay += stepSize;
     }
 
-    float a = 1.0 - abs(clamp(closestDistance, -OUTLINE_SIZE, OUTLINE_SIZE) / OUTLINE_SIZE);
+    float a = 1.0 - abs(clamp(closestDistance - 1, -OUTLINE_SIZE, OUTLINE_SIZE) / OUTLINE_SIZE);
     return a * a;
 }
