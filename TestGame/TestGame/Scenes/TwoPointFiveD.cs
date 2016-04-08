@@ -110,7 +110,6 @@ namespace TestGame.Scenes {
                     DistanceFieldLongStepFactor = 0.5f,
                     DistanceFieldOcclusionToOpacityPower = 0.7f,
                     DistanceFieldMaxConeRadius = 24,
-                    GBufferCaching = true,
                     DistanceFieldUpdateRate = 16,
                 }
             );
@@ -163,7 +162,7 @@ namespace TestGame.Scenes {
                     new Vector3(500, 750, 0), new Vector3(90, 45, 30f)
                 ));
 
-            if (true)
+            if (false)
                 Environment.HeightVolumes.Clear();
 
             Environment.GroundZ = 0;

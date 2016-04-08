@@ -8,8 +8,8 @@ uniform float  SliceZ;
 
 void DistanceFunctionVertexShader(
     in    float3 position : POSITION0, // x, y, z
-    inout float3 center   : POSITION1,
-    inout float3 size     : POSITION2,
+    inout float3 center   : TEXCOORD0,
+    inout float3 size     : TEXCOORD1,
     out   float4 result   : POSITION0
 ) {
     result = TransformPosition(float4(position.xy - ViewportPosition, 0, 1), 0);
@@ -25,8 +25,8 @@ float3 getPosition (in float2 vpos) {
 void BoxPixelShader (
     out float4 color  : COLOR0,
     in  float2 vpos   : VPOS,
-    in  float3 center : POSITION1,
-    in  float3 size   : POSITION2
+    in  float3 center : TEXCOORD0,
+    in  float3 size   : TEXCOORD1
 ) {
     float resultDistance = evaluateBox(getPosition(vpos), center, size);
     color = encodeDistance(resultDistance);
@@ -35,8 +35,8 @@ void BoxPixelShader (
 void EllipsoidPixelShader(
     out float4 color  : COLOR0,
     in  float2 vpos   : VPOS,
-    in  float3 center : POSITION1,
-    in  float3 size   : POSITION2
+    in  float3 center : TEXCOORD0,
+    in  float3 size : TEXCOORD1
 ) {
     float resultDistance = evaluateEllipsoid(getPosition(vpos), center, size);
     color = encodeDistance(resultDistance);
@@ -45,8 +45,8 @@ void EllipsoidPixelShader(
 void CylinderPixelShader(
     out float4 color  : COLOR0,
     in  float2 vpos   : VPOS,
-    in  float3 center : POSITION1,
-    in  float3 size   : POSITION2
+    in  float3 center : TEXCOORD0,
+    in  float3 size : TEXCOORD1
 ) {
     float resultDistance = evaluateCylinder(getPosition(vpos), center, size);
     color = encodeDistance(resultDistance);
