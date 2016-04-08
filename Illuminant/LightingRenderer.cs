@@ -266,6 +266,9 @@ namespace Squared.Illuminant {
 
                 materials.Add(IlluminantMaterials.ToneMappedLightingResolve = 
                     new Squared.Render.EffectMaterial(content.Load<Effect>("Resolve"), "ToneMappedLightingResolve"));
+
+                materials.Add(IlluminantMaterials.ObjectSurfaces = 
+                    new Squared.Render.EffectMaterial(content.Load<Effect>("VisualizeDistanceField"), "ObjectSurfaces"));
             }
 
             materials.Add(IlluminantMaterials.ScreenSpaceGammaCompressedBitmap = new Squared.Render.EffectMaterial(
@@ -676,7 +679,97 @@ namespace Squared.Illuminant {
             });
 
             sg.Draw(drawCall, material: m);
-        }        
+        }
+
+        public void VisualizeDistanceField (
+            Bounds rectangle, 
+            Vector3 viewDirection,
+            IBatchContainer container, int layerIndex
+        ) {
+            var indices = new short[] {
+                0, 1, 3, 1, 2, 3
+            };
+            var tl = new Vector3(rectangle.TopLeft, 0);
+            var tr = new Vector3(rectangle.TopRight, 0);
+            var bl = new Vector3(rectangle.BottomLeft, 0);
+            var br = new Vector3(rectangle.BottomRight, 0);
+
+            var extent = new Vector3(
+                Configuration.DistanceFieldSize.First,
+                Configuration.DistanceFieldSize.Second,
+                Environment.MaximumZ
+            );
+
+            // HACK: Pick an appropriate length that will always travel through the whole field
+            var rayLength = extent.Length() * 1.5f;
+            var rayVector = viewDirection * rayLength;
+
+            // HACK: Ensure we are always gazing into the field
+            var rayOrigin = new Vector3(
+                rayVector.X < 0 ? 1 : 0,
+                rayVector.Y < 0 ? 1 : 0,
+                rayVector.Z < 0 ? 1 : 0
+            );
+
+            var mat = Matrix.CreateWorld(
+                rayOrigin, viewDirection, 
+                viewDirection.Z != 0
+                    ? Vector3.UnitY
+                    : Vector3.UnitZ
+            );
+            var inverseMat = Matrix.Invert(mat);
+
+            var worldTL = new Vector3(0, 0, 0);
+            var worldTR = new Vector3(1, 0, 0);
+            var worldBL = new Vector3(0, 1, 0);
+            var worldBR = new Vector3(1, 1, 0);
+
+            worldTL = Vector3.Transform(worldTL, mat) * extent;
+            worldTR = Vector3.Transform(worldTR, mat) * extent;
+            worldBL = Vector3.Transform(worldBL, mat) * extent;
+            worldBR = Vector3.Transform(worldBR, mat) * extent;
+
+            var verts = new VisualizeDistanceFieldVertex[] {
+                new VisualizeDistanceFieldVertex {
+                    Position = tl,
+                    RayStart = worldTL,
+                    RayVector = rayVector
+                },
+                new VisualizeDistanceFieldVertex {
+                    Position = tr,
+                    RayStart = worldTR,
+                    RayVector = rayVector
+                },
+                new VisualizeDistanceFieldVertex {
+                    Position = br,
+                    RayStart = worldBR,
+                    RayVector = rayVector
+                },
+                new VisualizeDistanceFieldVertex {
+                    Position = bl,
+                    RayStart = worldBL,
+                    RayVector = rayVector
+                }
+            };
+
+            var material = IlluminantMaterials.ObjectSurfaces;
+            using (var batch = PrimitiveBatch<VisualizeDistanceFieldVertex>.New(
+                container, layerIndex++, Materials.Get(
+                    material,
+                    depthStencilState: DepthStencilState.None,
+                    rasterizerState: RasterizerState.CullNone,
+                    blendState: BlendState.Opaque
+                ), (dm, _) => {
+                    var p = material.Effect.Parameters;
+                    SetDistanceFieldParameters(p, true);
+                    material.Flush();
+                }
+            )) {
+                batch.Add(new PrimitiveDrawCall<VisualizeDistanceFieldVertex>(
+                    PrimitiveType.TriangleList, verts, 0, 4, indices, 0, 2
+                ));
+            }
+        }
 
         private void SetDistanceFieldParameters (EffectParameterCollection p, bool setDistanceTexture) {
             var s = p["DistanceField"].StructureMembers;
@@ -705,7 +798,9 @@ namespace Squared.Illuminant {
                 Configuration.DistanceFieldLongStepFactor
             ));
 
-            p["RenderScale"].SetValue(Configuration.RenderScale);
+            var rs = p["RenderScale"];
+            if (rs != null)
+                rs.SetValue(Configuration.RenderScale);
 
             if (setDistanceTexture)
                 p["DistanceFieldTexture"].SetValue(_DistanceField);

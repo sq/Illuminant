@@ -125,4 +125,35 @@ namespace Squared.Illuminant {
             }
         }
     }
+
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    public struct VisualizeDistanceFieldVertex : IVertexType {
+        public Vector3 Position;
+        public Vector3 RayStart;
+        public Vector3 RayVector;
+
+        public static VertexDeclaration _VertexDeclaration;
+
+        static VisualizeDistanceFieldVertex () {
+            var tThis = typeof(VisualizeDistanceFieldVertex);
+
+            _VertexDeclaration = new VertexDeclaration(
+                new VertexElement(Marshal.OffsetOf(tThis, "Position").ToInt32(),  VertexElementFormat.Vector3, VertexElementUsage.Position, 0),
+                new VertexElement(Marshal.OffsetOf(tThis, "RayStart").ToInt32(),  VertexElementFormat.Vector3, VertexElementUsage.Position, 1),
+                new VertexElement(Marshal.OffsetOf(tThis, "RayVector").ToInt32(), VertexElementFormat.Vector3, VertexElementUsage.Position, 2)
+            );
+        }
+
+        public VisualizeDistanceFieldVertex (Vector3 position, Vector3 rayStart, Vector3 rayVector) {
+            Position = position;
+            RayStart = rayStart;
+            RayVector = rayVector;
+        }
+
+        public VertexDeclaration VertexDeclaration {
+            get {
+                return _VertexDeclaration;
+            }
+        }
+    }
 }

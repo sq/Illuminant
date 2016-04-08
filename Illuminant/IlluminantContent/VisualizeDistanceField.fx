@@ -1,6 +1,5 @@
 #include "DistanceFieldCommon.fxh"
 
-#define MAX_STEPS 64
 #define MIN_STEP_SIZE 1
 #define EPSILON 0.5
 
@@ -18,14 +17,14 @@ float4 ApplyTransform (float3 position) {
 }
 
 void VisualizeVertexShader(
-    in float2 position       : POSITION0,
+    in float3 position       : POSITION0,
     inout float3 rayStart    : POSITION1,
     inout float3 rayVector   : POSITION2,
-    out float2 worldPosition : TEXCOORD2,
+    out float3 worldPosition : TEXCOORD2,
     out float4 result        : POSITION0
 ) {
     worldPosition = position;
-    float4 transformedPosition = ApplyTransform(float3(position, 0));
+    float4 transformedPosition = ApplyTransform(position);
     result = float4(transformedPosition.xy, 0, transformedPosition.w);
 }
 
@@ -69,9 +68,9 @@ void ObjectSurfacesPixelShader(
 ) {
     float intersectionDistance;
     if (traceRay(rayStart, rayVector, intersectionDistance)) {
-        result = float4(1, 1, 1, 1);
-    } else {
         result = float4(0, 0, 0, 0);
+    } else {
+        result = float4(1, 1, 1, 1);
     }
 }
 

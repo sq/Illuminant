@@ -116,6 +116,7 @@
     <Compile Include="PerformanceStats.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Program.cs" />
+    <Compile Include="Scenes\DistanceFieldEditor.cs" />
     <Compile Include="Scenes\SC3.cs" />
     <Compile Include="Scenes\TwoPointFiveD.cs" />
     <Compile Include="Scenes\HeightVolumeTest.cs" />
