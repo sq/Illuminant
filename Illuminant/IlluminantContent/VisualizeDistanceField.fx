@@ -1,6 +1,6 @@
 #include "DistanceFieldCommon.fxh"
 
-#define MIN_STEP_SIZE 1
+#define MIN_STEP_SIZE 3
 #define EPSILON 0.5
 
 shared float2 ViewportScale;

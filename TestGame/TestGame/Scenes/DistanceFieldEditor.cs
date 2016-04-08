@@ -23,7 +23,7 @@ namespace TestGame.Scenes {
         bool ShowSurfaces = true;
 
         public DistanceFieldEditor (TestGame game, int width, int height)
-            : base(game, 1024, 1024) {
+            : base(game, 256, 256) {
         }
 
         public override void LoadContent () {
@@ -36,68 +36,67 @@ namespace TestGame.Scenes {
                     Width, Height, 256, true
                 ) {
                     RenderScale = 1.0f,
-                    DistanceFieldResolution = 0.25f,
-                    DistanceFieldUpdateRate = 1
+                    DistanceFieldResolution = 0.5f,
+                    DistanceFieldUpdateRate = 8
                 }
             );
 
             Environment.GroundZ = 0;
-            Environment.MaximumZ = 1024;
+            Environment.MaximumZ = 256;
             Environment.ZToYMultiplier = 2.5f;
 
-            var offset = new Vector3(64, 64, 64);
-            var size = new Vector3(48, 48, 48);
+            var offset = new Vector3(32, 32, 32);
+            var size = new Vector3(24, 24, 24);
 
             Environment.Obstructions.Add(new LightObstruction(
                 LightObstructionType.Box,
                 offset, size
             ));
 
-            offset.X += (size.X * 2) + 16;
+            offset.X += (size.X * 2) + 8;
 
             Environment.Obstructions.Add(new LightObstruction(
                 LightObstructionType.Ellipsoid,
                 offset, size                
             ));
 
-            offset.X += (size.X * 2) + 16;
+            offset.X += (size.X * 2) + 8;
 
             Environment.Obstructions.Add(new LightObstruction(
                 LightObstructionType.Cylinder,
                 offset, size                
             ));
         }
+
+        private void Visualize (Frame frame, ref int layer, float x, float y, float size, Vector3 gaze) {
+            var rect = Bounds.FromPositionAndSize(new Vector2(x, y), new Vector2(size, size));
+            Renderer.VisualizeDistanceField(
+                rect, gaze, frame, layer++
+            );
+        }
         
         public override void Draw (Squared.Render.Frame frame) {
             Renderer.UpdateFields(frame, -1);
 
-            var minLength = Math.Min(
-                Game.Graphics.PreferredBackBufferWidth / 2.1f,
+            var visSize = Math.Min(
+                Game.Graphics.PreferredBackBufferWidth / 3.1f,
                 Game.Graphics.PreferredBackBufferHeight / 2.1f
             );
-
-            var visSize = new Vector2(minLength, minLength);
 
             ClearBatch.AddNew(frame, 0, Game.Materials.Clear, Color.Blue);
 
             if (ShowSurfaces) {
-                Renderer.VisualizeDistanceField(
-                    Bounds.FromPositionAndSize(Vector2.Zero, visSize),
-                    -Vector3.UnitZ,
-                    frame, 1
-                );
+                const float pad = 8;
+                int layer = 1;
 
-                Renderer.VisualizeDistanceField(
-                    Bounds.FromPositionAndSize(new Vector2(visSize.X + 8, 0), visSize),
-                    -Vector3.UnitY,
-                    frame, 2
-                );
+                Visualize(frame, ref layer, 0, 0, visSize, -Vector3.UnitX);
+                Visualize(frame, ref layer, 0, visSize + pad, visSize, Vector3.UnitX);
 
-                Renderer.VisualizeDistanceField(
-                    Bounds.FromPositionAndSize(new Vector2(0, visSize.Y + 8), visSize),
-                    -Vector3.UnitX,
-                    frame, 3
-                );
+                Visualize(frame, ref layer, visSize + pad, 0, visSize, -Vector3.UnitY);
+                Visualize(frame, ref layer, visSize + pad, visSize + pad, visSize, Vector3.UnitY);
+
+                Visualize(frame, ref layer, (visSize + pad) * 2, 0, visSize, -Vector3.UnitZ);
+                Visualize(frame, ref layer, (visSize + pad) * 2, visSize + pad, visSize, Vector3.UnitZ);
             }
         }
 
