@@ -140,8 +140,8 @@ namespace Squared.Illuminant {
 
             _VertexDeclaration = new VertexDeclaration(
                 new VertexElement(Marshal.OffsetOf(tThis, "Position").ToInt32(),  VertexElementFormat.Vector3, VertexElementUsage.Position, 0),
-                new VertexElement(Marshal.OffsetOf(tThis, "RayStart").ToInt32(),  VertexElementFormat.Vector3, VertexElementUsage.Position, 1),
-                new VertexElement(Marshal.OffsetOf(tThis, "RayVector").ToInt32(), VertexElementFormat.Vector3, VertexElementUsage.Position, 2),
+                new VertexElement(Marshal.OffsetOf(tThis, "RayStart").ToInt32(),  VertexElementFormat.Vector3, VertexElementUsage.TextureCoordinate, 0),
+                new VertexElement(Marshal.OffsetOf(tThis, "RayVector").ToInt32(), VertexElementFormat.Vector3, VertexElementUsage.TextureCoordinate, 1),
                 new VertexElement(Marshal.OffsetOf(tThis, "Color").ToInt32(), VertexElementFormat.Vector4, VertexElementUsage.Color, 0)
             );
         }

@@ -43,10 +43,10 @@ namespace TestGame.Scenes {
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(
                     Width, Height, true,
-                    Width, Height, 128, true
+                    Width, Height, 32, true
                 ) {
                     RenderScale = 1.0f,
-                    DistanceFieldResolution = 0.5f,
+                    DistanceFieldResolution = 0.25f,
                     DistanceFieldUpdateRate = 32
                 }
             );

@@ -27,8 +27,8 @@ float4 ApplyTransform (float3 position) {
 
 void VisualizeVertexShader(
     in float3 position       : POSITION0,
-    inout float3 rayStart    : POSITION1,
-    inout float3 rayVector   : POSITION2,
+    inout float3 rayStart    : TEXCOORD0,
+    inout float3 rayVector   : TEXCOORD1,
     inout float4 color       : COLOR0,
     out float3 worldPosition : TEXCOORD2,
     out float4 result        : POSITION0
@@ -51,8 +51,8 @@ float evaluateFunctions (float3 worldPosition, float vars) {
 
 void FunctionSurfacePixelShader(
     in  float2 worldPosition : TEXCOORD2,
-    in  float3 rayStart : POSITION1,
-    in  float3 rayVector : POSITION2,
+    in  float3 rayStart : TEXCOORD0,
+    in  float3 rayVector : TEXCOORD1,
     in  float4 color : COLOR0,
     in  float2 vpos : VPOS,
     out float4 result : COLOR0
@@ -77,8 +77,8 @@ void FunctionSurfacePixelShader(
 
 void FunctionOutlinePixelShader(
     in  float2 worldPosition : TEXCOORD2,
-    in  float3 rayStart : POSITION1,
-    in  float3 rayVector : POSITION2,
+    in  float3 rayStart : TEXCOORD0,
+    in  float3 rayVector : TEXCOORD1,
     in  float4 color : COLOR0,
     in  float2 vpos : VPOS,
     out float4 result : COLOR0
