@@ -1,7 +1,7 @@
 #include "DistanceFieldCommon.fxh"
 
-#define MIN_STEP_SIZE 2
-#define SMALL_STEP_FACTOR 0.95
+#define MIN_STEP_SIZE 3
+#define SMALL_STEP_FACTOR 1
 #define EPSILON 0.05
 #define OUTLINE_SIZE 2
 
@@ -44,7 +44,7 @@ float3 estimateNormal (
         DistanceField.InvScaleFactor,
         DistanceField.Extent.z / DistanceField.TextureSliceCount.z, 
         0
-    ) * 0.5;
+    );
 
     return normalize(float3(
         sampleDistanceField(position + texel.xww, vars) - sampleDistanceField(position - texel.xww, vars),
@@ -63,6 +63,7 @@ bool traceRay(
     float positionAlongRay = 0;
     float rayLength = length(rayVector);
     float3 rayDirection = rayVector / rayLength;
+    float minStepSize = MIN_STEP_SIZE;
 
     [loop]
     while (positionAlongRay <= rayLength) {
@@ -77,7 +78,7 @@ bool traceRay(
             return true;
         }
 
-        float stepSize = max(MIN_STEP_SIZE, abs(distance) * SMALL_STEP_FACTOR);
+        float stepSize = max(minStepSize, abs(distance) * SMALL_STEP_FACTOR);
         positionAlongRay += stepSize;
     }
 
@@ -124,6 +125,7 @@ void ObjectOutlinesPixelShader(
     float positionAlongRay = 0;
     float rayLength = length(rayVector);
     float3 rayDirection = rayVector / rayLength;
+    float minStepSize = MIN_STEP_SIZE;
 
     [loop]
     while (positionAlongRay <= rayLength) {

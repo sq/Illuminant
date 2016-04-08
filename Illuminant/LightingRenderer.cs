@@ -774,7 +774,7 @@ namespace Squared.Illuminant {
                 }
             };
 
-            var ambientColor = new Vector3(0.05f, 0.1f, 0.1f);
+            var ambientColor = new Vector3(0.1f, 0.15f, 0.15f);
             var lightDirection = new Vector3(0, -0.5f, -1.0f);
             lightDirection.Normalize();
 
@@ -794,7 +794,7 @@ namespace Squared.Illuminant {
                     SetDistanceFieldParameters(p, true);
                     p["AmbientColor"].SetValue(ambientColor);
                     p["LightDirection"].SetValue(lightDirection);
-                    p["LightColor"].SetValue(new Vector3(0.7f));
+                    p["LightColor"].SetValue(new Vector3(0.75f));
                     material.Flush();
                 }
             )) {

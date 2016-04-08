@@ -16,6 +16,11 @@ using Squared.Util;
 
 namespace TestGame.Scenes {
     public class DistanceFieldEditor : Scene {
+        public struct Viewport {
+            public Bounds  Rectangle;
+            public Vector3 ViewAngle;
+        }
+
         LightingEnvironment Environment;
         LightingRenderer Renderer;
 
@@ -24,6 +29,8 @@ namespace TestGame.Scenes {
         bool ShowDistanceField = false;
 
         int  SelectedObject = 0;
+
+        Viewport[] Viewports;
 
         public DistanceFieldEditor (TestGame game, int width, int height)
             : base(game, 256, 256) {
@@ -40,7 +47,7 @@ namespace TestGame.Scenes {
                 ) {
                     RenderScale = 1.0f,
                     DistanceFieldResolution = 0.5f,
-                    DistanceFieldUpdateRate = 64
+                    DistanceFieldUpdateRate = 32
                 }
             );
 
@@ -48,6 +55,49 @@ namespace TestGame.Scenes {
             Environment.MaximumZ = 256;
             Environment.ZToYMultiplier = 2.5f;
 
+            BuildViewports();
+            BuildObstructions();
+        }
+
+        private void BuildViewports () {
+            Viewports = new Viewport[6];
+
+            var visSize = Math.Min(
+                Game.Graphics.PreferredBackBufferWidth / 3.1f,
+                Game.Graphics.PreferredBackBufferHeight / 2.1f
+            );
+            var visSize2 = new Vector2(visSize);
+            const float pad = 8;
+
+            Viewports[0] = new Viewport {
+                Rectangle = Bounds.FromPositionAndSize(new Vector2(0, 0), visSize2),
+                ViewAngle = -Vector3.UnitX
+            };
+            Viewports[1] = new Viewport {
+                Rectangle = Bounds.FromPositionAndSize(new Vector2(0, visSize + pad), visSize2),
+                ViewAngle = Vector3.UnitX
+            };
+
+            Viewports[2] = new Viewport {
+                Rectangle = Bounds.FromPositionAndSize(new Vector2(visSize + pad, 0), visSize2),
+                ViewAngle = -Vector3.UnitY
+            };
+            Viewports[3] = new Viewport {
+                Rectangle = Bounds.FromPositionAndSize(new Vector2(visSize + pad, visSize + pad), visSize2),
+                ViewAngle = Vector3.UnitY
+            };
+
+            Viewports[4] = new Viewport {
+                Rectangle = Bounds.FromPositionAndSize(new Vector2((visSize + pad) * 2, 0), visSize2),
+                ViewAngle = -Vector3.UnitZ
+            };
+            Viewports[5] = new Viewport {
+                Rectangle = Bounds.FromPositionAndSize(new Vector2((visSize + pad) * 2, visSize + pad), visSize2),
+                ViewAngle = Vector3.UnitZ
+            };
+        }
+
+        private void BuildObstructions () {
             var offset = new Vector3(32, 32, 32);
             var size = new Vector3(24, 24, 24);
 
@@ -94,9 +144,7 @@ namespace TestGame.Scenes {
             ));
         }
 
-        private void Visualize (Frame frame, float x, float y, float size, Vector3 gaze) {
-            var rect = Bounds.FromPositionAndSize(new Vector2(x, y), new Vector2(size, size));
-
+        private void Visualize (Frame frame, Bounds rect, Vector3 gaze) {
             if (ShowSurfaces)
                 Renderer.VisualizeDistanceField(
                     rect, gaze, frame, 2, VisualizationMode.Surfaces
@@ -109,30 +157,18 @@ namespace TestGame.Scenes {
 
             var ir = new ImperativeRenderer(frame, Game.Materials, 4, blendState: BlendState.AlphaBlend, autoIncrementLayer: true);
             var text = gaze.ToString();
-            ir.DrawString(Game.Font, text, new Vector2(x + 1, y + 1), Color.Black, 0.7f);
-            ir.DrawString(Game.Font, text, new Vector2(x, y), Color.White, 0.7f);
+            ir.DrawString(Game.Font, text, rect.TopLeft + Vector2.One, Color.Black, 0.7f);
+            ir.DrawString(Game.Font, text, rect.TopLeft, Color.White, 0.7f);
         }
         
         public override void Draw (Squared.Render.Frame frame) {
             Renderer.UpdateFields(frame, -1);
 
-            var visSize = Math.Min(
-                Game.Graphics.PreferredBackBufferWidth / 3.1f,
-                Game.Graphics.PreferredBackBufferHeight / 2.1f
-            );
-
             ClearBatch.AddNew(frame, 0, Game.Materials.Clear, new Color(0, 32 / 255.0f, 32 / 255.0f, 1));
 
-            const float pad = 8;
 
-            Visualize(frame, 0, 0, visSize, -Vector3.UnitX);
-            Visualize(frame, 0, visSize + pad, visSize, Vector3.UnitX);
-
-            Visualize(frame, visSize + pad, 0, visSize, -Vector3.UnitY);
-            Visualize(frame, visSize + pad, visSize + pad, visSize, Vector3.UnitY);
-
-            Visualize(frame, (visSize + pad) * 2, 0, visSize, -Vector3.UnitZ);
-            Visualize(frame, (visSize + pad) * 2, visSize + pad, visSize, Vector3.UnitZ);
+            foreach (var vp in Viewports)
+                Visualize(frame, vp.Rectangle, vp.ViewAngle);
 
             if (ShowDistanceField) {
                 float dfScale = Math.Min(
