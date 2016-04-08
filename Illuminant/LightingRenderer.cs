@@ -681,6 +681,14 @@ namespace Squared.Illuminant {
             sg.Draw(drawCall, material: m);
         }
 
+        private Vector4 AddW (Vector3 v3) {
+            return new Vector4(v3, 1);
+        }
+
+        private Vector3 StripW (Vector4 v4) {
+            return new Vector3(v4.X / v4.W, v4.Y / v4.W, v4.Z / v4.W);
+        }
+
         public void VisualizeDistanceField (
             Bounds rectangle, 
             Vector3 viewDirection,
@@ -706,28 +714,37 @@ namespace Squared.Illuminant {
 
             // HACK: Ensure we are always gazing into the field
             var rayOrigin = new Vector3(
-                rayVector.X < 0 ? 1 : 0,
-                rayVector.Y < 0 ? 1 : 0,
-                rayVector.Z < 0 ? 1 : 0
+                viewDirection.X < 0 ? 1 : 0,
+                viewDirection.Y < 0 ? 1 : 0,
+                viewDirection.Z < 0 ? 1 : 0
             );
 
-            var mat = Matrix.CreateWorld(
-                rayOrigin, viewDirection, 
-                viewDirection.Z != 0
-                    ? Vector3.UnitY
-                    : Vector3.UnitZ
-            );
-            var inverseMat = Matrix.Invert(mat);
+            Vector3 worldTL, worldTR, worldBL, worldBR;
 
-            var worldTL = new Vector3(0, 0, 0);
-            var worldTR = new Vector3(1, 0, 0);
-            var worldBL = new Vector3(0, 1, 0);
-            var worldBR = new Vector3(1, 1, 0);
+            // HACK: Fuck matrices, they never work
+            if (viewDirection.Z != 0) {
+                worldTL = new Vector3(0, 0, rayOrigin.Z);
+                worldTR = new Vector3(1, 0, rayOrigin.Z);
+                worldBL = new Vector3(0, 1, rayOrigin.Z);
+                worldBR = new Vector3(1, 1, rayOrigin.Z);
+            } else if (viewDirection.Y != 0) {
+                worldTL = new Vector3(0, rayOrigin.Y, 0);
+                worldTR = new Vector3(1, rayOrigin.Y, 0);
+                worldBL = new Vector3(0, rayOrigin.Y, 1);
+                worldBR = new Vector3(1, rayOrigin.Y, 1);
+            } else if (viewDirection.X != 0) {
+                worldTL = new Vector3(rayOrigin.X, 0, 0);
+                worldTR = new Vector3(rayOrigin.X, 1, 0);
+                worldBL = new Vector3(rayOrigin.X, 0, 1);
+                worldBR = new Vector3(rayOrigin.X, 1, 1);
+            } else {
+                throw new Exception("what");
+            }
 
-            worldTL = Vector3.Transform(worldTL, mat) * extent;
-            worldTR = Vector3.Transform(worldTR, mat) * extent;
-            worldBL = Vector3.Transform(worldBL, mat) * extent;
-            worldBR = Vector3.Transform(worldBR, mat) * extent;
+            worldTL = worldTL * extent;
+            worldTR = worldTR * extent;
+            worldBL = worldBL * extent;
+            worldBR = worldBR * extent;
 
             var verts = new VisualizeDistanceFieldVertex[] {
                 new VisualizeDistanceFieldVertex {

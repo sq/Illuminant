@@ -68,9 +68,10 @@ void ObjectSurfacesPixelShader(
 ) {
     float intersectionDistance;
     if (traceRay(rayStart, rayVector, intersectionDistance)) {
-        result = float4(0, 0, 0, 0);
+        result = 1;
     } else {
-        result = float4(1, 1, 1, 1);
+        result = 0;
+        discard;
     }
 }
 

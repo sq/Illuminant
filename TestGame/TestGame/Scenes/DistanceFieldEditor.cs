@@ -73,6 +73,11 @@ namespace TestGame.Scenes {
             Renderer.VisualizeDistanceField(
                 rect, gaze, frame, layer++
             );
+
+            var ir = new ImperativeRenderer(frame, Game.Materials, layer++, blendState: BlendState.AlphaBlend, autoIncrementLayer: true);
+            var text = gaze.ToString();
+            ir.DrawString(Game.Font, text, new Vector2(x + 1, y + 1), Color.Black, 0.7f);
+            ir.DrawString(Game.Font, text, new Vector2(x, y), Color.White, 0.7f);
         }
         
         public override void Draw (Squared.Render.Frame frame) {
@@ -83,7 +88,7 @@ namespace TestGame.Scenes {
                 Game.Graphics.PreferredBackBufferHeight / 2.1f
             );
 
-            ClearBatch.AddNew(frame, 0, Game.Materials.Clear, Color.Blue);
+            ClearBatch.AddNew(frame, 0, Game.Materials.Clear, new Color(0, 32 / 255.0f, 32 / 255.0f, 1));
 
             if (ShowSurfaces) {
                 const float pad = 8;
