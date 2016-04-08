@@ -736,8 +736,7 @@ namespace Squared.Illuminant {
                     continue;
 
                 minDistance = intersection.Value;
-                // FIXME
-                result = Vector3.Zero;
+                result = ray.Position + (ray.Direction * intersection.Value);
             }
 
             return result;
@@ -781,33 +780,31 @@ namespace Squared.Illuminant {
                     throw new Exception("Ray didn't intersect the box... what?");
                 rayOrigin = planeCenter.Value;
             }
-            
+
             Vector3 worldTL, worldTR, worldBL, worldBR;
+
+            Vector3 right, up;
 
             // HACK: Fuck matrices, they never work
             if (viewDirection.Z != 0) {
-                worldTL = new Vector3(0, 0, rayOrigin.Z);
-                worldTR = new Vector3(1, 0, rayOrigin.Z);
-                worldBL = new Vector3(0, 1, rayOrigin.Z);
-                worldBR = new Vector3(1, 1, rayOrigin.Z);
-            } else if (viewDirection.Y != 0) {
-                worldTL = new Vector3(0, rayOrigin.Y, 0);
-                worldTR = new Vector3(1, rayOrigin.Y, 0);
-                worldBL = new Vector3(0, rayOrigin.Y, 1);
-                worldBR = new Vector3(1, rayOrigin.Y, 1);
-            } else if (viewDirection.X != 0) {
-                worldTL = new Vector3(rayOrigin.X, 0, 0);
-                worldTR = new Vector3(rayOrigin.X, 1, 0);
-                worldBL = new Vector3(rayOrigin.X, 0, 1);
-                worldBR = new Vector3(rayOrigin.X, 1, 1);
+                up = -Vector3.UnitY;
             } else {
-                throw new Exception("what");
+                up = Vector3.UnitZ;
             }
 
-            worldTL = worldTL * extent;
-            worldTR = worldTR * extent;
-            worldBL = worldBL * extent;
-            worldBR = worldBR * extent;
+            if (viewDirection.X != 0) {
+                right = Vector3.UnitY;
+            } else {
+                right = Vector3.UnitX;
+            }
+
+            var planeRight = Vector3.Cross(viewDirection, up);
+            var planeUp = Vector3.Cross(viewDirection, right);
+
+            worldTL = rayOrigin + (-planeRight * center) + (planeUp  * center);
+            worldTR = rayOrigin + (planeRight  * center) + (planeUp  * center);
+            worldBL = rayOrigin + (-planeRight * center) + (-planeUp * center);
+            worldBR = rayOrigin + (planeRight  * center) + (-planeUp * center);
 
             var _color = color.GetValueOrDefault(Vector4.One);
 
