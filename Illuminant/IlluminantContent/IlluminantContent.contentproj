@@ -57,6 +57,9 @@
     <None Include="DistanceFieldCommon.fxh">
       <Name>DistanceFieldCommon</Name>
     </None>
+    <None Include="DistanceFunctionCommon.fxh">
+      <Name>DistanceFunctionCommon</Name>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <None Include="LightCommon.fxh">
@@ -117,6 +120,20 @@
       <Importer>EffectImporter</Importer>
       <Processor>EffectProcessor</Processor>
       <ProcessorParameters_DebugMode>Optimize</ProcessorParameters_DebugMode>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="VisualizeCommon.fxh">
+      <Name>VisualizeCommon</Name>
+      <Importer>EffectImporter</Importer>
+      <Processor>EffectProcessor</Processor>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="VisualizeDistanceFunction.fx">
+      <Name>VisualizeDistanceFunction</Name>
+      <Importer>EffectImporter</Importer>
+      <Processor>EffectProcessor</Processor>
     </Compile>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\XNA Game Studio\$(XnaFrameworkVersion)\Microsoft.Xna.GameStudio.ContentPipeline.targets" />

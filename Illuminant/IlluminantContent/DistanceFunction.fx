@@ -1,6 +1,7 @@
 #include "..\..\Upstream\Fracture\Squared\RenderLib\Content\GeometryCommon.fxh"
 #include "LightCommon.fxh"
 #include "DistanceFieldCommon.fxh"
+#include "DistanceFunctionCommon.fxh"
 
 uniform float2 PixelSize;
 uniform float  SliceZ;
@@ -15,12 +16,10 @@ void DistanceFunctionVertexShader(
     result.z = position.z;
 }
 
-float3 getPosition (in float2 vpos, in float3 center) {
+float3 getPosition (in float2 vpos) {
     vpos *= DistanceField.InvScaleFactor;
     vpos += ViewportPosition;
-    float3 result = float3(vpos, SliceZ);
-    result -= center;
-    return result;
+    return float3(vpos, SliceZ);
 }
 
 void BoxPixelShader (
@@ -29,16 +28,7 @@ void BoxPixelShader (
     in  float3 center : POSITION1,
     in  float3 size   : POSITION2
 ) {
-    float3 position = getPosition(vpos, center);
-
-    float3 d = abs(position) - size;
-    float resultDistance = 
-        min(
-            max(d.x, max(d.y, d.z)),
-            0.0
-        ) + length(max(d, 0.0)
-    );
-
+    float resultDistance = evaluateBox(getPosition(vpos), center, size);
     color = encodeDistance(resultDistance);
 }
 
@@ -46,15 +36,9 @@ void EllipsoidPixelShader(
     out float4 color  : COLOR0,
     in  float2 vpos   : VPOS,
     in  float3 center : POSITION1,
-    in  float3 radius : POSITION2
+    in  float3 size   : POSITION2
 ) {
-    float3 position = getPosition(vpos, center);
-
-    // FIXME: Why is this a sphere???????????
-    float l = length(position / radius) - 1.0;
-    float resultDistance =
-        l * min(min(radius.x, radius.y), radius.z);
-
+    float resultDistance = evaluateEllipsoid(getPosition(vpos), center, size);
     color = encodeDistance(resultDistance);
 }
 
@@ -64,14 +48,7 @@ void CylinderPixelShader(
     in  float3 center : POSITION1,
     in  float3 size   : POSITION2
 ) {
-    float3 position = getPosition(vpos, center);
-
-    float3 p = position.xzy;
-    float2 h = size.xz;
-
-    float2 d = abs(float2(length(p.xz), p.y)) - h;
-    float resultDistance = min(max(d.x, d.y), 0.0) + length(max(d, 0.0));
-
+    float resultDistance = evaluateCylinder(getPosition(vpos), center, size);
     color = encodeDistance(resultDistance);
 }
 

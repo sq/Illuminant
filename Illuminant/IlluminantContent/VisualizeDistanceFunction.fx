@@ -1,7 +1,9 @@
 #include "DistanceFieldCommon.fxh"
 
-#define SAMPLE sampleDistanceField
-#define TVARS  DistanceFieldConstants
+float evaluateFunctions (float3 worldPosition, float vars);
+
+#define SAMPLE evaluateFunctions
+#define TVARS  float
 
 #include "VisualizeCommon.fxh"
 
@@ -30,14 +32,18 @@ void VisualizeVertexShader(
     result = float4(transformedPosition.xy, 0, transformedPosition.w);
 }
 
-void ObjectSurfacesPixelShader(
+float evaluateFunctions (float3 worldPosition, float vars) {
+    return length(worldPosition);
+}
+
+void FunctionSurfacePixelShader(
     in  float2 worldPosition : TEXCOORD2,
     in  float3 rayStart : POSITION1,
     in  float3 rayVector : POSITION2,
     in  float2 vpos : VPOS,
     out float4 result : COLOR0
 ) {
-    DistanceFieldConstants vars = makeDistanceFieldConstants();
+    float vars = 0;
 
     float intersectionDistance;
     float3 estimatedIntersection;
@@ -55,14 +61,14 @@ void ObjectSurfacesPixelShader(
     }
 }
 
-void ObjectOutlinesPixelShader(
+void FunctionOutlinePixelShader(
     in  float2 worldPosition : TEXCOORD2,
     in  float3 rayStart : POSITION1,
     in  float3 rayVector : POSITION2,
     in  float2 vpos : VPOS,
     out float4 result : COLOR0
 ) {
-    DistanceFieldConstants vars = makeDistanceFieldConstants();
+    float vars = 0;
 
     float a = traceOutlines(rayStart, rayVector, vars);
 
@@ -72,18 +78,18 @@ void ObjectOutlinesPixelShader(
         discard;
 }
 
-technique ObjectSurfaces {
+technique FunctionSurface {
     pass P0
     {
         vertexShader = compile vs_3_0 VisualizeVertexShader();
-        pixelShader  = compile ps_3_0 ObjectSurfacesPixelShader();
+        pixelShader  = compile ps_3_0 FunctionSurfacePixelShader();
     }
 }
 
-technique ObjectOutlines {
+technique FunctionOutline {
     pass P0
     {
         vertexShader = compile vs_3_0 VisualizeVertexShader();
-        pixelShader = compile ps_3_0 ObjectOutlinesPixelShader();
+        pixelShader = compile ps_3_0 FunctionOutlinePixelShader();
     }
 }
