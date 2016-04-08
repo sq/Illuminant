@@ -798,8 +798,13 @@ namespace Squared.Illuminant {
                 right = Vector3.UnitX;
             }
 
-            var planeRight = Vector3.Cross(viewDirection, up);
-            var planeUp = Vector3.Cross(viewDirection, right);
+            var absViewDirection = new Vector3(
+                Math.Abs(viewDirection.X),
+                Math.Abs(viewDirection.Y),
+                Math.Abs(viewDirection.Z)
+            );
+            var planeRight = Vector3.Cross(absViewDirection, up);
+            var planeUp = Vector3.Cross(absViewDirection, right);
 
             worldTL = rayOrigin + (-planeRight * center) + (planeUp  * center);
             worldTR = rayOrigin + (planeRight  * center) + (planeUp  * center);

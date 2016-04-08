@@ -43,10 +43,10 @@ namespace TestGame.Scenes {
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(
                     Width, Height, true,
-                    Width, Height, 256, true
+                    Width, Height, 64, true
                 ) {
                     RenderScale = 1.0f,
-                    DistanceFieldResolution = 1f,
+                    DistanceFieldResolution = 0.5f,
                     DistanceFieldUpdateRate = 32
                 }
             );
@@ -110,13 +110,6 @@ namespace TestGame.Scenes {
             var size = new Vector3(24, 24, 24);
 
             Environment.Obstructions.Add(new LightObstruction(
-                LightObstructionType.Box,
-                offset, size
-            ));
-
-            offset.X += (size.X * 2) + 8;
-
-            Environment.Obstructions.Add(new LightObstruction(
                 LightObstructionType.Ellipsoid,
                 offset, size                
             ));
@@ -150,6 +143,23 @@ namespace TestGame.Scenes {
                 LightObstructionType.Ellipsoid,
                 offset, new Vector3(12, 12, 36)
             ));
+
+            var extent = new Vector3(
+                Renderer.Configuration.MaximumRenderSize.First,
+                Renderer.Configuration.MaximumRenderSize.Second,
+                Environment.MaximumZ
+            );
+            for (var z = 0; z <= 1; z++) {
+                for (var y = 0; y <= 1; y++) {
+                    for (var x = 0; x <= 1; x++) {
+                        Environment.Obstructions.Add(new LightObstruction(
+                            LightObstructionType.Ellipsoid,
+                            extent * new Vector3(x, y, z),
+                            Vector3.One * 10
+                        ));
+                    }
+                }
+            }
         }
 
         private void Visualize (Frame frame, Bounds rect, Vector3 gaze) {
@@ -163,12 +173,14 @@ namespace TestGame.Scenes {
                     rect, gaze, frame, 3, mode: VisualizationMode.Outlines
                 );
 
-            var obj = Environment.Obstructions[SelectedObject];
-            Renderer.VisualizeDistanceField(
-                rect, gaze, frame, 4, obj, 
-                VisualizationMode.Outlines, BlendState.AlphaBlend,
-                color: new Vector4(0.15f, 0.4f, 0.0f, 0.15f)
-            );
+            if (false) {
+                var obj = Environment.Obstructions[SelectedObject];
+                Renderer.VisualizeDistanceField(
+                    rect, gaze, frame, 4, obj, 
+                    VisualizationMode.Outlines, BlendState.AlphaBlend,
+                    color: new Vector4(0.15f, 0.4f, 0.0f, 0.15f)
+                );
+            }
 
             var ir = new ImperativeRenderer(frame, Game.Materials, 4, blendState: BlendState.AlphaBlend, autoIncrementLayer: true);
             var text = gaze.ToString();
