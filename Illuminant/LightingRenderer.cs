@@ -698,6 +698,51 @@ namespace Squared.Illuminant {
             return new Vector3(v4.X / v4.W, v4.Y / v4.W, v4.Z / v4.W);
         }
 
+        // XNA is garbage and BoundingBox intersections don't work
+        private Vector3? FindBoxIntersection (Ray ray, Vector3 boxMin, Vector3 boxMax) {
+            Plane    plane;
+            float    minDistance = 999999;
+            Vector3? result = null;
+
+            for (int i = 0; i < 6; i++) {
+                switch (i) {
+                    case 0:
+                        plane = new Plane(Vector3.UnitX, boxMin.X);
+                        break;
+                    case 1:
+                        plane = new Plane(Vector3.UnitY, boxMin.X);
+                        break;
+                    case 2:
+                        plane = new Plane(Vector3.UnitZ, boxMin.X);
+                        break;
+                    case 3:
+                        plane = new Plane(-Vector3.UnitX, boxMax.X);
+                        break;
+                    case 4:
+                        plane = new Plane(-Vector3.UnitY, boxMax.Y);
+                        break;
+                    case 5:
+                        plane = new Plane(-Vector3.UnitZ, boxMax.Z);
+                        break;
+                    default:
+                        throw new Exception();
+                }
+
+                float? intersection = ray.Intersects(plane);
+                if (!intersection.HasValue)
+                    continue;
+
+                if (intersection.Value > minDistance)
+                    continue;
+
+                minDistance = intersection.Value;
+                // FIXME
+                result = Vector3.Zero;
+            }
+
+            return result;
+        }
+
         public void VisualizeDistanceField (
             Bounds rectangle, 
             Vector3 viewDirection,
@@ -720,19 +765,23 @@ namespace Squared.Illuminant {
                 Configuration.DistanceFieldSize.Second,
                 Environment.MaximumZ
             );
+            var center = extent * 0.5f;
             var halfTexel = new Vector3(-0.5f * (1.0f / extent.X), -0.5f * (1.0f / extent.Y), 0);
 
             // HACK: Pick an appropriate length that will always travel through the whole field
             var rayLength = extent.Length() * 1.5f;
             var rayVector = viewDirection * rayLength;
+            Vector3 rayOrigin;
 
-            // HACK: Ensure we are always gazing into the field
-            var rayOrigin = new Vector3(
-                viewDirection.X < 0 ? 1 : 0,
-                viewDirection.Y < 0 ? 1 : 0,
-                viewDirection.Z < 0 ? 1 : 0
-            );
-
+            // HACK: Place our view plane somewhere reasonable
+            {
+                var ray = new Ray(center, -viewDirection);
+                var planeCenter = FindBoxIntersection(ray, Vector3.Zero, extent);
+                if (!planeCenter.HasValue)
+                    throw new Exception("Ray didn't intersect the box... what?");
+                rayOrigin = planeCenter.Value;
+            }
+            
             Vector3 worldTL, worldTR, worldBL, worldBR;
 
             // HACK: Fuck matrices, they never work

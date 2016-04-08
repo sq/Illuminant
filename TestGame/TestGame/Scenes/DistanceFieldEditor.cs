@@ -60,40 +60,48 @@ namespace TestGame.Scenes {
         }
 
         private void BuildViewports () {
-            Viewports = new Viewport[6];
-
             var visSize = Math.Min(
-                Game.Graphics.PreferredBackBufferWidth / 3.1f,
+                Game.Graphics.PreferredBackBufferWidth / 4.1f,
                 Game.Graphics.PreferredBackBufferHeight / 2.1f
             );
             var visSize2 = new Vector2(visSize);
             const float pad = 8;
 
-            Viewports[0] = new Viewport {
-                Rectangle = Bounds.FromPositionAndSize(new Vector2(0, 0), visSize2),
-                ViewAngle = -Vector3.UnitX
-            };
-            Viewports[1] = new Viewport {
-                Rectangle = Bounds.FromPositionAndSize(new Vector2(0, visSize + pad), visSize2),
-                ViewAngle = Vector3.UnitX
-            };
+            var diagonal = new Vector3(0, -1, -1);
+            diagonal.Normalize();
 
-            Viewports[2] = new Viewport {
-                Rectangle = Bounds.FromPositionAndSize(new Vector2(visSize + pad, 0), visSize2),
-                ViewAngle = -Vector3.UnitY
-            };
-            Viewports[3] = new Viewport {
-                Rectangle = Bounds.FromPositionAndSize(new Vector2(visSize + pad, visSize + pad), visSize2),
-                ViewAngle = Vector3.UnitY
-            };
+            Viewports = new[] {
+                new Viewport {
+                    Rectangle = Bounds.FromPositionAndSize(new Vector2(0, 0), visSize2),
+                    ViewAngle = -Vector3.UnitX
+                },
+                new Viewport {
+                    Rectangle = Bounds.FromPositionAndSize(new Vector2(0, visSize + pad), visSize2),
+                    ViewAngle = Vector3.UnitX
+                },
 
-            Viewports[4] = new Viewport {
-                Rectangle = Bounds.FromPositionAndSize(new Vector2((visSize + pad) * 2, 0), visSize2),
-                ViewAngle = -Vector3.UnitZ
-            };
-            Viewports[5] = new Viewport {
-                Rectangle = Bounds.FromPositionAndSize(new Vector2((visSize + pad) * 2, visSize + pad), visSize2),
-                ViewAngle = Vector3.UnitZ
+                new Viewport {
+                    Rectangle = Bounds.FromPositionAndSize(new Vector2(visSize + pad, 0), visSize2),
+                    ViewAngle = -Vector3.UnitY
+                },
+                new Viewport {
+                    Rectangle = Bounds.FromPositionAndSize(new Vector2(visSize + pad, visSize + pad), visSize2),
+                    ViewAngle = Vector3.UnitY
+                },
+
+                new Viewport {
+                    Rectangle = Bounds.FromPositionAndSize(new Vector2((visSize + pad) * 2, 0), visSize2),
+                    ViewAngle = -Vector3.UnitZ
+                },
+                new Viewport {
+                    Rectangle = Bounds.FromPositionAndSize(new Vector2((visSize + pad) * 2, visSize + pad), visSize2),
+                    ViewAngle = Vector3.UnitZ
+                },
+
+                new Viewport {
+                    Rectangle = Bounds.FromPositionAndSize(new Vector2((visSize + pad) * 3, 0), visSize2),
+                    ViewAngle = diagonal
+                }
             };
         }
 
