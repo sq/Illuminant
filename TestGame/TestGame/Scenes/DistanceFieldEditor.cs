@@ -72,6 +72,15 @@ namespace TestGame.Scenes {
 
             Viewports = new[] {
                 new Viewport {
+                    Rectangle = Bounds.FromPositionAndSize(new Vector2((visSize + pad) * 2, 0), visSize2),
+                    ViewAngle = -Vector3.UnitZ
+                },
+                new Viewport {
+                    Rectangle = Bounds.FromPositionAndSize(new Vector2((visSize + pad) * 2, visSize + pad), visSize2),
+                    ViewAngle = Vector3.UnitZ
+                },
+
+                new Viewport {
                     Rectangle = Bounds.FromPositionAndSize(new Vector2(0, 0), visSize2),
                     ViewAngle = -Vector3.UnitX
                 },
@@ -87,15 +96,6 @@ namespace TestGame.Scenes {
                 new Viewport {
                     Rectangle = Bounds.FromPositionAndSize(new Vector2(visSize + pad, visSize + pad), visSize2),
                     ViewAngle = Vector3.UnitY
-                },
-
-                new Viewport {
-                    Rectangle = Bounds.FromPositionAndSize(new Vector2((visSize + pad) * 2, 0), visSize2),
-                    ViewAngle = -Vector3.UnitZ
-                },
-                new Viewport {
-                    Rectangle = Bounds.FromPositionAndSize(new Vector2((visSize + pad) * 2, visSize + pad), visSize2),
-                    ViewAngle = Vector3.UnitZ
                 },
 
                 new Viewport {
@@ -162,36 +162,63 @@ namespace TestGame.Scenes {
             }
         }
 
+        private string DirectionToText (Vector3 dir) {
+            if (dir.X != 0)
+                return (dir.X > 0) ? "+X" : "-X";
+            if (dir.Y != 0)
+                return (dir.Y > 0) ? "+Y" : "-Y";
+            if (dir.Z != 0)
+                return (dir.Z > 0) ? "+Z" : "-Z";
+
+            return "?";
+        }
+
         private void Visualize (Frame frame, Bounds rect, Vector3 gaze) {
+            var visInfo = new VisualizationInfo();
+
             if (ShowSurfaces)
-                Renderer.VisualizeDistanceField(
+                visInfo = Renderer.VisualizeDistanceField(
                     rect, gaze, frame, 2, mode: VisualizationMode.Surfaces
                 );
 
             if (ShowOutlines)
-                Renderer.VisualizeDistanceField(
+                visInfo = Renderer.VisualizeDistanceField(
                     rect, gaze, frame, 3, mode: VisualizationMode.Outlines
                 );
 
-            if (false) {
-                var obj = Environment.Obstructions[SelectedObject];
-                Renderer.VisualizeDistanceField(
-                    rect, gaze, frame, 4, obj, 
-                    VisualizationMode.Outlines, BlendState.AlphaBlend,
-                    color: new Vector4(0.15f, 0.4f, 0.0f, 0.15f)
-                );
-            }
+            var obj = Environment.Obstructions[SelectedObject];
+            Renderer.VisualizeDistanceField(
+                rect, gaze, frame, 4, obj, 
+                VisualizationMode.Outlines, BlendState.AlphaBlend,
+                color: new Vector4(0.15f, 0.4f, 0.0f, 0.15f)
+            );
 
-            var ir = new ImperativeRenderer(frame, Game.Materials, 4, blendState: BlendState.AlphaBlend, autoIncrementLayer: true);
+            var ir = new ImperativeRenderer(frame, Game.Materials, blendState: BlendState.AlphaBlend, autoIncrementLayer: true);
             var text = gaze.ToString();
-            ir.DrawString(Game.Font, text, rect.TopLeft + Vector2.One, Color.Black, 0.7f);
-            ir.DrawString(Game.Font, text, rect.TopLeft, Color.White, 0.7f);
+            ir.FillRectangle(rect, new Color(0, 32 / 255.0f, 16 / 255.0f, 1.0f), layer: 1);
+
+            ir.DrawString(Game.Font, text, rect.TopLeft + Vector2.One, Color.Black, 0.7f, layer: 4);
+            ir.DrawString(Game.Font, text, rect.TopLeft, Color.White, 0.7f, layer: 5);
+
+            if (ShowSurfaces || ShowOutlines) {
+                var rightText = DirectionToText(visInfo.Right);
+                var pos = rect.BottomLeft - new Vector2(-2, Game.Font.LineSpacing * 0.6f);
+
+                ir.DrawString(Game.Font, rightText, pos + Vector2.One, Color.Black, scale: 0.6f, layer: 4);
+                ir.DrawString(Game.Font, rightText, pos, Color.White, scale: 0.6f, layer: 5);
+
+                var upText = DirectionToText(-visInfo.Up);
+                pos = rect.TopRight - new Vector2(Game.Font.MeasureString(upText).X * 0.6f, -2);
+
+                ir.DrawString(Game.Font, upText, pos + Vector2.One, Color.Black, scale: 0.6f, layer: 4);
+                ir.DrawString(Game.Font, upText, pos, Color.White, scale: 0.6f, layer: 5);
+            }
         }
         
         public override void Draw (Squared.Render.Frame frame) {
             Renderer.UpdateFields(frame, -1);
 
-            ClearBatch.AddNew(frame, 0, Game.Materials.Clear, new Color(0, 32 / 255.0f, 32 / 255.0f, 1));
+            ClearBatch.AddNew(frame, 0, Game.Materials.Clear, new Color(0, 16 / 255.0f, 32 / 255.0f, 1));
 
             foreach (var vp in Viewports)
                 Visualize(frame, vp.Rectangle, vp.ViewAngle);
@@ -230,10 +257,13 @@ namespace TestGame.Scenes {
                 result.X -= speed;
             if (ks.IsKeyDown(plusX))
                 result.X += speed;
+
+            // HACK: +y is down because *incoherent screaming*
             if (ks.IsKeyDown(minusY))
-                result.Y -= speed;
-            if (ks.IsKeyDown(plusY))
                 result.Y += speed;
+            if (ks.IsKeyDown(plusY))
+                result.Y -= speed;
+
             if (ks.IsKeyDown(minusZ))
                 result.Z -= speed;
             if (ks.IsKeyDown(plusZ))
@@ -278,9 +308,9 @@ namespace TestGame.Scenes {
                     var obs = Environment.Obstructions[SelectedObject];
                     obs.Center += translation;
                     obs.Size = new Vector3(
-                        Math.Max(1, obs.Size.X + growth.X),
-                        Math.Max(1, obs.Size.Y + growth.Y),
-                        Math.Max(1, obs.Size.Z + growth.Z)
+                        Math.Max(2, obs.Size.X + growth.X),
+                        Math.Max(2, obs.Size.Y + growth.Y),
+                        Math.Max(2, obs.Size.Z + growth.Z)
                     );
                     Renderer.InvalidateFields();
                 }

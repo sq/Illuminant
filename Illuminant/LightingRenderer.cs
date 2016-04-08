@@ -742,7 +742,7 @@ namespace Squared.Illuminant {
             return result;
         }
 
-        public void VisualizeDistanceField (
+        public VisualizationInfo VisualizeDistanceField (
             Bounds rectangle, 
             Vector3 viewDirection,
             IBatchContainer container, int layerIndex,
@@ -882,6 +882,12 @@ namespace Squared.Illuminant {
                     PrimitiveType.TriangleList, verts, 0, 4, indices, 0, 2
                 ));
             }
+
+            return new VisualizationInfo {
+                ViewCenter = rayOrigin,
+                Up = planeUp,
+                Right = planeRight
+            };
         }
 
         private void SetDistanceFieldParameters (EffectParameterCollection p, bool setDistanceTexture) {
@@ -1625,5 +1631,10 @@ namespace Squared.Illuminant {
     public enum VisualizationMode {
         Surfaces,
         Outlines
+    }
+
+    public struct VisualizationInfo {
+        public Vector3 ViewCenter;
+        public Vector3 Up, Right;
     }
 }
