@@ -21,7 +21,7 @@ void DirectionalLightVertexShader(
     in float2    position            : POSITION0,
     inout float4 color               : COLOR0,
     inout float4 lightDirectionAndAO : TEXCOORD0,
-    inout bool   enableShadows       : TEXCOORD1,
+    inout float2 lightProperties     : TEXCOORD1,
     out float2   worldPosition       : TEXCOORD2,
     out float4   result              : POSITION0
 ) {
@@ -34,7 +34,7 @@ void DirectionalLightVertexShader(
 float DirectionalLightPixelCore(
     in float2 worldPosition       : TEXCOORD2,
     in float4 lightDirectionAndAO : TEXCOORD0,
-    in bool   enableShadows       : TEXCOORD1,
+    in float2 lightProperties     : TEXCOORD1,
     in float2 vpos                : VPOS
 ) {
     float3 shadedPixelPosition;
@@ -56,15 +56,15 @@ float DirectionalLightPixelCore(
         lightOpacity *= aoRamp;
     }
 
-    bool traceShadows = (visible && enableShadows);
+    bool traceShadows = (visible && lightProperties.x);
 
     // FIXME: Cone trace for directional shadows?
-    /*
     [branch]
     if (traceShadows) {
-        lightOpacity *= coneTrace(lightCenterAndAO.xyz, lightProperties.xy, shadedPixelPosition + (SELF_OCCLUSION_HACK * shadedPixelNormal), vars);
+        float3 fakeLightCenter = shadedPixelPosition - (lightDirectionAndAO.xyz * lightProperties.y);
+        float2 fakeRamp = float2(9999, 0);
+        lightOpacity *= coneTrace(fakeLightCenter, fakeRamp, shadedPixelPosition + (SELF_OCCLUSION_HACK * shadedPixelNormal), vars);
     }
-    */
 
     [branch]
     // HACK: Don't cull pixels unless they were killed by distance falloff.
@@ -80,13 +80,13 @@ float DirectionalLightPixelCore(
 void DirectionalLightPixelShader(
     in  float2 worldPosition       : TEXCOORD2,
     in  float4 lightDirectionAndAO : TEXCOORD0,
-    in  float  enableShadows       : TEXCOORD1,
+    in  float2 lightProperties     : TEXCOORD1,
     in  float4 color               : COLOR0,
     in  float2 vpos                : VPOS,
     out float4 result              : COLOR0
 ) {
     float opacity = DirectionalLightPixelCore(
-        worldPosition, lightDirectionAndAO, enableShadows, vpos
+        worldPosition, lightDirectionAndAO, lightProperties, vpos
     );
 
     float4 lightColorActual = float4(color.rgb * color.a * opacity, 1);

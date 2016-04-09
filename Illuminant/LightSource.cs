@@ -23,17 +23,34 @@ namespace Squared.Illuminant {
     }
 
     public class DirectionalLightSource : LightSource {
+        /// <summary>
+        /// The direction light travels.
+        /// </summary>
         public Vector3 Direction;
+        /// <summary>
+        /// The distance in pixels that will be traced to find light obstructions.
+        /// A larger value produces more accurate directional shadows at increased cost.
+        /// </summary>
+        public float   ShadowTraceLength = 256;
     }
 
     public class SphereLightSource : LightSource {
-        // The center of the light source.
+        /// <summary>
+        /// The center of the light source. 
+        /// </summary>
         public Vector3 Position;
-        // The size of the light source.
+        /// <summary>
+        /// The size of the light source.
+        /// </summary>
         public float   Radius = 0;
-        // The size of the falloff around the light source.
+        /// <summary>
+        /// The size of the falloff around the light source.
+        /// </summary>
         public float   RampLength = 1;
-        // Controls the nature of the light's distance falloff. Exponential produces falloff that is more realistic (square of distance or whatever) but not necessarily as expected.
+        /// <summary>
+        /// Controls the nature of the light's distance falloff.
+        /// Exponential produces falloff that is more realistic (square of distance or whatever) but not necessarily as expected. 
+        /// </summary>
         public LightSourceRampMode RampMode = LightSourceRampMode.Linear;
 
         public Bounds3 Bounds {

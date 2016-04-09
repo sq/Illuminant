@@ -110,7 +110,7 @@ namespace TestGame.Scenes {
                     DistanceFieldLongStepFactor = 0.5f,
                     DistanceFieldOcclusionToOpacityPower = 0.7f,
                     DistanceFieldMaxConeRadius = 24,
-                    DistanceFieldUpdateRate = 1,
+                    DistanceFieldUpdateRate = 4,
                 }
             );
 
@@ -125,12 +125,12 @@ namespace TestGame.Scenes {
             Environment.Lights.Add(MovableLight);
 
             Environment.Lights.Add(new DirectionalLightSource {
-                Direction = new Vector3(-0.75f, -0.1f, -1f),
+                Direction = new Vector3(-0.75f, -0.7f, -0.33f),
                 Color = new Vector4(0.2f, 0.4f, 0.6f, 0.4f)
             });
 
             Environment.Lights.Add(new DirectionalLightSource {
-                Direction = new Vector3(0.15f, 0f, -1f),
+                Direction = new Vector3(0.35f, -0.05f, -0.75f),
                 Color = new Vector4(0.5f, 0.3f, 0.15f, 0.3f)
             });
 
