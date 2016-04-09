@@ -49,6 +49,7 @@ float coneTraceStep(
 float coneTrace(
     in float3 lightCenter,
     in float2 lightRamp,
+    in float  coneGrowthFactor,
     in float3 shadedPixelPosition,
     in DistanceFieldConstants vars
 ) {
@@ -63,10 +64,9 @@ float coneTrace(
 
         float maxRadius = clamp(
             lightRamp.x, MIN_CONE_RADIUS, DistanceField.MaxConeRadius
-            );
+        );
         float rampLength           = max(lightRamp.y, 16);
-        float radiusGrowthPerPixel = maxRadius / rampLength
-            * DistanceField.ConeGrowthFactor;
+        float radiusGrowthPerPixel = maxRadius / rampLength * coneGrowthFactor;
 
         config = float3(
             maxRadius, radiusGrowthPerPixel, max(1, DistanceField.Step.y)

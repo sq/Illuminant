@@ -63,11 +63,16 @@ float SphereLightPixelCore(
         lightOpacity *= aoRamp;
     }
 
-    bool traceShadows = (visible && lightProperties.w);
+    bool traceShadows = visible && lightProperties.w && (lightOpacity >= 1 / 256.0);
 
     [branch]
     if (traceShadows) {
-        lightOpacity *= coneTrace(lightCenterAndAO.xyz, lightProperties.xy, shadedPixelPosition + (SELF_OCCLUSION_HACK * shadedPixelNormal), vars);
+        lightOpacity *= coneTrace(
+            lightCenterAndAO.xyz, lightProperties.xy, 
+            DistanceField.ConeGrowthFactor,
+            shadedPixelPosition + (SELF_OCCLUSION_HACK * shadedPixelNormal),
+            vars
+        );
     }
 
     [branch]

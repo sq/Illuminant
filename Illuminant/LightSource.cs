@@ -31,7 +31,30 @@ namespace Squared.Illuminant {
         /// The distance in pixels that will be traced to find light obstructions.
         /// A larger value produces more accurate directional shadows at increased cost.
         /// </summary>
-        public float   ShadowTraceLength = 256;
+        public float   ShadowTraceLength = 64;
+        /// <summary>
+        /// Controls the maximum fuzziness of directional light shadows.
+        /// </summary>
+        public float   ShadowSoftness = 16;
+        /// <summary>
+        /// Controls how quickly directional light shadows become fuzzy.
+        /// </summary>
+        public float   ShadowRampRate = 0.05f;
+
+        public DirectionalLightSource Clone () {
+            var result = new DirectionalLightSource {
+                UserData = UserData,
+                Direction = Direction,
+                ShadowTraceLength = ShadowTraceLength,
+                ShadowSoftness = ShadowSoftness,
+                ShadowRampRate = ShadowRampRate,
+                Color = Color,
+                Opacity = Opacity,
+                CastsShadows = CastsShadows,
+                AmbientOcclusionRadius = AmbientOcclusionRadius,
+            };
+            return result;
+        }
     }
 
     public class SphereLightSource : LightSource {

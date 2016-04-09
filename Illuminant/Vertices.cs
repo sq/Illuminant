@@ -40,7 +40,7 @@ namespace Squared.Illuminant {
         // FIXME: Shouldn't this be V3? Blech
         public Vector2 Position;
         public Vector4 LightDirectionAndAO;
-        public Vector2 LightProperties;
+        public Vector4 LightProperties;
         public Vector4 Color;
 
         public static VertexDeclaration _VertexDeclaration;
@@ -51,7 +51,7 @@ namespace Squared.Illuminant {
             _VertexDeclaration = new VertexDeclaration(
                 new VertexElement(Marshal.OffsetOf(tThis, "Position").ToInt32(), VertexElementFormat.Vector2, VertexElementUsage.Position, 0),
                 new VertexElement(Marshal.OffsetOf(tThis, "LightDirectionAndAO").ToInt32(), VertexElementFormat.Vector4, VertexElementUsage.TextureCoordinate, 0),
-                new VertexElement(Marshal.OffsetOf(tThis, "LightProperties").ToInt32(), VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 1),
+                new VertexElement(Marshal.OffsetOf(tThis, "LightProperties").ToInt32(), VertexElementFormat.Vector4, VertexElementUsage.TextureCoordinate, 1),
                 new VertexElement(Marshal.OffsetOf(tThis, "Color").ToInt32(), VertexElementFormat.Vector4, VertexElementUsage.Color, 0)
             );
         }

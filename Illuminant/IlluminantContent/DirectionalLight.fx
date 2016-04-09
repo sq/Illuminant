@@ -21,7 +21,7 @@ void DirectionalLightVertexShader(
     in float2    position            : POSITION0,
     inout float4 color               : COLOR0,
     inout float4 lightDirectionAndAO : TEXCOORD0,
-    inout float2 lightProperties     : TEXCOORD1,
+    inout float4 lightProperties     : TEXCOORD1,
     out float2   worldPosition       : TEXCOORD2,
     out float4   result              : POSITION0
 ) {
@@ -34,7 +34,7 @@ void DirectionalLightVertexShader(
 float DirectionalLightPixelCore(
     in float2 worldPosition       : TEXCOORD2,
     in float4 lightDirectionAndAO : TEXCOORD0,
-    in float2 lightProperties     : TEXCOORD1,
+    in float4 lightProperties     : TEXCOORD1,
     in float2 vpos                : VPOS
 ) {
     float3 shadedPixelPosition;
@@ -56,14 +56,19 @@ float DirectionalLightPixelCore(
         lightOpacity *= aoRamp;
     }
 
-    bool traceShadows = (visible && lightProperties.x);
+    bool traceShadows = visible && lightProperties.x && (lightOpacity >= 1 / 256.0);
 
     // FIXME: Cone trace for directional shadows?
     [branch]
     if (traceShadows) {
         float3 fakeLightCenter = shadedPixelPosition - (lightDirectionAndAO.xyz * lightProperties.y);
-        float2 fakeRamp = float2(9999, 0);
-        lightOpacity *= coneTrace(fakeLightCenter, fakeRamp, shadedPixelPosition + (SELF_OCCLUSION_HACK * shadedPixelNormal), vars);
+        float2 fakeRamp = float2(lightProperties.z, lightProperties.y);
+        lightOpacity *= coneTrace(
+            fakeLightCenter, fakeRamp, 
+            lightProperties.w,
+            shadedPixelPosition + (SELF_OCCLUSION_HACK * shadedPixelNormal), 
+            vars
+        );
     }
 
     [branch]
@@ -80,7 +85,7 @@ float DirectionalLightPixelCore(
 void DirectionalLightPixelShader(
     in  float2 worldPosition       : TEXCOORD2,
     in  float4 lightDirectionAndAO : TEXCOORD0,
-    in  float2 lightProperties     : TEXCOORD1,
+    in  float4 lightProperties     : TEXCOORD1,
     in  float4 color               : COLOR0,
     in  float2 vpos                : VPOS,
     out float4 result              : COLOR0

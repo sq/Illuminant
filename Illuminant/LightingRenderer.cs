@@ -688,9 +688,11 @@ namespace Squared.Illuminant {
             );
             vertex.Color = lightSource.Color;
             vertex.Color.W *= (lightSource.Opacity * intensityScale);
-            vertex.LightProperties = new Vector2(
+            vertex.LightProperties = new Vector4(
                 lightSource.CastsShadows ? 1f : 0f,
-                lightSource.ShadowTraceLength
+                lightSource.ShadowTraceLength,
+                lightSource.ShadowSoftness,
+                lightSource.ShadowRampRate
             );
 
             var lightBounds = new Bounds(

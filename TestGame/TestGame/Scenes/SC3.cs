@@ -215,7 +215,7 @@ namespace TestGame.Scenes {
                 Radius = 160,
                 RampLength = 360,
                 RampMode = LightSourceRampMode.Exponential,
-                AmbientOcclusionRadius = 16f
+                AmbientOcclusionRadius = 12f
             };
 
             Environment.Lights.Add(light);
@@ -224,19 +224,15 @@ namespace TestGame.Scenes {
             light.AmbientOcclusionRadius = 0;
             ForegroundEnvironment.Lights.Add(light);
 
-            var ambientLight = new SphereLightSource {
-                Position = new Vector3(Width / 2f, Height / 2f, 128),
+            var ambientLight = new DirectionalLightSource {
+                Direction = new Vector3(-0.7f, -0.7f, -0.8f),
                 Color = new Vector4(0.33f, 0.85f, 0.65f, 0.15f),
-                Radius = 8192,
-                RampLength = 0,
-                RampMode = LightSourceRampMode.None,
-                CastsShadows = false,
+                CastsShadows = true
             };
 
             Environment.Lights.Add(ambientLight);
 
-            ambientLight = ambientLight.Clone();
-            ForegroundEnvironment.Lights.Add(ambientLight);
+            ForegroundEnvironment.Lights.Add(ambientLight.Clone());
 
             Environment.GroundZ = ForegroundEnvironment.GroundZ = 64;
             Environment.MaximumZ = ForegroundEnvironment.MaximumZ = 200;
