@@ -20,7 +20,7 @@ namespace TestGame.Scenes {
 
         RenderTarget2D Lightmap;
 
-        public readonly List<LightSource> Lights = new List<LightSource>();
+        public readonly List<PointLightSource> Lights = new List<PointLightSource>();
 
         Texture2D Background;
         float LightZ;
@@ -114,7 +114,7 @@ namespace TestGame.Scenes {
                 }
             );
 
-            var light = new LightSource {
+            var light = new PointLightSource {
                 Position = new Vector3(64, 64, 0.7f),
                 Color = new Vector4(1f, 1f, 1f, 0.5f),
                 Radius = 24,
@@ -125,7 +125,7 @@ namespace TestGame.Scenes {
             Lights.Add(light);
             Environment.Lights.Add(light);
 
-            var light2 = new LightSource {
+            var light2 = new PointLightSource {
                 Position = new Vector3(1024, 800, 320f),
                 Color = new Vector4(0.2f, 0.4f, 0.6f, 0.4f),
                 Radius = 2048,
@@ -135,7 +135,7 @@ namespace TestGame.Scenes {
             Lights.Add(light2);
             Environment.Lights.Add(light2);
 
-            var light3 = new LightSource {
+            var light3 = new PointLightSource {
                 Position = new Vector3(500, 150, 220f),
                 Color = new Vector4(0.6f, 0.4f, 0.2f, 0.33f),
                 Radius = 2048,

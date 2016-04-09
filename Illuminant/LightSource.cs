@@ -8,15 +8,9 @@ using Squared.Game;
 using Squared.Util;
 
 namespace Squared.Illuminant {
-    public class LightSource {
+    public abstract class LightSource {
         public object UserData;
 
-        // The center of the light source.
-        public Vector3 Position;
-        // The size of the light source.
-        public float   Radius = 0;
-        // The size of the falloff around the light source.
-        public float   RampLength = 1;
         // The color of the light's illumination.
         // Note that this color is a Vector4 so that you can use HDR (greater than one) lighting values.
         // Alpha is *not* premultiplied (maybe it should be?)
@@ -26,6 +20,19 @@ namespace Squared.Illuminant {
         public bool    CastsShadows = true;
         // Uniformly obscures light if it is within N pixels of any obstacle.
         public float   AmbientOcclusionRadius = 0;
+    }
+
+    public class DirectionalLightSource : LightSource {
+        public Vector3 Direction;
+    }
+
+    public class PointLightSource : LightSource {
+        // The center of the light source.
+        public Vector3 Position;
+        // The size of the light source.
+        public float   Radius = 0;
+        // The size of the falloff around the light source.
+        public float   RampLength = 1;
         // Controls the nature of the light's distance falloff. Exponential produces falloff that is more realistic (square of distance or whatever) but not necessarily as expected.
         public LightSourceRampMode RampMode = LightSourceRampMode.Linear;
 
@@ -36,8 +43,8 @@ namespace Squared.Illuminant {
             }
         }
 
-        public LightSource Clone () {
-            var result = new LightSource {
+        public PointLightSource Clone () {
+            var result = new PointLightSource {
                 UserData = UserData,
                 Position = Position,
                 Radius = Radius,

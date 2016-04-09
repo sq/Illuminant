@@ -562,46 +562,9 @@ namespace Squared.Illuminant {
                     // TODO: Use threads?
                     lock (_LightBufferLock)
                     foreach (var lightSource in Environment.Lights) {
-                        float radius = lightSource.Radius + lightSource.RampLength;
-                        var lightBounds3 = lightSource.Bounds;
-                        var lightBounds = lightBounds3.XY;
-
-                        // Expand the bounding box upward to account for 2.5D perspective
-                        if (Configuration.TwoPointFiveD) {
-                            var offset = Math.Min(
-                                lightSource.Radius + lightSource.RampLength,
-                                Environment.MaximumZ
-                            );
-                            // FIXME: Is this right?
-                            lightBounds.TopLeft.Y -= (offset / Environment.ZToYMultiplier);
-                        }
-
-                        lightBounds = lightBounds.Scale(Configuration.RenderScale);
-
-                        SphereLightVertex vertex;
-                        vertex.LightCenterAndAO = new Vector4(
-                            lightSource.Position,
-                            lightSource.AmbientOcclusionRadius
-                        );
-                        vertex.Color = lightSource.Color;
-                        vertex.Color.W *= (lightSource.Opacity * intensityScale);
-                        vertex.LightProperties = new Vector4(
-                            lightSource.Radius, lightSource.RampLength,
-                            (float)(int)lightSource.RampMode,
-                            lightSource.CastsShadows ? 1f : 0f
-                        );
-
-                        vertex.Position = lightBounds.TopLeft;
-                        SphereLightVertices[j++] = vertex;
-
-                        vertex.Position = lightBounds.TopRight;
-                        SphereLightVertices[j++] = vertex;
-
-                        vertex.Position = lightBounds.BottomRight;
-                        SphereLightVertices[j++] = vertex;
-
-                        vertex.Position = lightBounds.BottomLeft;
-                        SphereLightVertices[j++] = vertex;
+                        var pointLightSource = lightSource as PointLightSource;
+                        if (pointLightSource != null)
+                            RenderPointLightSource(pointLightSource, intensityScale, ref j);
                     };
 
                     if (lightCount > 0) {
@@ -622,6 +585,84 @@ namespace Squared.Illuminant {
                         Render.Tracing.RenderTrace.Marker(resultGroup, 9999, "LightingRenderer {0:X4} : End", this.GetHashCode());
                 }
             }
+        }
+
+        private void RenderPointLightSource (PointLightSource lightSource, float intensityScale, ref int j) {
+            float radius = lightSource.Radius + lightSource.RampLength;
+            var lightBounds3 = lightSource.Bounds;
+            var lightBounds = lightBounds3.XY;
+
+            // Expand the bounding box upward to account for 2.5D perspective
+            if (Configuration.TwoPointFiveD) {
+                var offset = Math.Min(
+                    lightSource.Radius + lightSource.RampLength,
+                    Environment.MaximumZ
+                );
+                // FIXME: Is this right?
+                lightBounds.TopLeft.Y -= (offset / Environment.ZToYMultiplier);
+            }
+
+            lightBounds = lightBounds.Scale(Configuration.RenderScale);
+
+            SphereLightVertex vertex;
+            vertex.LightCenterAndAO = new Vector4(
+                lightSource.Position,
+                lightSource.AmbientOcclusionRadius
+            );
+            vertex.Color = lightSource.Color;
+            vertex.Color.W *= (lightSource.Opacity * intensityScale);
+            vertex.LightProperties = new Vector4(
+                lightSource.Radius, lightSource.RampLength,
+                (int)lightSource.RampMode,
+                lightSource.CastsShadows ? 1f : 0f
+            );
+
+            vertex.Position = lightBounds.TopLeft;
+            SphereLightVertices[j++] = vertex;
+
+            vertex.Position = lightBounds.TopRight;
+            SphereLightVertices[j++] = vertex;
+
+            vertex.Position = lightBounds.BottomRight;
+            SphereLightVertices[j++] = vertex;
+
+            vertex.Position = lightBounds.BottomLeft;
+            SphereLightVertices[j++] = vertex;
+        }
+
+        private void RenderDirectionalLightSource (DirectionalLightSource lightSource, float intensityScale, ref int j) {
+            SphereLightVertex vertex;
+            vertex.LightCenterAndAO = new Vector4(
+                Vector3.Zero,
+                lightSource.AmbientOcclusionRadius
+            );
+            vertex.Color = lightSource.Color;
+            vertex.Color.W *= (lightSource.Opacity * intensityScale);
+            vertex.LightProperties = new Vector4(
+                99999f, 0,
+                (int)LightSourceRampMode.None,
+                lightSource.CastsShadows ? 1f : 0f
+            );
+
+            var lightBounds = new Bounds(
+                Vector2.Zero,
+                new Vector2(
+                    Configuration.MaximumRenderSize.First,
+                    Configuration.MaximumRenderSize.Second
+                )
+            );
+
+            vertex.Position = lightBounds.TopLeft;
+            SphereLightVertices[j++] = vertex;
+
+            vertex.Position = lightBounds.TopRight;
+            SphereLightVertices[j++] = vertex;
+
+            vertex.Position = lightBounds.BottomRight;
+            SphereLightVertices[j++] = vertex;
+
+            vertex.Position = lightBounds.BottomLeft;
+            SphereLightVertices[j++] = vertex;
         }
 
         /// <summary>
