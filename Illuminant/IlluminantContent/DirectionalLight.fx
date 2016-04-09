@@ -22,7 +22,7 @@ void DirectionalLightVertexShader(
     inout float4 color               : COLOR0,
     inout float3 lightDirection      : TEXCOORD0,
     inout float4 lightProperties     : TEXCOORD1,
-    inout float2 moreLightProperties : TEXCOORD3,
+    inout float3 moreLightProperties : TEXCOORD3,
     out float2   worldPosition       : TEXCOORD2,
     out float4   result              : POSITION0
 ) {
@@ -37,8 +37,8 @@ float DirectionalLightPixelCore(
     in float3 lightDirection      : TEXCOORD0,
     // enableShadows, shadowTraceLength, shadowSoftness, shadowRampRate
     in float4 lightProperties     : TEXCOORD1,
-    // aoRadius, shadowDistanceFalloff
-    in float2 moreLightProperties : TEXCOORD3,
+    // aoRadius, shadowDistanceFalloff, shadowRampLength
+    in float3 moreLightProperties : TEXCOORD3,
     in float2 vpos                : VPOS
 ) {
     float3 shadedPixelPosition;
@@ -66,7 +66,7 @@ float DirectionalLightPixelCore(
     [branch]
     if (traceShadows) {
         float3 fakeLightCenter = shadedPixelPosition - (lightDirection * lightProperties.y);
-        float2 fakeRamp = float2(lightProperties.z, lightProperties.y);
+        float2 fakeRamp = float2(lightProperties.z, moreLightProperties.y);
         lightOpacity *= coneTrace(
             fakeLightCenter, fakeRamp, 
             float2(lightProperties.w, moreLightProperties.y),
@@ -90,7 +90,7 @@ void DirectionalLightPixelShader(
     in  float2 worldPosition       : TEXCOORD2,
     in  float3 lightDirection      : TEXCOORD0,
     in  float4 lightProperties     : TEXCOORD1,
-    in  float2 moreLightProperties : TEXCOORD3,
+    in  float3 moreLightProperties : TEXCOORD3,
     in  float4 color               : COLOR0,
     in  float2 vpos                : VPOS,
     out float4 result              : COLOR0

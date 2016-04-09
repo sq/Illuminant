@@ -226,9 +226,12 @@ namespace TestGame.Scenes {
 
             var ambientLight = new DirectionalLightSource {
                 Direction = new Vector3(-0.7f, -0.7f, -0.9f),
-                ShadowDistanceFalloff = 64f,
+                ShadowTraceLength = 72f,
+                ShadowRampLength = 400f,
+                ShadowRampRate = 0.15f,
+                ShadowSoftness = 24f,
                 Color = new Vector4(0.33f, 0.85f, 0.65f, 0.15f),
-                CastsShadows = true
+                CastsShadows = true,
             };
 
             Environment.Lights.Add(ambientLight);

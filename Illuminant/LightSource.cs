@@ -33,7 +33,7 @@ namespace Squared.Illuminant {
         /// The distance in pixels that will be traced to find light obstructions.
         /// A larger value produces more accurate directional shadows at increased cost.
         /// </summary>
-        public float   ShadowTraceLength = 192;
+        public float   ShadowTraceLength = 256;
         /// <summary>
         /// Controls the maximum fuzziness of directional light shadows.
         /// </summary>
@@ -41,7 +41,11 @@ namespace Squared.Illuminant {
         /// <summary>
         /// Controls how quickly directional light shadows become fuzzy.
         /// </summary>
-        public float   ShadowRampRate = 2f;
+        public float   ShadowRampRate = 0.5f;
+        /// <summary>
+        /// Controls the length of the shadow softness ramp.
+        /// </summary>
+        public float   ShadowRampLength = 256f;
 
         public DirectionalLightSource Clone () {
             var result = new DirectionalLightSource {

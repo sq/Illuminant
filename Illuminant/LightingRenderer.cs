@@ -692,9 +692,10 @@ namespace Squared.Illuminant {
                 lightSource.ShadowSoftness,
                 lightSource.ShadowRampRate
             );
-            vertex.MoreLightProperties = new Vector2(
+            vertex.MoreLightProperties = new Vector3(
                 lightSource.AmbientOcclusionRadius,
-                lightSource.ShadowDistanceFalloff.GetValueOrDefault(-99999)
+                lightSource.ShadowDistanceFalloff.GetValueOrDefault(-99999),
+                lightSource.ShadowRampLength
             );
 
             var lightBounds = new Bounds(
