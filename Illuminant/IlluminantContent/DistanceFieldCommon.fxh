@@ -45,6 +45,7 @@ struct DistanceFieldSettings {
 
     float  MaxConeRadius;
     float  ConeGrowthFactor;
+    float  ShadowDistanceFalloff;
     float  OcclusionToOpacityPower;
     float  InvScaleFactor;
     float3 Extent;

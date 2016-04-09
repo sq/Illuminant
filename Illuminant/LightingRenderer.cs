@@ -652,16 +652,17 @@ namespace Squared.Illuminant {
             lightBounds = lightBounds.Scale(Configuration.RenderScale);
 
             SphereLightVertex vertex;
-            vertex.LightCenterAndAO = new Vector4(
-                lightSource.Position,
-                lightSource.AmbientOcclusionRadius
-            );
+            vertex.LightCenter = lightSource.Position;
             vertex.Color = lightSource.Color;
             vertex.Color.W *= (lightSource.Opacity * intensityScale);
             vertex.LightProperties = new Vector4(
                 lightSource.Radius, lightSource.RampLength,
                 (int)lightSource.RampMode,
                 lightSource.CastsShadows ? 1f : 0f
+            );
+            vertex.MoreLightProperties = new Vector2(
+                lightSource.AmbientOcclusionRadius,
+                lightSource.ShadowDistanceFalloff.GetValueOrDefault(-99999)
             );
 
             vertex.Position = lightBounds.TopLeft;
@@ -682,10 +683,7 @@ namespace Squared.Illuminant {
             lightDirection.Normalize();
 
             DirectionalLightVertex vertex;
-            vertex.LightDirectionAndAO = new Vector4(
-                lightDirection,
-                lightSource.AmbientOcclusionRadius
-            );
+            vertex.LightDirection = lightDirection;
             vertex.Color = lightSource.Color;
             vertex.Color.W *= (lightSource.Opacity * intensityScale);
             vertex.LightProperties = new Vector4(
@@ -693,6 +691,10 @@ namespace Squared.Illuminant {
                 lightSource.ShadowTraceLength,
                 lightSource.ShadowSoftness,
                 lightSource.ShadowRampRate
+            );
+            vertex.MoreLightProperties = new Vector2(
+                lightSource.AmbientOcclusionRadius,
+                lightSource.ShadowDistanceFalloff.GetValueOrDefault(-99999)
             );
 
             var lightBounds = new Bounds(

@@ -182,10 +182,10 @@ namespace TestGame.Scenes {
                 ) {
                     RenderScale = 1.0f / BackgroundScaleRatio,
                     DistanceFieldResolution = 0.5f,
-                    DistanceFieldMinStepSize = 2.1f,
-                    DistanceFieldLongStepFactor = 0.75f,
-                    DistanceFieldOcclusionToOpacityPower = 1.3f,
-                    DistanceFieldMaxConeRadius = 36,
+                    DistanceFieldMinStepSize = 1.5f,
+                    DistanceFieldLongStepFactor = 0.7f,
+                    DistanceFieldOcclusionToOpacityPower = 1.35f,
+                    DistanceFieldMaxConeRadius = 30,
                     TwoPointFiveD = true,
                     DistanceFieldUpdateRate = 2                    
                 }
@@ -199,10 +199,10 @@ namespace TestGame.Scenes {
                 ) {
                     RenderScale = 1.0f / ForegroundScaleRatio,
                     DistanceFieldResolution = 0.5f,
-                    DistanceFieldMinStepSize = 2.1f,
-                    DistanceFieldLongStepFactor = 0.75f,
-                    DistanceFieldOcclusionToOpacityPower = 1.3f,
-                    DistanceFieldMaxConeRadius = 36,
+                    DistanceFieldMinStepSize = 1.5f,
+                    DistanceFieldLongStepFactor = 0.7f,
+                    DistanceFieldOcclusionToOpacityPower = 1.35f,
+                    DistanceFieldMaxConeRadius = 30,
                     TwoPointFiveD = true,
                     // RenderGroundPlane = false,
                     DistanceFieldUpdateRate = 2,
@@ -215,7 +215,7 @@ namespace TestGame.Scenes {
                 Radius = 160,
                 RampLength = 360,
                 RampMode = LightSourceRampMode.Exponential,
-                AmbientOcclusionRadius = 12f
+                AmbientOcclusionRadius = 8f
             };
 
             Environment.Lights.Add(light);
@@ -225,7 +225,8 @@ namespace TestGame.Scenes {
             ForegroundEnvironment.Lights.Add(light);
 
             var ambientLight = new DirectionalLightSource {
-                Direction = new Vector3(-0.7f, -0.7f, -0.8f),
+                Direction = new Vector3(-0.7f, -0.7f, -0.9f),
+                ShadowDistanceFalloff = 64f,
                 Color = new Vector4(0.33f, 0.85f, 0.65f, 0.15f),
                 CastsShadows = true
             };

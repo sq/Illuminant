@@ -18,24 +18,28 @@ float4 ApplyTransform (float3 position) {
 }
 
 void SphereLightVertexShader(
-    in float2 position            : POSITION0,
-    inout float4 color            : COLOR0,
-    inout float4 lightCenterAndAO : TEXCOORD0,
-    inout float4 lightProperties  : TEXCOORD1,
-    out float2 worldPosition      : TEXCOORD2,
-    out float4 result             : POSITION0
+    in float2 position               : POSITION0,
+    inout float4 color               : COLOR0,
+    inout float3 lightCenter         : TEXCOORD0,
+    inout float4 lightProperties     : TEXCOORD1,
+    inout float2 moreLightProperties : TEXCOORD3,
+    out float2 worldPosition         : TEXCOORD2,
+    out float4 result                : POSITION0
 ) {
     worldPosition = position;
     // FIXME: Z
-    float4 transformedPosition = ApplyTransform(float3(position, lightCenterAndAO.z));
+    float4 transformedPosition = ApplyTransform(float3(position, lightCenter.z));
     result = float4(transformedPosition.xy, 0, transformedPosition.w);
 }
 
 float SphereLightPixelCore(
-    in float2 worldPosition    : TEXCOORD2,
-    in float4 lightCenterAndAO : TEXCOORD0,
-    in float4 lightProperties  : TEXCOORD1, // radius, ramp length, ramp mode, enable shadows
-    in float2 vpos             : VPOS
+    in float2 worldPosition       : TEXCOORD2,
+    in float3 lightCenter         : TEXCOORD0,
+    // radius, ramp length, ramp mode, enable shadows
+    in float4 lightProperties     : TEXCOORD1,
+    // ao radius, distance falloff
+    in float2 moreLightProperties : TEXCOORD3,
+    in float2 vpos                : VPOS
 ) {
     float3 shadedPixelPosition;
     float3 shadedPixelNormal;
@@ -47,7 +51,7 @@ float SphereLightPixelCore(
     bool  distanceCull = false;
     float lightOpacity = computeSphereLightOpacity(
         shadedPixelPosition, shadedPixelNormal,
-        lightCenterAndAO.xyz, lightProperties,
+        lightCenter, lightProperties,
         distanceCull
     );
 
@@ -57,9 +61,9 @@ float SphereLightPixelCore(
     DistanceFieldConstants vars = makeDistanceFieldConstants();
 
     [branch]
-    if ((lightCenterAndAO.w >= 0.5) && visible) {
+    if ((moreLightProperties.x >= 0.5) && visible) {
         float distance = sampleDistanceField(shadedPixelPosition, vars);
-        float aoRamp = clamp(distance / lightCenterAndAO.w, 0, 1);
+        float aoRamp = clamp(distance / moreLightProperties.x, 0, 1);
         lightOpacity *= aoRamp;
     }
 
@@ -68,8 +72,8 @@ float SphereLightPixelCore(
     [branch]
     if (traceShadows) {
         lightOpacity *= coneTrace(
-            lightCenterAndAO.xyz, lightProperties.xy, 
-            DistanceField.ConeGrowthFactor,
+            lightCenter, lightProperties.xy, 
+            float2(DistanceField.ConeGrowthFactor, moreLightProperties.y),
             shadedPixelPosition + (SELF_OCCLUSION_HACK * shadedPixelNormal),
             vars
         );
@@ -87,15 +91,16 @@ float SphereLightPixelCore(
 }
 
 void SphereLightPixelShader(
-    in  float2 worldPosition    : TEXCOORD2,
-    in  float4 lightCenterAndAO : TEXCOORD0,
-    in  float4 lightProperties  : TEXCOORD1,
-    in  float4 color            : COLOR0,
-    in  float2 vpos             : VPOS,
-    out float4 result           : COLOR0
+    in  float2 worldPosition       : TEXCOORD2,
+    in  float3 lightCenter         : TEXCOORD0,
+    in  float4 lightProperties     : TEXCOORD1,
+    in  float2 moreLightProperties : TEXCOORD3,
+    in  float4 color               : COLOR0,
+    in  float2 vpos                : VPOS,
+    out float4 result              : COLOR0
 ) {
     float opacity = SphereLightPixelCore(
-        worldPosition, lightCenterAndAO, lightProperties, vpos
+        worldPosition, lightCenter, lightProperties, moreLightProperties, vpos
     );
 
     float4 lightColorActual = float4(color.rgb * color.a * opacity, 1);

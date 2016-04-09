@@ -18,6 +18,8 @@ namespace Squared.Illuminant {
         // A separate opacity factor that you can use to easily fade lights in/out.
         public float   Opacity = 1.0f;
         public bool    CastsShadows = true;
+        // FIXME: Not implemented in shaders
+        public float?  ShadowDistanceFalloff = null;
         // Uniformly obscures light if it is within N pixels of any obstacle.
         public float   AmbientOcclusionRadius = 0;
     }
@@ -31,15 +33,15 @@ namespace Squared.Illuminant {
         /// The distance in pixels that will be traced to find light obstructions.
         /// A larger value produces more accurate directional shadows at increased cost.
         /// </summary>
-        public float   ShadowTraceLength = 64;
+        public float   ShadowTraceLength = 192;
         /// <summary>
         /// Controls the maximum fuzziness of directional light shadows.
         /// </summary>
-        public float   ShadowSoftness = 16;
+        public float   ShadowSoftness = 12;
         /// <summary>
         /// Controls how quickly directional light shadows become fuzzy.
         /// </summary>
-        public float   ShadowRampRate = 0.05f;
+        public float   ShadowRampRate = 2f;
 
         public DirectionalLightSource Clone () {
             var result = new DirectionalLightSource {

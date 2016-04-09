@@ -25,8 +25,8 @@ struct TraceParameters {
 };
 
 float coneTraceStep(
-    // maxRadius, lightTangentAngle, minStepSize
-    in    float3 config,
+    // maxRadius, lightTangentAngle, minStepSize, distanceFalloff
+    in    float4 config,
     in    float  distanceToObstacle,
     in    float  offset,
     inout float  visibility
@@ -35,7 +35,7 @@ float coneTraceStep(
         (config.y * offset) + MIN_CONE_RADIUS, config.x
     );
 
-    float localVisibility = distanceToObstacle / localSphereRadius;
+    float localVisibility = clamp((distanceToObstacle / localSphereRadius), 0, 1);
     visibility = min(visibility, localVisibility);
 
     return max(
@@ -49,13 +49,13 @@ float coneTraceStep(
 float coneTrace(
     in float3 lightCenter,
     in float2 lightRamp,
-    in float  coneGrowthFactor,
+    in float2 coneGrowthFactorAndDistanceFalloff,
     in float3 shadedPixelPosition,
     in DistanceFieldConstants vars
 ) {
     float  traceLength;
     float3 traceDirection;
-    float3 config;
+    float4 config;
 
     {
         float3 traceVector = (lightCenter - shadedPixelPosition);
@@ -66,10 +66,13 @@ float coneTrace(
             lightRamp.x, MIN_CONE_RADIUS, DistanceField.MaxConeRadius
         );
         float rampLength           = max(lightRamp.y, 16);
-        float radiusGrowthPerPixel = maxRadius / rampLength * coneGrowthFactor;
+        float radiusGrowthPerPixel = maxRadius / rampLength * 
+            coneGrowthFactorAndDistanceFalloff.x;
 
-        config = float3(
-            maxRadius, radiusGrowthPerPixel, max(1, DistanceField.Step.y)
+        config = float4(
+            maxRadius, radiusGrowthPerPixel, 
+            max(1, DistanceField.Step.y), 
+            coneGrowthFactorAndDistanceFalloff.y
         );
     }
 
