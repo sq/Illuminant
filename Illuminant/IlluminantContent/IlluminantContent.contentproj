@@ -36,8 +36,8 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Illumination.fx">
-      <Name>Illumination</Name>
+    <Compile Include="SphereLight.fx">
+      <Name>SphereLight</Name>
       <Importer>EffectImporter</Importer>
       <Processor>EffectProcessor</Processor>
       <ProcessorParameters_DebugMode>Optimize</ProcessorParameters_DebugMode>
@@ -135,6 +135,13 @@
       <Importer>EffectImporter</Importer>
       <Processor>EffectProcessor</Processor>
       <ProcessorParameters_DebugMode>Optimize</ProcessorParameters_DebugMode>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="DirectionalLight.fx">
+      <Name>DirectionalLight</Name>
+      <Importer>EffectImporter</Importer>
+      <Processor>EffectProcessor</Processor>
     </Compile>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\XNA Game Studio\$(XnaFrameworkVersion)\Microsoft.Xna.GameStudio.ContentPipeline.targets" />

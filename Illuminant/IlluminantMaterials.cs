@@ -12,7 +12,7 @@ namespace Squared.Illuminant {
     public class IlluminantMaterials {
         public readonly DefaultMaterialSet MaterialSet;
 
-        public Material SphereLight;
+        public Material SphereLight, DirectionalLight;
         public Render.EffectMaterial DistanceFieldExterior, DistanceFieldInterior;
         public Render.EffectMaterial[] DistanceFunctionTypes;
         public Render.EffectMaterial HeightVolume, HeightVolumeFace;

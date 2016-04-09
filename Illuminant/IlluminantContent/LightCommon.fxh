@@ -47,6 +47,16 @@ void sampleGBuffer(
     ));
 }
 
+float computeNormalFactor(
+    float3 lightNormal, float3 shadedPixelNormal
+) {
+    float d = dot(-lightNormal, shadedPixelNormal);
+
+    // HACK: We allow the light to be somewhat behind the surface without occluding it,
+    //  and we want a smooth ramp between occluded and not-occluded
+    return pow(clamp((d + DOT_OFFSET) / DOT_RAMP_RANGE, 0, 1), DOT_EXPONENT);
+}
+
 float computeSphereLightOpacity(
     float3 shadedPixelPosition, float3 shadedPixelNormal,
     float3 lightCenter, float4 lightProperties,
@@ -61,12 +71,7 @@ float computeSphereLightOpacity(
     float  distanceFactor = 1 - clamp((distance - lightRadius) / lightRampLength, 0, 1);
 
     float3 lightNormal = distance3 / distance;
-
-    float d = dot(-lightNormal, shadedPixelNormal);
-
-    // HACK: We allow the light to be somewhat behind the surface without occluding it,
-    //  and we want a smooth ramp between occluded and not-occluded
-    float  normalFactor = pow(clamp((d + DOT_OFFSET) / DOT_RAMP_RANGE, 0, 1), DOT_EXPONENT);
+    float normalFactor = computeNormalFactor(lightNormal, shadedPixelNormal);
 
     [flatten]
     if (falloffMode >= 2) {
@@ -79,4 +84,11 @@ float computeSphereLightOpacity(
     distanceFalloff = (distanceFactor <= 0);
 
     return normalFactor * distanceFactor;
+}
+
+float computeDirectionalLightOpacity(
+    float3 lightDirection, float3 shadedPixelNormal
+) {
+    float  normalFactor = computeNormalFactor(lightDirection, shadedPixelNormal);
+    return normalFactor;
 }

@@ -20,7 +20,7 @@ namespace TestGame.Scenes {
 
         RenderTarget2D Lightmap;
 
-        public readonly List<PointLightSource> Lights = new List<PointLightSource>();
+        public SphereLightSource MovableLight;
 
         Texture2D Background;
         float LightZ;
@@ -110,11 +110,11 @@ namespace TestGame.Scenes {
                     DistanceFieldLongStepFactor = 0.5f,
                     DistanceFieldOcclusionToOpacityPower = 0.7f,
                     DistanceFieldMaxConeRadius = 24,
-                    DistanceFieldUpdateRate = 16,
+                    DistanceFieldUpdateRate = 1,
                 }
             );
 
-            var light = new PointLightSource {
+            MovableLight = new SphereLightSource {
                 Position = new Vector3(64, 64, 0.7f),
                 Color = new Vector4(1f, 1f, 1f, 0.5f),
                 Radius = 24,
@@ -122,28 +122,17 @@ namespace TestGame.Scenes {
                 RampMode = LightSourceRampMode.Exponential
             };
 
-            Lights.Add(light);
-            Environment.Lights.Add(light);
+            Environment.Lights.Add(MovableLight);
 
-            var light2 = new PointLightSource {
-                Position = new Vector3(1024, 800, 320f),
-                Color = new Vector4(0.2f, 0.4f, 0.6f, 0.4f),
-                Radius = 2048,
-                RampMode = LightSourceRampMode.None
-            };
+            Environment.Lights.Add(new DirectionalLightSource {
+                Direction = new Vector3(-0.75f, -0.1f, -1f),
+                Color = new Vector4(0.2f, 0.4f, 0.6f, 0.4f)
+            });
 
-            Lights.Add(light2);
-            Environment.Lights.Add(light2);
-
-            var light3 = new PointLightSource {
-                Position = new Vector3(500, 150, 220f),
-                Color = new Vector4(0.6f, 0.4f, 0.2f, 0.33f),
-                Radius = 2048,
-                RampMode = LightSourceRampMode.None
-            };
-
-            Lights.Add(light3);
-            Environment.Lights.Add(light3);
+            Environment.Lights.Add(new DirectionalLightSource {
+                Direction = new Vector3(0.15f, 0f, -1f),
+                Color = new Vector4(0.5f, 0.3f, 0.15f, 0.3f)
+            });
 
             Rect(new Vector2(330, 337), new Vector2(Width, 394), 0f, 55f);
 
@@ -308,9 +297,9 @@ namespace TestGame.Scenes {
                 var mousePos = new Vector3(ms.X, ms.Y, LightZ);
 
                 if (Deterministic)
-                    Lights[0].Position = new Vector3(671, 394, 97.5f);
+                    MovableLight.Position = new Vector3(671, 394, 97.5f);
                 else
-                    Lights[0].Position = mousePos;
+                    MovableLight.Position = mousePos;
             }
         }
 
@@ -318,7 +307,7 @@ namespace TestGame.Scenes {
             get {
                 return string.Format(
                     "L@{1:0000},{2:0000},{0:000.0} {3}", 
-                    LightZ, Lights[0].Position.X, Lights[0].Position.Y,
+                    LightZ, MovableLight.Position.X, MovableLight.Position.Y,
                     TwoPointFiveD 
                         ? "2.5D"
                         : "2D"

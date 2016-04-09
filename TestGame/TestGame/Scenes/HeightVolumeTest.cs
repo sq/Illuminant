@@ -19,7 +19,7 @@ namespace TestGame.Scenes {
 
         RenderTarget2D Lightmap;
 
-        public readonly List<PointLightSource> Lights = new List<PointLightSource>();
+        public readonly List<SphereLightSource> Lights = new List<SphereLightSource>();
 
         bool ShowGBuffer   = false;
         bool TwoPointFiveD = true;
@@ -67,7 +67,7 @@ namespace TestGame.Scenes {
                 }
             );
 
-            var light = new PointLightSource {
+            var light = new SphereLightSource {
                 Position = new Vector3(64, 64, 0),
                 Color = new Vector4(1f, 1f, 1f, 1f),
                 Opacity = 0.5f,
@@ -84,7 +84,7 @@ namespace TestGame.Scenes {
 
             var rng = new Random(1234);
             for (var i = 0; i < RotatingLightCount; i++) {
-                light = new PointLightSource {
+                light = new SphereLightSource {
                     Position = new Vector3(64, 64, rng.NextFloat(0.1f, 2.0f)),
                     Color = new Vector4((float)rng.NextDouble(0.1f, 0.7f), (float)rng.NextDouble(0.1f, 0.7f), (float)rng.NextDouble(0.1f, 0.7f), 1f),
                     Opacity = opacityScale,

@@ -27,7 +27,7 @@ namespace TestGame.Scenes {
             private static int _NextIndex;
 
             public readonly int Index;
-            public readonly PointLightSource Light;
+            public readonly SphereLightSource Light;
             public readonly Vector3 Source, Target;
             public readonly float Size;
 
@@ -53,7 +53,7 @@ namespace TestGame.Scenes {
 
                 var position = source + (Velocity * RNG.NextFloat(0.3f, 0.8f));
 
-                Light = new PointLightSource {
+                Light = new SphereLightSource {
                     Position = position,
                     CastsShadows = true,
                     AmbientOcclusionRadius = 0,
@@ -209,7 +209,7 @@ namespace TestGame.Scenes {
                 }
             );
 
-            var light = new PointLightSource {
+            var light = new SphereLightSource {
                 Position = new Vector3(64, 64, 0.7f),
                 Color = new Vector4(1f, 1f, 1f, 0.5f),
                 Radius = 160,
@@ -224,7 +224,7 @@ namespace TestGame.Scenes {
             light.AmbientOcclusionRadius = 0;
             ForegroundEnvironment.Lights.Add(light);
 
-            var ambientLight = new PointLightSource {
+            var ambientLight = new SphereLightSource {
                 Position = new Vector3(Width / 2f, Height / 2f, 128),
                 Color = new Vector4(0.33f, 0.85f, 0.65f, 0.15f),
                 Radius = 8192,
@@ -585,12 +585,12 @@ namespace TestGame.Scenes {
                 }
 
                 if (Deterministic)
-                    ((PointLightSource)Environment.Lights[0]).Position = 
-                        ((PointLightSource)ForegroundEnvironment.Lights[0]).Position = 
+                    ((SphereLightSource)Environment.Lights[0]).Position = 
+                        ((SphereLightSource)ForegroundEnvironment.Lights[0]).Position = 
                         new Vector3(Width / 2f, Height / 2f, 200f);
                 else
-                    ((PointLightSource)Environment.Lights[0]).Position = 
-                        ((PointLightSource)ForegroundEnvironment.Lights[0]).Position = 
+                    ((SphereLightSource)Environment.Lights[0]).Position = 
+                        ((SphereLightSource)ForegroundEnvironment.Lights[0]).Position = 
                         mousePos;
 
                 using (var e = Projectiles.GetEnumerator())
@@ -606,7 +606,7 @@ namespace TestGame.Scenes {
 
         public override string Status {
             get {
-                var pls = (PointLightSource)Environment.Lights[0];
+                var pls = (SphereLightSource)Environment.Lights[0];
                 return string.Format(
                     "L@{1:0000},{2:0000},{0:000.0}", 
                     LightZ, pls.Position.X, pls.Position.Y

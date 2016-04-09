@@ -26,7 +26,7 @@ namespace Squared.Illuminant {
         public Vector3 Direction;
     }
 
-    public class PointLightSource : LightSource {
+    public class SphereLightSource : LightSource {
         // The center of the light source.
         public Vector3 Position;
         // The size of the light source.
@@ -43,8 +43,8 @@ namespace Squared.Illuminant {
             }
         }
 
-        public PointLightSource Clone () {
-            var result = new PointLightSource {
+        public SphereLightSource Clone () {
+            var result = new SphereLightSource {
                 UserData = UserData,
                 Position = Position,
                 Radius = Radius,

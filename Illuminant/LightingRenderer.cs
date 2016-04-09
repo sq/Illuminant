@@ -35,8 +35,12 @@ namespace Squared.Illuminant {
         public readonly BlendState[]      ClearPackedSlice = new BlendState[4];
 
         private readonly DynamicVertexBuffer SphereLightVertexBuffer;
+        private readonly DynamicVertexBuffer DirectionalLightVertexBuffer;
         private readonly IndexBuffer         QuadIndexBuffer;
-        private readonly SphereLightVertex[] SphereLightVertices = new SphereLightVertex[MaximumLightCount * 4];
+        private readonly SphereLightVertex[] SphereLightVertices = 
+            new SphereLightVertex[MaximumLightCount * 4];
+        private readonly DirectionalLightVertex[] DirectionalLightVertices = 
+            new DirectionalLightVertex[MaximumLightCount * 4];
 
         private readonly DynamicVertexBuffer      DistanceFunctionVertexBuffer;
         private readonly DistanceFunctionVertex[] DistanceFunctionVertices = 
@@ -87,6 +91,10 @@ namespace Squared.Illuminant {
                 SphereLightVertexBuffer = new DynamicVertexBuffer(
                     coordinator.Device, typeof(SphereLightVertex), 
                     SphereLightVertices.Length, BufferUsage.WriteOnly
+                );
+                DirectionalLightVertexBuffer = new DynamicVertexBuffer(
+                    coordinator.Device, typeof(DirectionalLightVertex), 
+                    DirectionalLightVertices.Length, BufferUsage.WriteOnly
                 );
                 QuadIndexBuffer = new IndexBuffer(
                     coordinator.Device, IndexElementSize.SixteenBits, MaximumLightCount * 6, BufferUsage.WriteOnly
@@ -223,10 +231,17 @@ namespace Squared.Illuminant {
                 Action<DeviceManager>[] dEnd = null;
 
                 var slmi =
-                    new Render.EffectMaterial(content.Load<Effect>("Illumination"), "SphereLight");
+                    new Render.EffectMaterial(content.Load<Effect>("SphereLight"), "SphereLight");
 
                 materials.Add(IlluminantMaterials.SphereLight = new DelegateMaterial(
                     slmi, dBegin, dEnd
+                ));
+
+                var dlmi =
+                    new Render.EffectMaterial(content.Load<Effect>("DirectionalLight"), "DirectionalLight");
+
+                materials.Add(IlluminantMaterials.DirectionalLight = new DelegateMaterial(
+                    dlmi, dBegin, dEnd
                 ));
 
                 materials.Add(IlluminantMaterials.DistanceFieldExterior = 
@@ -320,6 +335,7 @@ namespace Squared.Illuminant {
 
         public void Dispose () {
             Coordinator.DisposeResource(SphereLightVertexBuffer);
+            Coordinator.DisposeResource(DirectionalLightVertexBuffer);
             Coordinator.DisposeResource(QuadIndexBuffer);
             Coordinator.DisposeResource(_DistanceField);
             Coordinator.DisposeResource(_GBuffer);
@@ -482,19 +498,27 @@ namespace Squared.Illuminant {
         }
 
         private void _IlluminationBatchSetup (DeviceManager device, object userData) {
-            var lightCount = (int)userData;
-            lock (_LightBufferLock)
-                SphereLightVertexBuffer.SetData(SphereLightVertices, 0, lightCount * 4, SetDataOptions.Discard);
+            var lightVertexCounts = (Pair<int>)userData;
+            lock (_LightBufferLock) {
+                if (lightVertexCounts.First > 0)
+                    SphereLightVertexBuffer.SetData(SphereLightVertices, 0, lightVertexCounts.First, SetDataOptions.Discard);
+
+                if (lightVertexCounts.Second > 0)
+                    DirectionalLightVertexBuffer.SetData(DirectionalLightVertices, 0, lightVertexCounts.Second, SetDataOptions.Discard);
+            }
 
             device.Device.BlendState = RenderStates.AdditiveBlend;
 
-            var mi = (Render.EffectMaterial)(
-                ((DelegateMaterial)IlluminantMaterials.SphereLight).BaseMaterial
-            );
+            SetLightShaderParameters(IlluminantMaterials.SphereLight);
+            SetLightShaderParameters(IlluminantMaterials.DirectionalLight);
+        }
+
+        private void SetLightShaderParameters (Material material) {
+            var mi = (Render.EffectMaterial)((DelegateMaterial)material).BaseMaterial;
             var p = mi.Effect.Parameters;
 
             var tsize = new Vector2(
-                1f / Configuration.RenderSize.First, 
+                1f / Configuration.RenderSize.First,
                 1f / Configuration.RenderSize.Second
             );
             p["GBufferTexelSize"].SetValue(tsize);
@@ -551,7 +575,8 @@ namespace Squared.Illuminant {
                     if (Render.Tracing.RenderTrace.EnableTracing)
                         Render.Tracing.RenderTrace.Marker(resultGroup, -9999, "LightingRenderer {0:X4} : Begin", this.GetHashCode());
 
-                    int lightCount = Environment.Lights.Count;
+                    int sphereVertexCount = 0;
+                    int directionalVertexCount = 0;
 
                     ClearBatch.AddNew(
                         resultGroup, -1, Materials.Clear, new Color(0, 0, 0, Configuration.RenderGroundPlane ? 1f : 0f)
@@ -562,22 +587,44 @@ namespace Squared.Illuminant {
                     // TODO: Use threads?
                     lock (_LightBufferLock)
                     foreach (var lightSource in Environment.Lights) {
-                        var pointLightSource = lightSource as PointLightSource;
+                        var pointLightSource = lightSource as SphereLightSource;
+                        var directionalLightSource = lightSource as DirectionalLightSource;
+
                         if (pointLightSource != null)
-                            RenderPointLightSource(pointLightSource, intensityScale, ref j);
+                            RenderPointLightSource(pointLightSource, intensityScale, ref sphereVertexCount);
+                        else if (directionalLightSource != null)
+                            RenderDirectionalLightSource(directionalLightSource, intensityScale, ref directionalVertexCount);
+                        else
+                            throw new NotSupportedException(lightSource.GetType().Name);
                     };
 
-                    if (lightCount > 0) {
+                    var vertexCounts = new Pair<int>(sphereVertexCount, directionalVertexCount);
+
+                    if (sphereVertexCount > 0) {
                         if (Render.Tracing.RenderTrace.EnableTracing)
-                            Render.Tracing.RenderTrace.Marker(resultGroup, layerIndex++, "LightingRenderer {0:X4} : Render {1} light source(s)", this.GetHashCode(), lightCount);
+                            Render.Tracing.RenderTrace.Marker(resultGroup, layerIndex++, "LightingRenderer {0:X4} : Render {1} sphere light source(s)", this.GetHashCode(), sphereVertexCount / 4);
 
                         using (var nb = NativeBatch.New(
-                            resultGroup, layerIndex++, IlluminantMaterials.SphereLight, IlluminationBatchSetup, userData: lightCount
+                            resultGroup, layerIndex++, IlluminantMaterials.SphereLight, IlluminationBatchSetup, userData: vertexCounts
                         ))
                             nb.Add(new NativeDrawCall(
                                 PrimitiveType.TriangleList,
                                 SphereLightVertexBuffer, 0,
-                                QuadIndexBuffer, 0, 0, lightCount * 4, 0, lightCount * 2
+                                QuadIndexBuffer, 0, 0, sphereVertexCount, 0, sphereVertexCount / 2
+                            ));
+                    }
+
+                    if (directionalVertexCount > 0) {
+                        if (Render.Tracing.RenderTrace.EnableTracing)
+                            Render.Tracing.RenderTrace.Marker(resultGroup, layerIndex++, "LightingRenderer {0:X4} : Render {1} directional light source(s)", this.GetHashCode(), directionalVertexCount / 4);
+
+                        using (var nb = NativeBatch.New(
+                            resultGroup, layerIndex++, IlluminantMaterials.DirectionalLight, IlluminationBatchSetup, userData: vertexCounts
+                        ))
+                            nb.Add(new NativeDrawCall(
+                                PrimitiveType.TriangleList,
+                                DirectionalLightVertexBuffer, 0,
+                                QuadIndexBuffer, 0, 0, directionalVertexCount, 0, directionalVertexCount / 2
                             ));
                     }
 
@@ -587,7 +634,7 @@ namespace Squared.Illuminant {
             }
         }
 
-        private void RenderPointLightSource (PointLightSource lightSource, float intensityScale, ref int j) {
+        private void RenderPointLightSource (SphereLightSource lightSource, float intensityScale, ref int vertexCount) {
             float radius = lightSource.Radius + lightSource.RampLength;
             var lightBounds3 = lightSource.Bounds;
             var lightBounds = lightBounds3.XY;
@@ -618,31 +665,30 @@ namespace Squared.Illuminant {
             );
 
             vertex.Position = lightBounds.TopLeft;
-            SphereLightVertices[j++] = vertex;
+            SphereLightVertices[vertexCount++] = vertex;
 
             vertex.Position = lightBounds.TopRight;
-            SphereLightVertices[j++] = vertex;
+            SphereLightVertices[vertexCount++] = vertex;
 
             vertex.Position = lightBounds.BottomRight;
-            SphereLightVertices[j++] = vertex;
+            SphereLightVertices[vertexCount++] = vertex;
 
             vertex.Position = lightBounds.BottomLeft;
-            SphereLightVertices[j++] = vertex;
+            SphereLightVertices[vertexCount++] = vertex;
         }
 
-        private void RenderDirectionalLightSource (DirectionalLightSource lightSource, float intensityScale, ref int j) {
-            SphereLightVertex vertex;
-            vertex.LightCenterAndAO = new Vector4(
-                Vector3.Zero,
+        private void RenderDirectionalLightSource (DirectionalLightSource lightSource, float intensityScale, ref int vertexCount) {
+            var lightDirection = lightSource.Direction;
+            lightDirection.Normalize();
+
+            DirectionalLightVertex vertex;
+            vertex.LightDirectionAndAO = new Vector4(
+                lightDirection,
                 lightSource.AmbientOcclusionRadius
             );
             vertex.Color = lightSource.Color;
             vertex.Color.W *= (lightSource.Opacity * intensityScale);
-            vertex.LightProperties = new Vector4(
-                99999f, 0,
-                (int)LightSourceRampMode.None,
-                lightSource.CastsShadows ? 1f : 0f
-            );
+            vertex.EnableShadows = lightSource.CastsShadows ? 1f : 0f;
 
             var lightBounds = new Bounds(
                 Vector2.Zero,
@@ -653,16 +699,16 @@ namespace Squared.Illuminant {
             );
 
             vertex.Position = lightBounds.TopLeft;
-            SphereLightVertices[j++] = vertex;
+            DirectionalLightVertices[vertexCount++] = vertex;
 
             vertex.Position = lightBounds.TopRight;
-            SphereLightVertices[j++] = vertex;
+            DirectionalLightVertices[vertexCount++] = vertex;
 
             vertex.Position = lightBounds.BottomRight;
-            SphereLightVertices[j++] = vertex;
+            DirectionalLightVertices[vertexCount++] = vertex;
 
             vertex.Position = lightBounds.BottomLeft;
-            SphereLightVertices[j++] = vertex;
+            DirectionalLightVertices[vertexCount++] = vertex;
         }
 
         /// <summary>

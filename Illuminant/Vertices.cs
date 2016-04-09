@@ -36,6 +36,34 @@ namespace Squared.Illuminant {
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    public struct DirectionalLightVertex : IVertexType {
+        // FIXME: Shouldn't this be V3? Blech
+        public Vector2 Position;
+        public Vector4 LightDirectionAndAO;
+        public float   EnableShadows;
+        public Vector4 Color;
+
+        public static VertexDeclaration _VertexDeclaration;
+
+        static DirectionalLightVertex () {
+            var tThis = typeof(DirectionalLightVertex);
+
+            _VertexDeclaration = new VertexDeclaration(
+                new VertexElement(Marshal.OffsetOf(tThis, "Position").ToInt32(), VertexElementFormat.Vector2, VertexElementUsage.Position, 0),
+                new VertexElement(Marshal.OffsetOf(tThis, "LightDirectionAndAO").ToInt32(), VertexElementFormat.Vector4, VertexElementUsage.TextureCoordinate, 0),
+                new VertexElement(Marshal.OffsetOf(tThis, "EnableShadows").ToInt32(), VertexElementFormat.Single, VertexElementUsage.TextureCoordinate, 1),
+                new VertexElement(Marshal.OffsetOf(tThis, "Color").ToInt32(), VertexElementFormat.Vector4, VertexElementUsage.Color, 0)
+            );
+        }
+
+        public VertexDeclaration VertexDeclaration {
+            get {
+                return _VertexDeclaration;
+            }
+        }
+    }
+
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct HeightVolumeVertex : IVertexType {
         public Vector3 Position;
         public Vector3 Normal;
