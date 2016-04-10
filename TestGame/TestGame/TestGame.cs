@@ -29,7 +29,7 @@ namespace TestGame {
         public SpriteFont Font;
 
         public readonly Scene[] Scenes;
-        public int ActiveSceneIndex = 1;
+        public int ActiveSceneIndex = 3;
 
         private int LastPerformanceStatPrimCount = 0;
 

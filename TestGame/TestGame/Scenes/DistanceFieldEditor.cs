@@ -19,6 +19,8 @@ namespace TestGame.Scenes {
         public struct Viewport {
             public Bounds  Rectangle;
             public Vector3 ViewAngle;
+
+            public Vector3 Up, Right;
         }
 
         LightingEnvironment Environment;
@@ -29,6 +31,9 @@ namespace TestGame.Scenes {
         bool ShowDistanceField = false;
 
         int  SelectedObject = 0;
+
+        MouseState PreviousMouseState;
+        int?       ActiveViewportIndex = null;
 
         Viewport[] Viewports;
 
@@ -149,19 +154,21 @@ namespace TestGame.Scenes {
                 offset, new Vector3(12, 12, 36)
             ));
 
-            var extent = new Vector3(
-                Renderer.Configuration.MaximumRenderSize.First,
-                Renderer.Configuration.MaximumRenderSize.Second,
-                Environment.MaximumZ
-            );
-            for (var z = 0; z <= 1; z++) {
-                for (var y = 0; y <= 1; y++) {
-                    for (var x = 0; x <= 1; x++) {
-                        Environment.Obstructions.Add(new LightObstruction(
-                            LightObstructionType.Ellipsoid,
-                            extent * new Vector3(x, y, z),
-                            Vector3.One * 10
-                        ));
+            if (false) {
+                var extent = new Vector3(
+                    Renderer.Configuration.MaximumRenderSize.First,
+                    Renderer.Configuration.MaximumRenderSize.Second,
+                    Environment.MaximumZ
+                );
+                for (var z = 0; z <= 1; z++) {
+                    for (var y = 0; y <= 1; y++) {
+                        for (var x = 0; x <= 1; x++) {
+                            Environment.Obstructions.Add(new LightObstruction(
+                                LightObstructionType.Ellipsoid,
+                                extent * new Vector3(x, y, z),
+                                Vector3.One * 10
+                            ));
+                        }
                     }
                 }
             }
@@ -178,8 +185,10 @@ namespace TestGame.Scenes {
             return "?";
         }
 
-        private void Visualize (Frame frame, Bounds rect, Vector3 gaze) {
+        private void Visualize (Frame frame, ref Viewport viewport) {
             var visInfo = new VisualizationInfo();
+            var rect = viewport.Rectangle;
+            var gaze = viewport.ViewAngle;
 
             if (ShowSurfaces)
                 visInfo = Renderer.VisualizeDistanceField(
@@ -205,6 +214,9 @@ namespace TestGame.Scenes {
             ir.DrawString(Game.Font, text, rect.TopLeft + Vector2.One, Color.Black, 0.7f, layer: 4);
             ir.DrawString(Game.Font, text, rect.TopLeft, Color.White, 0.7f, layer: 5);
 
+            viewport.Up = visInfo.Up;
+            viewport.Right = visInfo.Right;
+
             if (ShowSurfaces || ShowOutlines) {
                 var rightText = DirectionToText(visInfo.Right);
                 var pos = rect.BottomLeft - new Vector2(-2, Game.Font.LineSpacing * 0.6f);
@@ -225,8 +237,8 @@ namespace TestGame.Scenes {
 
             ClearBatch.AddNew(frame, 0, Game.Materials.Clear, new Color(0, 16 / 255.0f, 32 / 255.0f, 1));
 
-            foreach (var vp in Viewports)
-                Visualize(frame, vp.Rectangle, vp.ViewAngle);
+            for (int i = 0; i < Viewports.Length; i++)
+                Visualize(frame, ref Viewports[i]);
 
             if (ShowDistanceField) {
                 float dfScale = Math.Min(
@@ -284,6 +296,44 @@ namespace TestGame.Scenes {
                 var ms = Mouse.GetState();
                 Game.IsMouseVisible = true;
 
+                if ((ms.LeftButton == ButtonState.Released) && (ms.RightButton == ButtonState.Released)) {
+                    ActiveViewportIndex = null;
+                } else if (ActiveViewportIndex.HasValue) {
+                    var viewport = Viewports[ActiveViewportIndex.Value];
+                    var delta = new Vector2(ms.X - PreviousMouseState.X, ms.Y - PreviousMouseState.Y);
+                    delta.X *= (Renderer.Configuration.MaximumRenderSize.First / viewport.Rectangle.Size.X);
+                    delta.Y *= (Renderer.Configuration.MaximumRenderSize.Second / viewport.Rectangle.Size.Y);
+
+                    var posChange = (viewport.Right * delta.X) + (viewport.Up * -delta.Y);
+
+                    if (posChange.LengthSquared() > 0) {
+                        var obs = Environment.Obstructions[SelectedObject];
+
+                        if (ms.LeftButton == ButtonState.Pressed)
+                            obs.Center += posChange;
+                        if (ms.RightButton == ButtonState.Pressed) {
+                            obs.Size += posChange;
+                            if (obs.Size.X < 2)
+                                obs.Size.X = 2;
+                            if (obs.Size.Y < 2)
+                                obs.Size.Y = 2;
+                            if (obs.Size.Z < 2)
+                                obs.Size.Z = 2;
+                        }
+
+                        Renderer.InvalidateFields();
+                    }
+                } else {
+                    var mousePos = new Vector2(ms.X, ms.Y);
+
+                    for (var i = 0; i < Viewports.Length; i++) {
+                        if (Viewports[i].Rectangle.Contains(mousePos)) {
+                            ActiveViewportIndex = i;
+                            break;
+                        }
+                    }
+                }
+
                 SelectedObject = Arithmetic.Wrap((int)(ms.ScrollWheelValue / 160.0f), 0, Environment.Obstructions.Count - 1);
 
                 if (KeyWasPressed(Keys.D1))
@@ -325,6 +375,8 @@ namespace TestGame.Scenes {
                 var m2 = Matrix.CreateFromAxisAngle(Vector3.UnitX, -(float)(((ms.Y - h) / h) * Math.PI / 2));
                 var magicAngle = Vector3.Transform(-Vector3.UnitY, m2);
                 Viewports[Viewports.Length - 1].ViewAngle = magicAngle;
+
+                PreviousMouseState = ms;
             }
         }
 
