@@ -460,29 +460,6 @@ namespace Squared.Illuminant {
             }
         }
 
-        private void OnLightPassCompleted (RenderTimer timer) {
-            // HACK: This timer needs to exist so the distance field timer is accurate
-            return;
-
-            var cpuDurationMs = timer.CPUDuration.GetValueOrDefault(0) * 1000;
-            var gpuDurationMs = timer.GPUDuration.GetValueOrDefault(0) * 1000;
-
-            Console.WriteLine(
-                "Light pass ~{0:0000.0}ms", gpuDurationMs
-            );
-        }
-
-        private void OnDistanceFieldCompleted (RenderTimer timer) {
-            // HACK: This timer needs to exist so the light pass timer is accurate, if used
-
-            var cpuDurationMs = timer.CPUDuration.GetValueOrDefault(0) * 1000;
-            var gpuDurationMs = timer.GPUDuration.GetValueOrDefault(0) * 1000;
-
-            Console.WriteLine(
-                "Distance field ~{0:0000.0}ms", gpuDurationMs
-            );
-        }
-
         private void _BeginLightPass (DeviceManager device, object userData) {
             var vt = ViewTransform.CreateOrthographic(
                 _Lightmap.Width, _Lightmap.Height
