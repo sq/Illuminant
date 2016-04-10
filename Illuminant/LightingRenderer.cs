@@ -612,46 +612,46 @@ namespace Squared.Illuminant {
         }
 
         private void RenderPointLightSource (SphereLightSource lightSource, float intensityScale, ref int vertexCount) {
-            float radius = lightSource.Radius + lightSource.RampLength;
-            var lightBounds3 = lightSource.Bounds;
-            var lightBounds = lightBounds3.XY;
+            float radius = (lightSource.Radius + lightSource.RampLength);
+            float x1 = lightSource.Position.X - radius;
+            float y1 = lightSource.Position.Y - radius;
+            float x2 = lightSource.Position.X + radius;
+            float y2 = lightSource.Position.Y + radius;
 
             // Expand the bounding box upward to account for 2.5D perspective
             if (Configuration.TwoPointFiveD) {
-                var offset = Math.Min(
-                    lightSource.Radius + lightSource.RampLength,
-                    Environment.MaximumZ
-                );
+                var offset = Math.Min(radius, Environment.MaximumZ);
                 // FIXME: Is this right?
-                lightBounds.TopLeft.Y -= (offset / Environment.ZToYMultiplier);
+                y1 -= (offset / Environment.ZToYMultiplier);
             }
 
-            lightBounds = lightBounds.Scale(Configuration.RenderScale);
+            x1 *= Configuration.RenderScale;
+            y1 *= Configuration.RenderScale;
+            x2 *= Configuration.RenderScale;
+            y2 *= Configuration.RenderScale;
 
             SphereLightVertex vertex;
             vertex.LightCenter = lightSource.Position;
             vertex.Color = lightSource.Color;
             vertex.Color.W *= (lightSource.Opacity * intensityScale);
-            vertex.LightProperties = new Vector4(
-                lightSource.Radius, lightSource.RampLength,
-                (int)lightSource.RampMode,
-                lightSource.CastsShadows ? 1f : 0f
-            );
-            vertex.MoreLightProperties = new Vector2(
-                lightSource.AmbientOcclusionRadius,
-                lightSource.ShadowDistanceFalloff.GetValueOrDefault(-99999)
-            );
+            vertex.LightProperties.X = lightSource.Radius;
+            vertex.LightProperties.Y = lightSource.RampLength;
+            vertex.LightProperties.Z = (int)lightSource.RampMode;
+            vertex.LightProperties.W = lightSource.CastsShadows ? 1f : 0f;
+            vertex.MoreLightProperties.X = lightSource.AmbientOcclusionRadius;
+            vertex.MoreLightProperties.Y = lightSource.ShadowDistanceFalloff.GetValueOrDefault(-99999);
 
-            vertex.Position = lightBounds.TopLeft;
+            vertex.Position.X = x1;
+            vertex.Position.Y = y1;
             SphereLightVertices[vertexCount++] = vertex;
 
-            vertex.Position = lightBounds.TopRight;
+            vertex.Position.X = x2;
             SphereLightVertices[vertexCount++] = vertex;
 
-            vertex.Position = lightBounds.BottomRight;
+            vertex.Position.Y = y2;
             SphereLightVertices[vertexCount++] = vertex;
 
-            vertex.Position = lightBounds.BottomLeft;
+            vertex.Position.X = x1;
             SphereLightVertices[vertexCount++] = vertex;
         }
 
