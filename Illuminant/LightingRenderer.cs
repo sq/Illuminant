@@ -220,7 +220,7 @@ namespace Squared.Illuminant {
             Coordinator.DeviceReset += Coordinator_DeviceReset;
         }
 
-        private void LoadMaterials (MaterialSetBase materials, ContentManager content) {
+        private void LoadMaterials (DefaultMaterialSet materials, ContentManager content) {
             {
                 var dBegin = new[] {
                     MaterialUtil.MakeDelegate(
@@ -304,6 +304,8 @@ namespace Squared.Illuminant {
             materials.Add(IlluminantMaterials.WorldSpaceToneMappedBitmap = new Squared.Render.Material(
                 content.Load<Effect>("HDRBitmap"), "WorldSpaceToneMappedBitmap"
             ));
+
+            materials.PreallocateBindings();
         }
 
         private void Coordinator_DeviceReset (object sender, EventArgs e) {
