@@ -31,8 +31,6 @@ namespace Squared.Illuminant {
         public readonly DepthStencilState TopFaceDepthStencilState, FrontFaceDepthStencilState;
         public readonly DepthStencilState DistanceInteriorStencilState, DistanceExteriorStencilState;
         public readonly DepthStencilState SphereLightDepthStencilState;
-        public readonly BlendState[]      PackedSlice      = new BlendState[4];
-        public readonly BlendState[]      ClearPackedSlice = new BlendState[4];
 
         private readonly DynamicVertexBuffer SphereLightVertexBuffer;
         private readonly DynamicVertexBuffer DirectionalLightVertexBuffer;
@@ -187,30 +185,6 @@ namespace Squared.Illuminant {
             SphereLightDepthStencilState = new DepthStencilState {
                 StencilEnable = false,
                 DepthBufferEnable = false
-            };
-
-            for (int i = 0; i < 4; i++) {
-                var writeChannels = (ColorWriteChannels)(1 << i);
-
-                PackedSlice[i] = new BlendState {
-                    ColorWriteChannels = writeChannels,
-                    AlphaBlendFunction = BlendFunction.Max,
-                    AlphaSourceBlend = Blend.One,
-                    AlphaDestinationBlend = Blend.One,
-                    ColorBlendFunction = BlendFunction.Max,
-                    ColorSourceBlend = Blend.One,
-                    ColorDestinationBlend = Blend.One
-                };
-
-                ClearPackedSlice[i] = new BlendState {
-                    ColorWriteChannels = writeChannels,
-                    AlphaBlendFunction = BlendFunction.Add,
-                    AlphaSourceBlend = Blend.One,
-                    AlphaDestinationBlend = Blend.Zero,
-                    ColorBlendFunction = BlendFunction.Add,
-                    ColorSourceBlend = Blend.One,
-                    ColorDestinationBlend = Blend.Zero
-                };
             };
 
             LoadMaterials(materials, content);
@@ -1274,39 +1248,16 @@ namespace Squared.Illuminant {
                 int layer = 0;
                 while (slicesToUpdate > 0) {
                     var slice = _InvalidDistanceFieldSlices[0];
-                    _InvalidDistanceFieldSlices.RemoveAt(0);
-
                     var physicalSlice = slice / PackedSliceCount;
-                    var sliceZ = SliceIndexToZ(slice);
 
-                    // TODO: Render four slices at once by writing to all channels in one go?
-                    RenderDistanceFieldSlice(
+                    RenderDistanceFieldSliceTriplet(
                         indices, rtGroup,
                         intParameters, extParameters,
-                        physicalSlice, slice % PackedSliceCount, sliceZ,
+                        physicalSlice, slice,
                         ref layer
                     );
 
-                    // Every 'r' channel slice should always be mirrored into the previous slice's 'a' channel
-                    // This ensures that we can always access a slice & its neighbor in a single texture load.
-                    if (
-                        ((slice % PackedSliceCount) == 0) &&
-                        (slice > 0)
-                    ) {
-                        RenderDistanceFieldSlice(
-                            indices, rtGroup,
-                            intParameters, extParameters,
-                            physicalSlice - 1, 3, sliceZ,
-                            ref layer
-                        );
-                    }
-
-                    _DistanceFieldSlicesReady = Math.Min(
-                        Math.Max(slice + 1, _DistanceFieldSlicesReady),
-                        Configuration.DistanceFieldSliceCount
-                    );
-
-                    slicesToUpdate--;
+                    slicesToUpdate -= 3;
                 }
             }
         }
@@ -1316,10 +1267,10 @@ namespace Squared.Illuminant {
             return sliceZ * Environment.MaximumZ;
         }
 
-        private void RenderDistanceFieldSlice (
+        private void RenderDistanceFieldSliceTriplet (
             short[] indices, BatchGroup rtGroup, 
             EffectParameterCollection intParameters, EffectParameterCollection extParameters,
-            int physicalSliceIndex, int maskIndex, float sliceZ, 
+            int physicalSliceIndex, int firstVirtualSliceIndex,
             ref int layer
         ) {
             var sliceX = (physicalSliceIndex % DistanceFieldSlicesX) * DistanceFieldSliceWidth;
@@ -1345,7 +1296,7 @@ namespace Squared.Illuminant {
                     dm.Device.ScissorRectangle = new Rectangle(
                         sliceX, sliceY, DistanceFieldSliceWidth, DistanceFieldSliceHeight
                     );
-                    dm.Device.BlendState = PackedSlice[maskIndex];
+                    dm.Device.BlendState = RenderStates.MaxBlendValue;
 
                     SetDistanceFieldParameters(IlluminantMaterials.DistanceFieldInterior.Effect.Parameters, false);
                     SetDistanceFieldParameters(IlluminantMaterials.DistanceFieldExterior.Effect.Parameters, false);
@@ -1359,30 +1310,48 @@ namespace Squared.Illuminant {
                     Materials.PopViewTransform();
                 };
 
-            var clearBlendState = ClearPackedSlice[maskIndex];
-
             ClearDistanceFieldSlice(
-                indices, clearBlendState,
+                indices, BlendState.Opaque,
                 beginSliceBatch, endSliceBatch,
                 rtGroup, layer++
             );
+
+            var lastVirtualSliceIndex = firstVirtualSliceIndex + 2;
 
             using (var group = BatchGroup.New(rtGroup, layer++,
                 beginSliceBatch, endSliceBatch
             )) {
                 if (Render.Tracing.RenderTrace.EnableTracing)
-                    Render.Tracing.RenderTrace.Marker(group, -1, "LightingRenderer {0:X4} : Begin Distance Field Slice Z={1} Idx={2}", this.GetHashCode(), sliceZ, physicalSliceIndex);
+                    Render.Tracing.RenderTrace.Marker(group, -1, "LightingRenderer {0:X4} : Begin Distance Field Slices [{1}-{2}]", this.GetHashCode(), firstVirtualSliceIndex, lastVirtualSliceIndex);
 
-                RenderDistanceFieldDistanceFunctions(indices, sliceZ, group);
-                RenderDistanceFieldHeightVolumes(indices, intParameters, extParameters, sliceZ, group);
+                RenderDistanceFieldDistanceFunctions(indices, firstVirtualSliceIndex, group);
+                RenderDistanceFieldHeightVolumes(indices, intParameters, extParameters, firstVirtualSliceIndex, group);
+
+                // FIXME: Slow
+                for (var i = firstVirtualSliceIndex; i <= lastVirtualSliceIndex; i++)
+                    _InvalidDistanceFieldSlices.Remove(i);
+
+                _DistanceFieldSlicesReady = Math.Max(_DistanceFieldSlicesReady, lastVirtualSliceIndex + 1);
 
                 if (Render.Tracing.RenderTrace.EnableTracing)
-                    Render.Tracing.RenderTrace.Marker(group, 9999, "LightingRenderer {0:X4} : End Distance Field Slice Z={1} Idx={2}", this.GetHashCode(), sliceZ, physicalSliceIndex);
+                    Render.Tracing.RenderTrace.Marker(group, -1, "LightingRenderer {0:X4} : End Distance Field Slices [{1}-{2}]", this.GetHashCode(), firstVirtualSliceIndex, lastVirtualSliceIndex);
             }
         }
 
-        private void RenderDistanceFieldHeightVolumes (short[] indices, EffectParameterCollection intParameters, EffectParameterCollection extParameters, float sliceZ, BatchGroup group) {
+        private void RenderDistanceFieldHeightVolumes (
+            short[] indices, 
+            EffectParameterCollection intParameters, 
+            EffectParameterCollection extParameters, 
+            int firstVirtualIndex, BatchGroup group
+        ) {
             int i = 1;
+
+            var sliceZ = new Vector4(
+                SliceIndexToZ(firstVirtualIndex),
+                SliceIndexToZ(firstVirtualIndex + 1),
+                SliceIndexToZ(firstVirtualIndex + 2),
+                SliceIndexToZ(firstVirtualIndex + 3)
+            );
 
             // Rasterize the height volumes in sequential order.
             // FIXME: Depth buffer/stencil buffer tricks should work for generating this SDF, but don't?
@@ -1497,10 +1466,19 @@ namespace Squared.Illuminant {
         // HACK
         bool DidUploadDistanceFieldBuffer = false;
 
-        private void RenderDistanceFieldDistanceFunctions (short[] indices, float sliceZ, BatchGroup group) {
+        private void RenderDistanceFieldDistanceFunctions (
+            short[] indices, int firstVirtualIndex, BatchGroup group
+        ) {
             var items = Environment.Obstructions;
             if (items.Count <= 0)
                 return;
+
+            var sliceZ = new Vector4(
+                SliceIndexToZ(firstVirtualIndex),
+                SliceIndexToZ(firstVirtualIndex + 1),
+                SliceIndexToZ(firstVirtualIndex + 2),
+                SliceIndexToZ(firstVirtualIndex + 3)
+            );
 
             // todo: shrink these per-instance?
             var tl = new Vector3(0, 0, 0);

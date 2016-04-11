@@ -4,7 +4,7 @@
 #include "DistanceFieldCommon.fxh"
 
 uniform float2 PixelSize;
-uniform float  SliceZ;
+uniform float4 SliceZ;
 uniform int    NumVertices;
 
 Texture2D VertexDataTexture : register(t0);
@@ -77,6 +77,28 @@ float computeSquaredDistanceZ (float sliceZ, float2 zRange) {
     }
 }
 
+float computeInteriorDistance (
+    float2 zRange,
+    float squaredDistanceXy,
+    float sliceZ
+) {
+    if ((sliceZ >= zRange.x) && (sliceZ <= zRange.y)) {
+        float squaredDistanceZ = computeSquaredDistanceZ(sliceZ, zRange);
+        return -sqrt(squaredDistanceXy + squaredDistanceZ);
+    } else {
+        return min(abs(sliceZ - zRange.x), abs(sliceZ - zRange.y));
+    }
+}
+
+float computeExteriorDistance (
+    float2 zRange,
+    float squaredDistanceXy,
+    float sliceZ
+) {
+    float squaredDistanceZ = computeSquaredDistanceZ(sliceZ, zRange);
+    return sqrt(squaredDistanceXy + squaredDistanceZ);
+}
+
 void InteriorPixelShader (
     out float4 color : COLOR0,
     in  float2 zRange : TEXCOORD0,
@@ -85,18 +107,14 @@ void InteriorPixelShader (
     vpos *= DistanceField.InvScaleFactor;
     vpos += Viewport.Position;
     
-    float sliceZ = SliceZ;
-    float resultSquaredDistance = computeSquaredDistanceXy(vpos);
-    float resultSquaredDistanceZ = computeSquaredDistanceZ(sliceZ, zRange);
+    float squaredDistanceXy = computeSquaredDistanceXy(vpos);
 
-    float resultDistance;
-    if ((sliceZ >= zRange.x) && (sliceZ <= zRange.y)) {
-        resultDistance = -sqrt(resultSquaredDistance + resultSquaredDistanceZ); 
-    } else {
-        resultDistance = min(abs(sliceZ - zRange.x), abs(sliceZ - zRange.y));
-    }
-
-    color = encodeDistance(resultDistance);
+    color = float4(
+        encodeDistance(computeInteriorDistance(zRange, squaredDistanceXy, SliceZ.x)),
+        encodeDistance(computeInteriorDistance(zRange, squaredDistanceXy, SliceZ.y)),
+        encodeDistance(computeInteriorDistance(zRange, squaredDistanceXy, SliceZ.z)),
+        encodeDistance(computeInteriorDistance(zRange, squaredDistanceXy, SliceZ.w))
+    );
 }
 
 void ExteriorPixelShader (
@@ -107,12 +125,14 @@ void ExteriorPixelShader (
     vpos *= DistanceField.InvScaleFactor;
     vpos += Viewport.Position;
 
-    float sliceZ = SliceZ;
-    float resultSquaredDistance = computeSquaredDistanceXy(vpos);
-    float resultSquaredDistanceZ = computeSquaredDistanceZ(sliceZ, zRange);
-    float resultDistance = sqrt(resultSquaredDistance + resultSquaredDistanceZ);
+    float squaredDistanceXy = computeSquaredDistanceXy(vpos);
 
-    color = encodeDistance(resultDistance);
+    color = float4(
+        encodeDistance(computeExteriorDistance(zRange, squaredDistanceXy, SliceZ.x)),
+        encodeDistance(computeExteriorDistance(zRange, squaredDistanceXy, SliceZ.y)),
+        encodeDistance(computeExteriorDistance(zRange, squaredDistanceXy, SliceZ.z)),
+        encodeDistance(computeExteriorDistance(zRange, squaredDistanceXy, SliceZ.w))
+    );
 }
 
 technique Exterior

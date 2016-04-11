@@ -5,7 +5,7 @@
 #include "DistanceFunctionCommon.fxh"
 
 uniform float2 PixelSize;
-uniform float  SliceZ;
+uniform float4 SliceZ;
 
 void DistanceFunctionVertexShader(
     in    float3 position : POSITION0, // x, y, z
@@ -17,10 +17,10 @@ void DistanceFunctionVertexShader(
     result.z = position.z;
 }
 
-float3 getPosition (in float2 vpos, float sliceZ) {
+float2 getPositionXy (in float2 vpos) {
     vpos *= DistanceField.InvScaleFactor;
     vpos += Viewport.Position;
-    return float3(vpos, sliceZ);
+    return vpos;
 }
 
 void BoxPixelShader (
@@ -29,8 +29,12 @@ void BoxPixelShader (
     in  float3 center : TEXCOORD0,
     in  float3 size   : TEXCOORD1
 ) {
-    float resultDistance = evaluateBox(getPosition(vpos, SliceZ), center, size);
-    color = encodeDistance(resultDistance);
+    color = float4(
+        encodeDistance(evaluateBox(float3(getPositionXy(vpos), SliceZ.x), center, size)),
+        encodeDistance(evaluateBox(float3(getPositionXy(vpos), SliceZ.y), center, size)),
+        encodeDistance(evaluateBox(float3(getPositionXy(vpos), SliceZ.z), center, size)),
+        encodeDistance(evaluateBox(float3(getPositionXy(vpos), SliceZ.w), center, size))
+    );
 }
 
 void EllipsoidPixelShader(
@@ -39,8 +43,12 @@ void EllipsoidPixelShader(
     in  float3 center : TEXCOORD0,
     in  float3 size : TEXCOORD1
 ) {
-    float resultDistance = evaluateEllipsoid(getPosition(vpos, SliceZ), center, size);
-    color = encodeDistance(resultDistance);
+    color = float4(
+        encodeDistance(evaluateEllipsoid(float3(getPositionXy(vpos), SliceZ.x), center, size)),
+        encodeDistance(evaluateEllipsoid(float3(getPositionXy(vpos), SliceZ.y), center, size)),
+        encodeDistance(evaluateEllipsoid(float3(getPositionXy(vpos), SliceZ.z), center, size)),
+        encodeDistance(evaluateEllipsoid(float3(getPositionXy(vpos), SliceZ.w), center, size))
+    );
 }
 
 void CylinderPixelShader(
@@ -49,8 +57,12 @@ void CylinderPixelShader(
     in  float3 center : TEXCOORD0,
     in  float3 size : TEXCOORD1
 ) {
-    float resultDistance = evaluateCylinder(getPosition(vpos, SliceZ), center, size);
-    color = encodeDistance(resultDistance);
+    color = float4(
+        encodeDistance(evaluateCylinder(float3(getPositionXy(vpos), SliceZ.x), center, size)),
+        encodeDistance(evaluateCylinder(float3(getPositionXy(vpos), SliceZ.y), center, size)),
+        encodeDistance(evaluateCylinder(float3(getPositionXy(vpos), SliceZ.z), center, size)),
+        encodeDistance(evaluateCylinder(float3(getPositionXy(vpos), SliceZ.w), center, size))
+    );
 }
 
 technique Box

@@ -31,7 +31,7 @@ float2 closestPointOnEdge (
     return edgeStart + ((edgeEnd - edgeStart) * clamp(u, 0, 1));
 }
 
-float4 encodeDistance (float distance) {
+float encodeDistance (float distance) {
     return DISTANCE_ZERO - (distance / DISTANCE_MAX);
 }
 
