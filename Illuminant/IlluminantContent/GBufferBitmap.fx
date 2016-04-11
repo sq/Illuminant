@@ -1,3 +1,4 @@
+#include "..\..\Upstream\Fracture\Squared\RenderLib\Content\ViewTransformCommon.fxh"
 #include "..\..\Upstream\Fracture\Squared\RenderLib\Content\GeometryCommon.fxh"
 
 #define SELF_OCCLUSION_HACK 1.5
@@ -28,9 +29,9 @@ void BillboardVertexShader(
 ) {
     // HACK: Offset away from the surface to prevent self occlusion
     worldPosition += (SELF_OCCLUSION_HACK * normal);
-    screenPosition = float3(position.xy - ViewportPosition, position.z);
+    screenPosition = float3(position.xy - Viewport.Position, position.z);
 
-    result = TransformPosition(float4(position.xy - ViewportPosition, 0, 1), 0);
+    result = TransformPosition(float4(position.xy - Viewport.Position, 0, 1), 0);
     result.z = position.z / DistanceFieldExtent.z;
 }
 

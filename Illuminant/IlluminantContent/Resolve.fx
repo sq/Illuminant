@@ -1,3 +1,4 @@
+#include "..\..\Upstream\Fracture\Squared\RenderLib\Content\ViewTransformCommon.fxh"
 #include "..\..\Upstream\Fracture\Squared\RenderLib\Content\BitmapCommon.fxh"
 #include "LightCommon.fxh"
 #include "DistanceFieldCommon.fxh"

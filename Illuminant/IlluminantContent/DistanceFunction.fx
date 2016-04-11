@@ -1,3 +1,4 @@
+#include "..\..\Upstream\Fracture\Squared\RenderLib\Content\ViewTransformCommon.fxh"
 #include "..\..\Upstream\Fracture\Squared\RenderLib\Content\GeometryCommon.fxh"
 #include "LightCommon.fxh"
 #include "DistanceFieldCommon.fxh"
@@ -12,13 +13,13 @@ void DistanceFunctionVertexShader(
     inout float3 size     : TEXCOORD1,
     out   float4 result   : POSITION0
 ) {
-    result = TransformPosition(float4(position.xy - ViewportPosition, 0, 1), 0);
+    result = TransformPosition(float4(position.xy - Viewport.Position, 0, 1), 0);
     result.z = position.z;
 }
 
 float3 getPosition (in float2 vpos) {
     vpos *= DistanceField.InvScaleFactor;
-    vpos += ViewportPosition;
+    vpos += Viewport.Position;
     return float3(vpos, SliceZ);
 }
 

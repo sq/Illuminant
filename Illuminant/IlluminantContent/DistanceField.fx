@@ -1,3 +1,4 @@
+#include "..\..\Upstream\Fracture\Squared\RenderLib\Content\ViewTransformCommon.fxh"
 #include "..\..\Upstream\Fracture\Squared\RenderLib\Content\GeometryCommon.fxh"
 #include "LightCommon.fxh"
 #include "DistanceFieldCommon.fxh"
@@ -21,7 +22,7 @@ void DistanceVertexShader (
     inout float2 zRange   : TEXCOORD0,
     out   float4 result   : POSITION0
 ) {
-    result = TransformPosition(float4(position.xy - ViewportPosition, 0, 1), 0);
+    result = TransformPosition(float4(position.xy - Viewport.Position, 0, 1), 0);
     result.z = 0;
 }
 
@@ -84,7 +85,7 @@ void InteriorPixelShader (
     in  float2 vpos : VPOS
 ) {
     vpos *= DistanceField.InvScaleFactor;
-    vpos += ViewportPosition;
+    vpos += Viewport.Position;
 
     float resultDistance;
     if ((SliceZ >= zRange.x) && (SliceZ <= zRange.y)) {
@@ -102,7 +103,7 @@ void ExteriorPixelShader (
     in  float2 vpos  : VPOS
 ) {
     vpos *= DistanceField.InvScaleFactor;
-    vpos += ViewportPosition;
+    vpos += Viewport.Position;
     float resultDistance = computeDistance(vpos, zRange);
     color = encodeDistance(resultDistance);
 }

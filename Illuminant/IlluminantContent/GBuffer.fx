@@ -1,3 +1,4 @@
+#include "..\..\Upstream\Fracture\Squared\RenderLib\Content\ViewTransformCommon.fxh"
 #include "..\..\Upstream\Fracture\Squared\RenderLib\Content\GeometryCommon.fxh"
 
 #define SELF_OCCLUSION_HACK 1.5
@@ -15,7 +16,7 @@ void HeightVolumeVertexShader (
     out   float4   result        : POSITION0
 ) {
     worldPosition = position;
-    result = TransformPosition(float4(position.xy - ViewportPosition, 0, 1), 0);
+    result = TransformPosition(float4(position.xy - Viewport.Position, 0, 1), 0);
     result.z = 0;
     dead = worldPosition.z < -9999;
 }
@@ -31,7 +32,7 @@ void HeightVolumeFaceVertexShader(
     worldPosition = position + (SELF_OCCLUSION_HACK * normal);
 
     position.y -= ZToYMultiplier * position.z;
-    result = TransformPosition(float4(position.xy - ViewportPosition, 0, 1), 0);
+    result = TransformPosition(float4(position.xy - Viewport.Position, 0, 1), 0);
     result.z = position.z / DistanceFieldExtent.z;
     dead = false;
 }
