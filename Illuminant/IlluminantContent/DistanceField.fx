@@ -26,8 +26,8 @@ void DistanceVertexShader (
     result.z = 0;
 }
 
-float computeDistanceToEdge (
-    float2 vpos, float closestDeltaZ, float u
+float computeSquaredDistanceToEdge (
+    float2 vpos, float u
 ) {
     float4 packedEdge = tex2Dlod(VertexDataSampler, float4(u, 0, 0, 0));
     float2 edgeA = packedEdge.xy;
@@ -35,48 +35,46 @@ float computeDistanceToEdge (
 
     float2 closest = closestPointOnEdge(vpos, edgeA, edgeB);
     float2 closestDeltaXy = (vpos - closest);
+    closestDeltaXy *= closestDeltaXy;
 
-    float3 closestDelta = float3(closestDeltaXy.x, closestDeltaXy.y, closestDeltaZ);
-    float  closestDistance = length(closestDelta);
-
-    return closestDistance;
+    return closestDeltaXy.x + closestDeltaXy.y;
 }
 
-float computeDistance (
-    float2 vpos, float2 zRange
+float computeSquaredDistanceXy (
+    float2 vpos
 ) {
-    float resultDistance = 99999;
+    float resultSquaredDistance = 99999999;
     float indexMultiplier = 1.0 / NumVertices;
     float u = 0;
-
-    float deltaMinZ = SliceZ - zRange.x;
-    float deltaMaxZ = SliceZ - zRange.y;
-
-    float closestDeltaZ;
-    if ((SliceZ >= zRange.x) && (SliceZ <= zRange.y)) {
-        closestDeltaZ = 0;
-    }
-    else if (abs(deltaMinZ) > abs(deltaMaxZ)) {
-        closestDeltaZ = deltaMaxZ;
-    }
-    else {
-        closestDeltaZ = deltaMinZ;
-    }
 
     [loop]
     for (int i = 0; i < NumVertices; i += 4) {
         // fxc can't handle unrolling loops without spending 30 minutes, yaaaaaaaaaay
-        resultDistance = min(resultDistance, computeDistanceToEdge(vpos, closestDeltaZ, u));
+        resultSquaredDistance = min(resultSquaredDistance, computeSquaredDistanceToEdge(vpos, u));
         u += indexMultiplier;
-        resultDistance = min(resultDistance, computeDistanceToEdge(vpos, closestDeltaZ, u));
+        resultSquaredDistance = min(resultSquaredDistance, computeSquaredDistanceToEdge(vpos, u));
         u += indexMultiplier;
-        resultDistance = min(resultDistance, computeDistanceToEdge(vpos, closestDeltaZ, u));
+        resultSquaredDistance = min(resultSquaredDistance, computeSquaredDistanceToEdge(vpos, u));
         u += indexMultiplier;
-        resultDistance = min(resultDistance, computeDistanceToEdge(vpos, closestDeltaZ, u));
+        resultSquaredDistance = min(resultSquaredDistance, computeSquaredDistanceToEdge(vpos, u));
         u += indexMultiplier;
     }
 
-    return resultDistance;
+    return resultSquaredDistance;
+}
+
+float computeSquaredDistanceZ (float sliceZ, float2 zRange) {
+    float deltaMinZ = sliceZ - zRange.x;
+    float deltaMaxZ = sliceZ - zRange.y;
+
+    if ((sliceZ >= zRange.x) && (sliceZ <= zRange.y)) {
+        // FIXME: Should this actually be zero?
+        return 0;
+    } else if (abs(deltaMinZ) > abs(deltaMaxZ)) {
+        return deltaMaxZ * deltaMaxZ;
+    } else {
+        return deltaMinZ * deltaMinZ;
+    }
 }
 
 void InteriorPixelShader (
@@ -86,12 +84,16 @@ void InteriorPixelShader (
 ) {
     vpos *= DistanceField.InvScaleFactor;
     vpos += Viewport.Position;
+    
+    float sliceZ = SliceZ;
+    float resultSquaredDistance = computeSquaredDistanceXy(vpos);
+    float resultSquaredDistanceZ = computeSquaredDistanceZ(sliceZ, zRange);
 
     float resultDistance;
-    if ((SliceZ >= zRange.x) && (SliceZ <= zRange.y)) {
-        resultDistance = -computeDistance(vpos, zRange);
+    if ((sliceZ >= zRange.x) && (sliceZ <= zRange.y)) {
+        resultDistance = -sqrt(resultSquaredDistance + resultSquaredDistanceZ); 
     } else {
-        resultDistance = min(abs(SliceZ - zRange.x), abs(SliceZ - zRange.y));
+        resultDistance = min(abs(sliceZ - zRange.x), abs(sliceZ - zRange.y));
     }
 
     color = encodeDistance(resultDistance);
@@ -104,7 +106,12 @@ void ExteriorPixelShader (
 ) {
     vpos *= DistanceField.InvScaleFactor;
     vpos += Viewport.Position;
-    float resultDistance = computeDistance(vpos, zRange);
+
+    float sliceZ = SliceZ;
+    float resultSquaredDistance = computeSquaredDistanceXy(vpos);
+    float resultSquaredDistanceZ = computeSquaredDistanceZ(sliceZ, zRange);
+    float resultDistance = sqrt(resultSquaredDistance + resultSquaredDistanceZ);
+
     color = encodeDistance(resultDistance);
 }
 

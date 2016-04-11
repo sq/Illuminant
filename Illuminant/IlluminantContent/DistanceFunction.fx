@@ -17,10 +17,10 @@ void DistanceFunctionVertexShader(
     result.z = position.z;
 }
 
-float3 getPosition (in float2 vpos) {
+float3 getPosition (in float2 vpos, float sliceZ) {
     vpos *= DistanceField.InvScaleFactor;
     vpos += Viewport.Position;
-    return float3(vpos, SliceZ);
+    return float3(vpos, sliceZ);
 }
 
 void BoxPixelShader (
@@ -29,7 +29,7 @@ void BoxPixelShader (
     in  float3 center : TEXCOORD0,
     in  float3 size   : TEXCOORD1
 ) {
-    float resultDistance = evaluateBox(getPosition(vpos), center, size);
+    float resultDistance = evaluateBox(getPosition(vpos, SliceZ), center, size);
     color = encodeDistance(resultDistance);
 }
 
@@ -39,7 +39,7 @@ void EllipsoidPixelShader(
     in  float3 center : TEXCOORD0,
     in  float3 size : TEXCOORD1
 ) {
-    float resultDistance = evaluateEllipsoid(getPosition(vpos), center, size);
+    float resultDistance = evaluateEllipsoid(getPosition(vpos, SliceZ), center, size);
     color = encodeDistance(resultDistance);
 }
 
@@ -49,7 +49,7 @@ void CylinderPixelShader(
     in  float3 center : TEXCOORD0,
     in  float3 size : TEXCOORD1
 ) {
-    float resultDistance = evaluateCylinder(getPosition(vpos), center, size);
+    float resultDistance = evaluateCylinder(getPosition(vpos, SliceZ), center, size);
     color = encodeDistance(resultDistance);
 }
 
