@@ -13,16 +13,16 @@ namespace Squared.Illuminant {
         public readonly DefaultMaterialSet MaterialSet;
 
         public Material SphereLight, DirectionalLight;
-        public Render.EffectMaterial DistanceFieldExterior, DistanceFieldInterior;
-        public Render.EffectMaterial[] DistanceFunctionTypes;
-        public Render.EffectMaterial HeightVolume, HeightVolumeFace;
-        public Render.EffectMaterial MaskBillboard, GDataBillboard;
-        public Render.EffectMaterial LightingResolve, 
+        public Material DistanceFieldExterior, DistanceFieldInterior;
+        public Material[] DistanceFunctionTypes;
+        public Material HeightVolume, HeightVolumeFace;
+        public Material MaskBillboard, GDataBillboard;
+        public Material LightingResolve, 
             GammaCompressedLightingResolve, ToneMappedLightingResolve;
-        public Render.EffectMaterial ScreenSpaceGammaCompressedBitmap, WorldSpaceGammaCompressedBitmap;
-        public Render.EffectMaterial ScreenSpaceToneMappedBitmap, WorldSpaceToneMappedBitmap;
-        public Render.EffectMaterial ObjectSurfaces, ObjectOutlines;
-        public Render.EffectMaterial FunctionSurface, FunctionOutline;
+        public Render.Material ScreenSpaceGammaCompressedBitmap, WorldSpaceGammaCompressedBitmap;
+        public Render.Material ScreenSpaceToneMappedBitmap, WorldSpaceToneMappedBitmap;
+        public Render.Material ObjectSurfaces, ObjectOutlines;
+        public Render.Material FunctionSurface, FunctionOutline;
 
         internal readonly Effect[] EffectsToSetGammaCompressionParametersOn;
         internal readonly Effect[] EffectsToSetToneMappingParametersOn;

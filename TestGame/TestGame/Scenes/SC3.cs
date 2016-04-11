@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,6 +13,7 @@ using Squared.Game;
 using Squared.Illuminant;
 using Squared.Render;
 using Squared.Render.Convenience;
+using Squared.Render.Evil;
 using Squared.Util;
 
 namespace TestGame.Scenes {
@@ -371,6 +373,28 @@ namespace TestGame.Scenes {
             int layer = -8;
             Renderer.RenderLighting(frame, layer, 1.0f / HDRRangeFactor);
             ForegroundRenderer.RenderLighting(frame, layer++, 1.0f / HDRRangeFactor);
+
+            unsafe
+            {
+                var effect = Renderer.IlluminantMaterials.DistanceFieldInterior.Effect;
+                var comEffect = effect.GetID3DXEffect();
+
+                var parameterHandle = comEffect.GetParameterByName(null, "SliceZ");
+
+                float newValue = 3f;
+                comEffect.SetRawValue(parameterHandle, &newValue, 0, (uint)Marshal.SizeOf<float>());
+
+                float managedValue = effect.Parameters["SliceZ"].GetValueSingle();
+                float apiValue = comEffect.GetFloat(parameterHandle);
+
+                if (managedValue != newValue)
+                    throw new Exception();
+                if (apiValue != newValue)
+                    throw new Exception();
+
+                Marshal.ReleaseComObject(comEffect);
+                comEffect = null;
+            }
 
             using (var bg = BatchGroup.ForRenderTarget(
                 frame, layer++, Lightmap,

@@ -230,27 +230,21 @@ namespace Squared.Illuminant {
                 };
                 Action<DeviceManager>[] dEnd = null;
 
-                var slmi =
-                    new Render.EffectMaterial(content.Load<Effect>("SphereLight"), "SphereLight");
-
-                materials.Add(IlluminantMaterials.SphereLight = new DelegateMaterial(
-                    slmi, dBegin, dEnd
+                materials.Add(IlluminantMaterials.SphereLight = new Material(
+                    content.Load<Effect>("SphereLight"), "SphereLight", dBegin, dEnd
                 ));
 
-                var dlmi =
-                    new Render.EffectMaterial(content.Load<Effect>("DirectionalLight"), "DirectionalLight");
-
-                materials.Add(IlluminantMaterials.DirectionalLight = new DelegateMaterial(
-                    dlmi, dBegin, dEnd
+                materials.Add(IlluminantMaterials.DirectionalLight = new Material(
+                    content.Load<Effect>("DirectionalLight"), "DirectionalLight", dBegin, dEnd
                 ));
 
                 materials.Add(IlluminantMaterials.DistanceFieldExterior = 
-                    new Squared.Render.EffectMaterial(content.Load<Effect>("DistanceField"), "Exterior"));
+                    new Squared.Render.Material(content.Load<Effect>("DistanceField"), "Exterior"));
 
                 materials.Add(IlluminantMaterials.DistanceFieldInterior = 
-                    new Squared.Render.EffectMaterial(content.Load<Effect>("DistanceField"), "Interior"));
+                    new Squared.Render.Material(content.Load<Effect>("DistanceField"), "Interior"));
 
-                IlluminantMaterials.DistanceFunctionTypes = new Render.EffectMaterial[(int)LightObstructionType.MAX + 1];
+                IlluminantMaterials.DistanceFunctionTypes = new Render.Material[(int)LightObstructionType.MAX + 1];
 
                 foreach (var i in Enum.GetValues(typeof(LightObstructionType))) {
                     var name = Enum.GetName(typeof(LightObstructionType), i);
@@ -258,56 +252,56 @@ namespace Squared.Illuminant {
                         continue;
 
                     materials.Add(IlluminantMaterials.DistanceFunctionTypes[(int)i] = 
-                        new Squared.Render.EffectMaterial(content.Load<Effect>("DistanceFunction"), name));
+                        new Squared.Render.Material(content.Load<Effect>("DistanceFunction"), name));
                 }
 
                 materials.Add(IlluminantMaterials.HeightVolume = 
-                    new Squared.Render.EffectMaterial(content.Load<Effect>("GBuffer"), "HeightVolume"));
+                    new Squared.Render.Material(content.Load<Effect>("GBuffer"), "HeightVolume"));
 
                 materials.Add(IlluminantMaterials.HeightVolumeFace = 
-                    new Squared.Render.EffectMaterial(content.Load<Effect>("GBuffer"), "HeightVolumeFace"));
+                    new Squared.Render.Material(content.Load<Effect>("GBuffer"), "HeightVolumeFace"));
 
                 materials.Add(IlluminantMaterials.MaskBillboard = 
-                    new Squared.Render.EffectMaterial(content.Load<Effect>("GBufferBitmap"), "MaskBillboard"));
+                    new Squared.Render.Material(content.Load<Effect>("GBufferBitmap"), "MaskBillboard"));
 
                 materials.Add(IlluminantMaterials.GDataBillboard = 
-                    new Squared.Render.EffectMaterial(content.Load<Effect>("GBufferBitmap"), "GDataBillboard"));
+                    new Squared.Render.Material(content.Load<Effect>("GBufferBitmap"), "GDataBillboard"));
 
                 materials.Add(IlluminantMaterials.LightingResolve = 
-                    new Squared.Render.EffectMaterial(content.Load<Effect>("Resolve"), "LightingResolve"));
+                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "LightingResolve"));
 
                 materials.Add(IlluminantMaterials.GammaCompressedLightingResolve = 
-                    new Squared.Render.EffectMaterial(content.Load<Effect>("Resolve"), "GammaCompressedLightingResolve"));
+                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "GammaCompressedLightingResolve"));
 
                 materials.Add(IlluminantMaterials.ToneMappedLightingResolve = 
-                    new Squared.Render.EffectMaterial(content.Load<Effect>("Resolve"), "ToneMappedLightingResolve"));
+                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "ToneMappedLightingResolve"));
 
                 materials.Add(IlluminantMaterials.ObjectSurfaces = 
-                    new Squared.Render.EffectMaterial(content.Load<Effect>("VisualizeDistanceField"), "ObjectSurfaces"));
+                    new Squared.Render.Material(content.Load<Effect>("VisualizeDistanceField"), "ObjectSurfaces"));
 
                 materials.Add(IlluminantMaterials.ObjectOutlines = 
-                    new Squared.Render.EffectMaterial(content.Load<Effect>("VisualizeDistanceField"), "ObjectOutlines"));
+                    new Squared.Render.Material(content.Load<Effect>("VisualizeDistanceField"), "ObjectOutlines"));
 
                 materials.Add(IlluminantMaterials.FunctionSurface = 
-                    new Squared.Render.EffectMaterial(content.Load<Effect>("VisualizeDistanceFunction"), "FunctionSurface"));
+                    new Squared.Render.Material(content.Load<Effect>("VisualizeDistanceFunction"), "FunctionSurface"));
 
                 materials.Add(IlluminantMaterials.FunctionOutline = 
-                    new Squared.Render.EffectMaterial(content.Load<Effect>("VisualizeDistanceFunction"), "FunctionOutline"));
+                    new Squared.Render.Material(content.Load<Effect>("VisualizeDistanceFunction"), "FunctionOutline"));
             }
 
-            materials.Add(IlluminantMaterials.ScreenSpaceGammaCompressedBitmap = new Squared.Render.EffectMaterial(
+            materials.Add(IlluminantMaterials.ScreenSpaceGammaCompressedBitmap = new Squared.Render.Material(
                 content.Load<Effect>("HDRBitmap"), "ScreenSpaceGammaCompressedBitmap"
             ));
 
-            materials.Add(IlluminantMaterials.WorldSpaceGammaCompressedBitmap = new Squared.Render.EffectMaterial(
+            materials.Add(IlluminantMaterials.WorldSpaceGammaCompressedBitmap = new Squared.Render.Material(
                 content.Load<Effect>("HDRBitmap"), "WorldSpaceGammaCompressedBitmap"
             ));
 
-            materials.Add(IlluminantMaterials.ScreenSpaceToneMappedBitmap = new Squared.Render.EffectMaterial(
+            materials.Add(IlluminantMaterials.ScreenSpaceToneMappedBitmap = new Squared.Render.Material(
                 content.Load<Effect>("HDRBitmap"), "ScreenSpaceToneMappedBitmap"
             ));
 
-            materials.Add(IlluminantMaterials.WorldSpaceToneMappedBitmap = new Squared.Render.EffectMaterial(
+            materials.Add(IlluminantMaterials.WorldSpaceToneMappedBitmap = new Squared.Render.Material(
                 content.Load<Effect>("HDRBitmap"), "WorldSpaceToneMappedBitmap"
             ));
         }
@@ -491,8 +485,8 @@ namespace Squared.Illuminant {
         }
 
         private void SetLightShaderParameters (Material material) {
-            var mi = (Render.EffectMaterial)((DelegateMaterial)material).BaseMaterial;
-            var p = mi.Effect.Parameters;
+            var effect = material.Effect;
+            var p = effect.Parameters;
 
             var tsize = new Vector2(
                 1f / Configuration.RenderSize.First,
@@ -722,7 +716,7 @@ namespace Squared.Illuminant {
             if (drawCall.Texture != _Lightmap)
                 throw new NotImplementedException("Non-direct resolve not yet implemented");
 
-            Render.EffectMaterial m;
+            Render.Material m;
             if (hdr.HasValue && hdr.Value.Mode == HDRMode.GammaCompress)
                 m = IlluminantMaterials.GammaCompressedLightingResolve;
             else if (hdr.HasValue && hdr.Value.Mode == HDRMode.ToneMap)
@@ -916,7 +910,7 @@ namespace Squared.Illuminant {
             var lightDirection = new Vector3(0, -0.5f, -1.0f);
             lightDirection.Normalize();
 
-            Render.EffectMaterial material = null;
+            Render.Material material = null;
 
             if (singleObject != null) {
                 material = mode == VisualizationMode.Outlines
