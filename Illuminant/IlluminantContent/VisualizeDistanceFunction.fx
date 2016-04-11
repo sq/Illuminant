@@ -1,3 +1,4 @@
+#include "..\..\Upstream\Fracture\Squared\RenderLib\Content\ViewTransformCommon.fxh"
 #include "DistanceFieldCommon.fxh"
 #include "DistanceFunctionCommon.fxh"
 
@@ -8,12 +9,6 @@ float evaluateFunctions (float3 worldPosition, float vars);
 
 #include "VisualizeCommon.fxh"
 
-shared float2 ViewportScale;
-shared float2 ViewportPosition;
-
-shared float4x4 ProjectionMatrix;
-shared float4x4 ModelViewMatrix;
-
 uniform float Time;
 
 uniform int    FunctionType;
@@ -21,8 +16,8 @@ uniform float3 FunctionCenter;
 uniform float3 FunctionSize;
 
 float4 ApplyTransform (float3 position) {
-    float3 localPosition = ((position - float3(ViewportPosition.xy, 0)) * float3(ViewportScale, 1));
-    return mul(mul(float4(localPosition.xyz, 1), ModelViewMatrix), ProjectionMatrix);
+    float3 localPosition = ((position - float3(Viewport.Position.xy, 0)) * float3(Viewport.Scale, 1));
+    return mul(mul(float4(localPosition.xyz, 1), Viewport.ModelView), Viewport.Projection);
 }
 
 void VisualizeVertexShader(
