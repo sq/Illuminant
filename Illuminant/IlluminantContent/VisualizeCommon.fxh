@@ -19,11 +19,21 @@ float3 estimateNormal(
         0
     );
 
-    return normalize(float3(
-        SAMPLE(position + texel.xww, vars) - SAMPLE(position - texel.xww, vars),
-        SAMPLE(position + texel.wyw, vars) - SAMPLE(position - texel.wyw, vars),
-        SAMPLE(position + texel.wwz, vars) - SAMPLE(position - texel.wwz, vars)
-    ));
+    float3 result = 0;
+
+    [loop]
+    for (int i = 0; i < 3; i++) {
+        float axis = SAMPLE(position + texel.xww, vars) - SAMPLE(position - texel.xww, vars);
+
+        if (i == 0)
+            result.x = axis;
+        else if (i == 1)
+            result.y = axis;
+        else
+            result.z = axis;
+    }
+
+    return normalize(result);
 }
 
 bool traceSurface (
@@ -44,11 +54,11 @@ bool traceSurface (
 
         float minStepSize = max(2.5, (positionAlongRay / rayLength) * 12);
 
-        [branch]
         if (distance <= minStepSize) {
             // HACK: Estimate a likely intersection point
             intersectionDistance = positionAlongRay + distance;
             estimatedIntersection = rayStart + (rayDirection * intersectionDistance);
+            positionAlongRay = rayLength;
             return true;
         }
 

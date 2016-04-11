@@ -38,6 +38,7 @@ void ObjectSurfacesPixelShader(
 
     float intersectionDistance;
     float3 estimatedIntersection;
+
     if (traceSurface(rayStart, rayVector, intersectionDistance, estimatedIntersection, vars)) {
         result = float4(AmbientColor, 1.0);
 
