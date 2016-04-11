@@ -110,7 +110,7 @@ namespace TestGame.Scenes {
                     DistanceFieldLongStepFactor = 0.5f,
                     DistanceFieldOcclusionToOpacityPower = 0.7f,
                     DistanceFieldMaxConeRadius = 24,
-                    DistanceFieldUpdateRate = 4,
+                    DistanceFieldUpdateRate = 64,
                 }
             );
 

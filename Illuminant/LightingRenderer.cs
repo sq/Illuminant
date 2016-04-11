@@ -1334,7 +1334,7 @@ namespace Squared.Illuminant {
                 _DistanceFieldSlicesReady = Math.Max(_DistanceFieldSlicesReady, lastVirtualSliceIndex + 1);
 
                 if (Render.Tracing.RenderTrace.EnableTracing)
-                    Render.Tracing.RenderTrace.Marker(group, -1, "LightingRenderer {0:X4} : End Distance Field Slices [{1}-{2}]", this.GetHashCode(), firstVirtualSliceIndex, lastVirtualSliceIndex);
+                    Render.Tracing.RenderTrace.Marker(group, 9999, "LightingRenderer {0:X4} : End Distance Field Slices [{1}-{2}]", this.GetHashCode(), firstVirtualSliceIndex, lastVirtualSliceIndex);
             }
         }
 
@@ -1511,10 +1511,10 @@ namespace Squared.Illuminant {
                     };
 
                     if (Render.Tracing.RenderTrace.EnableTracing)
-                        Render.Tracing.RenderTrace.Marker(group, (i * 2), "LightingRenderer {0:X4} : Render {1}(s)", GetHashCode(), (LightObstructionType)i);
+                        Render.Tracing.RenderTrace.Marker(group, (i * 2) + 3, "LightingRenderer {0:X4} : Render {1}(s)", GetHashCode(), (LightObstructionType)i);
                     
                     batches[i] = NativeBatch.New(
-                        group, (i * 2) + 1, m, setup
+                        group, (i * 2) + 4, m, setup
                     );
                     firstOffset[i] = -1;
                 }
