@@ -213,10 +213,22 @@ namespace Squared.Illuminant {
                 ));
 
                 materials.Add(IlluminantMaterials.DistanceFieldExterior = 
-                    new Squared.Render.Material(content.Load<Effect>("DistanceField"), "Exterior"));
+                    new Material(
+                        content.Load<Effect>("DistanceField"), "Exterior",
+                        new[] { MaterialUtil.MakeDelegate(RenderStates.MaxBlendValue) }
+                    )
+                );
 
                 materials.Add(IlluminantMaterials.DistanceFieldInterior = 
-                    new Squared.Render.Material(content.Load<Effect>("DistanceField"), "Interior"));
+                    new Material(
+                        content.Load<Effect>("DistanceField"), "Interior", 
+                        new[] { MaterialUtil.MakeDelegate(RenderStates.MaxBlendValue) }
+                    )
+                );
+
+                materials.Add(IlluminantMaterials.ClearDistanceFieldSlice =
+                    materials.GetGeometryMaterial(true, blendState: BlendState.Opaque).Clone()
+                );
 
                 IlluminantMaterials.DistanceFunctionTypes = new Render.Material[(int)LightObstructionType.MAX + 1];
 
@@ -226,7 +238,7 @@ namespace Squared.Illuminant {
                         continue;
 
                     materials.Add(IlluminantMaterials.DistanceFunctionTypes[(int)i] = 
-                        new Squared.Render.Material(content.Load<Effect>("DistanceFunction"), name));
+                        new Material(content.Load<Effect>("DistanceFunction"), name));
                 }
 
                 materials.Add(IlluminantMaterials.HeightVolume = 
@@ -1280,49 +1292,46 @@ namespace Squared.Illuminant {
 
             bool forceClear = _DistanceFieldSlicesReady == 0;
 
+            var viewTransform = ViewTransform.CreateOrthographic(
+                Configuration.DistanceFieldSize.First * DistanceFieldSlicesX,
+                Configuration.DistanceFieldSize.Second * DistanceFieldSlicesY
+            );
+            viewTransform.Position = new Vector2(-sliceXVirtual, -sliceYVirtual);
+
             Action<DeviceManager, object> beginSliceBatch =
                 (dm, _) => {
                     if (forceClear)
                         dm.Device.Clear(Color.Transparent);
 
                     // TODO: Optimize this
-                    var vt = ViewTransform.CreateOrthographic(
-                        Configuration.DistanceFieldSize.First * DistanceFieldSlicesX,
-                        Configuration.DistanceFieldSize.Second * DistanceFieldSlicesY
-                    );
-                    vt.Position = new Vector2(-sliceXVirtual, -sliceYVirtual);
-                    Materials.PushViewTransform(ref vt);
-
                     dm.Device.ScissorRectangle = new Rectangle(
                         sliceX, sliceY, DistanceFieldSliceWidth, DistanceFieldSliceHeight
                     );
-                    dm.Device.BlendState = RenderStates.MaxBlendValue;
+
+                    Materials.ApplyViewTransformToMaterial(IlluminantMaterials.ClearDistanceFieldSlice, ref viewTransform);
+                    Materials.ApplyViewTransformToMaterial(IlluminantMaterials.DistanceFieldInterior, ref viewTransform);
+                    Materials.ApplyViewTransformToMaterial(IlluminantMaterials.DistanceFieldExterior, ref viewTransform);
 
                     SetDistanceFieldParameters(IlluminantMaterials.DistanceFieldInterior.Effect.Parameters, false);
                     SetDistanceFieldParameters(IlluminantMaterials.DistanceFieldExterior.Effect.Parameters, false);
 
-                    foreach (var m in IlluminantMaterials.DistanceFunctionTypes)
+                    foreach (var m in IlluminantMaterials.DistanceFunctionTypes) {
+                        Materials.ApplyViewTransformToMaterial(m, ref viewTransform);
                         SetDistanceFieldParameters(m.Effect.Parameters, false);
+                    }
                 };
-
-            Action<DeviceManager, object> endSliceBatch =
-                (dm, _) => {
-                    Materials.PopViewTransform();
-                };
-
-            ClearDistanceFieldSlice(
-                indices, BlendState.Opaque,
-                beginSliceBatch, endSliceBatch,
-                rtGroup, layer++
-            );
 
             var lastVirtualSliceIndex = firstVirtualSliceIndex + 2;
 
             using (var group = BatchGroup.New(rtGroup, layer++,
-                beginSliceBatch, endSliceBatch
+                beginSliceBatch, null
             )) {
                 if (Render.Tracing.RenderTrace.EnableTracing)
-                    Render.Tracing.RenderTrace.Marker(group, -1, "LightingRenderer {0:X4} : Begin Distance Field Slices [{1}-{2}]", this.GetHashCode(), firstVirtualSliceIndex, lastVirtualSliceIndex);
+                    Render.Tracing.RenderTrace.Marker(group, -2, "LightingRenderer {0:X4} : Begin Distance Field Slices [{1}-{2}]", this.GetHashCode(), firstVirtualSliceIndex, lastVirtualSliceIndex);
+
+                ClearDistanceFieldSlice(
+                    indices, group, -1
+                );
 
                 RenderDistanceFieldDistanceFunctions(indices, firstVirtualSliceIndex, group);
                 RenderDistanceFieldHeightVolumes(indices, intParameters, extParameters, firstVirtualSliceIndex, group);
@@ -1434,11 +1443,7 @@ namespace Squared.Illuminant {
         }
 
         private void ClearDistanceFieldSlice (
-            short[] indices, 
-            BlendState blendState,
-            Action<DeviceManager, object> beginBatch,
-            Action<DeviceManager, object> endBatch,
-            IBatchContainer container, int layer
+            short[] indices, IBatchContainer container, int layer
         ) {
             var verts = new VertexPositionColor[] {
                 new VertexPositionColor(new Vector3(0, 0, 0), Color.Transparent),
@@ -1447,15 +1452,8 @@ namespace Squared.Illuminant {
                 new VertexPositionColor(new Vector3(0, Configuration.DistanceFieldSize.Second, 0), Color.Transparent)
             };
 
-            // HACK: Create a group to attach begin/end callbacks to
-            using (var group = BatchGroup.New(
-                container, layer,
-                beginBatch, endBatch
-            ))
             using (var batch = PrimitiveBatch<VertexPositionColor>.New(
-                // FIXME: Only clear the current channel
-                group, 0,
-                Materials.Get(Materials.WorldSpaceGeometry, blendState: blendState)
+                container, layer, IlluminantMaterials.ClearDistanceFieldSlice
             ))
                 batch.Add(new PrimitiveDrawCall<VertexPositionColor>(
                     PrimitiveType.TriangleList,
