@@ -16,7 +16,12 @@ using Squared.Render.Convenience;
 using Squared.Util;
 
 namespace Squared.Illuminant {
-    public sealed class LightingRenderer : IDisposable {
+    public sealed partial class LightingRenderer : IDisposable {
+        private struct TemplateUniforms {
+            public Uniforms.Environment Environment;
+            public Uniforms.DistanceField DistanceField;
+        }
+
         public const int MaximumLightCount = 8192;
         public const int PackedSliceCount = 3;
         public const int MaximumDistanceFunctionCount = 8192;
@@ -69,6 +74,8 @@ namespace Squared.Illuminant {
 
         public readonly int DistanceFieldSliceWidth, DistanceFieldSliceHeight;
         public readonly int DistanceFieldSlicesX, DistanceFieldSlicesY;
+
+        private TemplateUniforms Uniforms = new TemplateUniforms();
 
         public LightingRenderer (
             ContentManager content, RenderCoordinator coordinator, 
@@ -192,106 +199,6 @@ namespace Squared.Illuminant {
             Environment = environment;
 
             Coordinator.DeviceReset += Coordinator_DeviceReset;
-        }
-
-        private void LoadMaterials (DefaultMaterialSet materials, ContentManager content) {
-            {
-                var dBegin = new[] {
-                    MaterialUtil.MakeDelegate(
-                        rasterizerState: RasterizerState.CullNone,
-                        depthStencilState: SphereLightDepthStencilState
-                    )
-                };
-                Action<DeviceManager>[] dEnd = null;
-
-                materials.Add(IlluminantMaterials.SphereLight = new Material(
-                    content.Load<Effect>("SphereLight"), "SphereLight", dBegin, dEnd
-                ));
-
-                materials.Add(IlluminantMaterials.DirectionalLight = new Material(
-                    content.Load<Effect>("DirectionalLight"), "DirectionalLight", dBegin, dEnd
-                ));
-
-                materials.Add(IlluminantMaterials.DistanceFieldExterior = 
-                    new Material(
-                        content.Load<Effect>("DistanceField"), "Exterior",
-                        new[] { MaterialUtil.MakeDelegate(RenderStates.MaxBlendValue) }
-                    )
-                );
-
-                materials.Add(IlluminantMaterials.DistanceFieldInterior = 
-                    new Material(
-                        content.Load<Effect>("DistanceField"), "Interior", 
-                        new[] { MaterialUtil.MakeDelegate(RenderStates.MaxBlendValue) }
-                    )
-                );
-
-                materials.Add(IlluminantMaterials.ClearDistanceFieldSlice =
-                    materials.GetGeometryMaterial(true, blendState: BlendState.Opaque).Clone()
-                );
-
-                IlluminantMaterials.DistanceFunctionTypes = new Render.Material[(int)LightObstructionType.MAX + 1];
-
-                foreach (var i in Enum.GetValues(typeof(LightObstructionType))) {
-                    var name = Enum.GetName(typeof(LightObstructionType), i);
-                    if (name == "MAX")
-                        continue;
-
-                    materials.Add(IlluminantMaterials.DistanceFunctionTypes[(int)i] = 
-                        new Material(content.Load<Effect>("DistanceFunction"), name));
-                }
-
-                materials.Add(IlluminantMaterials.HeightVolume = 
-                    new Squared.Render.Material(content.Load<Effect>("GBuffer"), "HeightVolume"));
-
-                materials.Add(IlluminantMaterials.HeightVolumeFace = 
-                    new Squared.Render.Material(content.Load<Effect>("GBuffer"), "HeightVolumeFace"));
-
-                materials.Add(IlluminantMaterials.MaskBillboard = 
-                    new Squared.Render.Material(content.Load<Effect>("GBufferBitmap"), "MaskBillboard"));
-
-                materials.Add(IlluminantMaterials.GDataBillboard = 
-                    new Squared.Render.Material(content.Load<Effect>("GBufferBitmap"), "GDataBillboard"));
-
-                materials.Add(IlluminantMaterials.LightingResolve = 
-                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "LightingResolve"));
-
-                materials.Add(IlluminantMaterials.GammaCompressedLightingResolve = 
-                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "GammaCompressedLightingResolve"));
-
-                materials.Add(IlluminantMaterials.ToneMappedLightingResolve = 
-                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "ToneMappedLightingResolve"));
-
-                materials.Add(IlluminantMaterials.ObjectSurfaces = 
-                    new Squared.Render.Material(content.Load<Effect>("VisualizeDistanceField"), "ObjectSurfaces"));
-
-                materials.Add(IlluminantMaterials.ObjectOutlines = 
-                    new Squared.Render.Material(content.Load<Effect>("VisualizeDistanceField"), "ObjectOutlines"));
-
-                materials.Add(IlluminantMaterials.FunctionSurface = 
-                    new Squared.Render.Material(content.Load<Effect>("VisualizeDistanceFunction"), "FunctionSurface"));
-
-                materials.Add(IlluminantMaterials.FunctionOutline = 
-                    new Squared.Render.Material(content.Load<Effect>("VisualizeDistanceFunction"), "FunctionOutline"));
-            }
-
-            materials.Add(IlluminantMaterials.ScreenSpaceGammaCompressedBitmap = new Squared.Render.Material(
-                content.Load<Effect>("HDRBitmap"), "ScreenSpaceGammaCompressedBitmap"
-            ));
-
-            materials.Add(IlluminantMaterials.WorldSpaceGammaCompressedBitmap = new Squared.Render.Material(
-                content.Load<Effect>("HDRBitmap"), "WorldSpaceGammaCompressedBitmap"
-            ));
-
-            materials.Add(IlluminantMaterials.ScreenSpaceToneMappedBitmap = new Squared.Render.Material(
-                content.Load<Effect>("HDRBitmap"), "ScreenSpaceToneMappedBitmap"
-            ));
-
-            materials.Add(IlluminantMaterials.WorldSpaceToneMappedBitmap = new Squared.Render.Material(
-                content.Load<Effect>("HDRBitmap"), "WorldSpaceToneMappedBitmap"
-            ));
-
-            materials.PreallocateBindings();
         }
 
         private void Coordinator_DeviceReset (object sender, EventArgs e) {
@@ -442,6 +349,21 @@ namespace Squared.Illuminant {
             }
         }
 
+        private void ComputeUniforms () {
+            Uniforms = new TemplateUniforms {
+                Environment = new Uniforms.Environment {
+                    GroundZ = Environment.GroundZ,
+                    ZToYMultiplier = 
+                        Configuration.TwoPointFiveD
+                            ? Environment.ZToYMultiplier
+                            : 0.0f,
+                    RenderScale = Configuration.RenderScale
+                },
+                DistanceField = new Uniforms.DistanceField {
+                }
+            };
+        }
+
         private void _BeginLightPass (DeviceManager device, object userData) {
             var vt = ViewTransform.CreateOrthographic(
                 _Lightmap.Width, _Lightmap.Height
@@ -483,15 +405,10 @@ namespace Squared.Illuminant {
             p["GBufferTexelSize"].SetValue(tsize);
             p["GBuffer"].SetValue(GBuffer);
 
-            var e = p["Environment"];
-            e.StructureMembers["GroundZ"].SetValue(Environment.GroundZ);
-            e.StructureMembers["ZToYMultiplier"].SetValue(
-                Configuration.TwoPointFiveD
-                    ? Environment.ZToYMultiplier
-                    : 0.0f
-            );
+            var ub = Materials.GetUniformBinding<Uniforms.Environment>(material, "Environment");
+            ub.Value.Current = Uniforms.Environment;
 
-            SetDistanceFieldParameters(p, true);
+            SetDistanceFieldParameters(material, true);
         }
 
         /// <summary>
@@ -503,6 +420,8 @@ namespace Squared.Illuminant {
         /// <param name="intensityScale">A factor to scale the intensity of all light sources. You can use this to rescale the intensity of light values for HDR.</param>
         public void RenderLighting (IBatchContainer container, int layer, float intensityScale = 1.0f) {
             int layerIndex = 0;
+
+            ComputeUniforms();
 
             using (var outerGroup = BatchGroup.New(container, layer)) {
                 // HACK: We make a copy of the previous lightmap so that brightness estimation can read it, without
@@ -724,8 +643,8 @@ namespace Squared.Illuminant {
                         : 1.0f
                 );
 
-                var e = m.Effect.Parameters["Environment"];
-                e.StructureMembers["RenderScale"].SetValue(Configuration.RenderScale);
+                var ub = Materials.GetUniformBinding<Uniforms.Environment>(m, "Environment");
+                ub.Value.Current = Uniforms.Environment;
 
                 if (hdr.HasValue) {
                     if (hdr.Value.Mode == HDRMode.GammaCompress)
@@ -919,7 +838,7 @@ namespace Squared.Illuminant {
                     blendState: blendState ?? BlendState.AlphaBlend
                 ), (dm, _) => {
                     var p = material.Effect.Parameters;
-                    SetDistanceFieldParameters(p, true);
+                    SetDistanceFieldParameters(material, true);
                     p["AmbientColor"].SetValue(ambientColor);
                     p["LightDirection"].SetValue(lightDirection);
                     p["LightColor"].SetValue(new Vector3(0.75f));
@@ -945,7 +864,8 @@ namespace Squared.Illuminant {
             };
         }
 
-        private void SetDistanceFieldParameters (EffectParameterCollection p, bool setDistanceTexture) {
+        private void SetDistanceFieldParameters (Material m, bool setDistanceTexture) {
+            var p = m.Effect.Parameters;
             var s = p["DistanceField"].StructureMembers;
 
             s["Extent"].SetValue(new Vector3(
@@ -972,9 +892,8 @@ namespace Squared.Illuminant {
                 Configuration.DistanceFieldLongStepFactor
             ));
 
-            var e = p["Environment"];
-            if (e != null)
-                e.StructureMembers["RenderScale"].SetValue(Configuration.RenderScale);
+            var ub = Materials.GetUniformBinding<Uniforms.Environment>(m, "Environment");
+            ub.Value.Current = Uniforms.Environment;
 
             if (setDistanceTexture)
                 p["DistanceFieldTexture"].SetValue(_DistanceField);
@@ -1046,18 +965,11 @@ namespace Squared.Illuminant {
                             Environment.MaximumZ
                         ));
 
-                        var e = p["Environment"];
-                        e.StructureMembers["ZToYMultiplier"].SetValue(
-                            Configuration.TwoPointFiveD
-                                ? Environment.ZToYMultiplier
-                                : 0.0f
-                        );
-                        e.StructureMembers["RenderScale"].SetValue(Configuration.RenderScale);
+                        var ub = Materials.GetUniformBinding<Uniforms.Environment>(IlluminantMaterials.HeightVolumeFace, "Environment");
+                        ub.Value.Current = Uniforms.Environment;
 
-                        e = IlluminantMaterials.HeightVolume.Effect.Parameters["Environment"];
-                        e.StructureMembers["RenderScale"].SetValue(
-                            Configuration.RenderScale
-                        );
+                        ub = Materials.GetUniformBinding<Uniforms.Environment>(IlluminantMaterials.HeightVolume, "Environment");
+                        ub.Value.Current = Uniforms.Environment;
                     }
                 )) {
 
@@ -1251,9 +1163,6 @@ namespace Squared.Illuminant {
             using (var rtGroup = BatchGroup.ForRenderTarget(
                 resultGroup, layerIndex++, _DistanceField
             )) {
-                var intParameters = IlluminantMaterials.DistanceFieldInterior.Effect.Parameters;
-                var extParameters = IlluminantMaterials.DistanceFieldExterior.Effect.Parameters;
-
                 // We incrementally do a partial update of the distance field.
                 int sliceCount = Configuration.DistanceFieldSliceCount;
                 int slicesToUpdate =
@@ -1269,7 +1178,8 @@ namespace Squared.Illuminant {
 
                     RenderDistanceFieldSliceTriplet(
                         indices, rtGroup,
-                        intParameters, extParameters,
+                        IlluminantMaterials.DistanceFieldInterior, 
+                        IlluminantMaterials.DistanceFieldExterior,
                         physicalSlice, slice,
                         ref layer
                     );
@@ -1286,7 +1196,7 @@ namespace Squared.Illuminant {
 
         private void RenderDistanceFieldSliceTriplet (
             short[] indices, BatchGroup rtGroup, 
-            EffectParameterCollection intParameters, EffectParameterCollection extParameters,
+            Material interior, Material exterior,
             int physicalSliceIndex, int firstVirtualSliceIndex,
             ref int layer
         ) {
@@ -1317,12 +1227,12 @@ namespace Squared.Illuminant {
                     Materials.ApplyViewTransformToMaterial(IlluminantMaterials.DistanceFieldInterior, ref viewTransform);
                     Materials.ApplyViewTransformToMaterial(IlluminantMaterials.DistanceFieldExterior, ref viewTransform);
 
-                    SetDistanceFieldParameters(IlluminantMaterials.DistanceFieldInterior.Effect.Parameters, false);
-                    SetDistanceFieldParameters(IlluminantMaterials.DistanceFieldExterior.Effect.Parameters, false);
+                    SetDistanceFieldParameters(IlluminantMaterials.DistanceFieldInterior, false);
+                    SetDistanceFieldParameters(IlluminantMaterials.DistanceFieldExterior, false);
 
                     foreach (var m in IlluminantMaterials.DistanceFunctionTypes) {
                         Materials.ApplyViewTransformToMaterial(m, ref viewTransform);
-                        SetDistanceFieldParameters(m.Effect.Parameters, false);
+                        SetDistanceFieldParameters(m, false);
                     }
                 };
 
@@ -1339,7 +1249,7 @@ namespace Squared.Illuminant {
                 );
 
                 RenderDistanceFieldDistanceFunctions(indices, firstVirtualSliceIndex, group);
-                RenderDistanceFieldHeightVolumes(indices, intParameters, extParameters, firstVirtualSliceIndex, group);
+                RenderDistanceFieldHeightVolumes(indices, interior, exterior, firstVirtualSliceIndex, group);
 
                 // FIXME: Slow
                 for (var i = firstVirtualSliceIndex; i <= lastVirtualSliceIndex; i++)
@@ -1354,8 +1264,8 @@ namespace Squared.Illuminant {
 
         private void RenderDistanceFieldHeightVolumes (
             short[] indices, 
-            EffectParameterCollection intParameters, 
-            EffectParameterCollection extParameters, 
+            Material interior, 
+            Material exterior, 
             int firstVirtualIndex, BatchGroup group
         ) {
             int i = 1;
@@ -1372,12 +1282,12 @@ namespace Squared.Illuminant {
             using (var interiorGroup = BatchGroup.New(group, 1, (dm, _) => {
                 dm.Device.RasterizerState = RenderStates.ScissorOnly;
                 dm.Device.DepthStencilState = DepthStencilState.None;
-                SetDistanceFieldParameters(intParameters, false);
+                SetDistanceFieldParameters(interior, false);
             }))
             using (var exteriorGroup = BatchGroup.New(group, 2, (dm, _) => {
                 dm.Device.RasterizerState = RenderStates.ScissorOnly;
                 dm.Device.DepthStencilState = DepthStencilState.None;
-                SetDistanceFieldParameters(extParameters, false);
+                SetDistanceFieldParameters(exterior, false);
             }))
             foreach (var hv in Environment.HeightVolumes) {
                 var p = hv.Polygon;
@@ -1418,9 +1328,10 @@ namespace Squared.Illuminant {
                 using (var batch = PrimitiveBatch<HeightVolumeVertex>.New(
                     interiorGroup, i, IlluminantMaterials.DistanceFieldInterior,
                     (dm, _) => {
-                        intParameters["NumVertices"].SetValue(p.Count);
-                        intParameters["VertexDataTexture"].SetValue(vertexDataTexture);
-                        intParameters["SliceZ"].SetValue(sliceZ);
+                        var ep = interior.Effect.Parameters;
+                        ep["NumVertices"].SetValue(p.Count);
+                        ep["VertexDataTexture"].SetValue(vertexDataTexture);
+                        ep["SliceZ"].SetValue(sliceZ);
                         IlluminantMaterials.DistanceFieldInterior.Flush();
                     }
                 ))
@@ -1432,9 +1343,10 @@ namespace Squared.Illuminant {
                 using (var batch = PrimitiveBatch<HeightVolumeVertex>.New(
                     exteriorGroup, i, IlluminantMaterials.DistanceFieldExterior,
                     (dm, _) => {
-                        extParameters["NumVertices"].SetValue(p.Count);
-                        extParameters["VertexDataTexture"].SetValue(vertexDataTexture);
-                        extParameters["SliceZ"].SetValue(sliceZ);
+                        var ep = exterior.Effect.Parameters;
+                        ep["NumVertices"].SetValue(p.Count);
+                        ep["VertexDataTexture"].SetValue(vertexDataTexture);
+                        ep["SliceZ"].SetValue(sliceZ);
                         IlluminantMaterials.DistanceFieldExterior.Flush();
                     }
                 ))
