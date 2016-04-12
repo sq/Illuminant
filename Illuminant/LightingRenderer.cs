@@ -1146,7 +1146,14 @@ namespace Squared.Illuminant {
             };
             
             using (var rtGroup = BatchGroup.ForRenderTarget(
-                resultGroup, layerIndex++, _DistanceField
+                resultGroup, layerIndex++, _DistanceField,
+                // HACK: Since we're mucking with view transforms, do a save and restore
+                (dm, _) => {
+                    Materials.PushViewTransform(Materials.ViewTransform);
+                },
+                (dm, _) => {
+                    Materials.PopViewTransform();
+                }
             )) {
                 // We incrementally do a partial update of the distance field.
                 int sliceCount = Configuration.DistanceFieldSliceCount;
@@ -1209,11 +1216,11 @@ namespace Squared.Illuminant {
                     );
 
                     Materials.ApplyViewTransformToMaterial(IlluminantMaterials.ClearDistanceFieldSlice, ref viewTransform);
-                    Materials.ApplyViewTransformToMaterial(IlluminantMaterials.DistanceFieldInterior, ref viewTransform);
-                    Materials.ApplyViewTransformToMaterial(IlluminantMaterials.DistanceFieldExterior, ref viewTransform);
+                    Materials.ApplyViewTransformToMaterial(interior, ref viewTransform);
+                    Materials.ApplyViewTransformToMaterial(exterior, ref viewTransform);
 
-                    SetDistanceFieldParameters(IlluminantMaterials.DistanceFieldInterior, false);
-                    SetDistanceFieldParameters(IlluminantMaterials.DistanceFieldExterior, false);
+                    SetDistanceFieldParameters(interior, false);
+                    SetDistanceFieldParameters(exterior, false);
 
                     foreach (var m in IlluminantMaterials.DistanceFunctionTypes) {
                         Materials.ApplyViewTransformToMaterial(m, ref viewTransform);
