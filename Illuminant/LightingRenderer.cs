@@ -869,8 +869,6 @@ namespace Squared.Illuminant {
                         p["FunctionCenter"].SetValue(singleObject.Center);
                         p["FunctionSize"].SetValue(singleObject.Size);
                     }
-
-                    material.Flush();
                 }
             )) {
                 batch.Add(new PrimitiveDrawCall<VisualizeDistanceFieldVertex>(
@@ -1128,8 +1126,6 @@ namespace Squared.Illuminant {
                         p["ZToYMultiplier"].SetValue(Uniforms.Environment.ZToYMultiplier);
                         p["RenderScale"].SetValue(Uniforms.Environment.RenderScale);
                         p["Mask"].SetValue(billboard.Texture);
-
-                        material.Flush();
                     }
                 )) {
                     batch.Add(new PrimitiveDrawCall<BillboardVertex>(
@@ -1316,7 +1312,6 @@ namespace Squared.Illuminant {
                         ep["NumVertices"].SetValue(p.Count);
                         ep["VertexDataTexture"].SetValue(vertexDataTexture);
                         ep["SliceZ"].SetValue(sliceZ);
-                        IlluminantMaterials.DistanceFieldInterior.Flush();
                     }
                 ))
                     batch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
@@ -1331,7 +1326,6 @@ namespace Squared.Illuminant {
                         ep["NumVertices"].SetValue(p.Count);
                         ep["VertexDataTexture"].SetValue(vertexDataTexture);
                         ep["SliceZ"].SetValue(sliceZ);
-                        IlluminantMaterials.DistanceFieldExterior.Flush();
                     }
                 ))
                     batch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
@@ -1398,7 +1392,6 @@ namespace Squared.Illuminant {
 
                     setup = (dm, _) => {
                         m.Effect.Parameters["SliceZ"].SetValue(sliceZ);
-                        m.Flush();
 
                         lock (DistanceFunctionVertices) {
                             if (DidUploadDistanceFieldBuffer)
