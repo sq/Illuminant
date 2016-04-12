@@ -53,8 +53,13 @@ namespace Squared.Illuminant {
                     if (name == "MAX")
                         continue;
 
-                    materials.Add(IlluminantMaterials.DistanceFunctionTypes[(int)i] = 
-                        new Material(content.Load<Effect>("DistanceFunction"), name));
+                    materials.Add(
+                        IlluminantMaterials.DistanceFunctionTypes[(int)i] = 
+                        new Material(
+                            content.Load<Effect>("DistanceFunction"), name,
+                            new[] { MaterialUtil.MakeDelegate(RenderStates.MaxBlendValue) }
+                        )
+                    );
                 }
 
                 materials.Add(IlluminantMaterials.HeightVolume = 
