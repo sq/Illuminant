@@ -359,7 +359,28 @@ namespace Squared.Illuminant {
                             : 0.0f,
                     RenderScale = Configuration.RenderScale
                 },
+
                 DistanceField = new Uniforms.DistanceField {
+                    Extent = new Vector3(
+                        Configuration.DistanceFieldSize.First,
+                        Configuration.DistanceFieldSize.Second,
+                        Environment.MaximumZ
+                    ),
+                    TextureSliceSize = new Vector2(1f / DistanceFieldSlicesX, 1f / DistanceFieldSlicesY),
+                    TextureSliceCount = new Vector3(DistanceFieldSlicesX, DistanceFieldSlicesY, _DistanceFieldSlicesReady),
+                    TextureTexelSize = new Vector2(
+                        1f / (Configuration.DistanceFieldSize.First * DistanceFieldSlicesX), 
+                        1f / (Configuration.DistanceFieldSize.Second * DistanceFieldSlicesY)
+                    ),
+                    InvScaleFactor = 1f / Configuration.DistanceFieldResolution,
+                    OcclusionToOpacityPower = Configuration.DistanceFieldOcclusionToOpacityPower,
+                    MaxConeRadius = Configuration.DistanceFieldMaxConeRadius,
+                    ConeGrowthFactor = Configuration.DistanceFieldConeGrowthFactor,
+                    Step = new Vector3(
+                        (float)Configuration.DistanceFieldMaxStepCount,
+                        Configuration.DistanceFieldMinStepSize,
+                        Configuration.DistanceFieldLongStepFactor
+                    )
                 }
             };
         }
@@ -866,34 +887,9 @@ namespace Squared.Illuminant {
 
         private void SetDistanceFieldParameters (Material m, bool setDistanceTexture) {
             var p = m.Effect.Parameters;
-            var s = p["DistanceField"].StructureMembers;
 
-            s["Extent"].SetValue(new Vector3(
-                Configuration.DistanceFieldSize.First,
-                Configuration.DistanceFieldSize.Second,
-                Environment.MaximumZ
-            ));
-            s["TextureSliceSize"].SetValue(new Vector2(1f / DistanceFieldSlicesX, 1f / DistanceFieldSlicesY));
-            s["TextureSliceCount"].SetValue(new Vector3(DistanceFieldSlicesX, DistanceFieldSlicesY, _DistanceFieldSlicesReady));
-
-            var tsize = new Vector2(
-                1f / (Configuration.DistanceFieldSize.First * DistanceFieldSlicesX), 
-                1f / (Configuration.DistanceFieldSize.Second * DistanceFieldSlicesY)
-            );
-            s["TextureTexelSize"].SetValue(tsize);
-            s["InvScaleFactor"].SetValue(1f / Configuration.DistanceFieldResolution);
-            s["OcclusionToOpacityPower"].SetValue(Configuration.DistanceFieldOcclusionToOpacityPower);
-            s["MaxConeRadius"].SetValue(Configuration.DistanceFieldMaxConeRadius);
-            s["ConeGrowthFactor"].SetValue(Configuration.DistanceFieldConeGrowthFactor);
-
-            s["Step"].SetValue(new Vector3(
-                (float)Configuration.DistanceFieldMaxStepCount,
-                Configuration.DistanceFieldMinStepSize,
-                Configuration.DistanceFieldLongStepFactor
-            ));
-
-            var ub = Materials.GetUniformBinding<Uniforms.Environment>(m, "Environment");
-            ub.Value.Current = Uniforms.Environment;
+            Materials.TrySetBoundUniform(m, "DistanceField", ref Uniforms.DistanceField);
+            Materials.TrySetBoundUniform(m, "Environment", ref Uniforms.Environment);
 
             if (setDistanceTexture)
                 p["DistanceFieldTexture"].SetValue(_DistanceField);
@@ -959,11 +955,7 @@ namespace Squared.Illuminant {
                     group, 1, IlluminantMaterials.HeightVolume,
                     (dm, _) => {
                         var p = IlluminantMaterials.HeightVolumeFace.Effect.Parameters;
-                        p["DistanceFieldExtent"].SetValue(new Vector3(
-                            Configuration.DistanceFieldSize.First,
-                            Configuration.DistanceFieldSize.Second,
-                            Environment.MaximumZ
-                        ));
+                        p["DistanceFieldExtent"].SetValue(Uniforms.DistanceField.Extent);
 
                         var ub = Materials.GetUniformBinding<Uniforms.Environment>(IlluminantMaterials.HeightVolumeFace, "Environment");
                         ub.Value.Current = Uniforms.Environment;
@@ -1132,17 +1124,9 @@ namespace Squared.Illuminant {
                         blendState: BlendState.Opaque
                     ), (dm, _) => {
                         var p = material.Effect.Parameters;
-                        p["DistanceFieldExtent"].SetValue(new Vector3(
-                            Configuration.DistanceFieldSize.First,
-                            Configuration.DistanceFieldSize.Second,
-                            Environment.MaximumZ
-                        ));
-                        p["ZToYMultiplier"].SetValue(
-                            Configuration.TwoPointFiveD
-                                ? Environment.ZToYMultiplier
-                                : 0.0f
-                        );
-                        p["RenderScale"].SetValue(Configuration.RenderScale);
+                        p["DistanceFieldExtent"].SetValue(Uniforms.DistanceField.Extent);
+                        p["ZToYMultiplier"].SetValue(Uniforms.Environment.ZToYMultiplier);
+                        p["RenderScale"].SetValue(Uniforms.Environment.RenderScale);
                         p["Mask"].SetValue(billboard.Texture);
 
                         material.Flush();
