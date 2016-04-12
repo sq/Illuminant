@@ -746,6 +746,8 @@ namespace Squared.Illuminant {
             BlendState blendState = null,
             Vector4? color = null
         ) {
+            ComputeUniforms();
+
             var indices = new short[] {
                 0, 1, 3, 1, 2, 3
             };
@@ -851,14 +853,16 @@ namespace Squared.Illuminant {
                     : IlluminantMaterials.ObjectSurfaces;
             }
 
+            material = Materials.Get(
+                material,
+                depthStencilState: DepthStencilState.None,
+                rasterizerState: RasterizerState.CullNone,
+                blendState: blendState ?? BlendState.AlphaBlend
+            );
             using (var batch = PrimitiveBatch<VisualizeDistanceFieldVertex>.New(
-                container, layerIndex++, Materials.Get(
-                    material,
-                    depthStencilState: DepthStencilState.None,
-                    rasterizerState: RasterizerState.CullNone,
-                    blendState: blendState ?? BlendState.AlphaBlend
-                ), (dm, _) => {
+                container, layerIndex++, material, (dm, _) => {
                     var p = material.Effect.Parameters;
+
                     SetDistanceFieldParameters(material, true);
                     p["AmbientColor"].SetValue(ambientColor);
                     p["LightDirection"].SetValue(lightDirection);
@@ -908,6 +912,8 @@ namespace Squared.Illuminant {
         }
 
         public void UpdateFields (IBatchContainer container, int layer) {
+            ComputeUniforms();
+
             if (
                 (_DistanceFieldSlicesReady < Configuration.DistanceFieldSliceCount) &&
                 (_InvalidDistanceFieldSlices.Count == 0)

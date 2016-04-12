@@ -107,11 +107,6 @@ namespace TestGame.Scenes {
                     Rectangle = Bounds.FromPositionAndSize(new Vector2((visSize + pad) * 3, 0), visSize2),
                     ViewAngle = diagonal
                 },
-
-                new Viewport {
-                    Rectangle = Bounds.FromPositionAndSize(new Vector2((visSize + pad) * 3, visSize + pad), visSize2),
-                    ViewAngle = Vector3.Zero
-                },
             };
         }
 
@@ -370,11 +365,13 @@ namespace TestGame.Scenes {
                     Renderer.InvalidateFields();
                 }
 
+                /*
                 float w = Game.Graphics.PreferredBackBufferWidth / 2f;
                 float h = Game.Graphics.PreferredBackBufferHeight / 2f;
                 var m2 = Matrix.CreateFromAxisAngle(Vector3.UnitX, -(float)(((ms.Y - h) / h) * Math.PI / 2));
                 var magicAngle = Vector3.Transform(-Vector3.UnitY, m2);
                 Viewports[Viewports.Length - 1].ViewAngle = magicAngle;
+                */
 
                 PreviousMouseState = ms;
             }
