@@ -7,10 +7,14 @@
 // The final output from the dot computation is raised to this power so
 #define DOT_EXPONENT   0.85
 
-uniform float GroundZ;
-uniform float ZToYMultiplier;
+struct EnvironmentSettings {
+    float GroundZ;
+    float ZToYMultiplier;
+    float RenderScale;
+};
 
-uniform float  RenderScale;
+uniform EnvironmentSettings Environment;
+
 uniform float  GBufferInvScaleFactor;
 uniform float2 GBufferTexelSize;
 
@@ -38,7 +42,7 @@ void sampleGBuffer(
     float relativeY = sample.z * 512;
     float worldZ    = sample.w * 512;
 
-    worldPosition = float3(screenPositionPx.x / RenderScale, (screenPositionPx.y / RenderScale) + relativeY, worldZ);
+    worldPosition = float3(screenPositionPx.x / Environment.RenderScale, (screenPositionPx.y / Environment.RenderScale) + relativeY, worldZ);
 
     // HACK: Reconstruct the y normal from the z normal
     float normalZ = (sample.y - 0.5) * 2;

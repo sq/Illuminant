@@ -483,14 +483,13 @@ namespace Squared.Illuminant {
             p["GBufferTexelSize"].SetValue(tsize);
             p["GBuffer"].SetValue(GBuffer);
 
-            p["GroundZ"].SetValue(Environment.GroundZ);
-            p["ZToYMultiplier"].SetValue(
+            var e = p["Environment"];
+            e.StructureMembers["GroundZ"].SetValue(Environment.GroundZ);
+            e.StructureMembers["ZToYMultiplier"].SetValue(
                 Configuration.TwoPointFiveD
                     ? Environment.ZToYMultiplier
                     : 0.0f
             );
-
-            p["Time"].SetValue((float)Time.Seconds);
 
             SetDistanceFieldParameters(p, true);
         }
@@ -719,12 +718,14 @@ namespace Squared.Illuminant {
                 );
                 m.Effect.Parameters["GBufferTexelSize"].SetValue(tsize);
                 m.Effect.Parameters["GBuffer"].SetValue(_GBuffer);
-                m.Effect.Parameters["RenderScale"].SetValue(Configuration.RenderScale);
                 m.Effect.Parameters["InverseScaleFactor"].SetValue(
                     hdr.HasValue
                         ? hdr.Value.InverseScaleFactor
                         : 1.0f
                 );
+
+                var e = m.Effect.Parameters["Environment"];
+                e.StructureMembers["RenderScale"].SetValue(Configuration.RenderScale);
 
                 if (hdr.HasValue) {
                     if (hdr.Value.Mode == HDRMode.GammaCompress)
@@ -971,9 +972,9 @@ namespace Squared.Illuminant {
                 Configuration.DistanceFieldLongStepFactor
             ));
 
-            var rs = p["RenderScale"];
-            if (rs != null)
-                rs.SetValue(Configuration.RenderScale);
+            var e = p["Environment"];
+            if (e != null)
+                e.StructureMembers["RenderScale"].SetValue(Configuration.RenderScale);
 
             if (setDistanceTexture)
                 p["DistanceFieldTexture"].SetValue(_DistanceField);
@@ -1044,13 +1045,17 @@ namespace Squared.Illuminant {
                             Configuration.DistanceFieldSize.Second,
                             Environment.MaximumZ
                         ));
-                        p["ZToYMultiplier"].SetValue(
+
+                        var e = p["Environment"];
+                        e.StructureMembers["ZToYMultiplier"].SetValue(
                             Configuration.TwoPointFiveD
                                 ? Environment.ZToYMultiplier
                                 : 0.0f
                         );
-                        p["RenderScale"].SetValue(Configuration.RenderScale);
-                        IlluminantMaterials.HeightVolume.Effect.Parameters["RenderScale"].SetValue(
+                        e.StructureMembers["RenderScale"].SetValue(Configuration.RenderScale);
+
+                        e = IlluminantMaterials.HeightVolume.Effect.Parameters["Environment"];
+                        e.StructureMembers["RenderScale"].SetValue(
                             Configuration.RenderScale
                         );
                     }

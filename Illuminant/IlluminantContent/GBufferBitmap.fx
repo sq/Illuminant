@@ -3,8 +3,14 @@
 
 #define SELF_OCCLUSION_HACK 1.5
 
-uniform float  RenderScale;
-uniform float  ZToYMultiplier;
+struct EnvironmentSettings {
+    float GroundZ;
+    float ZToYMultiplier;
+    float RenderScale;
+};
+
+uniform EnvironmentSettings Environment;
+
 // FIXME: Use the shared header?
 uniform float3 DistanceFieldExtent;
 
@@ -76,7 +82,7 @@ void GDataBillboardPixelShader(
     clip(alpha - discardThreshold);
 
     float yOffset = data.b * dataScale;
-    float effectiveZ = worldPosition.z + (yOffset / ZToYMultiplier);
+    float effectiveZ = worldPosition.z + (yOffset / Environment.ZToYMultiplier);
 
     // HACK: We drop the world x axis and the normal y axis,
     //  and reconstruct those two values when sampling the g-buffer

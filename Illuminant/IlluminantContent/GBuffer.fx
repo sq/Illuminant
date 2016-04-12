@@ -3,8 +3,14 @@
 
 #define SELF_OCCLUSION_HACK 1.5
 
-uniform float  RenderScale;
-uniform float  ZToYMultiplier;
+struct EnvironmentSettings {
+    float GroundZ;
+    float ZToYMultiplier;
+    float RenderScale;
+};
+
+uniform EnvironmentSettings Environment;
+
 // FIXME: Use the shared header?
 uniform float3 DistanceFieldExtent;
 
@@ -31,7 +37,7 @@ void HeightVolumeFaceVertexShader(
     // HACK: Offset away from the surface to prevent self occlusion
     worldPosition = position + (SELF_OCCLUSION_HACK * normal);
 
-    position.y -= ZToYMultiplier * position.z;
+    position.y -= Environment.ZToYMultiplier * position.z;
     result = TransformPosition(float4(position.xy - Viewport.Position, 0, 1), 0);
     result.z = position.z / DistanceFieldExtent.z;
     dead = false;
@@ -52,7 +58,7 @@ void HeightVolumePixelShader (
         );
     } else {
         float wp = worldPosition.y;
-        float sp = vpos.y / RenderScale;
+        float sp = vpos.y / Environment.RenderScale;
         float relativeY = wp - sp;
 
         // HACK: We drop the world x axis and the normal y axis,
