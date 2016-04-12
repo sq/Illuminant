@@ -1122,9 +1122,8 @@ namespace Squared.Illuminant {
                         blendState: BlendState.Opaque
                     ), (dm, _) => {
                         var p = material.Effect.Parameters;
+                        Materials.TrySetBoundUniform(material, "Environment", ref Uniforms.Environment);
                         p["DistanceFieldExtent"].SetValue(Uniforms.DistanceField.Extent);
-                        p["ZToYMultiplier"].SetValue(Uniforms.Environment.ZToYMultiplier);
-                        p["RenderScale"].SetValue(Uniforms.Environment.RenderScale);
                         p["Mask"].SetValue(billboard.Texture);
                     }
                 )) {
