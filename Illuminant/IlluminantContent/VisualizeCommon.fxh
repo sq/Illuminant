@@ -23,14 +23,16 @@ float3 estimateNormal(
 
     [loop]
     for (int i = 0; i < 3; i++) {
-        float axis = SAMPLE(position + texel.xww, vars) - SAMPLE(position - texel.xww, vars);
+        float3 mask = float3(1, 0, 0);
+        if (i >= 1)
+            mask = float3(0, 1, 0);
+        if (i >= 2)
+            mask = float3(0, 0, 1);
 
-        if (i == 0)
-            result.x = axis;
-        else if (i == 1)
-            result.y = axis;
-        else
-            result.z = axis;
+        float3 offset = texel.xyz * mask;
+        float axis = SAMPLE(position + offset, vars) - SAMPLE(position - offset, vars);
+
+        result += axis * mask;
     }
 
     return normalize(result);

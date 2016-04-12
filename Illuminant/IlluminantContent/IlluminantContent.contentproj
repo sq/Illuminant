@@ -142,6 +142,7 @@
       <Name>DirectionalLight</Name>
       <Importer>EffectImporter</Importer>
       <Processor>EffectProcessor</Processor>
+      <ProcessorParameters_DebugMode>Optimize</ProcessorParameters_DebugMode>
     </Compile>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\XNA Game Studio\$(XnaFrameworkVersion)\Microsoft.Xna.GameStudio.ContentPipeline.targets" />

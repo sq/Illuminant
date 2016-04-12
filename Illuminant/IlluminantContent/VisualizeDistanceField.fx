@@ -43,9 +43,10 @@ void ObjectSurfacesPixelShader(
         result = float4(AmbientColor, 1.0);
 
         float3 normal = estimateNormal(estimatedIntersection, vars);
+
         float normalDotLight = dot(normal, LightDirection);
-        if (normalDotLight > 0)
-            result.rgb += LightColor * normalDotLight * color.rgb;
+        normalDotLight = clamp((normalDotLight + 0.05) * 1.1, 0, 1);
+        result.rgb += LightColor * normalDotLight * color.rgb;
     }
     else {
         result = 0;
