@@ -50,7 +50,7 @@ namespace TestGame.Scenes {
                     Width, Height, true,
                     Width, Height, 64, true
                 ) {
-                    RenderScale = 1.0f,
+                    RenderScale = Vector2.One,
                     DistanceFieldResolution = 0.5f,
                     DistanceFieldUpdateRate = 32
                 }

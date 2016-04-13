@@ -4,9 +4,9 @@
 #define SELF_OCCLUSION_HACK 1.5
 
 struct EnvironmentSettings {
-    float GroundZ;
-    float ZToYMultiplier;
-    float RenderScale;
+    float  GroundZ;
+    float  ZToYMultiplier;
+    float2 RenderScale;
 };
 
 uniform EnvironmentSettings Environment;

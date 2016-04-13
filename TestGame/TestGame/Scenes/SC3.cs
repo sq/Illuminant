@@ -179,10 +179,10 @@ namespace TestGame.Scenes {
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(
-                    Width / BackgroundScaleRatio, Height / BackgroundScaleRatio, true,
+                    Width / BackgroundScaleRatio, Height / BackgroundScaleRatio / 3, true,
                     Width, Height, 16, true
                 ) {
-                    RenderScale = 1.0f / BackgroundScaleRatio,
+                    RenderScale = new Vector2(1.0f / BackgroundScaleRatio) * new Vector2(1, 0.33f),
                     DistanceFieldResolution = 0.5f,
                     DistanceFieldMinStepSize = 1.5f,
                     DistanceFieldLongStepFactor = 0.7f,
@@ -190,17 +190,17 @@ namespace TestGame.Scenes {
                     DistanceFieldMaxConeRadius = 30,
                     TwoPointFiveD = true,
                     GBufferCaching = false,
-                    DistanceFieldUpdateRate = 4                    
+                    DistanceFieldUpdateRate = 4
                 }
             );
 
             ForegroundRenderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, ForegroundEnvironment, 
                 new RendererConfiguration(
-                    Width / ForegroundScaleRatio, Height / ForegroundScaleRatio, true,
+                    Width / ForegroundScaleRatio, Height / ForegroundScaleRatio / 3, true,
                     Width, Height, 12
                 ) {
-                    RenderScale = 1.0f / ForegroundScaleRatio,
+                    RenderScale = new Vector2(1.0f / ForegroundScaleRatio) * new Vector2(1, 0.33f),
                     DistanceFieldResolution = 0.5f,
                     DistanceFieldMinStepSize = 1.5f,
                     DistanceFieldLongStepFactor = 0.7f,
@@ -219,7 +219,8 @@ namespace TestGame.Scenes {
                 Radius = 160,
                 RampLength = 360,
                 RampMode = LightSourceRampMode.Exponential,
-                AmbientOcclusionRadius = 8f
+                AmbientOcclusionRadius = 8f,
+                FalloffYFactor = 4f
             };
 
             Environment.Lights.Add(light);
@@ -229,11 +230,11 @@ namespace TestGame.Scenes {
             ForegroundEnvironment.Lights.Add(light);
 
             var ambientLight = new DirectionalLightSource {
-                Direction = new Vector3(-0.7f, -0.7f, -0.9f),
+                Direction = new Vector3(-0.7f, -0.7f, -1.66f),
                 ShadowTraceLength = 72f,
                 ShadowRampLength = 400f,
                 ShadowRampRate = 0.15f,
-                ShadowSoftness = 24f,
+                ShadowSoftness = 12f,
                 Color = new Vector4(0.33f, 0.85f, 0.65f, 0.15f),
                 CastsShadows = true,
             };
@@ -391,7 +392,7 @@ namespace TestGame.Scenes {
 
                 Renderer.ResolveLighting(
                     bg, 1, 
-                    new BitmapDrawCall(Renderer.Lightmap, Vector2.Zero, BackgroundScaleRatio),
+                    new BitmapDrawCall(Renderer.Lightmap, Vector2.Zero, new Vector2(BackgroundScaleRatio, BackgroundScaleRatio * 3.0f)),
                     hdrConfiguration
                 );
             };
@@ -411,7 +412,7 @@ namespace TestGame.Scenes {
 
                 ForegroundRenderer.ResolveLighting(
                     fg, 1, 
-                    new BitmapDrawCall(ForegroundRenderer.Lightmap, Vector2.Zero, ForegroundScaleRatio),
+                    new BitmapDrawCall(ForegroundRenderer.Lightmap, Vector2.Zero, new Vector2(ForegroundScaleRatio, ForegroundScaleRatio * 3.0f)),
                     hdrConfiguration
                 );
             };

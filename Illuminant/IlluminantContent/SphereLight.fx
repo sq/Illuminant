@@ -17,7 +17,7 @@ void SphereLightVertexShader(
     inout float4 color               : COLOR0,
     inout float3 lightCenter         : TEXCOORD0,
     inout float4 lightProperties     : TEXCOORD1,
-    inout float2 moreLightProperties : TEXCOORD3,
+    inout float3 moreLightProperties : TEXCOORD3,
     out float2 worldPosition         : TEXCOORD2,
     out float4 result                : POSITION0
 ) {
@@ -32,8 +32,8 @@ float SphereLightPixelCore(
     in float3 lightCenter         : TEXCOORD0,
     // radius, ramp length, ramp mode, enable shadows
     in float4 lightProperties     : TEXCOORD1,
-    // ao radius, distance falloff
-    in float2 moreLightProperties : TEXCOORD3,
+    // ao radius, distance falloff, y falloff factor
+    in float3 moreLightProperties : TEXCOORD3,
     in float2 vpos                : VPOS
 ) {
     float3 shadedPixelPosition;
@@ -46,7 +46,7 @@ float SphereLightPixelCore(
     bool  distanceCull = false;
     float lightOpacity = computeSphereLightOpacity(
         shadedPixelPosition, shadedPixelNormal,
-        lightCenter, lightProperties,
+        lightCenter, lightProperties, moreLightProperties.z,
         distanceCull
     );
 
@@ -89,7 +89,7 @@ void SphereLightPixelShader(
     in  float2 worldPosition       : TEXCOORD2,
     in  float3 lightCenter         : TEXCOORD0,
     in  float4 lightProperties     : TEXCOORD1,
-    in  float2 moreLightProperties : TEXCOORD3,
+    in  float3 moreLightProperties : TEXCOORD3,
     in  float4 color               : COLOR0,
     in  float2 vpos                : VPOS,
     out float4 result              : COLOR0

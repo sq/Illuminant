@@ -550,10 +550,10 @@ namespace Squared.Illuminant {
                 y1 -= (offset / Environment.ZToYMultiplier);
             }
 
-            x1 *= Configuration.RenderScale;
-            y1 *= Configuration.RenderScale;
-            x2 *= Configuration.RenderScale;
-            y2 *= Configuration.RenderScale;
+            x1 *= Configuration.RenderScale.X;
+            y1 *= Configuration.RenderScale.Y;
+            x2 *= Configuration.RenderScale.X;
+            y2 *= Configuration.RenderScale.Y;
 
             SphereLightVertex vertex;
             vertex.LightCenter = lightSource.Position;
@@ -565,6 +565,7 @@ namespace Squared.Illuminant {
             vertex.LightProperties.W = lightSource.CastsShadows ? 1f : 0f;
             vertex.MoreLightProperties.X = lightSource.AmbientOcclusionRadius;
             vertex.MoreLightProperties.Y = lightSource.ShadowDistanceFalloff.GetValueOrDefault(-99999);
+            vertex.MoreLightProperties.Z = lightSource.FalloffYFactor;
 
             vertex.Position.X = x1;
             vertex.Position.Y = y1;
@@ -657,8 +658,8 @@ namespace Squared.Illuminant {
 
             var sg = ir.MakeSubgroup(before: (dm, _) => {
                 var tsize = new Vector2(
-                    1f / Configuration.RenderSize.First * Configuration.RenderScale, 
-                    1f / Configuration.RenderSize.Second * Configuration.RenderScale
+                    1f / Configuration.RenderSize.First * Configuration.RenderScale.X, 
+                    1f / Configuration.RenderSize.Second * Configuration.RenderScale.Y
                 );
                 m.Effect.Parameters["GBufferTexelSize"].SetValue(tsize);
                 m.Effect.Parameters["GBuffer"].SetValue(_GBuffer);
@@ -940,8 +941,8 @@ namespace Squared.Illuminant {
                 // FIXME: Optimize this
                 (dm, _) => {
                     Materials.PushViewTransform(ViewTransform.CreateOrthographic(
-                        (int)(Configuration.RenderSize.First / Configuration.RenderScale), 
-                        (int)(Configuration.RenderSize.Second / Configuration.RenderScale)
+                        (int)(Configuration.RenderSize.First / Configuration.RenderScale.X), 
+                        (int)(Configuration.RenderSize.Second / Configuration.RenderScale.Y)
                     ));
                 },
                 (dm, _) => {
@@ -1516,7 +1517,7 @@ namespace Squared.Illuminant {
         public readonly bool         EnableBrightnessEstimation;
 
         // Scales world coordinates when rendering the G-buffer and lightmap
-        public float RenderScale                   = 1.0f;
+        public Vector2 RenderScale                 = Vector2.One;
 
         public bool  TwoPointFiveD                 = false;
         public bool  GBufferCaching                = true;

@@ -9,9 +9,9 @@ using Microsoft.Xna.Framework;
 namespace Squared.Illuminant.Uniforms {
     [StructLayout(LayoutKind.Sequential)]
     public struct Environment {
-        public float GroundZ;
-        public float ZToYMultiplier;
-        public float RenderScale;
+        public float   GroundZ;
+        public float   ZToYMultiplier;
+        public Vector2 RenderScale;
     }
 
     [StructLayout(LayoutKind.Sequential)]

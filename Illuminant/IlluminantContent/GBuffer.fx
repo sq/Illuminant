@@ -4,9 +4,9 @@
 #define SELF_OCCLUSION_HACK 1.5
 
 struct EnvironmentSettings {
-    float GroundZ;
-    float ZToYMultiplier;
-    float RenderScale;
+    float  GroundZ;
+    float  ZToYMultiplier;
+    float2 RenderScale;
 };
 
 uniform EnvironmentSettings Environment;
@@ -58,7 +58,7 @@ void HeightVolumePixelShader (
         );
     } else {
         float wp = worldPosition.y;
-        float sp = vpos.y / Environment.RenderScale;
+        float sp = vpos.y / Environment.RenderScale.y;
         float relativeY = wp - sp;
 
         // HACK: We drop the world x axis and the normal y axis,

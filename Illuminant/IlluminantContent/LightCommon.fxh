@@ -8,9 +8,9 @@
 #define DOT_EXPONENT   0.85
 
 struct EnvironmentSettings {
-    float GroundZ;
-    float ZToYMultiplier;
-    float RenderScale;
+    float  GroundZ;
+    float  ZToYMultiplier;
+    float2 RenderScale;
 };
 
 uniform EnvironmentSettings Environment;
@@ -42,7 +42,7 @@ void sampleGBuffer(
     float relativeY = sample.z * 512;
     float worldZ    = sample.w * 512;
 
-    worldPosition = float3(screenPositionPx.x / Environment.RenderScale, (screenPositionPx.y / Environment.RenderScale) + relativeY, worldZ);
+    worldPosition = float3(screenPositionPx.x / Environment.RenderScale.x, (screenPositionPx.y / Environment.RenderScale.y) + relativeY, worldZ);
 
     // HACK: Reconstruct the y normal from the z normal
     float normalZ = (sample.y - 0.5) * 2;
@@ -63,14 +63,15 @@ float computeNormalFactor(
 
 float computeSphereLightOpacity(
     float3 shadedPixelPosition, float3 shadedPixelNormal,
-    float3 lightCenter, float4 lightProperties,
-    out bool distanceFalloff 
+    float3 lightCenter, float4 lightProperties, 
+    float yDistanceFactor, out bool distanceFalloff 
 ) {
     float  lightRadius     = lightProperties.x;
     float  lightRampLength = lightProperties.y;
     float  falloffMode     = lightProperties.z;
 
     float3 distance3      = shadedPixelPosition - lightCenter;
+    distance3.y *= yDistanceFactor;
     float  distance       = length(distance3);
     float  distanceFactor = 1 - clamp((distance - lightRadius) / lightRampLength, 0, 1);
 

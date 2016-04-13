@@ -22,6 +22,8 @@ namespace Squared.Illuminant {
         public float?  ShadowDistanceFalloff = null;
         // Uniformly obscures light if it is within N pixels of any obstacle.
         public float   AmbientOcclusionRadius = 0;
+        // Allows you to scale the falloff of the light along the Y axis to fake foreshortening.
+        public float   FalloffYFactor = 1;
     }
 
     public class DirectionalLightSource : LightSource {

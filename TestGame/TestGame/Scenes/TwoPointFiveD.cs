@@ -104,7 +104,7 @@ namespace TestGame.Scenes {
                     1024 / LightmapScaleRatio, 1024 / LightmapScaleRatio, true,
                     1024, 1024, 64
                 ) {
-                    RenderScale = 1.0f / LightmapScaleRatio,
+                    RenderScale = Vector2.One * (1.0f / LightmapScaleRatio),
                     DistanceFieldResolution = 0.5f,
                     DistanceFieldMinStepSize = 1f,
                     DistanceFieldLongStepFactor = 0.5f,
