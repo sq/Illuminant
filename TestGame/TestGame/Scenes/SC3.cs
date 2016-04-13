@@ -189,7 +189,8 @@ namespace TestGame.Scenes {
                     DistanceFieldOcclusionToOpacityPower = 1.35f,
                     DistanceFieldMaxConeRadius = 30,
                     TwoPointFiveD = true,
-                    DistanceFieldUpdateRate = 2                    
+                    GBufferCaching = false,
+                    DistanceFieldUpdateRate = 4                    
                 }
             );
 
@@ -207,7 +208,8 @@ namespace TestGame.Scenes {
                     DistanceFieldMaxConeRadius = 30,
                     TwoPointFiveD = true,
                     // RenderGroundPlane = false,
-                    DistanceFieldUpdateRate = 2,
+                    GBufferCaching = false,
+                    DistanceFieldUpdateRate = 4,
                 }
             );
 

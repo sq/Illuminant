@@ -68,6 +68,10 @@ namespace Squared.Illuminant {
 
         private readonly List<int> _InvalidDistanceFieldSlices = new List<int>();
 
+        private static readonly short[] QuadIndices = new short[] {
+            0, 1, 3, 1, 2, 3
+        };
+
         // HACK
         private int         _DistanceFieldSlicesReady = 0;
         private bool        _GBufferReady     = false;
@@ -748,9 +752,6 @@ namespace Squared.Illuminant {
         ) {
             ComputeUniforms();
 
-            var indices = new short[] {
-                0, 1, 3, 1, 2, 3
-            };
             var tl = new Vector3(rectangle.TopLeft, 0);
             var tr = new Vector3(rectangle.TopRight, 0);
             var bl = new Vector3(rectangle.BottomLeft, 0);
@@ -876,7 +877,7 @@ namespace Squared.Illuminant {
                 }
             )) {
                 batch.Add(new PrimitiveDrawCall<VisualizeDistanceFieldVertex>(
-                    PrimitiveType.TriangleList, verts, 0, 4, indices, 0, 2
+                    PrimitiveType.TriangleList, verts, 0, 4, QuadIndices, 0, 2
                 ));
             }
 
@@ -972,9 +973,6 @@ namespace Squared.Illuminant {
                     // HACK: Fill in the gbuffer values for the ground plane
                     {
                         var zRange = new Vector2(Environment.GroundZ, Environment.GroundZ);
-                        var indices = new short[] {
-                            0, 1, 3, 1, 2, 3
-                        };
                         var tl = new Vector3(0, 0, Environment.GroundZ);
                         var tr = new Vector3(Configuration.DistanceFieldSize.First, 0, Environment.GroundZ);
                         var br = new Vector3(Configuration.DistanceFieldSize.First, Configuration.DistanceFieldSize.Second, Environment.GroundZ);
@@ -996,7 +994,7 @@ namespace Squared.Illuminant {
                         };
 
                         batch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
-                            PrimitiveType.TriangleList, verts, 0, 4, indices, 0, 2
+                            PrimitiveType.TriangleList, verts, 0, 4, QuadIndices, 0, 2
                         ));
                     }
 
@@ -1067,9 +1065,6 @@ namespace Squared.Illuminant {
         }
 
         private void RenderGBufferBillboards (IBatchContainer container, int layerIndex) {
-            var indices = new short[] {
-                0, 1, 3, 1, 2, 3
-            };            
             foreach (var billboard in Environment.Billboards) {
                 var tl   = billboard.Position;
                 var size = billboard.Size;
@@ -1134,17 +1129,14 @@ namespace Squared.Illuminant {
                     }
                 )) {
                     batch.Add(new PrimitiveDrawCall<BillboardVertex>(
-                        PrimitiveType.TriangleList, verts, 0, 4, indices, 0, 2
+                        PrimitiveType.TriangleList, verts, 0, 4, QuadIndices, 0, 2
                     ));
                 }
             }
         }
 
         private void RenderDistanceField (ref int layerIndex, IBatchContainer resultGroup) {
-            var indices = new short[] {
-                0, 1, 3, 1, 2, 3
-            };
-            
+           
             using (var rtGroup = BatchGroup.ForRenderTarget(
                 resultGroup, layerIndex++, _DistanceField,
                 // HACK: Since we're mucking with view transforms, do a save and restore
@@ -1169,11 +1161,7 @@ namespace Squared.Illuminant {
                     var physicalSlice = slice / PackedSliceCount;
 
                     RenderDistanceFieldSliceTriplet(
-                        indices, rtGroup,
-                        IlluminantMaterials.DistanceFieldInterior, 
-                        IlluminantMaterials.DistanceFieldExterior,
-                        physicalSlice, slice,
-                        ref layer
+                        rtGroup, physicalSlice, slice, ref layer
                     );
 
                     slicesToUpdate -= 3;
@@ -1187,11 +1175,11 @@ namespace Squared.Illuminant {
         }
 
         private void RenderDistanceFieldSliceTriplet (
-            short[] indices, BatchGroup rtGroup, 
-            Material interior, Material exterior,
-            int physicalSliceIndex, int firstVirtualSliceIndex,
-            ref int layer
+            BatchGroup rtGroup, int physicalSliceIndex, int firstVirtualSliceIndex, ref int layer
         ) {
+            var interior = IlluminantMaterials.DistanceFieldInterior;
+            var exterior = IlluminantMaterials.DistanceFieldExterior;
+
             var sliceX = (physicalSliceIndex % DistanceFieldSlicesX) * DistanceFieldSliceWidth;
             var sliceY = (physicalSliceIndex / DistanceFieldSlicesX) * DistanceFieldSliceHeight;
             var sliceXVirtual = (physicalSliceIndex % DistanceFieldSlicesX) * Configuration.DistanceFieldSize.First;
@@ -1237,11 +1225,11 @@ namespace Squared.Illuminant {
                     Render.Tracing.RenderTrace.Marker(group, -2, "LightingRenderer {0:X4} : Begin Distance Field Slices [{1}-{2}]", this.GetHashCode(), firstVirtualSliceIndex, lastVirtualSliceIndex);
 
                 ClearDistanceFieldSlice(
-                    indices, group, -1
+                    QuadIndices, group, -1
                 );
 
-                RenderDistanceFieldDistanceFunctions(indices, firstVirtualSliceIndex, group);
-                RenderDistanceFieldHeightVolumes(indices, interior, exterior, firstVirtualSliceIndex, group);
+                RenderDistanceFieldDistanceFunctions(firstVirtualSliceIndex, group);
+                RenderDistanceFieldHeightVolumes(firstVirtualSliceIndex, group);
 
                 // FIXME: Slow
                 for (var i = firstVirtualSliceIndex; i <= lastVirtualSliceIndex; i++)
@@ -1255,13 +1243,12 @@ namespace Squared.Illuminant {
         }
 
         private void RenderDistanceFieldHeightVolumes (
-            short[] indices, 
-            Material interior, 
-            Material exterior, 
             int firstVirtualIndex, BatchGroup group
         ) {
             int i = 1;
 
+            var interior = IlluminantMaterials.DistanceFieldInterior;
+            var exterior = IlluminantMaterials.DistanceFieldExterior;
             var sliceZ = new Vector4(
                 SliceIndexToZ(firstVirtualIndex),
                 SliceIndexToZ(firstVirtualIndex + 1),
@@ -1342,7 +1329,7 @@ namespace Squared.Illuminant {
                 ))
                     batch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
                         PrimitiveType.TriangleList,
-                        boundingBoxVertices, 0, boundingBoxVertices.Length, indices, 0, indices.Length / 3
+                        boundingBoxVertices, 0, boundingBoxVertices.Length, QuadIndices, 0, 2
                     ));
 
                 i++;
@@ -1372,7 +1359,7 @@ namespace Squared.Illuminant {
         bool DidUploadDistanceFieldBuffer = false;
 
         private void RenderDistanceFieldDistanceFunctions (
-            short[] indices, int firstVirtualIndex, BatchGroup group
+            int firstVirtualIndex, BatchGroup group
         ) {
             var items = Environment.Obstructions;
             if (items.Count <= 0)
