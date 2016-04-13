@@ -1065,6 +1065,45 @@ namespace Squared.Illuminant {
         }
 
         private void RenderGBufferBillboards (IBatchContainer container, int layerIndex) {
+            int i = 0;
+
+            // FIXME: GC pressure
+            var verts = new BillboardVertex[4 * Environment.Billboards.Count];
+
+            Action<DeviceManager, object> setTexture = (dm, _) => {
+                var billboard = (Billboard)_;
+                var material =
+                    billboard.Type == BillboardType.Mask
+                        ? IlluminantMaterials.MaskBillboard
+                        : IlluminantMaterials.GDataBillboard;
+                material.Effect.Parameters["Mask"].SetValue(billboard.Texture);
+                material.Flush();
+            };
+
+            using (var maskBatch = PrimitiveBatch<BillboardVertex>.New(
+                container, layerIndex++, Materials.Get(
+                    IlluminantMaterials.MaskBillboard,
+                    depthStencilState: DepthStencilState.None,
+                    rasterizerState: RasterizerState.CullNone,
+                    blendState: BlendState.Opaque
+                ), (dm, _) => {
+                    var material = IlluminantMaterials.MaskBillboard;
+                    Materials.TrySetBoundUniform(material, "Environment", ref Uniforms.Environment);
+                    material.Effect.Parameters["DistanceFieldExtent"].SetValue(Uniforms.DistanceField.Extent);
+                }
+            )) 
+            using (var gDataBatch = PrimitiveBatch<BillboardVertex>.New(
+                container, layerIndex++, Materials.Get(
+                    IlluminantMaterials.GDataBillboard,
+                    depthStencilState: DepthStencilState.None,
+                    rasterizerState: RasterizerState.CullNone,
+                    blendState: BlendState.Opaque
+                ), (dm, _) => {
+                    var material = IlluminantMaterials.GDataBillboard;
+                    Materials.TrySetBoundUniform(material, "Environment", ref Uniforms.Environment);
+                    material.Effect.Parameters["DistanceFieldExtent"].SetValue(Uniforms.DistanceField.Extent);
+                }
+            )) 
             foreach (var billboard in Environment.Billboards) {
                 var tl   = billboard.Position;
                 var size = billboard.Size;
@@ -1079,59 +1118,49 @@ namespace Squared.Illuminant {
                     normal2.X = 1;
                 }
 
-                var verts = new BillboardVertex[] {
-                    new BillboardVertex {
-                        Position = tl,
-                        Normal = normal1,
-                        WorldPosition = bl + new Vector3(0, 0, size.Z),
-                        TexCoord = Vector2.Zero,
-                        DataScale = billboard.DataScale,
-                    },
-                    new BillboardVertex {
-                        Position = tr,
-                        Normal = normal2,
-                        WorldPosition = bl + new Vector3(size.X, 0, size.Z),
-                        TexCoord = new Vector2(1, 0),
-                        DataScale = billboard.DataScale,
-                    },
-                    new BillboardVertex {
-                        Position = tl + size,
-                        Normal = normal2,
-                        WorldPosition = bl + new Vector3(size.X, 0, 0),
-                        TexCoord = Vector2.One,
-                        DataScale = billboard.DataScale,
-                    },
-                    new BillboardVertex {
-                        Position = bl,
-                        Normal = normal1,
-                        WorldPosition = bl,
-                        TexCoord = new Vector2(0, 1),
-                        DataScale = billboard.DataScale,
-                    }
+                var j = i * 4;
+                verts[j + 0] = new BillboardVertex {
+                    Position = tl,
+                    Normal = normal1,
+                    WorldPosition = bl + new Vector3(0, 0, size.Z),
+                    TexCoord = Vector2.Zero,
+                    DataScale = billboard.DataScale,
+                };
+                verts[j + 1] = new BillboardVertex {
+                    Position = tr,
+                    Normal = normal2,
+                    WorldPosition = bl + new Vector3(size.X, 0, size.Z),
+                    TexCoord = new Vector2(1, 0),
+                    DataScale = billboard.DataScale,
+                };
+                verts[j + 2] = new BillboardVertex {
+                    Position = tl + size,
+                    Normal = normal2,
+                    WorldPosition = bl + new Vector3(size.X, 0, 0),
+                    TexCoord = Vector2.One,
+                    DataScale = billboard.DataScale,
+                };
+                verts[j + 3] = new BillboardVertex {
+                    Position = bl,
+                    Normal = normal1,
+                    WorldPosition = bl,
+                    TexCoord = new Vector2(0, 1),
+                    DataScale = billboard.DataScale,
                 };
 
-                var material =
-                    billboard.Type == BillboardType.Mask
-                        ? IlluminantMaterials.MaskBillboard
-                        : IlluminantMaterials.GDataBillboard;
+                var batch =
+                    billboard.Type == BillboardType.GBufferData
+                        ? gDataBatch
+                        : maskBatch;
 
-                using (var batch = PrimitiveBatch<BillboardVertex>.New(
-                    container, layerIndex++, Materials.Get(
-                        material,
-                        depthStencilState: DepthStencilState.None,
-                        rasterizerState: RasterizerState.CullNone,
-                        blendState: BlendState.Opaque
-                    ), (dm, _) => {
-                        var p = material.Effect.Parameters;
-                        Materials.TrySetBoundUniform(material, "Environment", ref Uniforms.Environment);
-                        p["DistanceFieldExtent"].SetValue(Uniforms.DistanceField.Extent);
-                        p["Mask"].SetValue(billboard.Texture);
-                    }
-                )) {
-                    batch.Add(new PrimitiveDrawCall<BillboardVertex>(
-                        PrimitiveType.TriangleList, verts, 0, 4, QuadIndices, 0, 2
-                    ));
-                }
+                batch.Add(new PrimitiveDrawCall<BillboardVertex>(
+                    PrimitiveType.TriangleList, verts, j, 4, 
+                    QuadIndices, 0, 2, 
+                    new DrawCallSortKey(order: i),
+                    setTexture, billboard
+                ));
+
+                i++;
             }
         }
 
@@ -1304,6 +1333,7 @@ namespace Squared.Illuminant {
                     }
                 }
 
+                // FIXME: Hoist these out and use BeforeDraw
                 using (var batch = PrimitiveBatch<HeightVolumeVertex>.New(
                     interiorGroup, i, IlluminantMaterials.DistanceFieldInterior,
                     (dm, _) => {
