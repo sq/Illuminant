@@ -8,7 +8,7 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace Squared.Illuminant {
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct SphereLightVertex : IVertexType {
+    public struct LightVertex : IVertexType {
         // FIXME: Shouldn't this be V3? Blech
         public Vector2 Position;
         public Vector3 LightCenter;
@@ -18,8 +18,8 @@ namespace Squared.Illuminant {
 
         public static VertexDeclaration _VertexDeclaration;
 
-        static SphereLightVertex () {
-            var tThis = typeof(SphereLightVertex);
+        static LightVertex () {
+            var tThis = typeof(LightVertex);
 
             _VertexDeclaration = new VertexDeclaration(
                 new VertexElement(Marshal.OffsetOf(tThis, "Position").ToInt32(), VertexElementFormat.Vector2, VertexElementUsage.Position, 0),
@@ -35,37 +35,7 @@ namespace Squared.Illuminant {
                 return _VertexDeclaration;
             }
         }
-    }
-
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct DirectionalLightVertex : IVertexType {
-        // FIXME: Shouldn't this be V3? Blech
-        public Vector2 Position;
-        public Vector3 LightDirection;
-        public Vector4 LightProperties;
-        public Vector3 MoreLightProperties;
-        public Vector4 Color;
-
-        public static VertexDeclaration _VertexDeclaration;
-
-        static DirectionalLightVertex () {
-            var tThis = typeof(DirectionalLightVertex);
-
-            _VertexDeclaration = new VertexDeclaration(
-                new VertexElement(Marshal.OffsetOf(tThis, "Position").ToInt32(), VertexElementFormat.Vector2, VertexElementUsage.Position, 0),
-                new VertexElement(Marshal.OffsetOf(tThis, "LightDirection").ToInt32(), VertexElementFormat.Vector3, VertexElementUsage.TextureCoordinate, 0),
-                new VertexElement(Marshal.OffsetOf(tThis, "LightProperties").ToInt32(), VertexElementFormat.Vector4, VertexElementUsage.TextureCoordinate, 1),
-                new VertexElement(Marshal.OffsetOf(tThis, "MoreLightProperties").ToInt32(), VertexElementFormat.Vector3, VertexElementUsage.TextureCoordinate, 3),
-                new VertexElement(Marshal.OffsetOf(tThis, "Color").ToInt32(), VertexElementFormat.Vector4, VertexElementUsage.Color, 0)
-            );
-        }
-
-        public VertexDeclaration VertexDeclaration {
-            get {
-                return _VertexDeclaration;
-            }
-        }
-    }
+    }    
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct HeightVolumeVertex : IVertexType {

@@ -9,6 +9,8 @@ using Squared.Util;
 
 namespace Squared.Illuminant {
     public abstract class LightSource {
+        public readonly int TypeID;
+
         public object UserData;
 
         // The color of the light's illumination.
@@ -24,6 +26,10 @@ namespace Squared.Illuminant {
         public float   AmbientOcclusionRadius = 0;
         // Allows you to scale the falloff of the light along the Y axis to fake foreshortening.
         public float   FalloffYFactor = 1;
+
+        protected LightSource (int typeID) {
+            TypeID = typeID;
+        }
     }
 
     public class DirectionalLightSource : LightSource {
@@ -48,6 +54,10 @@ namespace Squared.Illuminant {
         /// Controls the length of the shadow softness ramp.
         /// </summary>
         public float   ShadowRampLength = 256f;
+
+        public DirectionalLightSource ()
+            : base (2) {
+        }
 
         public DirectionalLightSource Clone () {
             var result = new DirectionalLightSource {
@@ -89,6 +99,10 @@ namespace Squared.Illuminant {
                 var size = new Vector3(Radius + RampLength);
                 return new Bounds3(Position - size, Position + size);
             }
+        }
+
+        public SphereLightSource ()
+            : base (1) {
         }
 
         public SphereLightSource Clone () {
