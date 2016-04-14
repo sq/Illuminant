@@ -240,7 +240,7 @@ namespace TestGame.Scenes {
                         samplerState: SamplerState.PointClamp
                     ))
                         bb.Add(new BitmapDrawCall(
-                            Renderer.GBuffer, Vector2.Zero, new Bounds(Vector2.Zero, Vector2.One), 
+                            Renderer.GBuffer.Texture, Vector2.Zero, new Bounds(Vector2.Zero, Vector2.One), 
                             Color.White, LightmapScaleRatio
                         ));
                 }

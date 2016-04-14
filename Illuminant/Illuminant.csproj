@@ -94,6 +94,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Billboard.cs" />
+    <Compile Include="GBuffer.cs" />
     <Compile Include="HeightVolume.cs" />
     <Compile Include="IlluminantMaterials.cs" />
     <Compile Include="LightingRenderer.cs" />

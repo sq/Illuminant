@@ -170,7 +170,7 @@ namespace TestGame.Scenes {
             )) {
                 var dc = new BitmapDrawCall(
                     ShowGBuffer
-                        ? Renderer.GBuffer
+                        ? Renderer.GBuffer.Texture
                         : Lightmap, 
                     Vector2.Zero,
                     Color.White

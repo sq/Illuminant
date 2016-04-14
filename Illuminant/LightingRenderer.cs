@@ -37,6 +37,8 @@ namespace Squared.Illuminant {
         public readonly DepthStencilState DistanceInteriorStencilState, DistanceExteriorStencilState;
         public readonly DepthStencilState SphereLightDepthStencilState;
 
+        public readonly GBuffer GBuffer;
+
         private readonly DynamicVertexBuffer SphereLightVertexBuffer;
         private readonly DynamicVertexBuffer DirectionalLightVertexBuffer;
         private readonly IndexBuffer         QuadIndexBuffer;
@@ -52,7 +54,6 @@ namespace Squared.Illuminant {
         private readonly Dictionary<Polygon, Texture2D> HeightVolumeVertexData = 
             new Dictionary<Polygon, Texture2D>(new ReferenceComparer<Polygon>());
 
-        private readonly RenderTarget2D _GBuffer;
         private readonly RenderTarget2D _DistanceField;
         private readonly RenderTarget2D _Lightmap;
         private readonly RenderTarget2D _PreviousLightmap;
@@ -141,17 +142,6 @@ namespace Squared.Illuminant {
                     RenderTargetUsage.PlatformContents
                 );
 
-                _GBuffer = new RenderTarget2D(
-                    coordinator.Device, 
-                    Configuration.MaximumRenderSize.First, 
-                    Configuration.MaximumRenderSize.Second,
-                    false, 
-                    Configuration.HighQuality
-                        ? SurfaceFormat.Vector4
-                        : SurfaceFormat.HalfVector4,
-                    DepthFormat.Depth24, 0, RenderTargetUsage.PlatformContents
-                );
-
                 _Lightmap = new RenderTarget2D(
                     coordinator.Device, 
                     Configuration.MaximumRenderSize.First, 
@@ -178,6 +168,13 @@ namespace Squared.Illuminant {
                     );
                 }
             }
+
+            GBuffer = new GBuffer(
+                Coordinator, 
+                Configuration.MaximumRenderSize.First, 
+                Configuration.MaximumRenderSize.Second,
+                Configuration.HighQuality
+            );
 
             TopFaceDepthStencilState = new DepthStencilState {
                 StencilEnable = false,
@@ -231,7 +228,7 @@ namespace Squared.Illuminant {
             Coordinator.DisposeResource(DirectionalLightVertexBuffer);
             Coordinator.DisposeResource(QuadIndexBuffer);
             Coordinator.DisposeResource(_DistanceField);
-            Coordinator.DisposeResource(_GBuffer);
+            Coordinator.DisposeResource(GBuffer);
             Coordinator.DisposeResource(_Lightmap);
             Coordinator.DisposeResource(_PreviousLightmap);
 
@@ -335,12 +332,6 @@ namespace Squared.Illuminant {
             });
         }
 
-        public RenderTarget2D GBuffer {
-            get {
-                return _GBuffer;
-            }
-        }
-
         public RenderTarget2D DistanceField {
             get {
                 return _DistanceField;
@@ -423,12 +414,9 @@ namespace Squared.Illuminant {
             var effect = material.Effect;
             var p = effect.Parameters;
 
-            var tsize = new Vector2(
-                1f / Configuration.RenderSize.First,
-                1f / Configuration.RenderSize.Second
-            );
-            p["GBufferTexelSize"].SetValue(tsize);
-            p["GBuffer"].SetValue(GBuffer);
+            // FIXME: RenderScale?
+            p["GBufferTexelSize"].SetValue(GBuffer.InverseSize);
+            p["GBuffer"].SetValue(GBuffer.Texture);
 
             var ub = Materials.GetUniformBinding<Uniforms.Environment>(material, "Environment");
             ub.Value.Current = Uniforms.Environment;
@@ -657,12 +645,9 @@ namespace Squared.Illuminant {
                 m = IlluminantMaterials.LightingResolve;
 
             var sg = ir.MakeSubgroup(before: (dm, _) => {
-                var tsize = new Vector2(
-                    1f / Configuration.RenderSize.First * Configuration.RenderScale.X, 
-                    1f / Configuration.RenderSize.Second * Configuration.RenderScale.Y
-                );
-                m.Effect.Parameters["GBufferTexelSize"].SetValue(tsize);
-                m.Effect.Parameters["GBuffer"].SetValue(_GBuffer);
+                // FIXME: RenderScale?
+                m.Effect.Parameters["GBufferTexelSize"].SetValue(GBuffer.InverseSize);
+                m.Effect.Parameters["GBuffer"].SetValue(GBuffer.Texture);
                 m.Effect.Parameters["InverseScaleFactor"].SetValue(
                     hdr.HasValue
                         ? hdr.Value.InverseScaleFactor
@@ -937,7 +922,7 @@ namespace Squared.Illuminant {
 
         private void RenderGBuffer (ref int layerIndex, IBatchContainer resultGroup) {
             using (var group = BatchGroup.ForRenderTarget(
-                resultGroup, layerIndex, _GBuffer,
+                resultGroup, layerIndex, GBuffer.Texture,
                 // FIXME: Optimize this
                 (dm, _) => {
                     Materials.PushViewTransform(ViewTransform.CreateOrthographic(

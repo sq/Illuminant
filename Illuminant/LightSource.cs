@@ -101,7 +101,9 @@ namespace Squared.Illuminant {
                 Opacity = Opacity,
                 CastsShadows = CastsShadows,
                 AmbientOcclusionRadius = AmbientOcclusionRadius,
-                RampMode = RampMode
+                RampMode = RampMode,
+                FalloffYFactor = FalloffYFactor,
+                ShadowDistanceFalloff = ShadowDistanceFalloff
             };
             return result;
         }
