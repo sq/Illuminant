@@ -10,7 +10,7 @@ using Squared.Render;
 namespace Squared.Illuminant {
     public class GBuffer : IDisposable {
         public bool IsDisposed { get; private set; }
-        public bool IsValid    { get; private set; }
+        public bool IsValid    { get; internal set; }
 
         public readonly RenderTarget2D Texture;
         public readonly Vector2 Size, InverseSize;
