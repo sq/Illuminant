@@ -10,18 +10,30 @@ namespace Squared.Illuminant {
     public class DistanceField : IDisposable {
         public bool IsDisposed { get; private set; }
 
+        public readonly float VirtualWidth, VirtualHeight, VirtualDepth;
+        public readonly float Resolution;
+
         public readonly RenderTarget2D Texture;
         public readonly int SliceWidth, SliceHeight, SliceCount;
         public readonly int PhysicalSliceCount;
         public readonly int ColumnCount, RowCount;
 
+        public int ValidSliceCount { get; internal set; }
+
+        internal readonly List<int> InvalidSlices = new List<int>();
+
         public DistanceField (
             RenderCoordinator coordinator,
-            int width, int height, int sliceCount,
-            float resolution = 1f
+            float virtualWidth, float virtualHeight, float virtualDepth,
+            int sliceCount, float resolution = 1f
         ) {
-            SliceWidth = (int)Math.Ceiling(width * resolution);
-            SliceHeight = (int)Math.Ceiling(height * resolution);
+            VirtualWidth = virtualWidth;
+            VirtualHeight = virtualHeight;
+            VirtualDepth = virtualDepth;
+            Resolution = resolution;
+
+            SliceWidth = (int)Math.Ceiling(virtualWidth * resolution);
+            SliceHeight = (int)Math.Ceiling(virtualHeight * resolution);
             int maxSlicesX = 4096 / SliceWidth;
             int maxSlicesY = 4096 / SliceHeight;
             int maxSlices = maxSlicesX * maxSlicesY * LightingRenderer.PackedSliceCount;
@@ -48,6 +60,14 @@ namespace Squared.Illuminant {
         }
 
         public void Invalidate () {
+            ValidSliceCount = 0;
+
+            for (var i = 0; i < SliceCount; i++) {
+                if (InvalidSlices.Contains(i))
+                    continue;
+
+                InvalidSlices.Add(i);
+            }
         }
 
         public void Dispose () {

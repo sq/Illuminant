@@ -15,6 +15,7 @@ using Squared.Util;
 
 namespace TestGame.Scenes {
     public class TwoPointFiveDTest : Scene {
+        DistanceField DistanceField;
         LightingEnvironment Environment;
         LightingRenderer Renderer;
 
@@ -96,23 +97,32 @@ namespace TestGame.Scenes {
         public override void LoadContent () {
             Environment = new LightingEnvironment();
 
+            Environment.GroundZ = 0;
+            Environment.MaximumZ = 128;
+            Environment.ZToYMultiplier = 2.5f;
+
+            DistanceField = new DistanceField(
+                Game.RenderCoordinator, 1024, 1024, Environment.MaximumZ,
+                64, 0.5f
+            );
+
             Background = Game.Content.Load<Texture2D>("sc3test");
 
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(
-                    1024 / LightmapScaleRatio, 1024 / LightmapScaleRatio, true,
-                    1024, 1024, 64
+                    1024 / LightmapScaleRatio, 1024 / LightmapScaleRatio, true
                 ) {
                     RenderScale = Vector2.One * (1.0f / LightmapScaleRatio),
-                    DistanceFieldResolution = 0.5f,
                     DistanceFieldMinStepSize = 1f,
                     DistanceFieldLongStepFactor = 0.5f,
                     DistanceFieldOcclusionToOpacityPower = 0.7f,
                     DistanceFieldMaxConeRadius = 24,
                     DistanceFieldUpdateRate = 64,
                 }
-            );
+            ) {
+                DistanceField = DistanceField
+            };
 
             MovableLight = new SphereLightSource {
                 Position = new Vector3(64, 64, 0.7f),
@@ -153,10 +163,6 @@ namespace TestGame.Scenes {
 
             if (false)
                 Environment.HeightVolumes.Clear();
-
-            Environment.GroundZ = 0;
-            Environment.MaximumZ = 128;
-            Environment.ZToYMultiplier = 2.5f;
         }
         
         public override void Draw (Squared.Render.Frame frame) {

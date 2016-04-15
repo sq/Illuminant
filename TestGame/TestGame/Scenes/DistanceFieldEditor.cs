@@ -23,6 +23,7 @@ namespace TestGame.Scenes {
             public Vector3 Up, Right;
         }
 
+        DistanceField DistanceField;
         LightingEnvironment Environment;
         LightingRenderer Renderer;
 
@@ -44,21 +45,26 @@ namespace TestGame.Scenes {
         public override void LoadContent () {
             Environment = new LightingEnvironment();
 
-            Renderer = new LightingRenderer(
-                Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
-                new RendererConfiguration(
-                    Width, Height, true,
-                    Width, Height, 64, true
-                ) {
-                    RenderScale = Vector2.One,
-                    DistanceFieldResolution = 0.5f,
-                    DistanceFieldUpdateRate = 32
-                }
-            );
-
             Environment.GroundZ = 0;
             Environment.MaximumZ = 256;
             Environment.ZToYMultiplier = 2.5f;
+
+            DistanceField = new DistanceField(
+                Game.RenderCoordinator, Width, Height, Environment.MaximumZ,
+                64, 0.5f
+            );
+
+            Renderer = new LightingRenderer(
+                Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
+                new RendererConfiguration(
+                    Width, Height, true, true
+                ) {
+                    RenderScale = Vector2.One,
+                    DistanceFieldUpdateRate = 32
+                }
+            ) {
+                DistanceField = DistanceField
+            };
 
             BuildViewports();
             BuildObstructions();

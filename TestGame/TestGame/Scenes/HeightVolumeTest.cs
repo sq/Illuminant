@@ -14,6 +14,7 @@ using Squared.Util;
 
 namespace TestGame.Scenes {
     public class HeightVolumeTest : Scene {
+        DistanceField DistanceField;
         LightingEnvironment Environment;
         LightingRenderer Renderer;
 
@@ -52,14 +53,21 @@ namespace TestGame.Scenes {
         public override void LoadContent () {
             Environment = new LightingEnvironment();
 
+            Environment.GroundZ = 0;
+            Environment.MaximumZ = 128;
+            Environment.ZToYMultiplier = 1.25f;
+
+            DistanceField = new DistanceField(
+                Game.RenderCoordinator, Width, Height, Environment.MaximumZ,
+                16, 0.5f
+            );
+
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment,
                 new RendererConfiguration(
-                    Width / LightmapScaleRatio, Height / LightmapScaleRatio, true,
-                    Width, Height, 16
+                    Width / LightmapScaleRatio, Height / LightmapScaleRatio, true
                 ) {
                     RenderScale = Vector2.One * (1.0f / LightmapScaleRatio),
-                    DistanceFieldResolution = 0.5f,
                     DistanceFieldLongStepFactor = 0.95f,
                     DistanceFieldMinStepSize = 1.5f,
                     DistanceFieldMaxStepCount = 72,
@@ -101,10 +109,6 @@ namespace TestGame.Scenes {
             const int   heightTiers = 8;
             const float minHeight = 0f;
             const float maxHeight = 127f;
-
-            Environment.GroundZ = 0;
-            Environment.MaximumZ = 128;
-            Environment.ZToYMultiplier = 1.25f;
 
             var points = new List<Vector2>();
 

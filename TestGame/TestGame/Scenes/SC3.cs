@@ -99,6 +99,7 @@ namespace TestGame.Scenes {
             }
         }
 
+        DistanceField DistanceField;
         LightingEnvironment Environment, ForegroundEnvironment;
         LightingRenderer Renderer, ForegroundRenderer;
 
@@ -160,6 +161,10 @@ namespace TestGame.Scenes {
             Environment = new LightingEnvironment();
             ForegroundEnvironment = new LightingEnvironment();
 
+            Environment.GroundZ = ForegroundEnvironment.GroundZ = 64;
+            Environment.MaximumZ = ForegroundEnvironment.MaximumZ = 200;
+            Environment.ZToYMultiplier = ForegroundEnvironment.ZToYMultiplier = 2.5f;
+
             Background = Game.Content.Load<Texture2D>("bg_noshadows");
             BackgroundMask = Game.Content.Load<Texture2D>("bg_mask");
             Foreground = Game.Content.Load<Texture2D>("fg");
@@ -176,42 +181,44 @@ namespace TestGame.Scenes {
 
             Spark = Game.Content.Load<Texture2D>("spark");
 
+            DistanceField = new DistanceField(
+                Game.RenderCoordinator, Width, Height, Environment.MaximumZ,
+                16, 0.5f
+            );
+
             Renderer = new LightingRenderer(
-                Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
+                Game.Content, Game.RenderCoordinator, Game.Materials, Environment,
                 new RendererConfiguration(
-                    Width / BackgroundScaleRatio, Height / BackgroundScaleRatio, true,
-                    Width, Height, 16, true
+                    Width / BackgroundScaleRatio, Height / BackgroundScaleRatio, true, true
                 ) {
                     RenderScale = new Vector2(1.0f / BackgroundScaleRatio),
-                    DistanceFieldResolution = 0.5f,
                     DistanceFieldMinStepSize = 1.5f,
                     DistanceFieldLongStepFactor = 0.7f,
                     DistanceFieldOcclusionToOpacityPower = 1.35f,
                     DistanceFieldMaxConeRadius = 30,
                     TwoPointFiveD = true,
-                    GBufferCaching = false,
-                    DistanceFieldUpdateRate = 4
+                    DistanceFieldUpdateRate = 1
                 }
-            );
+            ) {
+                DistanceField = DistanceField
+            };
 
             ForegroundRenderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, ForegroundEnvironment, 
                 new RendererConfiguration(
-                    Width / ForegroundScaleRatio, Height / ForegroundScaleRatio, true,
-                    Width, Height, 12
+                    Width / ForegroundScaleRatio, Height / ForegroundScaleRatio, true
                 ) {
                     RenderScale = new Vector2(1.0f / ForegroundScaleRatio),
-                    DistanceFieldResolution = 0.5f,
                     DistanceFieldMinStepSize = 1.5f,
                     DistanceFieldLongStepFactor = 0.7f,
                     DistanceFieldOcclusionToOpacityPower = 1.35f,
                     DistanceFieldMaxConeRadius = 30,
                     TwoPointFiveD = true,
-                    // RenderGroundPlane = false,
-                    GBufferCaching = false,
-                    DistanceFieldUpdateRate = 4,
+                    DistanceFieldUpdateRate = 1,
                 }
-            );
+            ) {
+                DistanceField = DistanceField
+            };
 
             var light = new SphereLightSource {
                 Position = new Vector3(64, 64, 0.7f),
@@ -242,10 +249,6 @@ namespace TestGame.Scenes {
             Environment.Lights.Add(ambientLight);
 
             ForegroundEnvironment.Lights.Add(ambientLight.Clone());
-
-            Environment.GroundZ = ForegroundEnvironment.GroundZ = 64;
-            Environment.MaximumZ = ForegroundEnvironment.MaximumZ = 200;
-            Environment.ZToYMultiplier = ForegroundEnvironment.ZToYMultiplier = 2.5f;
 
             BuildObstacles();
 
@@ -346,11 +349,6 @@ namespace TestGame.Scenes {
         
         public override void Draw (Squared.Render.Frame frame) {
             CreateRenderTargets();
-
-            if (true) {
-                Renderer.InvalidateFields();
-                ForegroundRenderer.InvalidateFields();
-            }
 
             Renderer.UpdateFields(frame, -16);
             ForegroundRenderer.UpdateFields(frame, -16);
