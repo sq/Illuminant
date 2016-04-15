@@ -865,13 +865,15 @@ namespace Squared.Illuminant {
             ref int layerIndex, IBatchContainer resultGroup,
             bool enableHeightVolumes = true, bool enableBillboards = true
         ) {
+            var renderWidth = (int)(Configuration.RenderSize.First / Configuration.RenderScale.X);
+            var renderHeight = (int)(Configuration.RenderSize.Second / Configuration.RenderScale.Y);
+
             using (var group = BatchGroup.ForRenderTarget(
                 resultGroup, layerIndex, GBuffer.Texture,
                 // FIXME: Optimize this
                 (dm, _) => {
                     Materials.PushViewTransform(ViewTransform.CreateOrthographic(
-                        (int)(Configuration.RenderSize.First / Configuration.RenderScale.X), 
-                        (int)(Configuration.RenderSize.Second / Configuration.RenderScale.Y)
+                        renderWidth, renderHeight                       
                     ));
                 },
                 (dm, _) => {
@@ -904,9 +906,9 @@ namespace Squared.Illuminant {
                     {
                         var zRange = new Vector2(Environment.GroundZ, Environment.GroundZ);
                         var tl = new Vector3(0, 0, Environment.GroundZ);
-                        var tr = new Vector3(GBuffer.Width, 0, Environment.GroundZ);
-                        var br = new Vector3(GBuffer.Width, GBuffer.Height, Environment.GroundZ);
-                        var bl = new Vector3(0, GBuffer.Height, Environment.GroundZ);
+                        var tr = new Vector3(renderWidth, 0, Environment.GroundZ);
+                        var br = new Vector3(renderWidth, renderHeight, Environment.GroundZ);
+                        var bl = new Vector3(0, renderHeight, Environment.GroundZ);
 
                         if (Configuration.RenderGroundPlane == false) {
                             var huge = new Vector3(0, 0, -99999);
