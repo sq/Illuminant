@@ -1,6 +1,7 @@
 ﻿
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -567,6 +568,12 @@ namespace TestGame.Scenes {
 
                 if (KeyWasPressed(Keys.R))
                     Deterministic = !Deterministic;
+
+                if (KeyWasPressed(Keys.S))
+                    DistanceField.Save(Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyDocuments), "df.bin"));
+
+                if (KeyWasPressed(Keys.O))
+                    DistanceField.Load(Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyDocuments), "df.bin"));
 
                 var time = (float)Time.Seconds;
 

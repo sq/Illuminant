@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -19,6 +20,8 @@ namespace Squared.Illuminant {
         public readonly int ColumnCount, RowCount;
 
         public int ValidSliceCount { get; internal set; }
+
+        private readonly object UseLock;
 
         internal readonly List<int> InvalidSlices = new List<int>();
 
@@ -46,6 +49,8 @@ namespace Squared.Illuminant {
             ColumnCount = Math.Min(maxSlicesX, PhysicalSliceCount);
             RowCount = Math.Max((int)Math.Ceiling(PhysicalSliceCount / (float)maxSlicesX), 1);
 
+            UseLock = coordinator.UseResourceLock;
+
             lock (coordinator.CreateResourceLock)
                 Texture = new RenderTarget2D(
                     coordinator.Device,
@@ -57,6 +62,44 @@ namespace Squared.Illuminant {
                 );
 
             Invalidate();
+        }
+
+        public void Save (string output) {
+            using (var stream = File.OpenWrite(output))
+                Save(stream);
+        }
+
+        public void Save (Stream output) {
+            if (ValidSliceCount < SliceCount)
+                throw new InvalidOperationException("The distance field must be fully valid");
+
+            var size = 8 * Texture.Width * Texture.Height;
+            var data = new byte[size];
+
+            lock (UseLock)
+                Texture.GetData(data);
+
+            output.Write(data, 0, size);
+        }
+
+        public void Load (string path) {
+            using (var stream = File.OpenRead(path))
+                Load(stream);
+        }
+
+        public void Load (Stream input) {
+            var size = 8 * Texture.Width * Texture.Height;
+            var data = new byte[size];
+            var bytesRead = input.Read(data, 0, size);
+            if (bytesRead != size)
+                throw new Exception("Truncated file");
+
+            lock (UseLock)
+                Texture.SetData(data);
+
+            InvalidSlices.Clear();
+            // FIXME: Is this right?
+            ValidSliceCount = ((SliceCount + 2) / 3) * 3;
         }
 
         public void Invalidate () {
