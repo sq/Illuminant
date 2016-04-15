@@ -314,8 +314,8 @@ namespace Squared.Illuminant {
                     TextureSliceSize = new Vector2(1f / DistanceField.ColumnCount, 1f / DistanceField.RowCount),
                     TextureSliceCount = new Vector3(DistanceField.ColumnCount, DistanceField.RowCount, DistanceField.ValidSliceCount),
                     TextureTexelSize = new Vector2(
-                        1f / (DistanceField.SliceWidth * DistanceField.ColumnCount), 
-                        1f / (DistanceField.SliceHeight * DistanceField.RowCount)
+                        1f / (DistanceField.VirtualWidth * DistanceField.ColumnCount), 
+                        1f / (DistanceField.VirtualHeight * DistanceField.RowCount)
                     ),
                     InvScaleFactor = 1f / DistanceField.Resolution,
                     OcclusionToOpacityPower = Configuration.DistanceFieldOcclusionToOpacityPower,
@@ -1099,8 +1099,16 @@ namespace Squared.Illuminant {
             }
         }
 
-        private void RenderDistanceField (ref int layerIndex, IBatchContainer resultGroup) {
-           
+        private void RenderDistanceField (ref int layerIndex, IBatchContainer resultGroup) {           
+            int sliceCount = DistanceField.SliceCount;
+            int slicesToUpdate =
+                Math.Min(
+                    Configuration.DistanceFieldUpdateRate,
+                    DistanceField.InvalidSlices.Count
+                );
+            if (slicesToUpdate <= 0)
+                return;
+
             using (var rtGroup = BatchGroup.ForRenderTarget(
                 resultGroup, layerIndex++, DistanceField.Texture,
                 // HACK: Since we're mucking with view transforms, do a save and restore
@@ -1112,13 +1120,6 @@ namespace Squared.Illuminant {
                 }
             )) {
                 // We incrementally do a partial update of the distance field.
-                int sliceCount = DistanceField.SliceCount;
-                int slicesToUpdate =
-                    Math.Min(
-                        Configuration.DistanceFieldUpdateRate,
-                        DistanceField.InvalidSlices.Count
-                    );
-
                 int layer = 0;
                 while (slicesToUpdate > 0) {
                     var slice = DistanceField.InvalidSlices[0];
@@ -1149,19 +1150,15 @@ namespace Squared.Illuminant {
             var sliceXVirtual = (physicalSliceIndex % DistanceField.ColumnCount) * DistanceField.VirtualWidth;
             var sliceYVirtual = (physicalSliceIndex / DistanceField.ColumnCount) * DistanceField.VirtualHeight;
 
-            bool forceClear = DistanceField.ValidSliceCount == 0;
-
             var viewTransform = ViewTransform.CreateOrthographic(
-                (int)Math.Ceiling(DistanceField.VirtualWidth),
-                (int)Math.Ceiling(DistanceField.VirtualHeight)
+                0, 0, 
+                (int)Math.Ceiling(DistanceField.VirtualWidth * DistanceField.ColumnCount), 
+                (int)Math.Ceiling(DistanceField.VirtualHeight * DistanceField.RowCount)
             );
             viewTransform.Position = new Vector2(-sliceXVirtual, -sliceYVirtual);
 
             Action<DeviceManager, object> beginSliceBatch =
                 (dm, _) => {
-                    if (forceClear)
-                        dm.Device.Clear(Color.Transparent);
-
                     // TODO: Optimize this
                     dm.Device.ScissorRectangle = new Rectangle(
                         sliceX, sliceY, DistanceField.SliceWidth, DistanceField.SliceHeight

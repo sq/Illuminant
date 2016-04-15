@@ -73,7 +73,9 @@ namespace TestGame.Scenes {
                     DistanceFieldMaxStepCount = 72,
                     GBufferCaching = true
                 }
-            );
+            ) {
+                DistanceField = DistanceField
+            };
 
             var light = new SphereLightSource {
                 Position = new Vector3(64, 64, 0),

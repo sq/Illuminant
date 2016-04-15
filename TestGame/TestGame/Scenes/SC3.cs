@@ -214,7 +214,7 @@ namespace TestGame.Scenes {
                     DistanceFieldOcclusionToOpacityPower = 1.35f,
                     DistanceFieldMaxConeRadius = 30,
                     TwoPointFiveD = true,
-                    DistanceFieldUpdateRate = 1,
+                    DistanceFieldUpdateRate = 0,
                 }
             ) {
                 DistanceField = DistanceField
@@ -349,6 +349,8 @@ namespace TestGame.Scenes {
         
         public override void Draw (Squared.Render.Frame frame) {
             CreateRenderTargets();
+
+            DistanceField.Invalidate();
 
             Renderer.UpdateFields(frame, -16);
             ForegroundRenderer.UpdateFields(frame, -16);
