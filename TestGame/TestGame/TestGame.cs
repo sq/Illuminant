@@ -86,7 +86,7 @@ namespace TestGame {
 
             PerformanceStats.Record(this);
 
-            Window.Title = String.Format("Scene {0}: {1} {2}", ActiveSceneIndex, Scenes[ActiveSceneIndex].GetType().Name, Scenes[ActiveSceneIndex].Status);
+            Window.Title = String.Format("Scene {0}: {1}", ActiveSceneIndex, Scenes[ActiveSceneIndex].GetType().Name);
 
             PreviousKeyboardState = KeyboardState;
 
@@ -149,7 +149,5 @@ namespace TestGame {
         protected bool KeyWasPressed (Keys key) {
             return Game.KeyboardState.IsKeyDown(key) && Game.PreviousKeyboardState.IsKeyUp(key);
         }
-
-        public abstract string Status { get; }
     }
 }

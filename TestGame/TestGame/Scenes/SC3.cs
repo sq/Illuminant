@@ -350,7 +350,7 @@ namespace TestGame.Scenes {
         public override void Draw (Squared.Render.Frame frame) {
             CreateRenderTargets();
 
-            DistanceField.Invalidate();
+            // DistanceField.Invalidate();
 
             Renderer.UpdateFields(frame, -16);
             ForegroundRenderer.UpdateFields(frame, -16);
@@ -606,16 +606,6 @@ namespace TestGame.Scenes {
                         e.RemoveCurrent();
                     }
                 }
-            }
-        }
-
-        public override string Status {
-            get {
-                var pls = (SphereLightSource)Environment.Lights[0];
-                return string.Format(
-                    "L@{1:0000},{2:0000},{0:000.0}", 
-                    LightZ, pls.Position.X, pls.Position.Y
-                );
             }
         }
     }

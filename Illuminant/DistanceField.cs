@@ -60,8 +60,6 @@ namespace Squared.Illuminant {
         }
 
         public void Invalidate () {
-            ValidSliceCount = 0;
-
             for (var i = 0; i < SliceCount; i++) {
                 if (InvalidSlices.Contains(i))
                     continue;

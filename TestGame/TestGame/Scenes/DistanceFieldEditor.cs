@@ -382,13 +382,5 @@ namespace TestGame.Scenes {
                 PreviousMouseState = ms;
             }
         }
-
-        public override string Status {
-            get {
-                return string.Format(
-                    "sel #{0}", SelectedObject
-                );
-            }
-        }
     }
 }

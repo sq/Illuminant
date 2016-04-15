@@ -252,17 +252,5 @@ namespace TestGame.Scenes {
                 }
             }
         }
-
-        public override string Status {
-            get {
-                return string.Format(
-                    "L@{1:0000},{2:0000},{0:000.0} {3}", 
-                    LightZ, Lights[0].Position.X, Lights[0].Position.Y,
-                    TwoPointFiveD 
-                        ? "2.5D"
-                        : "2D"
-                );
-            }
-        }
     }
 }
