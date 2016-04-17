@@ -426,7 +426,9 @@ namespace Squared.Illuminant {
                     lock (_LightBufferLock)
                     using (var buffer = BufferPool<LightSource>.Allocate(Environment.Lights.Count)) {
                         Environment.Lights.CopyTo(buffer.Data);
-                        Array.Sort(buffer.Data, (lhs, rhs) => lhs.TypeID - rhs.TypeID);
+                        Squared.Util.Sort.FastCLRSort(
+                            buffer.Data, LightSorter.Instance, 0, Environment.Lights.Count
+                        );
 
                         for (var i = 0; i < Environment.Lights.Count; i++) {
                             var lightSource = buffer.Data[i];
@@ -1524,5 +1526,13 @@ namespace Squared.Illuminant {
     public struct VisualizationInfo {
         public Vector3 ViewCenter;
         public Vector3 Up, Right;
+    }
+
+    public class LightSorter : IComparer<LightSource> {
+        public static readonly LightSorter Instance = new LightSorter();
+
+        public int Compare (LightSource x, LightSource y) {
+            return x.TypeID - y.TypeID;
+        }
     }
 }
