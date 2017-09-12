@@ -115,7 +115,7 @@ namespace TestGame {
 
             using (var buffer = BufferPool<BitmapDrawCall>.Allocate(text.Length)) {
                 var layout = Font.LayoutString(text, buffer, scale: scale);
-                var layoutSize = layout.Size * scale;
+                var layoutSize = layout.Size;
                 var position = new Vector2(Graphics.PreferredBackBufferWidth - (232 * scale), 30f).Floor();
                 var dc = layout.DrawCalls;
 

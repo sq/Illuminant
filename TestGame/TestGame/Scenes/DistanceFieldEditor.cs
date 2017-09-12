@@ -51,7 +51,7 @@ namespace TestGame.Scenes {
 
             DistanceField = new DistanceField(
                 Game.RenderCoordinator, Width, Height, Environment.MaximumZ,
-                64, 0.5f
+                128, 0.5f
             );
 
             Renderer = new LightingRenderer(
@@ -60,7 +60,7 @@ namespace TestGame.Scenes {
                     Width, Height, true, true
                 ) {
                     RenderScale = Vector2.One,
-                    DistanceFieldUpdateRate = 32
+                    DistanceFieldUpdateRate = 64
                 }
             ) {
                 DistanceField = DistanceField

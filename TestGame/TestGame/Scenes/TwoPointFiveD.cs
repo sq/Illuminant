@@ -281,7 +281,7 @@ namespace TestGame.Scenes {
 
                 Renderer.Configuration.DistanceFieldMaxStepCount =
                     (Timelapse & !Deterministic)
-                        ? (int)Arithmetic.Clamp((time % 12) * (MaxStepCount / 11.0f), 1, MaxStepCount)
+                        ? (int)Arithmetic.Clamp((time % 12) * (MaxStepCount / 32.0f), 1, MaxStepCount)
                         : MaxStepCount;
 
                 if (!Deterministic) {
