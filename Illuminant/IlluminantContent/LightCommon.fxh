@@ -49,6 +49,7 @@ void sampleGBuffer(
     );
 
     // FIXME: Viewport scale
+    worldPosition.xy /= Viewport.Scale.xy;
     worldPosition.xy += Viewport.Position.xy;
 
     // HACK: Reconstruct the y normal from the z normal

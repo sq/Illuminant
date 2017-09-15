@@ -33,7 +33,9 @@ namespace TestGame.Scenes {
         bool ShowLightmap      = false;
         bool ShowDistanceField = false;
         bool Deterministic     = false;
-        int  CameraX, CameraY;
+        float CameraX, CameraY;
+        float CameraZoom = 1.0f;
+        int CameraZoomIndex = 100;
 
         public Township (TestGame game, int width, int height)
             : base(game, 1024, 1024) {
@@ -134,6 +136,7 @@ namespace TestGame.Scenes {
                         Width, Height
                     );
                     vt.Position = new Vector2(CameraX, CameraY);
+                    vt.Scale = new Vector2(CameraZoom);
                     Game.Materials.PushViewTransform(vt);
                 },
                 (dm, _) => {
@@ -228,15 +231,24 @@ namespace TestGame.Scenes {
                 if (KeyWasPressed(Keys.R))
                     Deterministic = !Deterministic;
 
+                if (Game.KeyboardState.IsKeyDown(Keys.OemMinus))
+                    CameraZoomIndex = Math.Min(300, CameraZoomIndex + 1);
+                else if (Game.KeyboardState.IsKeyDown(Keys.OemPlus))
+                    CameraZoomIndex = Math.Max(10, CameraZoomIndex - 1);
+
+                CameraZoom = 100f / CameraZoomIndex;
+
+                var scrollSpeed = 6 / CameraZoom;
+
                 if (Game.KeyboardState.IsKeyDown(Keys.Right))
-                    CameraX += 2;
+                    CameraX += scrollSpeed;
                 else if (Game.KeyboardState.IsKeyDown(Keys.Left))
-                    CameraX -= 2;
+                    CameraX -= scrollSpeed;
 
                 if (Game.KeyboardState.IsKeyDown(Keys.Up))
-                    CameraY -= 2;
+                    CameraY -= scrollSpeed;
                 else if (Game.KeyboardState.IsKeyDown(Keys.Down))
-                    CameraY += 2;
+                    CameraY += scrollSpeed;
 
                 var time = (float)Time.Seconds;
 
@@ -248,12 +260,16 @@ namespace TestGame.Scenes {
                 if (LightZ < 0.01f)
                     LightZ = 0.01f;
 
-                var mousePos = new Vector3(ms.X + CameraX, ms.Y + CameraY, LightZ);
+                // FIXME: Zoom
+                var mousePos = new Vector3((ms.X / CameraZoom) + CameraX, (ms.Y / CameraZoom) + CameraY, LightZ);
 
-                if (Deterministic)
+                if (Deterministic) {
                     MovableLight.Position = new Vector3(671, 394, 97.5f);
-                else
+                    MovableLight.Radius = 24;
+                } else {
                     MovableLight.Position = mousePos;
+                    MovableLight.Radius = 24 / CameraZoom;
+                }
             }
         }
     }

@@ -8,8 +8,7 @@
 uniform float Time;
 
 float4 ApplyTransform (float3 position) {
-    float3 localPosition = ((position - float3(Viewport.Position.xy, 0)) * float3(Viewport.Scale, 1));
-    return mul(mul(float4(localPosition.xyz, 1), Viewport.ModelView), Viewport.Projection);
+    return mul(mul(float4(position.xyz, 1), Viewport.ModelView), Viewport.Projection);
 }
 
 void DirectionalLightVertexShader(
