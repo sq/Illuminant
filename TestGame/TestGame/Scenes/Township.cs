@@ -14,7 +14,7 @@ using Squared.Render.Convenience;
 using Squared.Util;
 
 namespace TestGame.Scenes {
-    public class TwoPointFiveDTest : Scene {
+    public class Township : Scene {
         DistanceField DistanceField;
         LightingEnvironment Environment;
         LightingRenderer Renderer;
@@ -23,7 +23,6 @@ namespace TestGame.Scenes {
 
         public SphereLightSource MovableLight;
 
-        Texture2D Background;
         float LightZ;
 
         const int MultisampleCount = 0;
@@ -33,11 +32,10 @@ namespace TestGame.Scenes {
         bool ShowGBuffer       = false;
         bool ShowLightmap      = false;
         bool ShowDistanceField = false;
-        bool Timelapse         = false;
-        bool TwoPointFiveD     = true;
-        bool Deterministic     = true;
+        bool Deterministic     = false;
+        int  CameraX, CameraY;
 
-        public TwoPointFiveDTest (TestGame game, int width, int height)
+        public Township (TestGame game, int width, int height)
             : base(game, 1024, 1024) {
         }
 
@@ -54,59 +52,16 @@ namespace TestGame.Scenes {
             }
         }
 
-        HeightVolumeBase Rect (Vector2 a, Vector2 b, float z1, float height) {
-            var result = new SimpleHeightVolume(
-                Polygon.FromBounds(new Bounds(a, b)), z1, height 
-            );
-            Environment.HeightVolumes.Add(result);
-            return result;
-        }
-
-        void Ellipse (Vector2 center, float radiusX, float radiusY, float z1, float height) {
-            var numPoints = Math.Max(
-                16,
-                (int)Math.Ceiling((radiusX + radiusY) * 0.5f)
-            );
-
-            var pts = new Vector2[numPoints];
-            float radiusStep = (float)((Math.PI * 2) / numPoints);
-            float r = 0;
-
-            for (var i = 0; i < numPoints; i++, r += radiusStep)
-                pts[i] = new Vector2((float)Math.Cos(r) * radiusX, (float)Math.Sin(r) * radiusY) + center;
-            
-            var result = new SimpleHeightVolume(
-                new Polygon(pts),
-                z1, height
-            );
-            Environment.HeightVolumes.Add(result);
-        }
-
-        void Pillar (Vector2 center) {
-            const float totalHeight = 0.69f;
-            const float baseHeight  = 0.085f;
-            const float capHeight   = 0.09f;
-
-            var baseSizeTL = new Vector2(62, 65);
-            var baseSizeBR = new Vector2(64, 57);
-            Ellipse(center, 51f, 45f, 0, totalHeight * 128);
-            Rect(center - baseSizeTL, center + baseSizeBR, 0.0f, baseHeight * 128);
-            Rect(center - baseSizeTL, center + baseSizeBR, (totalHeight - capHeight) * 128, capHeight * 128);
-        }
-
         public override void LoadContent () {
             Environment = new LightingEnvironment();
 
             Environment.GroundZ = 0;
-            Environment.MaximumZ = 128;
-            Environment.ZToYMultiplier = 2.5f;
+            Environment.MaximumZ = 64;
 
             DistanceField = new DistanceField(
-                Game.RenderCoordinator, 1024, 1024, Environment.MaximumZ,
-                64, 0.33f
+                Game.RenderCoordinator, 4096, 4096, Environment.MaximumZ,
+                4, 0.2f
             );
-
-            Background = Game.Content.Load<Texture2D>("sc3test");
 
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
@@ -118,7 +73,7 @@ namespace TestGame.Scenes {
                     DistanceFieldLongStepFactor = 0.5f,
                     DistanceFieldOcclusionToOpacityPower = 0.7f,
                     DistanceFieldMaxConeRadius = 24,
-                    DistanceFieldUpdateRate = 64,
+                    DistanceFieldUpdateRate = 1,
                 }
             ) {
                 DistanceField = DistanceField
@@ -144,40 +99,42 @@ namespace TestGame.Scenes {
                 Color = new Vector4(0.5f, 0.3f, 0.15f, 0.3f)
             });
 
-            Rect(new Vector2(330, 337), new Vector2(Width, 394), 0f, 55f);
+            {
+                const int tileSize = 32;
+                const int numTiles = 4096 / tileSize;
 
-            Pillar(new Vector2(97, 523));
-            Pillar(new Vector2(719, 520));
+                var rng = new Random();
+                for (var i = 0; i < 2048; i++) {
+                    int x = rng.Next(0, numTiles), y = rng.Next(0, numTiles);
+                    Environment.Obstructions.Add(new LightObstruction(
+                        LightObstructionType.Box,
+                        new Vector3(x * tileSize, y * tileSize, Environment.MaximumZ / 2),
+                        new Vector3(tileSize, tileSize, Environment.MaximumZ)
+                    ));
+                }
+            }
 
-            if (true)
-                Environment.Obstructions.Add(new LightObstruction(
-                    LightObstructionType.Box, 
-                    new Vector3(500, 750, 0), new Vector3(50, 100, 15f)
-                ));
-
-            if (false)
-                Environment.Obstructions.Add(new LightObstruction(
-                    LightObstructionType.Ellipsoid, 
-                    new Vector3(500, 750, 0), new Vector3(90, 45, 30f)
-                ));
-
-            if (false)
-                Environment.HeightVolumes.Clear();
+            /*
+            Environment.Obstructions.Add(new LightObstruction(
+                LightObstructionType.Box, 
+                new Vector3(500, 750, 0), new Vector3(50, 100, 15f)
+            ));
+            */
         }
         
         public override void Draw (Squared.Render.Frame frame) {
             CreateRenderTargets();
-
-            Renderer.Configuration.TwoPointFiveD = TwoPointFiveD;
 
             Renderer.UpdateFields(frame, -2);
 
             using (var bg = BatchGroup.ForRenderTarget(
                 frame, -1, Lightmap,
                 (dm, _) => {
-                    Game.Materials.PushViewTransform(ViewTransform.CreateOrthographic(
+                    var vt = ViewTransform.CreateOrthographic(
                         Width, Height
-                    ));
+                    );
+                    vt.Position = new Vector2(CameraX, CameraY);
+                    Game.Materials.PushViewTransform(vt);
                 },
                 (dm, _) => {
                     Game.Materials.PopViewTransform();
@@ -192,7 +149,7 @@ namespace TestGame.Scenes {
             using (var group = BatchGroup.New(frame, 0)) {
                 ClearBatch.AddNew(group, 0, Game.Materials.Clear, clearColor: Color.Blue);
 
-                if (ShowLightmap) {
+                if (ShowLightmap || true) {
                     using (var bb = BitmapBatch.New(
                         group, 1,
                         Game.Materials.Get(Game.Materials.ScreenSpaceBitmap, blendState: BlendState.Opaque),
@@ -200,6 +157,7 @@ namespace TestGame.Scenes {
                     ))
                         bb.Add(new BitmapDrawCall(Lightmap, Vector2.Zero));
                 } else {
+                    /*
                     using (var bb = BitmapBatch.New(
                         group, 1,
                         Game.Materials.Get(
@@ -216,6 +174,7 @@ namespace TestGame.Scenes {
                         dc.Textures = new TextureSet(dc.Textures.Texture1, Lightmap);
                         bb.Add(dc);
                     }
+                    */
                 }
 
                 if (ShowDistanceField) {
@@ -263,34 +222,23 @@ namespace TestGame.Scenes {
                 if (KeyWasPressed(Keys.G))
                     ShowGBuffer = !ShowGBuffer;
 
-                if (KeyWasPressed(Keys.D2)) {
-                    TwoPointFiveD = !TwoPointFiveD;
-                    Renderer.InvalidateFields();
-                }
-
-                if (KeyWasPressed(Keys.T))
-                    Timelapse = !Timelapse;
-
                 if (KeyWasPressed(Keys.D))
                     ShowDistanceField = !ShowDistanceField;
 
                 if (KeyWasPressed(Keys.R))
                     Deterministic = !Deterministic;
 
+                if (Game.KeyboardState.IsKeyDown(Keys.Right))
+                    CameraX += 2;
+                else if (Game.KeyboardState.IsKeyDown(Keys.Left))
+                    CameraX -= 2;
+
+                if (Game.KeyboardState.IsKeyDown(Keys.Up))
+                    CameraY -= 2;
+                else if (Game.KeyboardState.IsKeyDown(Keys.Down))
+                    CameraY += 2;
+
                 var time = (float)Time.Seconds;
-
-                Renderer.Configuration.DistanceFieldMaxStepCount =
-                    (Timelapse & !Deterministic)
-                        ? (int)Arithmetic.Clamp((time % 12) * (MaxStepCount / 32.0f), 1, MaxStepCount)
-                        : MaxStepCount;
-
-                if (!Deterministic) {
-                    var obs = Environment.Obstructions[0];
-                    obs.Center =
-                        new Vector3(500, 750, Arithmetic.Pulse(time / 10, 0, 40));
-
-                    Renderer.InvalidateFields();
-                }
 
                 var ms = Mouse.GetState();
                 Game.IsMouseVisible = true;
@@ -300,7 +248,7 @@ namespace TestGame.Scenes {
                 if (LightZ < 0.01f)
                     LightZ = 0.01f;
 
-                var mousePos = new Vector3(ms.X, ms.Y, LightZ);
+                var mousePos = new Vector3(ms.X + CameraX, ms.Y + CameraY, LightZ);
 
                 if (Deterministic)
                     MovableLight.Position = new Vector3(671, 394, 97.5f);

@@ -118,6 +118,7 @@
     <Compile Include="Program.cs" />
     <Compile Include="Scenes\DistanceFieldEditor.cs" />
     <Compile Include="Scenes\SC3.cs" />
+    <Compile Include="Scenes\Township.cs" />
     <Compile Include="Scenes\TwoPointFiveD.cs" />
     <Compile Include="Scenes\HeightVolumeTest.cs" />
     <Compile Include="TestGame.cs" />
