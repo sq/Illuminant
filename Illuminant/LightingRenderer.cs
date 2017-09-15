@@ -18,7 +18,7 @@ using Squared.Util;
 namespace Squared.Illuminant {
     public sealed partial class LightingRenderer : IDisposable {
         private struct TemplateUniforms {
-            public Uniforms.Environment Environment;
+            public Uniforms.Environment   Environment;
             public Uniforms.DistanceField DistanceField;
         }
 
@@ -334,6 +334,8 @@ namespace Squared.Illuminant {
             var vt = ViewTransform.CreateOrthographic(
                 _Lightmap.Width, _Lightmap.Height
             );
+            vt.Position = Materials.ViewportPosition;
+            vt.Scale = Materials.ViewportScale;
 
             device.PushStates();
             Materials.PushViewTransform(ref vt);
@@ -379,7 +381,9 @@ namespace Squared.Illuminant {
         /// <param name="container">The batch container to render lighting into.</param>
         /// <param name="layer">The layer to render lighting into.</param>
         /// <param name="intensityScale">A factor to scale the intensity of all light sources. You can use this to rescale the intensity of light values for HDR.</param>
-        public void RenderLighting (IBatchContainer container, int layer, float intensityScale = 1.0f) {
+        public void RenderLighting (
+            IBatchContainer container, int layer, float intensityScale = 1.0f
+        ) {
             int layerIndex = 0;
 
             ComputeUniforms();
@@ -403,7 +407,8 @@ namespace Squared.Illuminant {
                     var ir = new ImperativeRenderer(
                         copyGroup, Materials, 
                         blendState: BlendState.Opaque,
-                        samplerState: SamplerState.LinearClamp
+                        samplerState: SamplerState.LinearClamp,
+                        worldSpace: false
                     );
                     ir.Clear(color: Color.Transparent);
                     ir.Draw(_Lightmap, new Rectangle(0, 0, _PreviousLightmap.Width, _PreviousLightmap.Height));
@@ -576,7 +581,7 @@ namespace Squared.Illuminant {
         /// <param name="drawCall">A draw call used as a template to resolve the lighting.</param>
         public void ResolveLighting (IBatchContainer container, int layer, BitmapDrawCall drawCall, HDRConfiguration? hdr = null) {
             var ir = new ImperativeRenderer(
-                container, Materials, layer
+                container, Materials, layer, worldSpace: false
             );
             ResolveLighting(ref ir, drawCall, hdr);
         }

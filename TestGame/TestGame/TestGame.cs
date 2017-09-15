@@ -104,6 +104,7 @@ namespace TestGame {
                 blendState: BlendState.Opaque, 
                 depthStencilState: DepthStencilState.None, 
                 rasterizerState: RasterizerState.CullNone,
+                worldSpace: false,
                 layer: 9999
             );
 

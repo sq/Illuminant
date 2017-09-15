@@ -169,7 +169,7 @@ technique LightingResolve
 {
     pass P0
     {
-        vertexShader = compile vs_3_0 WorldSpaceVertexShader();
+        vertexShader = compile vs_3_0 ScreenSpaceVertexShader();
         pixelShader = compile ps_3_0 LightingResolvePixelShader();
     }
 }
@@ -178,7 +178,7 @@ technique GammaCompressedLightingResolve
 {
     pass P0
     {
-        vertexShader = compile vs_3_0 WorldSpaceVertexShader();
+        vertexShader = compile vs_3_0 ScreenSpaceVertexShader();
         pixelShader = compile ps_3_0 GammaCompressedLightingResolvePixelShader();
     }
 }
@@ -187,7 +187,7 @@ technique ToneMappedLightingResolve
 {
     pass P0
     {
-        vertexShader = compile vs_3_0 WorldSpaceVertexShader();
+        vertexShader = compile vs_3_0 ScreenSpaceVertexShader();
         pixelShader = compile ps_3_0 ToneMappedLightingResolvePixelShader();
     }
 }
