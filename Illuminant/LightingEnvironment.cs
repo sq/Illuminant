@@ -28,6 +28,9 @@ namespace Squared.Illuminant {
 
         public void Clear () {
             Lights.Clear();
+            Obstructions.Clear();
+            HeightVolumes.Clear();
+            Billboards.Clear();
         }
     }
 }

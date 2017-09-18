@@ -37,9 +37,6 @@ namespace Squared.Illuminant {
         public  readonly DepthStencilState DistanceInteriorStencilState, DistanceExteriorStencilState;
         public  readonly DepthStencilState SphereLightDepthStencilState;
 
-        public           DistanceField DistanceField;
-        public           GBuffer GBuffer;
-
         private readonly DynamicVertexBuffer LightVertexBuffer;
         private readonly IndexBuffer         QuadIndexBuffer;
         private readonly LightVertex[]       LightVertices = new LightVertex[MaximumLightCount * 4];
@@ -53,6 +50,9 @@ namespace Squared.Illuminant {
 
         private readonly RenderTarget2D _Lightmap;
         private readonly RenderTarget2D _PreviousLightmap;
+
+        private DistanceField _DistanceField;
+        private GBuffer _GBuffer;
 
         private byte[] _ReadbackBuffer;
 
@@ -126,7 +126,7 @@ namespace Squared.Illuminant {
                 }
             }
 
-            GBuffer = new GBuffer(
+            _GBuffer = new GBuffer(
                 Coordinator, 
                 Configuration.MaximumRenderSize.First, 
                 Configuration.MaximumRenderSize.Second,
@@ -157,6 +157,23 @@ namespace Squared.Illuminant {
             Environment = environment;
 
             Coordinator.DeviceReset += Coordinator_DeviceReset;
+        }
+
+        public GBuffer GBuffer {
+            get {
+                return _GBuffer;
+            }
+        }
+
+        public DistanceField DistanceField {
+            get {
+                return _DistanceField;
+            }
+            set {
+                if (value == null)
+                    throw new ArgumentNullException("DistanceField");
+                _DistanceField = value;
+            }
         }
 
         private void Coordinator_DeviceReset (object sender, EventArgs e) {
@@ -864,8 +881,10 @@ namespace Squared.Illuminant {
             // TODO: Maybe remove this since I'm not sure it's useful at all.
             Bounds3? region = null
         ) {
-            GBuffer.Invalidate();
-            DistanceField.Invalidate();
+            if (GBuffer != null)
+                GBuffer.Invalidate();
+            if (DistanceField != null)
+                DistanceField.Invalidate();
         }
 
         public void UpdateFields (IBatchContainer container, int layer) {
@@ -1382,7 +1401,9 @@ namespace Squared.Illuminant {
                             if (DidUploadDistanceFieldBuffer)
                                 return;
 
-                            DistanceFunctionVertexBuffer.SetData(DistanceFunctionVertices, 0, items.Count * 4, SetDataOptions.Discard);
+                            if (items.Count > 0)
+                                DistanceFunctionVertexBuffer.SetData(DistanceFunctionVertices, 0, items.Count * 4, SetDataOptions.Discard);
+
                             DidUploadDistanceFieldBuffer = true;
                         }
                     };
