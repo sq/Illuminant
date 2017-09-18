@@ -28,7 +28,7 @@ namespace Squared.Illuminant {
 
         const int        DistanceLimit = 520;
         
-        public readonly RenderCoordinator Coordinator;
+        public  readonly RenderCoordinator Coordinator;
 
         public  readonly DefaultMaterialSet Materials;
         public  readonly IlluminantMaterials IlluminantMaterials;
@@ -295,6 +295,9 @@ namespace Squared.Illuminant {
         }
 
         private void ComputeUniforms () {
+            if (DistanceField == null)
+                throw new NullReferenceException("DistanceField");
+
             Uniforms = new TemplateUniforms {
                 Environment = new Uniforms.Environment {
                     GroundZ = Environment.GroundZ,
