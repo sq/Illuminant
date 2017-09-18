@@ -1,3 +1,5 @@
+uniform float                 MaximumEncodedDistance;
+
 #define PI 3.14159265359
 
 // This is a distance of 0
@@ -6,7 +8,7 @@
 
 // Maximum distance
 // Smaller values increase the precision of distance values but slow down traces
-#define DISTANCE_MAX 512
+#define DISTANCE_MAX MaximumEncodedDistance
 
 // Filtering dramatically increases the precision of the distance field,
 //  *and* it's mathematically correct!

@@ -13,6 +13,7 @@ namespace Squared.Illuminant {
 
         public readonly float VirtualWidth, VirtualHeight, VirtualDepth;
         public readonly float Resolution;
+        public readonly float MaximumEncodedDistance;
 
         public readonly RenderTarget2D Texture;
         public readonly int SliceWidth, SliceHeight, SliceCount;
@@ -28,12 +29,13 @@ namespace Squared.Illuminant {
         public DistanceField (
             RenderCoordinator coordinator,
             float virtualWidth, float virtualHeight, float virtualDepth,
-            int sliceCount, float resolution = 1f
+            int sliceCount, float resolution = 1f, float maximumEncodedDistance = 256f
         ) {
             VirtualWidth = virtualWidth;
             VirtualHeight = virtualHeight;
             VirtualDepth = virtualDepth;
             Resolution = resolution;
+            MaximumEncodedDistance = maximumEncodedDistance;
 
             SliceWidth = (int)Math.Ceiling(virtualWidth * resolution);
             SliceHeight = (int)Math.Ceiling(virtualHeight * resolution);

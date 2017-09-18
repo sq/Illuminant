@@ -870,6 +870,8 @@ namespace Squared.Illuminant {
         private void SetDistanceFieldParameters (Material m, bool setDistanceTexture) {
             var p = m.Effect.Parameters;
 
+            p["MaximumEncodedDistance"].SetValue(DistanceField.MaximumEncodedDistance);
+
             Materials.TrySetBoundUniform(m, "DistanceField", ref Uniforms.DistanceField);
             Materials.TrySetBoundUniform(m, "Environment", ref Uniforms.Environment);
 
@@ -1067,6 +1069,7 @@ namespace Squared.Illuminant {
                 ), (dm, _) => {
                     var material = IlluminantMaterials.MaskBillboard;
                     Materials.TrySetBoundUniform(material, "Environment", ref Uniforms.Environment);
+                    material.Effect.Parameters["MaximumEncodedDistance"].SetValue(DistanceField.MaximumEncodedDistance);
                     material.Effect.Parameters["DistanceFieldExtent"].SetValue(Uniforms.DistanceField.Extent);
                 }
             )) 
@@ -1079,6 +1082,7 @@ namespace Squared.Illuminant {
                 ), (dm, _) => {
                     var material = IlluminantMaterials.GDataBillboard;
                     Materials.TrySetBoundUniform(material, "Environment", ref Uniforms.Environment);
+                    material.Effect.Parameters["MaximumEncodedDistance"].SetValue(DistanceField.MaximumEncodedDistance);
                     material.Effect.Parameters["DistanceFieldExtent"].SetValue(Uniforms.DistanceField.Extent);
                 }
             )) 
@@ -1443,6 +1447,14 @@ namespace Squared.Illuminant {
                             firstOffset[type] = j;
 
                         primCount[type] += 2;
+
+                        // See definition of DISTANCE_MAX in DistanceFieldCommon.fxh
+                        const float offset = 129;
+
+                        tl = new Vector3(item.Center.X - item.Size.X - offset, item.Center.Y - item.Size.Y - offset, 0);
+                        br = new Vector3(item.Center.X + item.Size.X + offset, item.Center.Y + item.Size.Y + offset, 0);
+                        tr = new Vector3(br.X, tl.Y, 0);
+                        bl = new Vector3(tl.X, br.Y, 0);
 
                         DistanceFunctionVertices[j++] = new DistanceFunctionVertex(
                             tl, item.Center, item.Size
