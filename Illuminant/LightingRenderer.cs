@@ -107,7 +107,7 @@ namespace Squared.Illuminant {
                     Configuration.HighQuality
                         ? SurfaceFormat.Rgba64
                         : SurfaceFormat.Color,
-                    DepthFormat.None, 0, RenderTargetUsage.PlatformContents
+                    DepthFormat.None, 0, RenderTargetUsage.PreserveContents
                 );
 
                 if (Configuration.EnableBrightnessEstimation) {
@@ -121,7 +121,7 @@ namespace Squared.Illuminant {
                         Configuration.HighQuality
                             ? SurfaceFormat.Rgba64
                             : SurfaceFormat.Color,
-                        DepthFormat.None, 0, RenderTargetUsage.PlatformContents
+                        DepthFormat.None, 0, RenderTargetUsage.PreserveContents
                     );
                 }
             }
