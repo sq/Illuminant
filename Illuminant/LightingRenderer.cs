@@ -576,6 +576,18 @@ namespace Squared.Illuminant {
 
         /// <summary>
         /// Resolves the current lightmap into the specified batch container on the specified layer.
+        /// </summary>
+        /// <param name="container">The batch container to resolve lighting into.</param>
+        /// <param name="layer">The layer to resolve lighting into.</param>
+        public void ResolveLighting (IBatchContainer container, int layer, HDRConfiguration? hdr = null) {
+            var drawCall = new BitmapDrawCall(
+                _Lightmap, Vector2.Zero
+            );
+            ResolveLighting(container, layer, drawCall, hdr);
+        }
+
+        /// <summary>
+        /// Resolves the current lightmap into the specified batch container on the specified layer.
         /// The provided draw call determines the position and size of the resolved lightmap.
         /// If the provided draw call's texture is not LightingRenderer.Lightmap, it will be modulated by the resolved lightmap.
         /// </summary>
