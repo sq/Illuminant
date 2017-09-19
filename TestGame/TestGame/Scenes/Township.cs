@@ -26,7 +26,7 @@ namespace TestGame.Scenes {
         float LightZ;
 
         const int MultisampleCount = 0;
-        const int LightmapScaleRatio = 1;
+        const int LightmapScaleRatio = 2;
         const int MaxStepCount = 128;
 
         bool ShowGBuffer       = false;
@@ -70,7 +70,7 @@ namespace TestGame.Scenes {
                 new RendererConfiguration(
                     1024 / LightmapScaleRatio, 1024 / LightmapScaleRatio, true
                 ) {
-                    RenderScale = new Vector2(0.5f),
+                    RenderScale = new Vector2(1.0f / LightmapScaleRatio),
                     DistanceFieldMinStepSize = 1f,
                     DistanceFieldLongStepFactor = 0.5f,
                     DistanceFieldOcclusionToOpacityPower = 0.7f,

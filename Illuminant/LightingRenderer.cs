@@ -599,7 +599,11 @@ namespace Squared.Illuminant {
         /// </summary>
         /// <param name="container">The batch container to resolve lighting into.</param>
         /// <param name="layer">The layer to resolve lighting into.</param>
-        public void ResolveLighting (IBatchContainer container, int layer, float? width = null, float? height = null, HDRConfiguration? hdr = null) {
+        public void ResolveLighting (
+            IBatchContainer container, int layer, 
+            float? width = null, float? height = null, 
+            HDRConfiguration? hdr = null
+        ) {
             Material m;
             if (hdr.HasValue && hdr.Value.Mode == HDRMode.GammaCompress)
                 m = IlluminantMaterials.GammaCompressedLightingResolve;
@@ -648,7 +652,7 @@ namespace Squared.Illuminant {
             dc.Scale = new Vector2(
                 width.GetValueOrDefault(Configuration.RenderSize.First) / Configuration.RenderSize.First,
                 height.GetValueOrDefault(Configuration.RenderSize.Second) / Configuration.RenderSize.Second
-            ) / Configuration.RenderScale;
+            );
 
             sg.Draw(dc, material: m);
         }
