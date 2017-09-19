@@ -731,7 +731,10 @@ namespace Squared.Illuminant {
             LightObstruction singleObject = null,
             VisualizationMode mode = VisualizationMode.Surfaces,
             BlendState blendState = null,
-            Vector4? color = null
+            Vector4? color = null,
+            Vector3? ambientColor = null,
+            Vector3? lightColor = null,
+            Vector3? lightDirection = null
         ) {
             ComputeUniforms();
 
@@ -787,10 +790,10 @@ namespace Squared.Illuminant {
             var planeRight = Vector3.Cross(absViewDirection, up);
             var planeUp = Vector3.Cross(absViewDirection, right);
 
-            worldTL = rayOrigin + (-planeRight * center) + (planeUp  * center);
-            worldTR = rayOrigin + (planeRight  * center) + (planeUp  * center);
-            worldBL = rayOrigin + (-planeRight * center) + (-planeUp * center);
-            worldBR = rayOrigin + (planeRight  * center) + (-planeUp * center);
+            worldTL = rayOrigin + (-planeRight * center) + (-planeUp  * center);
+            worldTR = rayOrigin + (planeRight  * center) + (-planeUp  * center);
+            worldBL = rayOrigin + (-planeRight * center) + (planeUp * center);
+            worldBR = rayOrigin + (planeRight  * center) + (planeUp * center);
 
             var _color = color.GetValueOrDefault(Vector4.One);
 
@@ -821,10 +824,6 @@ namespace Squared.Illuminant {
                 }
             };
 
-            var ambientColor = new Vector3(0.1f, 0.15f, 0.15f);
-            var lightDirection = new Vector3(0, -0.5f, -1.0f);
-            lightDirection.Normalize();
-
             Render.Material material = null;
 
             if (singleObject != null) {
@@ -848,9 +847,16 @@ namespace Squared.Illuminant {
                     var p = material.Effect.Parameters;
 
                     SetDistanceFieldParameters(material, true);
-                    p["AmbientColor"].SetValue(ambientColor);
-                    p["LightDirection"].SetValue(lightDirection);
-                    p["LightColor"].SetValue(new Vector3(0.75f));
+
+                    var ac = ambientColor.GetValueOrDefault(new Vector3(0.1f, 0.15f, 0.15f));
+                    p["AmbientColor"].SetValue(ac);
+
+                    var ld = lightDirection.GetValueOrDefault(new Vector3(0, -0.5f, -1.0f));
+                    ld.Normalize();
+                    p["LightDirection"].SetValue(ld);
+
+                    var lc = lightColor.GetValueOrDefault(new Vector3(0.75f));
+                    p["LightColor"].SetValue(lc);
 
                     if (singleObject != null) {
                         p["FunctionType"].SetValue((int)singleObject.Type);
