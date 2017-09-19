@@ -549,10 +549,12 @@ namespace Squared.Illuminant {
                 y1 -= (offset / Environment.ZToYMultiplier);
             }
 
+            /*
             x1 *= Configuration.RenderScale.X;
             y1 *= Configuration.RenderScale.Y;
             x2 *= Configuration.RenderScale.X;
             y2 *= Configuration.RenderScale.Y;
+            */
 
             LightVertex vertex;
             vertex.LightCenter = lightSource.Position;
@@ -920,6 +922,7 @@ namespace Squared.Illuminant {
             ref int layerIndex, IBatchContainer resultGroup,
             bool enableHeightVolumes = true, bool enableBillboards = true
         ) {
+            // FIXME: Is this right?
             var renderWidth = (int)(Configuration.MaximumRenderSize.First / Configuration.RenderScale.X);
             var renderHeight = (int)(Configuration.MaximumRenderSize.Second / Configuration.RenderScale.Y);
 
@@ -1081,7 +1084,6 @@ namespace Squared.Illuminant {
                 ), (dm, _) => {
                     var material = IlluminantMaterials.MaskBillboard;
                     Materials.TrySetBoundUniform(material, "Environment", ref Uniforms.Environment);
-                    material.Effect.Parameters["MaximumEncodedDistance"].SetValue(DistanceField.MaximumEncodedDistance);
                     material.Effect.Parameters["DistanceFieldExtent"].SetValue(Uniforms.DistanceField.Extent);
                 }
             )) 
@@ -1094,7 +1096,6 @@ namespace Squared.Illuminant {
                 ), (dm, _) => {
                     var material = IlluminantMaterials.GDataBillboard;
                     Materials.TrySetBoundUniform(material, "Environment", ref Uniforms.Environment);
-                    material.Effect.Parameters["MaximumEncodedDistance"].SetValue(DistanceField.MaximumEncodedDistance);
                     material.Effect.Parameters["DistanceFieldExtent"].SetValue(Uniforms.DistanceField.Extent);
                 }
             )) 
@@ -1461,7 +1462,7 @@ namespace Squared.Illuminant {
                         primCount[type] += 2;
 
                         // See definition of DISTANCE_MAX in DistanceFieldCommon.fxh
-                        const float offset = 129;
+                        float offset = DistanceField.MaximumEncodedDistance + 1;
 
                         tl = new Vector3(item.Center.X - item.Size.X - offset, item.Center.Y - item.Size.Y - offset, 0);
                         br = new Vector3(item.Center.X + item.Size.X + offset, item.Center.Y + item.Size.Y + offset, 0);
