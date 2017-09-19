@@ -1,4 +1,4 @@
-#include "..\..\Upstream\Fracture\Squared\RenderLib\Content\ViewTransformCommon.fxh"
+#include "..\..\..\Fracture\Squared\RenderLib\Content\ViewTransformCommon.fxh"
 #include "LightCommon.fxh"
 #include "DistanceFieldCommon.fxh"
 #include "ConeTrace.fxh"
@@ -7,29 +7,31 @@
 
 uniform float Time;
 
-float4 ApplyTransform (float3 position) {
-    float3 localPosition = ((position - float3(Viewport.Position.xy, 0)) * float3(Viewport.Scale, 1));
-    localPosition.xy *= Environment.RenderScale;
-    return mul(mul(float4(localPosition.xyz, 1), Viewport.ModelView), Viewport.Projection);
-}
-
 void SphereLightVertexShader(
-    in float2 position               : POSITION0,
+    in float2 cornerWeight           : POSITION0,
     inout float4 color               : COLOR0,
     inout float3 lightCenter         : TEXCOORD0,
     inout float4 lightProperties     : TEXCOORD1,
     inout float3 moreLightProperties : TEXCOORD3,
-    out float2 worldPosition         : TEXCOORD2,
+    out float3 worldPosition         : TEXCOORD2,
     out float4 result                : POSITION0
 ) {
-    worldPosition = position;
-    // FIXME: Z
-    float4 transformedPosition = ApplyTransform(float3(position, lightCenter.z));
+    float  radius = lightProperties.x + lightProperties.y + 1;
+    float3 radius3 = float3(radius, radius, 0);
+    float3 tl = lightCenter - radius3, br = lightCenter + radius3;
+    worldPosition = lerp(tl, br, float3(cornerWeight, 0));
+
+    float3 screenPosition = worldPosition - float3(Viewport.Position.xy, 0); // FIXME
+    /*
+    float3 localPosition = ((position - float3(Viewport.Position.xy, 0)) * float3(Viewport.Scale, 1));
+    localPosition.xy *= Environment.RenderScale;
+    */
+    float4 transformedPosition = mul(mul(float4(screenPosition.xyz, 1), Viewport.ModelView), Viewport.Projection);
     result = float4(transformedPosition.xy, 0, transformedPosition.w);
 }
 
 float SphereLightPixelCore(
-    in float2 worldPosition       : TEXCOORD2,
+    in float3 worldPosition       : TEXCOORD2,
     in float3 lightCenter         : TEXCOORD0,
     // radius, ramp length, ramp mode, enable shadows
     in float4 lightProperties     : TEXCOORD1,
@@ -87,7 +89,7 @@ float SphereLightPixelCore(
 }
 
 void SphereLightPixelShader(
-    in  float2 worldPosition       : TEXCOORD2,
+    in  float3 worldPosition       : TEXCOORD2,
     in  float3 lightCenter         : TEXCOORD0,
     in  float4 lightProperties     : TEXCOORD1,
     in  float3 moreLightProperties : TEXCOORD3,

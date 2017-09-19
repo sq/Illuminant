@@ -49,7 +49,7 @@ namespace TestGame.Scenes {
                 Lightmap = new RenderTarget2D(
                     Game.GraphicsDevice, Width, Height, false,
                     SurfaceFormat.Color, DepthFormat.None, MultisampleCount, 
-                    RenderTargetUsage.PlatformContents
+                    RenderTargetUsage.PreserveContents
                 );
             }
         }
@@ -58,11 +58,11 @@ namespace TestGame.Scenes {
             Environment = new LightingEnvironment();
 
             Environment.GroundZ = 0;
-            Environment.MaximumZ = 64;
+            Environment.MaximumZ = 256;
 
             DistanceField = new DistanceField(
                 Game.RenderCoordinator, 4096, 4096, Environment.MaximumZ,
-                4, 0.25f
+                16, 0.25f
             );
 
             Renderer = new LightingRenderer(
@@ -70,7 +70,7 @@ namespace TestGame.Scenes {
                 new RendererConfiguration(
                     1024 / LightmapScaleRatio, 1024 / LightmapScaleRatio, true
                 ) {
-                    RenderScale = Vector2.One * (1.0f / LightmapScaleRatio),
+                    RenderScale = new Vector2(1),
                     DistanceFieldMinStepSize = 1f,
                     DistanceFieldLongStepFactor = 0.5f,
                     DistanceFieldOcclusionToOpacityPower = 0.7f,
@@ -105,13 +105,13 @@ namespace TestGame.Scenes {
                 const int tileSize = 32;
                 const int numTiles = 4096 / tileSize;
 
-                var rng = new Random();
-                for (var i = 0; i < 2048; i++) {
+                var rng = new Random(123456);
+                for (var i = 0; i < 3024; i++) {
                     int x = rng.Next(0, numTiles), y = rng.Next(0, numTiles);
                     Environment.Obstructions.Add(new LightObstruction(
-                        LightObstructionType.Box,
-                        new Vector3(x * tileSize, y * tileSize, Environment.MaximumZ / 2),
-                        new Vector3(tileSize, tileSize, Environment.MaximumZ)
+                        LightObstructionType.Ellipsoid,
+                        new Vector3(x * tileSize, y * tileSize, 0),
+                        new Vector3(20f, 20f, rng.Next(32, 200))
                     ));
                 }
             }
@@ -126,6 +126,8 @@ namespace TestGame.Scenes {
         
         public override void Draw (Squared.Render.Frame frame) {
             CreateRenderTargets();
+
+            Renderer.InvalidateFields();
 
             Renderer.UpdateFields(frame, -2);
 
@@ -261,7 +263,7 @@ namespace TestGame.Scenes {
                     LightZ = 0.01f;
 
                 // FIXME: Zoom
-                var mousePos = new Vector3((ms.X / CameraZoom) + CameraX, (ms.Y / CameraZoom) + CameraY, LightZ);
+                var mousePos = new Vector3((ms.X / CameraZoom) + CameraX, (ms.Y / CameraZoom) + CameraY, LightZ);                
 
                 if (Deterministic) {
                     MovableLight.Position = new Vector3(671, 394, 97.5f);

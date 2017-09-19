@@ -531,19 +531,6 @@ namespace Squared.Illuminant {
         }
 
         private void RenderPointLightSource (SphereLightSource lightSource, float intensityScale, ref int vertexCount) {
-            float radius = (lightSource.Radius + lightSource.RampLength);
-            float x1 = lightSource.Position.X - radius;
-            float y1 = lightSource.Position.Y - radius;
-            float x2 = lightSource.Position.X + radius;
-            float y2 = lightSource.Position.Y + radius;
-
-            // Expand the bounding box upward to account for 2.5D perspective
-            if (Configuration.TwoPointFiveD) {
-                var offset = Math.Min(radius, Environment.MaximumZ);
-                // FIXME: Is this right?
-                y1 -= (offset / Environment.ZToYMultiplier);
-            }
-
             LightVertex vertex;
             vertex.LightCenter = lightSource.Position;
             vertex.Color = lightSource.Color;
@@ -556,17 +543,13 @@ namespace Squared.Illuminant {
             vertex.MoreLightProperties.Y = lightSource.ShadowDistanceFalloff.GetValueOrDefault(-99999);
             vertex.MoreLightProperties.Z = lightSource.FalloffYFactor;
 
-            vertex.Position.X = x1;
-            vertex.Position.Y = y1;
+            vertex.Position = new Vector2(0, 0);
             LightVertices[vertexCount++] = vertex;
-
-            vertex.Position.X = x2;
+            vertex.Position = new Vector2(1, 0);
             LightVertices[vertexCount++] = vertex;
-
-            vertex.Position.Y = y2;
+            vertex.Position = new Vector2(1, 1);
             LightVertices[vertexCount++] = vertex;
-
-            vertex.Position.X = x1;
+            vertex.Position = new Vector2(0, 1);
             LightVertices[vertexCount++] = vertex;
         }
 

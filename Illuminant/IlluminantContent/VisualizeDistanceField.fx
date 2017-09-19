@@ -1,4 +1,4 @@
-#include "..\..\Upstream\Fracture\Squared\RenderLib\Content\ViewTransformCommon.fxh"
+#include "..\..\..\Fracture\Squared\RenderLib\Content\ViewTransformCommon.fxh"
 #include "DistanceFieldCommon.fxh"
 
 #define SAMPLE sampleDistanceField

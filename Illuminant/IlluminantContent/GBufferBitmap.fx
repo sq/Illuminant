@@ -1,5 +1,5 @@
-#include "..\..\Upstream\Fracture\Squared\RenderLib\Content\ViewTransformCommon.fxh"
-#include "..\..\Upstream\Fracture\Squared\RenderLib\Content\GeometryCommon.fxh"
+#include "..\..\..\Fracture\Squared\RenderLib\Content\ViewTransformCommon.fxh"
+#include "..\..\..\Fracture\Squared\RenderLib\Content\GeometryCommon.fxh"
 
 #define SELF_OCCLUSION_HACK 1.5
 
