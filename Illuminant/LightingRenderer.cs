@@ -56,7 +56,6 @@ namespace Squared.Illuminant {
         private GBuffer _GBuffer;
 
         private byte[] _ReadbackBuffer;
-        private Rectangle _SavedScissor;
 
         private readonly Action<DeviceManager, object> BeginLightPass, EndLightPass, IlluminationBatchSetup;
 
@@ -375,25 +374,21 @@ namespace Squared.Illuminant {
         }
 
         private void _BeginLightPass (DeviceManager device, object userData) {
+            device.Device.Viewport = new Viewport(0, 0, Configuration.RenderSize.First, Configuration.RenderSize.Second);
+
             var vt = ViewTransform.CreateOrthographic(
-                _Lightmap.Width, _Lightmap.Height
+                Configuration.RenderSize.First, Configuration.RenderSize.Second
             );
             vt.Position = Materials.ViewportPosition;
             vt.Scale = Materials.ViewportScale;
 
             device.PushStates();
             Materials.PushViewTransform(ref vt);
-
-            _SavedScissor = device.Device.ScissorRectangle;
-            device.Device.ScissorRectangle = new Rectangle(
-                0, 0, Configuration.RenderSize.First, Configuration.RenderSize.Second
-            );
         }
 
         private void _EndLightPass (DeviceManager device, object userData) {
             Materials.PopViewTransform();
             device.PopStates();
-            device.Device.ScissorRectangle = _SavedScissor;
         }
 
         private void _IlluminationBatchSetup (DeviceManager device, object userData) {
@@ -548,13 +543,6 @@ namespace Squared.Illuminant {
                 // FIXME: Is this right?
                 y1 -= (offset / Environment.ZToYMultiplier);
             }
-
-            /*
-            x1 *= Configuration.RenderScale.X;
-            y1 *= Configuration.RenderScale.Y;
-            x2 *= Configuration.RenderScale.X;
-            y2 *= Configuration.RenderScale.Y;
-            */
 
             LightVertex vertex;
             vertex.LightCenter = lightSource.Position;
