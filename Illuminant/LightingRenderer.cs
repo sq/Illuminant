@@ -13,10 +13,11 @@ using Microsoft.Xna.Framework.Graphics.PackedVector;
 using Squared.Game;
 using Squared.Render;
 using Squared.Render.Convenience;
+using Squared.Render.Tracing;
 using Squared.Util;
 
 namespace Squared.Illuminant {
-    public sealed partial class LightingRenderer : IDisposable {
+    public sealed partial class LightingRenderer : IDisposable, INameableGraphicsObject {
         private struct TemplateUniforms {
             public Uniforms.Environment   Environment;
             public Uniforms.DistanceField DistanceField;
@@ -55,6 +56,7 @@ namespace Squared.Illuminant {
         private GBuffer _GBuffer;
 
         private byte[] _ReadbackBuffer;
+        private Rectangle _SavedScissor;
 
         private readonly Action<DeviceManager, object> BeginLightPass, EndLightPass, IlluminationBatchSetup;
 
@@ -68,6 +70,8 @@ namespace Squared.Illuminant {
         };
 
         private TemplateUniforms Uniforms = new TemplateUniforms();
+
+        private string _Name;
 
         public LightingRenderer (
             ContentManager content, RenderCoordinator coordinator, 
@@ -157,6 +161,26 @@ namespace Squared.Illuminant {
             Environment = environment;
 
             Coordinator.DeviceReset += Coordinator_DeviceReset;
+        }
+
+        public string Name {
+            get {
+                return _Name;
+            }
+            set {
+                _Name = value;
+                this.SetName(value);
+                NameSurfaces();
+            }
+        }
+
+        private void NameSurfaces () {
+            if (_Lightmap != null)
+                _Lightmap.SetName(ObjectNames.ToObjectID(this) + ":Lightmap");
+            if (_PreviousLightmap != null)
+                _PreviousLightmap.SetName(ObjectNames.ToObjectID(this) + ":PreviousLightmap");
+            if (_GBuffer != null)
+                _GBuffer.Texture.SetName(ObjectNames.ToObjectID(this) + ":GBuffer");
         }
 
         public GBuffer GBuffer {
@@ -359,11 +383,17 @@ namespace Squared.Illuminant {
 
             device.PushStates();
             Materials.PushViewTransform(ref vt);
+
+            _SavedScissor = device.Device.ScissorRectangle;
+            device.Device.ScissorRectangle = new Rectangle(
+                0, 0, Configuration.RenderSize.First, Configuration.RenderSize.Second
+            );
         }
 
         private void _EndLightPass (DeviceManager device, object userData) {
             Materials.PopViewTransform();
             device.PopStates();
+            device.Device.ScissorRectangle = _SavedScissor;
         }
 
         private void _IlluminationBatchSetup (DeviceManager device, object userData) {
@@ -421,8 +451,8 @@ namespace Squared.Illuminant {
                         Materials.PopViewTransform();
                     }
                 )) {
-                    if (Render.Tracing.RenderTrace.EnableTracing)
-                        Render.Tracing.RenderTrace.Marker(copyGroup, -1, "LightingRenderer {0:X4} : Generate HDR Buffer", this.GetHashCode());
+                    if (RenderTrace.EnableTracing)
+                        RenderTrace.Marker(copyGroup, -1, "LightingRenderer {0} : Generate HDR Buffer", this.ToObjectID());
 
                     var ir = new ImperativeRenderer(
                         copyGroup, Materials, 
@@ -435,8 +465,8 @@ namespace Squared.Illuminant {
                 }
 
                 using (var resultGroup = BatchGroup.ForRenderTarget(outerGroup, 1, _Lightmap, before: BeginLightPass, after: EndLightPass)) {
-                    if (Render.Tracing.RenderTrace.EnableTracing)
-                        Render.Tracing.RenderTrace.Marker(resultGroup, -9999, "LightingRenderer {0:X4} : Begin", this.GetHashCode());
+                    if (RenderTrace.EnableTracing)
+                        RenderTrace.Marker(resultGroup, -9999, "LightingRenderer {0} : Begin", this.ToObjectID());
 
                     int sphereVertexCount = 0;
                     int directionalVertexCount = 0;
@@ -472,8 +502,8 @@ namespace Squared.Illuminant {
                     var vertexCounts = new Pair<int>(sphereVertexCount, directionalVertexCount);
 
                     if (sphereVertexCount > 0) {
-                        if (Render.Tracing.RenderTrace.EnableTracing)
-                            Render.Tracing.RenderTrace.Marker(resultGroup, layerIndex++, "LightingRenderer {0:X4} : Render {1} sphere light source(s)", this.GetHashCode(), sphereVertexCount / 4);
+                        if (RenderTrace.EnableTracing)
+                            RenderTrace.Marker(resultGroup, layerIndex++, "LightingRenderer {0} : Render {1} sphere light source(s)", this.ToObjectID(), sphereVertexCount / 4);
 
                         using (var nb = NativeBatch.New(
                             resultGroup, layerIndex++, IlluminantMaterials.SphereLight, IlluminationBatchSetup, userData: vertexCounts
@@ -486,8 +516,8 @@ namespace Squared.Illuminant {
                     }
 
                     if (directionalVertexCount > 0) {
-                        if (Render.Tracing.RenderTrace.EnableTracing)
-                            Render.Tracing.RenderTrace.Marker(resultGroup, layerIndex++, "LightingRenderer {0:X4} : Render {1} directional light source(s)", this.GetHashCode(), directionalVertexCount / 4);
+                        if (RenderTrace.EnableTracing)
+                            RenderTrace.Marker(resultGroup, layerIndex++, "LightingRenderer {0} : Render {1} directional light source(s)", this.ToObjectID(), directionalVertexCount / 4);
 
                         using (var nb = NativeBatch.New(
                             resultGroup, layerIndex++, IlluminantMaterials.DirectionalLight, IlluminationBatchSetup, userData: vertexCounts
@@ -499,8 +529,8 @@ namespace Squared.Illuminant {
                             ));
                     }
 
-                    if (Render.Tracing.RenderTrace.EnableTracing)
-                        Render.Tracing.RenderTrace.Marker(resultGroup, 9999, "LightingRenderer {0:X4} : End", this.GetHashCode());
+                    if (RenderTrace.EnableTracing)
+                        RenderTrace.Marker(resultGroup, 9999, "LightingRenderer {0} : End", this.ToObjectID());
                 }
             }
         }
@@ -596,40 +626,8 @@ namespace Squared.Illuminant {
         /// </summary>
         /// <param name="container">The batch container to resolve lighting into.</param>
         /// <param name="layer">The layer to resolve lighting into.</param>
-        public void ResolveLighting (IBatchContainer container, int layer, HDRConfiguration? hdr = null) {
-            var drawCall = new BitmapDrawCall(
-                _Lightmap, Vector2.Zero
-            );
-            ResolveLighting(container, layer, drawCall, hdr);
-        }
-
-        /// <summary>
-        /// Resolves the current lightmap into the specified batch container on the specified layer.
-        /// The provided draw call determines the position and size of the resolved lightmap.
-        /// If the provided draw call's texture is not LightingRenderer.Lightmap, it will be modulated by the resolved lightmap.
-        /// </summary>
-        /// <param name="container">The batch container to resolve lighting into.</param>
-        /// <param name="layer">The layer to resolve lighting into.</param>
-        /// <param name="drawCall">A draw call used as a template to resolve the lighting.</param>
-        public void ResolveLighting (IBatchContainer container, int layer, BitmapDrawCall drawCall, HDRConfiguration? hdr = null) {
-            var ir = new ImperativeRenderer(
-                container, Materials, layer, worldSpace: false
-            );
-            ResolveLighting(ref ir, drawCall, hdr);
-        }
-
-        /// <summary>
-        /// Resolves the current lightmap via the provided renderer.
-        /// The provided draw call determines the position and size of the resolved lightmap.
-        /// If the provided draw call's texture is not LightingRenderer.Lightmap, it will be modulated by the resolved lightmap.
-        /// </summary>
-        /// <param name="renderer">The renderer used to resolve the lighting.</param>
-        /// <param name="drawCall">A draw call used as a template to resolve the lighting.</param>
-        public void ResolveLighting (ref ImperativeRenderer ir, BitmapDrawCall drawCall, HDRConfiguration? hdr = null) {
-            if (drawCall.Texture != _Lightmap)
-                throw new NotImplementedException("Non-direct resolve not yet implemented");
-
-            Render.Material m;
+        public void ResolveLighting (IBatchContainer container, int layer, float? width = null, float? height = null, HDRConfiguration? hdr = null) {
+            Material m;
             if (hdr.HasValue && hdr.Value.Mode == HDRMode.GammaCompress)
                 m = IlluminantMaterials.GammaCompressedLightingResolve;
             else if (hdr.HasValue && hdr.Value.Mode == HDRMode.ToneMap)
@@ -637,6 +635,8 @@ namespace Squared.Illuminant {
             else
                 m = IlluminantMaterials.LightingResolve;
 
+            // HACK: This is a little gross
+            var ir = new ImperativeRenderer(container, Materials, layer);
             var sg = ir.MakeSubgroup(before: (dm, _) => {
                 // FIXME: RenderScale?
                 m.Effect.Parameters["GBufferTexelSize"].SetValue(GBuffer.InverseSize);
@@ -665,7 +665,19 @@ namespace Squared.Illuminant {
                 }
             });
 
-            sg.Draw(drawCall, material: m);
+            var bounds = _Lightmap.BoundsFromRectangle(
+                new Rectangle(0, 0, Configuration.RenderSize.First, Configuration.RenderSize.Second)
+            );
+
+            var dc = new BitmapDrawCall(
+                _Lightmap, Vector2.Zero, bounds                
+            );
+            dc.Scale = new Vector2(
+                width.GetValueOrDefault(Configuration.RenderSize.First) / Configuration.RenderSize.First,
+                height.GetValueOrDefault(Configuration.RenderSize.Second) / Configuration.RenderSize.Second
+            );
+
+            sg.Draw(dc, material: m);
         }
 
         private Vector4 AddW (Vector3 v3) {
@@ -908,23 +920,23 @@ namespace Squared.Illuminant {
             ref int layerIndex, IBatchContainer resultGroup,
             bool enableHeightVolumes = true, bool enableBillboards = true
         ) {
-            var renderWidth = (int)(Configuration.RenderSize.First / Configuration.RenderScale.X);
-            var renderHeight = (int)(Configuration.RenderSize.Second / Configuration.RenderScale.Y);
+            var renderWidth = (int)(Configuration.MaximumRenderSize.First / Configuration.RenderScale.X);
+            var renderHeight = (int)(Configuration.MaximumRenderSize.Second / Configuration.RenderScale.Y);
 
             using (var group = BatchGroup.ForRenderTarget(
                 resultGroup, layerIndex, GBuffer.Texture,
                 // FIXME: Optimize this
                 (dm, _) => {
                     Materials.PushViewTransform(ViewTransform.CreateOrthographic(
-                        renderWidth, renderHeight                       
+                        renderWidth, renderHeight
                     ));
                 },
                 (dm, _) => {
                     Materials.PopViewTransform();
                 }
             )) {
-                if (Render.Tracing.RenderTrace.EnableTracing)
-                    Render.Tracing.RenderTrace.Marker(group, -1, "LightingRenderer {0:X4} : Begin G-Buffer", this.GetHashCode());
+                if (RenderTrace.EnableTracing)
+                    RenderTrace.Marker(group, -1, "LightingRenderer {0} : Begin G-Buffer", this.ToObjectID());
 
                 ClearBatch.AddNew(
                     group, 0, Materials.Clear, 
@@ -974,13 +986,13 @@ namespace Squared.Illuminant {
                     }
 
                     if (Configuration.TwoPointFiveD) {
-                        if (Render.Tracing.RenderTrace.EnableTracing) {
+                        if (RenderTrace.EnableTracing) {
                             if (enableHeightVolumes) {
-                                Render.Tracing.RenderTrace.Marker(group, 2, "LightingRenderer {0:X4} : G-Buffer Top Faces", this.GetHashCode());
-                                Render.Tracing.RenderTrace.Marker(group, 4, "LightingRenderer {0:X4} : G-Buffer Front Faces", this.GetHashCode());
+                                RenderTrace.Marker(group, 2, "LightingRenderer {0} : G-Buffer Top Faces", this.ToObjectID());
+                                RenderTrace.Marker(group, 4, "LightingRenderer {0} : G-Buffer Front Faces", this.ToObjectID());
                             }
 
-                            Render.Tracing.RenderTrace.Marker(group, 6, "LightingRenderer {0:X4} : G-Buffer Billboards", this.GetHashCode());
+                            RenderTrace.Marker(group, 6, "LightingRenderer {0} : G-Buffer Billboards", this.ToObjectID());
                         }
 
                         if (enableHeightVolumes)
@@ -1039,8 +1051,8 @@ namespace Squared.Illuminant {
 
                 // TODO: Update the heightmap using any SDF light obstructions (maybe only if they're flagged?)
 
-                if (Render.Tracing.RenderTrace.EnableTracing)
-                    Render.Tracing.RenderTrace.Marker(group, 9999, "LightingRenderer {0:X4} : End G-Buffer", this.GetHashCode());
+                if (RenderTrace.EnableTracing)
+                    RenderTrace.Marker(group, 9999, "LightingRenderer {0} : End G-Buffer", this.ToObjectID());
             }
         }
 
@@ -1229,8 +1241,8 @@ namespace Squared.Illuminant {
             using (var group = BatchGroup.New(rtGroup, layer++,
                 beginSliceBatch, null
             )) {
-                if (Render.Tracing.RenderTrace.EnableTracing)
-                    Render.Tracing.RenderTrace.Marker(group, -2, "LightingRenderer {0:X4} : Begin Distance Field Slices [{1}-{2}]", this.GetHashCode(), firstVirtualSliceIndex, lastVirtualSliceIndex);
+                if (RenderTrace.EnableTracing)
+                    RenderTrace.Marker(group, -2, "LightingRenderer {0} : Begin Distance Field Slices [{1}-{2}]", this.ToObjectID(), firstVirtualSliceIndex, lastVirtualSliceIndex);
 
                 ClearDistanceFieldSlice(
                     QuadIndices, group, -1
@@ -1245,8 +1257,8 @@ namespace Squared.Illuminant {
 
                 DistanceField.ValidSliceCount = Math.Max(DistanceField.ValidSliceCount, lastVirtualSliceIndex + 1);
 
-                if (Render.Tracing.RenderTrace.EnableTracing)
-                    Render.Tracing.RenderTrace.Marker(group, 9999, "LightingRenderer {0:X4} : End Distance Field Slices [{1}-{2}]", this.GetHashCode(), firstVirtualSliceIndex, lastVirtualSliceIndex);
+                if (RenderTrace.EnableTracing)
+                    RenderTrace.Marker(group, 9999, "LightingRenderer {0} : End Distance Field Slices [{1}-{2}]", this.ToObjectID(), firstVirtualSliceIndex, lastVirtualSliceIndex);
             }
         }
 
@@ -1412,8 +1424,8 @@ namespace Squared.Illuminant {
                         }
                     };
 
-                    if (Render.Tracing.RenderTrace.EnableTracing)
-                        Render.Tracing.RenderTrace.Marker(group, (i * 2) + 3, "LightingRenderer {0:X4} : Render {1}(s)", GetHashCode(), (LightObstructionType)i);
+                    if (RenderTrace.EnableTracing)
+                        RenderTrace.Marker(group, (i * 2) + 3, "LightingRenderer {0} : Render {1}(s)", this.ToObjectID(), (LightObstructionType)i);
                     
                     batches[i] = NativeBatch.New(
                         group, (i * 2) + 4, m, setup

@@ -66,6 +66,15 @@ namespace Squared.Illuminant {
             Invalidate();
         }
 
+        public string Name {
+            get {
+                return Render.Tracing.ObjectNames.ToObjectID(Texture);
+            }
+            set {
+                Render.Tracing.ObjectNames.SetName(Texture, value);
+            }
+        }
+
         public void Save (string output) {
             using (var stream = File.OpenWrite(output))
                 Save(stream);

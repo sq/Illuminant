@@ -14,7 +14,7 @@ namespace Squared.Illuminant {
             {
                 var dBegin = new[] {
                     MaterialUtil.MakeDelegate(
-                        rasterizerState: RasterizerState.CullNone,
+                        rasterizerState: RenderStates.ScissorOnly,
                         depthStencilState: SphereLightDepthStencilState
                     )
                 };
