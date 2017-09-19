@@ -19,10 +19,12 @@ void SphereLightVertexShader(
     float  radius = lightProperties.x + lightProperties.y + 1;
     float3 radius3 = float3(radius, radius, 0);
     float3 tl = lightCenter - radius3, br = lightCenter + radius3;
+    if (Environment.ZToYMultiplier > 0)
+        tl.y -= min(radius, DistanceField.Extent.z) / Environment.ZToYMultiplier;
     worldPosition = lerp(tl, br, float3(cornerWeight, 0));
 
-    float3 screenPosition = (worldPosition - float3(Viewport.Position.xy, 0)) 
-        * float3(Viewport.Scale, 1);
+    float3 screenPosition = (worldPosition - float3(Viewport.Position.xy, 0));
+    screenPosition.xy *= Viewport.Scale * Environment.RenderScale;
     float4 transformedPosition = mul(mul(float4(screenPosition.xyz, 1), Viewport.ModelView), Viewport.Projection);
     result = float4(transformedPosition.xy, 0, transformedPosition.w);
 }

@@ -70,7 +70,7 @@ namespace TestGame.Scenes {
                 new RendererConfiguration(
                     1024 / LightmapScaleRatio, 1024 / LightmapScaleRatio, true
                 ) {
-                    RenderScale = new Vector2(1),
+                    RenderScale = new Vector2(0.5f),
                     DistanceFieldMinStepSize = 1f,
                     DistanceFieldLongStepFactor = 0.5f,
                     DistanceFieldOcclusionToOpacityPower = 0.7f,
@@ -127,7 +127,7 @@ namespace TestGame.Scenes {
         public override void Draw (Squared.Render.Frame frame) {
             CreateRenderTargets();
 
-            Renderer.InvalidateFields();
+            // Renderer.InvalidateFields();
 
             Renderer.UpdateFields(frame, -2);
 
