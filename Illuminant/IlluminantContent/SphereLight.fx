@@ -21,11 +21,8 @@ void SphereLightVertexShader(
     float3 tl = lightCenter - radius3, br = lightCenter + radius3;
     worldPosition = lerp(tl, br, float3(cornerWeight, 0));
 
-    float3 screenPosition = worldPosition - float3(Viewport.Position.xy, 0); // FIXME
-    /*
-    float3 localPosition = ((position - float3(Viewport.Position.xy, 0)) * float3(Viewport.Scale, 1));
-    localPosition.xy *= Environment.RenderScale;
-    */
+    float3 screenPosition = (worldPosition - float3(Viewport.Position.xy, 0)) 
+        * float3(Viewport.Scale, 1);
     float4 transformedPosition = mul(mul(float4(screenPosition.xyz, 1), Viewport.ModelView), Viewport.Projection);
     result = float4(transformedPosition.xy, 0, transformedPosition.w);
 }
@@ -101,8 +98,7 @@ void SphereLightPixelShader(
         worldPosition, lightCenter, lightProperties, moreLightProperties, vpos
     );
 
-    float4 lightColorActual = float4(color.rgb * color.a * opacity, 1);
-    result = lightColorActual;
+    result = float4(color.rgb * color.a * opacity, 1);
 }
 
 technique SphereLight {

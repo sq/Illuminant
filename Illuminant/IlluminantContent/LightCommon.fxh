@@ -45,13 +45,10 @@ void sampleGBuffer(
     screenPositionPx /= Environment.RenderScale;
 
     worldPosition = float3(
-        (screenPositionPx.x + Viewport.Position.x), 
-        (screenPositionPx.y + Viewport.Position.y) + relativeY, 
+        screenPositionPx.xy / Viewport.Scale.xy + Viewport.Position.xy,
         worldZ
     );
-
-    // FIXME: Viewport scale
-    worldPosition.xy /= Viewport.Scale.xy;
+    worldPosition.y += relativeY;
 
     // HACK: Reconstruct the y normal from the z normal
     float normalZ = (sample.y - 0.5) * 2;
