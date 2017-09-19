@@ -18,6 +18,21 @@ using Squared.Util;
 
 namespace Squared.Illuminant {
     public sealed partial class LightingRenderer : IDisposable, INameableGraphicsObject {
+        private class LightObstructionTypeComparer : IComparer<LightObstruction> {
+            public static readonly LightObstructionTypeComparer Instance = 
+                new LightObstructionTypeComparer();
+
+            public int Compare (LightObstruction lhs, LightObstruction rhs) {
+                if (rhs == null) {
+                    return (lhs == null) ? 0 : -1;
+                } else if (lhs == null) {
+                    return 0;
+                }
+
+                return ((int)lhs.Type) - ((int)rhs.Type);
+            }
+        }
+
         private struct TemplateUniforms {
             public Uniforms.Environment   Environment;
             public Uniforms.DistanceField DistanceField;
@@ -1413,16 +1428,9 @@ namespace Squared.Illuminant {
                 //  then issue a single draw for each
                 using (var buffer = BufferPool<LightObstruction>.Allocate(items.Count))
                 lock (DistanceFunctionVertices) {
+                    Array.Clear(buffer.Data, 0, buffer.Data.Length);
                     items.CopyTo(buffer.Data);
-                    Array.Sort(buffer.Data, (lhs, rhs) => {
-                        if (rhs == null) {
-                            return (lhs == null) ? 0 : -1;
-                        } else if (lhs == null) {
-                            return 0;
-                        }
-
-                        return ((int)lhs.Type) - ((int)rhs.Type);
-                    });
+                    Array.Sort(buffer.Data, 0, items.Count, LightObstructionTypeComparer.Instance);
 
                     DidUploadDistanceFieldBuffer = false;
 
