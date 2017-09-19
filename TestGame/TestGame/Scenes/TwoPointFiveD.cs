@@ -186,7 +186,7 @@ namespace TestGame.Scenes {
                 ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black);
 
                 Renderer.RenderLighting(bg, 1);
-                Renderer.ResolveLighting(bg, 2, new BitmapDrawCall(Renderer.Lightmap, Vector2.Zero, LightmapScaleRatio));
+                Renderer.ResolveLighting(bg, 2, Width, Height);
             };
 
             using (var group = BatchGroup.New(frame, 0)) {

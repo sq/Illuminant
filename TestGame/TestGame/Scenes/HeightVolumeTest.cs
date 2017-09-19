@@ -29,7 +29,7 @@ namespace TestGame.Scenes {
         public const int RotatingLightCount = 1024;
 
         public const int MultisampleCount = 0;
-        public const int LightmapScaleRatio = 3;
+        public const int LightmapScaleRatio = 2;
 
         float LightZ = 0;
 
@@ -164,7 +164,7 @@ namespace TestGame.Scenes {
                 ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black);
 
                 Renderer.RenderLighting(bg, 1, intensityScale: 1);
-                Renderer.ResolveLighting(bg, 2, new BitmapDrawCall(Renderer.Lightmap, Vector2.Zero, LightmapScaleRatio));
+                Renderer.ResolveLighting(bg, 2, Width, Height);
             };
 
             ClearBatch.AddNew(frame, 0, Game.Materials.Clear, clearColor: Color.Black);

@@ -393,7 +393,7 @@ namespace TestGame.Scenes {
 
                 Renderer.ResolveLighting(
                     bg, 1, 
-                    new BitmapDrawCall(Renderer.Lightmap, Vector2.Zero, new Vector2(BackgroundScaleRatio, BackgroundScaleRatio)),
+                    Width, Height,
                     hdrConfiguration
                 );
             };
@@ -413,7 +413,7 @@ namespace TestGame.Scenes {
 
                 ForegroundRenderer.ResolveLighting(
                     fg, 1, 
-                    new BitmapDrawCall(ForegroundRenderer.Lightmap, Vector2.Zero, new Vector2(ForegroundScaleRatio, ForegroundScaleRatio)),
+                    Width, Height,
                     hdrConfiguration
                 );
             };

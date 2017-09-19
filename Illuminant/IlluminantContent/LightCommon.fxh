@@ -35,13 +35,14 @@ void sampleGBuffer(
     out float3 normal
 ) {
     // FIXME: Should we be offsetting distance field samples too?
-    screenPositionPx /= Environment.RenderScale;
     float2 uv     = (screenPositionPx + 0.5) * GBufferTexelSize;
 
     float4 sample = tex2Dlod(GBufferSampler, float4(uv, 0, 0));
 
     float relativeY = sample.z * 512;
     float worldZ    = sample.w * 512;
+
+    screenPositionPx /= Environment.RenderScale;
 
     worldPosition = float3(
         (screenPositionPx.x + Viewport.Position.x), 
