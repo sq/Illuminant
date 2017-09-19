@@ -648,7 +648,7 @@ namespace Squared.Illuminant {
             dc.Scale = new Vector2(
                 width.GetValueOrDefault(Configuration.RenderSize.First) / Configuration.RenderSize.First,
                 height.GetValueOrDefault(Configuration.RenderSize.Second) / Configuration.RenderSize.Second
-            );
+            ) / Configuration.RenderScale;
 
             sg.Draw(dc, material: m);
         }
