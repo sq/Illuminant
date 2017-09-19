@@ -10,6 +10,7 @@
 struct EnvironmentSettings {
     float  GroundZ;
     float  ZToYMultiplier;
+    float  InvZToYMultiplier;
     float2 RenderScale;
 };
 

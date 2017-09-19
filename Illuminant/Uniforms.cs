@@ -11,6 +11,7 @@ namespace Squared.Illuminant.Uniforms {
     public struct Environment {
         public float   GroundZ;
         public float   ZToYMultiplier;
+        public float   InvZToYMultiplier;
         public Vector2 RenderScale;
     }
 

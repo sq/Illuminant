@@ -356,9 +356,13 @@ namespace Squared.Illuminant {
             Uniforms = new TemplateUniforms {
                 Environment = new Uniforms.Environment {
                     GroundZ = Environment.GroundZ,
-                    ZToYMultiplier = 
+                    ZToYMultiplier =
                         Configuration.TwoPointFiveD
                             ? Environment.ZToYMultiplier
+                            : 0.0f,
+                    InvZToYMultiplier =
+                        Configuration.TwoPointFiveD
+                            ? 1f / Environment.ZToYMultiplier
                             : 0.0f,
                     RenderScale = Configuration.RenderScale
                 },

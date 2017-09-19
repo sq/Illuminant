@@ -6,6 +6,7 @@
 struct EnvironmentSettings {
     float  GroundZ;
     float  ZToYMultiplier;
+    float  InvZToYMultiplier;
     float2 RenderScale;
 };
 
@@ -82,7 +83,7 @@ void GDataBillboardPixelShader(
     clip(alpha - discardThreshold);
 
     float yOffset = data.b * dataScale;
-    float effectiveZ = worldPosition.z + (yOffset / Environment.ZToYMultiplier);
+    float effectiveZ = worldPosition.z + (yOffset * Environment.InvZToYMultiplier);
 
     // HACK: We drop the world x axis and the normal y axis,
     //  and reconstruct those two values when sampling the g-buffer
