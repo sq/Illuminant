@@ -215,7 +215,7 @@ namespace Squared.Illuminant {
         }
 
         private void Coordinator_DeviceReset (object sender, EventArgs e) {
-            InvalidateFields();
+            FillIndexBuffer();
         }
 
         private void FillIndexBuffer () {

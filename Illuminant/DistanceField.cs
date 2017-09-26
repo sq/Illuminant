@@ -72,7 +72,10 @@ namespace Squared.Illuminant {
             if (IsDisposed)
                 return;
 
-            Invalidate();
+            ValidSliceCount = 0;
+            InvalidSlices.Clear();
+            for (var i = 0; i < SliceCount; i++)
+                InvalidSlices.Add(i);
         }
 
         public string Name {
