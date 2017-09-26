@@ -33,9 +33,15 @@ namespace Squared.Illuminant {
                     highQuality
                         ? SurfaceFormat.Vector4
                         : SurfaceFormat.HalfVector4,
-                    DepthFormat.Depth24, 0, RenderTargetUsage.PlatformContents
+                    DepthFormat.Depth24, 0, RenderTargetUsage.PreserveContents
                 );
 
+            coordinator.DeviceReset += Coordinator_DeviceReset;
+
+            Invalidate();
+        }
+
+        private void Coordinator_DeviceReset (object sender, EventArgs e) {
             Invalidate();
         }
 
@@ -46,6 +52,8 @@ namespace Squared.Illuminant {
         public void Dispose () {
             if (IsDisposed)
                 return;
+
+            // TODO: Remove event from coordinator
 
             IsDisposed = true;
             Texture.Dispose();

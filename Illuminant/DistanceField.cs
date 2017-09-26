@@ -60,8 +60,17 @@ namespace Squared.Illuminant {
                     SliceHeight * RowCount,
                     false, SurfaceFormat.Rgba64,
                     DepthFormat.None, 0, 
-                    RenderTargetUsage.PlatformContents
+                    RenderTargetUsage.PreserveContents
                 );
+
+            coordinator.DeviceReset += Coordinator_DeviceReset;
+
+            Invalidate();
+        }
+
+        private void Coordinator_DeviceReset (object sender, EventArgs e) {
+            if (IsDisposed)
+                return;
 
             Invalidate();
         }
@@ -125,6 +134,8 @@ namespace Squared.Illuminant {
         public void Dispose () {
             if (IsDisposed)
                 return;
+
+            // TODO: Remove event listener from rendercoordinator
 
             IsDisposed = true;
             Texture.Dispose();
