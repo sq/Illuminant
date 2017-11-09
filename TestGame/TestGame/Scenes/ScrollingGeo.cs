@@ -14,7 +14,7 @@ using Squared.Render.Convenience;
 using Squared.Util;
 
 namespace TestGame.Scenes {
-    public class Township : Scene {
+    public class ScrollingGeo : Scene {
         DistanceField DistanceField;
         LightingEnvironment Environment;
         LightingRenderer Renderer;
@@ -26,7 +26,7 @@ namespace TestGame.Scenes {
         float LightZ;
 
         const int MultisampleCount = 0;
-        const int LightmapScaleRatio = 2;
+        const int LightmapScaleRatio = 1;
         const int MaxStepCount = 128;
 
         bool ShowGBuffer       = false;
@@ -37,7 +37,7 @@ namespace TestGame.Scenes {
         float CameraZoom = 1.0f;
         int CameraZoomIndex = 100;
 
-        public Township (TestGame game, int width, int height)
+        public ScrollingGeo (TestGame game, int width, int height)
             : base(game, 1024, 1024) {
         }
 

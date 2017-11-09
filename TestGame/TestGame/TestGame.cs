@@ -40,8 +40,8 @@ namespace TestGame {
             Graphics.PreferredBackBufferWidth = 1920;
             Graphics.PreferredBackBufferHeight = 1080;
             Graphics.SynchronizeWithVerticalRetrace = true;
-            Graphics.IsFullScreen = false;
-            // Graphics.SynchronizeWithVerticalRetrace = false;
+            // Graphics.IsFullScreen = true;
+            Graphics.SynchronizeWithVerticalRetrace = false;
             Graphics.PreferMultiSampling = false;
 
             Content.RootDirectory = "Content";
@@ -60,7 +60,7 @@ namespace TestGame {
                 new TwoPointFiveDTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new SC3(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new DistanceFieldEditor(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new Township(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
+                new ScrollingGeo(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
             };
         }
 

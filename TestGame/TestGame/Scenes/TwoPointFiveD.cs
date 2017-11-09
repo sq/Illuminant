@@ -118,7 +118,7 @@ namespace TestGame.Scenes {
                     DistanceFieldLongStepFactor = 0.5f,
                     DistanceFieldOcclusionToOpacityPower = 0.7f,
                     DistanceFieldMaxConeRadius = 24,
-                    DistanceFieldUpdateRate = 64,
+                    DistanceFieldUpdateRate = 6,
                 }
             ) {
                 DistanceField = DistanceField
@@ -170,6 +170,7 @@ namespace TestGame.Scenes {
 
             Renderer.Configuration.TwoPointFiveD = TwoPointFiveD;
 
+            Renderer.InvalidateFields();
             Renderer.UpdateFields(frame, -2);
 
             using (var bg = BatchGroup.ForRenderTarget(

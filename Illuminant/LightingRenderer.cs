@@ -44,10 +44,13 @@ namespace Squared.Illuminant {
 
         const int        DistanceLimit = 520;
         
-        public  readonly RenderCoordinator Coordinator;
+        public  readonly RenderCoordinator   Coordinator;
+        public  readonly ContentManager      Content;
 
-        public  readonly DefaultMaterialSet Materials;
-        public  readonly IlluminantMaterials IlluminantMaterials;
+        public  readonly DefaultMaterialSet  Materials;
+        public           IlluminantMaterials IlluminantMaterials { get; private set; }
+
+        private readonly List<Material>      LoadedMaterials = new List<Material>();
 
         public  readonly DepthStencilState TopFaceDepthStencilState, FrontFaceDepthStencilState;
         public  readonly DepthStencilState DistanceInteriorStencilState, DistanceExteriorStencilState;
@@ -95,6 +98,7 @@ namespace Squared.Illuminant {
             Materials = materials;
             Coordinator = coordinator;
             Configuration = configuration;
+            Content = content;
 
             IlluminantMaterials = new IlluminantMaterials(materials);
 
@@ -170,7 +174,7 @@ namespace Squared.Illuminant {
                 DepthBufferEnable = false
             };
 
-            LoadMaterials(materials, content);
+            LoadMaterials(content);
 
             Environment = environment;
 
@@ -245,6 +249,11 @@ namespace Squared.Illuminant {
 
             foreach (var kvp in HeightVolumeVertexData)
                 Coordinator.DisposeResource(kvp.Value);
+
+            /*
+            foreach (var m in LoadedMaterials)
+                Coordinator.DisposeResource(m);
+            */
         }
 
         private const int LuminanceScaleFactor = 8192;
@@ -1246,7 +1255,7 @@ namespace Squared.Illuminant {
                     RenderTrace.Marker(group, -2, "LightingRenderer {0} : Begin Distance Field Slices [{1}-{2}]", this.ToObjectID(), firstVirtualSliceIndex, lastVirtualSliceIndex);
 
                 ClearDistanceFieldSlice(
-                    QuadIndices, group, -1
+                    QuadIndices, group, -1, firstVirtualSliceIndex
                 );
 
                 RenderDistanceFieldDistanceFunctions(firstVirtualSliceIndex, group);
@@ -1359,13 +1368,16 @@ namespace Squared.Illuminant {
         }
 
         private void ClearDistanceFieldSlice (
-            short[] indices, IBatchContainer container, int layer
+            short[] indices, IBatchContainer container, int layer, int firstSliceIndex
         ) {
+            // var color = new Color((firstSliceIndex * 16) % 255, 0, 0, 0);
+            var color = Color.Transparent;
+
             var verts = new VertexPositionColor[] {
-                new VertexPositionColor(new Vector3(0, 0, 0), Color.Transparent),
-                new VertexPositionColor(new Vector3(DistanceField.VirtualWidth, 0, 0), Color.Transparent),
-                new VertexPositionColor(new Vector3(DistanceField.VirtualWidth, DistanceField.VirtualHeight, 0), Color.Transparent),
-                new VertexPositionColor(new Vector3(0, DistanceField.VirtualHeight, 0), Color.Transparent)
+                new VertexPositionColor(new Vector3(0, 0, 0), color),
+                new VertexPositionColor(new Vector3(DistanceField.VirtualWidth, 0, 0), color),
+                new VertexPositionColor(new Vector3(DistanceField.VirtualWidth, DistanceField.VirtualHeight, 0), color),
+                new VertexPositionColor(new Vector3(0, DistanceField.VirtualHeight, 0), color)
             };
 
             using (var batch = PrimitiveBatch<VertexPositionColor>.New(

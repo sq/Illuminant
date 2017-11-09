@@ -10,7 +10,12 @@ using Squared.Render.Convenience;
 
 namespace Squared.Illuminant {
     public sealed partial class LightingRenderer : IDisposable {
-        private void LoadMaterials (DefaultMaterialSet materials, ContentManager content) {
+        private void DefineMaterial (Material m) {
+            Materials.Add(m);
+            LoadedMaterials.Add(m);
+        }
+
+        private void LoadMaterials (ContentManager content) {
             {
                 var dBegin = new[] {
                     MaterialUtil.MakeDelegate(
@@ -20,30 +25,30 @@ namespace Squared.Illuminant {
                 };
                 Action<DeviceManager>[] dEnd = null;
 
-                materials.Add(IlluminantMaterials.SphereLight = new Material(
+                DefineMaterial(IlluminantMaterials.SphereLight = new Material(
                     content.Load<Effect>("SphereLight"), "SphereLight", dBegin, dEnd
                 ));
 
-                materials.Add(IlluminantMaterials.DirectionalLight = new Material(
+                DefineMaterial(IlluminantMaterials.DirectionalLight = new Material(
                     content.Load<Effect>("DirectionalLight"), "DirectionalLight", dBegin, dEnd
                 ));
 
-                materials.Add(IlluminantMaterials.DistanceFieldExterior = 
+                DefineMaterial(IlluminantMaterials.DistanceFieldExterior = 
                     new Material(
                         content.Load<Effect>("DistanceField"), "Exterior",
                         new[] { MaterialUtil.MakeDelegate(RenderStates.MaxBlendValue) }
                     )
                 );
 
-                materials.Add(IlluminantMaterials.DistanceFieldInterior = 
+                DefineMaterial(IlluminantMaterials.DistanceFieldInterior = 
                     new Material(
                         content.Load<Effect>("DistanceField"), "Interior", 
                         new[] { MaterialUtil.MakeDelegate(RenderStates.MaxBlendValue) }
                     )
                 );
 
-                materials.Add(IlluminantMaterials.ClearDistanceFieldSlice =
-                    materials.GetGeometryMaterial(true, blendState: BlendState.Opaque).Clone()
+                DefineMaterial(IlluminantMaterials.ClearDistanceFieldSlice =
+                    Materials.GetGeometryMaterial(true, blendState: BlendState.Opaque).Clone()
                 );
 
                 IlluminantMaterials.DistanceFunctionTypes = new Render.Material[(int)LightObstructionType.MAX + 1];
@@ -53,7 +58,7 @@ namespace Squared.Illuminant {
                     if (name == "MAX")
                         continue;
 
-                    materials.Add(
+                    DefineMaterial(
                         IlluminantMaterials.DistanceFunctionTypes[(int)i] = 
                         new Material(
                             content.Load<Effect>("DistanceFunction"), name,
@@ -62,61 +67,61 @@ namespace Squared.Illuminant {
                     );
                 }
 
-                materials.Add(IlluminantMaterials.HeightVolume = 
+                DefineMaterial(IlluminantMaterials.HeightVolume = 
                     new Squared.Render.Material(content.Load<Effect>("GBuffer"), "HeightVolume"));
 
-                materials.Add(IlluminantMaterials.HeightVolumeFace = 
+                DefineMaterial(IlluminantMaterials.HeightVolumeFace = 
                     new Squared.Render.Material(content.Load<Effect>("GBuffer"), "HeightVolumeFace"));
 
-                materials.Add(IlluminantMaterials.MaskBillboard = 
+                DefineMaterial(IlluminantMaterials.MaskBillboard = 
                     new Squared.Render.Material(content.Load<Effect>("GBufferBitmap"), "MaskBillboard"));
 
-                materials.Add(IlluminantMaterials.GDataBillboard = 
+                DefineMaterial(IlluminantMaterials.GDataBillboard = 
                     new Squared.Render.Material(content.Load<Effect>("GBufferBitmap"), "GDataBillboard"));
 
-                materials.Add(IlluminantMaterials.LightingResolve = 
+                DefineMaterial(IlluminantMaterials.LightingResolve = 
                     new Squared.Render.Material(content.Load<Effect>("Resolve"), "LightingResolve"));
 
-                materials.Add(IlluminantMaterials.GammaCompressedLightingResolve = 
+                DefineMaterial(IlluminantMaterials.GammaCompressedLightingResolve = 
                     new Squared.Render.Material(content.Load<Effect>("Resolve"), "GammaCompressedLightingResolve"));
 
-                materials.Add(IlluminantMaterials.ToneMappedLightingResolve = 
+                DefineMaterial(IlluminantMaterials.ToneMappedLightingResolve = 
                     new Squared.Render.Material(content.Load<Effect>("Resolve"), "ToneMappedLightingResolve"));
 
-                materials.Add(IlluminantMaterials.ObjectSurfaces = 
+                DefineMaterial(IlluminantMaterials.ObjectSurfaces = 
                     new Squared.Render.Material(content.Load<Effect>("VisualizeDistanceField"), "ObjectSurfaces"));
 
-                materials.Add(IlluminantMaterials.ObjectOutlines = 
+                DefineMaterial(IlluminantMaterials.ObjectOutlines = 
                     new Squared.Render.Material(content.Load<Effect>("VisualizeDistanceField"), "ObjectOutlines"));
 
-                materials.Add(IlluminantMaterials.FunctionSurface = 
+                DefineMaterial(IlluminantMaterials.FunctionSurface = 
                     new Squared.Render.Material(content.Load<Effect>("VisualizeDistanceFunction"), "FunctionSurface"));
 
-                materials.Add(IlluminantMaterials.FunctionOutline = 
+                DefineMaterial(IlluminantMaterials.FunctionOutline = 
                     new Squared.Render.Material(content.Load<Effect>("VisualizeDistanceFunction"), "FunctionOutline"));
             }
 
-            materials.Add(IlluminantMaterials.ScreenSpaceGammaCompressedBitmap = new Squared.Render.Material(
+            DefineMaterial(IlluminantMaterials.ScreenSpaceGammaCompressedBitmap = new Squared.Render.Material(
                 content.Load<Effect>("HDRBitmap"), "ScreenSpaceGammaCompressedBitmap"
             ));
 
-            materials.Add(IlluminantMaterials.WorldSpaceGammaCompressedBitmap = new Squared.Render.Material(
+            DefineMaterial(IlluminantMaterials.WorldSpaceGammaCompressedBitmap = new Squared.Render.Material(
                 content.Load<Effect>("HDRBitmap"), "WorldSpaceGammaCompressedBitmap"
             ));
 
-            materials.Add(IlluminantMaterials.ScreenSpaceToneMappedBitmap = new Squared.Render.Material(
+            DefineMaterial(IlluminantMaterials.ScreenSpaceToneMappedBitmap = new Squared.Render.Material(
                 content.Load<Effect>("HDRBitmap"), "ScreenSpaceToneMappedBitmap"
             ));
 
-            materials.Add(IlluminantMaterials.WorldSpaceToneMappedBitmap = new Squared.Render.Material(
+            DefineMaterial(IlluminantMaterials.WorldSpaceToneMappedBitmap = new Squared.Render.Material(
                 content.Load<Effect>("HDRBitmap"), "WorldSpaceToneMappedBitmap"
             ));
 
-            materials.PreallocateBindings();
+            Materials.PreallocateBindings();
 
-            materials.ForEachMaterial<object>((m, _) => {
-                materials.GetUniformBinding<Uniforms.Environment>(m, "Environment");
-                materials.GetUniformBinding<Uniforms.DistanceField>(m, "DistanceField");
+            Materials.ForEachMaterial<object>((m, _) => {
+                Materials.GetUniformBinding<Uniforms.Environment>(m, "Environment");
+                Materials.GetUniformBinding<Uniforms.DistanceField>(m, "DistanceField");
             }, null);
         }
     }
