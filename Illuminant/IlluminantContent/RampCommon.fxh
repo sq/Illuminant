@@ -1,8 +1,8 @@
 Texture2D RampTexture        : register(t3);
 sampler   RampTextureSampler : register(s3) {
-    Texture = (RampTexture);
-    AddressU = CLAMP;
-    AddressV = CLAMP;
+    Texture   = (RampTexture);
+    AddressU  = CLAMP;
+    AddressV  = CLAMP;
     MipFilter = POINT;
     MinFilter = LINEAR;
     MagFilter = LINEAR;
