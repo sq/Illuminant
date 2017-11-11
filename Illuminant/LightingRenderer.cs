@@ -28,7 +28,6 @@ namespace Squared.Illuminant {
             public  readonly LightingRenderer           Parent;
             public  readonly LightTypeRenderStateKey    Key;
             public  readonly object                     Lock = new object();
-            public  readonly UnorderedList<Texture2D>   RampTextures = new UnorderedList<Texture2D>(512 / 4);
             public  readonly UnorderedList<LightVertex> LightVertices = new UnorderedList<LightVertex>(512);
             public  readonly Material                   Material;
 
@@ -525,8 +524,18 @@ namespace Squared.Illuminant {
             var ltk =
                 new LightTypeRenderStateKey {
                     Type = ls.TypeID,
-                    RampTexture = ls.RampTexture
+                    RampTexture = ls.RampTexture ?? Configuration.DefaultRampTexture
                 };
+
+            // A 1x1 ramp is treated as no ramp at all.
+            // This lets you override a default ramp texture on a per-light basis by attaching a 1x1 ramp,
+            //  and means if you have a ramp turned on by default you can shut it off by replacing the
+            //  image file with a 1x1 bitmap
+            if (
+                (ltk.RampTexture != null) &&
+                (ltk.RampTexture.Width == 1)
+            )
+                ltk.RampTexture = null;
 
             var sls = ls as SphereLightSource;
             if (sls != null)
@@ -594,10 +603,8 @@ namespace Squared.Illuminant {
 
                     // TODO: Use threads?
                     lock (_LightStateLock) {
-                        foreach (var kvp in LightRenderStates) {
+                        foreach (var kvp in LightRenderStates)
                             kvp.Value.LightVertices.Clear();
-                            kvp.Value.RampTextures.Clear();
-                        }
 
                         using (var buffer = BufferPool<LightSource>.Allocate(Environment.Lights.Count)) {
                             Environment.Lights.CopyTo(buffer.Data);
@@ -626,7 +633,7 @@ namespace Squared.Illuminant {
 
                         foreach (var kvp in LightRenderStates) {
                             var ltrs = kvp.Value;
-                            var count = ltrs.RampTextures.Count;
+                            var count = ltrs.LightVertices.Count / 4;
                             if (count <= 0)
                                 continue;
 
@@ -663,8 +670,6 @@ namespace Squared.Illuminant {
             vertex.MoreLightProperties.X = lightSource.AmbientOcclusionRadius;
             vertex.MoreLightProperties.Y = lightSource.ShadowDistanceFalloff.GetValueOrDefault(-99999);
             vertex.MoreLightProperties.Z = lightSource.FalloffYFactor;
-
-            ltrs.RampTextures.Add(lightSource.RampTexture);
 
             vertex.Position = new Vector2(0, 0);
             ltrs.LightVertices.Add(ref vertex);
@@ -703,8 +708,6 @@ namespace Squared.Illuminant {
                     Configuration.MaximumRenderSize.Second
                 )
             );
-
-            ltrs.RampTextures.Add(lightSource.RampTexture);
 
             vertex.Position = lightBounds.TopLeft;
             ltrs.LightVertices.Add(ref vertex);
@@ -1669,7 +1672,10 @@ namespace Squared.Illuminant {
 
         // The current width and height of the viewport.
         // Must not be larger than MaximumRenderSize.
-        public Pair<int> RenderSize;        
+        public Pair<int> RenderSize;
+
+        // Sets the default ramp texture to use for lights with no ramp texture set.
+        public Texture2D DefaultRampTexture;
 
         public RendererConfiguration (
             int maxWidth, int maxHeight, bool highQuality,
