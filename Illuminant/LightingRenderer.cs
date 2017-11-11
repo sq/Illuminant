@@ -1521,8 +1521,14 @@ namespace Squared.Illuminant {
             out Vector2 computedViewPosition, 
             out Vector2 computedUvOffset
         ) {
-            computedViewPosition = ((viewPosition * Configuration.RenderScale).Floor()) / Configuration.RenderScale;
-            computedUvOffset = (viewPosition - computedViewPosition) / new Vector2(lightmapWidth, lightmapHeight);
+            var truncated = new Vector2(
+                (float)Math.Truncate(viewPosition.X * Configuration.RenderScale.X),
+                (float)Math.Truncate(viewPosition.Y * Configuration.RenderScale.Y)
+            );
+            computedViewPosition = truncated / Configuration.RenderScale;
+            var offsetInPixels = (viewPosition - computedViewPosition);
+            var offsetInLightmapTexels = offsetInPixels * Configuration.RenderScale;
+            computedUvOffset = offsetInLightmapTexels / new Vector2(lightmapWidth, lightmapHeight);
         }
     }
 
