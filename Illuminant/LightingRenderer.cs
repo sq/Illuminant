@@ -104,7 +104,9 @@ namespace Squared.Illuminant {
                         );
                     }
 
-                    LightVertexBuffer.SetData(LightVertices.GetBuffer(), 0, LightVertices.Count, SetDataOptions.Discard);
+                    if (LightVertices.Count > 0)
+                        LightVertexBuffer.SetData(LightVertices.GetBuffer(), 0, LightVertices.Count, SetDataOptions.Discard);
+
                     CurrentVertexCount = LightVertices.Count;
                 }
             }
