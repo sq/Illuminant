@@ -18,10 +18,42 @@ using Squared.Util;
 
 namespace Squared.Illuminant {
     public sealed partial class LightingRenderer : IDisposable, INameableGraphicsObject {
+        private class LightTypeRenderStateKeyComparer : IEqualityComparer<LightTypeRenderStateKey> {
+            public static readonly LightTypeRenderStateKeyComparer Instance = new LightTypeRenderStateKeyComparer();
+
+            public bool Equals (LightTypeRenderStateKey x, LightTypeRenderStateKey y) {
+                return x.Equals(y);
+            }
+
+            public int GetHashCode (LightTypeRenderStateKey obj) {
+                return obj.GetHashCode();
+            }
+        }
+
         private struct LightTypeRenderStateKey {
             public LightSourceTypeID Type;
             public Texture2D         RampTexture;
             public bool              DistanceRamp;
+
+            public override int GetHashCode () {
+                var result = ((int)Type) ^ (DistanceRamp ? 2049 : 16593);
+                if (RampTexture != null)
+                    result ^= RampTexture.GetHashCode();
+                return result;
+            }
+
+            public override bool Equals (object obj) {
+                if (obj is LightTypeRenderStateKey)
+                    return Equals((LightTypeRenderStateKey)obj);
+
+                return false;
+            }
+
+            public bool Equals (LightTypeRenderStateKey ltrsk) {
+                return (Type == ltrsk.Type) &&
+                    (DistanceRamp == ltrsk.DistanceRamp) &&
+                    RampTexture == ltrsk.RampTexture;
+            }
         }
 
         private class LightTypeRenderState : IDisposable {
@@ -155,7 +187,7 @@ namespace Squared.Illuminant {
 
         private readonly object _LightStateLock = new object();
         private readonly Dictionary<LightTypeRenderStateKey, LightTypeRenderState> LightRenderStates = 
-            new Dictionary<LightTypeRenderStateKey, LightTypeRenderState>();
+            new Dictionary<LightTypeRenderStateKey, LightTypeRenderState>(LightTypeRenderStateKeyComparer.Instance);
 
         public readonly RendererConfiguration Configuration;
         public LightingEnvironment Environment;
@@ -1733,9 +1765,10 @@ namespace Squared.Illuminant {
                 xTexID = x.RampTexture.GetHashCode();
             if (y.RampTexture != null)
                 yTexID = y.RampTexture.GetHashCode();
-            var result = xTexID.CompareTo(yTexID);
+
+            var result = xTexID - yTexID;
             if (result == 0)
-                result = x.TypeID.CompareTo(y.TypeID);
+                result = x.TypeID - y.TypeID;
             return result;
         }
     }
