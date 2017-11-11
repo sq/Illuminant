@@ -132,6 +132,7 @@ namespace TestGame.Scenes {
             Vector2 cvp, uvo;
             Renderer.ComputeViewPositionAndUVOffset(
                 cp,
+                // FIXME: This is wrong because of the scaled resolve???????
                 Lightmap.Width, Lightmap.Height,
                 out cvp, out uvo
             );
