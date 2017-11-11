@@ -33,6 +33,18 @@ namespace Squared.Illuminant {
                     content.Load<Effect>("DirectionalLight"), "DirectionalLight", dBegin, dEnd
                 ));
 
+                DefineMaterial(IlluminantMaterials.SphereLightWithDistanceRamp = new Material(
+                    content.Load<Effect>("SphereLight"), "SphereLightWithDistanceRamp", dBegin, dEnd
+                ));
+
+                DefineMaterial(IlluminantMaterials.SphereLightWithOpacityRamp = new Material(
+                    content.Load<Effect>("SphereLight"), "SphereLightWithOpacityRamp", dBegin, dEnd
+                ));
+
+                DefineMaterial(IlluminantMaterials.DirectionalLightWithRamp = new Material(
+                    content.Load<Effect>("DirectionalLight"), "DirectionalLightWithRamp", dBegin, dEnd
+                ));
+
                 DefineMaterial(IlluminantMaterials.DistanceFieldExterior = 
                     new Material(
                         content.Load<Effect>("DistanceField"), "Exterior",

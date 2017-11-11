@@ -2,6 +2,7 @@
 #include "LightCommon.fxh"
 #include "DistanceFieldCommon.fxh"
 #include "ConeTrace.fxh"
+#include "RampCommon.fxh"
 
 #define SELF_OCCLUSION_HACK 1.1
 
@@ -33,7 +34,8 @@ float DirectionalLightPixelCore(
     in float4 lightProperties     : TEXCOORD1,
     // aoRadius, shadowDistanceFalloff, shadowRampLength
     in float3 moreLightProperties : TEXCOORD3,
-    in float2 vpos                : VPOS
+    in float2 vpos                : VPOS,
+    in bool   useOpacityRamp
 ) {
     float3 shadedPixelPosition;
     float3 shadedPixelNormal;
@@ -70,6 +72,10 @@ float DirectionalLightPixelCore(
     }
 
     [branch]
+    if (useOpacityRamp)
+        lightOpacity = SampleFromRamp(lightOpacity);
+
+    [branch]
     // HACK: Don't cull pixels unless they were killed by distance falloff.
     // This ensures that billboards are always lit.
     if (visible) {
@@ -90,7 +96,24 @@ void DirectionalLightPixelShader(
     out float4 result              : COLOR0
 ) {
     float opacity = DirectionalLightPixelCore(
-        worldPosition, lightDirection, lightProperties, moreLightProperties, vpos
+        worldPosition, lightDirection, lightProperties, moreLightProperties, vpos, false
+    );
+
+    float4 lightColorActual = float4(color.rgb * color.a * opacity, 1);
+    result = lightColorActual;
+}
+
+void DirectionalLightWithRampPixelShader(
+    in  float2 worldPosition       : TEXCOORD2,
+    in  float3 lightDirection      : TEXCOORD0,
+    in  float4 lightProperties     : TEXCOORD1,
+    in  float3 moreLightProperties : TEXCOORD3,
+    in  float4 color               : COLOR0,
+    in  float2 vpos                : VPOS,
+    out float4 result              : COLOR0
+) {
+    float opacity = DirectionalLightPixelCore(
+        worldPosition, lightDirection, lightProperties, moreLightProperties, vpos, true
     );
 
     float4 lightColorActual = float4(color.rgb * color.a * opacity, 1);
@@ -102,5 +125,13 @@ technique DirectionalLight {
     {
         vertexShader = compile vs_3_0 DirectionalLightVertexShader();
         pixelShader  = compile ps_3_0 DirectionalLightPixelShader();
+    }
+}
+
+technique DirectionalLightWithRamp {
+    pass P0
+    {
+        vertexShader = compile vs_3_0 DirectionalLightVertexShader();
+        pixelShader  = compile ps_3_0 DirectionalLightWithRampPixelShader();
     }
 }

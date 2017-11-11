@@ -8,26 +8,35 @@ using Squared.Game;
 using Squared.Util;
 
 namespace Squared.Illuminant {
+    public enum LightSourceTypeID : int {
+        Unknown = 0,
+        Sphere = 1,
+        Directional = 2
+    }
+
     public abstract class LightSource {
-        public readonly int TypeID;
+        public readonly LightSourceTypeID TypeID;
 
         public object UserData;
 
         // The color of the light's illumination.
         // Note that this color is a Vector4 so that you can use HDR (greater than one) lighting values.
         // Alpha is *not* premultiplied (maybe it should be?)
-        public Vector4 Color = Vector4.One;
+        public Vector4   Color = Vector4.One;
         // A separate opacity factor that you can use to easily fade lights in/out.
-        public float   Opacity = 1.0f;
-        public bool    CastsShadows = true;
+        public float     Opacity = 1.0f;
+        public bool      CastsShadows = true;
         // FIXME: Not implemented in shaders
-        public float?  ShadowDistanceFalloff = null;
+        public float?    ShadowDistanceFalloff = null;
         // Uniformly obscures light if it is within N pixels of any obstacle.
-        public float   AmbientOcclusionRadius = 0;
+        public float     AmbientOcclusionRadius = 0;
         // Allows you to scale the falloff of the light along the Y axis to fake foreshortening.
-        public float   FalloffYFactor = 1;
+        public float     FalloffYFactor = 1;
+        // Allows you to optionally set a ramp texture to control the appearance of light falloff
+        public Texture2D RampTexture = null;
 
-        protected LightSource (int typeID) {
+
+        protected LightSource (LightSourceTypeID typeID) {
             TypeID = typeID;
         }
     }
@@ -56,7 +65,7 @@ namespace Squared.Illuminant {
         public float   ShadowRampLength = 256f;
 
         public DirectionalLightSource ()
-            : base (2) {
+            : base (LightSourceTypeID.Directional) {
         }
 
         public DirectionalLightSource Clone () {
@@ -93,6 +102,11 @@ namespace Squared.Illuminant {
         /// Exponential produces falloff that is more realistic (square of distance or whatever) but not necessarily as expected. 
         /// </summary>
         public LightSourceRampMode RampMode = LightSourceRampMode.Linear;
+        /// <summary>
+        /// If using a ramp texture, this selects values from the ramp based on distance from light instead of light brightness.
+        /// Non-linear ramps (with weird patterns or what have you) will look really weird unless you set this to true.
+        /// </summary>
+        public bool UseDistanceForRampTexture = false;
 
         public Bounds3 Bounds {
             get {
@@ -102,7 +116,7 @@ namespace Squared.Illuminant {
         }
 
         public SphereLightSource ()
-            : base (1) {
+            : base (LightSourceTypeID.Sphere) {
         }
 
         public SphereLightSource Clone () {

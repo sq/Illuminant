@@ -18,6 +18,85 @@ using Squared.Util;
 
 namespace Squared.Illuminant {
     public sealed partial class LightingRenderer : IDisposable, INameableGraphicsObject {
+        private struct LightTypeRenderStateKey {
+            public LightSourceTypeID Type;
+            public Texture2D         RampTexture;
+            public bool              DistanceRamp;
+        }
+
+        private class LightTypeRenderState : IDisposable {
+            public  readonly LightingRenderer           Parent;
+            public  readonly LightTypeRenderStateKey    Key;
+            public  readonly object                     Lock = new object();
+            public  readonly UnorderedList<Texture2D>   RampTextures = new UnorderedList<Texture2D>(512 / 4);
+            public  readonly UnorderedList<LightVertex> LightVertices = new UnorderedList<LightVertex>(512);
+            public  readonly Material                   Material;
+
+            private int                                 CurrentVertexCount = 0;
+            private DynamicVertexBuffer                 LightVertexBuffer = null;
+
+            public LightTypeRenderState (LightingRenderer parent, LightTypeRenderStateKey key) {
+                Parent = parent;
+                Key    = key;
+
+                switch (key.Type) {
+                    case LightSourceTypeID.Sphere:
+                        Material = (key.RampTexture == null)
+                            ? parent.IlluminantMaterials.SphereLight
+                            : (
+                                key.DistanceRamp
+                                    ? parent.IlluminantMaterials.SphereLightWithDistanceRamp
+                                    : parent.IlluminantMaterials.SphereLightWithOpacityRamp
+                            );
+                        break;
+                    case LightSourceTypeID.Directional:
+                        Material = (key.RampTexture == null)
+                            ? parent.IlluminantMaterials.DirectionalLight
+                            : parent.IlluminantMaterials.DirectionalLightWithRamp;
+                        break;
+                    default:
+                        throw new NotImplementedException(key.Type.ToString());
+                }
+            }
+
+            public void UpdateVertexBuffer () {
+                lock (Lock) {
+                    if ((LightVertexBuffer != null) && (LightVertexBuffer.VertexCount < LightVertices.Count)) {
+                        Parent.Coordinator.DisposeResource(LightVertexBuffer);
+                        LightVertexBuffer = null;
+                    }
+
+                    if (LightVertexBuffer == null) {
+                        LightVertexBuffer = new DynamicVertexBuffer(
+                            Parent.Coordinator.Device, typeof(LightVertex),
+                            LightVertices.Capacity, BufferUsage.WriteOnly
+                        );
+                    }
+
+                    LightVertexBuffer.SetData(LightVertices.GetBuffer(), 0, LightVertices.Count, SetDataOptions.Discard);
+                    CurrentVertexCount = LightVertices.Count;
+                }
+            }
+
+            public DynamicVertexBuffer GetVertexBuffer () {
+                lock (Lock) {
+                    if ((LightVertexBuffer == null) || CurrentVertexCount != LightVertices.Count)
+                        throw new InvalidOperationException("Vertex buffer not up-to-date");
+
+                    return LightVertexBuffer;
+                }
+            }
+
+            public void Dispose () {
+                lock (Lock) {
+                    if (LightVertexBuffer != null) {
+                        Parent.Coordinator.DisposeResource(LightVertexBuffer);
+                        LightVertexBuffer = null;
+                    }
+                }
+            }
+        }
+
         private class LightObstructionTypeComparer : IComparer<LightObstruction> {
             public static readonly LightObstructionTypeComparer Instance = 
                 new LightObstructionTypeComparer();
@@ -38,7 +117,7 @@ namespace Squared.Illuminant {
             public Uniforms.DistanceField DistanceField;
         }
 
-        public const int MaximumLightCount = 8192;
+        public const int MaximumLightCount = 4096;
         public const int PackedSliceCount = 3;
         public const int MaximumDistanceFunctionCount = 8192;
 
@@ -56,9 +135,7 @@ namespace Squared.Illuminant {
         public  readonly DepthStencilState DistanceInteriorStencilState, DistanceExteriorStencilState;
         public  readonly DepthStencilState SphereLightDepthStencilState;
 
-        private readonly DynamicVertexBuffer LightVertexBuffer;
         private readonly IndexBuffer         QuadIndexBuffer;
-        private readonly LightVertex[]       LightVertices = new LightVertex[MaximumLightCount * 4];
 
         private readonly DynamicVertexBuffer      DistanceFunctionVertexBuffer;
         private readonly DistanceFunctionVertex[] DistanceFunctionVertices = 
@@ -77,7 +154,9 @@ namespace Squared.Illuminant {
 
         private readonly Action<DeviceManager, object> BeginLightPass, EndLightPass, IlluminationBatchSetup;
 
-        private readonly object _LightBufferLock = new object();
+        private readonly object _LightStateLock = new object();
+        private readonly Dictionary<LightTypeRenderStateKey, LightTypeRenderState> LightRenderStates = 
+            new Dictionary<LightTypeRenderStateKey, LightTypeRenderState>();
 
         public readonly RendererConfiguration Configuration;
         public LightingEnvironment Environment;
@@ -107,10 +186,6 @@ namespace Squared.Illuminant {
             IlluminationBatchSetup = _IlluminationBatchSetup;
 
             lock (coordinator.CreateResourceLock) {
-                LightVertexBuffer = new DynamicVertexBuffer(
-                    coordinator.Device, typeof(LightVertex), 
-                    LightVertices.Length, BufferUsage.WriteOnly
-                );
                 QuadIndexBuffer = new IndexBuffer(
                     coordinator.Device, IndexElementSize.SixteenBits, MaximumLightCount * 6, BufferUsage.WriteOnly
                 );
@@ -240,7 +315,9 @@ namespace Squared.Illuminant {
         }
 
         public void Dispose () {
-            Coordinator.DisposeResource(LightVertexBuffer);
+            foreach (var kvp in LightRenderStates)
+                kvp.Value.Dispose();
+
             Coordinator.DisposeResource(QuadIndexBuffer);
             Coordinator.DisposeResource(DistanceField);
             Coordinator.DisposeResource(GBuffer);
@@ -420,17 +497,14 @@ namespace Squared.Illuminant {
         }
 
         private void _IlluminationBatchSetup (DeviceManager device, object userData) {
-            var lightVertexCounts = (Pair<int>)userData;
-            lock (_LightBufferLock) {
-                var totalVertexCount = lightVertexCounts.First + lightVertexCounts.Second;
-                if (totalVertexCount > 0)
-                    LightVertexBuffer.SetData(LightVertices, 0, totalVertexCount, SetDataOptions.Discard);
-            }
+            var ltrs = (LightTypeRenderState)userData;
+            lock (_LightStateLock)
+                ltrs.UpdateVertexBuffer();
 
             device.Device.BlendState = RenderStates.AdditiveBlend;
 
-            SetLightShaderParameters(IlluminantMaterials.SphereLight);
-            SetLightShaderParameters(IlluminantMaterials.DirectionalLight);
+            SetLightShaderParameters(ltrs.Material);
+            ltrs.Material.Effect.Parameters["RampTexture"].SetValue(ltrs.Key.RampTexture);
         }
 
         private void SetLightShaderParameters (Material material) {
@@ -445,6 +519,27 @@ namespace Squared.Illuminant {
             ub.Value.Current = Uniforms.Environment;
 
             SetDistanceFieldParameters(material, true);
+        }
+
+        private LightTypeRenderState GetLightRenderState (LightSource ls) {
+            var ltk =
+                new LightTypeRenderStateKey {
+                    Type = ls.TypeID,
+                    RampTexture = ls.RampTexture
+                };
+
+            var sls = ls as SphereLightSource;
+            if (sls != null)
+                ltk.DistanceRamp = sls.UseDistanceForRampTexture;
+
+            LightTypeRenderState result;
+            if (!LightRenderStates.TryGetValue(ltk, out result)) {
+                LightRenderStates[ltk] = result = new LightTypeRenderState(
+                    this, ltk
+                );
+            }
+
+            return result;
         }
 
         /// <summary>
@@ -491,9 +586,6 @@ namespace Squared.Illuminant {
                     if (RenderTrace.EnableTracing)
                         RenderTrace.Marker(resultGroup, -9999, "LightingRenderer {0} : Begin", this.ToObjectID());
 
-                    int sphereVertexCount = 0;
-                    int directionalVertexCount = 0;
-
                     ClearBatch.AddNew(
                         resultGroup, -1, Materials.Clear, new Color(0, 0, 0, Configuration.RenderGroundPlane ? 1f : 0f)
                     );
@@ -501,55 +593,56 @@ namespace Squared.Illuminant {
                     int j = 0;
 
                     // TODO: Use threads?
-                    lock (_LightBufferLock)
-                    using (var buffer = BufferPool<LightSource>.Allocate(Environment.Lights.Count)) {
-                        Environment.Lights.CopyTo(buffer.Data);
-                        Squared.Util.Sort.FastCLRSort(
-                            buffer.Data, LightSorter.Instance, 0, Environment.Lights.Count
-                        );
+                    lock (_LightStateLock) {
+                        foreach (var kvp in LightRenderStates) {
+                            kvp.Value.LightVertices.Clear();
+                            kvp.Value.RampTextures.Clear();
+                        }
 
-                        for (var i = 0; i < Environment.Lights.Count; i++) {
-                            var lightSource = buffer.Data[i];
-                            var pointLightSource = lightSource as SphereLightSource;
-                            var directionalLightSource = lightSource as DirectionalLightSource;
+                        using (var buffer = BufferPool<LightSource>.Allocate(Environment.Lights.Count)) {
+                            Environment.Lights.CopyTo(buffer.Data);
+                            Squared.Util.Sort.FastCLRSort(
+                                buffer.Data, LightSorter.Instance, 0, Environment.Lights.Count
+                            );
 
-                            if (pointLightSource != null)
-                                RenderPointLightSource(pointLightSource, intensityScale, ref sphereVertexCount);
-                            else if (directionalLightSource != null)
-                                RenderDirectionalLightSource(directionalLightSource, intensityScale, sphereVertexCount, ref directionalVertexCount);
-                            else
-                                throw new NotSupportedException(lightSource.GetType().Name);
-                        };
-                    }
+                            for (var i = 0; i < Environment.Lights.Count; i++) {
+                                var lightSource = buffer.Data[i];
+                                var pointLightSource = lightSource as SphereLightSource;
+                                var directionalLightSource = lightSource as DirectionalLightSource;
 
-                    var vertexCounts = new Pair<int>(sphereVertexCount, directionalVertexCount);
+                                var ltrs = GetLightRenderState(lightSource);
 
-                    if (sphereVertexCount > 0) {
-                        if (RenderTrace.EnableTracing)
-                            RenderTrace.Marker(resultGroup, layerIndex++, "LightingRenderer {0} : Render {1} sphere light source(s)", this.ToObjectID(), sphereVertexCount / 4);
+                                if (pointLightSource != null)
+                                    RenderPointLightSource(pointLightSource, intensityScale, ltrs);
+                                else if (directionalLightSource != null)
+                                    RenderDirectionalLightSource(directionalLightSource, intensityScale, ltrs);
+                                else
+                                    throw new NotSupportedException(lightSource.GetType().Name);
+                            };
+                        }
 
-                        using (var nb = NativeBatch.New(
-                            resultGroup, layerIndex++, IlluminantMaterials.SphereLight, IlluminationBatchSetup, userData: vertexCounts
-                        ))
-                            nb.Add(new NativeDrawCall(
-                                PrimitiveType.TriangleList,
-                                LightVertexBuffer, 0,
-                                QuadIndexBuffer, 0, 0, sphereVertexCount, 0, sphereVertexCount / 2
-                            ));
-                    }
+                        foreach (var kvp in LightRenderStates)
+                            kvp.Value.UpdateVertexBuffer();
 
-                    if (directionalVertexCount > 0) {
-                        if (RenderTrace.EnableTracing)
-                            RenderTrace.Marker(resultGroup, layerIndex++, "LightingRenderer {0} : Render {1} directional light source(s)", this.ToObjectID(), directionalVertexCount / 4);
+                        foreach (var kvp in LightRenderStates) {
+                            var ltrs = kvp.Value;
+                            var count = ltrs.RampTextures.Count;
+                            if (count <= 0)
+                                continue;
 
-                        using (var nb = NativeBatch.New(
-                            resultGroup, layerIndex++, IlluminantMaterials.DirectionalLight, IlluminationBatchSetup, userData: vertexCounts
-                        ))
-                            nb.Add(new NativeDrawCall(
-                                PrimitiveType.TriangleList,
-                                LightVertexBuffer, sphereVertexCount,
-                                QuadIndexBuffer, 0, 0, directionalVertexCount, 0, directionalVertexCount / 2
-                            ));
+                            if (RenderTrace.EnableTracing)
+                                RenderTrace.Marker(resultGroup, layerIndex++, "LightingRenderer {0} : Render {1} {2} light(s)", this.ToObjectID(), count, ltrs.Key.Type);
+
+                            using (var nb = NativeBatch.New(
+                                resultGroup, layerIndex++, ltrs.Material, IlluminationBatchSetup, userData: ltrs
+                            )) {
+                                nb.Add(new NativeDrawCall(
+                                    PrimitiveType.TriangleList,
+                                    ltrs.GetVertexBuffer(), 0,
+                                    QuadIndexBuffer, 0, 0, ltrs.LightVertices.Count, 0, ltrs.LightVertices.Count / 2
+                                ));
+                            }
+                        }
                     }
 
                     if (RenderTrace.EnableTracing)
@@ -558,7 +651,7 @@ namespace Squared.Illuminant {
             }
         }
 
-        private void RenderPointLightSource (SphereLightSource lightSource, float intensityScale, ref int vertexCount) {
+        private void RenderPointLightSource (SphereLightSource lightSource, float intensityScale, LightTypeRenderState ltrs) {
             LightVertex vertex;
             vertex.LightCenter = lightSource.Position;
             vertex.Color = lightSource.Color;
@@ -571,17 +664,19 @@ namespace Squared.Illuminant {
             vertex.MoreLightProperties.Y = lightSource.ShadowDistanceFalloff.GetValueOrDefault(-99999);
             vertex.MoreLightProperties.Z = lightSource.FalloffYFactor;
 
+            ltrs.RampTextures.Add(lightSource.RampTexture);
+
             vertex.Position = new Vector2(0, 0);
-            LightVertices[vertexCount++] = vertex;
+            ltrs.LightVertices.Add(ref vertex);
             vertex.Position = new Vector2(1, 0);
-            LightVertices[vertexCount++] = vertex;
+            ltrs.LightVertices.Add(ref vertex);
             vertex.Position = new Vector2(1, 1);
-            LightVertices[vertexCount++] = vertex;
+            ltrs.LightVertices.Add(ref vertex);
             vertex.Position = new Vector2(0, 1);
-            LightVertices[vertexCount++] = vertex;
+            ltrs.LightVertices.Add(ref vertex);
         }
 
-        private void RenderDirectionalLightSource (DirectionalLightSource lightSource, float intensityScale, int vertexOffset, ref int vertexCount) {
+        private void RenderDirectionalLightSource (DirectionalLightSource lightSource, float intensityScale, LightTypeRenderState ltrs) {
             var lightDirection = lightSource.Direction;
             lightDirection.Normalize();
 
@@ -609,17 +704,16 @@ namespace Squared.Illuminant {
                 )
             );
 
+            ltrs.RampTextures.Add(lightSource.RampTexture);
+
             vertex.Position = lightBounds.TopLeft;
-            LightVertices[vertexOffset + vertexCount++] = vertex;
-
+            ltrs.LightVertices.Add(ref vertex);
             vertex.Position = lightBounds.TopRight;
-            LightVertices[vertexOffset + vertexCount++] = vertex;
-
+            ltrs.LightVertices.Add(ref vertex);
             vertex.Position = lightBounds.BottomRight;
-            LightVertices[vertexOffset + vertexCount++] = vertex;
-
+            ltrs.LightVertices.Add(ref vertex);
             vertex.Position = lightBounds.BottomLeft;
-            LightVertices[vertexOffset + vertexCount++] = vertex;
+            ltrs.LightVertices.Add(ref vertex);
         }
 
         /// <summary>
@@ -1628,7 +1722,15 @@ namespace Squared.Illuminant {
         public static readonly LightSorter Instance = new LightSorter();
 
         public int Compare (LightSource x, LightSource y) {
-            return x.TypeID - y.TypeID;
+            int xTexID = 0, yTexID = 0;
+            if (x.RampTexture != null)
+                xTexID = x.RampTexture.GetHashCode();
+            if (y.RampTexture != null)
+                yTexID = y.RampTexture.GetHashCode();
+            var result = xTexID.CompareTo(yTexID);
+            if (result == 0)
+                result = x.TypeID.CompareTo(y.TypeID);
+            return result;
         }
     }
 }

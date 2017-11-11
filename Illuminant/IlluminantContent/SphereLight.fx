@@ -2,6 +2,7 @@
 #include "LightCommon.fxh"
 #include "DistanceFieldCommon.fxh"
 #include "ConeTrace.fxh"
+#include "RampCommon.fxh"
 
 #define SELF_OCCLUSION_HACK 1.1
 
@@ -35,7 +36,9 @@ float SphereLightPixelCore(
     in float4 lightProperties     : TEXCOORD1,
     // ao radius, distance falloff, y falloff factor
     in float3 moreLightProperties : TEXCOORD3,
-    in float2 vpos                : VPOS
+    in float2 vpos                : VPOS,
+    in bool   useDistanceRamp,
+    in bool   useOpacityRamp
 ) {
     float3 shadedPixelPosition;
     float3 shadedPixelNormal;
@@ -57,6 +60,10 @@ float SphereLightPixelCore(
     DistanceFieldConstants vars = makeDistanceFieldConstants();
 
     [branch]
+    if (useDistanceRamp)
+        lightOpacity = SampleFromRamp(lightOpacity);
+
+    [branch]
     if ((moreLightProperties.x >= 0.5) && visible) {
         float distance = sampleDistanceField(shadedPixelPosition, vars);
         float aoRamp = clamp(distance / moreLightProperties.x, 0, 1);
@@ -74,6 +81,10 @@ float SphereLightPixelCore(
             vars
         );
     }
+
+    [branch]
+    if (useOpacityRamp)
+        lightOpacity = SampleFromRamp(lightOpacity);
 
     [branch]
     // HACK: Don't cull pixels unless they were killed by distance falloff.
@@ -96,7 +107,39 @@ void SphereLightPixelShader(
     out float4 result              : COLOR0
 ) {
     float opacity = SphereLightPixelCore(
-        worldPosition, lightCenter, lightProperties, moreLightProperties, vpos
+        worldPosition, lightCenter, lightProperties, moreLightProperties, vpos, false, false
+    );
+
+    result = float4(color.rgb * color.a * opacity, 1);
+}
+
+void SphereLightWithDistanceRampPixelShader(
+    in  float3 worldPosition       : TEXCOORD2,
+    in  float3 lightCenter         : TEXCOORD0,
+    in  float4 lightProperties     : TEXCOORD1,
+    in  float3 moreLightProperties : TEXCOORD3,
+    in  float4 color               : COLOR0,
+    in  float2 vpos                : VPOS,
+    out float4 result              : COLOR0
+) {
+    float opacity = SphereLightPixelCore(
+        worldPosition, lightCenter, lightProperties, moreLightProperties, vpos, true, false
+    );
+
+    result = float4(color.rgb * color.a * opacity, 1);
+}
+
+void SphereLightWithOpacityRampPixelShader(
+    in  float3 worldPosition       : TEXCOORD2,
+    in  float3 lightCenter         : TEXCOORD0,
+    in  float4 lightProperties     : TEXCOORD1,
+    in  float3 moreLightProperties : TEXCOORD3,
+    in  float4 color               : COLOR0,
+    in  float2 vpos                : VPOS,
+    out float4 result              : COLOR0
+) {
+    float opacity = SphereLightPixelCore(
+        worldPosition, lightCenter, lightProperties, moreLightProperties, vpos, false, true
     );
 
     result = float4(color.rgb * color.a * opacity, 1);
@@ -107,5 +150,21 @@ technique SphereLight {
     {
         vertexShader = compile vs_3_0 SphereLightVertexShader();
         pixelShader  = compile ps_3_0 SphereLightPixelShader();
+    }
+}
+
+technique SphereLightWithDistanceRamp {
+    pass P0
+    {
+        vertexShader = compile vs_3_0 SphereLightVertexShader();
+        pixelShader  = compile ps_3_0 SphereLightWithDistanceRampPixelShader();
+    }
+}
+
+technique SphereLightWithOpacityRamp {
+    pass P0
+    {
+        vertexShader = compile vs_3_0 SphereLightVertexShader();
+        pixelShader = compile ps_3_0 SphereLightWithOpacityRampPixelShader();
     }
 }

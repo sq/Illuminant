@@ -27,9 +27,10 @@ namespace TestGame {
         public KeyboardState PreviousKeyboardState, KeyboardState;
 
         public SpriteFont Font;
+        public Texture2D RampTexture;
 
         public readonly Scene[] Scenes;
-        public int ActiveSceneIndex = 4;
+        public int ActiveSceneIndex = 1;
 
         private int LastPerformanceStatPrimCount = 0;
 
@@ -39,7 +40,7 @@ namespace TestGame {
             Graphics.PreferredDepthStencilFormat = DepthFormat.Depth24Stencil8;
             Graphics.PreferredBackBufferWidth = 1920;
             Graphics.PreferredBackBufferHeight = 1080;
-            Graphics.SynchronizeWithVerticalRetrace = true;
+            Graphics.SynchronizeWithVerticalRetrace = false;
             // Graphics.IsFullScreen = true;
             // Graphics.SynchronizeWithVerticalRetrace = false;
             Graphics.PreferMultiSampling = false;
@@ -69,6 +70,7 @@ namespace TestGame {
 
             Font = Content.Load<SpriteFont>("Font");
             Materials = new DefaultMaterialSet(Services);
+            RampTexture = Content.Load<Texture2D>("light_ramp");
 
             foreach (var scene in Scenes)
                 scene.LoadContent();
