@@ -26,7 +26,7 @@ namespace TestGame.Scenes {
         float LightZ;
 
         const int MultisampleCount = 0;
-        const int LightmapScaleRatio = 1;
+        const int LightmapScaleRatio = 16;
         const int MaxStepCount = 128;
 
         bool ShowGBuffer       = false;
@@ -109,7 +109,7 @@ namespace TestGame.Scenes {
                 for (var i = 0; i < 3024; i++) {
                     int x = rng.Next(0, numTiles), y = rng.Next(0, numTiles);
                     Environment.Obstructions.Add(new LightObstruction(
-                        LightObstructionType.Ellipsoid,
+                        LightObstructionType.Box,
                         new Vector3(x * tileSize, y * tileSize, 0),
                         new Vector3(20f, 20f, rng.Next(32, 200))
                     ));
@@ -127,23 +127,34 @@ namespace TestGame.Scenes {
         public override void Draw (Squared.Render.Frame frame) {
             CreateRenderTargets();
 
+            var cz = new Vector2(CameraZoom);
+            var cp = new Vector2(CameraX, CameraY);
+            Vector2 cvp, uvo;
+            Renderer.ComputeViewPositionAndUVOffset(
+                cp,
+                Lightmap.Width, Lightmap.Height,
+                out cvp, out uvo
+            );
+
             // Renderer.InvalidateFields();
 
             Renderer.UpdateFields(frame, -2);
 
+            var setLightingTransform = (Action<DeviceManager, object>)((dm, _) => {
+                var vt = ViewTransform.CreateOrthographic(
+                    Width, Height
+                );
+                vt.Position = cvp;
+                vt.Scale = cz;
+                Game.Materials.PushViewTransform(vt);
+            });
+            var popViewTransform = (Action<DeviceManager, object>)((dm, _) => {
+                Game.Materials.PopViewTransform();
+            });
+
             using (var bg = BatchGroup.ForRenderTarget(
                 frame, -1, Lightmap,
-                (dm, _) => {
-                    var vt = ViewTransform.CreateOrthographic(
-                        Width, Height
-                    );
-                    vt.Position = new Vector2(CameraX, CameraY);
-                    vt.Scale = new Vector2(CameraZoom);
-                    Game.Materials.PushViewTransform(vt);
-                },
-                (dm, _) => {
-                    Game.Materials.PopViewTransform();
-                }
+                setLightingTransform, popViewTransform                
             )) {
                 ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black);
 
@@ -160,7 +171,7 @@ namespace TestGame.Scenes {
                         Game.Materials.Get(Game.Materials.ScreenSpaceBitmap, blendState: BlendState.Opaque),
                         samplerState: SamplerState.LinearClamp
                     ))
-                        bb.Add(new BitmapDrawCall(Lightmap, Vector2.Zero));
+                        bb.Add(new BitmapDrawCall(Lightmap, Vector2.Zero, new Bounds(uvo, Vector2.One + uvo)));
                 } else {
                     /*
                     using (var bb = BitmapBatch.New(
@@ -214,6 +225,23 @@ namespace TestGame.Scenes {
                             Color.White, LightmapScaleRatio
                         ));
                 }
+
+                using (var gbg = BatchGroup.New(group, 5, 
+                    before: (dm, _) => {
+                        var vt = Game.Materials.ViewTransform;
+                        vt.Position = cp;
+                        vt.Scale = cz;
+                        Game.Materials.PushViewTransform(vt);
+                    },
+                    after: popViewTransform
+                ))
+                using (var gb = GeometryBatch.New(
+                    gbg, 0,
+                    Game.Materials.Get(Game.Materials.WorldSpaceGeometry, blendState: BlendState.Opaque)
+                )) {
+                    foreach (var o in Environment.Obstructions)
+                        gb.AddFilledQuad(o.Bounds3.XY, Color.White);
+                }
             }
         }
 
@@ -240,7 +268,7 @@ namespace TestGame.Scenes {
 
                 CameraZoom = 100f / CameraZoomIndex;
 
-                var scrollSpeed = 6 / CameraZoom;
+                var scrollSpeed = 3 / CameraZoom;
 
                 if (Game.KeyboardState.IsKeyDown(Keys.Right))
                     CameraX += scrollSpeed;

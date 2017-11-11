@@ -1505,6 +1505,25 @@ namespace Squared.Illuminant {
                     batch.Dispose();
             }
         }
+        
+        /// <summary>
+        /// When using a lightmap resolution below 1.0, if you set the view position in raw pixels
+        /// you will get weird jittery artifacts when scrolling as the alignment of obstructions
+        /// and lights changes relative to the lightmap pixels. Use this method to compensate by
+        /// using a combination of a view position and a UV offset.
+        /// </summary>
+        /// <param name="viewPosition">The view position in raw pixels.</param>
+        /// <param name="computedViewPosition">The view position you should actually set in your ViewTransform.</param>
+        /// <param name="computedUvOffset">The UV offset to set into the LightmapUVOffset uniform of your LightmappedBitmap material.</param>
+        public void ComputeViewPositionAndUVOffset (
+            Vector2 viewPosition,
+            int lightmapWidth, int lightmapHeight,
+            out Vector2 computedViewPosition, 
+            out Vector2 computedUvOffset
+        ) {
+            computedViewPosition = ((viewPosition * Configuration.RenderScale).Floor()) / Configuration.RenderScale;
+            computedUvOffset = (viewPosition - computedViewPosition) / new Vector2(lightmapWidth, lightmapHeight);
+        }
     }
 
     public class RendererConfiguration {

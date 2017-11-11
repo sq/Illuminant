@@ -435,17 +435,19 @@ namespace TestGame.Scenes {
                         ));
                     }
                 } else {
-                    using (var bb = BitmapBatch.New(
-                        group, 1,
-                        Game.Materials.Get(
+                    var bitmapMaterial = Game.Materials.Get(
                             ShowGBuffer
                                 ? Game.Materials.ScreenSpaceBitmap
                                 : Game.Materials.ScreenSpaceLightmappedBitmap,
-                            blendState: 
+                            blendState:
                                 ShowGBuffer
                                 ? BlendState.Opaque
                                 : BlendState.AlphaBlend
-                        ),
+                        );
+
+                    using (var bb = BitmapBatch.New(
+                        group, 1,
+                        bitmapMaterial,
                         samplerState: SamplerState.PointClamp
                     )) {
                         if (!VisualizeForeground) {
