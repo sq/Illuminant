@@ -89,6 +89,9 @@ namespace TestGame {
                     Graphics.SynchronizeWithVerticalRetrace = !Graphics.SynchronizeWithVerticalRetrace;
                     Graphics.ApplyChangesAfterPresent(RenderCoordinator);
                 }
+                else if (KeyboardState.IsKeyDown(Keys.OemPipe) && !PreviousKeyboardState.IsKeyDown(Keys.OemPipe)) {
+                    UniformBinding.ForceCompatibilityMode = !UniformBinding.ForceCompatibilityMode;
+                }
             }
 
             Scenes[ActiveSceneIndex].Update(gameTime);

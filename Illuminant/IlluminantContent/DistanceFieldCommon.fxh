@@ -58,8 +58,8 @@ struct DistanceFieldSettings {
 
 uniform DistanceFieldSettings DistanceField;
 
-Texture2D DistanceFieldTexture        : register(t1);
-sampler   DistanceFieldTextureSampler : register(s1) {
+Texture2D DistanceFieldTexture;
+sampler   DistanceFieldTextureSampler {
     Texture = (DistanceFieldTexture);
     AddressU  = CLAMP;
     AddressV  = CLAMP;

@@ -103,8 +103,6 @@
     <Compile Include="LightObstruction.cs" />
     <Compile Include="LightSource.cs" />
     <Compile Include="LoadMaterials.cs" />
-    <Compile Include="ParticleRenderer.cs" />
-    <Compile Include="ParticleSystem.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Uniforms.cs" />
     <Compile Include="Vertices.cs" />
