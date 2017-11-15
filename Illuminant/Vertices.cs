@@ -191,4 +191,28 @@ namespace Squared.Illuminant {
             }
         }
     }
+
+    public struct ParticleOffsetVertex : IVertexType {
+        public Vector2 Offset;
+
+        public static VertexDeclaration _VertexDeclaration;
+
+        public ParticleOffsetVertex (float x, float y) {
+            Offset = new Vector2(x, y);
+        }
+
+        static ParticleOffsetVertex () {
+            var tThis = typeof(ParticleOffsetVertex);
+
+            _VertexDeclaration = new VertexDeclaration(
+                new VertexElement(Marshal.OffsetOf(tThis, "Offset").ToInt32(),  VertexElementFormat.Vector2, VertexElementUsage.Position, 1)
+            );
+        }
+
+        public VertexDeclaration VertexDeclaration {
+            get {
+                return _VertexDeclaration;
+            }
+        }
+    }
 }

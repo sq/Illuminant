@@ -48,11 +48,11 @@ namespace Squared.Illuminant {
                         var a = rng.NextDouble(0, Math.PI * 2);
                         var x = Math.Sin(a);
                         var y = Math.Cos(a);
-                        var r = rng.NextDouble() * 200;
+                        var r = rng.NextDouble(10, 200);
 
                         buf[i] = new Vector4(
-                            (float)(600 + (r * x)),
-                            (float)(600 + (r * y)),
+                            (float)(900 + (r * x)),
+                            (float)(550 + (r * y)),
                             0,
                             seconds
                         );
@@ -60,7 +60,7 @@ namespace Squared.Illuminant {
 
                     PositionAndBirthTime.SetData(buf);
 
-                    var maxSpeed = 0.05f;
+                    var maxSpeed = 0.1f;
 
                     for (var i = 0; i < buf.Length; i++)
                         buf[i] = new Vector4(
@@ -89,7 +89,7 @@ namespace Squared.Illuminant {
         public readonly ParticleSystemConfiguration Configuration;
 
         private const int SliceCount          = 3;
-        private const int RasterChunkRowCount = 24;
+        private const int RasterChunkRowCount = 16;
         private readonly int[] DeadCountPerRow;
 
         private Slice[] Slices;
@@ -104,6 +104,7 @@ namespace Squared.Illuminant {
         private readonly VertexBuffer QuadVertexBuffer;
         private          IndexBuffer  RasterizeIndexBuffer;
         private          VertexBuffer RasterizeVertexBuffer;
+        private          VertexBuffer RasterizeOffsetBuffer;
 
         private static readonly short[] QuadIndices = new short[] {
             0, 1, 3, 1, 2, 3
@@ -129,12 +130,10 @@ namespace Squared.Illuminant {
                     0, RenderTargetUsage.PreserveContents
                 );
 
-                if (Configuration.ParticlesPerRow >= 255)
-                    throw new Exception("Live count per row is packed into 8 bits");
                 LiveParticleCountBuffer = new RenderTarget2D(
                     engine.Coordinator.Device,
-                    RowCount, 1, false,                    
-                    SurfaceFormat.Alpha8, DepthFormat.None, 
+                    RowCount, 1, false,
+                    SurfaceFormat.Single, DepthFormat.None, 
                     0, RenderTargetUsage.PreserveContents
                 );
 
@@ -155,7 +154,7 @@ namespace Squared.Illuminant {
         }
 
         private void FillIndexBuffer () {
-            var buf = new short[RasterChunkRowCount * Configuration.ParticlesPerRow * 6];
+            var buf = new short[Configuration.ParticlesPerRow * 6];
             int i = 0, j = 0;
             while (i < buf.Length) {
                 buf[i++] = (short)(j + 0);
@@ -176,29 +175,41 @@ namespace Squared.Illuminant {
         }
 
         private void FillVertexBuffer () {
-            var buf = new ParticleSystemVertex[RasterChunkRowCount * Configuration.ParticlesPerRow * 4];
-            int i = 0;
-            for (var y = 0; y < RasterChunkRowCount; y++) {
-                for (var x = 0; x < Configuration.ParticlesPerRow; x++) {
-                    var v = new ParticleSystemVertex(
-                        x / (float)Configuration.ParticlesPerRow,
-                        y / (float)RowCount, 0
-                    );
-                    buf[i++] = v;
-                    v.Corner = v.Unused = 1;
-                    buf[i++] = v;
-                    v.Corner = v.Unused = 2;
-                    buf[i++] = v;
-                    v.Corner = v.Unused = 3;
-                    buf[i++] = v;
-                }
+            {
+                var buf = new ParticleSystemVertex[4];
+                int i = 0;
+                var v = new ParticleSystemVertex();
+                buf[i++] = v;
+                v.Corner = v.Unused = 1;
+                buf[i++] = v;
+                v.Corner = v.Unused = 2;
+                buf[i++] = v;
+                v.Corner = v.Unused = 3;
+                buf[i++] = v;
+
+                RasterizeVertexBuffer = new VertexBuffer(
+                    Engine.Coordinator.Device, typeof(ParticleSystemVertex),
+                    buf.Length, BufferUsage.WriteOnly
+                );
+                RasterizeVertexBuffer.SetData(buf);
             }
 
-            RasterizeVertexBuffer = new VertexBuffer(
-                Engine.Coordinator.Device, typeof(ParticleSystemVertex),
-                buf.Length, BufferUsage.WriteOnly
-            );
-            RasterizeVertexBuffer.SetData(buf);
+            {
+                var buf = new ParticleOffsetVertex[RasterChunkRowCount * Configuration.ParticlesPerRow];
+
+                for (var y = 0; y < RasterChunkRowCount; y++) {
+                    for (var x = 0; x < Configuration.ParticlesPerRow; x++) {
+                        var i = (y * Configuration.ParticlesPerRow) + x;
+                        buf[i].Offset = new Vector2(x / (float)Configuration.ParticlesPerRow, y / (float)RowCount);
+                    }
+                }
+
+                RasterizeOffsetBuffer = new VertexBuffer(
+                    Engine.Coordinator.Device, typeof(ParticleOffsetVertex),
+                    buf.Length, BufferUsage.WriteOnly
+                );
+                RasterizeOffsetBuffer.SetData(buf);
+            }
         }
 
         private Slice[] AllocateSlices () {
@@ -300,11 +311,14 @@ namespace Squared.Illuminant {
                     source.InUseCount++;
             }
 
-            var m = Engine.ParticleMaterials.RasterizeParticles;
+            var m = Engine.Materials.Get(
+                Engine.ParticleMaterials.RasterizeParticles, blendState: blendState
+            );
             var e = m.Effect;
             using (var group = BatchGroup.New(
                 container, layer,
                 (dm, _) => {
+                    // TODO: transform arg
                     e.Parameters["PositionTexture"].SetValue(source.PositionAndBirthTime);
                     e.Parameters["VelocityTexture"].SetValue(source.Velocity);
                     e.Parameters["HalfTexel"].SetValue(new Vector2(0.5f / Configuration.ParticlesPerRow, 0.5f / RowCount));
@@ -333,8 +347,12 @@ namespace Squared.Illuminant {
                         }
                     )) {
                         chunk.Add(new NativeDrawCall(
-                            PrimitiveType.TriangleList, RasterizeVertexBuffer, 0,
-                            RasterizeIndexBuffer, 0, 0, quadCount * 4, 0, quadCount * 2
+                            PrimitiveType.TriangleList, 
+                            RasterizeVertexBuffer, 0,
+                            RasterizeOffsetBuffer, 0, 
+                            null, 0,
+                            RasterizeIndexBuffer, 0, 0, 4, 0, 2,
+                            quadCount
                         ));
                     }
                 }
