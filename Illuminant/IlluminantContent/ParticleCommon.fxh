@@ -1,13 +1,7 @@
-struct ParticleSystemSettings {
-    float2 ColumnsAndRows;
-    float  MaximumAge;
-};
-
-uniform ParticleSystemSettings ParticleSystem;
-
+uniform float2 HalfTexel;
 
 Texture2D PositionTexture;
-sampler PositionTextureSampler {
+sampler PositionSampler {
     Texture = (PositionTexture);
     AddressU  = CLAMP;
     AddressV  = CLAMP;
@@ -17,7 +11,7 @@ sampler PositionTextureSampler {
 };
 
 Texture2D VelocityTexture;
-sampler VelocityTextureSampler {
+sampler VelocitySampler {
     Texture = (VelocityTexture);
     AddressU  = CLAMP;
     AddressV  = CLAMP;

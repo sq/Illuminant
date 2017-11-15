@@ -164,14 +164,24 @@ namespace Squared.Illuminant {
 
     public struct ParticleSystemVertex : IVertexType {
         public Vector2 Position;
+        public short Corner;
+        public short Unused;
 
         public static VertexDeclaration _VertexDeclaration;
+
+        public ParticleSystemVertex (float x, float y, short corner) {
+            Position = new Vector2(x, y);
+            Corner = corner;
+            Unused = corner;
+        }
 
         static ParticleSystemVertex () {
             var tThis = typeof(ParticleSystemVertex);
 
             _VertexDeclaration = new VertexDeclaration(
-                new VertexElement(Marshal.OffsetOf(tThis, "Position").ToInt32(),  VertexElementFormat.Vector2, VertexElementUsage.Position, 0)
+                new VertexElement(Marshal.OffsetOf(tThis, "Position").ToInt32(),  VertexElementFormat.Vector2, VertexElementUsage.Position, 0),
+                new VertexElement(Marshal.OffsetOf(tThis, "Corner").ToInt32(), 
+                    VertexElementFormat.Short2, VertexElementUsage.BlendIndices, 0 )
             );
         }
 

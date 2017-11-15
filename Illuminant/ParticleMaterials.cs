@@ -7,7 +7,7 @@ namespace Squared.Illuminant {
     public class ParticleMaterials {
         public readonly DefaultMaterialSet MaterialSet;
 
-        public Material UpdateParticleSystem;
+        public Material UpdatePositions, RasterizeParticles;
 
         internal ParticleMaterials (DefaultMaterialSet materialSet) {
             MaterialSet = materialSet;

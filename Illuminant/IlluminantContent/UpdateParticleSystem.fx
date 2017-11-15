@@ -5,7 +5,7 @@ void vs (
     out float4 result : POSITION0,
     out float2 _xy    : POSITION1
 ) {
-    result = float4(xy, 0, 1);
+    result = float4((xy.x * 2) - 1, (xy.y * -2) + 1, 0, 1);
     _xy = xy;
 }
 
@@ -14,8 +14,11 @@ void ps (
     out float4 newPosition : COLOR0,
     out float4 newVelocity : COLOR1
 ) {
-    newPosition = 0;
-    newVelocity = 0;
+    float4 oldPosition = tex2Dlod(PositionSampler, float4(xy + HalfTexel, 0, 0));
+    float4 oldVelocity = tex2Dlod(VelocitySampler, float4(xy + HalfTexel, 0, 0));
+
+    newPosition = float4(oldPosition.xyz + oldVelocity.xyz, oldPosition.w);
+    newVelocity = oldVelocity;
 }
 
 technique UpdatePositions {

@@ -144,7 +144,25 @@ namespace Squared.Illuminant {
 
         private void LoadMaterials (ContentManager content) {
             {
+                var dBegin = new[] {
+                    MaterialUtil.MakeDelegate(
+                        rasterizerState: RasterizerState.CullNone,
+                        depthStencilState: DepthStencilState.None,
+                        blendState: BlendState.Opaque
+                    )
+                };
+                Action<DeviceManager>[] dEnd = null;
+
+                DefineMaterial(ParticleMaterials.UpdatePositions = new Material(
+                    content.Load<Effect>("UpdateParticleSystem"), "UpdatePositions", dBegin, dEnd
+                ));
             }
+
+            DefineMaterial(ParticleMaterials.RasterizeParticles = new Material(
+                content.Load<Effect>("RasterizeParticleSystem"), "RasterizeParticles"
+            ));
+
+            Materials.PreallocateBindings();
         }
     }
 }

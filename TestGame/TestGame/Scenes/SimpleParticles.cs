@@ -36,15 +36,18 @@ namespace TestGame.Scenes {
             );
             System = new ParticleSystem(
                 Engine,
-                new ParticleSystemConfiguration {
-                }
+                new ParticleSystemConfiguration(40960)
             );
         }
         
         public override void Draw (Squared.Render.Frame frame) {
             CreateRenderTargets();
 
-            ClearBatch.AddNew(frame, 0, Game.Materials.Clear, clearColor: Color.Black);
+            ClearBatch.AddNew(frame, 0, Game.Materials.Clear, clearColor: Color.MidnightBlue);
+
+            System.Update(frame, 1);
+
+            System.Render(frame, 2);
         }
 
         public override void Update (GameTime gameTime) {

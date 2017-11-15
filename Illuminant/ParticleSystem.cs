@@ -3,22 +3,81 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Squared.Game;
 using Squared.Render;
 
 namespace Squared.Illuminant {
     public class ParticleSystem : IDisposable {
         private class Slice : IDisposable {
-            public int  Index;
+            public readonly int Index;
             public long Timestamp;
             public bool IsValid, IsBeingGenerated;
             public int  InUseCount;
-            public RenderTarget2D PositionAndLife;
+            public RenderTarget2D PositionAndBirthTime;
             public RenderTarget2D Velocity;
+
+            public Slice (
+                GraphicsDevice device, int index, int rowCount,
+                bool hackPopulate
+            ) {
+                Index = index;
+                PositionAndBirthTime = new RenderTarget2D(
+                    device,
+                    ParticlesPerRow, rowCount, false,
+                    SurfaceFormat.Vector4, DepthFormat.None,
+                    0, RenderTargetUsage.PreserveContents
+                );
+                Velocity = new RenderTarget2D(
+                    device,
+                    ParticlesPerRow, rowCount, false,
+                    SurfaceFormat.Vector4, DepthFormat.None,
+                    0, RenderTargetUsage.PreserveContents
+                );
+                Timestamp = Util.Time.Ticks;
+
+                if (hackPopulate) {
+                    var seconds = (float)Util.Time.Seconds;
+
+                    // HACK
+                    var rng = new MersenneTwister(0);
+                    var buf = new Vector4[ParticlesPerRow * rowCount];
+
+                    for (var i = 0; i < buf.Length; i++) {
+                        var a = rng.NextDouble(0, Math.PI * 2);
+                        var x = Math.Sin(a);
+                        var y = Math.Cos(a);
+                        var r = rng.NextDouble() * 200;
+
+                        buf[i] = new Vector4(
+                            (float)(600 + (r * x)),
+                            (float)(600 + (r * y)),
+                            0,
+                            seconds
+                        );
+                    }
+
+                    PositionAndBirthTime.SetData(buf);
+
+                    var maxSpeed = 0.05f;
+
+                    for (var i = 0; i < buf.Length; i++)
+                        buf[i] = new Vector4(
+                            rng.NextFloat(-1, 1) * maxSpeed,
+                            rng.NextFloat(-1, 1) * maxSpeed,
+                            0, 0
+                        );
+
+                    Velocity.SetData(buf);
+
+                    IsValid = true;
+                }
+            }
 
             public void Dispose () {
                 IsValid = false;
-                PositionAndLife.Dispose();
+                PositionAndBirthTime.Dispose();
                 Velocity.Dispose();
             }
         }
@@ -30,7 +89,8 @@ namespace Squared.Illuminant {
         public readonly ParticleSystemConfiguration Configuration;
 
         private const int SliceCount      = 3;
-        private const int ParticlesPerRow = 64;
+        private const int ParticlesPerRow = 128;
+        private const int RasterChunkRowCount = 24;
         private readonly int[] DeadCountPerRow;
 
         private Slice[] Slices;
@@ -41,9 +101,19 @@ namespace Squared.Illuminant {
             // We generate this every frame from a pass over the age fraction buffer
             LiveParticleCountBuffer;
 
+        private readonly IndexBuffer  QuadIndexBuffer;
+        private readonly VertexBuffer QuadVertexBuffer;
+        private          IndexBuffer  RasterizeIndexBuffer;
+        private          VertexBuffer RasterizeVertexBuffer;
+
+        private static readonly short[] QuadIndices = new short[] {
+            0, 1, 3, 1, 2, 3
+        };
+
         public ParticleSystem (
             ParticleEngine engine, ParticleSystemConfiguration configuration
         ) {
+            Engine = engine;
             Configuration = configuration;
             RowCount = (Configuration.MaximumCount + ParticlesPerRow - 1) / ParticlesPerRow;
             DeadCountPerRow = new int[RowCount];
@@ -68,30 +138,74 @@ namespace Squared.Illuminant {
                     SurfaceFormat.Alpha8, DepthFormat.None, 
                     0, RenderTargetUsage.PreserveContents
                 );
+
+                QuadIndexBuffer = new IndexBuffer(engine.Coordinator.Device, IndexElementSize.SixteenBits, 6, BufferUsage.WriteOnly);
+                QuadIndexBuffer.SetData(QuadIndices);
+
+                QuadVertexBuffer = new VertexBuffer(engine.Coordinator.Device, typeof(ParticleSystemVertex), 4, BufferUsage.WriteOnly);
+                QuadVertexBuffer.SetData(new [] {
+                    new ParticleSystemVertex(0, 0, 0),
+                    new ParticleSystemVertex(1, 0, 1),
+                    new ParticleSystemVertex(1, 1, 2),
+                    new ParticleSystemVertex(0, 1, 3)
+                });
+
+                FillIndexBuffer();
+                FillVertexBuffer();
             }
+        }
+
+        private void FillIndexBuffer () {
+            var buf = new short[RasterChunkRowCount * ParticlesPerRow * 6];
+            int i = 0, j = 0;
+            while (i < buf.Length) {
+                buf[i++] = (short)(j + 0);
+                buf[i++] = (short)(j + 1);
+                buf[i++] = (short)(j + 3);
+                buf[i++] = (short)(j + 1);
+                buf[i++] = (short)(j + 2);
+                buf[i++] = (short)(j + 3);
+
+                j += 4;
+            }
+
+            RasterizeIndexBuffer = new IndexBuffer(
+                Engine.Coordinator.Device, IndexElementSize.SixteenBits, 
+                buf.Length, BufferUsage.WriteOnly
+            );
+            RasterizeIndexBuffer.SetData(buf);
+        }
+
+        private void FillVertexBuffer () {
+            var buf = new ParticleSystemVertex[RasterChunkRowCount * ParticlesPerRow * 4];
+            int i = 0;
+            for (var y = 0; y < RasterChunkRowCount; y++) {
+                for (var x = 0; x < ParticlesPerRow; x++) {
+                    var v = new ParticleSystemVertex(
+                        x / (float)ParticlesPerRow,
+                        y / (float)RowCount, 0
+                    );
+                    buf[i++] = v;
+                    v.Corner = v.Unused = 1;
+                    buf[i++] = v;
+                    v.Corner = v.Unused = 2;
+                    buf[i++] = v;
+                    v.Corner = v.Unused = 3;
+                    buf[i++] = v;
+                }
+            }
+
+            RasterizeVertexBuffer = new VertexBuffer(
+                Engine.Coordinator.Device, typeof(ParticleSystemVertex),
+                buf.Length, BufferUsage.WriteOnly
+            );
+            RasterizeVertexBuffer.SetData(buf);
         }
 
         private Slice[] AllocateSlices () {
             var result = new Slice[SliceCount];
             for (var i = 0; i < result.Length; i++)
-                result[i] = new Slice {
-                    Index = i,
-                    PositionAndLife = new RenderTarget2D(
-                        Engine.Coordinator.Device,
-                        ParticlesPerRow, RowCount, false,
-                        SurfaceFormat.Vector4, DepthFormat.None,
-                        0, RenderTargetUsage.PreserveContents
-                    ),
-                    Velocity = new RenderTarget2D(
-                        Engine.Coordinator.Device,
-                        ParticlesPerRow, RowCount, false,
-                        SurfaceFormat.Vector4, DepthFormat.None,
-                        0, RenderTargetUsage.PreserveContents
-                    )
-                };
-
-            // HACK
-            result[0].IsValid = true;
+                result[i] = new Slice(Engine.Coordinator.Device, i, RowCount, i == 0);
 
             return result;
         }
@@ -122,7 +236,39 @@ namespace Squared.Illuminant {
                 }
             }
 
-            // TODO: Actually update
+            var m = Engine.ParticleMaterials.UpdatePositions;
+            var e = m.Effect;
+            using (var batch = NativeBatch.New(
+                container, layer,
+                m,
+                (dm, _) => {
+                    dm.PushRenderTargets(new[] {
+                        new RenderTargetBinding(dest.PositionAndBirthTime),
+                        new RenderTargetBinding(dest.Velocity)
+                    });
+                    dm.Device.Viewport = new Viewport(0, 0, ParticlesPerRow, RowCount);
+                    dm.Device.Clear(Color.Transparent);
+                    e.Parameters["PositionTexture"].SetValue(source.PositionAndBirthTime);
+                    e.Parameters["VelocityTexture"].SetValue(source.Velocity);
+                    e.Parameters["HalfTexel"].SetValue(new Vector2(0.5f / ParticlesPerRow, 0.5f / RowCount));
+                    m.Flush();
+                },
+                (dm, _) => {
+                    dm.PopRenderTarget();
+                    e.Parameters["PositionTexture"].SetValue((Texture2D)null);
+                    e.Parameters["VelocityTexture"].SetValue((Texture2D)null);
+                    // fuck offfff
+                    for (var i = 0; i < 4; i++)
+                        dm.Device.VertexTextures[i] = null;
+                    for (var i = 0; i < 16; i++)
+                        dm.Device.Textures[i] = null;
+                }
+            )) {
+                batch.Add(new NativeDrawCall(
+                    PrimitiveType.TriangleList, QuadVertexBuffer, 0,
+                    QuadIndexBuffer, 0, 0, QuadVertexBuffer.VertexCount, 0, QuadVertexBuffer.VertexCount / 2
+                ));
+            }
 
             // TODO: Do this immediately after issuing the batch instead?
             Engine.Coordinator.AfterPresent(() => {
@@ -138,7 +284,11 @@ namespace Squared.Illuminant {
             });
         }
 
-        public void Render (IBatchContainer container, int layer) {
+        public void Render (
+            IBatchContainer container, int layer,
+            Matrix? transform = null, 
+            BlendState blendState = null
+        ) {
             Slice source;
 
             lock (Slices) {
@@ -149,6 +299,44 @@ namespace Squared.Illuminant {
 
                 lock (source)
                     source.InUseCount++;
+            }
+
+            var m = Engine.ParticleMaterials.RasterizeParticles;
+            var e = m.Effect;
+            using (var group = BatchGroup.New(
+                container, layer,
+                (dm, _) => {
+                    e.Parameters["PositionTexture"].SetValue(source.PositionAndBirthTime);
+                    e.Parameters["VelocityTexture"].SetValue(source.Velocity);
+                    e.Parameters["HalfTexel"].SetValue(new Vector2(0.5f / ParticlesPerRow, 0.5f / RowCount));
+                    m.Flush();
+                },
+                (dm, _) => {
+                    e.Parameters["PositionTexture"].SetValue((Texture2D)null);
+                    e.Parameters["VelocityTexture"].SetValue((Texture2D)null);
+                    // fuck offfff
+                    for (var i = 0; i < 4; i++)
+                        dm.Device.VertexTextures[i] = null;
+                    for (var i = 0; i < 16; i++)
+                        dm.Device.Textures[i] = null;
+                }
+            )) {
+                int chunkCount = RowCount / RasterChunkRowCount;
+                var quadCount = RasterChunkRowCount * ParticlesPerRow;
+                for (var i = 0; i < chunkCount; i++) {
+                    var offset = new Vector2(0, (i * RasterChunkRowCount) / (float)RowCount);
+                    using (var chunk = NativeBatch.New(
+                        group, i, m, (dm, _) => {
+                            e.Parameters["SourceCoordinateOffset"].SetValue(offset);
+                            m.Flush();
+                        }
+                    )) {
+                        chunk.Add(new NativeDrawCall(
+                            PrimitiveType.TriangleList, RasterizeVertexBuffer, 0,
+                            RasterizeIndexBuffer, 0, 0, quadCount * 4, 0, quadCount * 2
+                        ));
+                    }
+                }
             }
 
             // TODO: Do this immediately after issuing the batch instead?
@@ -174,7 +362,7 @@ namespace Squared.Illuminant {
         // Defaults to (effectively) not killing particles
         public int MaximumAge = 1024 * 1024 * 8;
 
-        public ParticleSystemConfiguration (int maximumCount = 8192) {
+        public ParticleSystemConfiguration (int maximumCount = 4096) {
             MaximumCount = maximumCount;
         }
     }
