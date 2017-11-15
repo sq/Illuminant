@@ -160,11 +160,18 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <None Include="UpdateParticleSystem.fx">
+    <Compile Include="UpdateParticleSystem.fx">
       <Name>UpdateParticleSystem</Name>
       <Importer>EffectImporter</Importer>
       <Processor>EffectProcessor</Processor>
-    </None>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="RasterizeParticleSystem.fx">
+      <Name>RasterizeParticleSystem</Name>
+      <Importer>EffectImporter</Importer>
+      <Processor>EffectProcessor</Processor>
+    </Compile>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\XNA Game Studio\$(XnaFrameworkVersion)\Microsoft.Xna.GameStudio.ContentPipeline.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -12,7 +12,6 @@ namespace Squared.Illuminant {
     public sealed partial class LightingRenderer : IDisposable {
         private void DefineMaterial (Material m) {
             Materials.Add(m);
-            LoadedMaterials.Add(m);
         }
 
         private void LoadMaterials (ContentManager content) {
@@ -135,6 +134,17 @@ namespace Squared.Illuminant {
                 Materials.GetUniformBinding<Uniforms.Environment>(m, "Environment");
                 Materials.GetUniformBinding<Uniforms.DistanceField>(m, "DistanceField");
             }, null);
+        }
+    }
+
+    public sealed partial class ParticleEngine : IDisposable {
+        private void DefineMaterial (Material m) {
+            Materials.Add(m);
+        }
+
+        private void LoadMaterials (ContentManager content) {
+            {
+            }
         }
     }
 }

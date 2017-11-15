@@ -10,15 +10,13 @@ void vs (
 }
 
 void ps (
-    in  float2 xy          : POSITION1,
-    out float4 newPosition : COLOR0,
-    out float4 newVelocity : COLOR1
+    in  float2 xy     : POSITION1,
+    out float4 result : COLOR0
 ) {
-    newPosition = 0;
-    newVelocity = 0;
+    result = float4(xy, 0, 1);
 }
 
-technique UpdatePositions {
+technique RasterizeParticles {
     pass P0
     {
         vertexShader = compile vs_3_0 vs();

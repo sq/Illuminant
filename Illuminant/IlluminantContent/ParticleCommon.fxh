@@ -1,16 +1,10 @@
 struct ParticleSystemSettings {
     float2 ColumnsAndRows;
-}
+    float  MaximumAge;
+};
 
-Texture2D LifeTexture;
-sampler LifeTextureSampler {
-    Texture = (LifeTexture);
-    AddressU  = CLAMP;
-    AddressV  = CLAMP;
-    MipFilter = POINT;
-    MinFilter = POINT;
-    MagFilter = POINT;
-}
+uniform ParticleSystemSettings ParticleSystem;
+
 
 Texture2D PositionTexture;
 sampler PositionTextureSampler {
@@ -20,7 +14,7 @@ sampler PositionTextureSampler {
     MipFilter = POINT;
     MinFilter = POINT;
     MagFilter = POINT;
-}
+};
 
 Texture2D VelocityTexture;
 sampler VelocityTextureSampler {
@@ -30,4 +24,4 @@ sampler VelocityTextureSampler {
     MipFilter = POINT;
     MinFilter = POINT;
     MagFilter = POINT;
-}
+};

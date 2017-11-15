@@ -36,7 +36,7 @@ namespace Squared.Illuminant {
             public bool              DistanceRamp;
 
             public override int GetHashCode () {
-                var result = ((int)Type) ^ (DistanceRamp ? 2049 : 16593);
+                var result = ((int)Type) ^ (DistanceRamp ? 2057 : 16593);
                 if (RampTexture != null)
                     result ^= RampTexture.GetHashCode();
                 return result;
@@ -157,12 +157,9 @@ namespace Squared.Illuminant {
         const int        DistanceLimit = 520;
         
         public  readonly RenderCoordinator   Coordinator;
-        public  readonly ContentManager      Content;
 
         public  readonly DefaultMaterialSet  Materials;
         public           IlluminantMaterials IlluminantMaterials { get; private set; }
-
-        private readonly List<Material>      LoadedMaterials = new List<Material>();
 
         public  readonly DepthStencilState TopFaceDepthStencilState, FrontFaceDepthStencilState;
         public  readonly DepthStencilState DistanceInteriorStencilState, DistanceExteriorStencilState;
@@ -210,7 +207,6 @@ namespace Squared.Illuminant {
             Materials = materials;
             Coordinator = coordinator;
             Configuration = configuration;
-            Content = content;
 
             IlluminantMaterials = new IlluminantMaterials(materials);
 

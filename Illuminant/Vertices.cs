@@ -161,4 +161,24 @@ namespace Squared.Illuminant {
             }
         }
     }
+
+    public struct ParticleSystemVertex : IVertexType {
+        public Vector2 Position;
+
+        public static VertexDeclaration _VertexDeclaration;
+
+        static ParticleSystemVertex () {
+            var tThis = typeof(ParticleSystemVertex);
+
+            _VertexDeclaration = new VertexDeclaration(
+                new VertexElement(Marshal.OffsetOf(tThis, "Position").ToInt32(),  VertexElementFormat.Vector2, VertexElementUsage.Position, 0)
+            );
+        }
+
+        public VertexDeclaration VertexDeclaration {
+            get {
+                return _VertexDeclaration;
+            }
+        }
+    }
 }
