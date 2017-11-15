@@ -36,7 +36,7 @@ namespace TestGame.Scenes {
             );
             System = new ParticleSystem(
                 Engine,
-                new ParticleSystemConfiguration(40960)
+                new ParticleSystemConfiguration(80000, 200)
             );
         }
         

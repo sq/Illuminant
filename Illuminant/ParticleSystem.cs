@@ -19,19 +19,19 @@ namespace Squared.Illuminant {
             public RenderTarget2D Velocity;
 
             public Slice (
-                GraphicsDevice device, int index, int rowCount,
+                GraphicsDevice device, int index, int columnCount, int rowCount,
                 bool hackPopulate
             ) {
                 Index = index;
                 PositionAndBirthTime = new RenderTarget2D(
                     device,
-                    ParticlesPerRow, rowCount, false,
+                    columnCount, rowCount, false,
                     SurfaceFormat.Vector4, DepthFormat.None,
                     0, RenderTargetUsage.PreserveContents
                 );
                 Velocity = new RenderTarget2D(
                     device,
-                    ParticlesPerRow, rowCount, false,
+                    columnCount, rowCount, false,
                     SurfaceFormat.Vector4, DepthFormat.None,
                     0, RenderTargetUsage.PreserveContents
                 );
@@ -42,7 +42,7 @@ namespace Squared.Illuminant {
 
                     // HACK
                     var rng = new MersenneTwister(0);
-                    var buf = new Vector4[ParticlesPerRow * rowCount];
+                    var buf = new Vector4[columnCount * rowCount];
 
                     for (var i = 0; i < buf.Length; i++) {
                         var a = rng.NextDouble(0, Math.PI * 2);
@@ -88,8 +88,7 @@ namespace Squared.Illuminant {
         public readonly ParticleEngine              Engine;
         public readonly ParticleSystemConfiguration Configuration;
 
-        private const int SliceCount      = 3;
-        private const int ParticlesPerRow = 128;
+        private const int SliceCount          = 3;
         private const int RasterChunkRowCount = 24;
         private readonly int[] DeadCountPerRow;
 
@@ -115,7 +114,7 @@ namespace Squared.Illuminant {
         ) {
             Engine = engine;
             Configuration = configuration;
-            RowCount = (Configuration.MaximumCount + ParticlesPerRow - 1) / ParticlesPerRow;
+            RowCount = (Configuration.MaximumCount + Configuration.ParticlesPerRow - 1) / Configuration.ParticlesPerRow;
             DeadCountPerRow = new int[RowCount];
             LiveCount = 0;
 
@@ -125,12 +124,12 @@ namespace Squared.Illuminant {
                 // TODO: Bitpack?
                 ParticleAgeFractionBuffer = new RenderTarget2D(
                     engine.Coordinator.Device,
-                    ParticlesPerRow, RowCount, false,                    
+                    Configuration.ParticlesPerRow, RowCount, false,                    
                     SurfaceFormat.Alpha8, DepthFormat.None, 
                     0, RenderTargetUsage.PreserveContents
                 );
 
-                if (ParticlesPerRow >= 255)
+                if (Configuration.ParticlesPerRow >= 255)
                     throw new Exception("Live count per row is packed into 8 bits");
                 LiveParticleCountBuffer = new RenderTarget2D(
                     engine.Coordinator.Device,
@@ -156,7 +155,7 @@ namespace Squared.Illuminant {
         }
 
         private void FillIndexBuffer () {
-            var buf = new short[RasterChunkRowCount * ParticlesPerRow * 6];
+            var buf = new short[RasterChunkRowCount * Configuration.ParticlesPerRow * 6];
             int i = 0, j = 0;
             while (i < buf.Length) {
                 buf[i++] = (short)(j + 0);
@@ -177,12 +176,12 @@ namespace Squared.Illuminant {
         }
 
         private void FillVertexBuffer () {
-            var buf = new ParticleSystemVertex[RasterChunkRowCount * ParticlesPerRow * 4];
+            var buf = new ParticleSystemVertex[RasterChunkRowCount * Configuration.ParticlesPerRow * 4];
             int i = 0;
             for (var y = 0; y < RasterChunkRowCount; y++) {
-                for (var x = 0; x < ParticlesPerRow; x++) {
+                for (var x = 0; x < Configuration.ParticlesPerRow; x++) {
                     var v = new ParticleSystemVertex(
-                        x / (float)ParticlesPerRow,
+                        x / (float)Configuration.ParticlesPerRow,
                         y / (float)RowCount, 0
                     );
                     buf[i++] = v;
@@ -205,7 +204,7 @@ namespace Squared.Illuminant {
         private Slice[] AllocateSlices () {
             var result = new Slice[SliceCount];
             for (var i = 0; i < result.Length; i++)
-                result[i] = new Slice(Engine.Coordinator.Device, i, RowCount, i == 0);
+                result[i] = new Slice(Engine.Coordinator.Device, i, Configuration.ParticlesPerRow, RowCount, i == 0);
 
             return result;
         }
@@ -246,11 +245,11 @@ namespace Squared.Illuminant {
                         new RenderTargetBinding(dest.PositionAndBirthTime),
                         new RenderTargetBinding(dest.Velocity)
                     });
-                    dm.Device.Viewport = new Viewport(0, 0, ParticlesPerRow, RowCount);
+                    dm.Device.Viewport = new Viewport(0, 0, Configuration.ParticlesPerRow, RowCount);
                     dm.Device.Clear(Color.Transparent);
                     e.Parameters["PositionTexture"].SetValue(source.PositionAndBirthTime);
                     e.Parameters["VelocityTexture"].SetValue(source.Velocity);
-                    e.Parameters["HalfTexel"].SetValue(new Vector2(0.5f / ParticlesPerRow, 0.5f / RowCount));
+                    e.Parameters["HalfTexel"].SetValue(new Vector2(0.5f / Configuration.ParticlesPerRow, 0.5f / RowCount));
                     m.Flush();
                 },
                 (dm, _) => {
@@ -308,7 +307,7 @@ namespace Squared.Illuminant {
                 (dm, _) => {
                     e.Parameters["PositionTexture"].SetValue(source.PositionAndBirthTime);
                     e.Parameters["VelocityTexture"].SetValue(source.Velocity);
-                    e.Parameters["HalfTexel"].SetValue(new Vector2(0.5f / ParticlesPerRow, 0.5f / RowCount));
+                    e.Parameters["HalfTexel"].SetValue(new Vector2(0.5f / Configuration.ParticlesPerRow, 0.5f / RowCount));
                     m.Flush();
                 },
                 (dm, _) => {
@@ -321,10 +320,12 @@ namespace Squared.Illuminant {
                         dm.Device.Textures[i] = null;
                 }
             )) {
-                int chunkCount = RowCount / RasterChunkRowCount;
-                var quadCount = RasterChunkRowCount * ParticlesPerRow;
+                int chunkCount = (RowCount + RasterChunkRowCount - 1) / RasterChunkRowCount;
                 for (var i = 0; i < chunkCount; i++) {
-                    var offset = new Vector2(0, (i * RasterChunkRowCount) / (float)RowCount);
+                    var rowIndex = (i * RasterChunkRowCount);
+                    var rowsToRender = Math.Min(RowCount - rowIndex, RasterChunkRowCount);
+                    var quadCount = rowsToRender * Configuration.ParticlesPerRow;
+                    var offset = new Vector2(0, rowIndex / (float)RowCount);
                     using (var chunk = NativeBatch.New(
                         group, i, m, (dm, _) => {
                             e.Parameters["SourceCoordinateOffset"].SetValue(offset);
@@ -357,13 +358,18 @@ namespace Squared.Illuminant {
 
     public class ParticleSystemConfiguration {
         public readonly int MaximumCount;
+        public readonly int ParticlesPerRow;
 
         // Particles that reach this age are killed
         // Defaults to (effectively) not killing particles
         public int MaximumAge = 1024 * 1024 * 8;
 
-        public ParticleSystemConfiguration (int maximumCount = 4096) {
+        public ParticleSystemConfiguration (
+            int maximumCount = 4096,
+            int particlesPerRow = 64
+        ) {
             MaximumCount = maximumCount;
+            ParticlesPerRow = particlesPerRow;
         }
     }
 }
