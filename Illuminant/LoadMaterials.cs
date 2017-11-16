@@ -156,6 +156,14 @@ namespace Squared.Illuminant {
                 DefineMaterial(ParticleMaterials.UpdatePositions = new Material(
                     content.Load<Effect>("UpdateParticleSystem"), "UpdatePositions", dBegin, dEnd
                 ));
+
+                DefineMaterial(ParticleMaterials.PositionFMA = new Material(
+                    content.Load<Effect>("PermuteParticleSystem"), "PositionFMA", dBegin, dEnd
+                ));
+
+                DefineMaterial(ParticleMaterials.VelocityFMA = new Material(
+                    content.Load<Effect>("PermuteParticleSystem"), "VelocityFMA", dBegin, dEnd
+                ));
             }
 
             DefineMaterial(ParticleMaterials.RasterizeParticles = new Material(

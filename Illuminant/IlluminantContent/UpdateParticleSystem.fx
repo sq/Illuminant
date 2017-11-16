@@ -1,15 +1,6 @@
 #include "ParticleCommon.fxh"
 
-void vs (
-    in  float2 xy     : POSITION0,
-    out float4 result : POSITION0,
-    out float2 _xy    : POSITION1
-) {
-    result = float4((xy.x * 2) - 1, (xy.y * -2) + 1, 0, 1);
-    _xy = xy;
-}
-
-void ps (
+void PS_Update (
     in  float2 xy          : POSITION1,
     out float4 newPosition : COLOR0,
     out float4 newVelocity : COLOR1
@@ -24,7 +15,7 @@ void ps (
 technique UpdatePositions {
     pass P0
     {
-        vertexShader = compile vs_3_0 vs();
-        pixelShader = compile ps_3_0 ps();
+        vertexShader = compile vs_3_0 VS_Update();
+        pixelShader = compile ps_3_0 PS_Update();
     }
 }

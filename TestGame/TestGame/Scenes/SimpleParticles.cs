@@ -9,6 +9,8 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Squared.Game;
 using Squared.Illuminant;
+using Squared.Illuminant.Transforms;
+using Squared.Illuminant.Util;
 using Squared.Render;
 using Squared.Util;
 
@@ -17,9 +19,7 @@ namespace TestGame.Scenes {
         ParticleEngine Engine;
         ParticleSystem System;
 
-        bool Deterministic = true;
-
-
+        bool Running = true;
 
         public SimpleParticles (TestGame game, int width, int height)
             : base(game, width, height) {
@@ -34,35 +34,95 @@ namespace TestGame.Scenes {
                 new ParticleEngineConfiguration {                    
                 }
             );
+
             System = new ParticleSystem(
                 Engine,
-                new ParticleSystemConfiguration(1000000, 1024)
+                new ParticleSystemConfiguration(4000000, 2048)
+            ) {
+                Transforms = {
+                    new VelocityFMA {
+                        Add = new Vector3(0.0015f, 0.0006f, 0),
+                        Multiply = Vector3.One * 0.995f
+                    }
+                }
+            };
+
+            Reset();
+        }
+
+        public void Reset () {
+            int seed = 0;
+
+            System.Initialize(
+                (buf) => {
+                    Parallel.For(
+                        0, buf.Length, 
+                        () => new MersenneTwister(Interlocked.Increment(ref seed)), 
+                        (i, pls, rng) => {
+                            var a = rng.NextDouble(0, Math.PI * 2);
+                            var x = Math.Sin(a);
+                            var y = Math.Cos(a);
+                            var r = rng.NextDouble(1, 140);
+
+                            buf[i] = new Vector4(
+                                (float)(900 + (r * x)),
+                                (float)(550 + (r * y)),
+                                0,
+                                1024
+                            );
+
+                            return rng;
+                        },
+                        (rng) => {}
+                    );
+                },
+                (buf) => {
+                    const float maxSpeed = 3.5f;
+
+                    Parallel.For(
+                        0, buf.Length, 
+                        () => new MersenneTwister(Interlocked.Increment(ref seed)), 
+                        (i, pls, rng) => {
+                            var v = rng.NextFloat(maxSpeed * 0.6f, maxSpeed);
+                            var a = rng.NextDouble(0, Math.PI * 2);
+
+                            buf[i] = new Vector4(
+                                (float)Math.Sin(a) * v,
+                                (float)Math.Cos(a) * v,
+                                0, 0
+                            );
+
+                            return rng;
+                        },
+                        (rng) => {}
+                    );
+                }
             );
         }
         
         public override void Draw (Squared.Render.Frame frame) {
             CreateRenderTargets();
 
-            System.Update(frame, -2);
+            if (Running)
+                System.Update(frame, -2);
 
             ClearBatch.AddNew(frame, 0, Game.Materials.Clear, clearColor: Color.Black);
 
-            System.Render(frame, 1, blendState: BlendState.Additive);
+            if (Running)
+                System.Render(frame, 1, blendState: BlendState.Additive);
         }
 
         public override void Update (GameTime gameTime) {
             if (Game.IsActive) {
                 const float step = 0.1f;
 
+                if (KeyWasPressed(Keys.Space))
+                    Running = !Running;
                 if (KeyWasPressed(Keys.R))
-                    Deterministic = !Deterministic;
+                    Reset();
 
                 var ms = Mouse.GetState();
                 Game.IsMouseVisible = true;
-
-                var time = gameTime.TotalGameTime.TotalSeconds;
-                if (Deterministic)
-                    time = 3.3;
             }
         }
     }

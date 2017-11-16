@@ -41,9 +41,9 @@ namespace TestGame {
             Graphics.PreferredDepthStencilFormat = DepthFormat.Depth24Stencil8;
             Graphics.PreferredBackBufferWidth = 1920;
             Graphics.PreferredBackBufferHeight = 1080;
-            Graphics.SynchronizeWithVerticalRetrace = false;
+            Graphics.SynchronizeWithVerticalRetrace = true;
             Graphics.PreferMultiSampling = false;
-            // Graphics.IsFullScreen = true;
+            Graphics.IsFullScreen = false;
             // Graphics.SynchronizeWithVerticalRetrace = false;
 
             Content.RootDirectory = "Content";

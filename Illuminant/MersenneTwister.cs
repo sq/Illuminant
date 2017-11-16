@@ -75,7 +75,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Squared.Illuminant {
+namespace Squared.Illuminant.Util {
     /// <summary>
     /// Generates pseudo-random numbers using the Mersenne Twister algorithm.
     /// </summary>
@@ -84,7 +84,7 @@ namespace Squared.Illuminant {
     /// http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/emt.html</a> for details
     /// on the algorithm.
     /// </remarks>
-    internal class MersenneTwister : Random
+    public class MersenneTwister : Random
     {
         public class Snapshot {
             public readonly List<UInt32> MT = new List<uint>(); /* the array for the state vector  */

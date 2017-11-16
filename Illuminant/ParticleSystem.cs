@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -12,6 +13,7 @@ namespace Squared.Illuminant {
     public class ParticleSystem : IDisposable {
         private class Slice : IDisposable {
             public readonly int Index;
+            public readonly int ColumnCount, RowCount;
             public long Timestamp;
             public bool IsValid, IsBeingGenerated;
             public int  InUseCount;
@@ -19,10 +21,11 @@ namespace Squared.Illuminant {
             public RenderTarget2D Velocity;
 
             public Slice (
-                GraphicsDevice device, int index, int columnCount, int rowCount,
-                bool hackPopulate
+                GraphicsDevice device, int index, int columnCount, int rowCount
             ) {
                 Index = index;
+                ColumnCount = columnCount;
+                RowCount = rowCount;
                 PositionAndBirthTime = new RenderTarget2D(
                     device,
                     columnCount, rowCount, false,
@@ -35,44 +38,39 @@ namespace Squared.Illuminant {
                     SurfaceFormat.Vector4, DepthFormat.None,
                     0, RenderTargetUsage.PreserveContents
                 );
-                Timestamp = Util.Time.Ticks;
+                Timestamp = Squared.Util.Time.Ticks;
+            }
 
-                if (hackPopulate) {
-                    var seconds = (float)Util.Time.Seconds;
+            // Make sure to lock the slice first.
+            public void Initialize (
+                Action<Vector4[]> positionInitializer,
+                Action<Vector4[]> velocityInitializer
+            ) {
+                var buf = new Vector4[ColumnCount * RowCount];
 
-                    // HACK
-                    var rng = new MersenneTwister(0);
-                    var buf = new Vector4[columnCount * rowCount];
-
-                    for (var i = 0; i < buf.Length; i++) {
-                        var a = rng.NextDouble(0, Math.PI * 2);
-                        var x = Math.Sin(a);
-                        var y = Math.Cos(a);
-                        var r = rng.NextDouble(10, 200);
-
-                        buf[i] = new Vector4(
-                            (float)(900 + (r * x)),
-                            (float)(550 + (r * y)),
-                            0,
-                            seconds
-                        );
-                    }
-
+                if (positionInitializer != null) {
+                    positionInitializer(buf);
                     PositionAndBirthTime.SetData(buf);
-
-                    var maxSpeed = 0.1f;
-
-                    for (var i = 0; i < buf.Length; i++)
-                        buf[i] = new Vector4(
-                            rng.NextFloat(-1, 1) * maxSpeed,
-                            rng.NextFloat(-1, 1) * maxSpeed,
-                            0, 0
-                        );
-
-                    Velocity.SetData(buf);
-
-                    IsValid = true;
                 }
+
+                if (velocityInitializer != null) {
+                    velocityInitializer(buf);
+                    Velocity.SetData(buf);
+                }
+
+                IsValid = true;
+            }
+
+            public void Lock (string reason) {
+                // Console.WriteLine("Lock {0} for {1}", Index, reason);
+                lock (this)
+                    InUseCount++;
+            }
+
+            public void Unlock () {
+                // Console.WriteLine("Unlock {0}", Index);
+                lock (this)
+                    InUseCount--;
             }
 
             public void Dispose () {
@@ -85,9 +83,13 @@ namespace Squared.Illuminant {
         public readonly int RowCount;
         public          int LiveCount { get; private set; }
 
-        public readonly ParticleEngine              Engine;
-        public readonly ParticleSystemConfiguration Configuration;
+        public readonly ParticleEngine                     Engine;
+        public readonly ParticleSystemConfiguration        Configuration;
+        public readonly List<Transforms.ParticleTransform> Transforms = 
+            new List<Illuminant.Transforms.ParticleTransform>();
 
+        // 3 because we go
+        // old -> permutation scratch -> updated
         private const int SliceCount          = 3;
         private const int RasterChunkRowCount = 16;
         private readonly int[] DeadCountPerRow;
@@ -105,6 +107,8 @@ namespace Squared.Illuminant {
         private          IndexBuffer  RasterizeIndexBuffer;
         private          VertexBuffer RasterizeVertexBuffer;
         private          VertexBuffer RasterizeOffsetBuffer;
+
+        private readonly AutoResetEvent UnlockedEvent = new AutoResetEvent(true);
 
         private static readonly short[] QuadIndices = new short[] {
             0, 1, 3, 1, 2, 3
@@ -151,6 +155,8 @@ namespace Squared.Illuminant {
                 FillIndexBuffer();
                 FillVertexBuffer();
             }
+
+            Initialize(null, null);
         }
 
         private void FillIndexBuffer () {
@@ -215,58 +221,74 @@ namespace Squared.Illuminant {
         private Slice[] AllocateSlices () {
             var result = new Slice[SliceCount];
             for (var i = 0; i < result.Length; i++)
-                result[i] = new Slice(Engine.Coordinator.Device, i, Configuration.ParticlesPerRow, RowCount, i == 0);
+                result[i] = new Slice(Engine.Coordinator.Device, i, Configuration.ParticlesPerRow, RowCount);
 
             return result;
         }
 
-        public void Update (IBatchContainer container, int layer) {
-            Slice source, dest;
+        private Slice GrabWriteSlice () {
+            Slice dest = null;
 
             lock (Slices) {
-                source = (
-                    from s in Slices where s.IsValid
-                    orderby s.Timestamp descending select s
-                ).First();
+                for (int i = 0; i < 10; i++) {
+                    dest = (
+                        from s in Slices where (!s.IsBeingGenerated && s.InUseCount <= 0)
+                        orderby s.Timestamp select s
+                    ).FirstOrDefault();
 
-                lock (source)
-                    source.InUseCount++;
-            }
+                    if (dest == null) {
+                        // Console.WriteLine("Retry lock");
+                        UnlockedEvent.WaitOne(100);
+                    } else
+                        break;
+                }
 
-            lock (Slices) {
-                dest = (
-                    from s in Slices where (!s.IsBeingGenerated && s.InUseCount <= 0)
-                    orderby s.Timestamp select s
-                ).First();
+                if (dest == null)
+                    throw new Exception("Failed to lock any slices for write");
 
+                dest.Lock("write");
                 lock (dest) {
-                    dest.InUseCount++;
                     dest.IsValid = false;
                     dest.IsBeingGenerated = true;
                 }
             }
 
-            var m = Engine.ParticleMaterials.UpdatePositions;
+            return dest;
+        }
+
+        private void UpdatePass (
+            IBatchContainer container, int layer, Material m,
+            Slice source, Slice a, Slice b,
+            ref Slice passSource, ref Slice passDest, Action<EffectParameterCollection> setParameters
+        ) {
+            // Console.WriteLine("{0} -> {1}", passSource.Index, passDest.Index);
+
+            var _source = passSource;
+            var _dest = passDest;
+
             var e = m.Effect;
             using (var batch = NativeBatch.New(
-                container, layer,
-                m,
+                container, layer, m,
                 (dm, _) => {
                     dm.PushRenderTargets(new[] {
-                        new RenderTargetBinding(dest.PositionAndBirthTime),
-                        new RenderTargetBinding(dest.Velocity)
+                        new RenderTargetBinding(_dest.PositionAndBirthTime),
+                        new RenderTargetBinding(_dest.Velocity)
                     });
                     dm.Device.Viewport = new Viewport(0, 0, Configuration.ParticlesPerRow, RowCount);
                     dm.Device.Clear(Color.Transparent);
-                    e.Parameters["PositionTexture"].SetValue(source.PositionAndBirthTime);
-                    e.Parameters["VelocityTexture"].SetValue(source.Velocity);
-                    e.Parameters["HalfTexel"].SetValue(new Vector2(0.5f / Configuration.ParticlesPerRow, 0.5f / RowCount));
+                    var p = e.Parameters;
+                    p["PositionTexture"].SetValue(_source.PositionAndBirthTime);
+                    p["VelocityTexture"].SetValue(_source.Velocity);
+                    p["HalfTexel"].SetValue(new Vector2(0.5f / Configuration.ParticlesPerRow, 0.5f / RowCount));
+                    if (setParameters != null)
+                        setParameters(p);
                     m.Flush();
                 },
                 (dm, _) => {
                     dm.PopRenderTarget();
-                    e.Parameters["PositionTexture"].SetValue((Texture2D)null);
-                    e.Parameters["VelocityTexture"].SetValue((Texture2D)null);
+                    var p = e.Parameters;
+                    p["PositionTexture"].SetValue((Texture2D)null);
+                    p["VelocityTexture"].SetValue((Texture2D)null);
                     // fuck offfff
                     for (var i = 0; i < 4; i++)
                         dm.Device.VertexTextures[i] = null;
@@ -280,17 +302,114 @@ namespace Squared.Illuminant {
                 ));
             }
 
+            if (_source == source) {
+                if (_dest == a)
+                    passDest = b;
+                else if (_dest == b)
+                    passDest = a;
+                else
+                    throw new Exception();
+
+                passSource = _dest;
+            } else {
+                passDest = _source;
+                passSource = _dest;
+            }
+        }
+
+        public void Initialize (
+            Action<Vector4[]> positionInitializer,
+            Action<Vector4[]> velocityInitializer
+        ) {
+            Slice target;
+
+            lock (Slices) {
+                target = (
+                    from s in Slices where s.IsValid
+                    orderby s.Timestamp descending select s
+                ).FirstOrDefault() ?? Slices[0];
+            }
+
+            target.Lock("initialize");
+            lock (target) {
+                target.IsValid = false;
+                target.IsBeingGenerated = true;
+            }
+
+            foreach (var s in Slices) {
+                lock (s)
+                    s.IsValid = false;
+            }
+
+            target.Initialize(
+                positionInitializer,
+                velocityInitializer
+            );
+
+            lock (target) {
+                target.Timestamp = Squared.Util.Time.Ticks;
+                target.IsValid = true;
+                target.IsBeingGenerated = false;
+            }
+            target.Unlock();
+        }
+
+        public void Update (IBatchContainer container, int layer) {
+            Slice source, a, b;
+            Slice passSource, passDest;
+
+            lock (Slices) {
+                source = (
+                    from s in Slices where s.IsValid
+                    orderby s.Timestamp descending select s
+                ).First();
+
+                source.Lock("update");
+            }
+
+            a = GrabWriteSlice();
+            b = GrabWriteSlice();
+            passSource = source;
+            passDest = a;
+
+            var pm = Engine.ParticleMaterials;
+
+            using (var group = BatchGroup.New(
+                container, layer
+            )) {
+                int i = 0;
+                foreach (var t in Transforms) {
+                    UpdatePass(
+                        group, i++, t.GetMaterial(Engine.ParticleMaterials),
+                        source, a, b, ref passSource, ref passDest,
+                        t.SetParameters
+                    );
+                }
+
+                UpdatePass(
+                    group, i++, pm.UpdatePositions,
+                    source, a, b, ref passSource, ref passDest,
+                    null
+                );
+            }
+
             // TODO: Do this immediately after issuing the batch instead?
             Engine.Coordinator.AfterPresent(() => {
-                lock (source)
-                    source.InUseCount--;
-
-                lock (dest) {
-                    dest.InUseCount--;
-                    dest.Timestamp = Util.Time.Ticks;
-                    dest.IsValid = true;
-                    dest.IsBeingGenerated = false;
+                lock (passSource) {
+                    // Console.WriteLine("Validate {0}", passSource.Index);
+                    passSource.Timestamp = Squared.Util.Time.Ticks;
+                    passSource.IsValid = true;
+                    passSource.IsBeingGenerated = false;
                 }
+
+                a.IsBeingGenerated = false;
+                b.IsBeingGenerated = false;
+
+                source.Unlock();
+                a.Unlock();
+                b.Unlock();
+
+                UnlockedEvent.Set();
             });
         }
 
@@ -307,8 +426,7 @@ namespace Squared.Illuminant {
                     orderby s.Timestamp descending select s
                 ).First();
 
-                lock (source)
-                    source.InUseCount++;
+                source.Lock("render");
             }
 
             var m = Engine.Materials.Get(
@@ -360,8 +478,8 @@ namespace Squared.Illuminant {
 
             // TODO: Do this immediately after issuing the batch instead?
             Engine.Coordinator.AfterPresent(() => {
-                lock (source)
-                    source.InUseCount--;
+                source.Unlock();
+                UnlockedEvent.Set();
             });
         }
 
