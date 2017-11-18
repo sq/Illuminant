@@ -170,8 +170,11 @@ namespace Squared.Illuminant {
                 ));
             }
 
-            DefineMaterial(ParticleMaterials.RasterizeParticles = new Material(
-                content.Load<Effect>("RasterizeParticleSystem"), "RasterizeParticles"
+            DefineMaterial(ParticleMaterials.White = new Material(
+                content.Load<Effect>("RasterizeParticleSystem"), "White"
+            ));
+            DefineMaterial(ParticleMaterials.AttributeColor = new Material(
+                content.Load<Effect>("RasterizeParticleSystem"), "AttributeColor"
             ));
 
             Materials.PreallocateBindings();

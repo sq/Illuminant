@@ -1,12 +1,15 @@
 #include "ParticleCommon.fxh"
 
 void PS_Update (
-    in  float2 xy          : POSITION1,
-    out float4 newPosition : COLOR0,
-    out float4 newVelocity : COLOR1
+    in  float2 xy            : POSITION1,
+    out float4 newPosition   : COLOR0,
+    out float4 newVelocity   : COLOR1,
+    out float4 newAttributes : COLOR2
 ) {
-    float4 oldPosition = tex2Dlod(PositionSampler, float4(xy + HalfTexel, 0, 0));
-    float4 oldVelocity = tex2Dlod(VelocitySampler, float4(xy + HalfTexel, 0, 0));
+    float4 oldPosition, oldVelocity;
+    readState(
+        xy, oldPosition, oldVelocity, newAttributes
+    );
 
     newPosition = float4(oldPosition.xyz + oldVelocity.xyz, oldPosition.w);
     newVelocity = oldVelocity;

@@ -15,32 +15,36 @@ float computeWeight (float3 worldPosition) {
 }
 
 void PS_PositionFMA (
-    in  float2 xy          : POSITION1,
-    out float4 newPosition : COLOR0,
-    out float4 newVelocity : COLOR1
+    in  float2 xy            : POSITION1,
+    out float4 newPosition   : COLOR0,
+    out float4 newVelocity   : COLOR1,
+    out float4 newAttributes : COLOR2
 ) {
-    float4 oldPosition = tex2Dlod(PositionSampler, float4(xy + HalfTexel, 0, 0));
-    float4 oldVelocity = tex2Dlod(VelocitySampler, float4(xy + HalfTexel, 0, 0));    
+    float4 oldPosition;
+    readState(
+        xy, oldPosition, newVelocity, newAttributes
+    );
 
     newPosition = lerp(
         oldPosition, float4((oldPosition.xyz * Multiply) + Add, oldPosition.w),
         computeWeight(oldPosition)
     );
-    newVelocity = oldVelocity;
 }
 
 void PS_VelocityFMA(
-    in  float2 xy          : POSITION1,
-    out float4 newPosition : COLOR0,
-    out float4 newVelocity : COLOR1
+    in  float2 xy            : POSITION1,
+    out float4 newPosition   : COLOR0,
+    out float4 newVelocity   : COLOR1,
+    out float4 newAttributes : COLOR2
 ) {
-    float4 oldPosition = tex2Dlod(PositionSampler, float4(xy + HalfTexel, 0, 0));
-    float4 oldVelocity = tex2Dlod(VelocitySampler, float4(xy + HalfTexel, 0, 0));
+    float4 oldVelocity;
+    readState(
+        xy, newPosition, oldVelocity, newAttributes
+    );
 
-    newPosition = oldPosition;
     newVelocity = lerp(
         oldVelocity, float4((oldVelocity.xyz * Multiply) + Add, oldVelocity.w),
-        computeWeight(oldPosition)
+        computeWeight(newPosition)
     );
 }
 

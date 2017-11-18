@@ -19,9 +19,11 @@ namespace Squared.Illuminant {
             public int  InUseCount;
             public RenderTarget2D PositionAndBirthTime;
             public RenderTarget2D Velocity;
+            public RenderTarget2D Attributes;
 
             public Slice (
-                GraphicsDevice device, int index, int columnCount, int rowCount
+                GraphicsDevice device, int index, int columnCount, int rowCount,
+                int attributeCount
             ) {
                 Index = index;
                 ColumnCount = columnCount;
@@ -38,14 +40,27 @@ namespace Squared.Illuminant {
                     SurfaceFormat.Vector4, DepthFormat.None,
                     0, RenderTargetUsage.PreserveContents
                 );
+
+                // FIXME
+                if (attributeCount == 1)
+                    Attributes = new RenderTarget2D(
+                        device,
+                        columnCount, rowCount, false,
+                        SurfaceFormat.Vector4, DepthFormat.None,
+                        0, RenderTargetUsage.PreserveContents
+                    );
+                else if (attributeCount != 0)
+                    throw new ArgumentException("Only one attribute is supported");
+
                 Timestamp = Squared.Util.Time.Ticks;
             }
 
             // Make sure to lock the slice first.
-            public void Initialize (
+            public void Initialize<TAttribute> (
                 Action<Vector4[]> positionInitializer,
-                Action<Vector4[]> velocityInitializer
-            ) {
+                Action<Vector4[]> velocityInitializer,
+                Action<TAttribute[]> attributeInitializer
+            ) where TAttribute : struct {
                 var buf = new Vector4[ColumnCount * RowCount];
 
                 if (positionInitializer != null) {
@@ -56,6 +71,12 @@ namespace Squared.Illuminant {
                 if (velocityInitializer != null) {
                     velocityInitializer(buf);
                     Velocity.SetData(buf);
+                }
+
+                if ((attributeInitializer != null) && (Attributes != null)) {
+                    var abuf = new TAttribute[ColumnCount * RowCount];
+                    attributeInitializer(abuf);
+                    Attributes.SetData(abuf);
                 }
 
                 IsValid = true;
@@ -89,7 +110,7 @@ namespace Squared.Illuminant {
             new List<Illuminant.Transforms.ParticleTransform>();
 
         // 3 because we go
-        // old -> permutation scratch -> updated
+        // old -> a -> b -> a -> ... -> done
         private const int SliceCount          = 3;
         private const int RasterChunkRowCount = 16;
         private readonly int[] DeadCountPerRow;
@@ -116,6 +137,10 @@ namespace Squared.Illuminant {
 
         private int LastResetCount = 0;
         public event Action<ParticleSystem> OnDeviceReset;
+
+        public Texture2D ParticleTexture;
+        public Bounds    ParticleTextureRegion = new Bounds(Vector2.Zero, Vector2.One);
+        public Vector2   ParticleSize = Vector2.One;
 
         public ParticleSystem (
             ParticleEngine engine, ParticleSystemConfiguration configuration
@@ -224,7 +249,10 @@ namespace Squared.Illuminant {
         private Slice[] AllocateSlices () {
             var result = new Slice[SliceCount];
             for (var i = 0; i < result.Length; i++)
-                result[i] = new Slice(Engine.Coordinator.Device, i, Configuration.ParticlesPerRow, RowCount);
+                result[i] = new Slice(
+                    Engine.Coordinator.Device, i, Configuration.ParticlesPerRow, 
+                    RowCount, Configuration.AttributeCount
+                );
 
             return result;
         }
@@ -241,7 +269,7 @@ namespace Squared.Illuminant {
 
                     if (dest == null) {
                         // Console.WriteLine("Retry lock");
-                        UnlockedEvent.WaitOne(100);
+                        UnlockedEvent.WaitOne(2);
                     } else
                         break;
                 }
@@ -253,6 +281,7 @@ namespace Squared.Illuminant {
                 lock (dest) {
                     dest.IsValid = false;
                     dest.IsBeingGenerated = true;
+                    dest.Timestamp = Squared.Util.Time.Ticks;
                 }
             }
 
@@ -268,20 +297,23 @@ namespace Squared.Illuminant {
 
             var _source = passSource;
             var _dest = passDest;
+            var bindings = new[] {
+                new RenderTargetBinding(_dest.PositionAndBirthTime),
+                new RenderTargetBinding(_dest.Velocity),
+                new RenderTargetBinding(_dest.Attributes)
+            };
 
             var e = m.Effect;
             using (var batch = NativeBatch.New(
                 container, layer, m,
                 (dm, _) => {
-                    dm.PushRenderTargets(new[] {
-                        new RenderTargetBinding(_dest.PositionAndBirthTime),
-                        new RenderTargetBinding(_dest.Velocity)
-                    });
+                    dm.PushRenderTargets(bindings);
                     dm.Device.Viewport = new Viewport(0, 0, Configuration.ParticlesPerRow, RowCount);
                     dm.Device.Clear(Color.Transparent);
                     var p = e.Parameters;
                     p["PositionTexture"].SetValue(_source.PositionAndBirthTime);
                     p["VelocityTexture"].SetValue(_source.Velocity);
+                    p["AttributeTexture"].SetValue(_source.Attributes);
                     p["HalfTexel"].SetValue(new Vector2(0.5f / Configuration.ParticlesPerRow, 0.5f / RowCount));
                     if (setParameters != null)
                         setParameters(p);
@@ -292,6 +324,7 @@ namespace Squared.Illuminant {
                     var p = e.Parameters;
                     p["PositionTexture"].SetValue((Texture2D)null);
                     p["VelocityTexture"].SetValue((Texture2D)null);
+                    p["AttributeTexture"].SetValue((Texture2D)null);
                     // fuck offfff
                     for (var i = 0; i < 4; i++)
                         dm.Device.VertexTextures[i] = null;
@@ -324,6 +357,14 @@ namespace Squared.Illuminant {
             Action<Vector4[]> positionInitializer,
             Action<Vector4[]> velocityInitializer
         ) {
+            Initialize<float>(positionInitializer, velocityInitializer, null);
+        }
+
+        public void Initialize<TAttribute> (
+            Action<Vector4[]> positionInitializer,
+            Action<Vector4[]> velocityInitializer,
+            Action<TAttribute[]> attributeInitializer
+        ) where TAttribute : struct {
             Slice target;
 
             lock (Slices) {
@@ -346,7 +387,8 @@ namespace Squared.Illuminant {
 
             target.Initialize(
                 positionInitializer,
-                velocityInitializer
+                velocityInitializer,
+                attributeInitializer
             );
 
             lock (target) {
@@ -388,6 +430,9 @@ namespace Squared.Illuminant {
             )) {
                 int i = 0;
                 foreach (var t in Transforms) {
+                    if (!t.IsActive)
+                        continue;
+
                     UpdatePass(
                         group, i++, t.GetMaterial(Engine.ParticleMaterials),
                         source, a, b, ref passSource, ref passDest,
@@ -424,6 +469,7 @@ namespace Squared.Illuminant {
 
         public void Render (
             IBatchContainer container, int layer,
+            Material material = null,
             Matrix? transform = null, 
             BlendState blendState = null
         ) {
@@ -439,7 +485,7 @@ namespace Squared.Illuminant {
             }
 
             var m = Engine.Materials.Get(
-                Engine.ParticleMaterials.RasterizeParticles, blendState: blendState
+                material ?? Engine.ParticleMaterials.White, blendState: blendState
             );
             var e = m.Effect;
             using (var group = BatchGroup.New(
@@ -448,13 +494,23 @@ namespace Squared.Illuminant {
                     // TODO: transform arg
                     e.Parameters["PositionTexture"].SetValue(source.PositionAndBirthTime);
                     e.Parameters["VelocityTexture"].SetValue(source.Velocity);
+                    e.Parameters["AttributeTexture"].SetValue(source.Attributes);
+                    e.Parameters["BitmapTexture"].SetValue(ParticleTexture);
+                    e.Parameters["BitmapTextureRegion"].SetValue(new Vector4(
+                        ParticleTextureRegion.TopLeft, 
+                        ParticleTextureRegion.BottomRight.X, 
+                        ParticleTextureRegion.BottomRight.Y
+                    ));
+                    e.Parameters["Size"].SetValue(ParticleSize / 2);
                     e.Parameters["HalfTexel"].SetValue(new Vector2(0.5f / Configuration.ParticlesPerRow, 0.5f / RowCount));
                     m.Flush();
                 },
                 (dm, _) => {
                     e.Parameters["PositionTexture"].SetValue((Texture2D)null);
                     e.Parameters["VelocityTexture"].SetValue((Texture2D)null);
-                    // fuck offfff
+                    e.Parameters["AttributeTexture"].SetValue((Texture2D)null);
+                    e.Parameters["BitmapTexture"].SetValue((Texture2D)null);
+                    // ughhhhhhhhhh
                     for (var i = 0; i < 4; i++)
                         dm.Device.VertexTextures[i] = null;
                     for (var i = 0; i < 16; i++)
@@ -504,15 +560,18 @@ namespace Squared.Illuminant {
     public class ParticleSystemConfiguration {
         public readonly int MaximumCount;
         public readonly int ParticlesPerRow;
+        public readonly int AttributeCount;
 
         // Particles that reach this age are killed
         // Defaults to (effectively) not killing particles
         public int MaximumAge = 1024 * 1024 * 8;
 
         public ParticleSystemConfiguration (
+            int attributeCount = 0,
             int maximumCount = 4096,
             int particlesPerRow = 64
         ) {
+            AttributeCount = attributeCount;
             MaximumCount = maximumCount;
             ParticlesPerRow = particlesPerRow;
         }

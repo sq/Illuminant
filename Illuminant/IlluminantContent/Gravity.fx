@@ -1,23 +1,32 @@
 #include "ParticleCommon.fxh"
 
-uniform float3 Position;
-uniform float  RadiusSquared;
-uniform float  Strength;
+#define MAX_ATTRACTORS 8
+
+uniform int    AttractorCount;
+uniform float3 AttractorPositions[MAX_ATTRACTORS];
+uniform float2 AttractorRadiusesAndStrengths[MAX_ATTRACTORS];
 
 void PS_Gravity (
-    in  float2 xy          : POSITION1,
-    out float4 newPosition : COLOR0,
-    out float4 newVelocity : COLOR1
+    in  float2 xy                : POSITION1,
+    out float4 newPosition       : COLOR0,
+    out float4 newVelocity       : COLOR1,
+    out float4 newAttributes     : COLOR2
 ) {
-    float4 oldPosition = tex2Dlod(PositionSampler, float4(xy + HalfTexel, 0, 0));
-    float4 oldVelocity = tex2Dlod(VelocitySampler, float4(xy + HalfTexel, 0, 0));
+    float4 oldVelocity;
+    readState(
+        xy, newPosition, oldVelocity, newAttributes
+    );
 
-    float3 toCenter = (Position - oldPosition.xyz);
-    float  distanceSquared = max(dot(toCenter, toCenter), RadiusSquared);
-    float  attraction = Strength / distanceSquared;
-    float3 acceleration = normalize(toCenter) * attraction;
+    float3 acceleration = 0;
 
-    newPosition = oldPosition;
+    [loop]
+    for (int i = 0; i < AttractorCount; i++) {
+        float3 toCenter = (AttractorPositions[i] - newPosition.xyz);
+        float  distanceSquared = max(dot(toCenter, toCenter), AttractorRadiusesAndStrengths[i].x);
+        float  attraction = AttractorRadiusesAndStrengths[i].y / distanceSquared;
+        acceleration += normalize(toCenter) * attraction;
+    }
+
     newVelocity = float4(
         oldVelocity + acceleration, oldVelocity.w
     );

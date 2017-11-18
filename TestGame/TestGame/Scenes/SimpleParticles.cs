@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Graphics.PackedVector;
 using Microsoft.Xna.Framework.Input;
 using Squared.Game;
 using Squared.Illuminant;
@@ -36,54 +37,39 @@ namespace TestGame.Scenes {
             );
 
             var sz = new Vector3(Width, Height, 0);
+            var fireball = Game.Content.Load<Texture2D>("fireball");
+            var fireballRect = fireball.BoundsFromRectangle(new Rectangle(0, 0, 34, 21));
 
             System = new ParticleSystem(
                 Engine,
-                new ParticleSystemConfiguration(4000000, 2048)
+                new ParticleSystemConfiguration(
+                    attributeCount: 1,
+                    maximumCount: 100000,
+                    particlesPerRow: 1024
+                )
             ) {
+                ParticleTexture = fireball,
+                ParticleTextureRegion = fireballRect,
+                ParticleSize = new Vector2(34, 21),
                 Transforms = {
-                    /*
                     new VelocityFMA {
-                        Add = new Vector3(0.0025f, 0.0016f, 0),
-                        Multiply = Vector3.One * 0.992f,
-                        AreaType = AreaType.Ellipsoid,
-                        AreaCenter = sz * new Vector3(0.2f, 0.5f, 0),
-                        AreaSize = new Vector3(300, 300, 1)
-                    },
-                    new VelocityFMA {
-                        Add = new Vector3(-0.0015f, -0.0006f, 0),
-                        Multiply = Vector3.One * 0.990f,
-                        AreaType = AreaType.Ellipsoid,
-                        AreaCenter = sz * new Vector3(0.8f, 0.5f, 0),
-                        AreaSize = new Vector3(300, 300, 1)
-                    },
-                    new VelocityFMA {
-                        Multiply = Vector3.One * 1.05f,
-                        AreaType = AreaType.Ellipsoid,
-                        AreaCenter = sz * new Vector3(0.5f, 0.1f, 0),
-                        AreaSize = new Vector3(200, 200, 1)
-                    },
-                    new VelocityFMA {
-                        Multiply = Vector3.One * 0.33f,
-                        AreaType = AreaType.Ellipsoid,
-                        AreaCenter = sz * new Vector3(0.5f, 0.9f, 0),
-                        AreaSize = new Vector3(100, 100, 1)
-                    },
-                    */
-                    new VelocityFMA {
-                        Multiply = Vector3.One * 0.99995f,
+                        Multiply = Vector3.One * 0.9998f,
                     },
                     new Gravity {
-                        Radius = 100,
-                        Strength = 300
-                    },
-                    new Gravity {
-                        Radius = 10,
-                        Strength = 400
-                    },
-                    new Gravity {
-                        Radius = 200,
-                        Strength = 1200
+                        Attractors = {
+                            new Gravity.Attractor {
+                                Radius = 70,
+                                Strength = 200
+                            },
+                            new Gravity.Attractor {
+                                Radius = 10,
+                                Strength = 300
+                            },
+                            new Gravity.Attractor {
+                                Radius = 150,
+                                Strength = 800
+                            },
+                        }
                     },
                 }
             };
@@ -99,7 +85,7 @@ namespace TestGame.Scenes {
         private void InitializeSystem (ParticleSystem system) {
             int seed = 0;
 
-            system.Initialize(
+            system.Initialize<Vector4>(
                 (buf) => {
                     Parallel.For(
                         0, buf.Length, 
@@ -108,7 +94,7 @@ namespace TestGame.Scenes {
                             var a = rng.NextDouble(0, Math.PI * 2);
                             var x = Math.Sin(a);
                             var y = Math.Cos(a);
-                            var r = rng.NextDouble(1, 140);
+                            var r = rng.NextDouble(1, 300);
 
                             buf[i] = new Vector4(
                                 (float)(900 + (r * x)),
@@ -123,7 +109,7 @@ namespace TestGame.Scenes {
                     );
                 },
                 (buf) => {
-                    const float maxSpeed = 1.9f;
+                    const float maxSpeed = 0.7f;
 
                     Parallel.For(
                         0, buf.Length, 
@@ -136,6 +122,22 @@ namespace TestGame.Scenes {
                                 (float)Math.Sin(a) * v,
                                 (float)Math.Cos(a) * v,
                                 0, 0
+                            );
+
+                            return rng;
+                        },
+                        (rng) => {}
+                    );
+                },
+                (buf) => {
+                    Parallel.For(
+                        0, buf.Length, 
+                        () => new MersenneTwister(Interlocked.Increment(ref seed)), 
+                        (i, pls, rng) => {
+                            buf[i] = new Vector4(
+                                rng.NextFloat(0.1f, 1),
+                                rng.NextFloat(0.1f, 1),
+                                rng.NextFloat(0.1f, 1), 1
                             );
 
                             return rng;
@@ -155,7 +157,11 @@ namespace TestGame.Scenes {
             ClearBatch.AddNew(frame, 0, Game.Materials.Clear, clearColor: Color.Black);
 
             if (Running)
-                System.Render(frame, 1, blendState: BlendState.Additive);
+                System.Render(
+                    frame, 1, 
+                    material: Engine.ParticleMaterials.AttributeColor, 
+                    blendState: BlendState.Additive
+                );
         }
 
         public override void Update (GameTime gameTime) {
@@ -171,19 +177,21 @@ namespace TestGame.Scenes {
 
                 var sz = new Vector3(Width, Height, 0);
 
-                ((Gravity)System.Transforms[1]).Position = new Vector3(
+                var grav = (Gravity)System.Transforms[1];
+
+                grav.Attractors[0].Position = new Vector3(
                     (float)((Math.Sin(time / 8) * 500) + (sz.X / 2)),
                     (float)((Math.Cos(time / 8) * 500) + (sz.Y / 2)),
                     0
                 );
-                ((Gravity)System.Transforms[2]).Position = new Vector3(
-                    (float)((Math.Sin((time / 4) + 0.7) * 320) + (sz.X / 2)),
-                    (float)((Math.Cos((time / 4) + 0.8) * 320) + (sz.Y / 2)),
+                grav.Attractors[1].Position = new Vector3(
+                    (float)((Math.Sin((time / 4) + 0.7) * 220) + (sz.X / 2)),
+                    (float)((Math.Cos((time / 4) + 0.8) * 220) + (sz.Y / 2)),
                     0
                 );
-                ((Gravity)System.Transforms[3]).Position = new Vector3(
-                    (float)((Math.Sin((time / 13) + 1.2) * 600) + (sz.X / 2)),
-                    (float)((Math.Cos((time / 13) + 3.6) * 600) + (sz.Y / 2)),
+                grav.Attractors[2].Position = new Vector3(
+                    (float)((Math.Sin((-time / 13) + 1.2) * 700) + (sz.X / 2)),
+                    (float)((Math.Cos((-time / 13) + 3.6) * 700) + (sz.Y / 2)),
                     0
                 );
 

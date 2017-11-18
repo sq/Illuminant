@@ -15,9 +15,14 @@ namespace Squared.Illuminant.Transforms {
         Cylinder = 3
     }
 
-    public abstract class ParticleTransform {
+    public abstract class ParticleTransform : IDisposable {
+        public bool IsActive = true;
+
         internal abstract Material GetMaterial (ParticleMaterials materials);
         internal abstract void SetParameters (EffectParameterCollection parameters);
+
+        public virtual void Dispose () {
+        }
     }
 
     public abstract class ParticleAreaTransform : ParticleTransform {
@@ -79,18 +84,29 @@ namespace Squared.Illuminant.Transforms {
     }
 
     public class Gravity : ParticleTransform {
-        public Vector3 Position;
-        public float   Radius = 1;
-        public float   Strength = 1;
+        public class Attractor {
+            public Vector3 Position;
+            public float   Radius = 1;
+            public float   Strength = 1;
+        }
+
+        public readonly List<Attractor> Attractors = new List<Attractor>();
+
+        private VertexBuffer InstanceData = null;
 
         internal override Material GetMaterial (ParticleMaterials materials) {
             return materials.Gravity;
         }
 
         internal override void SetParameters (EffectParameterCollection parameters) {
-            parameters["Position"].SetValue(Position);
-            parameters["RadiusSquared"].SetValue(Radius * Radius);
-            parameters["Strength"].SetValue(Strength);            
+            if (Attractors.Count > 8)
+                throw new Exception("Maximum number of attractors per instance is 8");
+
+            parameters["AttractorCount"].SetValue(Attractors.Count);
+            var positions = (from p in Attractors select p.Position).ToArray();
+            parameters["AttractorPositions"].SetValue(positions);
+            var rns = (from p in Attractors select new Vector2(p.Radius, p.Strength)).ToArray();
+            parameters["AttractorRadiusesAndStrengths"].SetValue(rns);
         }
     }
 }
