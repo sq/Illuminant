@@ -9,6 +9,7 @@ namespace Squared.Illuminant {
 
         public Material UpdatePositions, RasterizeParticles;
         public Material PositionFMA, VelocityFMA;
+        public Material Gravity;
 
         internal ParticleMaterials (DefaultMaterialSet materialSet) {
             MaterialSet = materialSet;

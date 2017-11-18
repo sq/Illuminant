@@ -158,11 +158,15 @@ namespace Squared.Illuminant {
                 ));
 
                 DefineMaterial(ParticleMaterials.PositionFMA = new Material(
-                    content.Load<Effect>("PermuteParticleSystem"), "PositionFMA", dBegin, dEnd
+                    content.Load<Effect>("AreaTransforms"), "PositionFMA", dBegin, dEnd
                 ));
 
                 DefineMaterial(ParticleMaterials.VelocityFMA = new Material(
-                    content.Load<Effect>("PermuteParticleSystem"), "VelocityFMA", dBegin, dEnd
+                    content.Load<Effect>("AreaTransforms"), "VelocityFMA", dBegin, dEnd
+                ));
+
+                DefineMaterial(ParticleMaterials.Gravity = new Material(
+                    content.Load<Effect>("Gravity"), "Gravity", dBegin, dEnd
                 ));
             }
 

@@ -114,6 +114,9 @@ namespace Squared.Illuminant {
             0, 1, 3, 1, 2, 3
         };
 
+        private int LastResetCount = 0;
+        public event Action<ParticleSystem> OnDeviceReset;
+
         public ParticleSystem (
             ParticleEngine engine, ParticleSystemConfiguration configuration
         ) {
@@ -357,6 +360,12 @@ namespace Squared.Illuminant {
         public void Update (IBatchContainer container, int layer) {
             Slice source, a, b;
             Slice passSource, passDest;
+
+            if (LastResetCount != Engine.ResetCount) {
+                if (OnDeviceReset != null)
+                    OnDeviceReset(this);
+                LastResetCount = Engine.ResetCount;
+            }
 
             lock (Slices) {
                 source = (

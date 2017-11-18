@@ -17,6 +17,8 @@ namespace Squared.Illuminant {
 
         public readonly ParticleEngineConfiguration Configuration;
 
+        internal int ResetCount = 0;
+
         public ParticleEngine (
             ContentManager content, RenderCoordinator coordinator, 
             DefaultMaterialSet materials, ParticleEngineConfiguration configuration
@@ -36,6 +38,7 @@ namespace Squared.Illuminant {
         }
 
         private void Coordinator_DeviceReset (object sender, EventArgs e) {
+            ResetCount += 1;
             // FillIndexBuffer();
         }
 

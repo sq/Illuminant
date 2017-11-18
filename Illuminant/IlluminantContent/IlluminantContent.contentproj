@@ -174,8 +174,15 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="PermuteParticleSystem.fx">
-      <Name>PermuteParticleSystem</Name>
+    <Compile Include="AreaTransforms.fx">
+      <Name>AreaTransforms</Name>
+      <Importer>EffectImporter</Importer>
+      <Processor>EffectProcessor</Processor>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Gravity.fx">
+      <Name>Gravity</Name>
       <Importer>EffectImporter</Importer>
       <Processor>EffectProcessor</Processor>
     </Compile>

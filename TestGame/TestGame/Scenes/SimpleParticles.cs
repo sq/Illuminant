@@ -35,25 +35,71 @@ namespace TestGame.Scenes {
                 }
             );
 
+            var sz = new Vector3(Width, Height, 0);
+
             System = new ParticleSystem(
                 Engine,
                 new ParticleSystemConfiguration(4000000, 2048)
             ) {
                 Transforms = {
+                    /*
                     new VelocityFMA {
-                        Add = new Vector3(0.0015f, 0.0006f, 0),
-                        Multiply = Vector3.One * 0.995f
-                    }
+                        Add = new Vector3(0.0025f, 0.0016f, 0),
+                        Multiply = Vector3.One * 0.992f,
+                        AreaType = AreaType.Ellipsoid,
+                        AreaCenter = sz * new Vector3(0.2f, 0.5f, 0),
+                        AreaSize = new Vector3(300, 300, 1)
+                    },
+                    new VelocityFMA {
+                        Add = new Vector3(-0.0015f, -0.0006f, 0),
+                        Multiply = Vector3.One * 0.990f,
+                        AreaType = AreaType.Ellipsoid,
+                        AreaCenter = sz * new Vector3(0.8f, 0.5f, 0),
+                        AreaSize = new Vector3(300, 300, 1)
+                    },
+                    new VelocityFMA {
+                        Multiply = Vector3.One * 1.05f,
+                        AreaType = AreaType.Ellipsoid,
+                        AreaCenter = sz * new Vector3(0.5f, 0.1f, 0),
+                        AreaSize = new Vector3(200, 200, 1)
+                    },
+                    new VelocityFMA {
+                        Multiply = Vector3.One * 0.33f,
+                        AreaType = AreaType.Ellipsoid,
+                        AreaCenter = sz * new Vector3(0.5f, 0.9f, 0),
+                        AreaSize = new Vector3(100, 100, 1)
+                    },
+                    */
+                    new VelocityFMA {
+                        Multiply = Vector3.One * 0.99995f,
+                    },
+                    new Gravity {
+                        Radius = 100,
+                        Strength = 300
+                    },
+                    new Gravity {
+                        Radius = 10,
+                        Strength = 400
+                    },
+                    new Gravity {
+                        Radius = 200,
+                        Strength = 1200
+                    },
                 }
             };
 
+            System.OnDeviceReset += InitializeSystem;
             Reset();
         }
 
         public void Reset () {
+            InitializeSystem(System);
+        }
+
+        private void InitializeSystem (ParticleSystem system) {
             int seed = 0;
 
-            System.Initialize(
+            system.Initialize(
                 (buf) => {
                     Parallel.For(
                         0, buf.Length, 
@@ -77,13 +123,13 @@ namespace TestGame.Scenes {
                     );
                 },
                 (buf) => {
-                    const float maxSpeed = 3.5f;
+                    const float maxSpeed = 1.9f;
 
                     Parallel.For(
                         0, buf.Length, 
                         () => new MersenneTwister(Interlocked.Increment(ref seed)), 
                         (i, pls, rng) => {
-                            var v = rng.NextFloat(maxSpeed * 0.6f, maxSpeed);
+                            var v = rng.NextFloat(maxSpeed * 0.25f, maxSpeed);
                             var a = rng.NextDouble(0, Math.PI * 2);
 
                             buf[i] = new Vector4(
@@ -120,6 +166,26 @@ namespace TestGame.Scenes {
                     Running = !Running;
                 if (KeyWasPressed(Keys.R))
                     Reset();
+
+                var time = Time.Seconds;
+
+                var sz = new Vector3(Width, Height, 0);
+
+                ((Gravity)System.Transforms[1]).Position = new Vector3(
+                    (float)((Math.Sin(time / 8) * 500) + (sz.X / 2)),
+                    (float)((Math.Cos(time / 8) * 500) + (sz.Y / 2)),
+                    0
+                );
+                ((Gravity)System.Transforms[2]).Position = new Vector3(
+                    (float)((Math.Sin((time / 4) + 0.7) * 320) + (sz.X / 2)),
+                    (float)((Math.Cos((time / 4) + 0.8) * 320) + (sz.Y / 2)),
+                    0
+                );
+                ((Gravity)System.Transforms[3]).Position = new Vector3(
+                    (float)((Math.Sin((time / 13) + 1.2) * 600) + (sz.X / 2)),
+                    (float)((Math.Cos((time / 13) + 3.6) * 600) + (sz.Y / 2)),
+                    0
+                );
 
                 var ms = Mouse.GetState();
                 Game.IsMouseVisible = true;

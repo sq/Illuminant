@@ -42,7 +42,7 @@ namespace TestGame {
             Graphics.PreferredBackBufferWidth = 1920;
             Graphics.PreferredBackBufferHeight = 1080;
             Graphics.SynchronizeWithVerticalRetrace = true;
-            Graphics.PreferMultiSampling = false;
+            Graphics.PreferMultiSampling = true;
             Graphics.IsFullScreen = false;
             // Graphics.SynchronizeWithVerticalRetrace = false;
 
@@ -82,12 +82,22 @@ namespace TestGame {
             KeyboardState = Keyboard.GetState();
 
             if (IsActive) {
+                var alt = KeyboardState.IsKeyDown(Keys.LeftAlt) || KeyboardState.IsKeyDown(Keys.RightAlt);
+                var wasAlt = PreviousKeyboardState.IsKeyDown(Keys.LeftAlt) || PreviousKeyboardState.IsKeyDown(Keys.RightAlt);
+
                 if (KeyboardState.IsKeyDown(Keys.OemOpenBrackets) && !PreviousKeyboardState.IsKeyDown(Keys.OemOpenBrackets))
                     ActiveSceneIndex = Arithmetic.Wrap(ActiveSceneIndex - 1, 0, Scenes.Length - 1);
                 else if (KeyboardState.IsKeyDown(Keys.OemCloseBrackets) && !PreviousKeyboardState.IsKeyDown(Keys.OemCloseBrackets))
                     ActiveSceneIndex = Arithmetic.Wrap(ActiveSceneIndex + 1, 0, Scenes.Length - 1);
                 else if (KeyboardState.IsKeyDown(Keys.OemTilde) && !PreviousKeyboardState.IsKeyDown(Keys.OemTilde)) {
                     Graphics.SynchronizeWithVerticalRetrace = !Graphics.SynchronizeWithVerticalRetrace;
+                    Graphics.ApplyChangesAfterPresent(RenderCoordinator);
+                }
+                else if (
+                    (KeyboardState.IsKeyDown(Keys.Enter) && alt) &&
+                    (!PreviousKeyboardState.IsKeyDown(Keys.Enter) || !wasAlt)
+                ) {
+                    Graphics.IsFullScreen = !Graphics.IsFullScreen;
                     Graphics.ApplyChangesAfterPresent(RenderCoordinator);
                 }
                 else if (KeyboardState.IsKeyDown(Keys.OemPipe) && !PreviousKeyboardState.IsKeyDown(Keys.OemPipe)) {
