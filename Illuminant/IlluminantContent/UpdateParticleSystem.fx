@@ -1,5 +1,7 @@
 #include "ParticleCommon.fxh"
 
+uniform float LifeDecayRate;
+
 void PS_Update (
     in  float2 xy            : POSITION1,
     out float4 newPosition   : COLOR0,
@@ -11,7 +13,7 @@ void PS_Update (
         xy, oldPosition, oldVelocity, newAttributes
     );
 
-    newPosition = float4(oldPosition.xyz + oldVelocity.xyz, oldPosition.w);
+    newPosition = float4(oldPosition.xyz + oldVelocity.xyz, oldPosition.w - LifeDecayRate);
     newVelocity = oldVelocity;
 }
 

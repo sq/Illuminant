@@ -138,10 +138,6 @@ namespace Squared.Illuminant {
         private int LastResetCount = 0;
         public event Action<ParticleSystem> OnDeviceReset;
 
-        public Texture2D ParticleTexture;
-        public Bounds    ParticleTextureRegion = new Bounds(Vector2.Zero, Vector2.One);
-        public Vector2   ParticleSize = Vector2.One;
-
         public ParticleSystem (
             ParticleEngine engine, ParticleSystemConfiguration configuration
         ) {
@@ -297,11 +293,19 @@ namespace Squared.Illuminant {
 
             var _source = passSource;
             var _dest = passDest;
-            var bindings = new[] {
-                new RenderTargetBinding(_dest.PositionAndBirthTime),
-                new RenderTargetBinding(_dest.Velocity),
-                new RenderTargetBinding(_dest.Attributes)
-            };
+
+            RenderTargetBinding[] bindings;            
+            if (_dest.Attributes != null)
+                bindings = new[] {
+                    new RenderTargetBinding(_dest.PositionAndBirthTime),
+                    new RenderTargetBinding(_dest.Velocity),
+                    new RenderTargetBinding(_dest.Attributes)
+                };
+            else
+                bindings = new[] {
+                    new RenderTargetBinding(_dest.PositionAndBirthTime),
+                    new RenderTargetBinding(_dest.Velocity)
+                };
 
             var e = m.Effect;
             using (var batch = NativeBatch.New(
@@ -443,7 +447,7 @@ namespace Squared.Illuminant {
                 UpdatePass(
                     group, i++, pm.UpdatePositions,
                     source, a, b, ref passSource, ref passDest,
-                    null
+                    (p) => p["LifeDecayRate"].SetValue(Configuration.GlobalLifeDecayRate)
                 );
             }
 
@@ -495,13 +499,16 @@ namespace Squared.Illuminant {
                     e.Parameters["PositionTexture"].SetValue(source.PositionAndBirthTime);
                     e.Parameters["VelocityTexture"].SetValue(source.Velocity);
                     e.Parameters["AttributeTexture"].SetValue(source.Attributes);
-                    e.Parameters["BitmapTexture"].SetValue(ParticleTexture);
+                    e.Parameters["BitmapTexture"].SetValue(Configuration.Texture);
                     e.Parameters["BitmapTextureRegion"].SetValue(new Vector4(
-                        ParticleTextureRegion.TopLeft, 
-                        ParticleTextureRegion.BottomRight.X, 
-                        ParticleTextureRegion.BottomRight.Y
+                        Configuration.TextureRegion.TopLeft, 
+                        Configuration.TextureRegion.BottomRight.X, 
+                        Configuration.TextureRegion.BottomRight.Y
                     ));
-                    e.Parameters["Size"].SetValue(ParticleSize / 2);
+                    e.Parameters["AnimationRate"].SetValue(Configuration.AnimationRate);
+                    e.Parameters["Size"].SetValue(Configuration.Size / 2);
+                    e.Parameters["VelocityRotation"].SetValue(Configuration.RotationFromVelocity ? 1f : 0f);
+                    e.Parameters["OpacityFromLife"].SetValue(Configuration.OpacityFromLife);
                     e.Parameters["HalfTexel"].SetValue(new Vector2(0.5f / Configuration.ParticlesPerRow, 0.5f / RowCount));
                     m.Flush();
                 },
@@ -565,6 +572,24 @@ namespace Squared.Illuminant {
         // Particles that reach this age are killed
         // Defaults to (effectively) not killing particles
         public int MaximumAge = 1024 * 1024 * 8;
+
+        // Configures the sprite rendered for each particle
+        public Texture2D Texture;
+        public Bounds    TextureRegion = new Bounds(Vector2.Zero, Vector2.One);
+        public Vector2   Size = Vector2.One;
+
+        // Animates through the sprite texture based on the particle's life value, if set
+        // Smaller values will result in slower animation. Zero turns off animation.
+        public Vector2 AnimationRate;
+
+        // If set, particles will rotate based on their direction of movement
+        public bool RotationFromVelocity;
+
+        // If != 0, a particle's opacity is equal to its life divided by this value
+        public float OpacityFromLife = 0;
+
+        // Life of all particles decreases by this much every update
+        public float GlobalLifeDecayRate = 1;
 
         public ParticleSystemConfiguration (
             int attributeCount = 0,

@@ -43,14 +43,18 @@ namespace TestGame.Scenes {
             System = new ParticleSystem(
                 Engine,
                 new ParticleSystemConfiguration(
-                    attributeCount: 1,
+                    attributeCount: 0,
                     maximumCount: 100000,
                     particlesPerRow: 1024
-                )
+                ) {
+                    Texture = fireball,
+                    TextureRegion = fireballRect,
+                    Size = new Vector2(34, 21) * 0.9f,
+                    AnimationRate = new Vector2(1 / 6f, 0),
+                    RotationFromVelocity = true,
+                    OpacityFromLife = 2048
+                }
             ) {
-                ParticleTexture = fireball,
-                ParticleTextureRegion = fireballRect,
-                ParticleSize = new Vector2(34, 21),
                 Transforms = {
                     new VelocityFMA {
                         Multiply = Vector3.One * 0.9998f,
@@ -100,7 +104,10 @@ namespace TestGame.Scenes {
                                 (float)(900 + (r * x)),
                                 (float)(550 + (r * y)),
                                 0,
-                                1024
+                                rng.NextFloat(
+                                    system.Configuration.OpacityFromLife * 0.25f, 
+                                    system.Configuration.OpacityFromLife
+                                )
                             );
 
                             return rng;
@@ -109,7 +116,7 @@ namespace TestGame.Scenes {
                     );
                 },
                 (buf) => {
-                    const float maxSpeed = 0.7f;
+                    const float maxSpeed = 2.7f;
 
                     Parallel.For(
                         0, buf.Length, 
@@ -159,8 +166,8 @@ namespace TestGame.Scenes {
             if (Running)
                 System.Render(
                     frame, 1, 
-                    material: Engine.ParticleMaterials.AttributeColor, 
-                    blendState: BlendState.Additive
+                    material: Engine.ParticleMaterials.White, 
+                    blendState: BlendState.AlphaBlend
                 );
         }
 
