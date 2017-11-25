@@ -157,12 +157,12 @@ namespace Squared.Illuminant {
                     content.Load<Effect>("UpdateParticleSystem"), "UpdatePositions", dBegin, dEnd
                 ));
 
-                DefineMaterial(ParticleMaterials.PositionFMA = new Material(
-                    content.Load<Effect>("AreaTransforms"), "PositionFMA", dBegin, dEnd
+                DefineMaterial(ParticleMaterials.FMA = new Material(
+                    content.Load<Effect>("FMA"), "FMA", dBegin, dEnd
                 ));
 
-                DefineMaterial(ParticleMaterials.VelocityFMA = new Material(
-                    content.Load<Effect>("AreaTransforms"), "VelocityFMA", dBegin, dEnd
+                DefineMaterial(ParticleMaterials.MatrixMultiply = new Material(
+                    content.Load<Effect>("MatrixMultiply"), "MatrixMultiply", dBegin, dEnd
                 ));
 
                 DefineMaterial(ParticleMaterials.Gravity = new Material(

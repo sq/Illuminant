@@ -26,6 +26,8 @@ namespace Squared.Illuminant.Transforms {
     }
 
     public abstract class ParticleAreaTransform : ParticleTransform {
+        public float    Strength = 1;
+
         public AreaType AreaType = AreaType.None;
         public Vector3  AreaCenter;
 
@@ -58,28 +60,66 @@ namespace Squared.Illuminant.Transforms {
             parameters["AreaCenter"].SetValue(AreaCenter);
             parameters["AreaSize"].SetValue(_AreaSize);
             parameters["AreaFalloff"].SetValue(_AreaFalloff);
+            parameters["Strength"].SetValue(Strength);
         }
     }
 
-    public abstract class ParticleFMA : ParticleAreaTransform {
-        public Vector3 Add, Multiply;
+    public class FMA : ParticleAreaTransform {
+        public class FMAParameters<T> where T : struct {
+            public T Add;
+            public T Multiply;
+        }
+
+        public FMAParameters<Vector3> Position;
+        public FMAParameters<Vector3> Velocity;
+        public FMAParameters<Vector4> Attribute;
+
+        public FMA () {
+            Position = new FMAParameters<Vector3> {
+                Add = Vector3.Zero,
+                Multiply = Vector3.One
+            };
+            Velocity = new FMAParameters<Vector3> {
+                Add = Vector3.Zero,
+                Multiply = Vector3.One
+            };
+            Attribute = new FMAParameters<Vector4> {
+                Add = Vector4.Zero,
+                Multiply = Vector4.One
+            };
+        }
 
         internal override void SetParameters (EffectParameterCollection parameters) {
             base.SetParameters(parameters);
-            parameters["Add"].SetValue(Add);
-            parameters["Multiply"].SetValue(Multiply);
+            parameters["PositionAdd"].SetValue(new Vector4(Position.Add, 0));
+            parameters["PositionMultiply"].SetValue(new Vector4(Position.Multiply, 1));
+            parameters["VelocityAdd"].SetValue(new Vector4(Velocity.Add, 0));
+            parameters["VelocityMultiply"].SetValue(new Vector4(Velocity.Multiply, 1));
+            parameters["AttributeAdd"].SetValue(Attribute.Add);
+            parameters["AttributeMultiply"].SetValue(Attribute.Multiply);
+        }
+
+        internal override Material GetMaterial (ParticleMaterials materials) {
+            return materials.FMA;
         }
     }
 
-    public class PositionFMA : ParticleFMA {
-        internal override Material GetMaterial (ParticleMaterials materials) {
-            return materials.PositionFMA;
-        }
-    }
+    public class MatrixMultiply : ParticleAreaTransform {
+        public Matrix Position, Velocity, Attribute;
 
-    public class VelocityFMA : ParticleFMA {
+        public MatrixMultiply () {
+            Position = Velocity = Attribute = Matrix.Identity;
+        }
+
+        internal override void SetParameters (EffectParameterCollection parameters) {
+            base.SetParameters(parameters);
+            parameters["PositionMatrix"].SetValue(Position);
+            parameters["VelocityMatrix"].SetValue(Velocity);
+            parameters["AttributeMatrix"].SetValue(Attribute);
+        }
+
         internal override Material GetMaterial (ParticleMaterials materials) {
-            return materials.VelocityFMA;
+            return materials.MatrixMultiply;
         }
     }
 

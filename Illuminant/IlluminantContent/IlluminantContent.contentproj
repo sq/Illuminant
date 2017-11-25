@@ -174,8 +174,8 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AreaTransforms.fx">
-      <Name>AreaTransforms</Name>
+    <Compile Include="FMA.fx">
+      <Name>FMA</Name>
       <Importer>EffectImporter</Importer>
       <Processor>EffectProcessor</Processor>
     </Compile>
@@ -183,6 +183,13 @@
   <ItemGroup>
     <Compile Include="Gravity.fx">
       <Name>Gravity</Name>
+      <Importer>EffectImporter</Importer>
+      <Processor>EffectProcessor</Processor>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="MatrixMultiply.fx">
+      <Name>MatrixMultiply</Name>
       <Importer>EffectImporter</Importer>
       <Processor>EffectProcessor</Processor>
     </Compile>

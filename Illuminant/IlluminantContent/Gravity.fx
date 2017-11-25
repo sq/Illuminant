@@ -1,6 +1,6 @@
 #include "ParticleCommon.fxh"
 
-#define MAX_ATTRACTORS 8
+#define MAX_ATTRACTORS 16
 
 uniform int    AttractorCount;
 uniform float3 AttractorPositions[MAX_ATTRACTORS];
@@ -19,7 +19,6 @@ void PS_Gravity (
 
     float3 acceleration = 0;
 
-    [loop]
     for (int i = 0; i < AttractorCount; i++) {
         float3 toCenter = (AttractorPositions[i] - newPosition.xyz);
         float  distanceSquared = max(dot(toCenter, toCenter), AttractorRadiusesAndStrengths[i].x);

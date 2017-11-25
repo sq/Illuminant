@@ -8,8 +8,7 @@ namespace Squared.Illuminant {
         public readonly DefaultMaterialSet MaterialSet;
 
         public Material UpdatePositions;
-        public Material PositionFMA, VelocityFMA;
-        public Material Gravity;
+        public Material FMA, Gravity, MatrixMultiply;
 
         public Material White, AttributeColor;
 
