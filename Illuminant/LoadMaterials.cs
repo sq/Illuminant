@@ -157,6 +157,10 @@ namespace Squared.Illuminant {
                     content.Load<Effect>("UpdateParticleSystem"), "UpdatePositions", dBegin, dEnd
                 ));
 
+                DefineMaterial(ParticleMaterials.UpdateWithDistanceField = new Material(
+                    content.Load<Effect>("UpdateParticleSystemWithDistanceField"), "UpdateWithDistanceField", dBegin, dEnd
+                ));
+
                 DefineMaterial(ParticleMaterials.FMA = new Material(
                     content.Load<Effect>("FMA"), "FMA", dBegin, dEnd
                 ));

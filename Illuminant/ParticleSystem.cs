@@ -109,6 +109,10 @@ namespace Squared.Illuminant {
         public readonly List<Transforms.ParticleTransform> Transforms = 
             new List<Illuminant.Transforms.ParticleTransform>();
 
+        // If set, particles collide with objects in this distance field
+        public DistanceField DistanceField;
+        public float         MaximumZ;
+
         // 3 because we go
         // old -> a -> b -> a -> ... -> done
         private const int SliceCount          = 3;
@@ -444,11 +448,23 @@ namespace Squared.Illuminant {
                     );
                 }
 
-                UpdatePass(
-                    group, i++, pm.UpdatePositions,
-                    source, a, b, ref passSource, ref passDest,
-                    (p) => p["LifeDecayRate"].SetValue(Configuration.GlobalLifeDecayRate)
-                );
+                if (DistanceField != null) {
+                    var m = pm.UpdateWithDistanceField;
+                    var p = m.Effect.Parameters;
+
+                    p["MaximumEncodedDistance"].SetValue(DistanceField.MaximumEncodedDistance);
+
+                    var dfu = new Uniforms.DistanceField(DistanceField, MaximumZ);
+                    pm.MaterialSet.TrySetBoundUniform(m, "DistanceField", ref dfu);
+
+                    p["DistanceFieldTexture"].SetValue(DistanceField.Texture);
+                } else {
+                    UpdatePass(
+                        group, i++, pm.UpdatePositions,
+                        source, a, b, ref passSource, ref passDest,
+                        (p) => p["LifeDecayRate"].SetValue(Configuration.GlobalLifeDecayRate)
+                    );
+                }
             }
 
             // TODO: Do this immediately after issuing the batch instead?

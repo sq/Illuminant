@@ -482,19 +482,7 @@ namespace Squared.Illuminant {
                     RenderScale = Configuration.RenderScale
                 },
 
-                DistanceField = new Uniforms.DistanceField {
-                    Extent = new Vector3(
-                        DistanceField.VirtualWidth,
-                        DistanceField.VirtualHeight,
-                        Environment.MaximumZ
-                    ),
-                    TextureSliceSize = new Vector2(1f / DistanceField.ColumnCount, 1f / DistanceField.RowCount),
-                    TextureSliceCount = new Vector3(DistanceField.ColumnCount, DistanceField.RowCount, DistanceField.ValidSliceCount),
-                    TextureTexelSize = new Vector2(
-                        1f / (DistanceField.VirtualWidth * DistanceField.ColumnCount), 
-                        1f / (DistanceField.VirtualHeight * DistanceField.RowCount)
-                    ),
-                    InvScaleFactor = 1f / DistanceField.Resolution,
+                DistanceField = new Uniforms.DistanceField(DistanceField, Environment.MaximumZ) {
                     OcclusionToOpacityPower = Configuration.DistanceFieldOcclusionToOpacityPower,
                     MaxConeRadius = Configuration.DistanceFieldMaxConeRadius,
                     ConeGrowthFactor = Configuration.DistanceFieldConeGrowthFactor,

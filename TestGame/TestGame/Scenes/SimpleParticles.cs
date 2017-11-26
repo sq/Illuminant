@@ -127,7 +127,7 @@ namespace TestGame.Scenes {
                 int numTilesY = (Height / tileSize) + 1;
 
                 var rng = new Random(123456);
-                for (var i = 0; i < 48; i++) {
+                for (var i = 0; i < 40; i++) {
                     int x = rng.Next(0, numTilesX), y = rng.Next(0, numTilesY);
                     Environment.Obstructions.Add(new LightObstruction(
                         LightObstructionType.Box,
