@@ -178,6 +178,7 @@
       <Name>FMA</Name>
       <Importer>EffectImporter</Importer>
       <Processor>EffectProcessor</Processor>
+      <ProcessorParameters_DebugMode>Debug</ProcessorParameters_DebugMode>
     </Compile>
   </ItemGroup>
   <ItemGroup>
@@ -192,6 +193,7 @@
       <Name>MatrixMultiply</Name>
       <Importer>EffectImporter</Importer>
       <Processor>EffectProcessor</Processor>
+      <ProcessorParameters_DebugMode>Debug</ProcessorParameters_DebugMode>
     </Compile>
   </ItemGroup>
   <ItemGroup>

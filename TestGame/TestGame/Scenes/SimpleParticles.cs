@@ -63,25 +63,25 @@ namespace TestGame.Scenes {
                 ) {
                     Texture = fireball,
                     TextureRegion = fireballRect,
-                    Size = new Vector2(34, 21) * 0.55f,
+                    Size = new Vector2(34, 21) * 0.45f,
                     AnimationRate = new Vector2(1 / 6f, 0),
                     RotationFromVelocity = true,
                     OpacityFromLife = 8192,
-                    EscapeVelocity = 2f,
-                    BounceVelocityMultiplier = 0.9f
+                    EscapeVelocity = 3f,
+                    BounceVelocityMultiplier = 0.85f
                 }
             ) {
                 Transforms = {
                     new MatrixMultiply {
                         // HACK: If we just use a rotation matrix, the particle eventually loses energy and
                         //  stops moving entirely. :(
-                        Velocity = Matrix.Identity * 1.002f * Matrix.CreateRotationZ(0.03f),
+                        Velocity = Matrix.Identity * 1.001f * Matrix.CreateRotationZ(0.015f),
                     },
                     new Gravity {
                         Attractors = {
                             new Gravity.Attractor {
                                 Radius = 70,
-                                Strength = 450
+                                Strength = 350
                             },
                             new Gravity.Attractor {
                                 Radius = 10,
@@ -89,7 +89,7 @@ namespace TestGame.Scenes {
                             },
                             new Gravity.Attractor {
                                 Radius = 150,
-                                Strength = 1500
+                                Strength = 1200
                             },
                         }
                     },
@@ -129,7 +129,7 @@ namespace TestGame.Scenes {
             InitializeSystem(System);
 
             {
-                const int tileSize = 64;
+                const int tileSize = 32;
                 int numTilesX = (Width / tileSize) + 1;
                 int numTilesY = (Height / tileSize) + 1;
 
@@ -142,15 +142,37 @@ namespace TestGame.Scenes {
                 var rng = new Random(RandomSeed);
                 for (var i = 0; i < 24; i++) {
                     int x = rng.Next(0, numTilesX), y = rng.Next(0, numTilesY);
-                    Environment.Obstructions.Add(new LightObstruction(
-                        LightObstructionType.Box,
+                    float sz = rng.NextFloat(40f, 100f);
+                    Environment.Obstructions.Add(LightObstruction.Ellipsoid(
                         new Vector3(x * tileSize, y * tileSize, 0),
-                        new Vector3(60f, 60f, rng.Next(32, 200))
+                        new Vector3(sz, sz, 60f)
                     ));
                 }
 
+                Environment.Obstructions.Add(LightObstruction.Box(
+                    new Vector3(0, -45, 0),
+                    new Vector3(Width, 50, 60f)
+                ));
+
+                Environment.Obstructions.Add(LightObstruction.Box(
+                    new Vector3(0, Height + 45, 0),
+                    new Vector3(Width, 50, 60f)
+                ));
+
+                Environment.Obstructions.Add(LightObstruction.Box(
+                    new Vector3(-45, 0, 0),
+                    new Vector3(50, Height, 60f)
+                ));
+
+                Environment.Obstructions.Add(LightObstruction.Box(
+                    new Vector3(Width + 45, 0, 0),
+                    new Vector3(50, Height, 60f)
+                ));
+
                 DistanceField.Invalidate();
             }
+
+            GC.Collect();
         }
 
         private void InitializeSystem (ParticleSystem system) {
@@ -165,14 +187,16 @@ namespace TestGame.Scenes {
                             var a = rng.NextDouble(0, Math.PI * 2);
                             var x = Math.Sin(a);
                             var y = Math.Cos(a);
-                            var r = rng.NextDouble(1, 550);
+                            var r = rng.NextDouble(1, 800);
+                            x = (900 + (r * x));
+                            y = (550 + (r * y));
+                            x = Arithmetic.Clamp(x, 10, Width - 10);
+                            y = Arithmetic.Clamp(y, 10, Height - 10);
 
                             buf[i] = new Vector4(
-                                (float)(900 + (r * x)),
-                                (float)(550 + (r * y)),
-                                0,
+                                (float)x, (float)y, 0,
                                 rng.NextFloat(
-                                    system.Configuration.OpacityFromLife * 0.25f, 
+                                    system.Configuration.OpacityFromLife * 0.33f, 
                                     system.Configuration.OpacityFromLife
                                 )
                             );
@@ -209,9 +233,9 @@ namespace TestGame.Scenes {
                         () => new MersenneTwister(Interlocked.Increment(ref seed)), 
                         (i, pls, rng) => {
                             buf[i] = new Vector4(
-                                rng.NextFloat(0.04f, 0.35f),
-                                rng.NextFloat(0.17f, 0.32f),
-                                rng.NextFloat(0.09f, 0.35f), 1
+                                rng.NextFloat(0.02f, 0.22f),
+                                rng.NextFloat(0.07f, 0.24f),
+                                rng.NextFloat(0.06f, 0.28f), 1
                             );
 
                             return rng;

@@ -38,5 +38,13 @@ namespace Squared.Illuminant {
                 );
             }
         }
+
+        public static LightObstruction Box (Vector3 center, Vector3 size) {
+            return new LightObstruction(LightObstructionType.Box, center, size);
+        }
+
+        public static LightObstruction Ellipsoid (Vector3 center, Vector3 size) {
+            return new LightObstruction(LightObstructionType.Ellipsoid, center, size);
+        }
     }
 }
