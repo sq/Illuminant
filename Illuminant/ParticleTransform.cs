@@ -15,6 +15,39 @@ namespace Squared.Illuminant.Transforms {
         Cylinder = 3
     }
 
+    public class TransformArea {
+        public AreaType Type = AreaType.None;
+        public Vector3  Center;
+
+        private Vector3 _Size = Vector3.One;
+        public Vector3 Size {
+            get {
+                return _Size;
+            }
+            set {
+                if ((value.X == 0) || (value.Y == 0) || (value.Z == 0))
+                    throw new ArgumentOutOfRangeException("value", "Size must be nonzero");
+                _Size = value;
+            }
+        }
+
+        private float _Falloff = 1;
+        public float Falloff {
+            get {
+                return _Falloff;
+            }
+            set {
+                if (value <= 0)
+                    throw new ArgumentOutOfRangeException("value", "Falloff divisor must be larger than 0");
+                _Falloff = value;
+            }
+        }
+
+        public TransformArea (AreaType type) {
+            Type = type;
+        }
+    }
+
     public abstract class ParticleTransform : IDisposable {
         public bool IsActive = true;
 
@@ -26,40 +59,18 @@ namespace Squared.Illuminant.Transforms {
     }
 
     public abstract class ParticleAreaTransform : ParticleTransform {
-        public float    Strength = 1;
-
-        public AreaType AreaType = AreaType.None;
-        public Vector3  AreaCenter;
-
-        private Vector3 _AreaSize = Vector3.One;
-        public Vector3 AreaSize {
-            get {
-                return _AreaSize;
-            }
-            set {
-                if ((value.X == 0) || (value.Y == 0) || (value.Z == 0))
-                    throw new ArgumentOutOfRangeException("value", "Size must be nonzero");
-                _AreaSize = value;
-            }
-        }
-
-        private float _AreaFalloff = 1;
-        public float AreaFalloff {
-            get {
-                return _AreaFalloff;
-            }
-            set {
-                if (value <= 0)
-                    throw new ArgumentOutOfRangeException("value", "Falloff divisor must be larger than 0");
-                _AreaFalloff = value;
-            }
-        }
+        public float Strength = 1;
+        public TransformArea Area = null;
 
         internal override void SetParameters (EffectParameterCollection parameters) {
-            parameters["AreaType"].SetValue((int)AreaType);
-            parameters["AreaCenter"].SetValue(AreaCenter);
-            parameters["AreaSize"].SetValue(_AreaSize);
-            parameters["AreaFalloff"].SetValue(_AreaFalloff);
+            if (Area != null) {
+                parameters["AreaType"].SetValue((int)Area.Type);
+                parameters["AreaCenter"].SetValue(Area.Center);
+                parameters["AreaSize"].SetValue(Area.Size);
+                parameters["AreaFalloff"].SetValue(Area.Falloff);
+            } else {
+                parameters["AreaType"].SetValue(0);
+            }
             parameters["Strength"].SetValue(Strength);
         }
     }

@@ -22,7 +22,9 @@ void PS_Gravity (
     for (int i = 0; i < AttractorCount; i++) {
         float3 toCenter = (AttractorPositions[i] - newPosition.xyz);
         float  distanceSquared = max(dot(toCenter, toCenter), AttractorRadiusesAndStrengths[i].x);
-        float  attraction = AttractorRadiusesAndStrengths[i].y / distanceSquared;
+        float  attraction = abs(AttractorRadiusesAndStrengths[i].y) / distanceSquared;
+        if (AttractorRadiusesAndStrengths[i].y < 0)
+            attraction = -attraction;
         acceleration += normalize(toCenter) * attraction;
     }
 
