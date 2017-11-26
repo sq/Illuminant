@@ -25,6 +25,7 @@ namespace TestGame.Scenes {
         ParticleSystem System;
 
         bool Running = true;
+        int RandomSeed = 152;
 
         public SimpleParticles (TestGame game, int width, int height)
             : base(game, width, height) {
@@ -57,22 +58,24 @@ namespace TestGame.Scenes {
                 Engine,
                 new ParticleSystemConfiguration(
                     attributeCount: 1,
-                    maximumCount: 1000000,
-                    particlesPerRow: 1024
+                    maximumCount: 2000000,
+                    particlesPerRow: 2048
                 ) {
                     Texture = fireball,
                     TextureRegion = fireballRect,
                     Size = new Vector2(34, 21) * 0.55f,
                     AnimationRate = new Vector2(1 / 6f, 0),
                     RotationFromVelocity = true,
-                    OpacityFromLife = 8192
+                    OpacityFromLife = 8192,
+                    EscapeVelocity = 2f,
+                    BounceVelocityMultiplier = 0.9f
                 }
             ) {
                 Transforms = {
                     new MatrixMultiply {
                         // HACK: If we just use a rotation matrix, the particle eventually loses energy and
                         //  stops moving entirely. :(
-                        Velocity = Matrix.Identity * 1.001f * Matrix.CreateRotationZ(0.04f),
+                        Velocity = Matrix.Identity * 1.002f * Matrix.CreateRotationZ(0.03f),
                     },
                     new Gravity {
                         Attractors = {
@@ -120,26 +123,34 @@ namespace TestGame.Scenes {
             ) {
                 DistanceField = DistanceField
             };
+        }
+
+        public void Reset () {
+            InitializeSystem(System);
 
             {
                 const int tileSize = 64;
                 int numTilesX = (Width / tileSize) + 1;
                 int numTilesY = (Height / tileSize) + 1;
 
-                var rng = new Random(123456);
-                for (var i = 0; i < 40; i++) {
+                /*
+                RandomSeed += 1;
+                Console.WriteLine(RandomSeed);
+                */
+
+                Environment.Obstructions.Clear();
+                var rng = new Random(RandomSeed);
+                for (var i = 0; i < 24; i++) {
                     int x = rng.Next(0, numTilesX), y = rng.Next(0, numTilesY);
                     Environment.Obstructions.Add(new LightObstruction(
                         LightObstructionType.Box,
                         new Vector3(x * tileSize, y * tileSize, 0),
-                        new Vector3(66f, 66f, rng.Next(32, 200))
+                        new Vector3(60f, 60f, rng.Next(32, 200))
                     ));
                 }
-            }
-        }
 
-        public void Reset () {
-            InitializeSystem(System);
+                DistanceField.Invalidate();
+            }
         }
 
         private void InitializeSystem (ParticleSystem system) {
@@ -154,7 +165,7 @@ namespace TestGame.Scenes {
                             var a = rng.NextDouble(0, Math.PI * 2);
                             var x = Math.Sin(a);
                             var y = Math.Cos(a);
-                            var r = rng.NextDouble(1, 500);
+                            var r = rng.NextDouble(1, 550);
 
                             buf[i] = new Vector4(
                                 (float)(900 + (r * x)),
@@ -172,7 +183,7 @@ namespace TestGame.Scenes {
                     );
                 },
                 (buf) => {
-                    const float maxSpeed = 3.5f;
+                    const float maxSpeed = 3f;
 
                     Parallel.For(
                         0, buf.Length, 
@@ -217,6 +228,8 @@ namespace TestGame.Scenes {
             // This lighting renderer's job is to generate a distance field for collisions
             LightingRenderer.UpdateFields(frame, -3);
 
+            System.Configuration.DistanceField = LightingRenderer.DistanceField;
+
             if (Running)
                 System.Update(frame, -2);
 
@@ -229,12 +242,15 @@ namespace TestGame.Scenes {
                     blendState: BlendState.Additive
                 );
 
+            var lightDir = new Vector3(-0.5f, 0.5f, -1f);
+            lightDir.Normalize();
+
             LightingRenderer.VisualizeDistanceField(
                 Bounds.FromPositionAndSize(Vector2.Zero, new Vector2(Width, Height)),
                 Vector3.UnitZ,
                 frame, 2,
                 mode: VisualizationMode.Outlines,
-                blendState: BlendState.Opaque
+                blendState: BlendState.AlphaBlend
             );
         }
 

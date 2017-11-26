@@ -2,10 +2,6 @@
 #define EPSILON 0.5
 #define OUTLINE_SIZE 1.8
 
-uniform float3 AmbientColor;
-uniform float3 LightDirection;
-uniform float3 LightColor;
-
 float3 estimateNormal(
     float3   position,
     in TVARS vars

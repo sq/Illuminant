@@ -109,10 +109,6 @@ namespace Squared.Illuminant {
         public readonly List<Transforms.ParticleTransform> Transforms = 
             new List<Illuminant.Transforms.ParticleTransform>();
 
-        // If set, particles collide with objects in this distance field
-        public DistanceField DistanceField;
-        public float         MaximumZ;
-
         // 3 because we go
         // old -> a -> b -> a -> ... -> done
         private const int SliceCount          = 3;
@@ -448,16 +444,21 @@ namespace Squared.Illuminant {
                     );
                 }
 
-                if (DistanceField != null) {
-                    var m = pm.UpdateWithDistanceField;
-                    var p = m.Effect.Parameters;
+                if (Configuration.DistanceField != null) {
+                    UpdatePass(
+                        group, i++, pm.UpdateWithDistanceField,
+                        source, a, b, ref passSource, ref passDest,
+                        (p) => {
+                            var dfu = new Uniforms.DistanceField(Configuration.DistanceField, Configuration.DistanceFieldMaximumZ);
+                            pm.MaterialSet.TrySetBoundUniform(pm.UpdateWithDistanceField, "DistanceField", ref dfu);
 
-                    p["MaximumEncodedDistance"].SetValue(DistanceField.MaximumEncodedDistance);
-
-                    var dfu = new Uniforms.DistanceField(DistanceField, MaximumZ);
-                    pm.MaterialSet.TrySetBoundUniform(m, "DistanceField", ref dfu);
-
-                    p["DistanceFieldTexture"].SetValue(DistanceField.Texture);
+                            p["MaximumEncodedDistance"].SetValue(Configuration.DistanceField.MaximumEncodedDistance);
+                            p["DistanceFieldTexture"].SetValue(Configuration.DistanceField.Texture);
+                            p["EscapeVelocity"].SetValue(Configuration.EscapeVelocity);
+                            p["BounceVelocityMultiplier"].SetValue(Configuration.BounceVelocityMultiplier);
+                            p["LifeDecayRate"].SetValue(Configuration.GlobalLifeDecayRate);
+                        }
+                    );
                 } else {
                     UpdatePass(
                         group, i++, pm.UpdatePositions,
@@ -606,6 +607,17 @@ namespace Squared.Illuminant {
 
         // Life of all particles decreases by this much every update
         public float GlobalLifeDecayRate = 1;
+
+        // If set, particles collide with volumes in this distance field
+        public DistanceField DistanceField;
+        public float         DistanceFieldMaximumZ;
+
+        // Particles trapped inside distance field volumes will attempt to escape
+        //  at this velocity multiplied by their distance from the outside
+        public float         EscapeVelocity = 1.0f;
+        // Particles colliding with distance field volumes will retain this much
+        //  of their speed and bounce off of the volume
+        public float         BounceVelocityMultiplier = 0.0f;
 
         public ParticleSystemConfiguration (
             int attributeCount = 0,

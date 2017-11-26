@@ -6,6 +6,10 @@
 
 #include "VisualizeCommon.fxh"
 
+uniform float3 AmbientColor;
+uniform float3 LightDirection;
+uniform float3 LightColor;
+
 uniform float Time;
 
 float4 ApplyTransform (float3 position) {

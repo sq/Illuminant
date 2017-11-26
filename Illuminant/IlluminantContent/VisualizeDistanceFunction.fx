@@ -9,6 +9,10 @@ float evaluateFunctions (float3 worldPosition, float vars);
 
 #include "VisualizeCommon.fxh"
 
+uniform float3 AmbientColor;
+uniform float3 LightDirection;
+uniform float3 LightColor;
+
 uniform float Time;
 
 uniform int    FunctionType;
