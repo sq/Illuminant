@@ -58,12 +58,12 @@ namespace TestGame.Scenes {
                 Engine,
                 new ParticleSystemConfiguration(
                     attributeCount: 1,
-                    maximumCount: 2000000,
+                    maximumCount: 500000,
                     particlesPerRow: 2048
                 ) {
                     Texture = fireball,
                     TextureRegion = fireballRect,
-                    Size = new Vector2(34, 21) * 0.45f,
+                    Size = new Vector2(34, 21) * 0.65f,
                     AnimationRate = new Vector2(1 / 6f, 0),
                     RotationFromVelocity = true,
                     OpacityFromLife = 8192,
@@ -196,7 +196,7 @@ namespace TestGame.Scenes {
                             buf[i] = new Vector4(
                                 (float)x, (float)y, 0,
                                 rng.NextFloat(
-                                    system.Configuration.OpacityFromLife * 0.33f, 
+                                    system.Configuration.OpacityFromLife * 0.66f, 
                                     system.Configuration.OpacityFromLife
                                 )
                             );
