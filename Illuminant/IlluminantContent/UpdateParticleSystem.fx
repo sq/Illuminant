@@ -1,6 +1,7 @@
 #include "ParticleCommon.fxh"
 
 uniform float LifeDecayRate;
+uniform float MaximumVelocity;
 
 void PS_Update (
     in  float2 xy            : POSITION1,
@@ -13,8 +14,12 @@ void PS_Update (
         xy, oldPosition, oldVelocity, newAttributes
     );
 
-    newPosition = float4(oldPosition.xyz + oldVelocity.xyz, oldPosition.w - LifeDecayRate);
-    newVelocity = oldVelocity;
+    float3 velocity = oldVelocity.xyz;
+    if (length(velocity) > MaximumVelocity)
+        velocity = normalize(velocity) * MaximumVelocity;
+
+    newPosition = float4(oldPosition.xyz + velocity, oldPosition.w - LifeDecayRate);
+    newVelocity = float4(velocity, oldVelocity.w);
 }
 
 technique UpdatePositions {

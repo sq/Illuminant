@@ -11,6 +11,8 @@
 uniform float EscapeVelocity;
 uniform float BounceVelocityMultiplier;
 uniform float LifeDecayRate;
+uniform float MaximumVelocity;
+uniform float CollisionDistance;
 
 void PS_Update (
     in  float2 xy            : POSITION1,
@@ -23,11 +25,15 @@ void PS_Update (
         xy, oldPosition, oldVelocity, newAttributes
     );
 
+    float3 velocity = oldVelocity.xyz;
+    if (length(velocity) > MaximumVelocity)
+        velocity = normalize(velocity) * MaximumVelocity;
+
     DistanceFieldConstants vars = makeDistanceFieldConstants();
 
     float oldDistance = sampleDistanceField(oldPosition.xyz, vars);
-    float3 unitVector = normalize(oldVelocity.xyz);
-    float stepSpeed = length(oldVelocity.xyz);
+    float3 unitVector = normalize(velocity.xyz);
+    float stepSpeed = length(velocity.xyz);
 
     bool collided = false;
 
@@ -38,10 +44,10 @@ void PS_Update (
         float stepDistance = sampleDistanceField(stepPosition, vars);
 
         // No collision
-        if (stepDistance > 0)
+        if (stepDistance > CollisionDistance)
             break;
 
-        if (oldDistance < 0) {
+        if (oldDistance < CollisionDistance) {
             collided = true;
             break;
         } else {
@@ -57,21 +63,21 @@ void PS_Update (
         newPosition = float4(oldPosition + (unitVector * stepSpeed), oldPosition.w - LifeDecayRate);
 
         float3 normal = estimateNormal(newPosition.xyz, vars);
-        if (length(normal) < 0.01)
+        if (length(normal) < 0.1)
             // HACK to avoid getting stuck at the center of volumes
             normal = float3(0, -1, 0);
 
-        if (oldDistance > 0) {
+        if (oldDistance > CollisionDistance) {
             // We started outside. Bounce away next step if configured to. Otherwise, we'll halt.
             float3 bounceVector = normalize(-(2 * dot(normal, unitVector) * (normal - unitVector)));
-            newVelocity = float4(bounceVector * (length(oldVelocity.xyz) * BounceVelocityMultiplier), oldVelocity.w);
+            newVelocity = float4(bounceVector * (min(MaximumVelocity, length(velocity.xyz) * BounceVelocityMultiplier)), oldVelocity.w);
         } else {
             // We started inside, so flee at our escape velocity.
-            newVelocity = float4(normal * min(EscapeVelocity, abs(oldDistance)), oldVelocity.w);
+            newVelocity = float4(normal * min(EscapeVelocity, abs(oldDistance) + CollisionDistance), oldVelocity.w);
         }
     } else {
-        newPosition = float4(oldPosition.xyz + oldVelocity.xyz, oldPosition.w - LifeDecayRate);
-        newVelocity = oldVelocity;
+        newPosition = float4(oldPosition.xyz + velocity.xyz, oldPosition.w - LifeDecayRate);
+        newVelocity = float4(velocity, oldVelocity.w);
     }
 }
 

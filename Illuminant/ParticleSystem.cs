@@ -457,13 +457,18 @@ namespace Squared.Illuminant {
                             p["EscapeVelocity"].SetValue(Configuration.EscapeVelocity);
                             p["BounceVelocityMultiplier"].SetValue(Configuration.BounceVelocityMultiplier);
                             p["LifeDecayRate"].SetValue(Configuration.GlobalLifeDecayRate);
+                            p["MaximumVelocity"].SetValue(Configuration.MaximumVelocity);
+                            p["CollisionDistance"].SetValue(Configuration.CollisionDistance);
                         }
                     );
                 } else {
                     UpdatePass(
                         group, i++, pm.UpdatePositions,
                         source, a, b, ref passSource, ref passDest,
-                        (p) => p["LifeDecayRate"].SetValue(Configuration.GlobalLifeDecayRate)
+                        (p) => {
+                            p["LifeDecayRate"].SetValue(Configuration.GlobalLifeDecayRate);
+                            p["MaximumVelocity"].SetValue(Configuration.MaximumVelocity);
+                        }
                     );
                 }
             }
@@ -611,6 +616,13 @@ namespace Squared.Illuminant {
         // If set, particles collide with volumes in this distance field
         public DistanceField DistanceField;
         public float         DistanceFieldMaximumZ;
+
+        // The distance at which a particle is considered colliding with the field.
+        // Raise this to make particles 'larger'.
+        public float         CollisionDistance = 0.5f;
+
+        // Particles will not be allowed to exceed this velocity
+        public float         MaximumVelocity = 9999f;
 
         // Particles trapped inside distance field volumes will attempt to escape
         //  at this velocity multiplied by their distance from the outside

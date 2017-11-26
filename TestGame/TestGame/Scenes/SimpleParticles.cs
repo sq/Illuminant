@@ -58,38 +58,40 @@ namespace TestGame.Scenes {
                 Engine,
                 new ParticleSystemConfiguration(
                     attributeCount: 1,
-                    maximumCount: 500000,
+                    maximumCount: 40000,
                     particlesPerRow: 2048
                 ) {
                     Texture = fireball,
                     TextureRegion = fireballRect,
-                    Size = new Vector2(34, 21) * 0.65f,
+                    Size = new Vector2(34, 21) * 0.9f,
                     AnimationRate = new Vector2(1 / 6f, 0),
                     RotationFromVelocity = true,
                     OpacityFromLife = 8192,
                     EscapeVelocity = 3f,
-                    BounceVelocityMultiplier = 0.85f
+                    BounceVelocityMultiplier = 1f,
+                    MaximumVelocity = 4f,
+                    CollisionDistance = 4
                 }
             ) {
                 Transforms = {
                     new MatrixMultiply {
                         // HACK: If we just use a rotation matrix, the particle eventually loses energy and
                         //  stops moving entirely. :(
-                        Velocity = Matrix.Identity * 1.001f * Matrix.CreateRotationZ(0.015f),
+                        Velocity = Matrix.Identity * 1.001f * Matrix.CreateRotationZ(0.01f),
                     },
                     new Gravity {
                         Attractors = {
                             new Gravity.Attractor {
                                 Radius = 70,
-                                Strength = 350
+                                Strength = 550
                             },
                             new Gravity.Attractor {
                                 Radius = 10,
-                                Strength = 800
+                                Strength = 1000
                             },
                             new Gravity.Attractor {
                                 Radius = 150,
-                                Strength = 1200
+                                Strength = 1600
                             },
                         }
                     },
@@ -142,7 +144,7 @@ namespace TestGame.Scenes {
                 var rng = new Random(RandomSeed);
                 for (var i = 0; i < 24; i++) {
                     int x = rng.Next(0, numTilesX), y = rng.Next(0, numTilesY);
-                    float sz = rng.NextFloat(40f, 100f);
+                    float sz = rng.NextFloat(70f, 110f);
                     Environment.Obstructions.Add(LightObstruction.Ellipsoid(
                         new Vector3(x * tileSize, y * tileSize, 0),
                         new Vector3(sz, sz, 60f)
@@ -207,13 +209,13 @@ namespace TestGame.Scenes {
                     );
                 },
                 (buf) => {
-                    const float maxSpeed = 3f;
+                    const float maxSpeed = 3.5f;
 
                     Parallel.For(
                         0, buf.Length, 
                         () => new MersenneTwister(Interlocked.Increment(ref seed)), 
                         (i, pls, rng) => {
-                            var v = rng.NextFloat(maxSpeed * 0.25f, maxSpeed);
+                            var v = rng.NextFloat(maxSpeed * 0.33f, maxSpeed);
                             var a = rng.NextDouble(0, Math.PI * 2);
 
                             buf[i] = new Vector4(
@@ -233,9 +235,9 @@ namespace TestGame.Scenes {
                         () => new MersenneTwister(Interlocked.Increment(ref seed)), 
                         (i, pls, rng) => {
                             buf[i] = new Vector4(
-                                rng.NextFloat(0.02f, 0.22f),
-                                rng.NextFloat(0.07f, 0.24f),
-                                rng.NextFloat(0.06f, 0.28f), 1
+                                rng.NextFloat(0.02f, 0.9f),
+                                rng.NextFloat(0.07f, 0.95f),
+                                rng.NextFloat(0.25f, 1f), 1
                             );
 
                             return rng;
@@ -263,7 +265,7 @@ namespace TestGame.Scenes {
                 System.Render(
                     frame, 1, 
                     material: Engine.ParticleMaterials.AttributeColor, 
-                    blendState: BlendState.Additive
+                    blendState: BlendState.AlphaBlend
                 );
 
             var lightDir = new Vector3(-0.5f, 0.5f, -1f);
