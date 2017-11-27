@@ -75,8 +75,8 @@ namespace TestGame.Scenes {
                     */
                     RotationFromVelocity = true,
                     OpacityFromLife = 4096,
-                    EscapeVelocity = 2f,
-                    BounceVelocityMultiplier = 0.9f,
+                    EscapeVelocity = 3f,
+                    BounceVelocityMultiplier = 0.95f,
                     MaximumVelocity = 4f,
                     CollisionDistance = 1f
                 }
@@ -98,12 +98,12 @@ namespace TestGame.Scenes {
                             },
                         }
                     },
-                    /*
                     new FMA {
                         Velocity = {
                             Multiply = Vector3.One * 0.9993f
                         }
                     },
+                    /*
                     new FMA {
                         Velocity = {
                             Multiply = Vector3.One * 0.98f,
@@ -209,20 +209,20 @@ namespace TestGame.Scenes {
             var offsetY = (Height - Pattern.Height) / 2f;
 
             system.Initialize<Vector4>(
-                template.Length,
+                template.Length * 2,
                 (buf, offset) => {
                     Parallel.For(
                         0, buf.Length, 
                         () => new MersenneTwister(Interlocked.Increment(ref seed)), 
                         (i, pls, rng) => {
-                            int j = i + offset;
-                            var x = (j % width) + offsetX;
+                            int j = (i + offset) / 2;
+                            var x = (((i + offset) / 2.0f) % width) + offsetX;
                             var y = (j / width) + offsetY;
 
                             buf[i] = new Vector4(
                                 x, y, 0,
                                 rng.NextFloat(
-                                    system.Configuration.OpacityFromLife * 0.8f, 
+                                    system.Configuration.OpacityFromLife * 0.9f, 
                                     system.Configuration.OpacityFromLife
                                 )
                             );
@@ -239,9 +239,9 @@ namespace TestGame.Scenes {
                     Parallel.For(
                         0, buf.Length, 
                         (i) => {
-                            int j = i + offset;
+                            int j = (i + offset) / 2;
                             if (j < template.Length)
-                                buf[i] = template[j].ToVector4() * 0.25f;
+                                buf[i] = template[j].ToVector4() * 0.11f;
                             else
                                 buf[i] = Vector4.Zero;
                         }
