@@ -209,6 +209,7 @@ namespace TestGame.Scenes {
             var offsetY = (Height - Pattern.Height) / 2f;
 
             system.Initialize<Vector4>(
+                template.Length,
                 (buf, offset) => {
                     Parallel.For(
                         0, buf.Length, 

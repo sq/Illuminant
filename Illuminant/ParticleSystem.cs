@@ -145,10 +145,15 @@ namespace Squared.Illuminant {
 
             // Make sure to lock the slice first.
             public void Initialize<TAttribute> (
+                int particleCount,
+                GraphicsDevice device,
                 Action<Vector4[], int> positionInitializer,
                 Action<Vector4[], int> velocityInitializer,
                 Action<TAttribute[], int> attributeInitializer
             ) where TAttribute : struct {
+                while ((Chunks.Count * Chunk.MaximumCount) < particleCount)
+                    CreateNewChunk(device);
+
                 foreach (var c in Chunks)
                     c.Initialize(positionInitializer, velocityInitializer, attributeInitializer);
 
@@ -228,7 +233,8 @@ namespace Squared.Illuminant {
                 FillVertexBuffer();
             }
 
-            Initialize(null, null);
+            // HACK
+            Initialize(0, null, null);
         }
 
         private void FillIndexBuffer () {
@@ -405,13 +411,15 @@ namespace Squared.Illuminant {
         }
 
         public void Initialize (
+            int particleCount,
             Action<Vector4[], int> positionInitializer,
             Action<Vector4[], int> velocityInitializer
         ) {
-            Initialize<float>(positionInitializer, velocityInitializer, null);
+            Initialize<float>(particleCount, positionInitializer, velocityInitializer, null);
         }
 
         public void Initialize<TAttribute> (
+            int particleCount,
             Action<Vector4[], int> positionInitializer,
             Action<Vector4[], int> velocityInitializer,
             Action<TAttribute[], int> attributeInitializer
@@ -436,11 +444,16 @@ namespace Squared.Illuminant {
                     s.IsValid = false;
             }
 
-            target.Initialize(
-                positionInitializer,
-                velocityInitializer,
-                attributeInitializer
-            );
+            // This operation might create new render targets
+            //  while allocating enough space for the particles
+            lock (Engine.Coordinator.CreateResourceLock)
+                target.Initialize(
+                    particleCount,
+                    Engine.Coordinator.Device,
+                    positionInitializer,
+                    velocityInitializer,
+                    attributeInitializer
+                );
 
             lock (target) {
                 target.Timestamp = Squared.Util.Time.Ticks;
@@ -604,7 +617,6 @@ namespace Squared.Illuminant {
                     p["VelocityRotation"].SetValue(Configuration.RotationFromVelocity ? 1f : 0f);
                     p["OpacityFromLife"].SetValue(Configuration.OpacityFromLife);
                     p["HalfTexel"].SetValue(new Vector2(0.5f / Slice.Chunk.Width, 0.5f / Slice.Chunk.Height));
-                    m.Flush();
                 },
                 (dm, _) => {
                     p["PositionTexture"].SetValue((Texture2D)null);
