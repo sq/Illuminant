@@ -15,7 +15,7 @@ namespace Squared.Illuminant {
         private class Slice : IDisposable {
             public class Chunk : IDisposable {
                 public const int Width = 256;
-                public const int Height = 256;
+                public const int Height = 512;
                 public const int MaximumCount = Width * Height;
 
                 public readonly int Index;
@@ -70,7 +70,7 @@ namespace Squared.Illuminant {
                 private RenderTarget2D CreateRenderTarget (GraphicsDevice device) {
                     return new RenderTarget2D(
                         device, 
-                        256, 256, false, 
+                        Width, Height, false, 
                         SurfaceFormat.Vector4, DepthFormat.None, 
                         0, RenderTargetUsage.PreserveContents
                     );
@@ -344,9 +344,6 @@ namespace Squared.Illuminant {
                 container, layer,
                 after: (dm, _) => {
                     // Incredibly pointless cleanup mandated by XNA's bugs
-                    p["PositionTexture"].SetValue((Texture2D)null);
-                    p["VelocityTexture"].SetValue((Texture2D)null);
-                    p["AttributeTexture"].SetValue((Texture2D)null);
                     for (var i = 0; i < 4; i++)
                         dm.Device.VertexTextures[i] = null;
                     for (var i = 0; i < 16; i++)
@@ -389,17 +386,40 @@ namespace Squared.Illuminant {
                 container, layer, m,
                 (dm, _) => {
                     dm.PushRenderTargets(dest.Bindings);
-                    dm.Device.Viewport = new Viewport(0, 0, 256, 256);
+                    dm.Device.Viewport = new Viewport(0, 0, Slice.Chunk.Width, Slice.Chunk.Height);
                     dm.Device.Clear(Color.Transparent);
+                    p["HalfTexel"].SetValue(new Vector2(0.5f / Slice.Chunk.Width, 0.5f / Slice.Chunk.Height));
+
                     p["PositionTexture"].SetValue(source.PositionAndBirthTime);
                     p["VelocityTexture"].SetValue(source.Velocity);
-                    p["AttributeTexture"].SetValue(source.Attributes);
-                    p["HalfTexel"].SetValue(new Vector2(0.5f / Slice.Chunk.Width, 0.5f / Slice.Chunk.Height));
+
+                    var at = p["AttributeTexture"];
+                    if (at != null)
+                        at.SetValue(source.Attributes);
+
+                    var dft = p["DistanceFieldTexture"];
+                    if (dft != null)
+                        dft.SetValue(Configuration.DistanceField.Texture);
+
                     if (setParameters != null)
                         setParameters(p);
+
                     m.Flush();
                 },
                 (dm, _) => {
+                    // XNA effectparameter gets confused about whether a value is set or not, so we do this
+                    //  to ensure it always re-sets the texture parameter
+                    p["PositionTexture"].SetValue((Texture2D)null);
+                    p["VelocityTexture"].SetValue((Texture2D)null);
+
+                    var at = p["AttributeTexture"];
+                    if (at != null)
+                        at.SetValue((Texture2D)null);
+
+                    var dft = p["DistanceFieldTexture"];
+                    if (dft != null)
+                        dft.SetValue((Texture2D)null);
+
                     dm.PopRenderTarget();
                 }
             )) {
@@ -513,7 +533,6 @@ namespace Squared.Illuminant {
                             pm.MaterialSet.TrySetBoundUniform(pm.UpdateWithDistanceField, "DistanceField", ref dfu);
 
                             p["MaximumEncodedDistance"].SetValue(Configuration.DistanceField.MaximumEncodedDistance);
-                            p["DistanceFieldTexture"].SetValue(Configuration.DistanceField.Texture);
                             p["EscapeVelocity"].SetValue(Configuration.EscapeVelocity);
                             p["BounceVelocityMultiplier"].SetValue(Configuration.BounceVelocityMultiplier);
                             p["LifeDecayRate"].SetValue(Configuration.GlobalLifeDecayRate);

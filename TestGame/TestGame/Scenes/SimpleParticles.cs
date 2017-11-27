@@ -76,13 +76,12 @@ namespace TestGame.Scenes {
                     RotationFromVelocity = true,
                     OpacityFromLife = 4096,
                     EscapeVelocity = 2f,
-                    BounceVelocityMultiplier = 0.5f,
+                    BounceVelocityMultiplier = 0.9f,
                     MaximumVelocity = 4f,
                     CollisionDistance = 1f
                 }
             ) {
                 Transforms = {
-                    /*
                     new Gravity {
                         Attractors = {
                             new Gravity.Attractor {
@@ -99,6 +98,7 @@ namespace TestGame.Scenes {
                             },
                         }
                     },
+                    /*
                     new FMA {
                         Velocity = {
                             Multiply = Vector3.One * 0.9993f
@@ -220,7 +220,7 @@ namespace TestGame.Scenes {
                             var y = (j / width) + offsetY;
 
                             buf[i] = new Vector4(
-                                (float)x, (float)y, 0,
+                                x, y, 0,
                                 rng.NextFloat(
                                     system.Configuration.OpacityFromLife * 0.8f, 
                                     system.Configuration.OpacityFromLife
