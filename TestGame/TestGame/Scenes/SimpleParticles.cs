@@ -13,6 +13,7 @@ using Squared.Illuminant;
 using Squared.Illuminant.Transforms;
 using Squared.Illuminant.Util;
 using Squared.Render;
+using Squared.Render.Convenience;
 using Squared.Util;
 
 namespace TestGame.Scenes {
@@ -26,6 +27,8 @@ namespace TestGame.Scenes {
 
         bool Running = true;
         int RandomSeed = 201;
+
+        Texture2D Pattern;
 
         public SimpleParticles (TestGame game, int width, int height)
             : base(game, width, height) {
@@ -55,15 +58,15 @@ namespace TestGame.Scenes {
             var fireballRect = fireball.BoundsFromRectangle(new Rectangle(0, 0, 34, 21));
             var spark = Game.Content.Load<Texture2D>("spark");
 
+            Pattern = Game.Content.Load<Texture2D>("template");
+
             System = new ParticleSystem(
                 Engine,
                 new ParticleSystemConfiguration(
-                    attributeCount: 1,
-                    maximumCount: 2500000,
-                    particlesPerRow: 2048
+                    attributeCount: 1
                 ) {
                     Texture = spark,
-                    Size = Vector2.One * 4.1f,
+                    Size = Vector2.One * 5.2f,
                     /*
                     Texture = fireball,
                     TextureRegion = fireballRect,
@@ -71,36 +74,15 @@ namespace TestGame.Scenes {
                     AnimationRate = new Vector2(1 / 6f, 0),
                     */
                     RotationFromVelocity = true,
-                    OpacityFromLife = 20480,
-                    EscapeVelocity = 7f,
-                    BounceVelocityMultiplier = 0.95f,
-                    MaximumVelocity = 5f,
+                    OpacityFromLife = 4096,
+                    EscapeVelocity = 2f,
+                    BounceVelocityMultiplier = 0.5f,
+                    MaximumVelocity = 4f,
                     CollisionDistance = 1f
                 }
             ) {
                 Transforms = {
-                    new FMA {
-                        Velocity = {
-                            Multiply = Vector3.One * 0.98f,
-                            Add = new Vector3(0.03f, 0.008f, 0f)
-                        },
-                        Area = new TransformArea(AreaType.Ellipsoid) {
-                            Center = sz * 0.15f,
-                            Size = Vector3.One * 125,
-                            Falloff = 150
-                        }
-                    },
-                    new FMA {
-                        Velocity = {
-                            Multiply = Vector3.One * 0.98f,
-                            Add = new Vector3(-0.03f, -0.008f, 0f)
-                        },
-                        Area = new TransformArea(AreaType.Ellipsoid) {
-                            Center = sz * 0.8f,
-                            Size = Vector3.One * 125,
-                            Falloff = 150
-                        }
-                    },
+                    /*
                     new Gravity {
                         Attractors = {
                             new Gravity.Attractor {
@@ -117,6 +99,23 @@ namespace TestGame.Scenes {
                             },
                         }
                     },
+                    new FMA {
+                        Velocity = {
+                            Multiply = Vector3.One * 0.9993f
+                        }
+                    },
+                    new FMA {
+                        Velocity = {
+                            Multiply = Vector3.One * 0.98f,
+                            Add = new Vector3(-0.03f, -0.008f, 0f)
+                        },
+                        Area = new TransformArea(AreaType.Ellipsoid) {
+                            Center = sz * 0.8f,
+                            Size = Vector3.One * 125,
+                            Falloff = 150
+                        }
+                    },
+                    */
                 }
             };
         }
@@ -129,7 +128,7 @@ namespace TestGame.Scenes {
 
             DistanceField = new DistanceField(
                 Game.RenderCoordinator, Width, Height, Environment.MaximumZ,
-                3, 1 / 3f
+                3, 1 / 2f
             );
 
             LightingRenderer = new LightingRenderer(
@@ -164,9 +163,9 @@ namespace TestGame.Scenes {
 
                 Environment.Obstructions.Clear();
                 var rng = new Random(RandomSeed);
-                for (var i = 0; i < 8; i++) {
+                for (var i = 0; i < 4; i++) {
                     int x = rng.Next(0, numTilesX), y = rng.Next(0, numTilesY);
-                    float sz = rng.NextFloat(110f, 260f);
+                    float sz = rng.NextFloat(100f, 200f);
                     Environment.Obstructions.Add(LightObstruction.Ellipsoid(
                         new Vector3(x * tileSize, y * tileSize, 0),
                         new Vector3(sz, sz, 60f)
@@ -202,25 +201,27 @@ namespace TestGame.Scenes {
         private void InitializeSystem (ParticleSystem system) {
             int seed = 0;
 
+            var width = Pattern.Width;
+            var template = new Color[width * Pattern.Height];
+            Pattern.GetData(template);
+
+            var offsetX = (Width - width) / 2f;
+            var offsetY = (Height - Pattern.Height) / 2f;
+
             system.Initialize<Vector4>(
-                (buf) => {
+                (buf, offset) => {
                     Parallel.For(
                         0, buf.Length, 
                         () => new MersenneTwister(Interlocked.Increment(ref seed)), 
                         (i, pls, rng) => {
-                            var a = rng.NextDouble(0, Math.PI * 2);
-                            var x = Math.Sin(a);
-                            var y = Math.Cos(a);
-                            var r = rng.NextDouble(1, 800);
-                            x = (900 + (r * x));
-                            y = (550 + (r * y));
-                            x = Arithmetic.Clamp(x, 30, Width - 30);
-                            y = Arithmetic.Clamp(y, 30, Height - 30);
+                            int j = i + offset;
+                            var x = (j % width) + offsetX;
+                            var y = (j / width) + offsetY;
 
                             buf[i] = new Vector4(
                                 (float)x, (float)y, 0,
                                 rng.NextFloat(
-                                    system.Configuration.OpacityFromLife * 0.5f, 
+                                    system.Configuration.OpacityFromLife * 0.8f, 
                                     system.Configuration.OpacityFromLife
                                 )
                             );
@@ -230,52 +231,19 @@ namespace TestGame.Scenes {
                         (rng) => {}
                     );
                 },
-                (buf) => {
-                    const float maxSpeed = 1.5f;
-
-                    Parallel.For(
-                        0, buf.Length, 
-                        () => new MersenneTwister(Interlocked.Increment(ref seed)), 
-                        (i, pls, rng) => {
-                            var v = rng.NextFloat(maxSpeed * 0.33f, maxSpeed);
-                            var a = rng.NextDouble(0, Math.PI * 2);
-
-                            buf[i] = new Vector4(
-                                (float)Math.Sin(a) * v,
-                                (float)Math.Cos(a) * v,
-                                0, 0
-                            );
-
-                            return rng;
-                        },
-                        (rng) => {}
-                    );
+                (buf, offset) => {
+                    Array.Clear(buf, 0, buf.Length);
                 },
-                (buf) => {
+                (buf, offset) => {
                     Parallel.For(
                         0, buf.Length, 
-                        () => new MersenneTwister(Interlocked.Increment(ref seed)), 
-                        (i, pls, rng) => {
-                            var c = rng.NextFloat(0, 2);
-                            if (c <= 1)
-                                buf[i] = new Vector4(
-                                    0.3f,
-                                    0.4f + (c * 0.33f),
-                                    0.5f + (c * 0.5f),
-                                    1
-                                );
-                            else {
-                                c -= 1;
-                                buf[i] = new Vector4(
-                                    0.3f + (c * 0.7f),
-                                    0.73f + (c * 0.27f),
-                                    1, 1
-                                );
-                            }
-
-                            return rng;
-                        },
-                        (rng) => {}
+                        (i) => {
+                            int j = i + offset;
+                            if (j < template.Length)
+                                buf[i] = template[j].ToVector4() * 0.25f;
+                            else
+                                buf[i] = Vector4.Zero;
+                        }
                     );
                 }
             );
@@ -298,7 +266,7 @@ namespace TestGame.Scenes {
                 System.Render(
                     frame, 1, 
                     material: Engine.ParticleMaterials.AttributeColor, 
-                    blendState: BlendState.AlphaBlend
+                    blendState: RenderStates.AdditiveBlend
                 );
 
             var lightDir = new Vector3(-0.5f, 0.5f, -1f);
@@ -326,36 +294,36 @@ namespace TestGame.Scenes {
 
                 var sz = new Vector3(Width, Height, 0);
 
-                if (System.Transforms.Count > 1) {
-                    var grav = (Gravity)System.Transforms[2];
+                if (System.Transforms.Count >= 1) {
+                    var grav = (Gravity)System.Transforms[0];
 
                     grav.Attractors[0].Position = new Vector3(
                         (float)((Math.Sin(time / 6) * 500) + (sz.X / 2)),
                         (float)((Math.Cos(time / 6) * 500) + (sz.Y / 2)),
                         0
                     );
-                    grav.Attractors[0].Strength = Arithmetic.PulseExp(time / 4, -1000f, -100f);
+                    grav.Attractors[0].Strength = Arithmetic.PulseExp(time / 4, -80f, -20f);
 
                     grav.Attractors[1].Position = new Vector3(
                         (float)((Math.Sin((time / 2) + 0.7) * 400) + (sz.X * 0.55f)),
                         (float)((Math.Cos((time / 2) + 0.8) * 220) + (sz.Y * 0.43f)),
                         0
                     );
-                    grav.Attractors[1].Strength = Arithmetic.PulseExp(time / 3, -400f, 1000f);
+                    grav.Attractors[1].Strength = Arithmetic.PulseExp(time / 3, -50f, 200f);
 
                     grav.Attractors[2].Position = new Vector3(
                         (float)((Math.Sin((time / 13) + 1.2) * 700) + (sz.X / 2)),
                         (float)((Math.Cos((time / 13) + 3.6) * 550) + (sz.Y * 0.55f)),
                         0
                     );
-                    grav.Attractors[2].Strength = Arithmetic.PulseExp(time / 6, 10f, 1600f);
+                    grav.Attractors[2].Strength = Arithmetic.PulseExp(time / 6, 2f, 220f);
 
                     grav.Attractors[3].Position = new Vector3(
                         (float)((Math.Sin((time / 16) + 1.2) * 200) + (sz.X / 2)),
                         (float)((Math.Cos((time / 8) + 3.6) * 550) + (sz.Y / 2)),
                         0
                     );
-                    grav.Attractors[3].Strength = Arithmetic.PulseExp(time / 8, 20f, 3200f);
+                    grav.Attractors[3].Strength = Arithmetic.PulseExp(time / 8, 4f, 460f);
                 }
 
                 var ms = Mouse.GetState();

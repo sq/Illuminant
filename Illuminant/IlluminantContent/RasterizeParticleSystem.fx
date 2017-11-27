@@ -4,8 +4,6 @@
 
 #define PI 3.14159265358979323846
 
-uniform float2 SourceCoordinateOffset;
-
 uniform float2 Size;
 uniform float2 AnimationRate;
 uniform float  VelocityRotation;
@@ -52,7 +50,7 @@ void vs (
     out float4 velocity    : TEXCOORD2,
     out float4 attributes  : COLOR0
 ) {
-    float2 actualXy = xy + SourceCoordinateOffset + offset;
+    float2 actualXy = xy + offset;
     readState(actualXy, position, velocity, attributes);
 
     float life = position.w;
