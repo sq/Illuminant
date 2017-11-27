@@ -147,6 +147,7 @@ namespace Squared.Illuminant {
             public void Initialize<TAttribute> (
                 int particleCount,
                 GraphicsDevice device,
+                bool parallel,
                 Action<Vector4[], int> positionInitializer,
                 Action<Vector4[], int> velocityInitializer,
                 Action<TAttribute[], int> attributeInitializer
@@ -154,8 +155,15 @@ namespace Squared.Illuminant {
                 while ((Chunks.Count * Chunk.MaximumCount) < particleCount)
                     CreateNewChunk(device);
 
-                foreach (var c in Chunks)
-                    c.Initialize(positionInitializer, velocityInitializer, attributeInitializer);
+                if (parallel) {
+                    Parallel.ForEach(
+                        Chunks, (c) =>
+                            c.Initialize(positionInitializer, velocityInitializer, attributeInitializer)
+                    );
+                } else {
+                    foreach (var c in Chunks)
+                        c.Initialize(positionInitializer, velocityInitializer, attributeInitializer);
+                }
 
                 IsValid = true;
             }
@@ -318,7 +326,7 @@ namespace Squared.Illuminant {
                 lock (dest) {
                     dest.IsValid = false;
                     dest.IsBeingGenerated = true;
-                    dest.Timestamp = Squared.Util.Time.Ticks;
+                    dest.Timestamp = Time.Ticks;
                 }
             }
 
@@ -433,16 +441,18 @@ namespace Squared.Illuminant {
         public void Initialize (
             int particleCount,
             Action<Vector4[], int> positionInitializer,
-            Action<Vector4[], int> velocityInitializer
+            Action<Vector4[], int> velocityInitializer,
+            bool parallel = true
         ) {
-            Initialize<float>(particleCount, positionInitializer, velocityInitializer, null);
+            Initialize<float>(particleCount, positionInitializer, velocityInitializer, null, parallel);
         }
 
         public void Initialize<TAttribute> (
             int particleCount,
             Action<Vector4[], int> positionInitializer,
             Action<Vector4[], int> velocityInitializer,
-            Action<TAttribute[], int> attributeInitializer
+            Action<TAttribute[], int> attributeInitializer,
+            bool parallel = true
         ) where TAttribute : struct {
             Slice target;
 
@@ -470,13 +480,14 @@ namespace Squared.Illuminant {
                 target.Initialize(
                     particleCount,
                     Engine.Coordinator.Device,
+                    parallel,
                     positionInitializer,
                     velocityInitializer,
                     attributeInitializer
                 );
 
             lock (target) {
-                target.Timestamp = Squared.Util.Time.Ticks;
+                target.Timestamp = Time.Ticks;
                 target.IsValid = true;
                 target.IsBeingGenerated = false;
             }
@@ -552,11 +563,13 @@ namespace Squared.Illuminant {
                 }
             }
 
+            var ts = Time.Ticks;
+
             // TODO: Do this immediately after issuing the batch instead?
             Engine.Coordinator.AfterPresent(() => {
                 lock (passSource) {
                     // Console.WriteLine("Validate {0}", passSource.Index);
-                    passSource.Timestamp = Squared.Util.Time.Ticks;
+                    passSource.Timestamp = ts;
                     passSource.IsValid = true;
                     passSource.IsBeingGenerated = false;
                 }

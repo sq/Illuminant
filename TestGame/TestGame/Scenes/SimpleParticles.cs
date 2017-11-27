@@ -211,41 +211,32 @@ namespace TestGame.Scenes {
             system.Initialize<Vector4>(
                 template.Length * 2,
                 (buf, offset) => {
-                    Parallel.For(
-                        0, buf.Length, 
-                        () => new MersenneTwister(Interlocked.Increment(ref seed)), 
-                        (i, pls, rng) => {
-                            int j = (i + offset) / 2;
-                            var x = (((i + offset) / 2.0f) % width) + offsetX;
-                            var y = (j / width) + offsetY;
+                    var rng = new MersenneTwister(Interlocked.Increment(ref seed));
+                    for (var i = 0; i < buf.Length; i++) {
+                        int j = (i + offset) / 2;
+                        var x = (((i + offset) / 2.0f) % width) + offsetX;
+                        var y = (j / width) + offsetY;
 
-                            buf[i] = new Vector4(
-                                x, y, 0,
-                                rng.NextFloat(
-                                    system.Configuration.OpacityFromLife * 0.9f, 
-                                    system.Configuration.OpacityFromLife
-                                )
-                            );
-
-                            return rng;
-                        },
-                        (rng) => {}
-                    );
+                        buf[i] = new Vector4(
+                            x, y, 0,
+                            rng.NextFloat(
+                                system.Configuration.OpacityFromLife * 0.9f, 
+                                system.Configuration.OpacityFromLife
+                            )
+                        );
+                    }
                 },
                 (buf, offset) => {
                     Array.Clear(buf, 0, buf.Length);
                 },
                 (buf, offset) => {
-                    Parallel.For(
-                        0, buf.Length, 
-                        (i) => {
-                            int j = (i + offset) / 2;
-                            if (j < template.Length)
-                                buf[i] = template[j].ToVector4() * 0.11f;
-                            else
-                                buf[i] = Vector4.Zero;
-                        }
-                    );
+                    for (var i = 0; i < buf.Length; i++) {
+                        int j = (i + offset) / 2;
+                        if (j < template.Length)
+                            buf[i] = template[j].ToVector4() * 0.11f;
+                        else
+                            buf[i] = Vector4.Zero;
+                    };
                 }
             );
         }
