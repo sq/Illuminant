@@ -353,7 +353,7 @@ namespace Squared.Illuminant {
                         dm.Device.Textures[i] = null;
                 }
             )) {
-                for (int i = 0, l = _source.Chunks.Count; i > l; i++) {
+                for (int i = 0, l = _source.Chunks.Count; i < l; i++) {
                     ChunkUpdatePass(
                         batch, i,
                         m, _source.Chunks[i], _dest.Chunks[i],

@@ -42,7 +42,7 @@ namespace TestGame {
             Graphics.PreferredBackBufferWidth = 1920;
             Graphics.PreferredBackBufferHeight = 1080;
             Graphics.SynchronizeWithVerticalRetrace = true;
-            Graphics.PreferMultiSampling = true;
+            Graphics.PreferMultiSampling = false;
             Graphics.IsFullScreen = false;
 
             Content.RootDirectory = "Content";
