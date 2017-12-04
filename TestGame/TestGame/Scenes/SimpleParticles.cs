@@ -26,9 +26,11 @@ namespace TestGame.Scenes {
         ParticleSystem System;
 
         bool Running = true;
-        bool ShowDistanceField = false;
-        bool Collisions = false;
+        bool ShowDistanceField = true;
+        bool Collisions = true;
         int RandomSeed = 201;
+
+        const int Supersampling = 1;
 
         Texture2D Pattern;
 
@@ -85,7 +87,6 @@ namespace TestGame.Scenes {
             ) {
                 Transforms = {
                     new Gravity {
-                        IsActive = false,
                         Attractors = {
                             new Gravity.Attractor {
                                 Radius = 150,
@@ -102,7 +103,6 @@ namespace TestGame.Scenes {
                         }
                     },
                     new FMA {
-                        IsActive = false,
                         Velocity = {
                             Multiply = Vector3.One * 0.9993f
                         }
@@ -213,12 +213,12 @@ namespace TestGame.Scenes {
             var offsetY = (Height - Pattern.Height) / 2f;
 
             system.Initialize<Vector4>(
-                true ? 10240 : template.Length * 2,
+                template.Length * Supersampling,
                 (buf, offset) => {
                     var rng = new MersenneTwister(Interlocked.Increment(ref seed));
                     for (var i = 0; i < buf.Length; i++) {
-                        int j = (i + offset) / 2;
-                        var x = (((i + offset) / 2.0f) % width) + offsetX;
+                        int j = (i + offset) / Supersampling;
+                        var x = (((i + offset) / (float)Supersampling) % width) + offsetX;
                         var y = (j / width) + offsetY;
 
                         buf[i] = new Vector4(
@@ -237,7 +237,7 @@ namespace TestGame.Scenes {
                     for (var i = 0; i < buf.Length; i++) {
                         int j = (i + offset) / 2;
                         if (j < template.Length)
-                            buf[i] = template[j].ToVector4() * 0.11f;
+                            buf[i] = template[j].ToVector4() * (0.22f / Supersampling);
                         else
                             buf[i] = Vector4.Zero;
                     };

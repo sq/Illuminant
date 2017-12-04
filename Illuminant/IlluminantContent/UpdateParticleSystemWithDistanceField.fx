@@ -15,14 +15,14 @@ uniform float MaximumVelocity;
 uniform float CollisionDistance;
 
 void PS_Update (
-    in  float2 xy            : POSITION1,
+    in  float2 xy            : VPOS,
     out float4 newPosition   : COLOR0,
     out float4 newVelocity   : COLOR1,
     out float4 newAttributes : COLOR2
 ) {
     float4 oldPosition, oldVelocity;
     readState(
-        xy, oldPosition, oldVelocity, newAttributes
+        xy * Texel, oldPosition, oldVelocity, newAttributes
     );
 
     float3 velocity = oldVelocity.xyz;

@@ -229,12 +229,16 @@ namespace Squared.Illuminant {
                 QuadIndexBuffer = new IndexBuffer(engine.Coordinator.Device, IndexElementSize.SixteenBits, 6, BufferUsage.WriteOnly);
                 QuadIndexBuffer.SetData(QuadIndices);
 
+                const float argh = 102400;
+
                 QuadVertexBuffer = new VertexBuffer(engine.Coordinator.Device, typeof(ParticleSystemVertex), 4, BufferUsage.WriteOnly);
                 QuadVertexBuffer.SetData(new [] {
-                    new ParticleSystemVertex(0, 0, 0),
-                    new ParticleSystemVertex(1, 0, 1),
-                    new ParticleSystemVertex(1, 1, 2),
-                    new ParticleSystemVertex(0, 1, 3)
+                    // HACK: Workaround for Intel's terrible video drivers.
+                    // No, I don't know why.
+                    new ParticleSystemVertex(-argh, -argh, 0),
+                    new ParticleSystemVertex(argh, -argh, 1),
+                    new ParticleSystemVertex(argh, argh, 2),
+                    new ParticleSystemVertex(-argh, argh, 3)
                 });
 
                 FillIndexBuffer();
@@ -396,7 +400,10 @@ namespace Squared.Illuminant {
                     dm.PushRenderTargets(dest.Bindings);
                     dm.Device.Viewport = new Viewport(0, 0, Slice.Chunk.Width, Slice.Chunk.Height);
                     dm.Device.Clear(Color.Transparent);
-                    p["HalfTexel"].SetValue(new Vector2(0.5f / Slice.Chunk.Width, 0.5f / Slice.Chunk.Height));
+                    dm.Device.RasterizerState = RasterizerState.CullNone;
+                    dm.Device.BlendState = BlendState.Opaque;
+                    dm.Device.DepthStencilState = DepthStencilState.None;
+                    p["Texel"].SetValue(new Vector2(1f / Slice.Chunk.Width, 1f / Slice.Chunk.Height));
 
                     p["PositionTexture"].SetValue(source.PositionAndBirthTime);
                     p["VelocityTexture"].SetValue(source.Velocity);
@@ -648,7 +655,7 @@ namespace Squared.Illuminant {
                     p["Size"].SetValue(Configuration.Size / 2);
                     p["VelocityRotation"].SetValue(Configuration.RotationFromVelocity ? 1f : 0f);
                     p["OpacityFromLife"].SetValue(Configuration.OpacityFromLife);
-                    p["HalfTexel"].SetValue(new Vector2(0.5f / Slice.Chunk.Width, 0.5f / Slice.Chunk.Height));
+                    p["Texel"].SetValue(new Vector2(1f / Slice.Chunk.Width, 1f / Slice.Chunk.Height));
                 },
                 (dm, _) => {
                     p["PositionTexture"].SetValue((Texture2D)null);

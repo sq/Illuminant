@@ -27,14 +27,14 @@ float4 computeFMA (
 }
 
 void PS_FMA (
-    in  float2 xy            : POSITION1,
+    in  float2 xy            : VPOS,
     out float4 newPosition   : COLOR0,
     out float4 newVelocity   : COLOR1,
     out float4 newAttributes : COLOR2
 ) {
     float4 oldPosition, oldVelocity, oldAttributes;
     readState(
-        xy, oldPosition, oldVelocity, oldAttributes
+        xy * Texel, oldPosition, oldVelocity, oldAttributes
     );
 
     newPosition   = computeFMA(oldPosition, oldPosition, PositionMultiply, PositionAdd);
