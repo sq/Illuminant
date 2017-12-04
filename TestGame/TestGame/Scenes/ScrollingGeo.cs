@@ -227,6 +227,7 @@ namespace TestGame.Scenes {
                         ));
                 }
 
+                if (false)
                 using (var gbg = BatchGroup.New(group, 5, 
                     before: (dm, _) => {
                         var vt = Game.Materials.ViewTransform;

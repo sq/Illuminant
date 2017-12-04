@@ -26,6 +26,8 @@ namespace TestGame.Scenes {
         ParticleSystem System;
 
         bool Running = true;
+        bool ShowDistanceField = false;
+        bool Collisions = false;
         int RandomSeed = 201;
 
         Texture2D Pattern;
@@ -83,6 +85,7 @@ namespace TestGame.Scenes {
             ) {
                 Transforms = {
                     new Gravity {
+                        IsActive = false,
                         Attractors = {
                             new Gravity.Attractor {
                                 Radius = 150,
@@ -99,6 +102,7 @@ namespace TestGame.Scenes {
                         }
                     },
                     new FMA {
+                        IsActive = false,
                         Velocity = {
                             Multiply = Vector3.One * 0.9993f
                         }
@@ -209,7 +213,7 @@ namespace TestGame.Scenes {
             var offsetY = (Height - Pattern.Height) / 2f;
 
             system.Initialize<Vector4>(
-                template.Length * 2,
+                true ? 10240 : template.Length * 2,
                 (buf, offset) => {
                     var rng = new MersenneTwister(Interlocked.Increment(ref seed));
                     for (var i = 0; i < buf.Length; i++) {
@@ -247,14 +251,14 @@ namespace TestGame.Scenes {
             // This lighting renderer's job is to generate a distance field for collisions
             LightingRenderer.UpdateFields(frame, -3);
 
-            System.Configuration.DistanceField = LightingRenderer.DistanceField;
+            System.Configuration.DistanceField = Collisions ? LightingRenderer.DistanceField : null;
 
             if (Running)
                 System.Update(frame, -2);
 
             ClearBatch.AddNew(frame, 0, Game.Materials.Clear, clearColor: Color.Black);
 
-            if (Running)
+            // if (Running)
                 System.Render(
                     frame, 1, 
                     material: Engine.ParticleMaterials.AttributeColor, 
@@ -264,13 +268,14 @@ namespace TestGame.Scenes {
             var lightDir = new Vector3(-0.5f, 0.5f, -1f);
             lightDir.Normalize();
 
-            LightingRenderer.VisualizeDistanceField(
-                Bounds.FromPositionAndSize(Vector2.Zero, new Vector2(Width, Height)),
-                Vector3.UnitZ,
-                frame, 2,
-                mode: VisualizationMode.Outlines,
-                blendState: BlendState.AlphaBlend
-            );
+            if (ShowDistanceField)
+                LightingRenderer.VisualizeDistanceField(
+                    Bounds.FromPositionAndSize(Vector2.Zero, new Vector2(Width, Height)),
+                    Vector3.UnitZ,
+                    frame, 2,
+                    mode: VisualizationMode.Outlines,
+                    blendState: BlendState.AlphaBlend
+                );
         }
 
         public override void Update (GameTime gameTime) {
@@ -281,6 +286,18 @@ namespace TestGame.Scenes {
                     Running = !Running;
                 if (KeyWasPressed(Keys.R))
                     Reset();
+                if (KeyWasPressed(Keys.D))
+                    ShowDistanceField = !ShowDistanceField;
+                if (KeyWasPressed(Keys.C))
+                    Collisions = !Collisions;
+
+                for (var i = 0; i < 9; i++) {
+                    if (i >= System.Transforms.Count)
+                        break;
+                    var k = Keys.D1 + i;
+                    if (KeyWasPressed(k))
+                        System.Transforms[i].IsActive = !System.Transforms[i].IsActive;
+                }
 
                 var time = (float)Time.Seconds;
 
