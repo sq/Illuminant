@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,6 +13,18 @@ using Squared.Util;
 
 namespace Squared.Illuminant {
     public class ParticleSystem : IDisposable {
+        internal class LivenessInfo : IDisposable {
+            public RenderTarget2D Buffer;
+            public byte[]         Flags;
+            public uint           Count;
+
+            public void Dispose () {
+                Buffer.Dispose();
+                Buffer = null;
+                Flags = null;
+            }
+        }
+
         private class Slice : IDisposable {
             public class Chunk : IDisposable {
                 public const int Width = 256;
@@ -26,16 +39,6 @@ namespace Squared.Illuminant {
                 public RenderTarget2D Velocity;
                 public RenderTarget2D Attributes;
 
-                // TODO: Track live counts
-                /*
-                public RenderTarget2D 
-                    // Used to locate empty slots to spawn new particles into
-                    // We generate this every frame from a pass over the position buffer
-                    ParticleAgeFractionBuffer,
-                    // We generate this every frame from a pass over the age fraction buffer
-                    LiveParticleCountBuffer;
-                */
-
                 public Chunk (
                     int index, int attributeCount,
                     GraphicsDevice device
@@ -48,23 +51,6 @@ namespace Squared.Illuminant {
 
                     if (attributeCount == 1)
                         Bindings[2] = Attributes = CreateRenderTarget(device);
-
-                    /*
-                    // TODO: Bitpack?
-                    ParticleAgeFractionBuffer = new RenderTarget2D(
-                        engine.Coordinator.Device,
-                        Configuration.ParticlesPerRow, RowCount, false,                    
-                        SurfaceFormat.Alpha8, DepthFormat.None, 
-                        0, RenderTargetUsage.PreserveContents
-                    );
-
-                    LiveParticleCountBuffer = new RenderTarget2D(
-                        engine.Coordinator.Device,
-                        RowCount, 1, false,
-                        SurfaceFormat.Single, DepthFormat.None, 
-                        0, RenderTargetUsage.PreserveContents
-                    );
-                    */
                 }
 
                 private RenderTarget2D CreateRenderTarget (GraphicsDevice device) {
@@ -201,6 +187,8 @@ namespace Squared.Illuminant {
         private const int SliceCount          = 3;
         private Slice[] Slices;
 
+        private readonly List<LivenessInfo> LivenessInfos = new List<LivenessInfo>();
+
         private readonly IndexBuffer  QuadIndexBuffer;
         private readonly VertexBuffer QuadVertexBuffer;
         private          IndexBuffer  RasterizeIndexBuffer;
@@ -247,6 +235,13 @@ namespace Squared.Illuminant {
 
             // HACK
             Initialize(0, null, null);
+        }
+
+        public int Capacity {
+            get {
+                // FIXME
+                return Slices[0].Chunks.Count * Slice.Chunk.Width * Slice.Chunk.Height;
+            }
         }
 
         private void FillIndexBuffer () {
@@ -298,6 +293,24 @@ namespace Squared.Illuminant {
             }
         }
 
+        private void AllocateLivenessRT () {
+            RenderTarget2D result;
+
+            lock (Engine.Coordinator.CreateResourceLock)
+                result = new RenderTarget2D(
+                    Engine.Coordinator.Device,
+                    Slice.Chunk.Width / 4, Slice.Chunk.Height, false,                    
+                    SurfaceFormat.Alpha8, DepthFormat.None, 
+                    0, RenderTargetUsage.PreserveContents
+                );
+
+            LivenessInfos.Add(new LivenessInfo {
+                Buffer = result,
+                Flags = new byte[result.Width * result.Height],
+                Count = 0
+            });
+        }
+
         private Slice[] AllocateSlices () {
             var result = new Slice[SliceCount];
             for (var i = 0; i < result.Length; i++)
@@ -335,6 +348,74 @@ namespace Squared.Illuminant {
             }
 
             return dest;
+        }
+
+        private void ComputeLiveness (
+            IBatchContainer container, int layer, Slice source
+        ) {
+            lock (LivenessInfos)
+            while (LivenessInfos.Count < source.Chunks.Count)
+                AllocateLivenessRT();
+
+            var e = Engine.ParticleMaterials.ComputeLiveness;
+            var p = e.Parameters;
+
+            using (var batch = BatchGroup.New(
+                container, layer,
+                after: (dm, _) => {
+                    // Incredibly pointless cleanup mandated by XNA's bugs
+                    for (var i = 0; i < 4; i++)
+                        dm.Device.VertexTextures[i] = null;
+                    for (var i = 0; i < 16; i++)
+                        dm.Device.Textures[i] = null;
+                }
+            )) {
+                for (int i = 0, l = source.Chunks.Count; i < l; i++) {
+                    ComputeLivenessForChunk(
+                        batch, i, source.Chunks[i], LivenessInfos[i]
+                    );
+                }
+            }
+        }
+
+        private void ComputeLivenessForChunk (
+            IBatchContainer container, int layer, Slice.Chunk chunk, LivenessInfo li
+        ) {
+            var m = Engine.ParticleMaterials.ComputeLiveness;
+            var e = m.Effect;
+            var p = e.Parameters;
+
+            using (var batch = NativeBatch.New(
+                container, layer, m,
+                (dm, _) => {
+                    dm.PushRenderTarget(li.Buffer);
+                    dm.Device.Viewport = new Viewport(0, 0, Slice.Chunk.Width / 4, Slice.Chunk.Height);
+                    dm.Device.Clear(Color.Transparent);
+                    p["Texel"].SetValue(new Vector2(1f / Slice.Chunk.Width, 1f / Slice.Chunk.Height));
+                    p["PositionTexture"].SetValue(chunk.PositionAndBirthTime);
+                    m.Flush();
+                },
+                (dm, _) => {
+                    // XNA effectparameter gets confused about whether a value is set or not, so we do this
+                    //  to ensure it always re-sets the texture parameter
+                    p["PositionTexture"].SetValue((Texture2D)null);
+                    dm.PopRenderTarget();
+                }
+            )) {
+                batch.Add(new NativeDrawCall(
+                    PrimitiveType.TriangleList, QuadVertexBuffer, 0,
+                    QuadIndexBuffer, 0, 0, QuadVertexBuffer.VertexCount, 0, QuadVertexBuffer.VertexCount / 2
+                ));
+            }
+        }
+
+        private void DownloadLivenessTextures () {
+            var g = Engine.Coordinator.ThreadGroup;
+            var q = g.GetQueueForType<DownloadLiveness>();
+            var buf = new byte[(Slice.Chunk.Width / 4) * Slice.Chunk.Height];
+
+            foreach (var li in LivenessInfos)
+                q.Enqueue(new DownloadLiveness(li));
         }
 
         private void UpdatePass (
@@ -400,9 +481,6 @@ namespace Squared.Illuminant {
                     dm.PushRenderTargets(dest.Bindings);
                     dm.Device.Viewport = new Viewport(0, 0, Slice.Chunk.Width, Slice.Chunk.Height);
                     dm.Device.Clear(Color.Transparent);
-                    dm.Device.RasterizerState = RasterizerState.CullNone;
-                    dm.Device.BlendState = BlendState.Opaque;
-                    dm.Device.DepthStencilState = DepthStencilState.None;
                     p["Texel"].SetValue(new Vector2(1f / Slice.Chunk.Width, 1f / Slice.Chunk.Height));
 
                     p["PositionTexture"].SetValue(source.PositionAndBirthTime);
@@ -511,6 +589,11 @@ namespace Squared.Illuminant {
                 LastResetCount = Engine.ResetCount;
             }
 
+            var q = Engine.Coordinator.ThreadGroup.GetQueueForType<DownloadLiveness>();
+            q.WaitUntilDrained();
+
+            LiveCount = (int)LivenessInfos.Sum(li => li.Count);
+
             lock (Slices) {
                 source = (
                     from s in Slices where s.IsValid
@@ -531,6 +614,7 @@ namespace Squared.Illuminant {
                 container, layer
             )) {
                 int i = 0;
+
                 foreach (var t in Transforms) {
                     if (!t.IsActive)
                         continue;
@@ -568,6 +652,8 @@ namespace Squared.Illuminant {
                         }
                     );
                 }
+
+                ComputeLiveness(group, i++, passSource);
             }
 
             var ts = Time.Ticks;
@@ -589,6 +675,8 @@ namespace Squared.Illuminant {
                 b.Unlock();
 
                 UnlockedEvent.Set();
+
+                DownloadLivenessTextures();
             });
         }
 
@@ -683,6 +771,8 @@ namespace Squared.Illuminant {
         public void Dispose () {
             foreach (var slice in Slices)
                 Engine.Coordinator.DisposeResource(slice);
+            foreach (var li in LivenessInfos)
+                Engine.Coordinator.DisposeResource(li);
         }
     }
 
@@ -733,6 +823,31 @@ namespace Squared.Illuminant {
             int attributeCount = 0
         ) {
             AttributeCount = attributeCount;
+        }
+    }
+
+    internal struct DownloadLiveness : Threading.IWorkItem {
+        public ParticleSystem.LivenessInfo Target;
+
+        public DownloadLiveness (ParticleSystem.LivenessInfo target) {
+            Target = target;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static uint popcnt (uint i) {
+             i = i - ((i >> 1) & 0x55555555);
+             i = (i & 0x33333333) + ((i >> 2) & 0x33333333);
+             return (((i + (i >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;
+        }
+
+        public void Execute () {
+            Target.Buffer.GetData(Target.Flags);
+
+            uint newCount = 0;
+            foreach (byte b in Target.Flags)
+                newCount += popcnt(b);
+
+            Target.Count = newCount;
         }
     }
 }

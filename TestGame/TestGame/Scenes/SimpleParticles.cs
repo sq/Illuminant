@@ -30,7 +30,7 @@ namespace TestGame.Scenes {
         bool Collisions = true;
         int RandomSeed = 201;
 
-        const float ParticlesPerPixel = 0.25f;
+        const float ParticlesPerPixel = 1f / 20;
 
         Texture2D Pattern;
 
@@ -226,7 +226,7 @@ namespace TestGame.Scenes {
                         buf[i] = new Vector4(
                             x, y, 0,
                             rng.NextFloat(
-                                system.Configuration.OpacityFromLife * 0.9f, 
+                                system.Configuration.OpacityFromLife * 0.1f, 
                                 system.Configuration.OpacityFromLife
                             )
                         );
@@ -236,10 +236,13 @@ namespace TestGame.Scenes {
                     Array.Clear(buf, 0, buf.Length);
                 },
                 (buf, offset) => {
+                    float b = 0.11f / ParticlesPerPixel;
+                    if (b > 1)
+                        b = 1;
                     for (var i = 0; i < buf.Length; i++) {
                         int j = (int)((i + offset) / ParticlesPerPixel);
                         if (j < template.Length)
-                            buf[i] = template[j].ToVector4() * 0.11f / ParticlesPerPixel;
+                            buf[i] = template[j].ToVector4() * b;
                         else
                             buf[i] = Vector4.Zero;
                     };
@@ -277,6 +280,18 @@ namespace TestGame.Scenes {
                     frame, 2,
                     mode: VisualizationMode.Outlines,
                     blendState: BlendState.AlphaBlend
+                );
+
+                var ir = new ImperativeRenderer(
+                    frame, Game.Materials, 4,
+                    blendState: BlendState.Opaque,
+                    samplerState: SamplerState.LinearClamp
+                );
+                ir.DrawString(
+                    Game.Font, string.Format(
+                        @"{0} / {1} alive",
+                        System.LiveCount, System.Capacity
+                    ), new Vector2(6, 6)
                 );
         }
 
