@@ -30,7 +30,7 @@ namespace TestGame.Scenes {
         bool Collisions = true;
         int RandomSeed = 201;
 
-        const int Supersampling = 1;
+        const float ParticlesPerPixel = 0.25f;
 
         Texture2D Pattern;
 
@@ -213,13 +213,15 @@ namespace TestGame.Scenes {
             var offsetY = (Height - Pattern.Height) / 2f;
 
             system.Initialize<Vector4>(
-                template.Length * Supersampling,
+                (int)(template.Length * ParticlesPerPixel),
                 (buf, offset) => {
                     var rng = new MersenneTwister(Interlocked.Increment(ref seed));
+                    var scaledWidth = width * ParticlesPerPixel;
+                    var invPerPixel = 1.0f / ParticlesPerPixel;
                     for (var i = 0; i < buf.Length; i++) {
-                        int j = (i + offset) / Supersampling;
-                        var x = (((i + offset) / (float)Supersampling) % width) + offsetX;
-                        var y = (j / width) + offsetY;
+                        int j = (i + offset);
+                        var x = ((i + offset) % scaledWidth) * invPerPixel + offsetX;
+                        var y = (j / scaledWidth) + offsetY;
 
                         buf[i] = new Vector4(
                             x, y, 0,
@@ -235,9 +237,9 @@ namespace TestGame.Scenes {
                 },
                 (buf, offset) => {
                     for (var i = 0; i < buf.Length; i++) {
-                        int j = (i + offset) / 2;
+                        int j = (int)((i + offset) / ParticlesPerPixel);
                         if (j < template.Length)
-                            buf[i] = template[j].ToVector4() * (0.22f / Supersampling);
+                            buf[i] = template[j].ToVector4() * 0.11f / ParticlesPerPixel;
                         else
                             buf[i] = Vector4.Zero;
                     };
