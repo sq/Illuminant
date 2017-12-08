@@ -299,7 +299,7 @@ namespace Squared.Illuminant {
             lock (Engine.Coordinator.CreateResourceLock)
                 result = new RenderTarget2D(
                     Engine.Coordinator.Device,
-                    Slice.Chunk.Width / 4, Slice.Chunk.Height, false,                    
+                    Slice.Chunk.Width / 8, Slice.Chunk.Height, false,                    
                     SurfaceFormat.Alpha8, DepthFormat.None, 
                     0, RenderTargetUsage.PreserveContents
                 );
@@ -389,7 +389,7 @@ namespace Squared.Illuminant {
                 container, layer, m,
                 (dm, _) => {
                     dm.PushRenderTarget(li.Buffer);
-                    dm.Device.Viewport = new Viewport(0, 0, Slice.Chunk.Width / 4, Slice.Chunk.Height);
+                    dm.Device.Viewport = new Viewport(0, 0, Slice.Chunk.Width / 8, Slice.Chunk.Height);
                     dm.Device.Clear(Color.Transparent);
                     p["Texel"].SetValue(new Vector2(1f / Slice.Chunk.Width, 1f / Slice.Chunk.Height));
                     p["PositionTexture"].SetValue(chunk.PositionAndBirthTime);

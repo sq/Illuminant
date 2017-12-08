@@ -9,20 +9,19 @@ void PS_ComputeLiveness (
     in  float2 xy     : VPOS,
     out float4 packed : COLOR0
 ) {
+    xy.x *= 8;
     xy *= Texel;
-    xy.x *= 4;
     float2 texelX = float2(Texel.x, 0);
-    float a = sampleLiveness(xy);
-    xy += texelX;
-    float b = sampleLiveness(xy);
-    xy += texelX;
-    float c = sampleLiveness(xy);
-    xy += texelX;
-    float d = sampleLiveness(xy);
 
-    float sum = (a) + (b * 4) + (c * 16) + (d * 64);
+    float sum = 0, multiplier = 1;
+    while (multiplier <= 128) {
+        float s = sampleLiveness(xy);
+        xy += texelX;
+        sum += (s * multiplier);
+        multiplier *= 2;
+    }
 
-    packed = sum / 256;
+    packed = sum / 255;
 }
 
 technique ComputeLiveness {

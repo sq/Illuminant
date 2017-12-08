@@ -26,11 +26,11 @@ namespace TestGame.Scenes {
         ParticleSystem System;
 
         bool Running = true;
-        bool ShowDistanceField = true;
+        bool ShowDistanceField = false;
         bool Collisions = true;
         int RandomSeed = 201;
 
-        const float ParticlesPerPixel = 1f / 20;
+        const float ParticlesPerPixel = 1f / 8;
 
         Texture2D Pattern;
 
@@ -79,9 +79,9 @@ namespace TestGame.Scenes {
                     */
                     RotationFromVelocity = true,
                     OpacityFromLife = 4096,
-                    EscapeVelocity = 3f,
+                    EscapeVelocity = 5f,
                     BounceVelocityMultiplier = 0.95f,
-                    MaximumVelocity = 4f,
+                    MaximumVelocity = 16f,
                     CollisionDistance = 1f
                 }
             ) {
@@ -226,7 +226,7 @@ namespace TestGame.Scenes {
                         buf[i] = new Vector4(
                             x, y, 0,
                             rng.NextFloat(
-                                system.Configuration.OpacityFromLife * 0.1f, 
+                                system.Configuration.OpacityFromLife * 0.33f, 
                                 system.Configuration.OpacityFromLife
                             )
                         );
@@ -236,7 +236,7 @@ namespace TestGame.Scenes {
                     Array.Clear(buf, 0, buf.Length);
                 },
                 (buf, offset) => {
-                    float b = 0.11f / ParticlesPerPixel;
+                    float b = 0.22f / ParticlesPerPixel;
                     if (b > 1)
                         b = 1;
                     for (var i = 0; i < buf.Length; i++) {
