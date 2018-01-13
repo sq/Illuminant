@@ -30,7 +30,7 @@ namespace TestGame.Scenes {
         bool Collisions = true;
         int RandomSeed = 201;
 
-        const float ParticlesPerPixel = 1;
+        const float ParticlesPerPixel = 4;
 
         Texture2D Pattern;
 

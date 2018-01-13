@@ -23,6 +23,7 @@ namespace Squared.Illuminant {
 
             public void Dispose () {
                 Query.Dispose();
+                Query = null;
                 /*
                 Buffer.Dispose();
                 Buffer = null;
@@ -33,8 +34,8 @@ namespace Squared.Illuminant {
 
         private class Slice : IDisposable {
             public class Chunk : IDisposable {
-                public const int Width = 256;
-                public const int Height = 256;
+                public const int Width = 512;
+                public const int Height = 512;
                 public const int MaximumCount = Width * Height;
 
                 public readonly int Index;
@@ -515,8 +516,10 @@ namespace Squared.Illuminant {
 
                     m.Flush();
 
-                    if (query != null)
+                    if (query != null) {
+                        Monitor.Enter(query);
                         query.Begin();
+                    }
                 },
                 (dm, _) => {
                     // XNA effectparameter gets confused about whether a value is set or not, so we do this
@@ -532,8 +535,10 @@ namespace Squared.Illuminant {
                     if (dft != null)
                         dft.SetValue((Texture2D)null);
 
-                    if (query != null)
+                    if (query != null) {
                         query.End();
+                        Monitor.Exit(query);
+                    }
 
                     dm.PopRenderTarget();
                 }
@@ -877,12 +882,14 @@ namespace Squared.Illuminant {
             */
 
             var waitStarted = Time.Ticks;
-            while (!Target.Query.IsComplete)
-                Thread.Sleep(0);
-            var waitEnded = Time.Ticks;
-            var elapsedMs = ((waitEnded - waitStarted) * 100 / Time.MillisecondInTicks) / 100.0;
+            lock (Target) {
+                while (!Target.Query.IsComplete)
+                    Thread.Sleep(0);
+                var waitEnded = Time.Ticks;
+                var elapsedMs = ((waitEnded - waitStarted) * 100 / Time.MillisecondInTicks) / 100.0;
 
-            Target.Count = (uint)Target.Query.PixelCount;
+                Target.Count = (uint)Target.Query.PixelCount;
+            }
         }
     }
 }
