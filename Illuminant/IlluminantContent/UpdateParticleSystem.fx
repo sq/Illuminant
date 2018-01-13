@@ -14,6 +14,10 @@ void PS_Update (
         xy * Texel, oldPosition, oldVelocity, newAttributes
     );
 
+    // To support occlusion queries and reduce bandwidth used by dead particles
+    if (oldPosition.w <= 0)
+        discard;
+
     float3 velocity = oldVelocity.xyz;
     if (length(velocity) > MaximumVelocity)
         velocity = normalize(velocity) * MaximumVelocity;

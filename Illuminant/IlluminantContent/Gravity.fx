@@ -17,6 +17,10 @@ void PS_Gravity (
         xy * Texel, newPosition, oldVelocity, newAttributes
     );
 
+    // To support occlusion queries and reduce bandwidth used by dead particles
+    if (newPosition.w <= 0)
+        discard;
+
     float3 acceleration = 0;
 
     for (int i = 0; i < AttractorCount; i++) {

@@ -14,21 +14,27 @@ using Squared.Util;
 namespace Squared.Illuminant {
     public class ParticleSystem : IDisposable {
         internal class LivenessInfo : IDisposable {
+            /*
             public RenderTarget2D Buffer;
             public byte[]         Flags;
+            */
             public uint           Count;
+            public OcclusionQuery Query;
 
             public void Dispose () {
+                Query.Dispose();
+                /*
                 Buffer.Dispose();
                 Buffer = null;
                 Flags = null;
+                */
             }
         }
 
         private class Slice : IDisposable {
             public class Chunk : IDisposable {
                 public const int Width = 256;
-                public const int Height = 512;
+                public const int Height = 256;
                 public const int MaximumCount = Width * Height;
 
                 public readonly int Index;
@@ -295,18 +301,24 @@ namespace Squared.Illuminant {
 
         private void AllocateLivenessRT () {
             RenderTarget2D result;
+            OcclusionQuery query;
 
-            lock (Engine.Coordinator.CreateResourceLock)
+            lock (Engine.Coordinator.CreateResourceLock) {
+                /*
                 result = new RenderTarget2D(
                     Engine.Coordinator.Device,
                     Slice.Chunk.Width / 8, Slice.Chunk.Height, false,                    
                     SurfaceFormat.Alpha8, DepthFormat.None, 
                     0, RenderTargetUsage.PreserveContents
                 );
+                */
+                query = new OcclusionQuery(Engine.Coordinator.Device);
+            }
 
             LivenessInfos.Add(new LivenessInfo {
-                Buffer = result,
-                Flags = new byte[result.Width * result.Height],
+                // Buffer = result,
+                // Flags = new byte[result.Width * result.Height],
+                Query = query,
                 Count = 0
             });
         }
@@ -350,13 +362,10 @@ namespace Squared.Illuminant {
             return dest;
         }
 
+        /*
         private void ComputeLiveness (
             IBatchContainer container, int layer, Slice source
         ) {
-            lock (LivenessInfos)
-            while (LivenessInfos.Count < source.Chunks.Count)
-                AllocateLivenessRT();
-
             var e = Engine.ParticleMaterials.ComputeLiveness;
             var p = e.Parameters;
 
@@ -408,11 +417,11 @@ namespace Squared.Illuminant {
                 ));
             }
         }
+        */
 
-        private void DownloadLivenessTextures () {
+        private void ReadLivenessInfo () {
             var g = Engine.Coordinator.ThreadGroup;
             var q = g.GetQueueForType<DownloadLiveness>();
-            var buf = new byte[(Slice.Chunk.Width / 4) * Slice.Chunk.Height];
 
             foreach (var li in LivenessInfos)
                 q.Enqueue(new DownloadLiveness(li));
@@ -421,7 +430,8 @@ namespace Squared.Illuminant {
         private void UpdatePass (
             IBatchContainer container, int layer, Material m,
             Slice source, Slice a, Slice b,
-            ref Slice passSource, ref Slice passDest, Action<EffectParameterCollection> setParameters
+            ref Slice passSource, ref Slice passDest, bool runOcclusionQuery,
+            Action<EffectParameterCollection> setParameters
         ) {
             var _source = passSource;
             var _dest = passDest;
@@ -429,6 +439,10 @@ namespace Squared.Illuminant {
             while (_dest.Chunks.Count < _source.Chunks.Count)
                 lock (container.RenderManager.CreateResourceLock)
                     _dest.CreateNewChunk(container.RenderManager.DeviceManager.Device);
+
+            lock (LivenessInfos)
+            while (LivenessInfos.Count < source.Chunks.Count)
+                AllocateLivenessRT();
 
             var e = m.Effect;
             var p = e.Parameters;
@@ -447,7 +461,8 @@ namespace Squared.Illuminant {
                     ChunkUpdatePass(
                         batch, i,
                         m, _source.Chunks[i], _dest.Chunks[i],
-                        setParameters
+                        setParameters, 
+                        runOcclusionQuery ? LivenessInfos[i].Query : null
                     );
                 }
             }
@@ -470,7 +485,8 @@ namespace Squared.Illuminant {
         private void ChunkUpdatePass (
             IBatchContainer container, int layer, Material m,
             Slice.Chunk source, Slice.Chunk dest,
-            Action<EffectParameterCollection> setParameters
+            Action<EffectParameterCollection> setParameters,
+            OcclusionQuery query
         ) {
             // Console.WriteLine("{0} -> {1}", passSource.Index, passDest.Index);
             var e = m.Effect;
@@ -498,6 +514,9 @@ namespace Squared.Illuminant {
                         setParameters(p);
 
                     m.Flush();
+
+                    if (query != null)
+                        query.Begin();
                 },
                 (dm, _) => {
                     // XNA effectparameter gets confused about whether a value is set or not, so we do this
@@ -512,6 +531,9 @@ namespace Squared.Illuminant {
                     var dft = p["DistanceFieldTexture"];
                     if (dft != null)
                         dft.SetValue((Texture2D)null);
+
+                    if (query != null)
+                        query.End();
 
                     dm.PopRenderTarget();
                 }
@@ -614,6 +636,7 @@ namespace Squared.Illuminant {
                 container, layer
             )) {
                 int i = 0;
+                bool occlusionQueryPending = true;
 
                 foreach (var t in Transforms) {
                     if (!t.IsActive)
@@ -621,15 +644,17 @@ namespace Squared.Illuminant {
 
                     UpdatePass(
                         group, i++, t.GetMaterial(Engine.ParticleMaterials),
-                        source, a, b, ref passSource, ref passDest,
+                        source, a, b, ref passSource, ref passDest, occlusionQueryPending,
                         t.SetParameters
                     );
+
+                    occlusionQueryPending = false;
                 }
 
                 if (Configuration.DistanceField != null) {
                     UpdatePass(
                         group, i++, pm.UpdateWithDistanceField,
-                        source, a, b, ref passSource, ref passDest,
+                        source, a, b, ref passSource, ref passDest, occlusionQueryPending,
                         (p) => {
                             var dfu = new Uniforms.DistanceField(Configuration.DistanceField, Configuration.DistanceFieldMaximumZ);
                             pm.MaterialSet.TrySetBoundUniform(pm.UpdateWithDistanceField, "DistanceField", ref dfu);
@@ -645,7 +670,7 @@ namespace Squared.Illuminant {
                 } else {
                     UpdatePass(
                         group, i++, pm.UpdatePositions,
-                        source, a, b, ref passSource, ref passDest,
+                        source, a, b, ref passSource, ref passDest, occlusionQueryPending,
                         (p) => {
                             p["LifeDecayRate"].SetValue(Configuration.GlobalLifeDecayRate);
                             p["MaximumVelocity"].SetValue(Configuration.MaximumVelocity);
@@ -653,7 +678,7 @@ namespace Squared.Illuminant {
                     );
                 }
 
-                ComputeLiveness(group, i++, passSource);
+                // ComputeLiveness(group, i++, passSource);
             }
 
             var ts = Time.Ticks;
@@ -676,7 +701,7 @@ namespace Squared.Illuminant {
 
                 UnlockedEvent.Set();
 
-                DownloadLivenessTextures();
+                ReadLivenessInfo();
             });
         }
 
@@ -841,6 +866,7 @@ namespace Squared.Illuminant {
         }
 
         public void Execute () {
+            /*
             Target.Buffer.GetData(Target.Flags);
 
             uint newCount = 0;
@@ -848,6 +874,15 @@ namespace Squared.Illuminant {
                 newCount += popcnt(b);
 
             Target.Count = newCount;
+            */
+
+            var waitStarted = Time.Ticks;
+            while (!Target.Query.IsComplete)
+                Thread.Sleep(0);
+            var waitEnded = Time.Ticks;
+            var elapsedMs = ((waitEnded - waitStarted) * 100 / Time.MillisecondInTicks) / 100.0;
+
+            Target.Count = (uint)Target.Query.PixelCount;
         }
     }
 }

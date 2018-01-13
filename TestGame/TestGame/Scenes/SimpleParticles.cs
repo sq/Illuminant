@@ -30,7 +30,7 @@ namespace TestGame.Scenes {
         bool Collisions = true;
         int RandomSeed = 201;
 
-        const float ParticlesPerPixel = 1f / 8;
+        const float ParticlesPerPixel = 1;
 
         Texture2D Pattern;
 
@@ -78,7 +78,7 @@ namespace TestGame.Scenes {
                     AnimationRate = new Vector2(1 / 6f, 0),
                     */
                     RotationFromVelocity = true,
-                    OpacityFromLife = 4096,
+                    OpacityFromLife = 800,
                     EscapeVelocity = 5f,
                     BounceVelocityMultiplier = 0.95f,
                     MaximumVelocity = 16f,
