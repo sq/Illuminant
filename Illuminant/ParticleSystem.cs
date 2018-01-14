@@ -420,14 +420,6 @@ namespace Squared.Illuminant {
         }
         */
 
-        private void ReadLivenessInfo () {
-            var g = Engine.Coordinator.ThreadGroup;
-            var q = g.GetQueueForType<DownloadLiveness>();
-
-            foreach (var li in LivenessInfos)
-                q.Enqueue(new DownloadLiveness(li));
-        }
-
         private void UpdatePass (
             IBatchContainer container, int layer, Material m,
             Slice source, Slice a, Slice b,
@@ -606,6 +598,37 @@ namespace Squared.Illuminant {
             target.Unlock();
         }
 
+        private void UpdateLivenessAndReapDeadChunks () {
+            lock (Engine.Coordinator.UseResourceLock) {
+                var q = Engine.Coordinator.ThreadGroup.GetQueueForType<DownloadLiveness>();
+
+                foreach (var li in LivenessInfos)
+                    q.Enqueue(new DownloadLiveness(li));
+
+                q.WaitUntilDrained();
+            }
+
+            LiveCount = (int)LivenessInfos.Sum(li => li.Count);
+
+            for (int i = 0; i < LivenessInfos.Count; i++) {
+                var li = LivenessInfos[i];
+                if (li.Count > 0)
+                    continue;
+
+                lock (Slices) {
+                    foreach (var s in Slices) {
+                        var chunk = s.Chunks[i];
+                        s.Chunks.RemoveAt(i);
+                        Engine.Coordinator.DisposeResource(chunk);
+                    }
+
+                    LivenessInfos.RemoveAt(i);
+                }
+
+                i -= 1;
+            }
+        }
+
         public void Update (IBatchContainer container, int layer) {
             Slice source, a, b;
             Slice passSource, passDest;
@@ -616,10 +639,8 @@ namespace Squared.Illuminant {
                 LastResetCount = Engine.ResetCount;
             }
 
-            var q = Engine.Coordinator.ThreadGroup.GetQueueForType<DownloadLiveness>();
-            q.WaitUntilDrained();
-
-            LiveCount = (int)LivenessInfos.Sum(li => li.Count);
+            lock (LivenessInfos)
+                UpdateLivenessAndReapDeadChunks();
 
             lock (Slices) {
                 source = (
@@ -705,8 +726,6 @@ namespace Squared.Illuminant {
                 b.Unlock();
 
                 UnlockedEvent.Set();
-
-                ReadLivenessInfo();
             });
         }
 

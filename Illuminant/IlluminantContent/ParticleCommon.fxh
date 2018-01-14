@@ -55,6 +55,7 @@ void readStateOrDiscard (
     out float4 attributes
 ) {
     position = tex2Dlod(PositionSampler, float4(xy, 0, 0));
+
     // To support occlusion queries and reduce bandwidth used by dead particles
     if (position.w <= 0)
         discard;
