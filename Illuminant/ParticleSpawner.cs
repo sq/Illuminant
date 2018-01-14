@@ -23,6 +23,7 @@ namespace Squared.Illuminant.Transforms {
         private int     TotalSpawned;
 
         private Vector4[] Temp = new Vector4[9];
+        private float[] Temp2 = new float[3];
 
         internal void SetIndices (int first, int last) {
             Indices = new Vector2(first, last);
@@ -58,7 +59,12 @@ namespace Squared.Illuminant.Transforms {
             Temp[7] = Attributes.RandomOffset;
             Temp[8] = Attributes.RandomScale;
 
+            Temp2[0] = Position.RandomCircularity;
+            Temp2[1] = Velocity.RandomCircularity;
+            Temp2[2] = Attributes.RandomCircularity;
+
             parameters["Configuration"].SetValue(Temp);
+            parameters["RandomCircularity"].SetValue(Temp2);
             parameters["ChunkSizeAndIndices"].SetValue(new Vector4(
                 ParticleSystem.ChunkSize.X, ParticleSystem.ChunkSize.Y,
                 Indices.X, Indices.Y

@@ -55,10 +55,11 @@ namespace Squared.Illuminant.Uniforms {
 }
 
 namespace Squared.Illuminant {
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    [StructLayout(LayoutKind.Sequential)]
     public struct Formula {
         public Vector4 Constant;
         public Vector4 RandomOffset;
         public Vector4 RandomScale;
+        public float   RandomCircularity;
     }
 }
