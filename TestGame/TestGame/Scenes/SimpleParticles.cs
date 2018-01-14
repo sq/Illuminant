@@ -99,21 +99,23 @@ namespace TestGame.Scenes {
             ) {
                 Transforms = {
                     new Spawner {
-                        MinCount = 12,
-                        MaxCount = 36,
+                        MinCount = 4,
+                        MaxCount = 32,
                         Position = new Formula {
                             Constant = new Vector4(Pattern.Width / 2f, Pattern.Height / 2f, 0, opacityFromLife),
                             RandomOffset = new Vector4(-0.5f, -0.5f, 0f, 0f),
-                            RandomScale = new Vector4(96f, 96f, 0f, 0f)
+                            RandomScale = new Vector4(256f, 256f, 0f, 0f)
                         },
                         Velocity = new Formula {
                             RandomOffset = new Vector4(-0.5f, -0.5f, 0f, 0f),
-                            RandomScale = new Vector4(4f, 4f, 0f, 0f)
+                            RandomScale = new Vector4(64f, 64f, 0f, 0f)
                         },
                         Attributes = new Formula {
-                            Constant = Vector4.One
+                            Constant = Vector4.One * 0.5f,
+                            RandomScale = Vector4.One * 0.5f
                         }
                     },
+                    /*
                     new Gravity {
                         Attractors = {
                             new Gravity.Attractor {
@@ -135,6 +137,7 @@ namespace TestGame.Scenes {
                             Multiply = Vector3.One * 0.9993f
                         }
                     },
+                    */
                     /*
                     new FMA {
                         Velocity = {
@@ -252,8 +255,6 @@ namespace TestGame.Scenes {
             // if (Running)
                 System.Render(
                     frame, 1, 
-                    // FIXME
-                    // material: Engine.ParticleMaterials.AttributeColor, 
                     material: Engine.ParticleMaterials.White,
                     blendState: RenderStates.AdditiveBlend
                 );
@@ -308,9 +309,9 @@ namespace TestGame.Scenes {
 
                 var sz = new Vector3(Width, Height, 0);
 
-                if (System.Transforms.Count >= 1) {
-                    var grav = System.Transforms.OfType<Gravity>().First();
+                var grav = System.Transforms.OfType<Gravity>().FirstOrDefault();
 
+                if (grav != null) {
                     grav.Attractors[0].Position = new Vector3(
                         (float)((Math.Sin(time / 6) * 500) + (sz.X / 2)),
                         (float)((Math.Cos(time / 6) * 500) + (sz.Y / 2)),

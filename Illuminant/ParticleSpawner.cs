@@ -22,6 +22,7 @@ namespace Squared.Illuminant.Transforms {
         private int     Delay;
         private Vector2 Indices;
         private MersenneTwister RNG = new MersenneTwister();
+        private int     TotalSpawned;
 
         internal void SetIndices (int first, int last) {
             Indices = new Vector2(first, last);
@@ -31,6 +32,7 @@ namespace Squared.Illuminant.Transforms {
             if (Delay <= 0) {
                 spawnCount = (int)(MinCount + (RNG.NextSingle() * (MaxCount - MinCount)));
                 Delay = (int)(MinInterval + (RNG.NextSingle() * (MaxInterval - MinInterval)));
+                TotalSpawned += spawnCount;
             } else {
                 spawnCount = 0;
                 Delay--;
@@ -45,6 +47,7 @@ namespace Squared.Illuminant.Transforms {
         }
 
         internal override void SetParameters (EffectParameterCollection parameters) {
+            parameters["RandomnessOffset"].SetValue(new Vector2(TotalSpawned, TotalSpawned / 600f));
             Uniforms.Value.Current = new SpawnerUniforms {
                 ChunkSizeAndIndices = new Vector4(
                     ParticleSystem.ChunkSize.X, ParticleSystem.ChunkSize.Y,

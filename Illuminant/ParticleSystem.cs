@@ -334,7 +334,7 @@ namespace Squared.Illuminant {
                 // TODO: HalfVector4?
                 RandomnessTexture = new Texture2D(
                     Engine.Coordinator.Device,
-                    256, 16, false,
+                    1024, 4, false,
                     SurfaceFormat.Vector4
                 );
 
@@ -812,7 +812,7 @@ namespace Squared.Illuminant {
                         continue;
 
                     var spawner = t as Transforms.Spawner;
-                    var runQuery = occlusionQueryPending && (spawner != null);
+                    var runQuery = occlusionQueryPending && (spawner == null);
 
                     UpdatePass(
                         group, i++, t.GetMaterial(Engine.ParticleMaterials),

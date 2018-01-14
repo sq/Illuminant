@@ -53,7 +53,7 @@ namespace Squared.Illuminant.Uniforms {
         }
     }
 
-    [StructLayout(LayoutKind.Sequential)]
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct SpawnerUniforms {
         public Vector4 ChunkSizeAndIndices;
         public Formula Position;
@@ -63,10 +63,12 @@ namespace Squared.Illuminant.Uniforms {
 }
 
 namespace Squared.Illuminant {
-    [StructLayout(LayoutKind.Sequential)]
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct Formula {
         public Vector4 Constant;
         public Vector4 RandomOffset;
         public Vector4 RandomScale;
+        // ????
+        public Vector4 Padding;
     }
 }

@@ -5,6 +5,8 @@ struct Formula {
     float4 Constant;
     float4 RandomOffset;
     float4 RandomScale;
+    // ?????????????
+    float4 Padding;
 };
 
 struct _Configuration {
@@ -40,12 +42,11 @@ void PS_Spawn (
         readState(
             xy * Texel, newPosition, newVelocity, newAttributes
         );
-        return;
+    } else {
+        newPosition   = evaluateFormula(Configuration.Position, float2(index, 0));
+        newVelocity   = evaluateFormula(Configuration.Velocity, float2(index, 1));
+        newAttributes = evaluateFormula(Configuration.Attributes, float2(index, 2));
     }
-
-    newPosition   = evaluateFormula(Configuration.Position, float2(index, 0));
-    newVelocity   = evaluateFormula(Configuration.Velocity, float2(index, 1));
-    newAttributes = evaluateFormula(Configuration.Attributes, float2(index, 2));
 }
 
 technique SpawnParticles {
