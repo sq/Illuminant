@@ -45,8 +45,11 @@ namespace Squared.Illuminant.Transforms {
         }
 
         internal override void SetParameters (EffectParameterCollection parameters) {
+            var secs = (float)Squared.Util.Time.Seconds;
+
             parameters["RandomnessOffset"].SetValue(new Vector2(
-                TotalSpawned % ParticleSystem.RandomnessTextureWidth, (TotalSpawned / ParticleSystem.RandomnessTextureWidth) * 3
+                (TotalSpawned % ParticleSystem.RandomnessTextureWidth) + (secs * 32), 
+                (TotalSpawned / ParticleSystem.RandomnessTextureWidth) * 2 + secs
             ));
 
             Temp[0] = Position.Constant;

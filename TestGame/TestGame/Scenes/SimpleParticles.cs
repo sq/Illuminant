@@ -100,7 +100,7 @@ namespace TestGame.Scenes {
                 Transforms = {
                     new Spawner {
                         MinCount = 100,
-                        MaxCount = 400,
+                        MaxCount = 3200,
                         Position = new Formula {
                             Constant = new Vector4(Pattern.Width / 2f, Pattern.Height / 2f, 0, opacityFromLife * 0.5f),
                             RandomOffset = new Vector4(-0.5f, -0.5f, 0f, 0f),
@@ -112,8 +112,8 @@ namespace TestGame.Scenes {
                             RandomCircularity = 1f
                         },
                         Attributes = new Formula {
-                            Constant = Vector4.One * 0.5f,
-                            RandomScale = Vector4.One * 0.5f
+                            Constant = Vector4.One * 0.1f,
+                            RandomScale = Vector4.One * 0.2f
                         }
                     },
                     new Gravity {

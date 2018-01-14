@@ -236,7 +236,7 @@ namespace Squared.Illuminant {
         private          VertexBuffer RasterizeOffsetBuffer;
 
         internal const int            RandomnessTextureWidth = 2048,
-                                      RandomnessTextureHeight = 16;
+                                      RandomnessTextureHeight = 140;
         private             Texture2D RandomnessTexture;
 
         private readonly AutoResetEvent UnlockedEvent = new AutoResetEvent(true);
