@@ -52,4 +52,17 @@ namespace Squared.Illuminant.Uniforms {
                 OcclusionToOpacityPower = 0;
         }
     }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct SpawnerUniforms {
+        public Vector2 ChunkSize, Indices;
+        public Formula Position, Velocity, Attributes;
+    }
+}
+
+namespace Squared.Illuminant {
+    [StructLayout(LayoutKind.Sequential)]
+    public struct Formula {
+        public Vector4 Constant, RandomOffset, RandomScale;
+    }
 }

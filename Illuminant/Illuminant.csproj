@@ -85,6 +85,7 @@
     <Compile Include="LoadMaterials.cs" />
     <Compile Include="ParticleEngine.cs" />
     <Compile Include="ParticleSystem.cs" />
+    <Compile Include="ParticleSpawner.cs" />
     <Compile Include="ParticleTransform.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Uniforms.cs" />

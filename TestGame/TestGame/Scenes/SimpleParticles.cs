@@ -31,7 +31,7 @@ namespace TestGame.Scenes {
         int RandomSeed = 201;
 
         const float ParticlesPerPixel = 4;
-        const int   SpawnInterval = 5;
+        const int   SpawnInterval = 10;
         const int   SpawnCount    = 1024;
 
         int SpawnOffset = 0;
@@ -74,6 +74,8 @@ namespace TestGame.Scenes {
             PatternPixels = new Color[width * Pattern.Height];
             Pattern.GetData(PatternPixels);
 
+            const int opacityFromLife = 400;
+
             System = new ParticleSystem(
                 Engine,
                 new ParticleSystemConfiguration(
@@ -88,7 +90,7 @@ namespace TestGame.Scenes {
                     AnimationRate = new Vector2(1 / 6f, 0),
                     */
                     RotationFromVelocity = true,
-                    OpacityFromLife = 400,
+                    OpacityFromLife = opacityFromLife,
                     EscapeVelocity = 5f,
                     BounceVelocityMultiplier = 0.95f,
                     MaximumVelocity = 16f,
@@ -96,6 +98,21 @@ namespace TestGame.Scenes {
                 }
             ) {
                 Transforms = {
+                    new Spawner {
+                        MinCount = 4,
+                        MaxCount = 8,
+                        MinInterval = 0,
+                        MaxInterval = 2,
+                        Position = new Formula {
+                            Constant = new Vector4(Pattern.Width / 2f, Pattern.Height / 2f, 0, opacityFromLife),
+                            RandomOffset = new Vector4(-0.5f, -0.5f, 0f, 0f),
+                            RandomScale = new Vector4(96f, 96f, 0f, 0f)
+                        },
+                        Velocity = new Formula {
+                            RandomOffset = new Vector4(-0.5f, -0.5f, 0f, 0f),
+                            RandomScale = new Vector4(4f, 4f, 0f, 0f)
+                        }
+                    },
                     new Gravity {
                         Attractors = {
                             new Gravity.Attractor {
@@ -289,7 +306,7 @@ namespace TestGame.Scenes {
                 var sz = new Vector3(Width, Height, 0);
 
                 if (System.Transforms.Count >= 1) {
-                    var grav = (Gravity)System.Transforms[0];
+                    var grav = System.Transforms.OfType<Gravity>().First();
 
                     grav.Attractors[0].Position = new Vector3(
                         (float)((Math.Sin(time / 6) * 500) + (sz.X / 2)),
@@ -324,7 +341,7 @@ namespace TestGame.Scenes {
                 Game.IsMouseVisible = true;
             }
 
-            MaybeSpawnMoreParticles();
+            // MaybeSpawnMoreParticles();
         }
 
         void MaybeSpawnMoreParticles () {

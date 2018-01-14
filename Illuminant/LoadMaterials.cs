@@ -173,8 +173,8 @@ namespace Squared.Illuminant {
                     content.Load<Effect>("Gravity"), "Gravity", dBegin, dEnd
                 ));
 
-                DefineMaterial(ParticleMaterials.ComputeLiveness = new Material(
-                    content.Load<Effect>("ComputeParticleLiveness"), "ComputeLiveness", dBegin, dEnd
+                DefineMaterial(ParticleMaterials.Spawn = new Material(
+                    content.Load<Effect>("SpawnParticles"), "SpawnParticles", dBegin, dEnd
                 ));
             }
 

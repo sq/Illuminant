@@ -123,6 +123,9 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="RandomCommon.fxh">
+      <Name>RandomCommon</Name>
+    </None>
     <None Include="VisualizeCommon.fxh">
       <Name>VisualizeCommon</Name>
       <Importer>EffectImporter</Importer>
@@ -204,8 +207,8 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ComputeParticleLiveness.fx">
-      <Name>ComputeParticleLiveness</Name>
+    <Compile Include="SpawnParticles.fx">
+      <Name>SpawnParticles</Name>
       <Importer>EffectImporter</Importer>
       <Processor>EffectProcessor</Processor>
     </Compile>

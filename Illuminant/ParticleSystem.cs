@@ -14,10 +14,6 @@ using Squared.Util;
 namespace Squared.Illuminant {
     public class ParticleSystem : IDisposable {
         internal class LivenessInfo : IDisposable {
-            /*
-            public RenderTarget2D Buffer;
-            public byte[]         Flags;
-            */
             public int?           Count;
             public OcclusionQuery Query;
             public long           LastQueryStart;
@@ -27,11 +23,6 @@ namespace Squared.Illuminant {
             public void Dispose () {
                 Query.Dispose();
                 Query = null;
-                /*
-                Buffer.Dispose();
-                Buffer = null;
-                Flags = null;
-                */
             }
         }
 
@@ -49,6 +40,8 @@ namespace Squared.Illuminant {
                 public RenderTarget2D Velocity;
                 public RenderTarget2D Attributes;
 
+                public int SpawnOffset, SpawnSlotsFree;
+
                 public Chunk (
                     int attributeCount, GraphicsDevice device
                 ) {
@@ -60,6 +53,9 @@ namespace Squared.Illuminant {
 
                     if (attributeCount == 1)
                         Bindings[2] = Attributes = CreateRenderTarget(device);
+
+                    SpawnOffset = 0;
+                    SpawnSlotsFree = MaximumCount;
                 }
 
                 private RenderTarget2D CreateRenderTarget (GraphicsDevice device) {
@@ -100,6 +96,9 @@ namespace Squared.Illuminant {
                         attributeInitializer(abuf, offset);
                         Attributes.SetData(abuf);
                     }
+
+                    SpawnOffset = MaximumCount;
+                    SpawnSlotsFree = 0;
                 }
 
                 public void Dispose () {
@@ -152,6 +151,9 @@ namespace Squared.Illuminant {
 
             public Chunk RemoveAt (int index) {
                 lock (Chunks) {
+                    if ((index >= Chunks.Count) || (index < 0))
+                        return null;
+
                     var chunk = Chunks[index];
                     Chunks.RemoveAt(index);
                     return chunk;
@@ -159,14 +161,34 @@ namespace Squared.Illuminant {
             }
 
             public void Add (Chunk chunk) {
-                lock (Chunks)
+                lock (Chunks) {
+                    chunk.Index = Chunks.Count;
                     Chunks.Add(chunk);
+                }
             }
 
             public Chunk this [int index] {
                 get {
-                    lock (Chunks)
+                    lock (Chunks) {
+                        if (index >= Chunks.Count)
+                            return null;
+
                         return Chunks[index];
+                    }
+                }
+            }
+
+            public Chunk SpawnTarget {
+                get {
+                    lock (Chunks) {
+                        Chunk target = null;
+                        foreach (var c in Chunks) {
+                            if ((target == null) || (c.SpawnSlotsFree > target.SpawnSlotsFree))
+                                target = c;
+                        }
+
+                        return target;
+                    }
                 }
             }
 
@@ -241,6 +263,9 @@ namespace Squared.Illuminant {
 
                 FillIndexBuffer();
                 FillVertexBuffer();
+
+                Slices[0].Timestamp = Time.Ticks;
+                Slices[0].IsValid = true;
             }
         }
 
@@ -362,64 +387,7 @@ namespace Squared.Illuminant {
 
             return dest;
         }
-
-        /*
-        private void ComputeLiveness (
-            IBatchContainer container, int layer, Slice source
-        ) {
-            var e = Engine.ParticleMaterials.ComputeLiveness;
-            var p = e.Parameters;
-
-            using (var batch = BatchGroup.New(
-                container, layer,
-                after: (dm, _) => {
-                    // Incredibly pointless cleanup mandated by XNA's bugs
-                    for (var i = 0; i < 4; i++)
-                        dm.Device.VertexTextures[i] = null;
-                    for (var i = 0; i < 16; i++)
-                        dm.Device.Textures[i] = null;
-                }
-            )) {
-                for (int i = 0, l = source.Chunks.Count; i < l; i++) {
-                    ComputeLivenessForChunk(
-                        batch, i, source.Chunks[i], LivenessInfos[i]
-                    );
-                }
-            }
-        }
-
-        private void ComputeLivenessForChunk (
-            IBatchContainer container, int layer, Slice.Chunk chunk, LivenessInfo li
-        ) {
-            var m = Engine.ParticleMaterials.ComputeLiveness;
-            var e = m.Effect;
-            var p = e.Parameters;
-
-            using (var batch = NativeBatch.New(
-                container, layer, m,
-                (dm, _) => {
-                    dm.PushRenderTarget(li.Buffer);
-                    dm.Device.Viewport = new Viewport(0, 0, Slice.Chunk.Width / 8, Slice.Chunk.Height);
-                    dm.Device.Clear(Color.Transparent);
-                    p["Texel"].SetValue(new Vector2(1f / Slice.Chunk.Width, 1f / Slice.Chunk.Height));
-                    p["PositionTexture"].SetValue(chunk.PositionAndBirthTime);
-                    m.Flush();
-                },
-                (dm, _) => {
-                    // XNA effectparameter gets confused about whether a value is set or not, so we do this
-                    //  to ensure it always re-sets the texture parameter
-                    p["PositionTexture"].SetValue((Texture2D)null);
-                    dm.PopRenderTarget();
-                }
-            )) {
-                batch.Add(new NativeDrawCall(
-                    PrimitiveType.TriangleList, QuadVertexBuffer, 0,
-                    QuadIndexBuffer, 0, 0, QuadVertexBuffer.VertexCount, 0, QuadVertexBuffer.VertexCount / 2
-                ));
-            }
-        }
-        */
-
+        
         private Slice.Chunk CreateChunk (GraphicsDevice device) {
             lock (FreeList) {
                 if (FreeList.Count > 0) {
@@ -467,11 +435,17 @@ namespace Squared.Illuminant {
             return numToSpawn * mc;
         }
 
+        internal static Vector2 ChunkSize {
+            get {
+                return new Vector2(Slice.Chunk.Width, Slice.Chunk.Height);
+            }
+        }
+
         private void UpdatePass (
             IBatchContainer container, int layer, Material m,
             Slice source, Slice a, Slice b,
             ref Slice passSource, ref Slice passDest, 
-            bool runOcclusionQuery, long startedWhen,
+            bool runOcclusionQuery, long startedWhen, Transforms.Spawner spawner,
             Action<EffectParameterCollection> setParameters
         ) {
             var _source = passSource;
@@ -485,8 +459,29 @@ namespace Squared.Illuminant {
                 }
             }
 
+            Slice.Chunk spawnChunk = null;
+            int spawnCount = 0;
+
+            if (spawner != null) {
+                spawner.Tick(out spawnCount);
+
+                if (spawnCount <= 0)
+                    return;
+                else if (spawnCount > Slice.Chunk.MaximumCount)
+                    throw new Exception("Spawn count too high to fit in a chunk");
+
+                // FIXME: Inefficient
+                spawnChunk = _dest.SpawnTarget;
+                if ((spawnChunk == null) || (spawnChunk.SpawnSlotsFree < spawnCount)) {
+                    lock (container.RenderManager.CreateResourceLock) {
+                        spawnChunk = CreateChunk(device);
+                        _dest.Add(spawnChunk);
+                    }
+                }
+            }
+
             lock (LivenessInfos)
-            while (LivenessInfos.Count < source.Count)
+            while (LivenessInfos.Count < _dest.Count)
                 AllocateLivenessRT();
 
             var e = m.Effect;
@@ -502,28 +497,50 @@ namespace Squared.Illuminant {
                         dm.Device.Textures[i] = null;
                 }
             )) {
-                for (int i = 0, l = _source.Count; i < l; i++) {
-                    var sourceChunk = _source[i];
-                    var destChunk = _dest[i];
-
-                    var li = LivenessInfos[i];
-                    bool runLocal = runOcclusionQuery;
-                    lock (li) {
-                        if (li.IsQueryPending)
-                            runLocal = false;
-
-                        if (runLocal) {
-                            li.LastQueryStart = Time.Ticks;
-                            li.IsQueryPending = true;
-                        }
+                if (spawner != null) {
+                    var sourceChunk = _source[spawnChunk.Index];
+                    if (sourceChunk != null) {
+                        spawnChunk.SpawnOffset = sourceChunk.SpawnOffset;
+                        spawnChunk.SpawnSlotsFree = sourceChunk.SpawnSlotsFree;
+                    } else {
+                        spawnChunk.SpawnOffset = 0;
+                        spawnChunk.SpawnSlotsFree = Slice.Chunk.MaximumCount;
                     }
 
+                    spawner.SetIndices(spawnChunk.SpawnOffset, spawnChunk.SpawnOffset + spawnCount);
+
                     ChunkUpdatePass(
-                        batch, i,
-                        m, sourceChunk, destChunk,
-                        setParameters, 
-                        runLocal ? li.Query : null
+                        batch, 0,
+                        m, sourceChunk, spawnChunk,
+                        setParameters, null
                     );
+
+                    spawnChunk.SpawnOffset += spawnCount;
+                    spawnChunk.SpawnSlotsFree -= spawnCount;
+                } else {
+                    for (int i = 0, l = _source.Count; i < l; i++) {
+                        var sourceChunk = _source[i];
+                        var destChunk = _dest[i];
+
+                        var li = LivenessInfos[i];
+                        bool runLocal = runOcclusionQuery;
+                        lock (li) {
+                            if (li.IsQueryPending)
+                                runLocal = false;
+
+                            if (runLocal) {
+                                li.LastQueryStart = Time.Ticks;
+                                li.IsQueryPending = true;
+                            }
+                        }
+
+                        ChunkUpdatePass(
+                            batch, i,
+                            m, sourceChunk, destChunk,
+                            setParameters, 
+                            runLocal ? li.Query : null
+                        );
+                    }
                 }
             }
 
@@ -559,19 +576,23 @@ namespace Squared.Illuminant {
                     dm.Device.Clear(Color.Transparent);
                     p["Texel"].SetValue(new Vector2(1f / Slice.Chunk.Width, 1f / Slice.Chunk.Height));
 
-                    p["PositionTexture"].SetValue(source.PositionAndBirthTime);
-                    p["VelocityTexture"].SetValue(source.Velocity);
+                    if (setParameters != null)
+                        setParameters(p);
 
-                    var at = p["AttributeTexture"];
-                    if (at != null)
-                        at.SetValue(source.Attributes);
+                    if (source != null) {
+                        p["PositionTexture"].SetValue(source.PositionAndBirthTime);
+                        p["VelocityTexture"].SetValue(source.Velocity);
+
+                        var at = p["AttributeTexture"];
+                        if (at != null)
+                            at.SetValue(source.Attributes);
+                    }
 
                     var dft = p["DistanceFieldTexture"];
                     if (dft != null)
                         dft.SetValue(Configuration.DistanceField.Texture);
 
-                    if (setParameters != null)
-                        setParameters(p);
+                    // TODO: RandomnessTexture
 
                     m.Flush();
 
@@ -610,6 +631,7 @@ namespace Squared.Illuminant {
         }
 
         public void Clear () {
+            // FIXME: Reap everything
             LastClearTimestamp = Time.Ticks;
         }
 
@@ -633,7 +655,7 @@ namespace Squared.Illuminant {
 
             lock (Slices) {
                 target = (
-                    from s in Slices where (s.IsValid && s.Timestamp >= LastClearTimestamp)
+                    from s in Slices where s.IsValid
                     orderby s.Timestamp descending select s
                 ).FirstOrDefault() ?? Slices[0];
             }
@@ -684,12 +706,13 @@ namespace Squared.Illuminant {
                 lock (Slices) {
                     foreach (var s in Slices) {
                         var chunk = s.RemoveAt(i);
-                        Reap(chunk, i);
+                        if (chunk != null) {
+                            Reap(chunk, i);
+                            LivenessInfos.RemoveAt(i);
+                            i -= 1;
+                        }
                     }
                 }
-
-                LivenessInfos.RemoveAt(i);
-                i -= 1;
             }
         }
 
@@ -699,6 +722,9 @@ namespace Squared.Illuminant {
                     FreeList.Add(chunk);
                 else
                     Engine.Coordinator.DisposeResource(chunk);
+
+                chunk.SpawnOffset = 0;
+                chunk.SpawnSlotsFree = Slice.Chunk.MaximumCount;
             }
         }
 
@@ -719,7 +745,7 @@ namespace Squared.Illuminant {
 
             lock (Slices) {
                 source = (
-                    from s in Slices where (s.IsValid && s.Timestamp >= LastClearTimestamp)
+                    from s in Slices where s.IsValid
                     orderby s.Timestamp descending select s
                 ).FirstOrDefault();
 
@@ -757,21 +783,25 @@ namespace Squared.Illuminant {
                     if (!t.IsActive)
                         continue;
 
+                    var spawner = t as Transforms.Spawner;
+                    var runQuery = occlusionQueryPending && (spawner != null);
+
                     UpdatePass(
                         group, i++, t.GetMaterial(Engine.ParticleMaterials),
                         source, a, b, ref passSource, ref passDest, 
-                        occlusionQueryPending, startedWhen,
+                        runQuery, startedWhen, spawner,
                         t.SetParameters
                     );
 
-                    occlusionQueryPending = false;
+                    if (runQuery)
+                        occlusionQueryPending = false;
                 }
 
                 if (Configuration.DistanceField != null) {
                     UpdatePass(
                         group, i++, pm.UpdateWithDistanceField,
                         source, a, b, ref passSource, ref passDest,
-                        occlusionQueryPending, startedWhen,
+                        occlusionQueryPending, startedWhen, null,
                         (p) => {
                             var dfu = new Uniforms.DistanceField(Configuration.DistanceField, Configuration.DistanceFieldMaximumZ);
                             pm.MaterialSet.TrySetBoundUniform(pm.UpdateWithDistanceField, "DistanceField", ref dfu);
@@ -788,7 +818,7 @@ namespace Squared.Illuminant {
                     UpdatePass(
                         group, i++, pm.UpdatePositions,
                         source, a, b, ref passSource, ref passDest,
-                        occlusionQueryPending, startedWhen,
+                        occlusionQueryPending, startedWhen, null,
                         (p) => {
                             p["LifeDecayRate"].SetValue(Configuration.GlobalLifeDecayRate);
                             p["MaximumVelocity"].SetValue(Configuration.MaximumVelocity);
@@ -860,7 +890,7 @@ namespace Squared.Illuminant {
 
             lock (Slices) {
                 source = (
-                    from s in Slices where (s.IsValid && s.Timestamp >= LastClearTimestamp)
+                    from s in Slices where s.IsValid
                     orderby s.Timestamp descending select s
                 ).FirstOrDefault();
 
