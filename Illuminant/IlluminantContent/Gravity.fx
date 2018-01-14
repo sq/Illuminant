@@ -13,13 +13,9 @@ void PS_Gravity (
     out float4 newAttributes     : COLOR2
 ) {
     float4 oldVelocity;
-    readState(
+    readStateOrDiscard(
         xy * Texel, newPosition, oldVelocity, newAttributes
     );
-
-    // To support occlusion queries and reduce bandwidth used by dead particles
-    if (newPosition.w <= 0)
-        discard;
 
     float3 acceleration = 0;
 

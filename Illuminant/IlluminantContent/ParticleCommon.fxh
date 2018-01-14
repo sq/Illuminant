@@ -47,3 +47,18 @@ void readState (
     velocity = tex2Dlod(VelocitySampler, float4(xy, 0, 0));
     attributes = tex2Dlod(AttributeSampler, float4(xy, 0, 0));
 }
+
+void readStateOrDiscard (
+    in float2 xy,
+    out float4 position,
+    out float4 velocity,
+    out float4 attributes
+) {
+    position = tex2Dlod(PositionSampler, float4(xy, 0, 0));
+    // To support occlusion queries and reduce bandwidth used by dead particles
+    if (position.w <= 0)
+        discard;
+
+    velocity = tex2Dlod(VelocitySampler, float4(xy, 0, 0));
+    attributes = tex2Dlod(AttributeSampler, float4(xy, 0, 0));
+}

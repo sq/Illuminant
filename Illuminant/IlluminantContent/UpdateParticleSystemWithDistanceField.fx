@@ -21,13 +21,9 @@ void PS_Update (
     out float4 newAttributes : COLOR2
 ) {
     float4 oldPosition, oldVelocity;
-    readState(
+    readStateOrDiscard(
         xy * Texel, oldPosition, oldVelocity, newAttributes
     );
-
-    // To support occlusion queries and reduce bandwidth used by dead particles
-    if (oldPosition.w <= 0)
-        discard;
 
     float3 velocity = oldVelocity.xyz;
     if (length(velocity) > MaximumVelocity)
