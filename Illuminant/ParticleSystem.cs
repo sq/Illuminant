@@ -14,6 +14,10 @@ using Squared.Util;
 
 namespace Squared.Illuminant {
     public class ParticleSystem : IDisposable {
+        internal struct SpawnState {
+            public int Offset, Free;
+        }
+
         internal class LivenessInfo : IDisposable {
             public int            ID;
             public int?           Count;
@@ -43,8 +47,6 @@ namespace Squared.Illuminant {
                 public RenderTarget2D Velocity;
                 public RenderTarget2D Attributes;
 
-                public int SpawnOffset, SpawnSlotsFree;
-
                 public Chunk (
                     int id, int attributeCount, GraphicsDevice device
                 ) {
@@ -56,9 +58,6 @@ namespace Squared.Illuminant {
 
                     if (attributeCount == 1)
                         Bindings[2] = Attributes = CreateRenderTarget(device);
-
-                    SpawnOffset = 0;
-                    SpawnSlotsFree = MaximumCount;
                 }
 
                 private RenderTarget2D CreateRenderTarget (GraphicsDevice device) {
@@ -99,9 +98,6 @@ namespace Squared.Illuminant {
                         attributeInitializer(abuf, offset);
                         Attributes.SetData(abuf);
                     }
-
-                    SpawnOffset = MaximumCount;
-                    SpawnSlotsFree = 0;
                 }
 
                 public void Dispose () {
@@ -205,16 +201,6 @@ namespace Squared.Illuminant {
                 }
             }
 
-            public Chunk GetSpawnTarget (int count) {
-                lock (Chunks) {
-                    foreach (var c in Chunks)
-                        if (c.SpawnSlotsFree > count)
-                            return c;
-
-                    return null;
-                }
-            }
-
             public int Count {
                 get {
                     lock (Chunks)
@@ -241,6 +227,7 @@ namespace Squared.Illuminant {
         private readonly List<Slice.Chunk> FreeList = new List<Slice.Chunk>();
 
         private readonly Dictionary<int, LivenessInfo> LivenessInfos = new Dictionary<int, LivenessInfo>();
+        private readonly Dictionary<int, SpawnState> SpawnStates = new Dictionary<int, SpawnState>();
 
         private readonly IndexBuffer  QuadIndexBuffer;
         private readonly VertexBuffer QuadVertexBuffer;
@@ -490,6 +477,14 @@ namespace Squared.Illuminant {
             }
         }
 
+        private int? GetSpawnTarget (int count) {
+            foreach (var kvp in SpawnStates)
+                if (kvp.Value.Free > count)
+                    return kvp.Key;
+
+            return null;
+        }
+
         private void UpdatePass (
             IBatchContainer container, int layer, Material m,
             Slice source, Slice a, Slice b,
@@ -512,7 +507,7 @@ namespace Squared.Illuminant {
                 }
             }
 
-            Slice.Chunk spawnChunk = null;
+            int? spawnId = null;
             int spawnCount = 0;
 
             if (spawner != null) {
@@ -523,15 +518,15 @@ namespace Squared.Illuminant {
                 else if (spawnCount > Slice.Chunk.MaximumCount)
                     throw new Exception("Spawn count too high to fit in a chunk");
 
-                // FIXME: Inefficient
-                var sourceSpawnChunk = _source.GetSpawnTarget(spawnCount);
-                if (sourceSpawnChunk != null)
-                    spawnChunk = _dest.GetByID(sourceSpawnChunk.ID);
+                // FIXME: Inefficient. Spawn across two buffers?
+                spawnId = GetSpawnTarget(spawnCount);
 
-                if (spawnChunk == null) {
+                if (spawnId == null) {
                     lock (container.RenderManager.CreateResourceLock) {
-                        spawnChunk = CreateChunk(device, NextChunkId++);
-                        _dest.Add(spawnChunk);
+                        spawnId = NextChunkId;
+                        var temp = CreateChunk(device, spawnId.Value);
+                        _dest.Add(temp);
+                        NextChunkId++;
                     }
                 }
             }
@@ -550,30 +545,29 @@ namespace Squared.Illuminant {
                 }
             )) {
                 if (spawner != null) {
-                    var li = GetLivenessInfo(spawnChunk.ID);
+                    var li = GetLivenessInfo(spawnId.Value);
 
-                    var sourceChunk = _source.GetByID(spawnChunk.ID);
-                    if (sourceChunk != null) {
-                        spawnChunk.SpawnOffset = sourceChunk.SpawnOffset;
-                        spawnChunk.SpawnSlotsFree = sourceChunk.SpawnSlotsFree;
-                    } else {
-                        spawnChunk.SpawnOffset = 0;
-                        spawnChunk.SpawnSlotsFree = Slice.Chunk.MaximumCount;
-                    }
+                    var sourceChunk = _source.GetByID(spawnId.Value);
+                    var destChunk = _dest.GetByID(spawnId.Value);
 
-                    spawner.SetIndices(spawnChunk.SpawnOffset, spawnChunk.SpawnOffset + spawnCount);
+                    SpawnState spawnState;
+                    if (!SpawnStates.TryGetValue(spawnId.Value, out spawnState))
+                        spawnState = new SpawnState { Offset = 0, Free = Slice.Chunk.MaximumCount };
+
+                    spawner.SetIndices(spawnState.Offset, spawnState.Offset + spawnCount);
 
                     ChunkUpdatePass(
                         batch, 0,
-                        m, sourceChunk, spawnChunk,
+                        m, sourceChunk, destChunk,
                         setParameters, null
                     );
 
-                    spawnChunk.SpawnOffset += spawnCount;
-                    spawnChunk.SpawnSlotsFree -= spawnCount;
-                    if (spawnChunk.SpawnSlotsFree < 0)
+                    spawnState.Offset += spawnCount;
+                    spawnState.Free -= spawnCount;
+                    if (spawnState.Free < 0)
                         throw new Exception();
 
+                    SpawnStates[spawnId.Value] = spawnState;
                     li.SpawnedParticlesThisFrame = true;
                 } else {
                     for (int i = 0, l = _source.Count; i < l; i++) {
@@ -787,8 +781,6 @@ namespace Squared.Illuminant {
             foreach (var li in ChunksToReap) {
                 lock (Slices) {
                     foreach (var s in Slices) {
-                        LivenessInfos.Remove(li.ID);
-
                         var chunk = s.RemoveByID(li.ID);
                         if (chunk != null)
                             Reap(chunk);
@@ -804,8 +796,8 @@ namespace Squared.Illuminant {
                 else
                     Engine.Coordinator.DisposeResource(chunk);
 
-                chunk.SpawnOffset = 0;
-                chunk.SpawnSlotsFree = Slice.Chunk.MaximumCount;
+                SpawnStates.Remove(chunk.ID);
+                LivenessInfos.Remove(chunk.ID);
             }
         }
 
