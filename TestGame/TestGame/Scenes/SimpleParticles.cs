@@ -99,23 +99,22 @@ namespace TestGame.Scenes {
             ) {
                 Transforms = {
                     new Spawner {
-                        MinCount = 4,
-                        MaxCount = 32,
+                        MinCount = 1024,
+                        MaxCount = 2048,
                         Position = new Formula {
-                            Constant = new Vector4(Pattern.Width / 2f, Pattern.Height / 2f, 0, opacityFromLife),
+                            Constant = new Vector4(Pattern.Width / 2f, Pattern.Height / 2f, 0, opacityFromLife * 0.5f),
                             RandomOffset = new Vector4(-0.5f, -0.5f, 0f, 0f),
-                            RandomScale = new Vector4(256f, 256f, 0f, 0f)
+                            RandomScale = new Vector4(900f * 2f, 450f * 2f, 0f, opacityFromLife * 0.5f)
                         },
                         Velocity = new Formula {
                             RandomOffset = new Vector4(-0.5f, -0.5f, 0f, 0f),
-                            RandomScale = new Vector4(64f, 64f, 0f, 0f)
+                            RandomScale = new Vector4(2f, 2f, 0f, 0f)
                         },
                         Attributes = new Formula {
                             Constant = Vector4.One * 0.5f,
                             RandomScale = Vector4.One * 0.5f
                         }
                     },
-                    /*
                     new Gravity {
                         Attractors = {
                             new Gravity.Attractor {
@@ -137,7 +136,6 @@ namespace TestGame.Scenes {
                             Multiply = Vector3.One * 0.9993f
                         }
                     },
-                    */
                     /*
                     new FMA {
                         Velocity = {
@@ -255,7 +253,7 @@ namespace TestGame.Scenes {
             // if (Running)
                 System.Render(
                     frame, 1, 
-                    material: Engine.ParticleMaterials.White,
+                    material: Engine.ParticleMaterials.AttributeColor,
                     blendState: RenderStates.AdditiveBlend
                 );
 

@@ -17,12 +17,12 @@ namespace Squared.Illuminant.Transforms {
 
         public Formula  Position, Velocity, Attributes;
 
-        private UniformBinding<SpawnerUniforms> Uniforms;
-
         private int     Delay;
         private Vector2 Indices;
         private MersenneTwister RNG = new MersenneTwister();
         private int     TotalSpawned;
+
+        private Vector4[] Temp = new Vector4[9];
 
         internal void SetIndices (int first, int last) {
             Indices = new Vector2(first, last);
@@ -40,24 +40,29 @@ namespace Squared.Illuminant.Transforms {
         }
 
         internal override Material GetMaterial (ParticleMaterials materials) {
-            var result = materials.Spawn;
-            // FIXME
-            Uniforms = materials.MaterialSet.GetUniformBinding<SpawnerUniforms>(result, "Configuration");
-            return result;
+            return materials.Spawn;
         }
 
         internal override void SetParameters (EffectParameterCollection parameters) {
-            parameters["RandomnessOffset"].SetValue(new Vector2(TotalSpawned, TotalSpawned / 600f));
-            Uniforms.Value.Current = new SpawnerUniforms {
-                ChunkSizeAndIndices = new Vector4(
-                    ParticleSystem.ChunkSize.X, ParticleSystem.ChunkSize.Y,
-                    Indices.X, Indices.Y
-                ),
-                Position = Position,
-                Velocity = Velocity,
-                Attributes = Attributes
-            };
-            Uniforms.Flush();
+            parameters["RandomnessOffset"].SetValue(new Vector2(
+                TotalSpawned % ParticleSystem.RandomnessTextureWidth, (TotalSpawned / ParticleSystem.RandomnessTextureWidth) * 3
+            ));
+
+            Temp[0] = Position.Constant;
+            Temp[1] = Position.RandomOffset;
+            Temp[2] = Position.RandomScale;
+            Temp[3] = Velocity.Constant;
+            Temp[4] = Velocity.RandomOffset;
+            Temp[5] = Velocity.RandomScale;
+            Temp[6] = Attributes.Constant;
+            Temp[7] = Attributes.RandomOffset;
+            Temp[8] = Attributes.RandomScale;
+
+            parameters["Configuration"].SetValue(Temp);
+            parameters["ChunkSizeAndIndices"].SetValue(new Vector4(
+                ParticleSystem.ChunkSize.X, ParticleSystem.ChunkSize.Y,
+                Indices.X, Indices.Y
+            ));
         }
     }
 }

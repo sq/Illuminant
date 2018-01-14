@@ -18,8 +18,14 @@ void PS_Update (
     if (length(velocity) > MaximumVelocity)
         velocity = normalize(velocity) * MaximumVelocity;
 
-    newPosition = float4(oldPosition.xyz + velocity, oldPosition.w - LifeDecayRate);
-    newVelocity = float4(velocity, oldVelocity.w);
+    float newLife = oldPosition.w - LifeDecayRate;
+    if (newLife <= 0) {
+        newPosition = 0;
+        newVelocity = 0;
+    } else {
+        newPosition = float4(oldPosition.xyz + velocity, newLife);
+        newVelocity = float4(velocity, oldVelocity.w);
+    }
 }
 
 technique UpdatePositions {

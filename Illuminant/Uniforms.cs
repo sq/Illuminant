@@ -52,14 +52,6 @@ namespace Squared.Illuminant.Uniforms {
                 OcclusionToOpacityPower = 0;
         }
     }
-
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct SpawnerUniforms {
-        public Vector4 ChunkSizeAndIndices;
-        public Formula Position;
-        public Formula Velocity;
-        public Formula Attributes;
-    }
 }
 
 namespace Squared.Illuminant {
@@ -68,7 +60,5 @@ namespace Squared.Illuminant {
         public Vector4 Constant;
         public Vector4 RandomOffset;
         public Vector4 RandomScale;
-        // ????
-        public Vector4 Padding;
     }
 }

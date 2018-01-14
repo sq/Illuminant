@@ -12,5 +12,6 @@ sampler RandomnessSampler {
 };
 
 float4 random (float2 xy) {
-    return tex2Dlod(RandomnessSampler, float4((xy + RandomnessOffset) * RandomnessTexel, 0, 0));
+    float4 randomUv = float4((xy + RandomnessOffset) * RandomnessTexel, 0, 0);
+    return tex2Dlod(RandomnessSampler, randomUv);
 }
