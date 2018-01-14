@@ -518,6 +518,12 @@ namespace Squared.Illuminant {
 
                 // FIXME: Inefficient. Spawn across two buffers?
                 spawnId = GetSpawnTarget(spawnCount);
+                if (spawnId == null) {
+                    spawnId = GetSpawnTarget((int)spawner.MinCount);
+
+                    if (spawnId.HasValue)
+                        spawnCount = Math.Min(SpawnStates[spawnId.Value].Free, spawnCount);
+                }
 
                 if (spawnId == null) {
                     lock (container.RenderManager.CreateResourceLock) {
