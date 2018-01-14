@@ -20,6 +20,7 @@ namespace Squared.Illuminant {
             */
             public uint           Count;
             public OcclusionQuery Query;
+            public long           LastQueryStart;
 
             public void Dispose () {
                 Query.Dispose();
@@ -34,11 +35,11 @@ namespace Squared.Illuminant {
 
         private class Slice : IDisposable {
             public class Chunk : IDisposable {
-                public const int Width = 512;
-                public const int Height = 512;
+                public const int Width = 256;
+                public const int Height = 256;
                 public const int MaximumCount = Width * Height;
 
-                public readonly int Index;
+                public int Index;
 
                 public RenderTargetBinding[] Bindings;
 
@@ -47,11 +48,10 @@ namespace Squared.Illuminant {
                 public RenderTarget2D Attributes;
 
                 public Chunk (
-                    int index, int attributeCount,
-                    GraphicsDevice device
+                    int attributeCount, GraphicsDevice device
                 ) {
-                    Index = index;
-                    
+                    Index = -1;
+
                     Bindings = new RenderTargetBinding[2 + attributeCount];
                     Bindings[0] = PositionAndBirthTime = CreateRenderTarget(device);
                     Bindings[1] = Velocity = CreateRenderTarget(device);
@@ -71,12 +71,12 @@ namespace Squared.Illuminant {
 
                 // Make sure to lock the slice first.
                 public void Initialize<TAttribute> (
+                    int offset,
                     Action<Vector4[], int> positionInitializer,
                     Action<Vector4[], int> velocityInitializer,
                     Action<TAttribute[], int> attributeInitializer
                 ) where TAttribute : struct {
                     var buf = new Vector4[MaximumCount];
-                    var offset = Index * MaximumCount;
 
                     if (positionInitializer != null) {
                         positionInitializer(buf, offset);
@@ -116,7 +116,7 @@ namespace Squared.Illuminant {
             public bool IsValid, IsBeingGenerated;
             public int  InUseCount;
 
-            public readonly List<Chunk> Chunks = new List<Chunk>();
+            private readonly List<Chunk> Chunks = new List<Chunk>();
 
             public Slice (
                 GraphicsDevice device, int index, int attributeCount
@@ -126,39 +126,6 @@ namespace Squared.Illuminant {
                 if ((attributeCount > 1) || (attributeCount < 0))
                     throw new ArgumentException("Valid attribute counts are 0 and 1");
                 Timestamp = Squared.Util.Time.Ticks;
-
-                CreateNewChunk(device);
-            }
-
-            public Chunk CreateNewChunk (GraphicsDevice device) {
-                var result = new Chunk(Chunks.Count, AttributeCount, device);
-                Chunks.Add(result);
-                return result;
-            }
-
-            // Make sure to lock the slice first.
-            public void Initialize<TAttribute> (
-                int particleCount,
-                GraphicsDevice device,
-                bool parallel,
-                Action<Vector4[], int> positionInitializer,
-                Action<Vector4[], int> velocityInitializer,
-                Action<TAttribute[], int> attributeInitializer
-            ) where TAttribute : struct {
-                while ((Chunks.Count * Chunk.MaximumCount) < particleCount)
-                    CreateNewChunk(device);
-
-                if (parallel) {
-                    Parallel.ForEach(
-                        Chunks, (c) =>
-                            c.Initialize(positionInitializer, velocityInitializer, attributeInitializer)
-                    );
-                } else {
-                    foreach (var c in Chunks)
-                        c.Initialize(positionInitializer, velocityInitializer, attributeInitializer);
-                }
-
-                IsValid = true;
             }
 
             public void Lock (string reason) {
@@ -179,6 +146,33 @@ namespace Squared.Illuminant {
                 lock (Chunks)
                 foreach (var c in Chunks)
                     c.Dispose();
+            }            
+
+            public Chunk RemoveAt (int index) {
+                lock (Chunks) {
+                    var chunk = Chunks[index];
+                    Chunks.RemoveAt(index);
+                    return chunk;
+                }
+            }
+
+            public void Add (Chunk chunk) {
+                lock (Chunks)
+                    Chunks.Add(chunk);
+            }
+
+            public Chunk this [int index] {
+                get {
+                    lock (Chunks)
+                        return Chunks[index];
+                }
+            }
+
+            public int Count {
+                get {
+                    lock (Chunks)
+                        return Chunks.Count;
+                }
             }
         }
 
@@ -194,6 +188,8 @@ namespace Squared.Illuminant {
         private const int SliceCount          = 3;
         private Slice[] Slices;
 
+        private readonly List<Slice.Chunk> NewChunks = new List<Slice.Chunk>();
+
         private readonly List<LivenessInfo> LivenessInfos = new List<LivenessInfo>();
 
         private readonly IndexBuffer  QuadIndexBuffer;
@@ -207,6 +203,8 @@ namespace Squared.Illuminant {
         private static readonly short[] QuadIndices = new short[] {
             0, 1, 3, 1, 2, 3
         };
+
+        internal long LastClearTimestamp;
 
         private int LastResetCount = 0;
         public event Action<ParticleSystem> OnDeviceReset;
@@ -239,15 +237,12 @@ namespace Squared.Illuminant {
                 FillIndexBuffer();
                 FillVertexBuffer();
             }
-
-            // HACK
-            Initialize(0, null, null);
         }
 
         public int Capacity {
             get {
                 // FIXME
-                return Slices[0].Chunks.Count * Slice.Chunk.Width * Slice.Chunk.Height;
+                return Slices[0].Count * Slice.Chunk.Width * Slice.Chunk.Height;
             }
         }
 
@@ -420,21 +415,65 @@ namespace Squared.Illuminant {
         }
         */
 
+        private Slice.Chunk CreateChunk (GraphicsDevice device) {
+            lock (Engine.Coordinator.CreateResourceLock)
+                return new Slice.Chunk(Configuration.AttributeCount, device);
+        }
+
+        // Make sure to lock the slice first.
+        public int InitializeNewChunks<TAttribute> (
+            int particleCount,
+            GraphicsDevice device,
+            bool parallel,
+            Action<Vector4[], int> positionInitializer,
+            Action<Vector4[], int> velocityInitializer,
+            Action<TAttribute[], int> attributeInitializer
+        ) where TAttribute : struct {
+            var mc = Slice.Chunk.MaximumCount;
+            int numToSpawn = (int)Math.Ceiling((double)particleCount / mc);
+
+            if (parallel) {
+                Parallel.For(
+                    0, numToSpawn,
+                    (i) => {
+                        var c = CreateChunk(device);
+                        c.Initialize(i * mc, positionInitializer, velocityInitializer, attributeInitializer);
+                        lock (NewChunks)
+                            NewChunks.Add(c);
+                    }
+                );
+            } else {
+                for (int i = 0; i < numToSpawn; i++) {
+                    var c = CreateChunk(device);
+                    c.Initialize(i * mc, positionInitializer, velocityInitializer, attributeInitializer);
+                    lock (NewChunks)
+                        NewChunks.Add(c);
+                }
+            }
+
+            return numToSpawn * mc;
+        }
+
         private void UpdatePass (
             IBatchContainer container, int layer, Material m,
             Slice source, Slice a, Slice b,
-            ref Slice passSource, ref Slice passDest, bool runOcclusionQuery,
+            ref Slice passSource, ref Slice passDest, 
+            bool runOcclusionQuery, long startedWhen,
             Action<EffectParameterCollection> setParameters
         ) {
             var _source = passSource;
             var _dest = passDest;
+            var device = container.RenderManager.DeviceManager.Device;
 
-            while (_dest.Chunks.Count < _source.Chunks.Count)
-                lock (container.RenderManager.CreateResourceLock)
-                    _dest.CreateNewChunk(container.RenderManager.DeviceManager.Device);
+            while (_dest.Count < _source.Count) {
+                lock (container.RenderManager.CreateResourceLock) {
+                    var newChunk = CreateChunk(device);
+                    _dest.Add(newChunk);
+                }
+            }
 
             lock (LivenessInfos)
-            while (LivenessInfos.Count < source.Chunks.Count)
+            while (LivenessInfos.Count < source.Count)
                 AllocateLivenessRT();
 
             var e = m.Effect;
@@ -450,12 +489,19 @@ namespace Squared.Illuminant {
                         dm.Device.Textures[i] = null;
                 }
             )) {
-                for (int i = 0, l = _source.Chunks.Count; i < l; i++) {
+                for (int i = 0, l = _source.Count; i < l; i++) {
+                    var sourceChunk = _source[i];
+                    var destChunk = _dest[i];
+
+                    var li = LivenessInfos[i];
+                    if (runOcclusionQuery)
+                        li.LastQueryStart = Time.Ticks;
+
                     ChunkUpdatePass(
                         batch, i,
-                        m, _source.Chunks[i], _dest.Chunks[i],
+                        m, sourceChunk, destChunk,
                         setParameters, 
-                        runOcclusionQuery ? LivenessInfos[i].Query : null
+                        runOcclusionQuery ? li.Query : null
                     );
                 }
             }
@@ -542,16 +588,24 @@ namespace Squared.Illuminant {
             }
         }
 
-        public void Initialize (
+        public void Clear () {
+            LastClearTimestamp = Time.Ticks;
+
+            lock (LivenessInfos)
+                foreach (var li in LivenessInfos)
+                    li.Count = 0;
+        }
+
+        public int Spawn (
             int particleCount,
             Action<Vector4[], int> positionInitializer,
             Action<Vector4[], int> velocityInitializer,
             bool parallel = true
         ) {
-            Initialize<float>(particleCount, positionInitializer, velocityInitializer, null, parallel);
+            return Spawn<float>(particleCount, positionInitializer, velocityInitializer, null, parallel);
         }
 
-        public void Initialize<TAttribute> (
+        public int Spawn<TAttribute> (
             int particleCount,
             Action<Vector4[], int> positionInitializer,
             Action<Vector4[], int> velocityInitializer,
@@ -562,7 +616,7 @@ namespace Squared.Illuminant {
 
             lock (Slices) {
                 target = (
-                    from s in Slices where s.IsValid
+                    from s in Slices where (s.IsValid && s.Timestamp >= LastClearTimestamp)
                     orderby s.Timestamp descending select s
                 ).FirstOrDefault() ?? Slices[0];
             }
@@ -573,22 +627,14 @@ namespace Squared.Illuminant {
                 target.IsBeingGenerated = true;
             }
 
-            foreach (var s in Slices) {
-                lock (s)
-                    s.IsValid = false;
-            }
-
-            // This operation might create new render targets
-            //  while allocating enough space for the particles
-            lock (Engine.Coordinator.CreateResourceLock)
-                target.Initialize(
-                    particleCount,
-                    Engine.Coordinator.Device,
-                    parallel,
-                    positionInitializer,
-                    velocityInitializer,
-                    attributeInitializer
-                );
+            var result = InitializeNewChunks(
+                particleCount,
+                Engine.Coordinator.Device,
+                parallel,
+                positionInitializer,
+                velocityInitializer,
+                attributeInitializer
+            );
 
             lock (target) {
                 target.Timestamp = Time.Ticks;
@@ -596,6 +642,8 @@ namespace Squared.Illuminant {
                 target.IsBeingGenerated = false;
             }
             target.Unlock();
+
+            return result;
         }
 
         private void UpdateLivenessAndReapDeadChunks () {
@@ -603,7 +651,7 @@ namespace Squared.Illuminant {
                 var q = Engine.Coordinator.ThreadGroup.GetQueueForType<DownloadLiveness>();
 
                 foreach (var li in LivenessInfos)
-                    q.Enqueue(new DownloadLiveness(li));
+                    q.Enqueue(new DownloadLiveness(this, li));
 
                 q.WaitUntilDrained();
             }
@@ -617,8 +665,7 @@ namespace Squared.Illuminant {
 
                 lock (Slices) {
                     foreach (var s in Slices) {
-                        var chunk = s.Chunks[i];
-                        s.Chunks.RemoveAt(i);
+                        var chunk = s.RemoveAt(i);
                         Engine.Coordinator.DisposeResource(chunk);
                     }
 
@@ -630,6 +677,8 @@ namespace Squared.Illuminant {
         }
 
         public void Update (IBatchContainer container, int layer) {
+            var startedWhen = Time.Ticks;
+
             Slice source, a, b;
             Slice passSource, passDest;
 
@@ -644,11 +693,25 @@ namespace Squared.Illuminant {
 
             lock (Slices) {
                 source = (
-                    from s in Slices where s.IsValid
+                    from s in Slices where (s.IsValid && s.Timestamp >= LastClearTimestamp)
                     orderby s.Timestamp descending select s
-                ).First();
+                ).FirstOrDefault();
+
+                if (source == null) {
+                    // A clear occurred
+                    return;
+                }
 
                 source.Lock("update");
+            }
+
+            lock (NewChunks) {
+                foreach (var nc in NewChunks) {
+                    nc.Index = source.Count;
+                    source.Add(nc);
+                }
+
+                NewChunks.Clear();
             }
 
             a = GrabWriteSlice();
@@ -670,7 +733,8 @@ namespace Squared.Illuminant {
 
                     UpdatePass(
                         group, i++, t.GetMaterial(Engine.ParticleMaterials),
-                        source, a, b, ref passSource, ref passDest, occlusionQueryPending,
+                        source, a, b, ref passSource, ref passDest, 
+                        occlusionQueryPending, startedWhen,
                         t.SetParameters
                     );
 
@@ -680,7 +744,8 @@ namespace Squared.Illuminant {
                 if (Configuration.DistanceField != null) {
                     UpdatePass(
                         group, i++, pm.UpdateWithDistanceField,
-                        source, a, b, ref passSource, ref passDest, occlusionQueryPending,
+                        source, a, b, ref passSource, ref passDest,
+                        occlusionQueryPending, startedWhen,
                         (p) => {
                             var dfu = new Uniforms.DistanceField(Configuration.DistanceField, Configuration.DistanceFieldMaximumZ);
                             pm.MaterialSet.TrySetBoundUniform(pm.UpdateWithDistanceField, "DistanceField", ref dfu);
@@ -696,7 +761,8 @@ namespace Squared.Illuminant {
                 } else {
                     UpdatePass(
                         group, i++, pm.UpdatePositions,
-                        source, a, b, ref passSource, ref passDest, occlusionQueryPending,
+                        source, a, b, ref passSource, ref passDest,
+                        occlusionQueryPending, startedWhen,
                         (p) => {
                             p["LifeDecayRate"].SetValue(Configuration.GlobalLifeDecayRate);
                             p["MaximumVelocity"].SetValue(Configuration.MaximumVelocity);
@@ -764,11 +830,17 @@ namespace Squared.Illuminant {
         ) {
             Slice source;
 
+            var startedWhen = Time.Ticks;
+
             lock (Slices) {
                 source = (
-                    from s in Slices where s.IsValid
+                    from s in Slices where (s.IsValid && s.Timestamp >= LastClearTimestamp)
                     orderby s.Timestamp descending select s
-                ).First();
+                ).FirstOrDefault();
+
+                // A clear occurred
+                if (source == null)
+                    return;
 
                 source.Lock("render");
             }
@@ -806,8 +878,10 @@ namespace Squared.Illuminant {
                         dm.Device.Textures[i] = null;
                 }
             )) {
-                foreach (var chunk in source.Chunks)
+                for (int i = 0, c = source.Count; i < c; i++) {
+                    var chunk = source[i];
                     RenderChunk(group, chunk, m);
+                }
             }
 
             // TODO: Do this immediately after issuing the batch instead?
@@ -876,9 +950,11 @@ namespace Squared.Illuminant {
     }
 
     internal struct DownloadLiveness : Threading.IWorkItem {
+        public ParticleSystem System;
         public ParticleSystem.LivenessInfo Target;
 
-        public DownloadLiveness (ParticleSystem.LivenessInfo target) {
+        public DownloadLiveness (ParticleSystem system, ParticleSystem.LivenessInfo target) {
+            System = system;
             Target = target;
         }
 
@@ -902,12 +978,15 @@ namespace Squared.Illuminant {
 
             var waitStarted = Time.Ticks;
             lock (Target) {
-                while (!Target.Query.IsComplete)
+                while ((Target.LastQueryStart > System.LastClearTimestamp) && !Target.Query.IsComplete)
                     Thread.Sleep(0);
                 var waitEnded = Time.Ticks;
                 var elapsedMs = ((waitEnded - waitStarted) * 100 / Time.MillisecondInTicks) / 100.0;
 
-                Target.Count = (uint)Target.Query.PixelCount;
+                if (Target.LastQueryStart <= System.LastClearTimestamp)
+                    Target.Count = 0;
+                else
+                    Target.Count = (uint)Target.Query.PixelCount;
             }
         }
     }

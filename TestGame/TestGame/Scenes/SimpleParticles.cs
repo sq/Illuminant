@@ -31,8 +31,14 @@ namespace TestGame.Scenes {
         int RandomSeed = 201;
 
         const float ParticlesPerPixel = 4;
+        const int   SpawnInterval = 5;
+        const int   SpawnCount    = 1024;
+
+        int SpawnOffset = 0;
+        int FramesUntilNextSpawn = 0;
 
         Texture2D Pattern;
+        Color[]   PatternPixels;
 
         public SimpleParticles (TestGame game, int width, int height)
             : base(game, width, height) {
@@ -64,6 +70,10 @@ namespace TestGame.Scenes {
 
             Pattern = Game.Content.Load<Texture2D>("template");
 
+            var width = Pattern.Width;
+            PatternPixels = new Color[width * Pattern.Height];
+            Pattern.GetData(PatternPixels);
+
             System = new ParticleSystem(
                 Engine,
                 new ParticleSystemConfiguration(
@@ -78,7 +88,7 @@ namespace TestGame.Scenes {
                     AnimationRate = new Vector2(1 / 6f, 0),
                     */
                     RotationFromVelocity = true,
-                    OpacityFromLife = 800,
+                    OpacityFromLife = 400,
                     EscapeVelocity = 5f,
                     BounceVelocityMultiplier = 0.95f,
                     MaximumVelocity = 16f,
@@ -154,6 +164,8 @@ namespace TestGame.Scenes {
 
         public void Reset () {
             InitializeSystem(System);
+            FramesUntilNextSpawn = 0;
+            SpawnOffset = 0;
 
             {
                 const int tileSize = 32;
@@ -203,51 +215,7 @@ namespace TestGame.Scenes {
         }
 
         private void InitializeSystem (ParticleSystem system) {
-            int seed = 0;
-
-            var width = Pattern.Width;
-            var template = new Color[width * Pattern.Height];
-            Pattern.GetData(template);
-
-            var offsetX = (Width - width) / 2f;
-            var offsetY = (Height - Pattern.Height) / 2f;
-
-            system.Initialize<Vector4>(
-                (int)(template.Length * ParticlesPerPixel),
-                (buf, offset) => {
-                    var rng = new MersenneTwister(Interlocked.Increment(ref seed));
-                    var scaledWidth = width * ParticlesPerPixel;
-                    var invPerPixel = 1.0f / ParticlesPerPixel;
-                    for (var i = 0; i < buf.Length; i++) {
-                        int j = (i + offset);
-                        var x = ((i + offset) % scaledWidth) * invPerPixel + offsetX;
-                        var y = (j / scaledWidth) + offsetY;
-
-                        buf[i] = new Vector4(
-                            x, y, 0,
-                            rng.NextFloat(
-                                system.Configuration.OpacityFromLife * 0.33f, 
-                                system.Configuration.OpacityFromLife
-                            )
-                        );
-                    }
-                },
-                (buf, offset) => {
-                    Array.Clear(buf, 0, buf.Length);
-                },
-                (buf, offset) => {
-                    float b = 0.22f / ParticlesPerPixel;
-                    if (b > 1)
-                        b = 1;
-                    for (var i = 0; i < buf.Length; i++) {
-                        int j = (int)((i + offset) / ParticlesPerPixel);
-                        if (j < template.Length)
-                            buf[i] = template[j].ToVector4() * b;
-                        else
-                            buf[i] = Vector4.Zero;
-                    };
-                }
-            );
+            system.Clear();
         }
         
         public override void Draw (Squared.Render.Frame frame) {
@@ -355,6 +323,62 @@ namespace TestGame.Scenes {
                 var ms = Mouse.GetState();
                 Game.IsMouseVisible = true;
             }
+
+            MaybeSpawnMoreParticles();
+        }
+
+        void MaybeSpawnMoreParticles () {
+            if (FramesUntilNextSpawn > 0) {
+                FramesUntilNextSpawn--;
+                return;
+            }
+
+            FramesUntilNextSpawn = SpawnInterval;
+
+            int seed = 0;
+
+            var width = Pattern.Width;
+            var height = Pattern.Height;
+            int wrap = (int)(PatternPixels.Length * ParticlesPerPixel);
+
+            var offsetX = (Width - width) / 2f;
+            var offsetY = (Height - height) / 2f;
+            var totalSpawned = System.Spawn<Vector4>(
+                SpawnCount,
+                (buf, offset) => {
+                    var rng = new MersenneTwister(Interlocked.Increment(ref seed));
+                    var scaledWidth = width * ParticlesPerPixel;
+                    var invPerPixel = 1.0f / ParticlesPerPixel;
+                    for (var i = 0; i < buf.Length; i++) {
+                        int j = (i + offset + SpawnOffset) % wrap;
+                        var x = (j % scaledWidth) * invPerPixel + offsetX;
+                        var y = (j / scaledWidth) + offsetY;
+
+                        buf[i] = new Vector4(
+                            x, y, 0,
+                            rng.NextFloat(
+                                System.Configuration.OpacityFromLife * 0.33f, 
+                                System.Configuration.OpacityFromLife
+                            )
+                        );
+                    }
+                },
+                (buf, offset) => {
+                    Array.Clear(buf, 0, buf.Length);
+                },
+                (buf, offset) => {
+                    float b = 0.22f / ParticlesPerPixel;
+                    if (b > 1)
+                        b = 1;
+                    for (var i = 0; i < buf.Length; i++) {
+                        int j = (int)((i + offset + SpawnOffset) % wrap / ParticlesPerPixel);
+                        int idx = j % PatternPixels.Length;
+                        buf[i] = PatternPixels[idx].ToVector4() * b;
+                    };
+                }
+            );
+
+            SpawnOffset += totalSpawned;
         }
     }
 }
