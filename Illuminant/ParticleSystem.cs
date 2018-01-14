@@ -221,7 +221,7 @@ namespace Squared.Illuminant {
         private const int SliceCount          = 3;
         private Slice[] Slices;
 
-        private const int FreeListCapacity = 4;
+        private const int FreeListCapacity = 8;
 
         private readonly List<Slice.Chunk> NewChunks = new List<Slice.Chunk>();
         private readonly List<Slice.Chunk> FreeList = new List<Slice.Chunk>();
@@ -360,24 +360,22 @@ namespace Squared.Illuminant {
         }
 
         private LivenessInfo GetLivenessInfo (int id) {
-            lock (LivenessInfos) {
-                LivenessInfo result;
-                if (LivenessInfos.TryGetValue(id, out result))
-                    return result;
-
-                OcclusionQuery query;
-                lock (Engine.Coordinator.CreateResourceLock)
-                    query = new OcclusionQuery(Engine.Coordinator.Device);
-
-                LivenessInfos.Add(
-                    id, result = new LivenessInfo {
-                        ID = id,
-                        Query = query,
-                        Count = 0
-                    }
-                );
+            LivenessInfo result;
+            if (LivenessInfos.TryGetValue(id, out result))
                 return result;
-            }
+
+            OcclusionQuery query;
+            lock (Engine.Coordinator.CreateResourceLock)
+                query = new OcclusionQuery(Engine.Coordinator.Device);
+
+            LivenessInfos.Add(
+                id, result = new LivenessInfo {
+                    ID = id,
+                    Query = query,
+                    Count = 0
+                }
+            );
+            return result;
         }
 
         private Slice[] AllocateSlices () {
@@ -568,7 +566,6 @@ namespace Squared.Illuminant {
                         throw new Exception();
 
                     SpawnStates[spawnId.Value] = spawnState;
-                    li.SpawnedParticlesThisFrame = true;
                 } else {
                     for (int i = 0, l = _source.Count; i < l; i++) {
                         var sourceChunk = _source[i];
@@ -579,14 +576,14 @@ namespace Squared.Illuminant {
 
                         var li = GetLivenessInfo(sourceChunk.ID);
                         bool runLocal = runOcclusionQuery;
-                        lock (li) {
-                            if (li.IsQueryPending)
-                                runLocal = false;
 
-                            if (runLocal) {
-                                li.LastQueryStart = Time.Ticks;
-                                li.IsQueryPending = true;
-                            }
+                        UpdateChunkLivenessQuery(li);
+                        if (li.IsQueryPending)
+                            runLocal = false;
+
+                        if (runLocal) {
+                            li.LastQueryStart = Time.Ticks;
+                            li.IsQueryPending = true;
                         }
 
                         ChunkUpdatePass(
@@ -744,49 +741,51 @@ namespace Squared.Illuminant {
             return result;
         }
 
-        private List<LivenessInfo> ChunksToReap = new List<LivenessInfo>();
+        internal HashSet<LivenessInfo> ChunksToReap = new HashSet<LivenessInfo>();
+
+        private void UpdateChunkLivenessQuery (LivenessInfo target) {
+            if (target.Query.IsDisposed || !target.Query.IsComplete)
+                return;
+
+            target.IsQueryPending = false;
+
+            if (target.LastQueryStart <= LastClearTimestamp) {
+                target.Count = null;
+                target.DeadFrameCount = 0;
+            } else {
+                target.Count = target.Query.PixelCount;
+
+                if (target.Count > 0)
+                    target.DeadFrameCount = 0;
+                else
+                    target.DeadFrameCount++;
+
+                if (target.DeadFrameCount >= 4)
+                    ChunksToReap.Add(target);
+            }
+        }
 
         private void UpdateLivenessAndReapDeadChunks () {
-            lock (Engine.Coordinator.UseResourceLock) {
-                var q = Engine.Coordinator.ThreadGroup.GetQueueForType<DownloadLiveness>();
+            LiveCount = 0;
 
-                lock (LivenessInfos)
-                foreach (var kvp in LivenessInfos)
-                    q.Enqueue(new DownloadLiveness(this, kvp.Value));
-
-                q.WaitUntilDrained();
-            }
-
-            int count = 0;
-            ChunksToReap.Clear();
-
-            lock (LivenessInfos)
             foreach (var kvp in LivenessInfos) {
-                var li = kvp.Value;
-                count += li.Count.GetValueOrDefault(0);
-
-                // HACK: Wait a few frames to make sure the chunk is really dead (race conditions?)
-                if (
-                    (li.DeadFrameCount < 4) && 
-                    (li.LastQueryStart > LastClearTimestamp)
-                )
-                    continue;
-
-                ChunksToReap.Add(li);
+                UpdateChunkLivenessQuery(kvp.Value);
+                LiveCount += kvp.Value.Count.GetValueOrDefault(0);
             }
 
-            LiveCount = count;
-
-            lock (LivenessInfos)
             foreach (var li in ChunksToReap) {
-                lock (Slices) {
-                    foreach (var s in Slices) {
-                        var chunk = s.RemoveByID(li.ID);
-                        if (chunk != null)
-                            Reap(chunk);
-                    }
+                lock (Slices)
+                foreach (var s in Slices) {
+                    var chunk = s.RemoveByID(li.ID);
+                    if (chunk != null)
+                        Reap(chunk);
                 }
+
+                SpawnStates.Remove(li.ID);
+                LivenessInfos.Remove(li.ID);
             }
+
+            ChunksToReap.Clear();
         }
 
         private void Reap (Slice.Chunk chunk) {
@@ -795,9 +794,6 @@ namespace Squared.Illuminant {
                     FreeList.Add(chunk);
                 else
                     Engine.Coordinator.DisposeResource(chunk);
-
-                SpawnStates.Remove(chunk.ID);
-                LivenessInfos.Remove(chunk.ID);
             }
         }
 
@@ -1075,58 +1071,6 @@ namespace Squared.Illuminant {
             int attributeCount = 0
         ) {
             AttributeCount = attributeCount;
-        }
-    }
-
-    internal struct DownloadLiveness : Threading.IWorkItem {
-        public ParticleSystem System;
-        public ParticleSystem.LivenessInfo Target;
-
-        public DownloadLiveness (ParticleSystem system, ParticleSystem.LivenessInfo target) {
-            System = system;
-            Target = target;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static uint popcnt (uint i) {
-             i = i - ((i >> 1) & 0x55555555);
-             i = (i & 0x33333333) + ((i >> 2) & 0x33333333);
-             return (((i + (i >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;
-        }
-
-        public void Execute () {
-            /*
-            Target.Buffer.GetData(Target.Flags);
-
-            uint newCount = 0;
-            foreach (byte b in Target.Flags)
-                newCount += popcnt(b);
-
-            Target.Count = newCount;
-            */
-
-            lock (Target) {
-                if (Target.SpawnedParticlesThisFrame)
-                    Target.DeadFrameCount = 0;
-                if (Target.Query.IsDisposed || !Target.Query.IsComplete)
-                    return;
-
-                Target.IsQueryPending = false;
-                if (Target.LastQueryStart <= System.LastClearTimestamp) {
-                    Target.DeadFrameCount = 0;
-                } else {
-                    Target.Count = Target.Query.PixelCount;
-
-                    if (Target.Count > 0)
-                        Target.DeadFrameCount = 0;
-                    else if (Target.SpawnedParticlesThisFrame)
-                        Target.DeadFrameCount = 0;
-                    else
-                        Target.DeadFrameCount++;
-
-                    Target.SpawnedParticlesThisFrame = false;
-                }
-            }
         }
     }
 }
