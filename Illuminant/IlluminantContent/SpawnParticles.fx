@@ -23,12 +23,7 @@ void VS_Spawn (
 
 float4 evaluateFormula (Formula formula, float2 xy) {
     float4 result = formula.Constant;
-
-    [branch]
-    if (length(formula.RandomScale) > 0) {
-        result += (formula.RandomScale * (random(xy) + formula.RandomOffset));
-    }
-
+    result += (formula.RandomScale * (random(xy) + formula.RandomOffset));
     return result;
 }
 
@@ -51,8 +46,6 @@ void PS_Spawn (
     newPosition   = evaluateFormula(Configuration.Position, float2(index, 0));
     newVelocity   = evaluateFormula(Configuration.Velocity, float2(index, 1));
     newAttributes = evaluateFormula(Configuration.Attributes, float2(index, 2));
-
-    newAttributes = float4(1, 1, 1, 1);
 }
 
 technique SpawnParticles {

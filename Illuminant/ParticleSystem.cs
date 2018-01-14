@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Squared.Game;
+using Squared.Illuminant.Util;
 using Squared.Render;
 using Squared.Util;
 
@@ -225,6 +226,8 @@ namespace Squared.Illuminant {
         private          VertexBuffer RasterizeVertexBuffer;
         private          VertexBuffer RasterizeOffsetBuffer;
 
+        private             Texture2D RandomnessTexture;
+
         private readonly AutoResetEvent UnlockedEvent = new AutoResetEvent(true);
 
         private static readonly short[] QuadIndices = new short[] {
@@ -263,6 +266,7 @@ namespace Squared.Illuminant {
 
                 FillIndexBuffer();
                 FillVertexBuffer();
+                GenerateRandomnessTexture();
 
                 Slices[0].Timestamp = Time.Ticks;
                 Slices[0].IsValid = true;
@@ -322,6 +326,25 @@ namespace Squared.Illuminant {
                     buf.Length, BufferUsage.WriteOnly
                 );
                 RasterizeOffsetBuffer.SetData(buf);
+            }
+        }
+
+        private void GenerateRandomnessTexture () {
+            lock (Engine.Coordinator.CreateResourceLock) {
+                // TODO: HalfVector4?
+                RandomnessTexture = new Texture2D(
+                    Engine.Coordinator.Device,
+                    256, 16, false,
+                    SurfaceFormat.Vector4
+                );
+
+                var buffer = new Vector4[RandomnessTexture.Width * RandomnessTexture.Height];
+                var rng = new MersenneTwister();
+
+                for (int i = 0; i < buffer.Length; i++)
+                    buffer[i] = new Vector4(rng.NextSingle(), rng.NextSingle(), rng.NextSingle(), rng.NextSingle());
+
+                RandomnessTexture.SetData(buffer);
             }
         }
 
@@ -592,7 +615,11 @@ namespace Squared.Illuminant {
                     if (dft != null)
                         dft.SetValue(Configuration.DistanceField.Texture);
 
-                    // TODO: RandomnessTexture
+                    var rt = p["RandomnessTexture"];
+                    if (rt != null) {
+                        p["RandomnessTexel"].SetValue(new Vector2(1.0f / RandomnessTexture.Width, 1.0f / RandomnessTexture.Height));
+                        rt.SetValue(RandomnessTexture);
+                    }
 
                     m.Flush();
 
@@ -703,6 +730,7 @@ namespace Squared.Illuminant {
                 if ((li.DeadFrameCount < 3) && (li.LastQueryStart > LastClearTimestamp))
                     continue;
 
+                if (false)
                 lock (Slices) {
                     foreach (var s in Slices) {
                         var chunk = s.RemoveAt(i);
@@ -952,6 +980,7 @@ namespace Squared.Illuminant {
                 Engine.Coordinator.DisposeResource(slice);
             foreach (var li in LivenessInfos)
                 Engine.Coordinator.DisposeResource(li);
+            Engine.Coordinator.DisposeResource(RandomnessTexture);
         }
     }
 

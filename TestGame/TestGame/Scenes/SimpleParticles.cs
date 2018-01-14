@@ -109,6 +109,9 @@ namespace TestGame.Scenes {
                         Velocity = new Formula {
                             RandomOffset = new Vector4(-0.5f, -0.5f, 0f, 0f),
                             RandomScale = new Vector4(4f, 4f, 0f, 0f)
+                        },
+                        Attributes = new Formula {
+                            Constant = Vector4.One
                         }
                     },
                     new Gravity {
@@ -249,7 +252,9 @@ namespace TestGame.Scenes {
             // if (Running)
                 System.Render(
                     frame, 1, 
-                    material: Engine.ParticleMaterials.AttributeColor, 
+                    // FIXME
+                    // material: Engine.ParticleMaterials.AttributeColor, 
+                    material: Engine.ParticleMaterials.White,
                     blendState: RenderStates.AdditiveBlend
                 );
 
