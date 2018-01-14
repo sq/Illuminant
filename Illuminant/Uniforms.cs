@@ -55,14 +55,18 @@ namespace Squared.Illuminant.Uniforms {
 
     [StructLayout(LayoutKind.Sequential)]
     public struct SpawnerUniforms {
-        public Vector2 ChunkSize, Indices;
-        public Formula Position, Velocity, Attributes;
+        public Vector4 ChunkSizeAndIndices;
+        public Formula Position;
+        public Formula Velocity;
+        public Formula Attributes;
     }
 }
 
 namespace Squared.Illuminant {
     [StructLayout(LayoutKind.Sequential)]
     public struct Formula {
-        public Vector4 Constant, RandomOffset, RandomScale;
+        public Vector4 Constant;
+        public Vector4 RandomOffset;
+        public Vector4 RandomScale;
     }
 }

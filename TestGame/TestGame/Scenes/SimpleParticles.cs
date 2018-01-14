@@ -99,10 +99,8 @@ namespace TestGame.Scenes {
             ) {
                 Transforms = {
                     new Spawner {
-                        MinCount = 4,
-                        MaxCount = 8,
-                        MinInterval = 0,
-                        MaxInterval = 2,
+                        MinCount = 12,
+                        MaxCount = 36,
                         Position = new Formula {
                             Constant = new Vector4(Pattern.Width / 2f, Pattern.Height / 2f, 0, opacityFromLife),
                             RandomOffset = new Vector4(-0.5f, -0.5f, 0f, 0f),

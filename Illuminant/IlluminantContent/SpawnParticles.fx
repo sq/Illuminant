@@ -8,8 +8,7 @@ struct Formula {
 };
 
 struct _Configuration {
-    float2 ChunkSize;
-    float2 Indices;
+    float4 ChunkSizeAndIndices;
     Formula Position, Velocity, Attributes;
 };
 
@@ -39,9 +38,10 @@ void PS_Spawn (
     out float4 newVelocity   : COLOR1,
     out float4 newAttributes : COLOR2
 ) {
-    float index = (xy.x) + (xy.y * Configuration.ChunkSize.x);
+    float index = (xy.x) + (xy.y * Configuration.ChunkSizeAndIndices.x);
 
-    if ((index < Configuration.Indices.x) || (index > Configuration.Indices.y)) {
+    [branch]
+    if ((index < Configuration.ChunkSizeAndIndices.z) || (index > Configuration.ChunkSizeAndIndices.w)) {
         readState(
             xy * Texel, newPosition, newVelocity, newAttributes
         );
@@ -51,6 +51,8 @@ void PS_Spawn (
     newPosition   = evaluateFormula(Configuration.Position, float2(index, 0));
     newVelocity   = evaluateFormula(Configuration.Velocity, float2(index, 1));
     newAttributes = evaluateFormula(Configuration.Attributes, float2(index, 2));
+
+    newAttributes = float4(1, 1, 1, 1);
 }
 
 technique SpawnParticles {

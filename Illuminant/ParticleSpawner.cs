@@ -46,8 +46,10 @@ namespace Squared.Illuminant.Transforms {
 
         internal override void SetParameters (EffectParameterCollection parameters) {
             Uniforms.Value.Current = new SpawnerUniforms {
-                ChunkSize = ParticleSystem.ChunkSize,
-                Indices = Indices,
+                ChunkSizeAndIndices = new Vector4(
+                    ParticleSystem.ChunkSize.X, ParticleSystem.ChunkSize.Y,
+                    Indices.X, Indices.Y
+                ),
                 Position = Position,
                 Velocity = Velocity,
                 Attributes = Attributes
