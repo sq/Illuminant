@@ -30,9 +30,10 @@ namespace TestGame.Scenes {
         bool Collisions = true;
         int RandomSeed = 201;
 
-        const float ParticlesPerPixel = 2;
-        const int   SpawnInterval = 1000;
-        const int   SpawnCount    = 1024;
+        const float ParticlesPerPixel = 3;
+        const int   SpawnInterval     = 6;
+        const int   SpawnCount        = 1024;
+        const int   MaxLife           = 380;
 
         int SpawnOffset = 0;
         int FramesUntilNextSpawn = 0;
@@ -75,7 +76,6 @@ namespace TestGame.Scenes {
             Pattern.GetData(PatternPixels);
 
             const int opacityFromLife = 200;
-            const int maxLife = 400;
 
             System = new ParticleSystem(
                 Engine,
@@ -83,7 +83,7 @@ namespace TestGame.Scenes {
                     attributeCount: 1
                 ) {
                     Texture = spark,
-                    Size = Vector2.One * 2.5f,
+                    Size = Vector2.One * 3f,
                     /*
                     Texture = fireball,
                     TextureRegion = fireballRect,
@@ -105,7 +105,7 @@ namespace TestGame.Scenes {
                         Position = new Formula {
                             Constant = new Vector4(Pattern.Width / 2f, Pattern.Height / 2f, 0, opacityFromLife),
                             RandomOffset = new Vector4(-0.5f, -0.5f, 0f, 0f),
-                            RandomScale = new Vector4(900f * 2f, 450f * 2f, 0f, maxLife - opacityFromLife),
+                            RandomScale = new Vector4(900f * 2f, 450f * 2f, 0f, MaxLife - opacityFromLife),
                         },
                         Velocity = new Formula {
                             RandomOffset = new Vector4(-0.5f, -0.5f, 0f, 0f),
@@ -378,8 +378,8 @@ namespace TestGame.Scenes {
                         buf[i] = new Vector4(
                             x, y, 0,
                             rng.NextFloat(
-                                System.Configuration.OpacityFromLife * 0.33f, 
-                                System.Configuration.OpacityFromLife
+                                200, 
+                                MaxLife
                             )
                         );
                     }
@@ -388,7 +388,7 @@ namespace TestGame.Scenes {
                     Array.Clear(buf, 0, buf.Length);
                 },
                 (buf, offset) => {
-                    float b = 0.95f / ParticlesPerPixel;
+                    float b = 0.66f / ParticlesPerPixel;
                     if (b > 1)
                         b = 1;
                     for (var i = 0; i < buf.Length; i++) {
