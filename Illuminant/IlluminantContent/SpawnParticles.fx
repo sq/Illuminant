@@ -46,7 +46,7 @@ void PS_Spawn (
 
     [branch]
     if ((index < ChunkSizeAndIndices.z) || (index > ChunkSizeAndIndices.w)) {
-        readState(
+        readStateOrDiscard(
             xy * Texel, newPosition, newVelocity, newAttributes
         );
     } else {

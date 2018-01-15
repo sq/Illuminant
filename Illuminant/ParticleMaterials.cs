@@ -9,7 +9,7 @@ namespace Squared.Illuminant {
 
         public Material UpdatePositions, UpdateWithDistanceField;
         public Material FMA, Gravity, MatrixMultiply;
-        public Material Spawn;
+        public Material Spawn, NullTransform;
 
         public Material White, AttributeColor;
 

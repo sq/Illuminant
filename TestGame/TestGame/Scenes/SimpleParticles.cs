@@ -30,7 +30,7 @@ namespace TestGame.Scenes {
         bool Collisions = true;
         int RandomSeed = 201;
 
-        const float ParticlesPerPixel = 4;
+        const float ParticlesPerPixel = 2;
         const int   SpawnInterval = 10;
         const int   SpawnCount    = 1024;
 
@@ -100,8 +100,8 @@ namespace TestGame.Scenes {
             ) {
                 Transforms = {
                     new Spawner {
-                        MinCount = 2500,
-                        MaxCount = 7000,
+                        MinCount = 32,
+                        MaxCount = 1024,
                         Position = new Formula {
                             Constant = new Vector4(Pattern.Width / 2f, Pattern.Height / 2f, 0, opacityFromLife),
                             RandomOffset = new Vector4(-0.5f, -0.5f, 0f, 0f),
@@ -345,7 +345,7 @@ namespace TestGame.Scenes {
                 Game.IsMouseVisible = true;
             }
 
-            // MaybeSpawnMoreParticles();
+            MaybeSpawnMoreParticles();
         }
 
         void MaybeSpawnMoreParticles () {
@@ -388,7 +388,7 @@ namespace TestGame.Scenes {
                     Array.Clear(buf, 0, buf.Length);
                 },
                 (buf, offset) => {
-                    float b = 0.22f / ParticlesPerPixel;
+                    float b = 0.95f / ParticlesPerPixel;
                     if (b > 1)
                         b = 1;
                     for (var i = 0; i < buf.Length; i++) {

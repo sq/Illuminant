@@ -176,6 +176,10 @@ namespace Squared.Illuminant {
                 DefineMaterial(ParticleMaterials.Spawn = new Material(
                     content.Load<Effect>("SpawnParticles"), "SpawnParticles", dBegin, dEnd
                 ));
+
+                DefineMaterial(ParticleMaterials.NullTransform = new Material(
+                    content.Load<Effect>("NullTransform"), "NullTransform", dBegin, dEnd
+                ));
             }
 
             DefineMaterial(ParticleMaterials.White = new Material(
