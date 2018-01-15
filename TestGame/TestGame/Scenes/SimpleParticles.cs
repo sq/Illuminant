@@ -95,7 +95,8 @@ namespace TestGame.Scenes {
                     EscapeVelocity = 5f,
                     BounceVelocityMultiplier = 0.95f,
                     MaximumVelocity = 16f,
-                    CollisionDistance = 1f
+                    CollisionDistance = 1f,
+                    CollisionLifePenalty = 4
                 }
             ) {
                 Transforms = {

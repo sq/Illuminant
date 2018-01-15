@@ -13,6 +13,7 @@ uniform float BounceVelocityMultiplier;
 uniform float LifeDecayRate;
 uniform float MaximumVelocity;
 uniform float CollisionDistance;
+uniform float CollisionLifePenalty;
 
 void PS_Update (
     in  float2 xy            : VPOS,
@@ -60,7 +61,7 @@ void PS_Update (
 
     [branch]
     if (collided) {
-        newPosition = float4(oldPosition + (unitVector * stepSpeed), oldPosition.w - LifeDecayRate);
+        newPosition = float4(oldPosition + (unitVector * stepSpeed), oldPosition.w - LifeDecayRate - CollisionLifePenalty);
 
         float3 normal = estimateNormal(newPosition.xyz, vars);
         if (length(normal) < 0.1)

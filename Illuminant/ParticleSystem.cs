@@ -734,6 +734,7 @@ namespace Squared.Illuminant {
                             p["LifeDecayRate"].SetValue(Configuration.GlobalLifeDecayRate);
                             p["MaximumVelocity"].SetValue(Configuration.MaximumVelocity);
                             p["CollisionDistance"].SetValue(Configuration.CollisionDistance);
+                            p["CollisionLifePenalty"].SetValue(Configuration.CollisionLifePenalty);
                         }
                     );
                 } else {
@@ -880,25 +881,25 @@ namespace Squared.Illuminant {
     }
 
     public class ParticleSystemConfiguration {
-        public readonly int AttributeCount;
+        public readonly int  AttributeCount;
 
         // Configures the sprite rendered for each particle
-        public Texture2D Texture;
-        public Bounds    TextureRegion = new Bounds(Vector2.Zero, Vector2.One);
-        public Vector2   Size = Vector2.One;
+        public Texture2D     Texture;
+        public Bounds        TextureRegion = new Bounds(Vector2.Zero, Vector2.One);
+        public Vector2       Size = Vector2.One;
 
         // Animates through the sprite texture based on the particle's life value, if set
         // Smaller values will result in slower animation. Zero turns off animation.
-        public Vector2 AnimationRate;
+        public Vector2       AnimationRate;
 
         // If set, particles will rotate based on their direction of movement
-        public bool RotationFromVelocity;
+        public bool          RotationFromVelocity;
 
         // If != 0, a particle's opacity is equal to its life divided by this value
-        public float OpacityFromLife = 0;
+        public float         OpacityFromLife = 0;
 
         // Life of all particles decreases by this much every update
-        public float GlobalLifeDecayRate = 1;
+        public float         GlobalLifeDecayRate = 1;
 
         // If set, particles collide with volumes in this distance field
         public DistanceField DistanceField;
@@ -907,6 +908,10 @@ namespace Squared.Illuminant {
         // The distance at which a particle is considered colliding with the field.
         // Raise this to make particles 'larger'.
         public float         CollisionDistance = 0.5f;
+
+        // Life of a particle decreases by this much every frame if it collides
+        //  with or is inside of a volume
+        public float         CollisionLifePenalty = 0;
 
         // Particles will not be allowed to exceed this velocity
         public float         MaximumVelocity = 9999f;
