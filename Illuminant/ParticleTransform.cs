@@ -142,6 +142,8 @@ namespace Squared.Illuminant.Transforms {
         }
 
         public readonly List<Attractor> Attractors = new List<Attractor>();
+        private Vector3[] _Positions;
+        private Vector2[] _RadiusesAndStrengths;
 
         internal override Material GetMaterial (ParticleMaterials materials) {
             return materials.Gravity;
@@ -151,11 +153,19 @@ namespace Squared.Illuminant.Transforms {
             if (Attractors.Count > 8)
                 throw new Exception("Maximum number of attractors per instance is 8");
 
+            if ((_Positions == null) || (_Positions.Length != Attractors.Count))
+                _Positions = new Vector3[Attractors.Count];
+            if ((_RadiusesAndStrengths == null) || (_RadiusesAndStrengths.Length != Attractors.Count))
+                _RadiusesAndStrengths = new Vector2[Attractors.Count];
+
+            for (int i = 0; i < Attractors.Count; i++) {
+                _Positions[i] = Attractors[i].Position;
+                _RadiusesAndStrengths[i] = new Vector2(Attractors[i].Radius, Attractors[i].Strength);
+            }
+
             parameters["AttractorCount"].SetValue(Attractors.Count);
-            var positions = (from p in Attractors select p.Position).ToArray();
-            parameters["AttractorPositions"].SetValue(positions);
-            var rns = (from p in Attractors select new Vector2(p.Radius, p.Strength)).ToArray();
-            parameters["AttractorRadiusesAndStrengths"].SetValue(rns);
+            parameters["AttractorPositions"].SetValue(_Positions);
+            parameters["AttractorRadiusesAndStrengths"].SetValue(_RadiusesAndStrengths);
         }
     }
 }
