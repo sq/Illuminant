@@ -438,21 +438,24 @@ namespace Squared.Illuminant {
 
                     var chunkMaterial = m;
                     if (spawner != null) {
-                        if (sourceChunk.ID == spawnId)
-                            chunkMaterial = m;
-                        else
+                        if (sourceChunk.ID != spawnId) {
                             chunkMaterial = Engine.ParticleMaterials.NullTransform;
+                        } else {
+                            chunkMaterial = m;
 
-                        SpawnState spawnState;
-                        if (!SpawnStates.TryGetValue(spawnId.Value, out spawnState))
-                            spawnState = new SpawnState { Offset = Slice.Chunk.MaximumCount, Free = 0 };
+                            SpawnState spawnState;
+                            if (!SpawnStates.TryGetValue(spawnId.Value, out spawnState))
+                                spawnState = new SpawnState { Offset = Slice.Chunk.MaximumCount, Free = 0 };
 
-                        spawner.SetIndices(spawnState.Offset, spawnState.Offset + spawnCount);
+                            spawner.SetIndices(spawnState.Offset, spawnState.Offset + spawnCount);
 
-                        spawnState.Offset += spawnCount;
-                        spawnState.Free -= spawnCount;
+                            spawnState.Offset += spawnCount;
+                            spawnState.Free -= spawnCount;
 
-                        SpawnStates[spawnId.Value] = spawnState;
+                            SpawnStates[spawnId.Value] = spawnState;
+
+                            li.DeadFrameCount = 0;
+                        }
                     }
 
                     ChunkUpdatePass(
@@ -608,11 +611,6 @@ namespace Squared.Illuminant {
 
                 if (target.Count > 0)
                     target.DeadFrameCount = 0;
-                else
-                    target.DeadFrameCount++;
-
-                if (target.DeadFrameCount >= 4)
-                    ChunksToReap.Add(target);
             }
         }
 
@@ -620,8 +618,15 @@ namespace Squared.Illuminant {
             LiveCount = 0;
 
             foreach (var kvp in LivenessInfos) {
-                UpdateChunkLivenessQuery(kvp.Value);
-                LiveCount += kvp.Value.Count.GetValueOrDefault(0);
+                var li = kvp.Value;
+                UpdateChunkLivenessQuery(li);
+                LiveCount += li.Count.GetValueOrDefault(0);
+
+                if (li.Count.GetValueOrDefault(1) <= 0) {
+                    li.DeadFrameCount++;
+                    if (li.DeadFrameCount >= 4)
+                        ChunksToReap.Add(li);
+                }
             }
 
             foreach (var li in ChunksToReap) {

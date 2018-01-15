@@ -31,7 +31,7 @@ namespace TestGame.Scenes {
         int RandomSeed = 201;
 
         const float ParticlesPerPixel = 2;
-        const int   SpawnInterval = 10;
+        const int   SpawnInterval = 1000;
         const int   SpawnCount    = 1024;
 
         int SpawnOffset = 0;
