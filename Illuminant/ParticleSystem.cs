@@ -33,7 +33,7 @@ namespace Squared.Illuminant {
             }
         }
 
-        private class Slice : IDisposable {
+        internal class Slice : IDisposable {
             public class Chunk : IDisposable {
                 public const int Width = 256;
                 public const int Height = 256;
@@ -229,21 +229,7 @@ namespace Squared.Illuminant {
         private readonly Dictionary<int, LivenessInfo> LivenessInfos = new Dictionary<int, LivenessInfo>();
         private readonly Dictionary<int, SpawnState> SpawnStates = new Dictionary<int, SpawnState>();
 
-        private readonly IndexBuffer  QuadIndexBuffer;
-        private readonly VertexBuffer QuadVertexBuffer;
-        private          IndexBuffer  RasterizeIndexBuffer;
-        private          VertexBuffer RasterizeVertexBuffer;
-        private          VertexBuffer RasterizeOffsetBuffer;
-
-        internal const int            RandomnessTextureWidth = 2048,
-                                      RandomnessTextureHeight = 140;
-        private             Texture2D RandomnessTexture;
-
         private readonly AutoResetEvent UnlockedEvent = new AutoResetEvent(true);
-
-        private static readonly short[] QuadIndices = new short[] {
-            0, 1, 3, 1, 2, 3
-        };
 
         internal long LastClearTimestamp;
 
@@ -260,25 +246,6 @@ namespace Squared.Illuminant {
             lock (engine.Coordinator.CreateResourceLock) {
                 Slices = AllocateSlices();
 
-                QuadIndexBuffer = new IndexBuffer(engine.Coordinator.Device, IndexElementSize.SixteenBits, 6, BufferUsage.WriteOnly);
-                QuadIndexBuffer.SetData(QuadIndices);
-
-                const float argh = 102400;
-
-                QuadVertexBuffer = new VertexBuffer(engine.Coordinator.Device, typeof(ParticleSystemVertex), 4, BufferUsage.WriteOnly);
-                QuadVertexBuffer.SetData(new [] {
-                    // HACK: Workaround for Intel's terrible video drivers.
-                    // No, I don't know why.
-                    new ParticleSystemVertex(-argh, -argh, 0),
-                    new ParticleSystemVertex(argh, -argh, 1),
-                    new ParticleSystemVertex(argh, argh, 2),
-                    new ParticleSystemVertex(-argh, argh, 3)
-                });
-
-                FillIndexBuffer();
-                FillVertexBuffer();
-                GenerateRandomnessTexture();
-
                 Slices[0].Timestamp = Time.Ticks;
                 Slices[0].IsValid = true;
             }
@@ -288,74 +255,6 @@ namespace Squared.Illuminant {
             get {
                 // FIXME
                 return Slices[0].Count * Slice.Chunk.Width * Slice.Chunk.Height;
-            }
-        }
-
-        private void FillIndexBuffer () {
-            var buf = new short[] {
-                0, 1, 3, 1, 2, 3
-            };
-            RasterizeIndexBuffer = new IndexBuffer(
-                Engine.Coordinator.Device, IndexElementSize.SixteenBits, 
-                buf.Length, BufferUsage.WriteOnly
-            );
-            RasterizeIndexBuffer.SetData(buf);
-        }
-
-        private void FillVertexBuffer () {
-            {
-                var buf = new ParticleSystemVertex[4];
-                int i = 0;
-                var v = new ParticleSystemVertex();
-                buf[i++] = v;
-                v.Corner = v.Unused = 1;
-                buf[i++] = v;
-                v.Corner = v.Unused = 2;
-                buf[i++] = v;
-                v.Corner = v.Unused = 3;
-                buf[i++] = v;
-
-                RasterizeVertexBuffer = new VertexBuffer(
-                    Engine.Coordinator.Device, typeof(ParticleSystemVertex),
-                    buf.Length, BufferUsage.WriteOnly
-                );
-                RasterizeVertexBuffer.SetData(buf);
-            }
-
-            {
-                var buf = new ParticleOffsetVertex[Slice.Chunk.MaximumCount];
-
-                for (var y = 0; y < Slice.Chunk.Height; y++) {
-                    for (var x = 0; x < Slice.Chunk.Width; x++) {
-                        var i = (y * Slice.Chunk.Width) + x;
-                        buf[i].Offset = new Vector2(x / (float)Slice.Chunk.Width, y / (float)Slice.Chunk.Height);
-                    }
-                }
-
-                RasterizeOffsetBuffer = new VertexBuffer(
-                    Engine.Coordinator.Device, typeof(ParticleOffsetVertex),
-                    buf.Length, BufferUsage.WriteOnly
-                );
-                RasterizeOffsetBuffer.SetData(buf);
-            }
-        }
-
-        private void GenerateRandomnessTexture () {
-            lock (Engine.Coordinator.CreateResourceLock) {
-                // TODO: HalfVector4?
-                RandomnessTexture = new Texture2D(
-                    Engine.Coordinator.Device,
-                    RandomnessTextureWidth, RandomnessTextureHeight, false,
-                    SurfaceFormat.Vector4
-                );
-
-                var buffer = new Vector4[RandomnessTextureWidth * RandomnessTextureHeight];
-                var rng = new MersenneTwister();
-
-                for (int i = 0; i < buffer.Length; i++)
-                    buffer[i] = new Vector4(rng.NextSingle(), rng.NextSingle(), rng.NextSingle(), rng.NextSingle());
-
-                RandomnessTexture.SetData(buffer);
             }
         }
 
@@ -655,8 +554,8 @@ namespace Squared.Illuminant {
 
                     var rt = p["RandomnessTexture"];
                     if (rt != null) {
-                        p["RandomnessTexel"].SetValue(new Vector2(1.0f / RandomnessTexture.Width, 1.0f / RandomnessTexture.Height));
-                        rt.SetValue(RandomnessTexture);
+                        p["RandomnessTexel"].SetValue(new Vector2(1.0f / ParticleEngine.RandomnessTextureWidth, 1.0f / ParticleEngine.RandomnessTextureHeight));
+                        rt.SetValue(Engine.RandomnessTexture);
                     }
 
                     m.Flush();
@@ -687,8 +586,8 @@ namespace Squared.Illuminant {
                 }
             )) {
                 batch.Add(new NativeDrawCall(
-                    PrimitiveType.TriangleList, QuadVertexBuffer, 0,
-                    QuadIndexBuffer, 0, 0, QuadVertexBuffer.VertexCount, 0, QuadVertexBuffer.VertexCount / 2
+                    PrimitiveType.TriangleList, Engine.QuadVertexBuffer, 0,
+                    Engine.QuadIndexBuffer, 0, 0, Engine.QuadVertexBuffer.VertexCount, 0, Engine.QuadVertexBuffer.VertexCount / 2
                 ));
             }
         }
@@ -945,10 +844,10 @@ namespace Squared.Illuminant {
             )) {
                 batch.Add(new NativeDrawCall(
                     PrimitiveType.TriangleList, 
-                    RasterizeVertexBuffer, 0,
-                    RasterizeOffsetBuffer, 0, 
+                    Engine.RasterizeVertexBuffer, 0,
+                    Engine.RasterizeOffsetBuffer, 0, 
                     null, 0,
-                    RasterizeIndexBuffer, 0, 0, 4, 0, 2,
+                    Engine.RasterizeIndexBuffer, 0, 0, 4, 0, 2,
                     quadCount
                 ));
             }
@@ -1029,16 +928,11 @@ namespace Squared.Illuminant {
             foreach (var kvp in LivenessInfos)
                 Engine.Coordinator.DisposeResource(kvp.Value);
             LivenessInfos.Clear();
-            Engine.Coordinator.DisposeResource(RandomnessTexture);
         }
     }
 
     public class ParticleSystemConfiguration {
         public readonly int AttributeCount;
-
-        // Particles that reach this age are killed
-        // Defaults to (effectively) not killing particles
-        public int MaximumAge = 1024 * 1024 * 8;
 
         // Configures the sprite rendered for each particle
         public Texture2D Texture;

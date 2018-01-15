@@ -48,8 +48,8 @@ namespace Squared.Illuminant.Transforms {
             var secs = (float)Squared.Util.Time.Seconds;
 
             parameters["RandomnessOffset"].SetValue(new Vector2(
-                (TotalSpawned % ParticleSystem.RandomnessTextureWidth) + (secs * 32), 
-                (TotalSpawned / ParticleSystem.RandomnessTextureWidth) * 2 + secs
+                (TotalSpawned % ParticleEngine.RandomnessTextureWidth) + (secs * 32), 
+                (TotalSpawned / ParticleEngine.RandomnessTextureWidth) * 2 + secs
             ));
 
             Temp[0] = Position.Constant;

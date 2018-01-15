@@ -74,7 +74,8 @@ namespace TestGame.Scenes {
             PatternPixels = new Color[width * Pattern.Height];
             Pattern.GetData(PatternPixels);
 
-            const int opacityFromLife = 400;
+            const int opacityFromLife = 200;
+            const int maxLife = 400;
 
             System = new ParticleSystem(
                 Engine,
@@ -102,9 +103,9 @@ namespace TestGame.Scenes {
                         MinCount = 2500,
                         MaxCount = 7000,
                         Position = new Formula {
-                            Constant = new Vector4(Pattern.Width / 2f, Pattern.Height / 2f, 0, opacityFromLife * 0.5f),
+                            Constant = new Vector4(Pattern.Width / 2f, Pattern.Height / 2f, 0, opacityFromLife),
                             RandomOffset = new Vector4(-0.5f, -0.5f, 0f, 0f),
-                            RandomScale = new Vector4(900f * 2f, 450f * 2f, 0f, opacityFromLife * 0.5f),
+                            RandomScale = new Vector4(900f * 2f, 450f * 2f, 0f, maxLife - opacityFromLife),
                         },
                         Velocity = new Formula {
                             RandomOffset = new Vector4(-0.5f, -0.5f, 0f, 0f),
