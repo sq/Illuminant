@@ -143,8 +143,6 @@ namespace Squared.Illuminant.Transforms {
 
         public readonly List<Attractor> Attractors = new List<Attractor>();
 
-        private VertexBuffer InstanceData = null;
-
         internal override Material GetMaterial (ParticleMaterials materials) {
             return materials.Gravity;
         }

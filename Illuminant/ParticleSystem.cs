@@ -43,7 +43,7 @@ namespace Squared.Illuminant {
 
                 public RenderTargetBinding[] Bindings;
 
-                public RenderTarget2D PositionAndBirthTime;
+                public RenderTarget2D PositionAndLife;
                 public RenderTarget2D Velocity;
                 public RenderTarget2D Attributes;
 
@@ -53,7 +53,7 @@ namespace Squared.Illuminant {
                     ID = id;
 
                     Bindings = new RenderTargetBinding[2 + attributeCount];
-                    Bindings[0] = PositionAndBirthTime = CreateRenderTarget(device);
+                    Bindings[0] = PositionAndLife = CreateRenderTarget(device);
                     Bindings[1] = Velocity = CreateRenderTarget(device);
 
                     if (attributeCount == 1)
@@ -80,7 +80,7 @@ namespace Squared.Illuminant {
 
                     if (positionInitializer != null) {
                         positionInitializer(buf, offset);
-                        PositionAndBirthTime.SetData(buf);
+                        PositionAndLife.SetData(buf);
                     }
 
                     if (velocityInitializer != null) {
@@ -101,12 +101,12 @@ namespace Squared.Illuminant {
                 }
 
                 public void Dispose () {
-                    PositionAndBirthTime.Dispose();
+                    PositionAndLife.Dispose();
                     Velocity.Dispose();
                     if (Attributes != null)
                         Attributes.Dispose();
 
-                    PositionAndBirthTime = Velocity = Attributes = null;
+                    PositionAndLife = Velocity = Attributes = null;
                 }
             }
 
@@ -638,7 +638,7 @@ namespace Squared.Illuminant {
                         setParameters(p);
 
                     if (source != null) {
-                        p["PositionTexture"].SetValue(source.PositionAndBirthTime);
+                        p["PositionTexture"].SetValue(source.PositionAndLife);
                         p["VelocityTexture"].SetValue(source.Velocity);
 
                         var at = p["AttributeTexture"];
@@ -934,7 +934,7 @@ namespace Squared.Illuminant {
             using (var batch = NativeBatch.New(
                 group, chunk.ID, m, (dm, _) => {
                     var p = m.Effect.Parameters;
-                    p["PositionTexture"].SetValue(chunk.PositionAndBirthTime);
+                    p["PositionTexture"].SetValue(chunk.PositionAndLife);
                     p["VelocityTexture"].SetValue(chunk.Velocity);
                     p["AttributeTexture"].SetValue(chunk.Attributes);
                     m.Flush();

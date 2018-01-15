@@ -82,7 +82,7 @@ namespace TestGame.Scenes {
                     attributeCount: 1
                 ) {
                     Texture = spark,
-                    Size = Vector2.One * 5.2f,
+                    Size = Vector2.One * 2.5f,
                     /*
                     Texture = fireball,
                     TextureRegion = fireballRect,
@@ -99,8 +99,8 @@ namespace TestGame.Scenes {
             ) {
                 Transforms = {
                     new Spawner {
-                        MinCount = 1000,
-                        MaxCount = 2000,
+                        MinCount = 2500,
+                        MaxCount = 7000,
                         Position = new Formula {
                             Constant = new Vector4(Pattern.Width / 2f, Pattern.Height / 2f, 0, opacityFromLife * 0.5f),
                             RandomOffset = new Vector4(-0.5f, -0.5f, 0f, 0f),
@@ -112,8 +112,8 @@ namespace TestGame.Scenes {
                             RandomCircularity = 1f
                         },
                         Attributes = new Formula {
-                            Constant = Vector4.One * 0.09f,
-                            RandomScale = Vector4.One * 0.25f
+                            Constant = new Vector4(0.09f, 0.09f, 0.09f, 1f),
+                            RandomScale = new Vector4(0.3f, 0.3f, 0.3f, 0f)
                         }
                     },
                     new Gravity {
@@ -316,28 +316,28 @@ namespace TestGame.Scenes {
                         (float)((Math.Cos(time / 6) * 500) + (sz.Y / 2)),
                         0
                     );
-                    grav.Attractors[0].Strength = Arithmetic.PulseExp(time / 4, -80f, -20f);
+                    grav.Attractors[0].Strength = Arithmetic.PulseExp(time / 4, -240f, -20f);
 
                     grav.Attractors[1].Position = new Vector3(
                         (float)((Math.Sin((time / 2) + 0.7) * 400) + (sz.X * 0.55f)),
                         (float)((Math.Cos((time / 2) + 0.8) * 220) + (sz.Y * 0.43f)),
                         0
                     );
-                    grav.Attractors[1].Strength = Arithmetic.PulseExp(time / 3, -50f, 200f);
+                    grav.Attractors[1].Strength = Arithmetic.PulseExp(time / 3, -90f, 250f);
 
                     grav.Attractors[2].Position = new Vector3(
                         (float)((Math.Sin((time / 13) + 1.2) * 700) + (sz.X / 2)),
                         (float)((Math.Cos((time / 13) + 3.6) * 550) + (sz.Y * 0.55f)),
                         0
                     );
-                    grav.Attractors[2].Strength = Arithmetic.PulseExp(time / 6, 2f, 220f);
+                    grav.Attractors[2].Strength = Arithmetic.PulseExp(time / 6, 2f, 320f);
 
                     grav.Attractors[3].Position = new Vector3(
                         (float)((Math.Sin((time / 16) + 1.2) * 200) + (sz.X / 2)),
                         (float)((Math.Cos((time / 8) + 3.6) * 550) + (sz.Y / 2)),
                         0
                     );
-                    grav.Attractors[3].Strength = Arithmetic.PulseExp(time / 8, 4f, 460f);
+                    grav.Attractors[3].Strength = Arithmetic.PulseExp(time / 8, 4f, 600f);
                 }
 
                 var ms = Mouse.GetState();
