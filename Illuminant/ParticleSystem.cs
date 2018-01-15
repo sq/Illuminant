@@ -629,9 +629,12 @@ namespace Squared.Illuminant {
             using (var batch = NativeBatch.New(
                 container, layer, m,
                 (dm, _) => {
-                    dm.PushRenderTargets(dest.Bindings);
+                    dm.Device.SetRenderTargets(dest.Bindings);
                     dm.Device.Viewport = new Viewport(0, 0, Slice.Chunk.Width, Slice.Chunk.Height);
-                    dm.Device.Clear(Color.Transparent);
+
+                    // For some reason this is a measurable performance hit
+                    // dm.Device.Clear(Color.Transparent);
+
                     p["Texel"].SetValue(new Vector2(1f / Slice.Chunk.Width, 1f / Slice.Chunk.Height));
 
                     if (setParameters != null)
@@ -681,8 +684,6 @@ namespace Squared.Illuminant {
                         query.End();
                         Monitor.Exit(query);
                     }
-
-                    dm.PopRenderTarget();
                 }
             )) {
                 batch.Add(new NativeDrawCall(
@@ -847,7 +848,9 @@ namespace Squared.Illuminant {
             var pm = Engine.ParticleMaterials;
 
             using (var group = BatchGroup.New(
-                container, layer
+                container, layer,
+                (dm, _) => dm.PushRenderTarget(null),
+                (dm, _) => dm.PopRenderTarget()
             )) {
                 int i = 0;
                 bool occlusionQueryPending = true;
