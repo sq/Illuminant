@@ -20,19 +20,14 @@ namespace Squared.Illuminant {
             public int Offset, Free;
         }
 
-        internal class LivenessInfo : IDisposable {
+        internal class LivenessInfo {
             public int            ID;
             public int?           Count;
-            public OcclusionQuery Query;
+            public bool           IsQueryRunning;
+            public OcclusionQuery PendingQuery;
             public long           LastQueryStart;
-            public bool           IsQueryPending;
             public int            DeadFrameCount;
             public bool           SpawnedParticlesThisFrame;
-
-            public void Dispose () {
-                Query.Dispose();
-                Query = null;
-            }
         }
 
         internal class ChunkInitializer {
@@ -117,6 +112,8 @@ namespace Squared.Illuminant {
                 public RenderTarget2D Velocity;
                 public RenderTarget2D Attributes;
 
+                public OcclusionQuery Query;
+
                 public object Lock = new object();
 
                 private bool _IsDisposed = false;
@@ -129,6 +126,7 @@ namespace Squared.Illuminant {
                     Bindings = new RenderTargetBinding[2 + attributeCount];
                     Bindings[0] = PositionAndLife = CreateRenderTarget(device);
                     Bindings[1] = Velocity = CreateRenderTarget(device);
+                    Query = new OcclusionQuery(device);
 
                     if (attributeCount == 1)
                         Bindings[2] = Attributes = CreateRenderTarget(device);
@@ -162,6 +160,9 @@ namespace Squared.Illuminant {
                             Attributes.Dispose();
 
                         PositionAndLife = Velocity = Attributes = null;
+
+                        Query.Dispose();
+                        Query = null;
                     }
                 }
             }
@@ -254,7 +255,7 @@ namespace Squared.Illuminant {
         private const int SliceCount          = 3;
         private Slice[] Slices;
 
-        private const int FreeListCapacity = 12;
+        private const int FreeListCapacity = 0;
 
         private readonly List<Slice.Chunk> NewChunks = new List<Slice.Chunk>();
         private readonly List<Slice.Chunk> FreeList = new List<Slice.Chunk>();
@@ -296,14 +297,9 @@ namespace Squared.Illuminant {
             if (LivenessInfos.TryGetValue(id, out result))
                 return result;
 
-            OcclusionQuery query;
-            lock (Engine.Coordinator.CreateResourceLock)
-                query = new OcclusionQuery(Engine.Coordinator.Device);
-
             LivenessInfos.Add(
                 id, result = new LivenessInfo {
                     ID = id,
-                    Query = query,
                     Count = 0
                 }
             );
@@ -484,11 +480,12 @@ namespace Squared.Illuminant {
 
                     var li = GetLivenessInfo(sourceChunk.ID);
                     UpdateChunkLivenessQuery(li);
-                    var runQuery = !li.IsQueryPending;
+
+                    var runQuery = (li.PendingQuery == null) && (spawner == null);
 
                     if (runQuery) {
                         li.LastQueryStart = Time.Ticks;
-                        li.IsQueryPending = true;
+                        li.PendingQuery = destChunk.Query;
                     }
 
                     var chunkMaterial = m;
@@ -517,7 +514,7 @@ namespace Squared.Illuminant {
                         batch, i++,
                         chunkMaterial, sourceChunk, destChunk,
                         setParameters, 
-                        runQuery ? li.Query : null
+                        runQuery ? li : null
                     );
                 }
             }
@@ -541,7 +538,7 @@ namespace Squared.Illuminant {
             IBatchContainer container, int layer, Material m,
             Slice.Chunk source, Slice.Chunk dest,
             Action<EffectParameterCollection> setParameters,
-            OcclusionQuery query
+            LivenessInfo li
         ) {
             // Console.WriteLine("{0} -> {1}", passSource.Index, passDest.Index);
             var e = m.Effect;
@@ -584,11 +581,12 @@ namespace Squared.Illuminant {
 
                     m.Flush();
 
-                    if (query != null) {
-                        var temp = query.IsComplete;
+                    if (li != null) {
+                        // HACK: For some reason this is necessary? It shouldn't be.
+                        var temp = li.PendingQuery.IsComplete;
 
-                        Monitor.Enter(query);
-                        query.Begin();
+                        Monitor.Enter(li.PendingQuery);
+                        li.PendingQuery.Begin();
                     }
                 },
                 (dm, _) => {
@@ -605,9 +603,10 @@ namespace Squared.Illuminant {
                     if (dft != null)
                         dft.SetValue((Texture2D)null);
 
-                    if (query != null) {
-                        query.End();
-                        Monitor.Exit(query);
+                    if (li != null) {
+                        li.PendingQuery.End();
+                        Monitor.Exit(li.PendingQuery);
+                        li.IsQueryRunning = true;
                     }
                 }
             )) {
@@ -653,21 +652,34 @@ namespace Squared.Illuminant {
         internal HashSet<LivenessInfo> ChunksToReap = new HashSet<LivenessInfo>();
 
         private void UpdateChunkLivenessQuery (LivenessInfo target) {
-            if (!target.IsQueryPending)
-                return;
-            if (target.Query.IsDisposed || !target.Query.IsComplete)
+            if (target.PendingQuery == null)
                 return;
 
-            target.IsQueryPending = false;
+            lock (target.PendingQuery) {
+                if (!target.IsQueryRunning)
+                    return;
 
-            if (target.LastQueryStart <= LastClearTimestamp) {
-                target.Count = null;
-                target.DeadFrameCount = 0;
-            } else {
-                target.Count = target.Query.PixelCount;
+                if (!target.PendingQuery.IsComplete)
+                    return;
 
-                if (target.Count > 0)
+                if (target.PendingQuery.IsDisposed) {
+                    target.PendingQuery = null;
+                    return;
+                }
+
+                target.IsQueryRunning = false;
+
+                if (target.LastQueryStart <= LastClearTimestamp) {
+                    target.Count = null;
                     target.DeadFrameCount = 0;
+                } else {
+                    target.Count = target.PendingQuery.PixelCount;
+
+                    if (target.Count > 0)
+                        target.DeadFrameCount = 0;
+                }
+
+                target.PendingQuery = null;
             }
         }
 
@@ -928,8 +940,6 @@ namespace Squared.Illuminant {
         public void Dispose () {
             foreach (var slice in Slices)
                 Engine.Coordinator.DisposeResource(slice);
-            foreach (var kvp in LivenessInfos)
-                Engine.Coordinator.DisposeResource(kvp.Value);
             foreach (var c in FreeList)
                 Engine.Coordinator.DisposeResource(c);
             FreeList.Clear();
