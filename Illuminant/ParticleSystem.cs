@@ -552,9 +552,11 @@ namespace Squared.Illuminant {
                     dm.Device.SetRenderTargets(dest.Bindings);
                     dm.Device.Viewport = new Viewport(0, 0, Slice.Chunk.Width, Slice.Chunk.Height);
 
+                    /*
                     if (query != null)
                         // For some reason this is a measurable performance hit
                         dm.Device.Clear(Color.Transparent);
+                        */
 
                     p["Texel"].SetValue(new Vector2(1f / Slice.Chunk.Width, 1f / Slice.Chunk.Height));
 
