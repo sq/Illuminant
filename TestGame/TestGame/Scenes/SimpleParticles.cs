@@ -31,7 +31,7 @@ namespace TestGame.Scenes {
         int RandomSeed = 201;
 
         const float ParticlesPerPixel = 2;
-        const int   SpawnInterval     = 6;
+        const int   SpawnInterval     = 21;
         const int   SpawnCount        = 1024;
         const int   MaxLife           = 360;
 
@@ -156,7 +156,7 @@ namespace TestGame.Scenes {
                     },
                     */
                     new MatrixMultiply {
-                        Velocity = Matrix.CreateRotationZ((float)Math.PI * 0.011f) * 1.004f,
+                        Velocity = Matrix.CreateRotationZ((float)Math.PI * 0.011f) * 1.001f,
                     }
                 }
             };

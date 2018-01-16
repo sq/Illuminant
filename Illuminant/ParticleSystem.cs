@@ -35,12 +35,50 @@ namespace Squared.Illuminant {
             }
         }
 
+        internal class ChunkInitializer {
+            public ParticleSystem System;
+            public int Remaining;
+            public BufferInitializer Position, Velocity, Attributes;
+            public Slice.Chunk Chunk;
+            public bool HasFailed;
+
+            public void Run (ThreadGroup g) {
+                if (g != null) {
+                    var q = g.GetQueueForType<BufferInitializer>();
+                    Position.Parent = Velocity.Parent = Attributes.Parent = this;
+
+                    q.Enqueue(ref Position);
+                    q.Enqueue(ref Velocity);
+                    if (Attributes.Initializer != null)
+                        q.Enqueue(ref Attributes);
+                } else {
+                    Position.Execute();
+                    Velocity.Execute();
+                    if (Attributes.Initializer != null)
+                        Attributes.Execute();
+                }
+            }
+
+            public void OnBufferInitialized (bool failed) {
+                var result = Interlocked.Decrement(ref Remaining);
+                if (failed)
+                    HasFailed = true;
+
+                if (result == 0) {
+                    if (!failed)
+                    lock (System.NewChunks)
+                        System.NewChunks.Add(Chunk);
+                }
+            }
+        }
+
         internal struct BufferInitializer : IWorkItem {
             static ThreadLocal<Vector4[]> Scratch = new ThreadLocal<Vector4[]>();
 
             public Action<Vector4[], int> Initializer;
             public int Offset;
             public RenderTarget2D Buffer;
+            public ChunkInitializer Parent;
 
             public void Execute () {
                 var scratch = Scratch.Value;
@@ -48,14 +86,26 @@ namespace Squared.Illuminant {
                     Scratch.Value = scratch = new Vector4[Slice.Chunk.MaximumCount];
 
                 Initializer(scratch, Offset);
-                Buffer.SetData(scratch);
+
+                try {
+                    lock (Parent.Chunk.Lock) {
+                        if (!Parent.Chunk.IsDisposed)
+                        lock (Parent.System.Engine.Coordinator.UseResourceLock)
+                            Buffer.SetData(scratch);
+                    }
+                    Parent.OnBufferInitialized(false);
+                } catch (ObjectDisposedException) {
+                    // This can happen even if we properly synchronize accesses, 
+                    //  presumably because the owning graphicsdevice got eaten :(
+                    Parent.OnBufferInitialized(true);
+                }
             }
         }
 
         internal class Slice : IDisposable, IEnumerable<Slice.Chunk> {
             public class Chunk : IDisposable {
-                public const int Width = 256;
-                public const int Height = 256;
+                public const int Width = 512;
+                public const int Height = 512;
                 public const int MaximumCount = Width * Height;
 
                 public int ID;
@@ -66,6 +116,10 @@ namespace Squared.Illuminant {
                 public RenderTarget2D PositionAndLife;
                 public RenderTarget2D Velocity;
                 public RenderTarget2D Attributes;
+
+                public object Lock = new object();
+
+                private bool _IsDisposed = false;
 
                 public Chunk (
                     int id, int attributeCount, GraphicsDevice device
@@ -89,13 +143,26 @@ namespace Squared.Illuminant {
                     );
                 }
 
-                public void Dispose () {
-                    PositionAndLife.Dispose();
-                    Velocity.Dispose();
-                    if (Attributes != null)
-                        Attributes.Dispose();
+                public bool IsDisposed {
+                    get {
+                        return _IsDisposed;
+                    }
+                }
 
-                    PositionAndLife = Velocity = Attributes = null;
+                public void Dispose () {
+                    lock (Lock) {
+                        if (_IsDisposed)
+                            return;
+
+                        _IsDisposed = true;
+
+                        PositionAndLife.Dispose();
+                        Velocity.Dispose();
+                        if (Attributes != null)
+                            Attributes.Dispose();
+
+                        PositionAndLife = Velocity = Attributes = null;
+                    }
                 }
             }
 
@@ -310,9 +377,7 @@ namespace Squared.Illuminant {
             var mc = Slice.Chunk.MaximumCount;
             int numToSpawn = (int)Math.Ceiling((double)particleCount / mc);
 
-            var g = Engine.Coordinator.ThreadGroup;
-            var q = g.GetQueueForType<BufferInitializer>();
-            var chunks = new List<Slice.Chunk>();
+            var g = parallel ? Engine.Coordinator.ThreadGroup : null;
 
             for (int i = 0; i < numToSpawn; i++) {
                 var c = CreateChunk(device, Interlocked.Increment(ref NextChunkId));
@@ -320,28 +385,17 @@ namespace Squared.Illuminant {
                 var pos = new BufferInitializer { Buffer = c.PositionAndLife, Initializer = positionInitializer, Offset = offset };
                 var vel = new BufferInitializer { Buffer = c.Velocity, Initializer = velocityInitializer, Offset = offset };
                 var attr = new BufferInitializer { Buffer = c.Attributes, Initializer = attributeInitializer, Offset = offset };
+                var job = new ChunkInitializer {
+                    System = this,
+                    Position = pos,
+                    Velocity = vel,
+                    Attributes = attr,
+                    Chunk = c,
+                    Remaining = (attributeInitializer != null) ? 3 : 2
+                };
 
-                if (parallel) {
-                    q.Enqueue(ref pos);
-                    q.Enqueue(ref vel);
-                    if (attributeInitializer != null)
-                        q.Enqueue(ref attr);
-                } else {
-                    pos.Execute();
-                    vel.Execute();
-                    if (attributeInitializer != null)
-                        attr.Execute();
-                }
-
-                chunks.Add(c);
+                job.Run(g);
             }
-
-            if (parallel)
-                q.WaitUntilDrained();
-
-            lock (NewChunks)
-            foreach (var c in chunks)
-                NewChunks.Add(c);
 
             return numToSpawn * mc;
         }
