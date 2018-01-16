@@ -11,6 +11,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Squared.Game;
 using Squared.Illuminant.Util;
 using Squared.Render;
+using Squared.Render.Tracing;
 using Squared.Threading;
 using Squared.Util;
 
@@ -78,7 +79,7 @@ namespace Squared.Illuminant {
             public void Execute () {
                 var scratch = Scratch.Value;
                 if (scratch == null)
-                    Scratch.Value = scratch = new Vector4[Slice.Chunk.MaximumCount];
+                    Scratch.Value = scratch = new Vector4[Parent.System.ChunkMaximumCount];
 
                 Initializer(scratch, Offset);
 
@@ -99,10 +100,7 @@ namespace Squared.Illuminant {
 
         internal class Slice : IDisposable, IEnumerable<Slice.Chunk> {
             public class Chunk : IDisposable {
-                public const int Width = 512;
-                public const int Height = 512;
-                public const int MaximumCount = Width * Height;
-
+                public int Size, MaximumCount;
                 public int ID;
                 public int RefCount;
 
@@ -119,9 +117,11 @@ namespace Squared.Illuminant {
                 private bool _IsDisposed = false;
 
                 public Chunk (
-                    int id, int attributeCount, GraphicsDevice device
+                    int id, int size, int attributeCount, GraphicsDevice device
                 ) {
                     ID = id;
+                    Size = size;
+                    MaximumCount = size * size;
 
                     Bindings = new RenderTargetBinding[2 + attributeCount];
                     Bindings[0] = PositionAndLife = CreateRenderTarget(device);
@@ -135,7 +135,7 @@ namespace Squared.Illuminant {
                 private RenderTarget2D CreateRenderTarget (GraphicsDevice device) {
                     return new RenderTarget2D(
                         device, 
-                        Width, Height, false, 
+                        Size, Size, false, 
                         SurfaceFormat.Vector4, DepthFormat.None, 
                         0, RenderTargetUsage.PreserveContents
                     );
@@ -288,7 +288,7 @@ namespace Squared.Illuminant {
         public int Capacity {
             get {
                 // FIXME
-                return Slices[0].Count * Slice.Chunk.Width * Slice.Chunk.Height;
+                return Slices[0].Count * ChunkMaximumCount;
             }
         }
 
@@ -358,7 +358,7 @@ namespace Squared.Illuminant {
             }
 
             lock (Engine.Coordinator.CreateResourceLock)
-                return new Slice.Chunk(id, Configuration.AttributeCount, device);
+                return new Slice.Chunk(id, Engine.Configuration.ChunkSize, Configuration.AttributeCount, device);
         }
 
         // Make sure to lock the slice first.
@@ -370,7 +370,7 @@ namespace Squared.Illuminant {
             Action<Vector4[], int> velocityInitializer,
             Action<Vector4[], int> attributeInitializer
         ) {
-            var mc = Slice.Chunk.MaximumCount;
+            var mc = ChunkMaximumCount;
             int numToSpawn = (int)Math.Ceiling((double)particleCount / mc);
 
             var g = parallel ? Engine.Coordinator.ThreadGroup : null;
@@ -396,9 +396,15 @@ namespace Squared.Illuminant {
             return numToSpawn * mc;
         }
 
-        internal static Vector2 ChunkSize {
+        internal int ChunkMaximumCount {
             get {
-                return new Vector2(Slice.Chunk.Width, Slice.Chunk.Height);
+                return Engine.Configuration.ChunkSize * Engine.Configuration.ChunkSize;
+            }
+        }
+
+        internal Vector2 ChunkSizeF {
+            get {
+                return new Vector2(Engine.Configuration.ChunkSize, Engine.Configuration.ChunkSize);
             }
         }
 
@@ -439,7 +445,7 @@ namespace Squared.Illuminant {
 
                 if (spawnCount <= 0)
                     return;
-                else if (spawnCount > Slice.Chunk.MaximumCount)
+                else if (spawnCount > ChunkMaximumCount)
                     throw new Exception("Spawn count too high to fit in a chunk");
 
                 // FIXME: Inefficient. Spawn across two buffers?
@@ -453,7 +459,7 @@ namespace Squared.Illuminant {
 
                 if (spawnId == null) {
                     spawnId = Interlocked.Increment(ref NextChunkId);
-                    SpawnStates[spawnId.Value] = new SpawnState { Offset = 0, Free = Slice.Chunk.MaximumCount };
+                    SpawnStates[spawnId.Value] = new SpawnState { Offset = 0, Free = ChunkMaximumCount };
                     lock (container.RenderManager.CreateResourceLock) {
                         _source.Add(CreateChunk(device, spawnId.Value));
                         _dest.Add(CreateChunk(device, spawnId.Value));
@@ -474,6 +480,8 @@ namespace Squared.Illuminant {
                         dm.Device.Textures[i] = null;
                 }
             )) {
+                RenderTrace.Marker(batch, -9999, "Particle transform {0}", m.Effect.CurrentTechnique.Name);
+
                 int i = 0;
                 foreach (var sourceChunk in _source) {
                     var destChunk = _dest.GetByID(sourceChunk.ID);
@@ -497,7 +505,7 @@ namespace Squared.Illuminant {
 
                             SpawnState spawnState;
                             if (!SpawnStates.TryGetValue(spawnId.Value, out spawnState))
-                                spawnState = new SpawnState { Offset = Slice.Chunk.MaximumCount, Free = 0 };
+                                spawnState = new SpawnState { Offset = ChunkMaximumCount, Free = 0 };
 
                             spawner.SetIndices(spawnState.Offset, spawnState.Offset + spawnCount);
 
@@ -547,7 +555,7 @@ namespace Squared.Illuminant {
                 container, layer, m,
                 (dm, _) => {
                     dm.Device.SetRenderTargets(dest.Bindings);
-                    dm.Device.Viewport = new Viewport(0, 0, Slice.Chunk.Width, Slice.Chunk.Height);
+                    dm.Device.Viewport = new Viewport(0, 0, Engine.Configuration.ChunkSize, Engine.Configuration.ChunkSize);
 
                     /*
                     if (query != null)
@@ -555,7 +563,7 @@ namespace Squared.Illuminant {
                         dm.Device.Clear(Color.Transparent);
                         */
 
-                    p["Texel"].SetValue(new Vector2(1f / Slice.Chunk.Width, 1f / Slice.Chunk.Height));
+                    p["Texel"].SetValue(new Vector2(1f / Engine.Configuration.ChunkSize, 1f / Engine.Configuration.ChunkSize));
 
                     if (setParameters != null)
                         setParameters(p);
@@ -766,6 +774,7 @@ namespace Squared.Illuminant {
                 int i = 0;
 
                 foreach (var t in Transforms) {
+                    t.Engine = Engine;
                     if (!t.IsActive)
                         continue;
 
@@ -781,7 +790,7 @@ namespace Squared.Illuminant {
                 // FIXME: Is this the right place?
                 lock (NewChunks) {
                     foreach (var nc in NewChunks) {
-                        SpawnStates[nc.ID] = new SpawnState { Free = 0, Offset = Slice.Chunk.MaximumCount };
+                        SpawnStates[nc.ID] = new SpawnState { Free = 0, Offset = ChunkMaximumCount };
                         source.Add(nc);
                     }
 
@@ -848,7 +857,7 @@ namespace Squared.Illuminant {
             Material m
         ) {
             // TODO: Actual occupied count?
-            var quadCount = Slice.Chunk.MaximumCount;
+            var quadCount = ChunkMaximumCount;
 
             using (var batch = NativeBatch.New(
                 group, chunk.ID, m, (dm, _) => {
@@ -912,7 +921,7 @@ namespace Squared.Illuminant {
                     p["Size"].SetValue(Configuration.Size / 2);
                     p["VelocityRotation"].SetValue(Configuration.RotationFromVelocity ? 1f : 0f);
                     p["OpacityFromLife"].SetValue(Configuration.OpacityFromLife);
-                    p["Texel"].SetValue(new Vector2(1f / Slice.Chunk.Width, 1f / Slice.Chunk.Height));
+                    p["Texel"].SetValue(new Vector2(1f / Engine.Configuration.ChunkSize, 1f / Engine.Configuration.ChunkSize));
                 },
                 (dm, _) => {
                     p["PositionTexture"].SetValue((Texture2D)null);
@@ -926,6 +935,8 @@ namespace Squared.Illuminant {
                         dm.Device.Textures[i] = null;
                 }
             )) {
+                RenderTrace.Marker(group, -9999, "Rasterize {0} particle chunks", source.Count);
+
                 foreach (var chunk in source)
                     RenderChunk(group, chunk, m);
             }

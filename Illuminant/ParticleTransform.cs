@@ -49,6 +49,8 @@ namespace Squared.Illuminant.Transforms {
     }
 
     public abstract class ParticleTransform : IDisposable {
+        public ParticleEngine Engine { get; internal set; }
+
         public bool IsActive = true;
 
         internal abstract Material GetMaterial (ParticleMaterials materials);

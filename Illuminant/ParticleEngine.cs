@@ -105,16 +105,17 @@ namespace Squared.Illuminant {
             }
 
             {
-                var buf = new ParticleOffsetVertex[Chunk.MaximumCount];
+                var buf = new ParticleOffsetVertex[Configuration.ChunkSize * Configuration.ChunkSize];
                 RasterizeOffsetBuffer = new VertexBuffer(
                     Coordinator.Device, typeof(ParticleOffsetVertex),
                     buf.Length, BufferUsage.WriteOnly
                 );
+                var fsize = (float)Configuration.ChunkSize;
 
-                for (var y = 0; y < Chunk.Height; y++) {
-                    for (var x = 0; x < Chunk.Width; x++) {
-                        var i = (y * Chunk.Width) + x;
-                        buf[i].Offset = new Vector2(x / (float)Chunk.Width, y / (float)Chunk.Height);
+                for (var y = 0; y < Configuration.ChunkSize; y++) {
+                    for (var x = 0; x < Configuration.ChunkSize; x++) {
+                        var i = (y * Configuration.ChunkSize) + x;
+                        buf[i].Offset = new Vector2(x / fsize, y / fsize);
                     }
                 }
 
@@ -162,5 +163,10 @@ namespace Squared.Illuminant {
     }
 
     public class ParticleEngineConfiguration {
+        public readonly int ChunkSize;
+
+        public ParticleEngineConfiguration (int chunkSize = 256) {
+            ChunkSize = chunkSize;
+        }
     }
 }

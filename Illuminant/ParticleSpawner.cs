@@ -73,7 +73,7 @@ namespace Squared.Illuminant.Transforms {
             parameters["Configuration"].SetValue(Temp);
             parameters["RandomCircularity"].SetValue(Temp2);
             parameters["ChunkSizeAndIndices"].SetValue(new Vector4(
-                ParticleSystem.ChunkSize.X, ParticleSystem.ChunkSize.Y,
+                Engine.Configuration.ChunkSize, Engine.Configuration.ChunkSize,
                 Indices.X, Indices.Y
             ));
         }
