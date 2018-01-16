@@ -255,10 +255,7 @@ namespace Squared.Illuminant {
         private const int SliceCount          = 3;
         private Slice[] Slices;
 
-        private const int FreeListCapacity = 0;
-
         private readonly List<Slice.Chunk> NewChunks = new List<Slice.Chunk>();
-        private readonly List<Slice.Chunk> FreeList = new List<Slice.Chunk>();
 
         private readonly Dictionary<int, LivenessInfo> LivenessInfos = new Dictionary<int, LivenessInfo>();
         private readonly Dictionary<int, SpawnState> SpawnStates = new Dictionary<int, SpawnState>();
@@ -348,10 +345,10 @@ namespace Squared.Illuminant {
         private volatile int NextChunkId = 1;
         
         private Slice.Chunk CreateChunk (GraphicsDevice device, int id) {
-            lock (FreeList) {
-                if (FreeList.Count > 0) {
-                    var result = FreeList[0];
-                    FreeList.RemoveAt(0);
+            lock (Engine.FreeList) {
+                if (Engine.FreeList.Count > 0) {
+                    var result = Engine.FreeList[0];
+                    Engine.FreeList.RemoveAt(0);
                     result.ID = id;
                     return result;
                 }
@@ -722,9 +719,9 @@ namespace Squared.Illuminant {
         }
 
         private void Reap (Slice.Chunk chunk) {
-            lock (FreeList) {
-                if (FreeList.Count < FreeListCapacity)
-                    FreeList.Add(chunk);
+            lock (Engine.FreeList) {
+                if (Engine.FreeList.Count < Engine.Configuration.FreeListCapacity)
+                    Engine.FreeList.Add(chunk);
                 else
                     Engine.Coordinator.DisposeResource(chunk);
             }
@@ -951,9 +948,6 @@ namespace Squared.Illuminant {
         public void Dispose () {
             foreach (var slice in Slices)
                 Engine.Coordinator.DisposeResource(slice);
-            foreach (var c in FreeList)
-                Engine.Coordinator.DisposeResource(c);
-            FreeList.Clear();
             LivenessInfos.Clear();
         }
     }

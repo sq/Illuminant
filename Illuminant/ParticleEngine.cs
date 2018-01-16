@@ -33,6 +33,9 @@ namespace Squared.Illuminant {
                                         RandomnessTextureHeight = 256;
         internal          Texture2D     RandomnessTexture;
 
+        internal readonly List<Chunk> FreeList = 
+            new List<Chunk>();
+
         private static readonly short[] QuadIndices = new short[] {
             0, 1, 3, 1, 2, 3
         };
@@ -151,19 +154,27 @@ namespace Squared.Illuminant {
             if (IsDisposed)
                 return;
 
+            IsDisposed = true;
+
+            lock (FreeList) {
+                foreach (var c in FreeList)
+                    Coordinator.DisposeResource(c);
+                FreeList.Clear();
+            }
+
             Coordinator.DisposeResource(QuadIndexBuffer);
             Coordinator.DisposeResource(QuadVertexBuffer);
             Coordinator.DisposeResource(RasterizeIndexBuffer);
             Coordinator.DisposeResource(RasterizeVertexBuffer);
             Coordinator.DisposeResource(RasterizeOffsetBuffer);
             Coordinator.DisposeResource(RandomnessTexture);
-
-            IsDisposed = true;            
         }
     }
 
     public class ParticleEngineConfiguration {
         public readonly int ChunkSize;
+
+        public int FreeListCapacity = 12;
 
         public ParticleEngineConfiguration (int chunkSize = 256) {
             ChunkSize = chunkSize;
