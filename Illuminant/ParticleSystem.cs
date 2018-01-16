@@ -11,6 +11,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Squared.Game;
 using Squared.Illuminant.Util;
 using Squared.Render;
+using Squared.Threading;
 using Squared.Util;
 
 namespace Squared.Illuminant {
@@ -31,6 +32,23 @@ namespace Squared.Illuminant {
             public void Dispose () {
                 Query.Dispose();
                 Query = null;
+            }
+        }
+
+        internal struct BufferInitializer : IWorkItem {
+            static ThreadLocal<Vector4[]> Scratch = new ThreadLocal<Vector4[]>();
+
+            public Action<Vector4[], int> Initializer;
+            public int Offset;
+            public RenderTarget2D Buffer;
+
+            public void Execute () {
+                var scratch = Scratch.Value;
+                if (scratch == null)
+                    Scratch.Value = scratch = new Vector4[Slice.Chunk.MaximumCount];
+
+                Initializer(scratch, Offset);
+                Buffer.SetData(scratch);
             }
         }
 
@@ -69,37 +87,6 @@ namespace Squared.Illuminant {
                         SurfaceFormat.Vector4, DepthFormat.None, 
                         0, RenderTargetUsage.PreserveContents
                     );
-                }
-
-                // Make sure to lock the slice first.
-                public void Initialize<TAttribute> (
-                    int offset,
-                    Action<Vector4[], int> positionInitializer,
-                    Action<Vector4[], int> velocityInitializer,
-                    Action<TAttribute[], int> attributeInitializer
-                ) where TAttribute : struct {
-                    var buf = new Vector4[MaximumCount];
-
-                    if (positionInitializer != null) {
-                        positionInitializer(buf, offset);
-                        PositionAndLife.SetData(buf);
-                    }
-
-                    if (velocityInitializer != null) {
-                        velocityInitializer(buf, offset);
-                        Velocity.SetData(buf);
-                    }
-
-                    if ((attributeInitializer != null) && (Attributes != null)) {
-                        TAttribute[] abuf;
-                        if (typeof(TAttribute) == typeof(Vector4))
-                            abuf = buf as TAttribute[];
-                        else
-                            abuf = new TAttribute[MaximumCount];
-
-                        attributeInitializer(abuf, offset);
-                        Attributes.SetData(abuf);
-                    }
                 }
 
                 public void Dispose () {
@@ -312,35 +299,49 @@ namespace Squared.Illuminant {
         }
 
         // Make sure to lock the slice first.
-        public int InitializeNewChunks<TAttribute> (
+        public int InitializeNewChunks (
             int particleCount,
             GraphicsDevice device,
             bool parallel,
             Action<Vector4[], int> positionInitializer,
             Action<Vector4[], int> velocityInitializer,
-            Action<TAttribute[], int> attributeInitializer
-        ) where TAttribute : struct {
+            Action<Vector4[], int> attributeInitializer
+        ) {
             var mc = Slice.Chunk.MaximumCount;
             int numToSpawn = (int)Math.Ceiling((double)particleCount / mc);
 
-            if (parallel) {
-                Parallel.For(
-                    0, numToSpawn,
-                    (i) => {
-                        var c = CreateChunk(device, Interlocked.Increment(ref NextChunkId));
-                        c.Initialize(i * mc, positionInitializer, velocityInitializer, attributeInitializer);
-                        lock (NewChunks)
-                            NewChunks.Add(c);
-                    }
-                );
-            } else {
-                for (int i = 0; i < numToSpawn; i++) {
-                    var c = CreateChunk(device, Interlocked.Increment(ref NextChunkId));
-                    c.Initialize(i * mc, positionInitializer, velocityInitializer, attributeInitializer);
-                    lock (NewChunks)
-                        NewChunks.Add(c);
+            var g = Engine.Coordinator.ThreadGroup;
+            var q = g.GetQueueForType<BufferInitializer>();
+            var chunks = new List<Slice.Chunk>();
+
+            for (int i = 0; i < numToSpawn; i++) {
+                var c = CreateChunk(device, Interlocked.Increment(ref NextChunkId));
+                var offset = i * mc;
+                var pos = new BufferInitializer { Buffer = c.PositionAndLife, Initializer = positionInitializer, Offset = offset };
+                var vel = new BufferInitializer { Buffer = c.Velocity, Initializer = velocityInitializer, Offset = offset };
+                var attr = new BufferInitializer { Buffer = c.Attributes, Initializer = attributeInitializer, Offset = offset };
+
+                if (parallel) {
+                    q.Enqueue(ref pos);
+                    q.Enqueue(ref vel);
+                    if (attributeInitializer != null)
+                        q.Enqueue(ref attr);
+                } else {
+                    pos.Execute();
+                    vel.Execute();
+                    if (attributeInitializer != null)
+                        attr.Execute();
                 }
+
+                chunks.Add(c);
             }
+
+            if (parallel)
+                q.WaitUntilDrained();
+
+            lock (NewChunks)
+            foreach (var c in chunks)
+                NewChunks.Add(c);
 
             return numToSpawn * mc;
         }
@@ -572,16 +573,16 @@ namespace Squared.Illuminant {
             Action<Vector4[], int> velocityInitializer,
             bool parallel = true
         ) {
-            return Spawn<float>(particleCount, positionInitializer, velocityInitializer, null, parallel);
+            return Spawn(particleCount, positionInitializer, velocityInitializer, null, parallel);
         }
 
-        public int Spawn<TAttribute> (
+        public int Spawn (
             int particleCount,
             Action<Vector4[], int> positionInitializer,
             Action<Vector4[], int> velocityInitializer,
-            Action<TAttribute[], int> attributeInitializer,
+            Action<Vector4[], int> attributeInitializer,
             bool parallel = true
-        ) where TAttribute : struct {
+        ) {
             var result = InitializeNewChunks(
                 particleCount,
                 Engine.Coordinator.Device,

@@ -30,10 +30,10 @@ namespace TestGame.Scenes {
         bool Collisions = true;
         int RandomSeed = 201;
 
-        const float ParticlesPerPixel = 3;
+        const float ParticlesPerPixel = 2;
         const int   SpawnInterval     = 6;
         const int   SpawnCount        = 1024;
-        const int   MaxLife           = 380;
+        const int   MaxLife           = 360;
 
         int SpawnOffset = 0;
         int FramesUntilNextSpawn = 0;
@@ -83,7 +83,7 @@ namespace TestGame.Scenes {
                     attributeCount: 1
                 ) {
                     Texture = spark,
-                    Size = Vector2.One * 3f,
+                    Size = Vector2.One * 2.6f,
                     /*
                     Texture = fireball,
                     TextureRegion = fireballRect,
@@ -101,6 +101,7 @@ namespace TestGame.Scenes {
             ) {
                 Transforms = {
                     new Spawner {
+                        IsActive = false,
                         MinCount = 32,
                         MaxCount = 1024,
                         Position = new Formula {
@@ -134,11 +135,13 @@ namespace TestGame.Scenes {
                             },
                         }
                     },
+                    /*
                     new FMA {
                         Velocity = {
                             Multiply = Vector3.One * 0.9993f
                         }
                     },
+                    */
                     /*
                     new FMA {
                         Velocity = {
@@ -152,6 +155,9 @@ namespace TestGame.Scenes {
                         }
                     },
                     */
+                    new MatrixMultiply {
+                        Velocity = Matrix.CreateRotationZ((float)Math.PI * 0.011f) * 1.004f,
+                    }
                 }
             };
         }
@@ -365,7 +371,7 @@ namespace TestGame.Scenes {
 
             var offsetX = (Width - width) / 2f;
             var offsetY = (Height - height) / 2f;
-            var totalSpawned = System.Spawn<Vector4>(
+            var totalSpawned = System.Spawn(
                 SpawnCount,
                 (buf, offset) => {
                     var rng = new MersenneTwister(Interlocked.Increment(ref seed));
@@ -386,7 +392,16 @@ namespace TestGame.Scenes {
                     }
                 },
                 (buf, offset) => {
-                    Array.Clear(buf, 0, buf.Length);
+                    var rng = new MersenneTwister(Interlocked.Increment(ref seed));
+                    for (var i = 0; i < buf.Length; i++) {
+                        var angle = rng.NextFloat(0, MathHelper.TwoPi);
+                        var vel = rng.NextFloat(0, 0.66f);
+                        buf[i] = new Vector4(
+                            (float)Math.Cos(angle) * vel,
+                            (float)Math.Sin(angle) * vel,
+                            0, 0
+                        );
+                    }
                 },
                 (buf, offset) => {
                     float b = 0.66f / ParticlesPerPixel;
