@@ -40,7 +40,25 @@ inline float3 ComputeRotatedCorner(
     );
 }
 
-void vs (
+void VS_Core (
+    in float4  position,
+    in float3  corner,
+    in  int2   cornerIndex : BLENDINDICES0, // 0-3
+    out float4 result,
+    out float2 texCoord
+) {
+    // FIXME
+    result = TransformPosition(
+        float4(position.xyz + corner, 1), 0
+    );
+
+    texCoord = (Corners[cornerIndex.x].xy / 2) + 0.5;
+    texCoord = lerp(BitmapTextureRegion.xy, BitmapTextureRegion.zw, texCoord);
+
+    texCoord += (BitmapTextureRegion.zw - BitmapTextureRegion.xy) * floor(AnimationRate * position.w);
+}
+
+void VS_PosVelAttr (
     in  float2 xy          : POSITION0,
     in  float2 offset      : POSITION1,
     in  int2   cornerIndex : BLENDINDICES0, // 0-3
@@ -60,15 +78,33 @@ void vs (
     float angle = (atan2(velocity.y, velocity.x) + PI) * VelocityRotation;
     float3 rotatedCorner = ComputeRotatedCorner(cornerIndex.x, angle);
 
-    // FIXME
-    result = TransformPosition(
-        float4(position.xyz + rotatedCorner, 1), 0
+    VS_Core(
+        position, rotatedCorner, cornerIndex,
+        result, texCoord
     );
+}
 
-    texCoord = (Corners[cornerIndex.x].xy / 2) + 0.5;
-    texCoord = lerp(BitmapTextureRegion.xy, BitmapTextureRegion.zw, texCoord);
+void VS_PosAttr (
+    in  float2 xy          : POSITION0,
+    in  float2 offset      : POSITION1,
+    in  int2   cornerIndex : BLENDINDICES0, // 0-3
+    out float4 result      : POSITION0,
+    out float2 texCoord    : TEXCOORD0,
+    out float4 position    : TEXCOORD1,
+    out float4 attributes  : COLOR0
+) {
+    float2 actualXy = xy + offset;
+    position = tex2Dlod(PositionSampler, float4(actualXy, 0, 0));
+    attributes = tex2Dlod(AttributeSampler, float4(actualXy, 0, 0));
 
-    texCoord += (BitmapTextureRegion.zw - BitmapTextureRegion.xy) * floor(AnimationRate * life);
+    float life = position.w;
+    if (life <= 0)
+        return;
+
+    VS_Core(
+        position, Corners[cornerIndex.x], cornerIndex,
+        result, texCoord
+    );
 }
 
 void PS_White (
@@ -101,18 +137,18 @@ void PS_AttributeColor (
     result = texColor * color;
 }
 
-technique White {
-    pass P0
-    {
-        vertexShader = compile vs_3_0 vs();
-        pixelShader = compile ps_3_0 PS_White();
-    }
-}
-
 technique AttributeColor {
     pass P0
     {
-        vertexShader = compile vs_3_0 vs();
+        vertexShader = compile vs_3_0 VS_PosVelAttr();
         pixelShader = compile ps_3_0 PS_AttributeColor();
+    }
+}
+
+technique White {
+    pass P0
+    {
+        vertexShader = compile vs_3_0 VS_PosVelAttr();
+        pixelShader = compile ps_3_0 PS_White();
     }
 }

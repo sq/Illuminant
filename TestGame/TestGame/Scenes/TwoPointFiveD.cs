@@ -111,7 +111,7 @@ namespace TestGame.Scenes {
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(
-                    1024 / LightmapScaleRatio, 1024 / LightmapScaleRatio, true
+                    1024 / LightmapScaleRatio, 1024 / LightmapScaleRatio, true, true
                 ) {
                     RenderScale = Vector2.One * (1.0f / LightmapScaleRatio),
                     DistanceFieldMinStepSize = 1f,
@@ -306,8 +306,10 @@ namespace TestGame.Scenes {
 
                 if (Deterministic)
                     MovableLight.Position = new Vector3(671, 394, 97.5f);
-                else
+                else {
                     MovableLight.Position = mousePos;
+                    MovableLight.Color.W = Arithmetic.Pulse((float)Time.Seconds / 2.25f, 0.3f, 1.25f);
+                }
             }
         }
     }
