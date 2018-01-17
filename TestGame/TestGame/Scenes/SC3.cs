@@ -331,7 +331,7 @@ namespace TestGame.Scenes {
         private void HandleEstimatedBrightness (LightmapInfo lightmapInfo) {
             // HACK: Ramp between the average and maximum based on the number of overexposed pixels
             float peakValue = Arithmetic.Lerp(
-                lightmapInfo.Mean, lightmapInfo.Maximum, lightmapInfo.Overexposed * 6f
+                lightmapInfo.Mean, lightmapInfo.Maximum, lightmapInfo.Overexposed * 2.25f
             );
             // Set an exposure to try and balance the scene brightness
             // TODO: Set a white point?

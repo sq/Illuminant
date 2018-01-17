@@ -61,7 +61,7 @@ namespace Squared.Illuminant {
 
             fixed (float* pBuffer = buffer) {
                 for (int i = 0; i < count; i++) {
-                    var luminance = pBuffer[i];
+                    var luminance = pBuffer[i] * scaleFactor;
 
                     min = Math.Min(min, luminance);
                     max = Math.Max(max, luminance);
@@ -74,9 +74,9 @@ namespace Squared.Illuminant {
 
             var result = new LightmapInfo {
                 Overexposed = overThresholdCount / (float)count,
-                Minimum = min * scaleFactor,
-                Maximum = max * scaleFactor,
-                Mean = (sum * scaleFactor) / count
+                Minimum = min,
+                Maximum = max,
+                Mean = sum / count
             };
 
             Array.Sort(buffer, 0, count);
@@ -86,14 +86,14 @@ namespace Squared.Illuminant {
                 lastZero = 0;
 
             int bandCount = 0;
-            float bandMin = ComputePercentile(lowBandPercentage, buffer, lastZero, count, 1),
-                bandMax = ComputePercentile(highBandPercentage, buffer, lastZero, count, 1);
+            float bandMin = ComputePercentile(lowBandPercentage, buffer, lastZero, count, 1) * scaleFactor,
+                bandMax = ComputePercentile(highBandPercentage, buffer, lastZero, count, 1) * scaleFactor;
             min = float.MaxValue;
             max = 0;
             sum = 0;
 
             for (int i = lastZero; i < count; i++) {
-                var luminance = buffer[i];
+                var luminance = buffer[i] * scaleFactor;
                 if ((luminance < bandMin) || (luminance > bandMax))
                     continue;
                 min = Math.Min(min, luminance);
@@ -106,9 +106,9 @@ namespace Squared.Illuminant {
                 min = 0;
 
             result.Band = new LightmapBandInfo {
-                Minimum = min * scaleFactor,
-                Maximum = max * scaleFactor,
-                Mean = (sum * scaleFactor / bandCount)
+                Minimum = min,
+                Maximum = max,
+                Mean = sum / bandCount
             };
 
             return result;
