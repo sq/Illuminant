@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Xna.Framework.Graphics;
 using Squared.Render.Tracing;
+using Squared.Threading;
 
 namespace Squared.Illuminant {
     public struct HDRConfiguration {
@@ -39,6 +43,31 @@ namespace Squared.Illuminant {
     }
 
     public sealed partial class LightingRenderer : IDisposable, INameableGraphicsObject {
+        private struct HistogramUpdateTask : IWorkItem {
+            public RenderTarget2D Texture;
+            public int LevelIndex;
+            public Histogram Histogram;
+            public float[] Buffer;
+            public float ScaleFactor;
+            public int Count;
+            public Action<Histogram> OnComplete;
+
+            public void Execute () {
+                Texture.GetData(
+                    LevelIndex, null,
+                    Buffer, 0, Count
+                );
+
+                lock (Histogram) {
+                    Histogram.Clear();
+                    Histogram.Add(Buffer, Count, ScaleFactor);
+                }
+
+                if (OnComplete != null)
+                    OnComplete(Histogram);
+            }
+        }
+
         private float ComputePercentile (float percentage, float[] buffer, int lastZero, int count, float effectiveScaleFactor) {
             count -= lastZero;
             var index = (int)(count * percentage / 100f);
@@ -154,6 +183,7 @@ namespace Squared.Illuminant {
                 onComplete(result);
             });
         }
+
         /// <summary>
         /// Analyzes the internal lighting buffer. This operation is asynchronous so that you do not stall on
         ///  a previous/in-flight draw operation.
@@ -177,24 +207,25 @@ namespace Squared.Illuminant {
             if ((_ReadbackBuffer == null) || (_ReadbackBuffer.Length < count))
                 _ReadbackBuffer = new float[count];
 
+            var q = Coordinator.ThreadGroup.GetQueueForType<HistogramUpdateTask>();
+
             Coordinator.AfterPresent(() => {
-                _PreviousLuminance.GetData(
-                    levelIndex, null,
-                    _ReadbackBuffer, 0, count
-                );
+                q.WaitUntilDrained();
 
-                lock (histogram) {
-                    histogram.Clear();
-                    histogram.Add(_ReadbackBuffer, count, inverseScaleFactor);
-                }
-
-                if (onComplete != null)
-                    onComplete(histogram);
+                q.Enqueue(new HistogramUpdateTask {
+                    Texture = _PreviousLuminance,
+                    LevelIndex = levelIndex,
+                    Histogram = histogram,
+                    Buffer = _ReadbackBuffer,
+                    Count = count,
+                    ScaleFactor = inverseScaleFactor,
+                    OnComplete = onComplete
+                });
             });
         }
     }
 
-    public class Histogram {
+    public unsafe class Histogram : IDisposable {
         public struct Bucket {
             public float BucketStart, BucketEnd;
             public float Min, Max, Mean;
@@ -208,13 +239,26 @@ namespace Squared.Illuminant {
 
         public const int BucketCount = 64;
 
+        public readonly float MaxInputValue;
+
+        private readonly float FirstBucketMaxValue;
+        private readonly float LastBucketMinValue;
         private readonly float[] BucketMaxValues;
         private readonly BucketState[] States;
 
-        public int SampleCount, LargestBucketCount;
-        public float Min, Max, Mean, Sum;
+        private GCHandle     MaxValuePin, StatesPin;
+        private float*       pMaxValues;
+        private BucketState* pStates;
+
+        public int SampleCount { get; private set; }
+        public float Min { get; private set; }
+        public float Max { get; private set; }
+        public float Mean { get; private set; }
+
+        private float Sum;
 
         public Histogram (float maxValue, float power) {
+            MaxInputValue = maxValue;
             BucketMaxValues = new float[BucketCount];
             States = new BucketState[BucketCount];
 
@@ -226,12 +270,26 @@ namespace Squared.Illuminant {
                 BucketMaxValues[i] = value;
             }
 
+            FirstBucketMaxValue = BucketMaxValues[0];
+            LastBucketMinValue = BucketMaxValues[BucketCount - 2];
+            MaxValuePin = GCHandle.Alloc(BucketMaxValues, GCHandleType.Pinned);
+            StatesPin = GCHandle.Alloc(States, GCHandleType.Pinned);
+            pMaxValues = (float*)MaxValuePin.AddrOfPinnedObject();
+            pStates = (BucketState*)StatesPin.AddrOfPinnedObject();
+
             Clear();
+        }
+
+        public void Dispose () {
+            MaxValuePin.Free();
+            StatesPin.Free();
+            pMaxValues = null;
+            pStates = null;
         }
 
         public void Clear () {
             SampleCount = 0;
-            Min = float.MaxValue;
+            Min = 0;
             Max = 0;
             Sum = 0;
             Mean = 0;
@@ -242,27 +300,62 @@ namespace Squared.Illuminant {
             }
         }
 
-        public void Add (float[] buffer, int count, float scaleFactor) {
-            for (int i = 0; i < count; i++) {
-                var value = buffer[i] * scaleFactor;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]        
+        private int PickBucketForValue (float value) {
+            if (value < FirstBucketMaxValue)
+                return 0;
+            else if (value >= LastBucketMinValue)
+                return BucketCount - 1;
 
-                Min = Math.Min(Min, value);
-                Max = Math.Max(Max, value);
+            int i = 0, max = BucketCount - 1;
+            while (i <= max) {
+				int pivot = i + (max - i >> 1);
+
+                if (pMaxValues[pivot] <= value) {
+					i = pivot + 1;
+				} else {
+				    max = pivot - 1;
+				}
+			}
+
+			return i;
+        }
+
+        public void Add (float[] buffer, int count, float scaleFactor) {
+            if (count > buffer.Length)
+                throw new ArgumentException("count");
+
+            fixed (float* pBuffer = buffer)
+            for (int i = 0; i < count; i++) {
+                var value = pBuffer[i] * scaleFactor;
+
                 Sum += value;
 
-                for (int j = 0; j < BucketCount; j++) {
-                    if (BucketMaxValues[j] > value) {
-                        States[j].Count++;
-                        States[j].Sum += value;
-                        States[j].Min = Math.Min(States[j].Min, value);
-                        States[j].Max = Math.Max(States[j].Max, value);
-                        break;
-                    }
-                }
+                var j = PickBucketForValue(value);
+                var pState = &pStates[j];
+                pState->Count++;
+                pState->Sum += value;
+                pState->Min = Math.Min(pState->Min, value);
+                pState->Max = Math.Max(pState->Max, value);
             }
             
             SampleCount += count;
-            Mean = Sum / SampleCount;
+            if (SampleCount > 0)
+                Mean = Sum / SampleCount;
+            else
+                Mean = 0;
+
+            float min = float.MaxValue, max = 0;
+            for (int j = 0; j < BucketCount; j++) {
+                min = Math.Min(States[j].Min, min);
+                max = Math.Max(States[j].Max, max);
+            }
+
+            if (SampleCount > 0)
+                Min = min;
+            else
+                Min = 0;
+            Max = max;
         }
 
         public IEnumerable<Bucket> Buckets {
@@ -280,9 +373,9 @@ namespace Squared.Illuminant {
                         BucketStart = minValue,
                         BucketEnd = BucketMaxValues[i],
                         Count = state.Count,
-                        Min = state.Min,
+                        Min = state.Count > 0 ? state.Min : 0,
                         Max = state.Max,
-                        Mean = state.Sum / state.Count
+                        Mean = state.Count > 0 ? state.Sum / state.Count : 0
                     };
                 }
             }

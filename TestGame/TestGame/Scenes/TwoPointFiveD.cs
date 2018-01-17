@@ -39,12 +39,14 @@ namespace TestGame.Scenes {
         bool TwoPointFiveD     = true;
         bool Deterministic     = true;
 
-        Histogram Histogram;
+        object HistogramLock = new object();
+        Histogram Histogram, NextHistogram;
 
         public TwoPointFiveDTest (TestGame game, int width, int height)
             : base(game, 1024, 1024) {
 
             Histogram = new Histogram(2f, 2);
+            NextHistogram = new Histogram(2f, 2);
         }
 
         private void CreateRenderTargets () {
@@ -196,7 +198,18 @@ namespace TestGame.Scenes {
 
                 Renderer.RenderLighting(bg, 1, scaleFactor);
                 Renderer.ResolveLighting(bg, 2, Width, Height, hdr: new HDRConfiguration { InverseScaleFactor = 1.0f / scaleFactor });
-                Renderer.EstimateBrightness(Histogram, null, 1.0f / scaleFactor);
+                Renderer.EstimateBrightness(
+                    NextHistogram, 
+                    (h) => {
+                        lock (HistogramLock) {
+                            if (h != NextHistogram)
+                                return;
+
+                            NextHistogram = Histogram;
+                            Histogram = h;
+                        }
+                    }, 1.0f / scaleFactor
+                );
             };
 
             using (var group = BatchGroup.New(frame, 0)) {
@@ -279,24 +292,30 @@ namespace TestGame.Scenes {
             int i = 0;
             float x1 = bounds.TopLeft.X;
             float bucketWidth = width / Histogram.BucketCount;
-            float maxCount = Histogram.SampleCount;
 
             ir.AutoIncrementLayer = false;
 
-            lock (Histogram)
-            foreach (var bucket in Histogram.Buckets) {
-                var scaledCount = bucket.Count / maxCount;
-                var y2 = bounds.BottomRight.Y;
-                var y1 = y2 - (scaledCount * height);
-                var x2 = x1 + bucketWidth;
+            Histogram h;
 
-                ir.FillRectangle(
-                    new Bounds(new Vector2(x1, y1), new Vector2(x2, y2)), 
-                    Color.Silver
-                ); 
+            lock (HistogramLock)
+                h = Histogram;
 
-                x1 = x2;
-                i++;
+            lock (h) {
+                float maxCount = h.SampleCount;
+                foreach (var bucket in h.Buckets) {
+                    var scaledCount = bucket.Count / maxCount;
+                    var y2 = bounds.BottomRight.Y;
+                    var y1 = y2 - (scaledCount * height);
+                    var x2 = x1 + bucketWidth;
+
+                    ir.FillRectangle(
+                        new Bounds(new Vector2(x1, y1), new Vector2(x2, y2)), 
+                        Color.Silver
+                    ); 
+
+                    x1 = x2;
+                    i++;
+                }
             }
         }
 
