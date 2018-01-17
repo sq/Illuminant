@@ -33,12 +33,18 @@ namespace TestGame.Scenes {
         bool ShowGBuffer       = false;
         bool ShowLightmap      = false;
         bool ShowDistanceField = false;
+        bool ShowHistogram     = true;
+        bool UseRampTexture    = true;
         bool Timelapse         = false;
         bool TwoPointFiveD     = true;
         bool Deterministic     = true;
 
+        Histogram Histogram;
+
         public TwoPointFiveDTest (TestGame game, int width, int height)
             : base(game, 1024, 1024) {
+
+            Histogram = new Histogram(2f, 2);
         }
 
         private void CreateRenderTargets () {
@@ -129,8 +135,7 @@ namespace TestGame.Scenes {
                 Color = new Vector4(1f, 1f, 1f, 0.5f),
                 Radius = 24,
                 RampLength = 550,
-                RampMode = LightSourceRampMode.Linear,
-                RampTexture = Game.RampTexture
+                RampMode = LightSourceRampMode.Linear
             };
 
             Environment.Lights.Add(MovableLight);
@@ -187,8 +192,11 @@ namespace TestGame.Scenes {
             )) {
                 ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black);
 
-                Renderer.RenderLighting(bg, 1);
-                Renderer.ResolveLighting(bg, 2, Width, Height);
+                var scaleFactor = 0.5f;
+
+                Renderer.RenderLighting(bg, 1, scaleFactor);
+                Renderer.ResolveLighting(bg, 2, Width, Height, hdr: new HDRConfiguration { InverseScaleFactor = 1.0f / scaleFactor });
+                Renderer.EstimateBrightness(Histogram, null, 1.0f / scaleFactor);
             };
 
             using (var group = BatchGroup.New(frame, 0)) {
@@ -252,6 +260,43 @@ namespace TestGame.Scenes {
                             Color.White, LightmapScaleRatio
                         ));
                 }
+
+                if (ShowHistogram)
+                    DrawHistogram(group, 5);
+            }
+        }
+
+        private void DrawHistogram (IBatchContainer group, int layer) {
+            var ir = new ImperativeRenderer(group, Game.Materials, layer).MakeSubgroup();
+            ir.AutoIncrementLayer = true;
+
+            var width = 600;
+            var height = 800;
+            var bounds = Bounds.FromPositionAndSize(new Vector2(Width + 10, 10), new Vector2(width, height));
+            ir.FillRectangle(bounds, Color.Black);
+            ir.OutlineRectangle(bounds, Color.White);
+
+            int i = 0;
+            float x1 = bounds.TopLeft.X;
+            float bucketWidth = width / Histogram.BucketCount;
+            float maxCount = Histogram.SampleCount;
+
+            ir.AutoIncrementLayer = false;
+
+            lock (Histogram)
+            foreach (var bucket in Histogram.Buckets) {
+                var scaledCount = bucket.Count / maxCount;
+                var y2 = bounds.BottomRight.Y;
+                var y1 = y2 - (scaledCount * height);
+                var x2 = x1 + bucketWidth;
+
+                ir.FillRectangle(
+                    new Bounds(new Vector2(x1, y1), new Vector2(x2, y2)), 
+                    Color.Silver
+                ); 
+
+                x1 = x2;
+                i++;
             }
         }
 
@@ -275,6 +320,12 @@ namespace TestGame.Scenes {
 
                 if (KeyWasPressed(Keys.D))
                     ShowDistanceField = !ShowDistanceField;
+
+                if (KeyWasPressed(Keys.H))
+                    ShowHistogram = !ShowHistogram;
+
+                if (KeyWasPressed(Keys.P))
+                    UseRampTexture = !UseRampTexture;
 
                 if (KeyWasPressed(Keys.R))
                     Deterministic = !Deterministic;
@@ -303,6 +354,8 @@ namespace TestGame.Scenes {
                     LightZ = 0.01f;
 
                 var mousePos = new Vector3(ms.X, ms.Y, LightZ);
+
+                MovableLight.RampTexture = UseRampTexture ? Game.RampTexture : null;
 
                 if (Deterministic)
                     MovableLight.Position = new Vector3(671, 394, 97.5f);

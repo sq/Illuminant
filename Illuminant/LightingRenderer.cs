@@ -660,7 +660,7 @@ namespace Squared.Illuminant {
                 m.Effect.Parameters["GBuffer"].SetValue(GBuffer.Texture);
                 m.Effect.Parameters["InverseScaleFactor"].SetValue(
                     hdr.HasValue
-                        ? hdr.Value.InverseScaleFactor
+                        ? ((hdr.Value.InverseScaleFactor != 0) ? hdr.Value.InverseScaleFactor : 1.0f)
                         : 1.0f
                 );
 
