@@ -99,6 +99,9 @@ namespace Squared.Illuminant {
                 DefineMaterial(IlluminantMaterials.ToneMappedLightingResolve = 
                     new Squared.Render.Material(content.Load<Effect>("Resolve"), "ToneMappedLightingResolve"));
 
+                DefineMaterial(IlluminantMaterials.CalculateLuminance = 
+                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "CalculateLuminance"));
+
                 DefineMaterial(IlluminantMaterials.ObjectSurfaces = 
                     new Squared.Render.Material(content.Load<Effect>("VisualizeDistanceField"), "ObjectSurfaces"));
 

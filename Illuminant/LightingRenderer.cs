@@ -175,12 +175,12 @@ namespace Squared.Illuminant {
             new Dictionary<Polygon, Texture2D>(new ReferenceComparer<Polygon>());
 
         private readonly RenderTarget2D _Lightmap;
-        private readonly RenderTarget2D _PreviousLightmap;
+        private readonly RenderTarget2D _PreviousLuminance;
 
         private DistanceField _DistanceField;
         private GBuffer _GBuffer;
 
-        private byte[] _ReadbackBuffer;
+        private float[] _ReadbackBuffer;
 
         private readonly Action<DeviceManager, object> BeginLightPass, EndLightPass, IlluminationBatchSetup;
 
@@ -240,13 +240,10 @@ namespace Squared.Illuminant {
                     var width = Configuration.MaximumRenderSize.First / 2;
                     var height = Configuration.MaximumRenderSize.Second / 2;
 
-                    _PreviousLightmap = new RenderTarget2D(
+                    _PreviousLuminance = new RenderTarget2D(
                         coordinator.Device, 
                         width, height, true,
-                        // TODO: Use SurfaceFormat.Single and do RGB->Gray conversion in shader
-                        Configuration.HighQuality
-                            ? SurfaceFormat.Rgba64
-                            : SurfaceFormat.Color,
+                        SurfaceFormat.Single,
                         DepthFormat.None, 0, RenderTargetUsage.PreserveContents
                     );
                 }
@@ -299,8 +296,8 @@ namespace Squared.Illuminant {
         private void NameSurfaces () {
             if (_Lightmap != null)
                 _Lightmap.SetName(ObjectNames.ToObjectID(this) + ":Lightmap");
-            if (_PreviousLightmap != null)
-                _PreviousLightmap.SetName(ObjectNames.ToObjectID(this) + ":PreviousLightmap");
+            if (_PreviousLuminance != null)
+                _PreviousLuminance.SetName(ObjectNames.ToObjectID(this) + ":PreviousLuminance");
             if (_GBuffer != null)
                 _GBuffer.Texture.SetName(ObjectNames.ToObjectID(this) + ":GBuffer");
         }
@@ -351,7 +348,7 @@ namespace Squared.Illuminant {
             Coordinator.DisposeResource(DistanceField);
             Coordinator.DisposeResource(GBuffer);
             Coordinator.DisposeResource(_Lightmap);
-            Coordinator.DisposeResource(_PreviousLightmap);
+            Coordinator.DisposeResource(_PreviousLuminance);
 
             foreach (var kvp in HeightVolumeVertexData)
                 Coordinator.DisposeResource(kvp.Value);
@@ -492,9 +489,9 @@ namespace Squared.Illuminant {
                 //  stalling on the current lightmap being rendered
                 if (Configuration.EnableBrightnessEstimation)
                 using (var copyGroup = BatchGroup.ForRenderTarget(
-                    outerGroup, 0, _PreviousLightmap,
+                    outerGroup, 0, _PreviousLuminance,
                     (dm, _) => {
-                        Materials.PushViewTransform(ViewTransform.CreateOrthographic(_PreviousLightmap.Width, _PreviousLightmap.Height));
+                        Materials.PushViewTransform(ViewTransform.CreateOrthographic(_PreviousLuminance.Width, _PreviousLuminance.Height));
                     },
                     (dm, _) => {
                         Materials.PopViewTransform();
@@ -503,14 +500,10 @@ namespace Squared.Illuminant {
                     if (RenderTrace.EnableTracing)
                         RenderTrace.Marker(copyGroup, -1, "LightingRenderer {0} : Generate HDR Buffer", this.ToObjectID());
 
-                    var ir = new ImperativeRenderer(
-                        copyGroup, Materials, 
-                        blendState: BlendState.Opaque,
-                        samplerState: SamplerState.LinearClamp,
-                        worldSpace: false
-                    );
+                    var ir = new ImperativeRenderer(copyGroup, Materials);
+                    var m = IlluminantMaterials.CalculateLuminance;
                     ir.Clear(color: Color.Transparent);
-                    ir.Draw(_Lightmap, new Rectangle(0, 0, _PreviousLightmap.Width, _PreviousLightmap.Height));
+                    ir.Draw(_Lightmap, new Rectangle(0, 0, _PreviousLuminance.Width, _PreviousLuminance.Height), material: m);
                 }
 
                 using (var resultGroup = BatchGroup.ForRenderTarget(outerGroup, 1, _Lightmap, before: BeginLightPass, after: EndLightPass)) {

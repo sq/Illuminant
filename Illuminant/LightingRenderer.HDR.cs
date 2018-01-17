@@ -27,16 +27,11 @@ namespace Squared.Illuminant {
         ToneMap
     }
 
-    public struct LightmapPercentileInfo {
-        public float P1, P2, P5, P10, P25, P50, P75, P90, P95, P98, P99;
-    }
-
     public struct LightmapBandInfo {
         public float Minimum, Maximum, Mean;
     }
 
     public struct LightmapInfo {
-        public LightmapPercentileInfo Percentiles;
         public LightmapBandInfo Band;
 
         public float Minimum, Maximum, Mean;
@@ -44,14 +39,7 @@ namespace Squared.Illuminant {
     }
 
     public sealed partial class LightingRenderer : IDisposable, INameableGraphicsObject {
-        private const int LuminanceScaleFactor = 8192;
-        private const int RedScaleFactor = (int)(0.299 * LuminanceScaleFactor);
-        private const int GreenScaleFactor = (int)(0.587 * LuminanceScaleFactor);
-        private const int BlueScaleFactor = (int)(0.114 * LuminanceScaleFactor);
-
-        private int[] AnalyzeScratchBuffer;
-
-        private float ComputePercentile (float percentage, int[] buffer, int lastZero, int count, float effectiveScaleFactor) {
+        private float ComputePercentile (float percentage, float[] buffer, int lastZero, int count, float effectiveScaleFactor) {
             count -= lastZero;
             var index = (int)(count * percentage / 100f);
             if (index < 0)
@@ -59,96 +47,53 @@ namespace Squared.Illuminant {
             if (index >= count)
                 index = count - 1;
 
-            var sample = buffer[lastZero + index];
-            return sample * effectiveScaleFactor;
+            return buffer[lastZero + index];
         }
 
         private unsafe LightmapInfo AnalyzeLightmap (
-            byte[] buffer, int count, 
+            float[] buffer, int count, 
             float scaleFactor, float threshold,
             float lowBandPercentage, float highBandPercentage
         ) {
-            int overThresholdCount = 0, min = int.MaxValue, max = 0;
-            long sum = 0;
+            int overThresholdCount = 0;
+            float min = float.MaxValue, max = 0;
+            float sum = 0;
 
-            int pixelCount = count / 
-                (Configuration.HighQuality
-                    ? 8
-                    : 4);
-
-            if ((AnalyzeScratchBuffer == null) || (AnalyzeScratchBuffer.Length < pixelCount))
-                AnalyzeScratchBuffer = new int[pixelCount];
-
-            int luminanceThreshold = (int)(threshold * LuminanceScaleFactor / scaleFactor);
-
-            fixed (byte* pBuffer = buffer)
-            if (Configuration.HighQuality) {
-                var pRgba = (ushort*)pBuffer;
-
-                for (int i = 0; i < pixelCount; i++, pRgba += 4) {
-                    int luminance = ((pRgba[0] * RedScaleFactor) + (pRgba[1] * GreenScaleFactor) + (pRgba[2] * BlueScaleFactor)) / 65536;
-                    AnalyzeScratchBuffer[i] = luminance;
+            fixed (float* pBuffer = buffer) {
+                for (int i = 0; i < count; i++) {
+                    var luminance = pBuffer[i];
 
                     min = Math.Min(min, luminance);
                     max = Math.Max(max, luminance);
                     sum += luminance;
 
-                    if (luminance >= luminanceThreshold)
-                        overThresholdCount += 1;
-                }                
-            } else {
-                var pRgba = pBuffer;
-
-                for (int i = 0; i < pixelCount; i++, pRgba += 4) {
-                    int luminance = ((pRgba[0] * 257 * RedScaleFactor) + (pRgba[1] * 257 * GreenScaleFactor) + (pRgba[2] * 257 * BlueScaleFactor)) / 65536;
-                    AnalyzeScratchBuffer[i] = luminance;
-
-                    min = Math.Min(min, luminance);
-                    max = Math.Max(max, luminance);
-                    sum += luminance;
-
-                    if (luminance >= luminanceThreshold)
+                    if (luminance >= threshold)
                         overThresholdCount += 1;
                 }                
             }
 
-            var effectiveScaleFactor = (1.0f / LuminanceScaleFactor) * scaleFactor;
-
-            var scratch = AnalyzeScratchBuffer;
-            Array.Sort(scratch, 0, pixelCount);
-            var lastZero = Array.LastIndexOf(scratch, 0);
-
-            var percentiles = new LightmapPercentileInfo {
-                P1 = ComputePercentile(1, scratch, lastZero, pixelCount, effectiveScaleFactor),
-                P2 = ComputePercentile(2, scratch, lastZero, pixelCount, effectiveScaleFactor),
-                P5 = ComputePercentile(5, scratch, lastZero, pixelCount, effectiveScaleFactor),
-                P10 = ComputePercentile(10, scratch, lastZero, pixelCount, effectiveScaleFactor),
-                P25 = ComputePercentile(25, scratch, lastZero, pixelCount, effectiveScaleFactor),
-                P50 = ComputePercentile(50, scratch, lastZero, pixelCount, effectiveScaleFactor),
-                P75 = ComputePercentile(75, scratch, lastZero, pixelCount, effectiveScaleFactor),
-                P90 = ComputePercentile(90, scratch, lastZero, pixelCount, effectiveScaleFactor),
-                P95 = ComputePercentile(95, scratch, lastZero, pixelCount, effectiveScaleFactor),
-                P98 = ComputePercentile(98, scratch, lastZero, pixelCount, effectiveScaleFactor),
-                P99 = ComputePercentile(99, scratch, lastZero, pixelCount, effectiveScaleFactor)
-            };
-
             var result = new LightmapInfo {
-                Percentiles = percentiles,
-                Overexposed = overThresholdCount / (float)pixelCount,
-                Minimum = min * effectiveScaleFactor,
-                Maximum = max * effectiveScaleFactor,
-                Mean = (sum * effectiveScaleFactor) / pixelCount
+                Overexposed = overThresholdCount / (float)count,
+                Minimum = min * scaleFactor,
+                Maximum = max * scaleFactor,
+                Mean = (sum * scaleFactor) / count
             };
 
-            int bandCount = 0, 
-                bandMin = (int)ComputePercentile(lowBandPercentage, scratch, lastZero, pixelCount, 1),
-                bandMax = (int)ComputePercentile(highBandPercentage, scratch, lastZero, pixelCount, 1);
-            min = int.MaxValue;
+            Array.Sort(buffer, 0, count);
+
+            var lastZero = Array.LastIndexOf(buffer, 0);
+            if (lastZero < 0)
+                lastZero = 0;
+
+            int bandCount = 0;
+            float bandMin = ComputePercentile(lowBandPercentage, buffer, lastZero, count, 1),
+                bandMax = ComputePercentile(highBandPercentage, buffer, lastZero, count, 1);
+            min = float.MaxValue;
             max = 0;
             sum = 0;
 
-            for (int i = lastZero; i < pixelCount; i++) {
-                var luminance = scratch[i];
+            for (int i = lastZero; i < count; i++) {
+                var luminance = buffer[i];
                 if ((luminance < bandMin) || (luminance > bandMax))
                     continue;
                 min = Math.Min(min, luminance);
@@ -157,13 +102,13 @@ namespace Squared.Illuminant {
                 bandCount++;
             }
 
-            if (min == int.MaxValue)
+            if (min == float.MaxValue)
                 min = 0;
 
             result.Band = new LightmapBandInfo {
-                Minimum = min * effectiveScaleFactor,
-                Maximum = max * effectiveScaleFactor,
-                Mean = (sum * effectiveScaleFactor / bandCount)
+                Minimum = min * scaleFactor,
+                Maximum = max * scaleFactor,
+                Mean = (sum * scaleFactor / bandCount)
             };
 
             return result;
@@ -187,20 +132,17 @@ namespace Squared.Illuminant {
             if (!Configuration.EnableBrightnessEstimation)
                 throw new InvalidOperationException("Brightness estimation must be enabled");
 
-            var levelIndex = Math.Min(accuracyFactor, _PreviousLightmap.LevelCount - 1);
+            var levelIndex = Math.Min(accuracyFactor, _PreviousLuminance.LevelCount - 1);
             var divisor = (int)Math.Pow(2, levelIndex);
-            var levelWidth = _PreviousLightmap.Width / divisor;
-            var levelHeight = _PreviousLightmap.Height / divisor;
-            var count = levelWidth * levelHeight * 
-                (Configuration.HighQuality
-                    ? 8
-                    : 4);
+            var levelWidth = _PreviousLuminance.Width / divisor;
+            var levelHeight = _PreviousLuminance.Height / divisor;
+            var count = levelWidth * levelHeight;
 
             if (_ReadbackBuffer == null)
-                _ReadbackBuffer = new byte[count];
+                _ReadbackBuffer = new float[count];
 
             Coordinator.AfterPresent(() => {
-                _PreviousLightmap.GetData(
+                _PreviousLuminance.GetData(
                     levelIndex, null,
                     _ReadbackBuffer, 0, count
                 );
@@ -212,5 +154,11 @@ namespace Squared.Illuminant {
                 onComplete(result);
             });
         }
+    }
+
+    public class Histogram {
+        public const int BucketCount = 64;
+        public const float ValueOffset = 1;
+        public const float ValueScale = 10;
     }
 }

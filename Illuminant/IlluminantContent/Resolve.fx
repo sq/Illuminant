@@ -160,9 +160,26 @@ void ToneMappedLightingResolvePixelShader(
         texCoord,
         texTL,
         texBR
-        );
+    );
 
     result = float4(Uncharted2Tonemap(result.rgb * Exposure) / Uncharted2Tonemap1(WhitePoint), result.a);
+}
+
+void CalculateLuminancePixelShader(
+    in float2 texCoord : TEXCOORD0,
+    in float2 texTL : TEXCOORD1,
+    in float2 texBR : TEXCOORD2,
+    out float4 result : COLOR0
+) {
+    float4 coord = float4(clamp(texCoord, texTL, texBR), 0, 0);
+    float2 coordTexels = coord.xy * BitmapTextureSize;
+
+    float4 samplePoint = tex2Dlod(PointSampler, coord);
+
+    float3 rgbScaled = samplePoint.rgb * float3(0.299, 0.587, 0.144);
+    float luminance = (rgbScaled.r + rgbScaled.g + rgbScaled.b);
+
+    result = float4(luminance, luminance, luminance, luminance);
 }
 
 technique LightingResolve
@@ -189,5 +206,14 @@ technique ToneMappedLightingResolve
     {
         vertexShader = compile vs_3_0 ScreenSpaceVertexShader();
         pixelShader = compile ps_3_0 ToneMappedLightingResolvePixelShader();
+    }
+}
+
+technique CalculateLuminance
+{
+    pass P0
+    {
+        vertexShader = compile vs_3_0 ScreenSpaceVertexShader();
+        pixelShader = compile ps_3_0 CalculateLuminancePixelShader();
     }
 }

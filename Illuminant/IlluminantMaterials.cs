@@ -20,6 +20,7 @@ namespace Squared.Illuminant {
         public Material ScreenSpaceToneMappedBitmap, WorldSpaceToneMappedBitmap;
         public Material ObjectSurfaces, ObjectOutlines;
         public Material FunctionSurface, FunctionOutline;
+        public Material CalculateLuminance;
 
         internal readonly Effect[] EffectsToSetGammaCompressionParametersOn;
         internal readonly Effect[] EffectsToSetToneMappingParametersOn;
