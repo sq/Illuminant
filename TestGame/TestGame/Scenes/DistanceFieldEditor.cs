@@ -60,7 +60,7 @@ namespace TestGame.Scenes {
                     Width, Height, true, true
                 ) {
                     RenderScale = Vector2.One,
-                    DistanceFieldUpdateRate = 64
+                    MaxFieldUpdatesPerFrame = 64
                 }
             ) {
                 DistanceField = DistanceField

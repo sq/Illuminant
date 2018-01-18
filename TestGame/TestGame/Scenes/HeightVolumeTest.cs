@@ -68,10 +68,12 @@ namespace TestGame.Scenes {
                     Width / LightmapScaleRatio, Height / LightmapScaleRatio, true
                 ) {
                     RenderScale = Vector2.One * (1.0f / LightmapScaleRatio),
-                    DistanceFieldLongStepFactor = 0.95f,
-                    DistanceFieldMinStepSize = 1.5f,
-                    DistanceFieldMaxStepCount = 72,
-                    GBufferCaching = true
+                    GBufferCaching = true,
+                    DefaultQuality = {
+                        LongStepFactor = 0.95f,
+                        MinStepSize = 1.5f,
+                        MaxStepCount = 72,
+                    }
                 }
             ) {
                 DistanceField = DistanceField

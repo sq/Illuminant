@@ -128,10 +128,17 @@ namespace TestGame.Scenes {
         bool ShowGBuffer         = false;
         bool ShowLightmap        = false;
         bool ShowDistanceField   = false;
+        bool ShowHistogram       = true;
         bool Deterministic       = true;
+
+        object HistogramLock = new object();
+        Histogram Histogram, NextHistogram;
 
         public SC3 (TestGame game, int width, int height)
             : base(game, 1396, 768) {
+
+            Histogram = new Histogram(4f, 2);
+            NextHistogram = new Histogram(4f, 2);
         }
 
         private void CreateRenderTargets () {
@@ -193,12 +200,14 @@ namespace TestGame.Scenes {
                     Width / BackgroundScaleRatio, Height / BackgroundScaleRatio, true, true
                 ) {
                     RenderScale = new Vector2(1.0f / BackgroundScaleRatio),
-                    DistanceFieldMinStepSize = 1.5f,
-                    DistanceFieldLongStepFactor = 0.7f,
-                    DistanceFieldOcclusionToOpacityPower = 1.35f,
-                    DistanceFieldMaxConeRadius = 30,
                     TwoPointFiveD = true,
-                    DistanceFieldUpdateRate = 1
+                    MaxFieldUpdatesPerFrame = 1,
+                    DefaultQuality = {
+                        MinStepSize = 1.5f,
+                        LongStepFactor = 0.7f,
+                        OcclusionToOpacityPower = 1.35f,
+                        MaxConeRadius = 30,
+                    }
                 }
             ) {
                 DistanceField = DistanceField
@@ -210,12 +219,14 @@ namespace TestGame.Scenes {
                     Width / ForegroundScaleRatio, Height / ForegroundScaleRatio, true
                 ) {
                     RenderScale = new Vector2(1.0f / ForegroundScaleRatio),
-                    DistanceFieldMinStepSize = 1.5f,
-                    DistanceFieldLongStepFactor = 0.7f,
-                    DistanceFieldOcclusionToOpacityPower = 1.35f,
-                    DistanceFieldMaxConeRadius = 30,
+                    MaxFieldUpdatesPerFrame = 0,
                     TwoPointFiveD = true,
-                    DistanceFieldUpdateRate = 0,
+                    DefaultQuality = {
+                        MinStepSize = 1.5f,
+                        LongStepFactor = 0.7f,
+                        OcclusionToOpacityPower = 1.35f,
+                        MaxConeRadius = 30,
+                    },
                 }
             ) {
                 DistanceField = DistanceField
@@ -357,10 +368,25 @@ namespace TestGame.Scenes {
             ForegroundRenderer.UpdateFields(frame, -16);
 
             Renderer.EstimateBrightness(
+                NextHistogram, 
+                (h) => {
+                    lock (HistogramLock) {
+                        if (h != NextHistogram)
+                            return;
+
+                        NextHistogram = Histogram;
+                        Histogram = h;
+                    }
+                }, HDRRangeFactor
+            );
+
+            /*
+            Renderer.EstimateBrightness(
                 HandleEstimatedBrightness,
                 HDRRangeFactor, TargetAverageBrightness, 
                 accuracyFactor: 3
             );
+            */
 
             float exposure;
             lock (ExposureSamples)
@@ -538,6 +564,18 @@ namespace TestGame.Scenes {
                         ));
                 }
 
+                if (ShowHistogram) {
+                    Histogram h;
+                    lock (HistogramLock)
+                        h = Histogram;
+
+                    var visualizer = new HistogramVisualizer {
+                        Materials = Game.Materials,
+                        Bounds = Bounds.FromPositionAndSize(new Vector2(10, Height - 40), new Vector2(Width - 20, 340)),                        
+                    };
+                    visualizer.Draw(group, 5, h);
+                }
+
                 var ir = new ImperativeRenderer(
                     frame, Game.Materials, layer++,
                     blendState: BlendState.Opaque,
@@ -568,6 +606,9 @@ namespace TestGame.Scenes {
 
                 if (KeyWasPressed(Keys.D))
                     ShowDistanceField = !ShowDistanceField;
+
+                if (KeyWasPressed(Keys.H))
+                    ShowHistogram = !ShowHistogram;
 
                 if (KeyWasPressed(Keys.R))
                     Deterministic = !Deterministic;

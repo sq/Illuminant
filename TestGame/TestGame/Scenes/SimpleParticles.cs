@@ -179,11 +179,13 @@ namespace TestGame.Scenes {
                     64, 64, true
                 ) {
                     RenderScale = Vector2.One,
-                    DistanceFieldMinStepSize = 1f,
-                    DistanceFieldLongStepFactor = 0.5f,
-                    DistanceFieldOcclusionToOpacityPower = 0.7f,
-                    DistanceFieldMaxConeRadius = 24,
-                    DistanceFieldUpdateRate = 1,
+                    MaxFieldUpdatesPerFrame = 1,
+                    DefaultQuality = {
+                        MinStepSize = 1f,
+                        LongStepFactor = 0.5f,
+                        OcclusionToOpacityPower = 0.7f,
+                        MaxConeRadius = 24,
+                    }
                 }
             ) {
                 DistanceField = DistanceField

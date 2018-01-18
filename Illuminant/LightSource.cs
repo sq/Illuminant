@@ -34,6 +34,9 @@ namespace Squared.Illuminant {
         public float     FalloffYFactor = 1;
         // Allows you to optionally set a ramp texture to control the appearance of light falloff
         public Texture2D RampTexture = null;
+        // Allows you to optionally override quality settings for this light
+        // NOTE: It is *much* faster to share a single settings instance for many lights!
+        public RendererQualitySettings Quality = null;
 
 
         protected LightSource (LightSourceTypeID typeID) {

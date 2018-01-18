@@ -75,6 +75,7 @@
     <Compile Include="DistanceField.cs" />
     <Compile Include="GBuffer.cs" />
     <Compile Include="HeightVolume.cs" />
+    <Compile Include="Histogram.cs" />
     <Compile Include="IlluminantMaterials.cs" />
     <Compile Include="LightingRenderer.HDR.cs" />
     <Compile Include="MersenneTwister.cs" />

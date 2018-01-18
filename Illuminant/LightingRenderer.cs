@@ -31,14 +31,17 @@ namespace Squared.Illuminant {
         }
 
         private struct LightTypeRenderStateKey {
-            public LightSourceTypeID Type;
-            public Texture2D         RampTexture;
-            public bool              DistanceRamp;
+            public LightSourceTypeID       Type;
+            public Texture2D               RampTexture;
+            public RendererQualitySettings Quality;
+            public bool                    DistanceRamp;
 
             public override int GetHashCode () {
                 var result = ((int)Type) ^ (DistanceRamp ? 2057 : 16593);
                 if (RampTexture != null)
                     result ^= RampTexture.GetHashCode();
+                if (Quality != null)
+                    result ^= Quality.GetHashCode();
                 return result;
             }
 
@@ -52,7 +55,8 @@ namespace Squared.Illuminant {
             public bool Equals (LightTypeRenderStateKey ltrsk) {
                 return (Type == ltrsk.Type) &&
                     (DistanceRamp == ltrsk.DistanceRamp) &&
-                    RampTexture == ltrsk.RampTexture;
+                    (RampTexture == ltrsk.RampTexture) &&
+                    (Quality == ltrsk.Quality);
             }
         }
 
@@ -143,12 +147,7 @@ namespace Squared.Illuminant {
 
                 return ((int)lhs.Type) - ((int)rhs.Type);
             }
-        }
-
-        private struct TemplateUniforms {
-            public Uniforms.Environment   Environment;
-            public Uniforms.DistanceField DistanceField;
-        }
+        }        
 
         public const int MaximumLightCount = 4096;
         public const int PackedSliceCount = 3;
@@ -195,7 +194,7 @@ namespace Squared.Illuminant {
             0, 1, 3, 1, 2, 3
         };
 
-        private TemplateUniforms Uniforms = new TemplateUniforms();
+        private Uniforms.Environment EnvironmentUniforms;
 
         private string _Name;
 
@@ -369,30 +368,17 @@ namespace Squared.Illuminant {
             if (DistanceField == null)
                 throw new NullReferenceException("DistanceField");
 
-            Uniforms = new TemplateUniforms {
-                Environment = new Uniforms.Environment {
-                    GroundZ = Environment.GroundZ,
-                    ZToYMultiplier =
-                        Configuration.TwoPointFiveD
-                            ? Environment.ZToYMultiplier
-                            : 0.0f,
-                    InvZToYMultiplier =
-                        Configuration.TwoPointFiveD
-                            ? 1f / Environment.ZToYMultiplier
-                            : 0.0f,
-                    RenderScale = Configuration.RenderScale
-                },
-
-                DistanceField = new Uniforms.DistanceField(DistanceField, Environment.MaximumZ) {
-                    OcclusionToOpacityPower = Configuration.DistanceFieldOcclusionToOpacityPower,
-                    MaxConeRadius = Configuration.DistanceFieldMaxConeRadius,
-                    ConeGrowthFactor = Configuration.DistanceFieldConeGrowthFactor,
-                    Step = new Vector3(
-                        (float)Configuration.DistanceFieldMaxStepCount,
-                        Configuration.DistanceFieldMinStepSize,
-                        Configuration.DistanceFieldLongStepFactor
-                    )
-                }
+            EnvironmentUniforms = new Uniforms.Environment {
+                GroundZ = Environment.GroundZ,
+                ZToYMultiplier =
+                    Configuration.TwoPointFiveD
+                        ? Environment.ZToYMultiplier
+                        : 0.0f,
+                InvZToYMultiplier =
+                    Configuration.TwoPointFiveD
+                        ? 1f / Environment.ZToYMultiplier
+                        : 0.0f,
+                RenderScale = Configuration.RenderScale
             };
         }
 
@@ -421,11 +407,11 @@ namespace Squared.Illuminant {
 
             device.Device.BlendState = RenderStates.AdditiveBlend;
 
-            SetLightShaderParameters(ltrs.Material);
+            SetLightShaderParameters(ltrs.Material, ltrs.Key.Quality);
             ltrs.Material.Effect.Parameters["RampTexture"].SetValue(ltrs.Key.RampTexture);
         }
 
-        private void SetLightShaderParameters (Material material) {
+        private void SetLightShaderParameters (Material material, RendererQualitySettings q) {
             var effect = material.Effect;
             var p = effect.Parameters;
 
@@ -434,16 +420,17 @@ namespace Squared.Illuminant {
             p["GBuffer"].SetValue(GBuffer.Texture);
 
             var ub = Materials.GetUniformBinding<Uniforms.Environment>(material, "Environment");
-            ub.Value.Current = Uniforms.Environment;
+            ub.Value.Current = EnvironmentUniforms;
 
-            SetDistanceFieldParameters(material, true);
+            SetDistanceFieldParameters(material, true, q);
         }
 
         private LightTypeRenderState GetLightRenderState (LightSource ls) {
             var ltk =
                 new LightTypeRenderStateKey {
                     Type = ls.TypeID,
-                    RampTexture = ls.RampTexture ?? Configuration.DefaultRampTexture
+                    RampTexture = ls.RampTexture ?? Configuration.DefaultRampTexture,
+                    Quality = ls.Quality ?? Configuration.DefaultQuality
                 };
 
             // A 1x1 ramp is treated as no ramp at all.
@@ -665,7 +652,7 @@ namespace Squared.Illuminant {
                 );
 
                 var ub = Materials.GetUniformBinding<Uniforms.Environment>(m, "Environment");
-                ub.Value.Current = Uniforms.Environment;
+                ub.Value.Current = EnvironmentUniforms;
 
                 if (hdr.HasValue) {
                     if (hdr.Value.Mode == HDRMode.GammaCompress)
@@ -871,7 +858,7 @@ namespace Squared.Illuminant {
                 container, layerIndex++, material, (dm, _) => {
                     var p = material.Effect.Parameters;
 
-                    SetDistanceFieldParameters(material, true);
+                    SetDistanceFieldParameters(material, true, Configuration.DefaultQuality);
 
                     var ac = ambientColor.GetValueOrDefault(new Vector3(0.1f, 0.15f, 0.15f));
                     p["AmbientColor"].SetValue(ac);
@@ -902,13 +889,30 @@ namespace Squared.Illuminant {
             };
         }
 
-        private void SetDistanceFieldParameters (Material m, bool setDistanceTexture) {
+        private void SetDistanceFieldParameters (
+            Material m, bool setDistanceTexture,
+            RendererQualitySettings q
+        ) {
+            if (q == null)
+                q = Configuration.DefaultQuality;
+
             var p = m.Effect.Parameters;
 
             p["MaximumEncodedDistance"].SetValue(DistanceField.MaximumEncodedDistance);
 
-            Materials.TrySetBoundUniform(m, "DistanceField", ref Uniforms.DistanceField);
-            Materials.TrySetBoundUniform(m, "Environment", ref Uniforms.Environment);
+            var dfu = new Uniforms.DistanceField(DistanceField, Environment.MaximumZ) {
+                OcclusionToOpacityPower = q.OcclusionToOpacityPower,
+                MaxConeRadius = q.MaxConeRadius,
+                ConeGrowthFactor = q.ConeGrowthFactor,
+                Step = new Vector3(
+                    (float)q.MaxStepCount,
+                    q.MinStepSize,
+                    q.LongStepFactor
+                )
+            };
+
+            Materials.TrySetBoundUniform(m, "DistanceField", ref dfu);
+            Materials.TrySetBoundUniform(m, "Environment", ref EnvironmentUniforms);
 
             if (setDistanceTexture)
                 p["DistanceFieldTexture"].SetValue(DistanceField.Texture);
@@ -936,6 +940,12 @@ namespace Squared.Illuminant {
 
             if (DistanceField.InvalidSlices.Count > 0) {
                 RenderDistanceField(ref layer, container);
+            }
+        }
+
+        private Vector3 Extent3 {
+            get {
+                return DistanceField.GetExtent3(Environment.MaximumZ);
             }
         }
 
@@ -971,13 +981,13 @@ namespace Squared.Illuminant {
                     group, 1, IlluminantMaterials.HeightVolume,
                     (dm, _) => {
                         var p = IlluminantMaterials.HeightVolumeFace.Effect.Parameters;
-                        p["DistanceFieldExtent"].SetValue(Uniforms.DistanceField.Extent);
+                        p["DistanceFieldExtent"].SetValue(Extent3);
 
                         var ub = Materials.GetUniformBinding<Uniforms.Environment>(IlluminantMaterials.HeightVolumeFace, "Environment");
-                        ub.Value.Current = Uniforms.Environment;
+                        ub.Value.Current = EnvironmentUniforms;
 
                         ub = Materials.GetUniformBinding<Uniforms.Environment>(IlluminantMaterials.HeightVolume, "Environment");
-                        ub.Value.Current = Uniforms.Environment;
+                        ub.Value.Current = EnvironmentUniforms;
                     }
                 )) {
 
@@ -1104,8 +1114,8 @@ namespace Squared.Illuminant {
                     blendState: BlendState.Opaque
                 ), (dm, _) => {
                     var material = IlluminantMaterials.MaskBillboard;
-                    Materials.TrySetBoundUniform(material, "Environment", ref Uniforms.Environment);
-                    material.Effect.Parameters["DistanceFieldExtent"].SetValue(Uniforms.DistanceField.Extent);
+                    Materials.TrySetBoundUniform(material, "Environment", ref EnvironmentUniforms);
+                    material.Effect.Parameters["DistanceFieldExtent"].SetValue(Extent3);
                 }
             )) 
             using (var gDataBatch = PrimitiveBatch<BillboardVertex>.New(
@@ -1116,8 +1126,8 @@ namespace Squared.Illuminant {
                     blendState: BlendState.Opaque
                 ), (dm, _) => {
                     var material = IlluminantMaterials.GDataBillboard;
-                    Materials.TrySetBoundUniform(material, "Environment", ref Uniforms.Environment);
-                    material.Effect.Parameters["DistanceFieldExtent"].SetValue(Uniforms.DistanceField.Extent);
+                    Materials.TrySetBoundUniform(material, "Environment", ref EnvironmentUniforms);
+                    material.Effect.Parameters["DistanceFieldExtent"].SetValue(Extent3);
                 }
             )) 
             foreach (var billboard in Environment.Billboards) {
@@ -1184,7 +1194,7 @@ namespace Squared.Illuminant {
             int sliceCount = DistanceField.SliceCount;
             int slicesToUpdate =
                 Math.Min(
-                    Configuration.DistanceFieldUpdateRate,
+                    Configuration.MaxFieldUpdatesPerFrame,
                     DistanceField.InvalidSlices.Count
                 );
             if (slicesToUpdate <= 0)
@@ -1249,12 +1259,12 @@ namespace Squared.Illuminant {
                     Materials.ApplyViewTransformToMaterial(interior, ref viewTransform);
                     Materials.ApplyViewTransformToMaterial(exterior, ref viewTransform);
 
-                    SetDistanceFieldParameters(interior, false);
-                    SetDistanceFieldParameters(exterior, false);
+                    SetDistanceFieldParameters(interior, false, Configuration.DefaultQuality);
+                    SetDistanceFieldParameters(exterior, false, Configuration.DefaultQuality);
 
                     foreach (var m in IlluminantMaterials.DistanceFunctionTypes) {
                         Materials.ApplyViewTransformToMaterial(m, ref viewTransform);
-                        SetDistanceFieldParameters(m, false);
+                        SetDistanceFieldParameters(m, false, Configuration.DefaultQuality);
                     }
                 };
 
@@ -1303,12 +1313,12 @@ namespace Squared.Illuminant {
             using (var interiorGroup = BatchGroup.New(group, 1, (dm, _) => {
                 dm.Device.RasterizerState = RenderStates.ScissorOnly;
                 dm.Device.DepthStencilState = DepthStencilState.None;
-                SetDistanceFieldParameters(interior, false);
+                SetDistanceFieldParameters(interior, false, Configuration.DefaultQuality);
             }))
             using (var exteriorGroup = BatchGroup.New(group, 2, (dm, _) => {
                 dm.Device.RasterizerState = RenderStates.ScissorOnly;
                 dm.Device.DepthStencilState = DepthStencilState.None;
-                SetDistanceFieldParameters(exterior, false);
+                SetDistanceFieldParameters(exterior, false, Configuration.DefaultQuality);
             }))
             foreach (var hv in Environment.HeightVolumes) {
                 var p = hv.Polygon;
@@ -1546,44 +1556,16 @@ namespace Squared.Illuminant {
 
     public class RendererConfiguration {
         // The maximum width and height of the viewport.
-        public readonly Pair<int>    MaximumRenderSize;
+        public readonly Pair<int> MaximumRenderSize;
 
         // Uses a high-precision g-buffer and internal lightmap.
-        public readonly bool         HighQuality;
+        public readonly bool      HighQuality;
         // Generates downscaled versions of the internal lightmap that the
         //  renderer can use to estimate the brightness of the scene for HDR.
-        public readonly bool         EnableBrightnessEstimation;
+        public readonly bool      EnableBrightnessEstimation;
 
         // Scales world coordinates when rendering the G-buffer and lightmap
-        public Vector2 RenderScale                 = Vector2.One;
-
-        public bool  TwoPointFiveD                 = false;
-        public bool  GBufferCaching                = true;
-        public bool  RenderGroundPlane             = true;
-
-        // Individual cone trace steps are not allowed to be any shorter than this.
-        // Improves the worst-case performance of the trace and avoids spending forever
-        //  stepping short distances around the edges of objects.
-        // Setting this to 1 produces the 'best' results but larger values tend to look
-        //  just fine. If this is too high you will get banding artifacts.
-        public float DistanceFieldMinStepSize             = 3.0f;
-        // Long step distances are scaled by this factor. A factor < 1.0
-        //  eliminates banding artifacts in the soft area between full/no shadow,
-        //  at the cost of additional cone trace steps.
-        // This effectively increases how much time we spend outside of objects,
-        //  producing higher quality as a side effect.
-        // Only set this above 1.0 if you love goofy looking artifacts
-        public float DistanceFieldLongStepFactor          = 1.0f;
-        // Terminates a cone trace after this many steps.
-        // Mitigates the performance hit for complex traces near the edge of objects.
-        // Most traces will not hit this cap.
-        public int   DistanceFieldMaxStepCount            = 64;
-        public float DistanceFieldMaxConeRadius           = 24;
-        public float DistanceFieldConeGrowthFactor        = 1.0f;
-        // The maximum number of distance field slices to update per frame.
-        // Setting this value too high can crash your video driver.
-        public int   DistanceFieldUpdateRate              = 1;
-        public float DistanceFieldOcclusionToOpacityPower = 1;
+        public Vector2   RenderScale    = Vector2.One;
 
         // The current width and height of the viewport.
         // Must not be larger than MaximumRenderSize.
@@ -1591,6 +1573,19 @@ namespace Squared.Illuminant {
 
         // Sets the default ramp texture to use for lights with no ramp texture set.
         public Texture2D DefaultRampTexture;
+
+        // Sets the default quality configuration to use for lights with
+        //  no configuration set.
+        public RendererQualitySettings DefaultQuality = 
+            new RendererQualitySettings();
+
+        // The maximum number of distance field slices to update per frame.
+        // Setting this value too high can crash your video driver.
+        public int  MaxFieldUpdatesPerFrame = 1;
+
+        public bool TwoPointFiveD           = false;
+        public bool GBufferCaching          = true;
+        public bool RenderGroundPlane       = true;
 
         public RendererConfiguration (
             int maxWidth, int maxHeight, bool highQuality,
@@ -1601,6 +1596,29 @@ namespace Squared.Illuminant {
             RenderSize = MaximumRenderSize;
             EnableBrightnessEstimation = enableBrightnessEstimation;
         }
+    }
+
+    public class RendererQualitySettings {
+        // Individual cone trace steps are not allowed to be any shorter than this.
+        // Improves the worst-case performance of the trace and avoids spending forever
+        //  stepping short distances around the edges of objects.
+        // Setting this to 1 produces the 'best' results but larger values tend to look
+        //  just fine. If this is too high you will get banding artifacts.
+        public float MinStepSize             = 3.0f;
+        // Long step distances are scaled by this factor. A factor < 1.0
+        //  eliminates banding artifacts in the soft area between full/no shadow,
+        //  at the cost of additional cone trace steps.
+        // This effectively increases how much time we spend outside of objects,
+        //  producing higher quality as a side effect.
+        // Only set this above 1.0 if you love goofy looking artifacts
+        public float LongStepFactor          = 1.0f;
+        // Terminates a cone trace after this many steps.
+        // Mitigates the performance hit for complex traces near the edge of objects.
+        // Most traces will not hit this cap.
+        public int   MaxStepCount            = 64;
+        public float MaxConeRadius           = 24;
+        public float ConeGrowthFactor        = 1.0f;
+        public float OcclusionToOpacityPower = 1;
     }
 
     public enum VisualizationMode {

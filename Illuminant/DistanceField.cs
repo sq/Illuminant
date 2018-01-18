@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Squared.Render;
 
@@ -66,6 +67,14 @@ namespace Squared.Illuminant {
             coordinator.DeviceReset += Coordinator_DeviceReset;
 
             Invalidate();
+        }
+
+        internal Vector3 GetExtent3 (float maximumZ) {
+            return new Vector3(
+                VirtualWidth,
+                VirtualHeight,
+                maximumZ
+            );
         }
 
         private void Coordinator_DeviceReset (object sender, EventArgs e) {

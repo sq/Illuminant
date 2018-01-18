@@ -39,6 +39,8 @@ namespace TestGame.Scenes {
         bool TwoPointFiveD     = true;
         bool Deterministic     = true;
 
+        RendererQualitySettings DirectionalQuality;
+
         object HistogramLock = new object();
         Histogram Histogram, NextHistogram;
 
@@ -122,11 +124,13 @@ namespace TestGame.Scenes {
                     1024 / LightmapScaleRatio, 1024 / LightmapScaleRatio, true, true
                 ) {
                     RenderScale = Vector2.One * (1.0f / LightmapScaleRatio),
-                    DistanceFieldMinStepSize = 1f,
-                    DistanceFieldLongStepFactor = 0.5f,
-                    DistanceFieldOcclusionToOpacityPower = 0.7f,
-                    DistanceFieldMaxConeRadius = 24,
-                    DistanceFieldUpdateRate = 6,
+                    MaxFieldUpdatesPerFrame = 6,
+                    DefaultQuality = {
+                        MinStepSize = 1f,
+                        LongStepFactor = 0.5f,
+                        OcclusionToOpacityPower = 0.7f,
+                        MaxConeRadius = 24,
+                    },
                 }
             ) {
                 DistanceField = DistanceField
@@ -142,14 +146,23 @@ namespace TestGame.Scenes {
 
             Environment.Lights.Add(MovableLight);
 
+            DirectionalQuality = new RendererQualitySettings {
+                MinStepSize = 2f,
+                LongStepFactor = 0.95f,
+                MaxConeRadius = 24,
+                OcclusionToOpacityPower = 0.7f,
+            };
+
             Environment.Lights.Add(new DirectionalLightSource {
                 Direction = new Vector3(-0.75f, -0.7f, -0.33f),
-                Color = new Vector4(0.2f, 0.4f, 0.6f, 0.4f)
+                Color = new Vector4(0.2f, 0.4f, 0.6f, 0.4f),
+                Quality = DirectionalQuality
             });
 
             Environment.Lights.Add(new DirectionalLightSource {
                 Direction = new Vector3(0.35f, -0.05f, -0.75f),
-                Color = new Vector4(0.5f, 0.3f, 0.15f, 0.3f)
+                Color = new Vector4(0.5f, 0.3f, 0.15f, 0.3f),
+                Quality = DirectionalQuality
             });
 
             Rect(new Vector2(330, 337), new Vector2(Width, 394), 0f, 55f);
@@ -196,8 +209,6 @@ namespace TestGame.Scenes {
 
                 var scaleFactor = 0.5f;
 
-                Renderer.RenderLighting(bg, 1, scaleFactor);
-                Renderer.ResolveLighting(bg, 2, Width, Height, hdr: new HDRConfiguration { InverseScaleFactor = 1.0f / scaleFactor });
                 Renderer.EstimateBrightness(
                     NextHistogram, 
                     (h) => {
@@ -210,6 +221,9 @@ namespace TestGame.Scenes {
                         }
                     }, 1.0f / scaleFactor
                 );
+
+                Renderer.RenderLighting(bg, 1, scaleFactor);
+                Renderer.ResolveLighting(bg, 2, Width, Height, hdr: new HDRConfiguration { InverseScaleFactor = 1.0f / scaleFactor });
             };
 
             using (var group = BatchGroup.New(frame, 0)) {
@@ -274,47 +288,16 @@ namespace TestGame.Scenes {
                         ));
                 }
 
-                if (ShowHistogram)
-                    DrawHistogram(group, 5);
-            }
-        }
+                if (ShowHistogram) {
+                    Histogram h;
+                    lock (HistogramLock)
+                        h = Histogram;
 
-        private void DrawHistogram (IBatchContainer group, int layer) {
-            var ir = new ImperativeRenderer(group, Game.Materials, layer).MakeSubgroup();
-            ir.AutoIncrementLayer = true;
-
-            var width = 600;
-            var height = 800;
-            var bounds = Bounds.FromPositionAndSize(new Vector2(Width + 10, 10), new Vector2(width, height));
-            ir.FillRectangle(bounds, Color.Black);
-            ir.OutlineRectangle(bounds, Color.White);
-
-            int i = 0;
-            float x1 = bounds.TopLeft.X;
-            float bucketWidth = width / Histogram.BucketCount;
-
-            ir.AutoIncrementLayer = false;
-
-            Histogram h;
-
-            lock (HistogramLock)
-                h = Histogram;
-
-            lock (h) {
-                float maxCount = h.SampleCount;
-                foreach (var bucket in h.Buckets) {
-                    var scaledCount = bucket.Count / maxCount;
-                    var y2 = bounds.BottomRight.Y;
-                    var y1 = y2 - (scaledCount * height);
-                    var x2 = x1 + bucketWidth;
-
-                    ir.FillRectangle(
-                        new Bounds(new Vector2(x1, y1), new Vector2(x2, y2)), 
-                        Color.Silver
-                    ); 
-
-                    x1 = x2;
-                    i++;
+                    var visualizer = new HistogramVisualizer {
+                        Materials = Game.Materials,
+                        Bounds = Bounds.FromPositionAndSize(new Vector2(Width + 10, 10), new Vector2(600, 800))
+                    };
+                    visualizer.Draw(group, 5, h);
                 }
             }
         }
@@ -351,10 +334,13 @@ namespace TestGame.Scenes {
 
                 var time = (float)Time.Seconds;
 
-                Renderer.Configuration.DistanceFieldMaxStepCount =
+                Renderer.Configuration.DefaultQuality.MaxStepCount =
                     (Timelapse & !Deterministic)
-                        ? (int)Arithmetic.Clamp((time % 12) * (MaxStepCount / 32.0f), 1, MaxStepCount)
+                        ? (int)Arithmetic.Wrap(time * (MaxStepCount / 8.0f), 1, MaxStepCount)
                         : MaxStepCount;
+
+                DirectionalQuality.MaxStepCount =
+                    (int)(Renderer.Configuration.DefaultQuality.MaxStepCount * 0.75f) + 1;
 
                 if (!Deterministic) {
                     var obs = Environment.Obstructions[0];
