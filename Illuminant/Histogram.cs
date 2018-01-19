@@ -10,9 +10,9 @@ using Microsoft.Xna.Framework.Graphics;
 using Squared.Game;
 using Squared.Render;
 using Squared.Render.Convenience;
+using Squared.Util;
 
 namespace Squared.Illuminant {
-
     public unsafe class Histogram : IDisposable {
         public struct Bucket {
             public float BucketStart, BucketEnd;
@@ -25,7 +25,7 @@ namespace Squared.Illuminant {
             public float Min, Max, Sum;
         }
 
-        public const int BucketCount = 64;
+        public readonly int BucketCount;
 
         public readonly float MaxInputValue;
 
@@ -45,7 +45,8 @@ namespace Squared.Illuminant {
 
         private float Sum;
 
-        public Histogram (float maxValue, float power) {
+        public Histogram (float maxValue, float power, int bucketCount = 64) {
+            BucketCount = bucketCount;
             MaxInputValue = maxValue;
             BucketMaxValues = new float[BucketCount];
             States = new BucketState[BucketCount];
@@ -172,7 +173,8 @@ namespace Squared.Illuminant {
 
     public class HistogramVisualizer {
         public float SampleCountPower = 3;
-        public Color BorderColor = Color.White, BackgroundColor = Color.Black * 0.66f;
+        public Color BorderColor = Color.White, BackgroundColor = Color.MidnightBlue * 0.75f;
+        public Color[] ValueColors = new[] { Color.Black, Color.White, Color.Yellow, Color.Red };
         public DefaultMaterialSet Materials;
         public Bounds Bounds;
 
@@ -185,7 +187,6 @@ namespace Squared.Illuminant {
 
             int i = 0;
             float x1 = Bounds.TopLeft.X;
-            float bucketWidth = Bounds.Size.X / Histogram.BucketCount;
 
             ir.AutoIncrementLayer = false;
 
@@ -193,15 +194,21 @@ namespace Squared.Illuminant {
                 double maxCount = h.SampleCount;
                 double logMaxCount = Math.Log(h.SampleCount + 1, SampleCountPower);
                 foreach (var bucket in h.Buckets) {
+                    float bucketWidth = Bounds.Size.X * (bucket.BucketEnd - bucket.BucketStart) / h.MaxInputValue;
                     var scaledLogCount = Math.Log(bucket.Count + 1, SampleCountPower) / logMaxCount;
                     var scaledCount = bucket.Count / maxCount;
                     var y2 = Bounds.BottomRight.Y;
                     var y1 = y2 - (float)((scaledCount + scaledLogCount) * 0.5 * Bounds.Size.Y);
                     var x2 = x1 + bucketWidth;
 
+                    var bucketValue = (bucket.BucketStart + bucket.BucketEnd) / 2f;
+                    var lowIndex = Arithmetic.Clamp((int)Math.Floor(bucketValue), 0, ValueColors.Length - 1);
+                    var highIndex = Arithmetic.Clamp(lowIndex + 1, 0, ValueColors.Length - 1);
+                    var elementColor = Color.Lerp(ValueColors[lowIndex], ValueColors[highIndex], bucketValue - (float)Math.Floor(bucketValue));
+
                     ir.FillRectangle(
                         new Bounds(new Vector2(x1, y1), new Vector2(x2, y2)), 
-                        Color.Silver
+                        elementColor
                     ); 
 
                     x1 = x2;

@@ -1,19 +1,23 @@
+uniform float Offset;
+uniform float ExposureMinusOne;
+
+
 uniform float MiddleGray;
 uniform float AverageLuminance, MaximumLuminanceSquared;
 
 static const float3 RGBToLuminance = float3(0.299f, 0.587f, 0.114f);
 
 float4 GammaCompress (float4 color) {
-    float resultLuminance = dot(color.rgb, RGBToLuminance);
+    float3 rgb = max(color.rgb + Offset, 0);
+    float resultLuminance = dot(rgb, RGBToLuminance);
     float scaledLuminance = (resultLuminance * MiddleGray) / AverageLuminance;
     float compressedLuminance = (scaledLuminance * (1 + (scaledLuminance / MaximumLuminanceSquared))) / (1 + scaledLuminance);
     float rescaleFactor = compressedLuminance / resultLuminance;
-    return float4(color.rgb * rescaleFactor, color.a);
+    return float4(rgb * rescaleFactor, color.a);
 }
 
 // http://frictionalgames.blogspot.com/2012/09/tech-feature-hdr-lightning.html
 
-uniform float Exposure;
 uniform float WhitePoint;
 
 static const float kA = 0.15;

@@ -659,12 +659,20 @@ namespace Squared.Illuminant {
                         IlluminantMaterials.SetGammaCompressionParameters(
                             hdr.Value.GammaCompression.MiddleGray,
                             hdr.Value.GammaCompression.AverageLuminance,
-                            hdr.Value.GammaCompression.MaximumLuminance
+                            hdr.Value.GammaCompression.MaximumLuminance,
+                            hdr.Value.Offset
                         );
                     else if (hdr.Value.Mode == HDRMode.ToneMap)
                         IlluminantMaterials.SetToneMappingParameters(
-                            hdr.Value.ToneMapping.Exposure,
-                            hdr.Value.ToneMapping.WhitePoint
+                            hdr.Value.Exposure,
+                            hdr.Value.ToneMapping.WhitePoint,
+                            hdr.Value.Offset
+                        );
+                    else 
+                        IlluminantMaterials.SetToneMappingParameters(
+                            hdr.Value.Exposure,
+                            1f,
+                            hdr.Value.Offset
                         );
                 }
             });

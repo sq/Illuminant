@@ -16,13 +16,25 @@ namespace Squared.Illuminant {
         }
 
         public struct ToneMappingConfiguration {
-            public float Exposure, WhitePoint;
+            public float WhitePoint;
         }
 
         public HDRMode Mode;
         public float InverseScaleFactor;
+        public float Offset;
         public GammaCompressionConfiguration GammaCompression;
         public ToneMappingConfiguration ToneMapping;
+
+        private float ExposureMinusOne;
+
+        public float Exposure {
+            get {
+                return ExposureMinusOne + 1;
+            }
+            set {
+                ExposureMinusOne = value - 1;
+            }
+        }
     }
 
     public enum HDRMode {

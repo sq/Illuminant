@@ -126,6 +126,9 @@ void LightingResolvePixelShader(
         texTL,
         texBR
     );
+
+    result.rgb = max(0, result.rgb + Offset);
+    result.rgb *= (ExposureMinusOne + 1);
 }
 
 void GammaCompressedLightingResolvePixelShader(
@@ -143,6 +146,7 @@ void GammaCompressedLightingResolvePixelShader(
         texTL,
         texBR
     );
+
     result = GammaCompress(result);
 }
 
@@ -162,7 +166,9 @@ void ToneMappedLightingResolvePixelShader(
         texBR
     );
 
-    result = float4(Uncharted2Tonemap(result.rgb * Exposure) / Uncharted2Tonemap1(WhitePoint), result.a);
+    float3 preToneMap = max(0, result.rgb + Offset) * (ExposureMinusOne + 1);
+
+    result = float4(Uncharted2Tonemap(preToneMap) / Uncharted2Tonemap1(WhitePoint), result.a);
 }
 
 void CalculateLuminancePixelShader(

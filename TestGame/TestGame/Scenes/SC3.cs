@@ -137,8 +137,8 @@ namespace TestGame.Scenes {
         public SC3 (TestGame game, int width, int height)
             : base(game, 1396, 768) {
 
-            Histogram = new Histogram(4f, 2);
-            NextHistogram = new Histogram(4f, 2);
+            Histogram = new Histogram(4f, 2f);
+            NextHistogram = new Histogram(4f, 2f);
         }
 
         private void CreateRenderTargets () {
@@ -395,8 +395,8 @@ namespace TestGame.Scenes {
             var hdrConfiguration = new HDRConfiguration {
                 Mode = HDRMode.ToneMap,
                 InverseScaleFactor = HDRRangeFactor,
+                Exposure = exposure,
                 ToneMapping = {
-                    Exposure = exposure,
                     WhitePoint = 1.0f
                 }
             };

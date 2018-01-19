@@ -29,6 +29,7 @@ namespace TestGame.Scenes {
         const int MultisampleCount = 0;
         const int LightmapScaleRatio = 1;
         const int MaxStepCount = 128;
+        const float LightScaleFactor = 4;
 
         bool ShowGBuffer       = false;
         bool ShowLightmap      = false;
@@ -37,7 +38,7 @@ namespace TestGame.Scenes {
         bool UseRampTexture    = true;
         bool Timelapse         = false;
         bool TwoPointFiveD     = true;
-        bool Deterministic     = true;
+        bool Deterministic     = false;
 
         RendererQualitySettings DirectionalQuality;
 
@@ -47,8 +48,8 @@ namespace TestGame.Scenes {
         public TwoPointFiveDTest (TestGame game, int width, int height)
             : base(game, 1024, 1024) {
 
-            Histogram = new Histogram(2f, 2);
-            NextHistogram = new Histogram(2f, 2);
+            Histogram = new Histogram(4f, 2f);
+            NextHistogram = new Histogram(4f, 2f);
         }
 
         private void CreateRenderTargets () {
@@ -207,8 +208,6 @@ namespace TestGame.Scenes {
             )) {
                 ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black);
 
-                var scaleFactor = 0.5f;
-
                 Renderer.EstimateBrightness(
                     NextHistogram, 
                     (h) => {
@@ -219,11 +218,11 @@ namespace TestGame.Scenes {
                             NextHistogram = Histogram;
                             Histogram = h;
                         }
-                    }, 1.0f / scaleFactor
+                    }, LightScaleFactor
                 );
 
-                Renderer.RenderLighting(bg, 1, scaleFactor);
-                Renderer.ResolveLighting(bg, 2, Width, Height, hdr: new HDRConfiguration { InverseScaleFactor = 1.0f / scaleFactor });
+                Renderer.RenderLighting(bg, 1, 1.0f / LightScaleFactor);
+                Renderer.ResolveLighting(bg, 2, Width, Height, hdr: new HDRConfiguration { InverseScaleFactor = LightScaleFactor });
             };
 
             using (var group = BatchGroup.New(frame, 0)) {
@@ -366,7 +365,7 @@ namespace TestGame.Scenes {
                     MovableLight.Position = new Vector3(671, 394, 97.5f);
                 else {
                     MovableLight.Position = mousePos;
-                    MovableLight.Color.W = Arithmetic.Pulse((float)Time.Seconds / 2.25f, 0.3f, 1.25f);
+                    MovableLight.Color.W = Arithmetic.Pulse((float)Time.Seconds / 3f, 0.3f, 4f);
                 }
             }
         }

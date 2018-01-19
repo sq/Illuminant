@@ -35,7 +35,9 @@ void ToneMappedPixelShader(
     result = multiplyColor * (tex2D(TextureSampler, clamp(texCoord, texTL, texBR)) * InverseScaleFactor);
     result += (addColor * result.a);
 
-    result = float4(Uncharted2Tonemap(result.rgb * Exposure) / Uncharted2Tonemap1(WhitePoint), result.a);
+    float3 preToneMap = max(result.rgb + Offset, 0) * (ExposureMinusOne + 1);
+
+    result = float4(Uncharted2Tonemap(preToneMap) / Uncharted2Tonemap1(WhitePoint), result.a);
 }
 
 technique WorldSpaceGammaCompressedBitmap
