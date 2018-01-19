@@ -64,11 +64,11 @@ namespace TestGame.Scenes {
                         RNG.NextFloat(0.5f, 1.0f),
                         RNG.NextFloat(0.5f, 1.0f),
                         RNG.NextFloat(0.5f, 1.0f),
-                        0.1f * Size
+                        0.27f * Size
                     ),
                     Opacity = 1,
-                    Radius = 3f * Size,
-                    RampLength = 160f * Size,
+                    Radius = 4f * Size,
+                    RampLength = 170f * Size,
                     RampMode = LightSourceRampMode.Exponential
                 };
             }
@@ -109,6 +109,7 @@ namespace TestGame.Scenes {
         public readonly List<LightSource> Lights = new List<LightSource>();
         public readonly UnorderedList<Projectile> Projectiles = new UnorderedList<Projectile>();
         public readonly Queue<float> ExposureSamples = new Queue<float>(ExposureSampleCount);
+        public readonly Queue<float> WhitePointSamples = new Queue<float>(WhitePointSampleCount);
 
         Texture2D Background, Foreground, BackgroundMask;
         Texture2D[] Trees;
@@ -116,7 +117,8 @@ namespace TestGame.Scenes {
         Texture2D Spark;
         float LightZ;
 
-        const int ExposureSampleCount = 40;
+        const int ExposureSampleCount = 30;
+        const int WhitePointSampleCount = 60;
 
         const int BackgroundScaleRatio = 1;
         const int ForegroundScaleRatio = 1;
@@ -130,6 +132,15 @@ namespace TestGame.Scenes {
         bool ShowDistanceField   = false;
         bool ShowHistogram       = true;
         bool Deterministic       = true;
+
+        const float TargetLowLuminance = 0.10f;
+        const float TargetHighLuminance = 0.53f;
+        const float MinimumExposure = 0.25f;
+        const float MaximumExposure = 1.5f;
+        const float MinimumWhitePoint = 0.7f;
+        const float MaximumWhitePoint = 2.3f;
+
+        const float LowPercentile = 60, HighPercentile = 94.5f, WhitePercentile = 97.5f;
 
         object HistogramLock = new object();
         Histogram Histogram, NextHistogram;
@@ -276,8 +287,10 @@ namespace TestGame.Scenes {
             Environment.Billboards.Add(terrainBillboard);
             ForegroundEnvironment.Billboards.Add(terrainBillboard);
 
-            for (int i = 0; i < Math.Min(4, ExposureSampleCount); i++)
+            for (int i = 0; i < Math.Min(4, ExposureSampleCount / 2); i++)
                 ExposureSamples.Enqueue(1.0f);
+            for (int i = 0; i < Math.Min(4, WhitePointSampleCount / 2); i++)
+                WhitePointSamples.Enqueue(1.0f);
         }
 
         private void Pillar (float x, float y, int textureIndex) {
@@ -337,21 +350,36 @@ namespace TestGame.Scenes {
             Tree(221, 526, 1);
         }
 
-        const float TargetAverageBrightness = 0.33f;
+        private void UpdateHDR (Histogram h) {
+            int temp;
+            float low, high, white;
 
-        private void HandleEstimatedBrightness (LightmapInfo lightmapInfo) {
-            // HACK: Ramp between the average and maximum based on the number of overexposed pixels
-            float peakValue = Arithmetic.Lerp(
-                lightmapInfo.Mean, lightmapInfo.Maximum, lightmapInfo.Overexposed * 2.25f
+            h.GetPercentile(LowPercentile, out temp, out low);
+            h.GetPercentile(HighPercentile, out temp, out high);
+            h.GetPercentile(WhitePercentile, out temp, out white);
+
+            float immediateWhitePoint = Arithmetic.Clamp(
+                (high + white) / 2, MinimumWhitePoint, MaximumWhitePoint
+            ), averageWhitePoint;
+
+            lock (WhitePointSamples) {
+                if (WhitePointSamples.Count >= WhitePointSampleCount)
+                    WhitePointSamples.Dequeue();
+
+                WhitePointSamples.Enqueue(immediateWhitePoint);
+                averageWhitePoint = WhitePointSamples.Average();
+            }
+
+            float immediateExposure = Arithmetic.Lerp(
+                Arithmetic.Clamp(
+                    Math.Min(TargetLowLuminance / low, TargetHighLuminance / high),
+                    MinimumExposure, MaximumExposure
+                ),
+                1.0f,
+                Arithmetic.Clamp(Math.Abs(averageWhitePoint - 1.0f) / 1.6f, 0, 1)
             );
-            // Set an exposure to try and balance the scene brightness
-            // TODO: Set a white point?
-            lock (ExposureSamples)
-            if (peakValue > 0) {
-                float immediateExposure = Arithmetic.Clamp(
-                    TargetAverageBrightness / peakValue,
-                    0.33f, 1.33f
-                );
+
+            lock (ExposureSamples) {
                 if (ExposureSamples.Count >= ExposureSampleCount)
                     ExposureSamples.Dequeue();
 
@@ -376,6 +404,8 @@ namespace TestGame.Scenes {
 
                         NextHistogram = Histogram;
                         Histogram = h;
+
+                        UpdateHDR(h);
                     }
                 }, HDRRangeFactor
             );
@@ -388,16 +418,18 @@ namespace TestGame.Scenes {
             );
             */
 
-            float exposure;
+            float exposure, whitePoint;
             lock (ExposureSamples)
                 exposure = ExposureSamples.Average();
+            lock (WhitePointSamples)
+                whitePoint = WhitePointSamples.Average();
 
             var hdrConfiguration = new HDRConfiguration {
                 Mode = HDRMode.ToneMap,
                 InverseScaleFactor = HDRRangeFactor,
                 Exposure = exposure,
                 ToneMapping = {
-                    WhitePoint = 1.0f
+                    WhitePoint = whitePoint
                 }
             };
 
@@ -573,7 +605,13 @@ namespace TestGame.Scenes {
                         Materials = Game.Materials,
                         Bounds = Bounds.FromPositionAndSize(new Vector2(10, Height - 40), new Vector2(Width - 20, 340)),                        
                     };
-                    visualizer.Draw(group, 5, h);
+                    float min, max;
+                    visualizer.GetRangeFromToneMapParameters(hdrConfiguration, out min, out max);
+                    visualizer.Draw(
+                        group, 5, h, 
+                        new[] { LowPercentile, HighPercentile, WhitePercentile },
+                        min, max
+                    );
                 }
 
                 var ir = new ImperativeRenderer(
@@ -584,8 +622,9 @@ namespace TestGame.Scenes {
                 ir.DrawString(
                     Game.Font, string.Format(
 @"Exposure {0:00.000}
-{1:0000} Projectiles",
-                        exposure, Projectiles.Count
+White Point {1:00.000}
+{2:0000} Projectiles",
+                        exposure, whitePoint, Projectiles.Count
                     ), new Vector2(3, 3), scale: 0.5f
                 );
             }

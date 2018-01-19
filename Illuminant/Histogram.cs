@@ -110,6 +110,33 @@ namespace Squared.Illuminant {
 			return i;
         }
 
+        public bool GetPercentile (float percent, out int bucketIndex, out float value) {
+            if ((SampleCount < 1) || (percent < 0) || (percent > 100)) {
+                bucketIndex = 0;
+                value = 0;
+                return false;
+            }
+
+            int sampleIndex = (int)(SampleCount * percent / 100f);
+
+            int bucketFirstSample = 0;
+            for (int i = 0; i < BucketCount; i++) {
+                var count = States[i].Count;
+                var localIndex = sampleIndex - bucketFirstSample;
+                if ((localIndex >= 0) && (localIndex < count)) {
+                    var minValue = (i > 0) ? pMaxValues[i - 1] : 0f;
+                    var maxValue = pMaxValues[i];                    
+                    bucketIndex = i;
+                    value = Arithmetic.Lerp(minValue, maxValue, (localIndex / (float)count));
+                    return true;
+                }
+
+                bucketFirstSample += count;
+            }
+
+            throw new Exception();
+        }
+
         public void Add (float[] buffer, int count, float scaleFactor) {
             if (count > buffer.Length)
                 throw new ArgumentException("count");
@@ -174,32 +201,41 @@ namespace Squared.Illuminant {
     public class HistogramVisualizer {
         public float SampleCountPower = 3;
         public Color BorderColor = Color.White, BackgroundColor = Color.MidnightBlue * 0.75f;
+        public Color PercentileColor = Color.White, RangeColor = Color.White * 0.33f;
+        public float PercentileWidth = 1f;
         public Color[] ValueColors = new[] { Color.Black, Color.White, Color.Yellow, Color.Red };
         public DefaultMaterialSet Materials;
         public Bounds Bounds;
 
-        public void Draw (IBatchContainer group, int layer, Histogram h) {
-            var ir = new ImperativeRenderer(group, Materials, layer).MakeSubgroup();
-            ir.AutoIncrementLayer = true;
+        public void GetRangeFromToneMapParameters (HDRConfiguration hdr, out float min, out float max) {
+            min = -hdr.Offset;
+            max = (1f / (hdr.Exposure / hdr.ToneMapping.WhitePoint)) - hdr.Offset;
+        }
 
-            ir.FillRectangle(Bounds, BackgroundColor, blendState: BlendState.AlphaBlend);
-            ir.OutlineRectangle(Bounds, BorderColor);
+        public void Draw (
+            IBatchContainer group, int layer, Histogram h,
+            float[] percentiles = null, float? rangeMin = null, float? rangeMax = null
+        ) {
+            var ir = new ImperativeRenderer(group, Materials, layer, blendState: BlendState.AlphaBlend).MakeSubgroup();
+            ir.AutoIncrementLayer = false;
+
+            ir.FillRectangle(Bounds, BackgroundColor, layer: 0);
+            ir.OutlineRectangle(Bounds, BorderColor, layer: 4);
 
             int i = 0;
-            float x1 = Bounds.TopLeft.X;
-
-            ir.AutoIncrementLayer = false;
+            float x1 = Bounds.TopLeft.X, x2;
 
             lock (h) {
                 double maxCount = h.SampleCount;
                 double logMaxCount = Math.Log(h.SampleCount + 1, SampleCountPower);
+
                 foreach (var bucket in h.Buckets) {
                     float bucketWidth = Bounds.Size.X * (bucket.BucketEnd - bucket.BucketStart) / h.MaxInputValue;
                     var scaledLogCount = Math.Log(bucket.Count + 1, SampleCountPower) / logMaxCount;
                     var scaledCount = bucket.Count / maxCount;
                     var y2 = Bounds.BottomRight.Y;
                     var y1 = y2 - (float)((scaledCount + scaledLogCount) * 0.5 * Bounds.Size.Y);
-                    var x2 = x1 + bucketWidth;
+                    x2 = x1 + bucketWidth;
 
                     var bucketValue = (bucket.BucketStart + bucket.BucketEnd) / 2f;
                     var lowIndex = Arithmetic.Clamp((int)Math.Floor(bucketValue), 0, ValueColors.Length - 1);
@@ -208,11 +244,39 @@ namespace Squared.Illuminant {
 
                     ir.FillRectangle(
                         new Bounds(new Vector2(x1, y1), new Vector2(x2, y2)), 
-                        elementColor
+                        elementColor, layer: 2
                     ); 
 
                     x1 = x2;
                     i++;
+                }
+
+                if (percentiles != null)
+                foreach (var percentile in percentiles) {
+                    int bucketIndex;
+                    float value;
+                    if (!h.GetPercentile(percentile, out bucketIndex, out value))
+                        continue;
+
+                    var x = Arithmetic.Lerp(Bounds.TopLeft.X, Bounds.BottomRight.X, Arithmetic.Clamp(value / h.MaxInputValue, 0, 1));
+                    var halfWidth = PercentileWidth / 2f;
+
+                    ir.FillRectangle(
+                        new Bounds(new Vector2(x - halfWidth, Bounds.TopLeft.Y), new Vector2(x + halfWidth, Bounds.BottomRight.Y)), 
+                        PercentileColor, layer: 3
+                    );
+                }
+
+                if (rangeMin.HasValue || rangeMax.HasValue) {
+                    float min = rangeMin.GetValueOrDefault(0);
+                    float max = rangeMax.GetValueOrDefault(h.MaxInputValue);
+                    x1 = Arithmetic.Lerp(Bounds.TopLeft.X, Bounds.BottomRight.X, Arithmetic.Clamp(min / h.MaxInputValue, 0, 1));
+                    x2 = Arithmetic.Lerp(Bounds.TopLeft.X, Bounds.BottomRight.X, Arithmetic.Clamp(max / h.MaxInputValue, 0, 1));
+
+                    ir.FillRectangle(
+                        new Bounds(new Vector2(x1, Bounds.TopLeft.Y), new Vector2(x2, Bounds.BottomRight.Y)),
+                        RangeColor, layer: 1
+                    );
                 }
             }
         }
