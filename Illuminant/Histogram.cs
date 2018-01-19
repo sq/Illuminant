@@ -43,11 +43,14 @@ namespace Squared.Illuminant {
         public float Max { get; private set; }
         public float Mean { get; private set; }
 
+        public bool IgnoreZeroes;
+
         private float Sum;
 
-        public Histogram (float maxValue, float power, int bucketCount = 64) {
+        public Histogram (float maxValue, float power, int bucketCount = 64, bool ignoreZeroes = false) {
             BucketCount = bucketCount;
             MaxInputValue = maxValue;
+            IgnoreZeroes = ignoreZeroes;
             BucketMaxValues = new float[BucketCount];
             States = new BucketState[BucketCount];
 
@@ -141,11 +144,18 @@ namespace Squared.Illuminant {
             if (count > buffer.Length)
                 throw new ArgumentException("count");
 
+            var totalAdded = 0;
+
             fixed (float* pBuffer = buffer)
             for (int i = 0; i < count; i++) {
-                var value = pBuffer[i] * scaleFactor;
+                var rawValue = pBuffer[i];
+                if (IgnoreZeroes && (rawValue <= 0))
+                    continue;
+
+                var value = rawValue * scaleFactor;
 
                 Sum += value;
+                totalAdded++;
 
                 var j = PickBucketForValue(value);
                 var pState = &pStates[j];
@@ -155,7 +165,7 @@ namespace Squared.Illuminant {
                 pState->Max = Math.Max(pState->Max, value);
             }
             
-            SampleCount += count;
+            SampleCount += totalAdded;
             if (SampleCount > 0)
                 Mean = Sum / SampleCount;
             else
