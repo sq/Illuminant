@@ -92,7 +92,7 @@ float SphereLightPixelCore(
     if (visible) {
         return lightOpacity;
     } else {
-        // discard;
+        discard;
         return 0;
     }
 }
