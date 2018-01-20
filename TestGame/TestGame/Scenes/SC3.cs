@@ -395,29 +395,6 @@ namespace TestGame.Scenes {
             Renderer.UpdateFields(frame, -16);
             ForegroundRenderer.UpdateFields(frame, -16);
 
-            Renderer.EstimateBrightness(
-                NextHistogram, 
-                (h) => {
-                    lock (HistogramLock) {
-                        if (h != NextHistogram)
-                            return;
-
-                        NextHistogram = Histogram;
-                        Histogram = h;
-
-                        UpdateHDR(h);
-                    }
-                }, HDRRangeFactor
-            );
-
-            /*
-            Renderer.EstimateBrightness(
-                HandleEstimatedBrightness,
-                HDRRangeFactor, TargetAverageBrightness, 
-                accuracyFactor: 3
-            );
-            */
-
             float exposure, whitePoint;
             lock (ExposureSamples)
                 exposure = ExposureSamples.Average();
@@ -434,8 +411,23 @@ namespace TestGame.Scenes {
             };
 
             int layer = -8;
-            Renderer.RenderLighting(frame, layer, 1.0f / HDRRangeFactor);
+            var brightness = Renderer.RenderLighting(frame, layer, 1.0f / HDRRangeFactor);
             ForegroundRenderer.RenderLighting(frame, layer++, 1.0f / HDRRangeFactor);
+
+            brightness.TryComputeHistogram(
+                NextHistogram, 
+                (h) => {
+                    lock (HistogramLock) {
+                        if (h != NextHistogram)
+                            return;
+
+                        NextHistogram = Histogram;
+                        Histogram = h;
+
+                        UpdateHDR(h);
+                    }
+                }
+            );
 
             using (var bg = BatchGroup.ForRenderTarget(
                 frame, layer++, Lightmap,

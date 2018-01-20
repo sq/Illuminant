@@ -174,7 +174,7 @@ namespace Squared.Illuminant {
             new Dictionary<Polygon, Texture2D>(new ReferenceComparer<Polygon>());
 
         private readonly RenderTarget2D _Lightmap;
-        private readonly RenderTarget2D _PreviousLuminance, _NextLuminance;
+        private readonly List<RenderTarget2D> _LuminanceBuffers = new List<RenderTarget2D>();
 
         private DistanceField _DistanceField;
         private GBuffer _GBuffer;
@@ -239,12 +239,8 @@ namespace Squared.Illuminant {
                     var width = Configuration.MaximumRenderSize.First / 2;
                     var height = Configuration.MaximumRenderSize.Second / 2;
 
-                    _PreviousLuminance = new RenderTarget2D(
-                        coordinator.Device, 
-                        width, height, true,
-                        SurfaceFormat.Single,
-                        DepthFormat.None, 0, RenderTargetUsage.PreserveContents
-                    );
+                    for (int i = 0; i < 3; i++)
+                        CreateLuminanceBuffer(coordinator.Device, width, height);
                 }
             }
 
@@ -274,6 +270,16 @@ namespace Squared.Illuminant {
             Environment = environment;
 
             Coordinator.DeviceReset += Coordinator_DeviceReset;
+        }
+
+        private void CreateLuminanceBuffer (GraphicsDevice device, int width, int height) {
+            var buffer = new RenderTarget2D(
+                device, 
+                width, height, true,
+                SurfaceFormat.Single,
+                DepthFormat.None, 0, RenderTargetUsage.PreserveContents
+            );
+            _LuminanceBuffers.Add(buffer);
         }
 
         private void EnsureGBuffer () {
@@ -309,8 +315,8 @@ namespace Squared.Illuminant {
         private void NameSurfaces () {
             if (_Lightmap != null)
                 _Lightmap.SetName(ObjectNames.ToObjectID(this) + ":Lightmap");
-            if (_PreviousLuminance != null)
-                _PreviousLuminance.SetName(ObjectNames.ToObjectID(this) + ":PreviousLuminance");
+            foreach (var lb in _LuminanceBuffers)
+                lb.SetName(ObjectNames.ToObjectID(this) + ":Luminance");
             if (_GBuffer != null)
                 _GBuffer.Texture.SetName(ObjectNames.ToObjectID(this) + ":GBuffer");
         }
@@ -356,12 +362,12 @@ namespace Squared.Illuminant {
                 kvp.Value.Dispose();
 
             Coordinator.DisposeResource(QuadIndexBuffer);
-            if (_DistanceField != null)
-                Coordinator.DisposeResource(_DistanceField);
-            if (_GBuffer != null)
-                Coordinator.DisposeResource(_GBuffer);
+            Coordinator.DisposeResource(_DistanceField);
+            Coordinator.DisposeResource(_GBuffer);
             Coordinator.DisposeResource(_Lightmap);
-            Coordinator.DisposeResource(_PreviousLuminance);
+
+            foreach (var lb in _LuminanceBuffers)
+                Coordinator.DisposeResource(lb);
 
             foreach (var kvp in HeightVolumeVertexData)
                 Coordinator.DisposeResource(kvp.Value);
@@ -482,9 +488,11 @@ namespace Squared.Illuminant {
         /// <param name="container">The batch container to render lighting into.</param>
         /// <param name="layer">The layer to render lighting into.</param>
         /// <param name="intensityScale">A factor to scale the intensity of all light sources. You can use this to rescale the intensity of light values for HDR.</param>
-        public void RenderLighting (
+        public BrightnessDataToken RenderLighting (
             IBatchContainer container, int layer, float intensityScale = 1.0f
         ) {
+            BrightnessDataToken result = new BrightnessDataToken(this, 1.0f / intensityScale);
+
             int layerIndex = 0;
 
             ComputeUniforms();
@@ -493,16 +501,24 @@ namespace Squared.Illuminant {
                 // HACK: We make a copy of the previous lightmap so that brightness estimation can read it, without
                 //  stalling on the current lightmap being rendered
                 if (Configuration.EnableBrightnessEstimation) {
+                    RenderTarget2D newLuminanceBuffer;
+                    lock (_LuminanceBuffers) {
+                        newLuminanceBuffer = _LuminanceBuffers[0];
+                        _LuminanceBuffers.RemoveAt(0);
+                    }
+
                     var w = Configuration.RenderSize.First / 2;
                     var h = Configuration.RenderSize.Second / 2;
                     using (var copyGroup = BatchGroup.ForRenderTarget(
-                        outerGroup, 0, _PreviousLuminance,
+                        outerGroup, 0, newLuminanceBuffer,
                         (dm, _) => {
                             dm.Device.Viewport = new Viewport(0, 0, w, h);
                             Materials.PushViewTransform(ViewTransform.CreateOrthographic(w, h));
                         },
                         (dm, _) => {
                             Materials.PopViewTransform();
+                            lock (_LuminanceBuffers)
+                                _LuminanceBuffers.Add(newLuminanceBuffer);
                         }
                     )) {
                         if (RenderTrace.EnableTracing)
@@ -518,6 +534,8 @@ namespace Squared.Illuminant {
                             material: m
                         );
                     }
+
+                    result = new BrightnessDataToken(this, newLuminanceBuffer, 1.0f / intensityScale);
                 }
 
                 using (var resultGroup = BatchGroup.ForRenderTarget(outerGroup, 1, _Lightmap, before: BeginLightPass, after: EndLightPass)) {
@@ -585,6 +603,8 @@ namespace Squared.Illuminant {
                         RenderTrace.Marker(resultGroup, 9999, "LightingRenderer {0} : End", this.ToObjectID());
                 }
             }
+
+            return result;
         }
 
         private void RenderPointLightSource (SphereLightSource lightSource, float intensityScale, LightTypeRenderState ltrs) {

@@ -84,47 +84,79 @@ namespace Squared.Illuminant {
 
             return buffer[lastZero + index];
         }
-        
-        /// <summary>
-        /// Analyzes the internal lighting buffer. This operation is asynchronous so that you do not stall on
-        ///  a previous/in-flight draw operation.
-        /// </summary>
-        /// <param name="inverseScaleFactor">Scale factor for the lighting values (you want 1.0f / intensityFactor, probably)</param>
-        /// <param name="accuracyFactor">Governs how many pixels will be analyzed. Higher values are lower accuracy (but faster).</param>
-        public void EstimateBrightness (
-            Histogram histogram,
-            Action<Histogram> onComplete,
-            float inverseScaleFactor, int accuracyFactor = 3
-        ) {
-            if (!Configuration.EnableBrightnessEstimation)
-                throw new InvalidOperationException("Brightness estimation must be enabled");
 
-            var levelIndex = Math.Min(accuracyFactor, _PreviousLuminance.LevelCount - 1);
-            var divisor = (int)Math.Pow(2, levelIndex);
-            var levelWidth = _PreviousLuminance.Width / divisor;
-            var levelHeight = _PreviousLuminance.Height / divisor;
-            var count = levelWidth * levelHeight;
+        public struct BrightnessDataToken {
+            public  readonly LightingRenderer Renderer;
+            public  readonly float            InverseScaleFactor;
+            private readonly RenderTarget2D   Buffer;
+            private readonly int              Width, Height;
 
-            if ((_ReadbackBuffer == null) || (_ReadbackBuffer.Length < count))
-                _ReadbackBuffer = new float[count];
+            internal BrightnessDataToken (LightingRenderer renderer, float inverseScaleFactor) {
+                Renderer = renderer;
+                Buffer = null;
+                InverseScaleFactor = inverseScaleFactor;
+                Width = Height = 0;
+            }
 
-            var q = Coordinator.ThreadGroup.GetQueueForType<HistogramUpdateTask>();
-            var rs = Configuration.RenderSize;
+            internal BrightnessDataToken (
+                LightingRenderer renderer, RenderTarget2D buffer,
+                float inverseScaleFactor
+            ) {
+                Renderer = renderer;
+                Buffer = buffer;
+                InverseScaleFactor = inverseScaleFactor;
+                Width = renderer.Configuration.RenderSize.First;
+                Height = renderer.Configuration.RenderSize.Second;
+            }
 
-            Coordinator.AfterPresent(() => {
-                q.WaitUntilDrained();
+            public bool IsValid {
+                get {
+                    return Buffer != null;
+                }
+            }
 
-                q.Enqueue(new HistogramUpdateTask {
-                    Texture = _PreviousLuminance,
-                    LevelIndex = levelIndex,
-                    Histogram = histogram,
-                    Buffer = _ReadbackBuffer,
-                    Width = rs.First / 2 / divisor,
-                    Height = rs.Second / 2 / divisor,
-                    ScaleFactor = inverseScaleFactor,
-                    OnComplete = onComplete
+            /// <param name="accuracyFactor">Governs how many pixels will be analyzed. Higher values are lower accuracy (but faster).</param>
+            public bool TryComputeHistogram (
+                Histogram histogram,
+                Action<Histogram> onComplete,
+                int accuracyFactor = 3
+            ) {
+                if (Renderer == null)
+                    return false;
+                if (Buffer == null)
+                    return false;
+
+                var levelIndex = Math.Min(accuracyFactor, Buffer.LevelCount - 1);
+                var divisor = (int)Math.Pow(2, levelIndex);
+                var levelWidth = Buffer.Width / divisor;
+                var levelHeight = Buffer.Height / divisor;
+                var count = levelWidth * levelHeight;
+
+                var buffer = Renderer._ReadbackBuffer;
+                if ((buffer == null) || (buffer.Length < count))
+                    buffer = Renderer._ReadbackBuffer = new float[count];
+
+                var q = Renderer.Coordinator.ThreadGroup.GetQueueForType<HistogramUpdateTask>();
+
+                var self = this;
+
+                Renderer.Coordinator.AfterPresent(() => {
+                    q.WaitUntilDrained();
+
+                    q.Enqueue(new HistogramUpdateTask {
+                        Texture = self.Buffer,
+                        LevelIndex = levelIndex,
+                        Histogram = histogram,
+                        Buffer = buffer,
+                        Width = self.Width / 2 / divisor,
+                        Height = self.Height / 2 / divisor,
+                        ScaleFactor = self.InverseScaleFactor,
+                        OnComplete = onComplete
+                    });
                 });
-            });
+
+                return true;
+            }
         }
     }
 }

@@ -257,7 +257,10 @@ namespace TestGame.Scenes {
             )) {
                 ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black);
 
-                Renderer.EstimateBrightness(
+                var brightness = Renderer.RenderLighting(bg, 1, 1.0f / LightScaleFactor);
+                Renderer.ResolveLighting(bg, 2, Width, Height, hdr: new HDRConfiguration { InverseScaleFactor = LightScaleFactor });
+
+                brightness.TryComputeHistogram(
                     NextHistogram, 
                     (h) => {
                         lock (HistogramLock) {
@@ -267,11 +270,8 @@ namespace TestGame.Scenes {
                             NextHistogram = Histogram;
                             Histogram = h;
                         }
-                    }, LightScaleFactor
+                    }
                 );
-
-                Renderer.RenderLighting(bg, 1, 1.0f / LightScaleFactor);
-                Renderer.ResolveLighting(bg, 2, Width, Height, hdr: new HDRConfiguration { InverseScaleFactor = LightScaleFactor });
             };
 
             using (var group = BatchGroup.New(frame, 0)) {
