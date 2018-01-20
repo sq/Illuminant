@@ -5,9 +5,12 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Graphics.PackedVector;
 using Squared.Render.Tracing;
 using Squared.Threading;
+using Squared.Util;
 
 namespace Squared.Illuminant {
     public struct HDRConfiguration {
@@ -41,18 +44,7 @@ namespace Squared.Illuminant {
         None,
         GammaCompress,
         ToneMap
-    }
-
-    public struct LightmapBandInfo {
-        public float Minimum, Maximum, Mean;
-    }
-
-    public struct LightmapInfo {
-        public LightmapBandInfo Band;
-
-        public float Minimum, Maximum, Mean;
-        public float Overexposed;
-    }
+    }    
 
     public sealed partial class LightingRenderer : IDisposable, INameableGraphicsObject {
         private struct HistogramUpdateTask : IWorkItem {
@@ -61,18 +53,20 @@ namespace Squared.Illuminant {
             public Histogram Histogram;
             public float[] Buffer;
             public float ScaleFactor;
-            public int Count;
+            public int Width, Height;
             public Action<Histogram> OnComplete;
 
             public void Execute () {
+                var count = Width * Height;
+
                 Texture.GetData(
-                    LevelIndex, null,
-                    Buffer, 0, Count
+                    LevelIndex, new Rectangle(0, 0, Width, Height),
+                    Buffer, 0, count
                 );
 
                 lock (Histogram) {
                     Histogram.Clear();
-                    Histogram.Add(Buffer, Count, ScaleFactor);
+                    Histogram.Add(Buffer, count, ScaleFactor);
                 }
 
                 if (OnComplete != null)
@@ -90,112 +84,7 @@ namespace Squared.Illuminant {
 
             return buffer[lastZero + index];
         }
-
-        private unsafe LightmapInfo AnalyzeLightmap (
-            float[] buffer, int count, 
-            float scaleFactor, float threshold,
-            float lowBandPercentage, float highBandPercentage
-        ) {
-            int overThresholdCount = 0;
-            float min = float.MaxValue, max = 0;
-            float sum = 0;
-
-            fixed (float* pBuffer = buffer) {
-                for (int i = 0; i < count; i++) {
-                    var luminance = pBuffer[i] * scaleFactor;
-
-                    min = Math.Min(min, luminance);
-                    max = Math.Max(max, luminance);
-                    sum += luminance;
-
-                    if (luminance >= threshold)
-                        overThresholdCount += 1;
-                }                
-            }
-
-            var result = new LightmapInfo {
-                Overexposed = overThresholdCount / (float)count,
-                Minimum = min,
-                Maximum = max,
-                Mean = sum / count
-            };
-
-            Array.Sort(buffer, 0, count);
-
-            var lastZero = Array.LastIndexOf(buffer, 0);
-            if (lastZero < 0)
-                lastZero = 0;
-
-            int bandCount = 0;
-            float bandMin = ComputePercentile(lowBandPercentage, buffer, lastZero, count, 1) * scaleFactor,
-                bandMax = ComputePercentile(highBandPercentage, buffer, lastZero, count, 1) * scaleFactor;
-            min = float.MaxValue;
-            max = 0;
-            sum = 0;
-
-            for (int i = lastZero; i < count; i++) {
-                var luminance = buffer[i] * scaleFactor;
-                if ((luminance < bandMin) || (luminance > bandMax))
-                    continue;
-                min = Math.Min(min, luminance);
-                max = Math.Max(max, luminance);
-                sum += luminance;
-                bandCount++;
-            }
-
-            if (min == float.MaxValue)
-                min = 0;
-
-            result.Band = new LightmapBandInfo {
-                Minimum = min,
-                Maximum = max,
-                Mean = sum / bandCount
-            };
-
-            return result;
-        }
-
-        /// <summary>
-        /// Analyzes the internal lighting buffer. This operation is asynchronous so that you do not stall on
-        ///  a previous/in-flight draw operation.
-        /// </summary>
-        /// <param name="inverseScaleFactor">Scale factor for the lighting values (you want 1.0f / intensityFactor, probably)</param>
-        /// <param name="threshold">Threshold for overexposed values (after scaling). 1.0f is reasonable.</param>
-        /// <param name="accuracyFactor">Governs how many pixels will be analyzed. Higher values are lower accuracy (but faster).</param>
-        /// <returns>LightmapInfo containing the minimum, average, and maximum light values, along with an overexposed pixel ratio [0-1].</returns>
-        public void EstimateBrightness (
-            Action<LightmapInfo> onComplete,
-            float inverseScaleFactor, float threshold, 
-            float lowBandPercentage = 70,
-            float highBandPercentage = 90,
-            int accuracyFactor = 3
-        ) {
-            if (!Configuration.EnableBrightnessEstimation)
-                throw new InvalidOperationException("Brightness estimation must be enabled");
-
-            var levelIndex = Math.Min(accuracyFactor, _PreviousLuminance.LevelCount - 1);
-            var divisor = (int)Math.Pow(2, levelIndex);
-            var levelWidth = _PreviousLuminance.Width / divisor;
-            var levelHeight = _PreviousLuminance.Height / divisor;
-            var count = levelWidth * levelHeight;
-
-            if ((_ReadbackBuffer == null) || (_ReadbackBuffer.Length < count))
-                _ReadbackBuffer = new float[count];
-
-            Coordinator.AfterPresent(() => {
-                _PreviousLuminance.GetData(
-                    levelIndex, null,
-                    _ReadbackBuffer, 0, count
-                );
-
-                var result = AnalyzeLightmap(
-                    _ReadbackBuffer, count, inverseScaleFactor, threshold,
-                    lowBandPercentage, highBandPercentage
-                );
-                onComplete(result);
-            });
-        }
-
+        
         /// <summary>
         /// Analyzes the internal lighting buffer. This operation is asynchronous so that you do not stall on
         ///  a previous/in-flight draw operation.
@@ -220,6 +109,7 @@ namespace Squared.Illuminant {
                 _ReadbackBuffer = new float[count];
 
             var q = Coordinator.ThreadGroup.GetQueueForType<HistogramUpdateTask>();
+            var rs = Configuration.RenderSize;
 
             Coordinator.AfterPresent(() => {
                 q.WaitUntilDrained();
@@ -229,7 +119,8 @@ namespace Squared.Illuminant {
                     LevelIndex = levelIndex,
                     Histogram = histogram,
                     Buffer = _ReadbackBuffer,
-                    Count = count,
+                    Width = rs.First / 2 / divisor,
+                    Height = rs.Second / 2 / divisor,
                     ScaleFactor = inverseScaleFactor,
                     OnComplete = onComplete
                 });

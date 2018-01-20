@@ -57,7 +57,7 @@ namespace TestGame.Scenes {
             ShowHistogram.Value = true;
             UseRampTexture.Value = true;
             TwoPointFiveD.Value = true;
-            DistanceFieldResolution.Value = 0.3f;
+            DistanceFieldResolution.Value = 0.25f;
             LightmapScaleRatio.Value = 1.0f;
 
             ShowLightmap.Key = Keys.L;
@@ -168,7 +168,7 @@ namespace TestGame.Scenes {
                 new RendererConfiguration(
                     1024, 1024, true, true
                 ) {
-                    MaxFieldUpdatesPerFrame = 6,
+                    MaxFieldUpdatesPerFrame = 3,
                     DefaultQuality = {
                         MinStepSize = 1f,
                         LongStepFactor = 0.5f,

@@ -174,7 +174,7 @@ namespace Squared.Illuminant {
             new Dictionary<Polygon, Texture2D>(new ReferenceComparer<Polygon>());
 
         private readonly RenderTarget2D _Lightmap;
-        private readonly RenderTarget2D _PreviousLuminance;
+        private readonly RenderTarget2D _PreviousLuminance, _NextLuminance;
 
         private DistanceField _DistanceField;
         private GBuffer _GBuffer;
@@ -492,23 +492,32 @@ namespace Squared.Illuminant {
             using (var outerGroup = BatchGroup.New(container, layer)) {
                 // HACK: We make a copy of the previous lightmap so that brightness estimation can read it, without
                 //  stalling on the current lightmap being rendered
-                if (Configuration.EnableBrightnessEstimation)
-                using (var copyGroup = BatchGroup.ForRenderTarget(
-                    outerGroup, 0, _PreviousLuminance,
-                    (dm, _) => {
-                        Materials.PushViewTransform(ViewTransform.CreateOrthographic(_PreviousLuminance.Width, _PreviousLuminance.Height));
-                    },
-                    (dm, _) => {
-                        Materials.PopViewTransform();
-                    }
-                )) {
-                    if (RenderTrace.EnableTracing)
-                        RenderTrace.Marker(copyGroup, -1, "LightingRenderer {0} : Generate HDR Buffer", this.ToObjectID());
+                if (Configuration.EnableBrightnessEstimation) {
+                    var w = Configuration.RenderSize.First / 2;
+                    var h = Configuration.RenderSize.Second / 2;
+                    using (var copyGroup = BatchGroup.ForRenderTarget(
+                        outerGroup, 0, _PreviousLuminance,
+                        (dm, _) => {
+                            dm.Device.Viewport = new Viewport(0, 0, w, h);
+                            Materials.PushViewTransform(ViewTransform.CreateOrthographic(w, h));
+                        },
+                        (dm, _) => {
+                            Materials.PopViewTransform();
+                        }
+                    )) {
+                        if (RenderTrace.EnableTracing)
+                            RenderTrace.Marker(copyGroup, -1, "LightingRenderer {0} : Generate HDR Buffer", this.ToObjectID());
 
-                    var ir = new ImperativeRenderer(copyGroup, Materials);
-                    var m = IlluminantMaterials.CalculateLuminance;
-                    ir.Clear(color: Color.Transparent);
-                    ir.Draw(_Lightmap, new Rectangle(0, 0, _PreviousLuminance.Width, _PreviousLuminance.Height), material: m);
+                        var ir = new ImperativeRenderer(copyGroup, Materials);
+                        var m = IlluminantMaterials.CalculateLuminance;
+                        ir.Clear(color: Color.Transparent);
+                        ir.Draw(
+                            _Lightmap, 
+                            new Rectangle(0, 0, w, h), 
+                            new Rectangle(0, 0, Configuration.RenderSize.First, Configuration.RenderSize.Second), 
+                            material: m
+                        );
+                    }
                 }
 
                 using (var resultGroup = BatchGroup.ForRenderTarget(outerGroup, 1, _Lightmap, before: BeginLightPass, after: EndLightPass)) {
