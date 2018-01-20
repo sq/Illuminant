@@ -9,8 +9,8 @@ float3 estimateNormal(
     // We want to stagger the samples so that we are moving a reasonable distance towards the nearest texel
     // FIXME: Pick better constant when sampling a distance function
     float4 texel = float4(
-        DistanceField.InvScaleFactor,
-        DistanceField.InvScaleFactor,
+        getInvScaleFactor(),
+        getInvScaleFactor(),
         DistanceField.Extent.z / DistanceField.TextureSliceCount.z,
         0
     );

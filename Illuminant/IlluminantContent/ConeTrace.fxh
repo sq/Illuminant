@@ -41,7 +41,7 @@ float coneTraceStep(
     return max(
         // the abs() actually makes this faster somehow, but
         //  it shouldn't ever be needed? :/
-        abs(distanceToObstacle) * DistanceField.Step.z,
+        abs(distanceToObstacle) * getLongStepFactor(),
         config.z
     );
 }
@@ -63,15 +63,16 @@ float coneTrace(
         traceDirection = traceVector / traceLength;
 
         float maxRadius = clamp(
-            lightRamp.x, MIN_CONE_RADIUS, DistanceField.MaxConeRadius
+            lightRamp.x, MIN_CONE_RADIUS, getMaxConeRadius()
         );
         float rampLength           = max(lightRamp.y, 16);
         float radiusGrowthPerPixel = maxRadius / rampLength * 
             coneGrowthFactorAndDistanceFalloff.x;
 
+        // maxRadius, lightTangentAngle, minStepSize, distanceFalloff
         config = float4(
             maxRadius, radiusGrowthPerPixel, 
-            max(1, DistanceField.Step.y), 
+            max(1, getMinStepSize()), 
             coneGrowthFactorAndDistanceFalloff.y
         );
     }
@@ -96,13 +97,13 @@ float coneTrace(
 
         stepCount += 1;
         abort =
-            (stepCount >= DistanceField.Step.x) ||
+            (stepCount >= getStepLimit()) ||
             (visibility < FULLY_SHADOWED_THRESHOLD) ||
             (a >= b);
     }
 
     // HACK: Force visibility down to 0 if we are going to terminate the trace because we took too many steps.
-    float windowStart = max(DistanceField.Step.x - MAX_STEP_RAMP_WINDOW, 0);
+    float windowStart = max(getStepLimit() - MAX_STEP_RAMP_WINDOW, 0);
     float stepWindowVisibility = (1.0 - (stepCount - windowStart) / MAX_STEP_RAMP_WINDOW);
     visibility = min(visibility, stepWindowVisibility);
 
@@ -112,6 +113,6 @@ float coneTrace(
             (UNSHADOWED_THRESHOLD - FULLY_SHADOWED_THRESHOLD),
             0, 1
         ),
-        DistanceField.OcclusionToOpacityPower
+        getOcclusionToOpacityPower()
     );
 }

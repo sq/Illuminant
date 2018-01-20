@@ -31,11 +31,13 @@ namespace TestGame {
         public Texture2D RampTexture;
 
         public readonly Scene[] Scenes;
-        public int ActiveSceneIndex = 2;
+        public int ActiveSceneIndex = 0;
 
         private int LastPerformanceStatPrimCount = 0;
 
         public TestGame () {
+            // UniformBinding.ForceCompatibilityMode = true;
+
             Graphics = new GraphicsDeviceManager(this);
             Graphics.PreferredBackBufferFormat = SurfaceFormat.Color;
             Graphics.PreferredDepthStencilFormat = DepthFormat.Depth24Stencil8;

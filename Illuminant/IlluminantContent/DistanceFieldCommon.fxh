@@ -41,22 +41,56 @@ float decodeDistance (float encodedDistance) {
     return (DISTANCE_ZERO - encodedDistance) * DISTANCE_MAX;
 }
 
-struct DistanceFieldSettings {
-    // StepLimit, MinimumLength, LongStepFactor
-    float3 Step;
 
-    float  MaxConeRadius;
-    float  ConeGrowthFactor;
-    float  ShadowDistanceFalloff;
-    float  OcclusionToOpacityPower;
-    float  InvScaleFactor;
+struct DistanceFieldSettings {
+    // MaxConeRadius, ConeGrowthFactor, OcclusionToOpacityPower, InvScaleFactor
+    float4 _ConeAndMisc;
+    float4 _TextureSliceAndTexelSize;
+    // StepLimit, MinimumLength, LongStepFactor
+    float3 _Step;
     float3 Extent;
     float3 TextureSliceCount;
-    float2 TextureSliceSize;
-    float2 TextureTexelSize;
 };
 
 uniform DistanceFieldSettings DistanceField;
+
+// FIXME: int?
+float getStepLimit () {
+    return DistanceField._Step.x;
+}
+
+float getMinStepSize () {
+    return DistanceField._Step.y;
+}
+
+float getLongStepFactor () {
+    return DistanceField._Step.z;
+}
+
+float getMaxConeRadius () {
+    return DistanceField._ConeAndMisc.x;
+}
+
+float getConeGrowthFactor () {
+    return DistanceField._ConeAndMisc.y;
+}
+
+float getOcclusionToOpacityPower () {
+    return DistanceField._ConeAndMisc.z;
+}
+
+float getInvScaleFactor () {
+    return DistanceField._ConeAndMisc.w;
+}
+
+float2 getDistanceSliceSize () {
+    return DistanceField._TextureSliceAndTexelSize.xy;
+}
+
+float2 getDistanceTexelSize () {
+    return DistanceField._TextureSliceAndTexelSize.zw;
+}
+
 
 Texture2D DistanceFieldTexture;
 sampler   DistanceFieldTextureSampler {
@@ -91,7 +125,7 @@ float2 computeDistanceFieldSliceUv (
     float rowIndexF   = virtualSliceIndex * invSliceCountXTimesOneThird;
     float rowIndex    = floor(rowIndexF);
     float columnIndex = floor((rowIndexF - rowIndex) * DistanceField.TextureSliceCount.x);
-    return float2(columnIndex, rowIndex) * DistanceField.TextureSliceSize.xy;
+    return float2(columnIndex, rowIndex) * getDistanceSliceSize();
 }
 
 float sampleDistanceField (
@@ -111,7 +145,7 @@ float sampleDistanceField (
 
     float4 uv = float4(
         computeDistanceFieldSliceUv(virtualSliceIndex, vars.invSliceCountXTimesOneThird) +
-            (clampedPosition.xy * DistanceField.TextureTexelSize),
+            (clampedPosition.xy * getDistanceTexelSize()),
         0, 0
     );
 

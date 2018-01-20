@@ -7,14 +7,7 @@
 // The final output from the dot computation is raised to this power so
 #define DOT_EXPONENT   0.85
 
-struct EnvironmentSettings {
-    float  GroundZ;
-    float  ZToYMultiplier;
-    float  InvZToYMultiplier;
-    float2 RenderScale;
-};
-
-uniform EnvironmentSettings Environment;
+#include "EnvironmentCommon.fxh"
 
 uniform float  GBufferInvScaleFactor;
 uniform float2 GBufferTexelSize;
@@ -35,27 +28,37 @@ void sampleGBuffer(
     out float3 worldPosition,
     out float3 normal
 ) {
-    // FIXME: Should we be offsetting distance field samples too?
-    float2 uv     = (screenPositionPx + 0.5) * GBufferTexelSize;
+    [branch]
+    if (GBufferTexelSize.x >= 0) {
+        // FIXME: Should we be offsetting distance field samples too?
+        float2 uv     = (screenPositionPx + 0.5) * GBufferTexelSize;
+        float4 sample = tex2Dlod(GBufferSampler, float4(uv, 0, 0));
 
-    float4 sample = tex2Dlod(GBufferSampler, float4(uv, 0, 0));
+        float relativeY = sample.z * 512;
+        float worldZ    = sample.w * 512;
 
-    float relativeY = sample.z * 512;
-    float worldZ    = sample.w * 512;
+        screenPositionPx /= Environment.RenderScale;
 
-    screenPositionPx /= Environment.RenderScale;
+        worldPosition = float3(
+            screenPositionPx.xy / Viewport.Scale.xy + Viewport.Position.xy,
+            worldZ
+        );
+        worldPosition.y += relativeY;
 
-    worldPosition = float3(
-        screenPositionPx.xy / Viewport.Scale.xy + Viewport.Position.xy,
-        worldZ
-    );
-    worldPosition.y += relativeY;
+        // HACK: Reconstruct the y normal from the z normal
+        float normalZ = (sample.y - 0.5) * 2;
+        normal = normalize(float3(
+            (sample.x - 0.5) * 2, 1 - abs(normalZ), normalZ
+        ));
+    } else {
+        screenPositionPx /= Environment.RenderScale;
 
-    // HACK: Reconstruct the y normal from the z normal
-    float normalZ = (sample.y - 0.5) * 2;
-    normal = normalize(float3(
-        (sample.x - 0.5) * 2, 1 - abs(normalZ), normalZ
-    ));
+        worldPosition = float3(
+            screenPositionPx.xy / Viewport.Scale.xy + Viewport.Position.xy,
+            getGroundZ()
+        );
+        normal = float3(0, 0, 1);
+    }
 }
 
 float computeNormalFactor(

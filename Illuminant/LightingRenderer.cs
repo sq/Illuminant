@@ -248,12 +248,7 @@ namespace Squared.Illuminant {
                 }
             }
 
-            _GBuffer = new GBuffer(
-                Coordinator, 
-                Configuration.MaximumRenderSize.First, 
-                Configuration.MaximumRenderSize.Second,
-                Configuration.HighQuality
-            );
+            EnsureGBuffer();
 
             TopFaceDepthStencilState = new DepthStencilState {
                 StencilEnable = false,
@@ -279,6 +274,25 @@ namespace Squared.Illuminant {
             Environment = environment;
 
             Coordinator.DeviceReset += Coordinator_DeviceReset;
+        }
+
+        private void EnsureGBuffer () {
+            if (Configuration.EnableGBuffer) {
+                if (_GBuffer == null) {
+                    _GBuffer = new GBuffer(
+                        Coordinator, 
+                        Configuration.MaximumRenderSize.First, 
+                        Configuration.MaximumRenderSize.Second,
+                        Configuration.HighQuality
+                    );
+                    _GBuffer.Texture.SetName(_Name);
+                }
+            } else {
+                if (_GBuffer != null) {
+                    Coordinator.DisposeResource(_GBuffer);
+                    _GBuffer = null;
+                }
+            }
         }
 
         public string Name {
@@ -344,7 +358,8 @@ namespace Squared.Illuminant {
             Coordinator.DisposeResource(QuadIndexBuffer);
             if (_DistanceField != null)
                 Coordinator.DisposeResource(_DistanceField);
-            Coordinator.DisposeResource(GBuffer);
+            if (_GBuffer != null)
+                Coordinator.DisposeResource(_GBuffer);
             Coordinator.DisposeResource(_Lightmap);
             Coordinator.DisposeResource(_PreviousLuminance);
 
@@ -366,14 +381,12 @@ namespace Squared.Illuminant {
         private void ComputeUniforms () {
             EnvironmentUniforms = new Uniforms.Environment {
                 GroundZ = Environment.GroundZ,
-                ZToYMultiplier =
-                    Configuration.TwoPointFiveD
-                        ? Environment.ZToYMultiplier
-                        : 0.0f,
-                InvZToYMultiplier =
-                    Configuration.TwoPointFiveD
-                        ? 1f / Environment.ZToYMultiplier
-                        : 0.0f,
+                ZToYMultiplier = Configuration.TwoPointFiveD
+                    ? Environment.ZToYMultiplier
+                    : 0.0f,
+                InvZToYMultiplier = Configuration.TwoPointFiveD
+                    ? 1f / Environment.ZToYMultiplier
+                    : 0.0f,
                 RenderScale = Configuration.RenderScale
             };
         }
@@ -407,13 +420,22 @@ namespace Squared.Illuminant {
             ltrs.Material.Effect.Parameters["RampTexture"].SetValue(ltrs.Key.RampTexture);
         }
 
+        private void SetGBufferParameters (EffectParameterCollection p) {
+            // FIXME: RenderScale?
+            if (_GBuffer != null) {
+                p["GBufferTexelSize"].SetValue(_GBuffer.InverseSize);
+                p["GBuffer"].SetValue(_GBuffer.Texture);
+            } else {
+                p["GBufferTexelSize"].SetValue(Vector2.Zero);
+                p["GBuffer"].SetValue((Texture2D)null);
+            }
+        }
+
         private void SetLightShaderParameters (Material material, RendererQualitySettings q) {
             var effect = material.Effect;
             var p = effect.Parameters;
 
-            // FIXME: RenderScale?
-            p["GBufferTexelSize"].SetValue(GBuffer.InverseSize);
-            p["GBuffer"].SetValue(GBuffer.Texture);
+            SetGBufferParameters(p);
 
             var ub = Materials.GetUniformBinding<Uniforms.Environment>(material, "Environment");
             ub.Value.Current = EnvironmentUniforms;
@@ -639,9 +661,10 @@ namespace Squared.Illuminant {
             var ir = new ImperativeRenderer(container, Materials, layer);
             var sg = ir.MakeSubgroup(before: (dm, _) => {
                 // FIXME: RenderScale?
-                m.Effect.Parameters["GBufferTexelSize"].SetValue(GBuffer.InverseSize);
-                m.Effect.Parameters["GBuffer"].SetValue(GBuffer.Texture);
-                m.Effect.Parameters["InverseScaleFactor"].SetValue(
+                var p = m.Effect.Parameters;
+
+                SetGBufferParameters(p);
+                p["InverseScaleFactor"].SetValue(
                     hdr.HasValue
                         ? ((hdr.Value.InverseScaleFactor != 0) ? hdr.Value.InverseScaleFactor : 1.0f)
                         : 1.0f
@@ -908,7 +931,6 @@ namespace Squared.Illuminant {
             if (_DistanceField == null) {
                 dfu = new Uniforms.DistanceField();
                 dfu.Extent.Z = Environment.MaximumZ;
-                p["MaximumEncodedDistance"].SetValue(999f);
                 Materials.TrySetBoundUniform(m, "DistanceField", ref dfu);
                 if (setDistanceTexture)
                     p["DistanceFieldTexture"].SetValue((Texture2D)null);
@@ -918,43 +940,44 @@ namespace Squared.Illuminant {
             if (q == null)
                 q = Configuration.DefaultQuality;
 
-            p["MaximumEncodedDistance"].SetValue(_DistanceField.MaximumEncodedDistance);
-
             dfu = new Uniforms.DistanceField(_DistanceField, Environment.MaximumZ) {
-                OcclusionToOpacityPower = q.OcclusionToOpacityPower,
                 MaxConeRadius = q.MaxConeRadius,
                 ConeGrowthFactor = q.ConeGrowthFactor,
-                Step = new Vector3(
-                    (float)q.MaxStepCount,
-                    q.MinStepSize,
-                    q.LongStepFactor
-                )
+                OcclusionToOpacityPower = q.OcclusionToOpacityPower,
+                StepLimit = q.MaxStepCount,
+                MinimumLength = q.MinStepSize,
+                LongStepFactor = q.LongStepFactor
             };
 
             Materials.TrySetBoundUniform(m, "DistanceField", ref dfu);
 
             if (setDistanceTexture)
                 p["DistanceFieldTexture"].SetValue(_DistanceField.Texture);
+
+            p["MaximumEncodedDistance"].SetValue(_DistanceField.MaximumEncodedDistance);
         }
 
         public void InvalidateFields (
             // TODO: Maybe remove this since I'm not sure it's useful at all.
             Bounds3? region = null
         ) {
-            if (GBuffer != null)
-                GBuffer.Invalidate();
+            EnsureGBuffer();
+            if (_GBuffer != null)
+                _GBuffer.Invalidate();
             if (_DistanceField != null)
                 _DistanceField.Invalidate();
         }
 
         public void UpdateFields (IBatchContainer container, int layer) {
+            EnsureGBuffer();
+
             ComputeUniforms();
 
-            if (!GBuffer.IsValid) {
+            if ((_GBuffer != null) && !_GBuffer.IsValid) {
                 RenderGBuffer(ref layer, container);
 
                 if (Configuration.GBufferCaching)
-                    GBuffer.IsValid = true;
+                    _GBuffer.IsValid = true;
             }
 
             if ((_DistanceField != null) && (_DistanceField.InvalidSlices.Count > 0)) {
@@ -967,7 +990,7 @@ namespace Squared.Illuminant {
                 if (_DistanceField != null)
                     return _DistanceField.GetExtent3(Environment.MaximumZ);
                 else
-                    return Vector3.Zero;
+                    return new Vector3(0, 0, Environment.MaximumZ);
             }
         }
 
@@ -980,7 +1003,7 @@ namespace Squared.Illuminant {
             var renderHeight = (int)(Configuration.MaximumRenderSize.Second / Configuration.RenderScale.Y);
 
             using (var group = BatchGroup.ForRenderTarget(
-                resultGroup, layerIndex, GBuffer.Texture,
+                resultGroup, layerIndex, _GBuffer.Texture,
                 // FIXME: Optimize this
                 (dm, _) => {
                     Materials.PushViewTransform(ViewTransform.CreateOrthographic(
@@ -1610,9 +1633,10 @@ namespace Squared.Illuminant {
         // Setting this value too high can crash your video driver.
         public int  MaxFieldUpdatesPerFrame = 1;
 
-        public bool TwoPointFiveD           = false;
-        public bool GBufferCaching          = true;
-        public bool RenderGroundPlane       = true;
+        public bool EnableGBuffer     = true;
+        public bool GBufferCaching    = true;
+        public bool TwoPointFiveD     = false;
+        public bool RenderGroundPlane = true;
 
         public RendererConfiguration (
             int maxWidth, int maxHeight, bool highQuality,

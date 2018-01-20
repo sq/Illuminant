@@ -34,11 +34,11 @@ namespace TestGame.Scenes {
         bool ShowGBuffer       = false;
         bool ShowLightmap      = false;
         bool ShowDistanceField = false;
-        bool ShowHistogram     = true;
+        bool ShowHistogram     = false;
         bool UseRampTexture    = true;
         bool Timelapse         = false;
         bool TwoPointFiveD     = true;
-        bool Deterministic     = false;
+        bool Deterministic     = true;
 
         RendererQualitySettings DirectionalQuality;
 
@@ -132,6 +132,7 @@ namespace TestGame.Scenes {
                         OcclusionToOpacityPower = 0.7f,
                         MaxConeRadius = 24,
                     },
+                    EnableGBuffer = true
                 }
             ) {
                 DistanceField = DistanceField
@@ -273,7 +274,7 @@ namespace TestGame.Scenes {
                         ));
                 }
 
-                if (ShowGBuffer) {
+                if (ShowGBuffer && Renderer.Configuration.EnableGBuffer) {
                     using (var bb = BitmapBatch.New(
                         group, 4, Game.Materials.Get(
                             Game.Materials.ScreenSpaceBitmap,

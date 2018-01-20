@@ -62,6 +62,12 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <None Include="EnvironmentCommon.fxh">
+      <Name>EnvironmentCommon</Name>
+    </None>
+    <None Include="GBufferShaderCommon.fxh">
+      <Name>GBufferShaderCommon</Name>
+    </None>
     <None Include="LightCommon.fxh">
       <Name>LightCommon</Name>
       <Importer>EffectImporter</Importer>

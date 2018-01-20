@@ -1,19 +1,6 @@
 #include "..\..\..\Fracture\Squared\RenderLib\Content\ViewTransformCommon.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Content\GeometryCommon.fxh"
-
-#define SELF_OCCLUSION_HACK 1.5
-
-struct EnvironmentSettings {
-    float  GroundZ;
-    float  ZToYMultiplier;
-    float  InvZToYMultiplier;
-    float2 RenderScale;
-};
-
-uniform EnvironmentSettings Environment;
-
-// FIXME: Use the shared header?
-uniform float3 DistanceFieldExtent;
+#include "GBufferShaderCommon.fxh"
 
 void HeightVolumeVertexShader (
     in    float3   position      : POSITION0, // x, y, z
@@ -38,7 +25,7 @@ void HeightVolumeFaceVertexShader(
     // HACK: Offset away from the surface to prevent self occlusion
     worldPosition = position + (SELF_OCCLUSION_HACK * normal);
 
-    position.y -= Environment.ZToYMultiplier * position.z;
+    position.y -= getZToYMultiplier() * position.z;
     result = TransformPosition(float4(position.xy - Viewport.Position, 0, 1), 0);
     result.z = position.z / DistanceFieldExtent.z;
     dead = false;

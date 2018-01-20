@@ -1,19 +1,6 @@
 #include "..\..\..\Fracture\Squared\RenderLib\Content\ViewTransformCommon.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Content\GeometryCommon.fxh"
-
-#define SELF_OCCLUSION_HACK 1.5
-
-struct EnvironmentSettings {
-    float  GroundZ;
-    float  ZToYMultiplier;
-    float  InvZToYMultiplier;
-    float2 RenderScale;
-};
-
-uniform EnvironmentSettings Environment;
-
-// FIXME: Use the shared header?
-uniform float3 DistanceFieldExtent;
+#include "GBufferShaderCommon.fxh"
 
 Texture2D Mask : register(t0);
 sampler MaskSampler : register(s0) {
@@ -83,7 +70,7 @@ void GDataBillboardPixelShader(
     clip(alpha - discardThreshold);
 
     float yOffset = data.b * dataScale;
-    float effectiveZ = worldPosition.z + (yOffset * Environment.InvZToYMultiplier);
+    float effectiveZ = worldPosition.z + (yOffset * getInvZToYMultiplier());
 
     // HACK: We drop the world x axis and the normal y axis,
     //  and reconstruct those two values when sampling the g-buffer

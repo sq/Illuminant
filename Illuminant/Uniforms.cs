@@ -9,43 +9,124 @@ using Microsoft.Xna.Framework;
 namespace Squared.Illuminant.Uniforms {
     [StructLayout(LayoutKind.Sequential)]
     public struct Environment {
-        public float   GroundZ;
-        public float   ZToYMultiplier;
-        public float   InvZToYMultiplier;
+        // GroundZ, ZToYMultiplier, InvZToYMultiplier
+        private Vector3 _Z;
         public Vector2 RenderScale;
+
+        public float GroundZ {
+            get {
+                return _Z.X;
+            }
+            set {
+                _Z.X = value;
+            }
+        }
+
+        public float ZToYMultiplier {
+            get {
+                return _Z.Y;
+            }
+            set {
+                _Z.Y = value;
+            }
+        }
+
+        public float InvZToYMultiplier {
+            get {
+                return _Z.Z;
+            }
+            set {
+                _Z.Z = value;
+            }
+        }
     }
 
     [StructLayout(LayoutKind.Sequential)]
     public struct DistanceField {
-        // FIXME: I should move these to another uniform set
+        // MaxConeRadius, ConeGrowthFactor, OcclusionToOpacityPower, InvScaleFactor
+        private Vector4 _ConeAndMisc;
+        private Vector4 _TextureSliceAndTexelSize;
         // StepLimit, MinimumLength, LongStepFactor
-        public Vector3 Step;
-        public float   MaxConeRadius;
-        public float   ConeGrowthFactor;
-        public float   ShadowDistanceFalloff;
-        public float   OcclusionToOpacityPower;
-        public float   InvScaleFactor;
-
+        private Vector3 _Step;
         public Vector3 Extent;
         // X, Y, Total
         public Vector3 TextureSliceCount;
-        public Vector2 TextureSliceSize;
-        public Vector2 TextureTexelSize;
 
         // This does not initialize every member.
         public DistanceField (Squared.Illuminant.DistanceField df, float maximumZ) {
             Extent = df.GetExtent3(maximumZ);
-            TextureSliceSize = new Vector2(1f / df.ColumnCount, 1f / df.RowCount);
             TextureSliceCount = new Vector3(df.ColumnCount, df.RowCount, df.ValidSliceCount);
-            TextureTexelSize = new Vector2(
+            _TextureSliceAndTexelSize = new Vector4(
+                1f / df.ColumnCount, 1f / df.RowCount,
                 1f / (df.VirtualWidth * df.ColumnCount),
                 1f / (df.VirtualHeight * df.RowCount)
             );
-            InvScaleFactor = 1f / df.Resolution;
 
-            Step = Vector3.Zero;
-            MaxConeRadius = ConeGrowthFactor = ShadowDistanceFalloff =
-                OcclusionToOpacityPower = 0;
+            _Step = new Vector3(0, 0, 1);
+            _ConeAndMisc = new Vector4(0, 0, 0, 1f / df.Resolution);
+        }
+
+        public int StepLimit {
+            get {
+                return (int)_Step.X;
+            }
+            set {
+                _Step.X = value;
+            }
+        }
+
+        public float MinimumLength {
+            get {
+                return _Step.Y;
+            }
+            set {
+                _Step.Y = value;
+            }
+        }
+
+        public float LongStepFactor {
+            get {
+                return _Step.Z;
+            }
+            set {
+                _Step.Z = value;
+            }
+        }
+
+        public float MaxConeRadius {
+            get {
+                return _ConeAndMisc.X;
+            }
+            set {
+                _ConeAndMisc.X = value;
+            }
+        }
+
+        public float ConeGrowthFactor {
+            get {
+                return _ConeAndMisc.Y;
+            }
+            set {
+                _ConeAndMisc.Y = value;
+            }
+        }
+
+        public float OcclusionToOpacityPower {
+            get {
+                return _ConeAndMisc.Z;
+            }
+            set {
+                _ConeAndMisc.Z = value;
+            }
+        }
+
+        public float InvScaleFactor {
+            get {
+                return _ConeAndMisc.W;
+            }
+            set {
+                _ConeAndMisc.W = value;
+            }
         }
     }
 }

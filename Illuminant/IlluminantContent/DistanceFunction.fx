@@ -18,7 +18,7 @@ void DistanceFunctionVertexShader(
 }
 
 float2 getPositionXy (in float2 vpos) {
-    vpos *= DistanceField.InvScaleFactor;
+    vpos *= getInvScaleFactor();
     vpos += Viewport.Position;
     return vpos;
 }

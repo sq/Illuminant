@@ -20,7 +20,7 @@ void SphereLightVertexShader(
     float  radius = lightProperties.x + lightProperties.y + 1;
     float3 radius3 = float3(radius, radius, 0);
     float3 tl = lightCenter - radius3, br = lightCenter + radius3;
-    tl.y -= radius * Environment.InvZToYMultiplier;
+    tl.y -= radius * getInvZToYMultiplier();
     worldPosition = lerp(tl, br, float3(cornerWeight, 0));
 
     float3 screenPosition = (worldPosition - float3(Viewport.Position.xy, 0));
@@ -76,7 +76,7 @@ float SphereLightPixelCore(
     if (traceShadows) {
         lightOpacity *= coneTrace(
             lightCenter, lightProperties.xy, 
-            float2(DistanceField.ConeGrowthFactor, moreLightProperties.y),
+            float2(getConeGrowthFactor(), moreLightProperties.y),
             shadedPixelPosition + (SELF_OCCLUSION_HACK * shadedPixelNormal),
             vars
         );
