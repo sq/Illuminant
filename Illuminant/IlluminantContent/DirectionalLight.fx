@@ -50,7 +50,7 @@ float DirectionalLightPixelCore(
     DistanceFieldConstants vars = makeDistanceFieldConstants();
 
     [branch]
-    if ((moreLightProperties.x >= 0.5) && visible) {
+    if ((moreLightProperties.x >= 0.5) && (DistanceField.Extent.x > 0) && visible) {
         float distance = sampleDistanceField(shadedPixelPosition, vars);
         float aoRamp = clamp(distance / moreLightProperties.x, 0, 1);
         lightOpacity *= aoRamp;

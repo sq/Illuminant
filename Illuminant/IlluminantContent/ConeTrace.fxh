@@ -80,7 +80,7 @@ float coneTrace(
     a = TRACE_INITIAL_OFFSET_PX;
     b = traceLength;
 
-    bool abort = false;
+    bool abort = DistanceField.Extent.x <= 0;
     float stepCount = 0;
     float visibility = 1.0;
 

@@ -64,7 +64,7 @@ float SphereLightPixelCore(
         lightOpacity = SampleFromRamp(lightOpacity);
 
     [branch]
-    if ((moreLightProperties.x >= 0.5) && visible) {
+    if ((moreLightProperties.x >= 0.5) && (DistanceField.Extent.x > 0) && visible) {
         float distance = sampleDistanceField(shadedPixelPosition, vars);
         float aoRamp = clamp(distance / moreLightProperties.x, 0, 1);
         lightOpacity *= aoRamp;
@@ -92,7 +92,7 @@ float SphereLightPixelCore(
     if (visible) {
         return lightOpacity;
     } else {
-        discard;
+        // discard;
         return 0;
     }
 }

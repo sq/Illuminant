@@ -98,6 +98,9 @@ float sampleDistanceField (
     float3 position, 
     DistanceFieldConstants vars
 ) {
+    if (DistanceField.Extent.x <= 0)
+        return DISTANCE_MAX;
+
     // Interpolate between two Z samples. The xy interpolation is done by the GPU for us.
     // linear [0-1] -> [0-NumZSlices)
     float slicePosition = clamp(position.z * vars.zToSliceIndex, 0, vars.sliceCountZMinus1);

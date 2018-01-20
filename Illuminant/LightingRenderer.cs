@@ -312,8 +312,6 @@ namespace Squared.Illuminant {
                 return _DistanceField;
             }
             set {
-                if (value == null)
-                    throw new ArgumentNullException("DistanceField");
                 _DistanceField = value;
             }
         }
@@ -344,7 +342,8 @@ namespace Squared.Illuminant {
                 kvp.Value.Dispose();
 
             Coordinator.DisposeResource(QuadIndexBuffer);
-            Coordinator.DisposeResource(DistanceField);
+            if (_DistanceField != null)
+                Coordinator.DisposeResource(_DistanceField);
             Coordinator.DisposeResource(GBuffer);
             Coordinator.DisposeResource(_Lightmap);
             Coordinator.DisposeResource(_PreviousLuminance);
@@ -365,9 +364,6 @@ namespace Squared.Illuminant {
         }
 
         private void ComputeUniforms () {
-            if (DistanceField == null)
-                throw new NullReferenceException("DistanceField");
-
             EnvironmentUniforms = new Uniforms.Environment {
                 GroundZ = Environment.GroundZ,
                 ZToYMultiplier =
@@ -756,6 +752,9 @@ namespace Squared.Illuminant {
             Vector3? lightColor = null,
             Vector3? lightDirection = null
         ) {
+            if (_DistanceField == null)
+                return new VisualizationInfo();
+
             ComputeUniforms();
 
             var tl = new Vector3(rectangle.TopLeft, 0);
@@ -764,8 +763,8 @@ namespace Squared.Illuminant {
             var br = new Vector3(rectangle.BottomRight, 0);
 
             var extent = new Vector3(
-                DistanceField.VirtualWidth,
-                DistanceField.VirtualHeight,
+                _DistanceField.VirtualWidth,
+                _DistanceField.VirtualHeight,
                 Environment.MaximumZ
             );
             var center = extent * 0.5f;
@@ -901,14 +900,27 @@ namespace Squared.Illuminant {
             Material m, bool setDistanceTexture,
             RendererQualitySettings q
         ) {
+            Uniforms.DistanceField dfu;
+            var p = m.Effect.Parameters;
+
+            Materials.TrySetBoundUniform(m, "Environment", ref EnvironmentUniforms);
+
+            if (_DistanceField == null) {
+                dfu = new Uniforms.DistanceField();
+                dfu.Extent.Z = Environment.MaximumZ;
+                p["MaximumEncodedDistance"].SetValue(999f);
+                Materials.TrySetBoundUniform(m, "DistanceField", ref dfu);
+                if (setDistanceTexture)
+                    p["DistanceFieldTexture"].SetValue((Texture2D)null);
+                return;
+            }
+
             if (q == null)
                 q = Configuration.DefaultQuality;
 
-            var p = m.Effect.Parameters;
+            p["MaximumEncodedDistance"].SetValue(_DistanceField.MaximumEncodedDistance);
 
-            p["MaximumEncodedDistance"].SetValue(DistanceField.MaximumEncodedDistance);
-
-            var dfu = new Uniforms.DistanceField(DistanceField, Environment.MaximumZ) {
+            dfu = new Uniforms.DistanceField(_DistanceField, Environment.MaximumZ) {
                 OcclusionToOpacityPower = q.OcclusionToOpacityPower,
                 MaxConeRadius = q.MaxConeRadius,
                 ConeGrowthFactor = q.ConeGrowthFactor,
@@ -920,10 +932,9 @@ namespace Squared.Illuminant {
             };
 
             Materials.TrySetBoundUniform(m, "DistanceField", ref dfu);
-            Materials.TrySetBoundUniform(m, "Environment", ref EnvironmentUniforms);
 
             if (setDistanceTexture)
-                p["DistanceFieldTexture"].SetValue(DistanceField.Texture);
+                p["DistanceFieldTexture"].SetValue(_DistanceField.Texture);
         }
 
         public void InvalidateFields (
@@ -932,8 +943,8 @@ namespace Squared.Illuminant {
         ) {
             if (GBuffer != null)
                 GBuffer.Invalidate();
-            if (DistanceField != null)
-                DistanceField.Invalidate();
+            if (_DistanceField != null)
+                _DistanceField.Invalidate();
         }
 
         public void UpdateFields (IBatchContainer container, int layer) {
@@ -946,14 +957,17 @@ namespace Squared.Illuminant {
                     GBuffer.IsValid = true;
             }
 
-            if (DistanceField.InvalidSlices.Count > 0) {
+            if ((_DistanceField != null) && (_DistanceField.InvalidSlices.Count > 0)) {
                 RenderDistanceField(ref layer, container);
             }
         }
 
         private Vector3 Extent3 {
             get {
-                return DistanceField.GetExtent3(Environment.MaximumZ);
+                if (_DistanceField != null)
+                    return _DistanceField.GetExtent3(Environment.MaximumZ);
+                else
+                    return Vector3.Zero;
             }
         }
 
@@ -1198,18 +1212,21 @@ namespace Squared.Illuminant {
             }
         }
 
-        private void RenderDistanceField (ref int layerIndex, IBatchContainer resultGroup) {           
-            int sliceCount = DistanceField.SliceCount;
+        private void RenderDistanceField (ref int layerIndex, IBatchContainer resultGroup) {
+            if (_DistanceField == null)
+                return;
+
+            int sliceCount = _DistanceField.SliceCount;
             int slicesToUpdate =
                 Math.Min(
                     Configuration.MaxFieldUpdatesPerFrame,
-                    DistanceField.InvalidSlices.Count
+                    _DistanceField.InvalidSlices.Count
                 );
             if (slicesToUpdate <= 0)
                 return;
 
             using (var rtGroup = BatchGroup.ForRenderTarget(
-                resultGroup, layerIndex++, DistanceField.Texture,
+                resultGroup, layerIndex++, _DistanceField.Texture,
                 // HACK: Since we're mucking with view transforms, do a save and restore
                 (dm, _) => {
                     Materials.PushViewTransform(Materials.ViewTransform);
@@ -1221,7 +1238,7 @@ namespace Squared.Illuminant {
                 // We incrementally do a partial update of the distance field.
                 int layer = 0;
                 while (slicesToUpdate > 0) {
-                    var slice = DistanceField.InvalidSlices[0];
+                    var slice = _DistanceField.InvalidSlices[0];
                     var physicalSlice = slice / PackedSliceCount;
 
                     RenderDistanceFieldSliceTriplet(
@@ -1234,25 +1251,27 @@ namespace Squared.Illuminant {
         }
 
         private float SliceIndexToZ (int slice) {
-            float sliceZ = (slice / Math.Max(1, (float)(DistanceField.SliceCount - 1)));
+            float sliceZ = (slice / Math.Max(1, (float)(_DistanceField.SliceCount - 1)));
             return sliceZ * Environment.MaximumZ;
         }
 
         private void RenderDistanceFieldSliceTriplet (
             BatchGroup rtGroup, int physicalSliceIndex, int firstVirtualSliceIndex, ref int layer
         ) {
+            var df = _DistanceField;
+
             var interior = IlluminantMaterials.DistanceFieldInterior;
             var exterior = IlluminantMaterials.DistanceFieldExterior;
 
-            var sliceX = (physicalSliceIndex % DistanceField.ColumnCount) * DistanceField.SliceWidth;
-            var sliceY = (physicalSliceIndex / DistanceField.ColumnCount) * DistanceField.SliceHeight;
-            var sliceXVirtual = (physicalSliceIndex % DistanceField.ColumnCount) * DistanceField.VirtualWidth;
-            var sliceYVirtual = (physicalSliceIndex / DistanceField.ColumnCount) * DistanceField.VirtualHeight;
+            var sliceX = (physicalSliceIndex % df.ColumnCount) * df.SliceWidth;
+            var sliceY = (physicalSliceIndex / df.ColumnCount) * df.SliceHeight;
+            var sliceXVirtual = (physicalSliceIndex % df.ColumnCount) * df.VirtualWidth;
+            var sliceYVirtual = (physicalSliceIndex / df.ColumnCount) * df.VirtualHeight;
 
             var viewTransform = ViewTransform.CreateOrthographic(
                 0, 0, 
-                (int)Math.Ceiling(DistanceField.VirtualWidth * DistanceField.ColumnCount), 
-                (int)Math.Ceiling(DistanceField.VirtualHeight * DistanceField.RowCount)
+                (int)Math.Ceiling(df.VirtualWidth * df.ColumnCount), 
+                (int)Math.Ceiling(df.VirtualHeight * df.RowCount)
             );
             viewTransform.Position = new Vector2(-sliceXVirtual, -sliceYVirtual);
 
@@ -1260,7 +1279,7 @@ namespace Squared.Illuminant {
                 (dm, _) => {
                     // TODO: Optimize this
                     dm.Device.ScissorRectangle = new Rectangle(
-                        sliceX, sliceY, DistanceField.SliceWidth, DistanceField.SliceHeight
+                        sliceX, sliceY, df.SliceWidth, df.SliceHeight
                     );
 
                     Materials.ApplyViewTransformToMaterial(IlluminantMaterials.ClearDistanceFieldSlice, ref viewTransform);
@@ -1293,9 +1312,9 @@ namespace Squared.Illuminant {
 
                 // FIXME: Slow
                 for (var i = firstVirtualSliceIndex; i <= lastVirtualSliceIndex; i++)
-                    DistanceField.InvalidSlices.Remove(i);
+                    df.InvalidSlices.Remove(i);
 
-                DistanceField.ValidSliceCount = Math.Max(DistanceField.ValidSliceCount, lastVirtualSliceIndex + 1);
+                df.ValidSliceCount = Math.Max(df.ValidSliceCount, lastVirtualSliceIndex + 1);
 
                 if (RenderTrace.EnableTracing)
                     RenderTrace.Marker(group, 9999, "LightingRenderer {0} : End Distance Field Slices [{1}-{2}]", this.ToObjectID(), firstVirtualSliceIndex, lastVirtualSliceIndex);
@@ -1405,9 +1424,9 @@ namespace Squared.Illuminant {
 
             var verts = new VertexPositionColor[] {
                 new VertexPositionColor(new Vector3(0, 0, 0), color),
-                new VertexPositionColor(new Vector3(DistanceField.VirtualWidth, 0, 0), color),
-                new VertexPositionColor(new Vector3(DistanceField.VirtualWidth, DistanceField.VirtualHeight, 0), color),
-                new VertexPositionColor(new Vector3(0, DistanceField.VirtualHeight, 0), color)
+                new VertexPositionColor(new Vector3(_DistanceField.VirtualWidth, 0, 0), color),
+                new VertexPositionColor(new Vector3(_DistanceField.VirtualWidth, _DistanceField.VirtualHeight, 0), color),
+                new VertexPositionColor(new Vector3(0, _DistanceField.VirtualHeight, 0), color)
             };
 
             using (var batch = PrimitiveBatch<VertexPositionColor>.New(
@@ -1438,9 +1457,9 @@ namespace Squared.Illuminant {
 
             // todo: shrink these per-instance?
             var tl = new Vector3(0, 0, 0);
-            var tr = new Vector3(DistanceField.VirtualWidth, 0, 0);
-            var br = new Vector3(DistanceField.VirtualWidth, DistanceField.VirtualHeight, 0);
-            var bl = new Vector3(0, DistanceField.VirtualHeight, 0);
+            var tr = new Vector3(_DistanceField.VirtualWidth, 0, 0);
+            var br = new Vector3(_DistanceField.VirtualWidth, _DistanceField.VirtualHeight, 0);
+            var bl = new Vector3(0, _DistanceField.VirtualHeight, 0);
 
             var numTypes    = (int)LightObstructionType.MAX + 1;
             var batches     = new NativeBatch[numTypes];
@@ -1497,7 +1516,7 @@ namespace Squared.Illuminant {
                         primCount[type] += 2;
 
                         // See definition of DISTANCE_MAX in DistanceFieldCommon.fxh
-                        float offset = DistanceField.MaximumEncodedDistance + 1;
+                        float offset = _DistanceField.MaximumEncodedDistance + 1;
 
                         tl = new Vector3(item.Center.X - item.Size.X - offset, item.Center.Y - item.Size.Y - offset, 0);
                         br = new Vector3(item.Center.X + item.Size.X + offset, item.Center.Y + item.Size.Y + offset, 0);
