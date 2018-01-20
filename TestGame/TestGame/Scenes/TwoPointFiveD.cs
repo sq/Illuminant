@@ -27,18 +27,20 @@ namespace TestGame.Scenes {
         float LightZ;
 
         const int MultisampleCount = 0;
-        const int LightmapScaleRatio = 1;
         const int MaxStepCount = 128;
         const float LightScaleFactor = 4;
 
-        bool ShowGBuffer       = false;
-        bool ShowLightmap      = false;
-        bool ShowDistanceField = false;
-        bool ShowHistogram     = false;
-        bool UseRampTexture    = true;
-        bool Timelapse         = false;
-        bool TwoPointFiveD     = true;
-        bool Deterministic     = true;
+        Toggle ShowGBuffer,
+            ShowLightmap,
+            ShowDistanceField,
+            ShowHistogram,
+            UseRampTexture,
+            Timelapse,
+            TwoPointFiveD,
+            Deterministic;
+
+        Slider DistanceFieldResolution,
+            LightmapScaleRatio;
 
         RendererQualitySettings DirectionalQuality;
 
@@ -50,6 +52,37 @@ namespace TestGame.Scenes {
 
             Histogram = new Histogram(4f, 2f);
             NextHistogram = new Histogram(4f, 2f);
+
+            Deterministic.Value = true;
+            ShowHistogram.Value = true;
+            UseRampTexture.Value = true;
+            TwoPointFiveD.Value = true;
+            DistanceFieldResolution.Value = 0.3f;
+            LightmapScaleRatio.Value = 1.0f;
+
+            ShowLightmap.Key = Keys.L;
+            ShowGBuffer.Key = Keys.G;
+            TwoPointFiveD.Key = Keys.D2;
+            TwoPointFiveD.Changed += (s, e) => Renderer.InvalidateFields();
+            Timelapse.Key = Keys.T;
+            ShowDistanceField.Key = Keys.D;
+            ShowHistogram.Key = Keys.H;
+            UseRampTexture.Key = Keys.P;
+            Deterministic.Key = Keys.R;
+
+            DistanceFieldResolution.MinusKey = Keys.D3;
+            DistanceFieldResolution.PlusKey = Keys.D4;
+            DistanceFieldResolution.Min = 0.1f;
+            DistanceFieldResolution.Max = 1.0f;
+            DistanceFieldResolution.Speed = 0.05f;
+
+            LightmapScaleRatio.MinusKey = Keys.D6;
+            LightmapScaleRatio.PlusKey = Keys.D7;
+            LightmapScaleRatio.Min = 0.05f;
+            LightmapScaleRatio.Max = 1.0f;
+            LightmapScaleRatio.Speed = 0.1f;
+
+            DistanceFieldResolution.Changed += (s, e) => CreateDistanceField();
         }
 
         private void CreateRenderTargets () {
@@ -105,26 +138,36 @@ namespace TestGame.Scenes {
             Rect(center - baseSizeTL, center + baseSizeBR, (totalHeight - capHeight) * 128, capHeight * 128);
         }
 
+        private void CreateDistanceField () {
+            if (DistanceField != null) {
+                Game.RenderCoordinator.DisposeResource(DistanceField);
+                DistanceField = null;
+            }
+
+            DistanceField = new DistanceField(
+                Game.RenderCoordinator, 1024, 1024, Environment.MaximumZ,
+                64, DistanceFieldResolution.Value
+            );
+            if (Renderer != null) {
+                Renderer.DistanceField = DistanceField;
+                Renderer.InvalidateFields();
+            }
+        }
+
         public override void LoadContent () {
             Environment = new LightingEnvironment();
 
             Environment.GroundZ = 0;
             Environment.MaximumZ = 128;
             Environment.ZToYMultiplier = 2.5f;
-
-            DistanceField = new DistanceField(
-                Game.RenderCoordinator, 1024, 1024, Environment.MaximumZ,
-                64, 0.33f
-            );
-
+            
             Background = Game.Content.Load<Texture2D>("sc3test");
 
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(
-                    1024 / LightmapScaleRatio, 1024 / LightmapScaleRatio, true, true
+                    1024, 1024, true, true
                 ) {
-                    RenderScale = Vector2.One * (1.0f / LightmapScaleRatio),
                     MaxFieldUpdatesPerFrame = 6,
                     DefaultQuality = {
                         MinStepSize = 1f,
@@ -134,9 +177,9 @@ namespace TestGame.Scenes {
                     },
                     EnableGBuffer = true
                 }
-            ) {
-                DistanceField = DistanceField
-            };
+            );
+
+            CreateDistanceField();
 
             MovableLight = new SphereLightSource {
                 Position = new Vector3(64, 64, 0.7f),
@@ -192,6 +235,11 @@ namespace TestGame.Scenes {
             CreateRenderTargets();
 
             Renderer.Configuration.TwoPointFiveD = TwoPointFiveD;
+            Renderer.Configuration.RenderScale = Vector2.One * LightmapScaleRatio;
+            Renderer.Configuration.RenderSize = new Pair<int>(
+                (int)(Renderer.Configuration.MaximumRenderSize.First * LightmapScaleRatio),
+                (int)(Renderer.Configuration.MaximumRenderSize.Second * LightmapScaleRatio)
+            );
 
             Renderer.InvalidateFields();
             Renderer.UpdateFields(frame, -2);
@@ -305,33 +353,7 @@ namespace TestGame.Scenes {
         public override void Update (GameTime gameTime) {
             if (Game.IsActive) {
                 const float step = 0.1f;
-
-                if (KeyWasPressed(Keys.L))
-                    ShowLightmap = !ShowLightmap;
-
-                if (KeyWasPressed(Keys.G))
-                    ShowGBuffer = !ShowGBuffer;
-
-                if (KeyWasPressed(Keys.D2)) {
-                    TwoPointFiveD = !TwoPointFiveD;
-                    Renderer.InvalidateFields();
-                }
-
-                if (KeyWasPressed(Keys.T))
-                    Timelapse = !Timelapse;
-
-                if (KeyWasPressed(Keys.D))
-                    ShowDistanceField = !ShowDistanceField;
-
-                if (KeyWasPressed(Keys.H))
-                    ShowHistogram = !ShowHistogram;
-
-                if (KeyWasPressed(Keys.P))
-                    UseRampTexture = !UseRampTexture;
-
-                if (KeyWasPressed(Keys.R))
-                    Deterministic = !Deterministic;
-
+                
                 var time = (float)Time.Seconds;
 
                 Renderer.Configuration.DefaultQuality.MaxStepCount =

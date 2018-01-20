@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using Microsoft.Xna.Framework;
@@ -31,7 +32,7 @@ namespace TestGame {
         public Texture2D RampTexture;
 
         public readonly Scene[] Scenes;
-        public int ActiveSceneIndex = 0;
+        public int ActiveSceneIndex = 1;
 
         private int LastPerformanceStatPrimCount = 0;
 
@@ -106,6 +107,7 @@ namespace TestGame {
                 }
             }
 
+            Scenes[ActiveSceneIndex].UpdateSettings();
             Scenes[ActiveSceneIndex].Update(gameTime);
 
             PerformanceStats.Record(this);
@@ -130,6 +132,8 @@ namespace TestGame {
                 worldSpace: false,
                 layer: 9999
             );
+
+            Scenes[ActiveSceneIndex].DrawSettings(frame, 9998);
 
             DrawPerformanceStats(ref ir);
         }
@@ -159,6 +163,8 @@ namespace TestGame {
     }
 
     public abstract class Scene {
+        internal List<ISetting> Settings = new List<ISetting>();
+
         public readonly TestGame Game;
         public readonly int Width, Height;
 
@@ -166,14 +172,134 @@ namespace TestGame {
             Game = game;
             Width = width;
             Height = height;
+
+            var tSetting = typeof(ISetting);
+            foreach (var f in GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)) {
+                if (!tSetting.IsAssignableFrom(f.FieldType))
+                    continue;
+
+                var setting = (ISetting)Activator.CreateInstance(f.FieldType);
+                setting.Name = f.Name;
+                Settings.Add(setting);
+                f.SetValue(this, setting);
+            }
         }
 
         public abstract void LoadContent ();
         public abstract void Draw (Frame frame);
         public abstract void Update (GameTime gameTime);
 
-        protected bool KeyWasPressed (Keys key) {
+        public void UpdateSettings () {
+            foreach (var s in Settings)
+                s.Update(this);
+        }
+
+        public void DrawSettings (IBatchContainer container, int layer) {
+            float scale = 0.75f;
+
+            var count = Settings.Count;
+            var lineHeight = Game.Font.LineSpacing * scale;
+
+            var ir = new ImperativeRenderer(
+                container, Game.Materials, 
+                blendState: BlendState.AlphaBlend, 
+                depthStencilState: DepthStencilState.None, 
+                rasterizerState: RasterizerState.CullNone,
+                worldSpace: false,
+                layer: layer
+            );
+
+            float y = Game.Graphics.PreferredBackBufferHeight - (count * lineHeight) - 10;
+            foreach (var s in Settings) {
+                ir.DrawString(Game.Font, s.ToString(), new Vector2(10, y), scale: scale);
+
+                y += lineHeight;
+            }
+        }
+
+        internal bool KeyWasPressed (Keys key) {
             return Game.KeyboardState.IsKeyDown(key) && Game.PreviousKeyboardState.IsKeyUp(key);
+        }
+    }
+
+    public interface ISetting {
+        void Update (Scene s);
+        string Name { get; set; }
+    }
+
+    public abstract class Setting<T> : ISetting
+        where T : IEquatable<T>
+    {
+        public event EventHandler<T> Changed;
+        public string Name { get; set; }
+        protected T _Value;
+
+        public virtual T Value { 
+            get { return _Value; }
+            set {
+                if (!_Value.Equals(value)) {
+                    _Value = value;
+                    if (Changed != null)
+                        Changed(this, value);
+                }
+            }
+        }
+
+        public abstract void Update (Scene s);
+
+        public static implicit operator T (Setting<T> setting) {
+            return setting.Value;
+        }
+    }
+
+    public class Toggle : Setting<bool> {
+        public Keys Key;
+
+        public override void Update (Scene s) {
+            if (s.KeyWasPressed(Key))
+                Value = !Value;
+        }
+
+        public override string ToString () {
+            return string.Format("{0,-2} {1} {2}", Key, Value ? "+" : "-", Name);
+        }
+    }
+
+    public class Slider : Setting<float> {
+        public Keys MinusKey, PlusKey;
+        public float? Min, Max;
+        public float Speed = 1;        
+
+        public override void Update (Scene s) {
+            float delta = 0;
+
+            if (s.KeyWasPressed(MinusKey))
+                delta = -Speed;
+            else if (s.KeyWasPressed(PlusKey))
+                delta = Speed;
+            else
+                return;
+
+            var newValue = Value + delta;
+            if (Min.HasValue)
+                newValue = Math.Max(newValue, Min.Value);
+            if (Max.HasValue)
+                newValue = Math.Min(newValue, Max.Value);
+
+            if (Value == newValue)
+                return;
+
+            Value = newValue;
+        }
+
+        public override string ToString () {
+            string formattedValue;
+            if (Speed < 1) {
+                formattedValue = string.Format("{0:00.000}", Value);
+            } else {
+                formattedValue = string.Format("{0:00000}", Value);
+            }
+            return string.Format("{0,-2} {1} {2:0} {3,2}", MinusKey, Name, formattedValue, PlusKey);
         }
     }
 }
