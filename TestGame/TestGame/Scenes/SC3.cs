@@ -143,13 +143,11 @@ namespace TestGame.Scenes {
         const float LowPercentile = 60, HighPercentile = 94.5f, WhitePercentile = 97.5f;
 
         object HistogramLock = new object();
-        Histogram Histogram, NextHistogram;
+        Histogram Histogram = null;
+        List<Histogram> UnusedHistograms = new List<Histogram>();
 
         public SC3 (TestGame game, int width, int height)
             : base(game, 1396, 768) {
-
-            Histogram = new Histogram(4f, 2f);
-            NextHistogram = new Histogram(4f, 2f);
         }
 
         private void CreateRenderTargets () {
@@ -414,20 +412,35 @@ namespace TestGame.Scenes {
             var lighting = Renderer.RenderLighting(frame, layer, 1.0f / HDRRangeFactor);
             var foregroundLighting = ForegroundRenderer.RenderLighting(frame, layer++, 1.0f / HDRRangeFactor);
 
-            lighting.TryComputeHistogram(
-                NextHistogram, 
-                (h) => {
-                    lock (HistogramLock) {
-                        if (h != NextHistogram)
-                            return;
-
-                        NextHistogram = Histogram;
-                        Histogram = h;
-
-                        UpdateHDR(h);
-                    }
+            Histogram newHistogram = null;
+            lock (HistogramLock) {
+                if (UnusedHistograms.Count > 0) {
+                    newHistogram = UnusedHistograms[0];
+                    UnusedHistograms.RemoveAt(0);
                 }
-            );
+
+                if (newHistogram == null)
+                    newHistogram = new Histogram(4f, 2);
+
+                lighting.TryComputeHistogram(
+                    newHistogram, 
+                    (h) => {
+                        h.Lock.EnterReadLock();
+                        try {
+                            UpdateHDR(h);
+                        } finally {
+                            h.Lock.ExitReadLock();
+                        }
+
+                        lock (HistogramLock) {
+                            var oldHistogram = Histogram;
+                            Histogram = h;
+                            if (oldHistogram != null)
+                                UnusedHistograms.Add(oldHistogram);
+                        }
+                    }
+                );
+            }
 
             using (var bg = BatchGroup.ForRenderTarget(
                 frame, layer++, Lightmap,
@@ -590,20 +603,24 @@ namespace TestGame.Scenes {
 
                 if (ShowHistogram) {
                     Histogram h;
-                    lock (HistogramLock)
+                    lock (HistogramLock) {
                         h = Histogram;
 
-                    var visualizer = new HistogramVisualizer {
-                        Materials = Game.Materials,
-                        Bounds = Bounds.FromPositionAndSize(new Vector2(10, Height - 40), new Vector2(Width - 20, 340)),                        
-                    };
-                    float min, max;
-                    visualizer.GetRangeFromToneMapParameters(hdrConfiguration, out min, out max);
-                    visualizer.Draw(
-                        group, 5, h, 
-                        new[] { LowPercentile, HighPercentile, WhitePercentile },
-                        min, max
-                    );
+                        if (h != null) {
+                            var visualizer = new HistogramVisualizer {
+                                Materials = Game.Materials,
+                                Bounds = Bounds.FromPositionAndSize(new Vector2(10, Height - 40), new Vector2(Width - 20, 340)),                        
+                            };
+                            float min, max;
+                            visualizer.GetRangeFromToneMapParameters(hdrConfiguration, out min, out max);
+
+                            visualizer.Draw(
+                                group, 5, h, 
+                                new[] { LowPercentile, HighPercentile, WhitePercentile },
+                                min, max
+                            );
+                        }
+                    }
                 }
 
                 var ir = new ImperativeRenderer(

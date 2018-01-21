@@ -17,6 +17,7 @@ using Squared.Game;
 using Squared.Illuminant;
 using Squared.Render;
 using Squared.Render.Convenience;
+using Squared.Render.Text;
 using Squared.Util;
 using TestGame.Scenes;
 using ThreefoldTrials.Framework;
@@ -210,11 +211,22 @@ namespace TestGame {
             );
 
             float y = Game.Graphics.PreferredBackBufferHeight - (count * lineHeight) - 10;
-            foreach (var s in Settings) {
-                ir.DrawString(Game.Font, s.ToString(), new Vector2(10, y), scale: scale);
+            var sle = new StringLayoutEngine {
+                position = new Vector2(10, y),
+                scale = scale,
+                color = Color.White
+            };
 
-                y += lineHeight;
+            sle.Initialize();
+
+            var gs = new SpriteFontGlyphSource(Game.Font);
+            foreach (var s in Settings) {
+                sle.AppendText(gs, s.ToString());
+                sle.AppendText(gs, Environment.NewLine);
             }
+
+            var sl = sle.Finish();
+            ir.DrawMultiple(sl.DrawCalls);
         }
 
         internal bool KeyWasPressed (Keys key) {
@@ -299,7 +311,7 @@ namespace TestGame {
             } else {
                 formattedValue = string.Format("{0:00000}", Value);
             }
-            return string.Format("{0,-2} {1} {2:0} {3,2}", MinusKey, Name, formattedValue, PlusKey);
+            return string.Format("{0,-2} {1:0} {2} {3,2}", MinusKey, formattedValue, Name, PlusKey);
         }
     }
 }

@@ -331,8 +331,7 @@ namespace TestGame.Scenes {
                         Materials = Game.Materials,
                         Bounds = Bounds.FromPositionAndSize(new Vector2(Width + 10, 10), new Vector2(600, 800))
                     };
-                    lock (Histogram)
-                        visualizer.Draw(group, 5, Histogram, new[] { 40.0f, 90.0f });
+                    visualizer.Draw(group, 5, Histogram, new[] { 40.0f, 90.0f });
                 }
             }
         }

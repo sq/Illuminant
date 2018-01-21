@@ -46,6 +46,8 @@ namespace Squared.Illuminant {
 
         public bool IgnoreZeroes;
 
+        public readonly ReaderWriterLockSlim Lock = new ReaderWriterLockSlim();
+
         private float Sum;
 
         public Histogram (float maxValue, float power, int bucketCount = 64, bool ignoreZeroes = false) {
@@ -70,7 +72,7 @@ namespace Squared.Illuminant {
             pMaxValues = (float*)MaxValuePin.AddrOfPinnedObject();
             pStates = (BucketState*)StatesPin.AddrOfPinnedObject();
 
-            Clear();
+            Clear(false);
         }
 
         public void Dispose () {
@@ -81,6 +83,13 @@ namespace Squared.Illuminant {
         }
 
         public void Clear () {
+            Clear(true);
+        }
+
+        private void Clear (bool enforceLocking) {
+            if (enforceLocking && !Lock.IsWriteLockHeld)
+                throw new InvalidOperationException();
+
             SampleCount = 0;
             Min = 0;
             Max = 0;
@@ -115,6 +124,9 @@ namespace Squared.Illuminant {
         }
 
         public bool GetPercentile (float percent, out int bucketIndex, out float value) {
+            if (!Lock.IsReadLockHeld)
+                throw new InvalidOperationException();
+
             if ((SampleCount < 1) || (percent < 0) || (percent > 100)) {
                 bucketIndex = 0;
                 value = 0;
@@ -142,6 +154,9 @@ namespace Squared.Illuminant {
         }
 
         public void Add (float[] buffer, int count, float scaleFactor) {
+            if (!Lock.IsWriteLockHeld)
+                throw new InvalidOperationException();
+
             if (count > buffer.Length)
                 throw new ArgumentException("count");
 
@@ -185,9 +200,13 @@ namespace Squared.Illuminant {
             Max = max;
         }
 
-        public IEnumerable<Bucket> Buckets {
+        public Bucket[] Buckets {
             get {
+                if (!Lock.IsReadLockHeld)
+                    throw new InvalidOperationException();
+
                 float minValue;
+                var buckets = new Bucket[BucketCount];
                 for (int i = 0; i < BucketCount; i++) {
                     if (i > 0)
                         minValue = BucketMaxValues[i - 1];
@@ -196,7 +215,7 @@ namespace Squared.Illuminant {
 
                     var state = States[i];
 
-                    yield return new Bucket {
+                    buckets[i] = new Bucket {
                         BucketStart = minValue,
                         BucketEnd = BucketMaxValues[i],
                         Count = state.Count,
@@ -205,6 +224,8 @@ namespace Squared.Illuminant {
                         Mean = state.Count > 0 ? state.Sum / state.Count : 0
                     };
                 }
+
+                return buckets;
             }
         }
     }
@@ -236,57 +257,63 @@ namespace Squared.Illuminant {
             int i = 0;
             float x1 = Bounds.TopLeft.X, x2;
 
-            double maxCount = h.SampleCount;
-            double logMaxCount = Math.Log(h.SampleCount + 1, SampleCountPower);
+            h.Lock.EnterReadLock();
 
-            foreach (var bucket in h.Buckets) {
-                float bucketWidth = Bounds.Size.X * (bucket.BucketEnd - bucket.BucketStart) / h.MaxInputValue;
-                var scaledLogCount = Math.Log(bucket.Count + 1, SampleCountPower) / logMaxCount;
-                var scaledCount = bucket.Count / maxCount;
-                var y2 = Bounds.BottomRight.Y;
-                var y1 = y2 - (float)((scaledCount + scaledLogCount) * 0.5 * Bounds.Size.Y);
-                x2 = x1 + bucketWidth;
+            try {
+                double maxCount = h.SampleCount;
+                double logMaxCount = Math.Log(h.SampleCount + 1, SampleCountPower);
 
-                var bucketValue = (bucket.BucketStart + bucket.BucketEnd) / 2f;
-                var lowIndex = Arithmetic.Clamp((int)Math.Floor(bucketValue), 0, ValueColors.Length - 1);
-                var highIndex = Arithmetic.Clamp(lowIndex + 1, 0, ValueColors.Length - 1);
-                var elementColor = Color.Lerp(ValueColors[lowIndex], ValueColors[highIndex], bucketValue - (float)Math.Floor(bucketValue));
+                foreach (var bucket in h.Buckets) {
+                    float bucketWidth = Bounds.Size.X * (bucket.BucketEnd - bucket.BucketStart) / h.MaxInputValue;
+                    var scaledLogCount = Math.Log(bucket.Count + 1, SampleCountPower) / logMaxCount;
+                    var scaledCount = bucket.Count / maxCount;
+                    var y2 = Bounds.BottomRight.Y;
+                    var y1 = y2 - (float)((scaledCount + scaledLogCount) * 0.5 * Bounds.Size.Y);
+                    x2 = x1 + bucketWidth;
 
-                ir.FillRectangle(
-                    new Bounds(new Vector2(x1, y1), new Vector2(x2, y2)), 
-                    elementColor, layer: 2
-                ); 
+                    var bucketValue = (bucket.BucketStart + bucket.BucketEnd) / 2f;
+                    var lowIndex = Arithmetic.Clamp((int)Math.Floor(bucketValue), 0, ValueColors.Length - 1);
+                    var highIndex = Arithmetic.Clamp(lowIndex + 1, 0, ValueColors.Length - 1);
+                    var elementColor = Color.Lerp(ValueColors[lowIndex], ValueColors[highIndex], bucketValue - (float)Math.Floor(bucketValue));
 
-                x1 = x2;
-                i++;
-            }
+                    ir.FillRectangle(
+                        new Bounds(new Vector2(x1, y1), new Vector2(x2, y2)), 
+                        elementColor, layer: 2
+                    ); 
 
-            if (percentiles != null)
-            foreach (var percentile in percentiles) {
-                int bucketIndex;
-                float value;
-                if (!h.GetPercentile(percentile, out bucketIndex, out value))
-                    continue;
+                    x1 = x2;
+                    i++;
+                }
 
-                var x = Arithmetic.Lerp(Bounds.TopLeft.X, Bounds.BottomRight.X, Arithmetic.Clamp(value / h.MaxInputValue, 0, 1));
-                var halfWidth = PercentileWidth / 2f;
+                if (percentiles != null)
+                foreach (var percentile in percentiles) {
+                    int bucketIndex;
+                    float value;
+                    if (!h.GetPercentile(percentile, out bucketIndex, out value))
+                        continue;
 
-                ir.FillRectangle(
-                    new Bounds(new Vector2(x - halfWidth, Bounds.TopLeft.Y), new Vector2(x + halfWidth, Bounds.BottomRight.Y)), 
-                    PercentileColor, layer: 3
-                );
-            }
+                    var x = Arithmetic.Lerp(Bounds.TopLeft.X, Bounds.BottomRight.X, Arithmetic.Clamp(value / h.MaxInputValue, 0, 1));
+                    var halfWidth = PercentileWidth / 2f;
 
-            if (rangeMin.HasValue || rangeMax.HasValue) {
-                float min = rangeMin.GetValueOrDefault(0);
-                float max = rangeMax.GetValueOrDefault(h.MaxInputValue);
-                x1 = Arithmetic.Lerp(Bounds.TopLeft.X, Bounds.BottomRight.X, Arithmetic.Clamp(min / h.MaxInputValue, 0, 1));
-                x2 = Arithmetic.Lerp(Bounds.TopLeft.X, Bounds.BottomRight.X, Arithmetic.Clamp(max / h.MaxInputValue, 0, 1));
+                    ir.FillRectangle(
+                        new Bounds(new Vector2(x - halfWidth, Bounds.TopLeft.Y), new Vector2(x + halfWidth, Bounds.BottomRight.Y)), 
+                        PercentileColor, layer: 3
+                    );
+                }
 
-                ir.FillRectangle(
-                    new Bounds(new Vector2(x1, Bounds.TopLeft.Y), new Vector2(x2, Bounds.BottomRight.Y)),
-                    RangeColor, layer: 1
-                );
+                if (rangeMin.HasValue || rangeMax.HasValue) {
+                    float min = rangeMin.GetValueOrDefault(0);
+                    float max = rangeMax.GetValueOrDefault(h.MaxInputValue);
+                    x1 = Arithmetic.Lerp(Bounds.TopLeft.X, Bounds.BottomRight.X, Arithmetic.Clamp(min / h.MaxInputValue, 0, 1));
+                    x2 = Arithmetic.Lerp(Bounds.TopLeft.X, Bounds.BottomRight.X, Arithmetic.Clamp(max / h.MaxInputValue, 0, 1));
+
+                    ir.FillRectangle(
+                        new Bounds(new Vector2(x1, Bounds.TopLeft.Y), new Vector2(x2, Bounds.BottomRight.Y)),
+                        RangeColor, layer: 1
+                    );
+                }
+            } finally {
+                h.Lock.ExitReadLock();
             }
         }
     }

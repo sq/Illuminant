@@ -182,6 +182,8 @@ namespace Squared.Illuminant {
         private readonly object     _LuminanceReadbackArrayLock = new object();
         private          float[]    _LuminanceReadbackArray;
 
+        private readonly HashSet<RenderedLighting> InProgressRenders = new HashSet<RenderedLighting>();
+
         // private readonly BufferRing _LightProbeBuffers;
         // private readonly Vector4[]  _LightProbeReadbackArray;
 
@@ -333,6 +335,13 @@ namespace Squared.Illuminant {
         }
 
         private void Coordinator_DeviceReset (object sender, EventArgs e) {
+            lock (InProgressRenders) {
+                foreach (var ipr in InProgressRenders)
+                    ipr.Ready.Set();
+
+                InProgressRenders.Clear();
+            }
+
             FillIndexBuffer();
         }
 
@@ -390,6 +399,8 @@ namespace Squared.Illuminant {
         }
 
         private void _BeginLightPass (DeviceManager device, object userData) {
+            var buffer = (RenderTarget2D)userData;
+
             device.Device.Viewport = new Viewport(0, 0, Configuration.RenderSize.First, Configuration.RenderSize.Second);
 
             var vt = ViewTransform.CreateOrthographic(
@@ -528,10 +539,11 @@ namespace Squared.Illuminant {
             IBatchContainer container, int layer, float intensityScale = 1.0f
         ) {
             var lightmap = _Lightmaps.BeginDraw(true);
-
-            RenderedLighting result = new RenderedLighting(
+            var result = new RenderedLighting(
                 this, lightmap.Buffer, 1.0f / intensityScale
             );
+            lock (InProgressRenders)
+                InProgressRenders.Add(result);
 
             int layerIndex = 0;
 
@@ -615,6 +627,13 @@ namespace Squared.Illuminant {
                         RenderTrace.Marker(resultGroup, 9999, "LightingRenderer {0} : End", this.ToObjectID());
                 }
             }
+
+            Coordinator.AfterPresent(() => {
+                lock (InProgressRenders)
+                    InProgressRenders.Remove(result);
+
+                result.Ready.Set();
+            });
 
             return result;
         }

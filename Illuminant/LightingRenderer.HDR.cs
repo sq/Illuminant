@@ -50,6 +50,8 @@ namespace Squared.Illuminant {
 
     public sealed partial class LightingRenderer : IDisposable, INameableGraphicsObject {
         private struct HistogramUpdateTask : IWorkItem {
+            public bool AllowBlocking;
+            public ManualResetEventSlim Ready;
             public RenderTarget2D Texture;
             public int LevelIndex;
             public Histogram Histogram;
@@ -61,14 +63,22 @@ namespace Squared.Illuminant {
             public void Execute () {
                 var count = Width * Height;
 
+                if (AllowBlocking)
+                    Ready.Wait();
+                else if (!Ready.IsSet)
+                    return;
+
                 Texture.GetData(
                     LevelIndex, new Rectangle(0, 0, Width, Height),
                     Buffer, 0, count
                 );
 
-                lock (Histogram) {
+                Histogram.Lock.EnterWriteLock();
+                try {
                     Histogram.Clear();
                     Histogram.Add(Buffer, count, ScaleFactor);
+                } finally {
+                    Histogram.Lock.ExitWriteLock();
                 }
 
                 if (OnComplete != null)
@@ -87,12 +97,14 @@ namespace Squared.Illuminant {
             return buffer[lastZero + index];
         }
 
-        public struct RenderedLighting {
-            public  readonly LightingRenderer Renderer;
-            public  readonly float            InverseScaleFactor;
-            private readonly RenderTarget2D   Lightmap;
-            internal         RenderTarget2D   LuminanceBuffer;
-            private readonly int              Width, Height;
+        public class RenderedLighting {
+            public   readonly LightingRenderer Renderer;
+            public   readonly float            InverseScaleFactor;
+            private  readonly RenderTarget2D   Lightmap;
+            internal          RenderTarget2D   LuminanceBuffer;
+            private  readonly int              Width, Height;
+            internal readonly ManualResetEventSlim Ready = 
+                new ManualResetEventSlim();
 
             internal RenderedLighting (
                 LightingRenderer renderer, RenderTarget2D lightmap, float inverseScaleFactor
@@ -129,35 +141,41 @@ namespace Squared.Illuminant {
             public bool TryComputeHistogram (
                 Histogram histogram,
                 Action<Histogram> onComplete,
-                int accuracyFactor = 3
+                int accuracyFactor = 3,
+                bool allowBlocking = true
             ) {
                 if (Renderer == null)
                     return false;
                 if (LuminanceBuffer == null)
                     return false;
 
-                var levelIndex = Math.Min(accuracyFactor, LuminanceBuffer.LevelCount - 1);
-                var divisor = (int)Math.Pow(2, levelIndex);
-                var levelWidth = LuminanceBuffer.Width / divisor;
-                var levelHeight = LuminanceBuffer.Height / divisor;
-                var count = levelWidth * levelHeight;
+                if (allowBlocking)
+                    histogram.Lock.EnterWriteLock();
+                else if (!histogram.Lock.TryEnterWriteLock(0))
+                    return false;
 
-                float[] buffer;
+                try {
+                    var levelIndex = Math.Min(accuracyFactor, LuminanceBuffer.LevelCount - 1);
+                    var divisor = (int)Math.Pow(2, levelIndex);
+                    var levelWidth = LuminanceBuffer.Width / divisor;
+                    var levelHeight = LuminanceBuffer.Height / divisor;
+                    var count = levelWidth * levelHeight;
 
-                lock (Renderer._LuminanceReadbackArrayLock) {
-                    buffer = Renderer._LuminanceReadbackArray;
-                    if ((buffer == null) || (buffer.Length < count))
-                        buffer = Renderer._LuminanceReadbackArray = new float[count];
-                }
+                    float[] buffer;
 
-                var q = Renderer.Coordinator.ThreadGroup.GetQueueForType<HistogramUpdateTask>();
+                    lock (Renderer._LuminanceReadbackArrayLock) {
+                        buffer = Renderer._LuminanceReadbackArray;
+                        if ((buffer == null) || (buffer.Length < count))
+                            buffer = Renderer._LuminanceReadbackArray = new float[count];
+                    }
 
-                var self = this;
+                    var q = Renderer.Coordinator.ThreadGroup.GetQueueForType<HistogramUpdateTask>();
 
-                Renderer.Coordinator.AfterPresent(() => {
-                    q.WaitUntilDrained();
+                    var self = this;
 
                     q.Enqueue(new HistogramUpdateTask {
+                        AllowBlocking = allowBlocking,
+                        Ready = Ready,
                         Texture = self.LuminanceBuffer,
                         LevelIndex = levelIndex,
                         Histogram = histogram,
@@ -167,7 +185,9 @@ namespace Squared.Illuminant {
                         ScaleFactor = self.InverseScaleFactor,
                         OnComplete = onComplete
                     });
-                });
+                } finally {
+                    histogram.Lock.ExitWriteLock();
+                }
 
                 return true;
             }
