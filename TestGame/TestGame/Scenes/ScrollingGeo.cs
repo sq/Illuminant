@@ -161,8 +161,8 @@ namespace TestGame.Scenes {
             )) {
                 ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black);
 
-                Renderer.RenderLighting(bg, 1);
-                Renderer.ResolveLighting(bg, 2, Width, Height);
+                var lighting = Renderer.RenderLighting(bg, 1);
+                lighting.Resolve(bg, 2, Width, Height);
             };
 
             using (var group = BatchGroup.New(frame, 0)) {

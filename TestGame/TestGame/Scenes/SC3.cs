@@ -411,10 +411,10 @@ namespace TestGame.Scenes {
             };
 
             int layer = -8;
-            var brightness = Renderer.RenderLighting(frame, layer, 1.0f / HDRRangeFactor);
-            ForegroundRenderer.RenderLighting(frame, layer++, 1.0f / HDRRangeFactor);
+            var lighting = Renderer.RenderLighting(frame, layer, 1.0f / HDRRangeFactor);
+            var foregroundLighting = ForegroundRenderer.RenderLighting(frame, layer++, 1.0f / HDRRangeFactor);
 
-            brightness.TryComputeHistogram(
+            lighting.TryComputeHistogram(
                 NextHistogram, 
                 (h) => {
                     lock (HistogramLock) {
@@ -442,7 +442,7 @@ namespace TestGame.Scenes {
             )) {
                 ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black);
 
-                Renderer.ResolveLighting(
+                lighting.Resolve(
                     bg, 1, 
                     Width, Height,
                     hdrConfiguration
@@ -462,7 +462,7 @@ namespace TestGame.Scenes {
             )) {
                 ClearBatch.AddNew(fg, 0, Game.Materials.Clear, clearColor: new Color(0.5f, 0.5f, 0.5f, 1f));
 
-                ForegroundRenderer.ResolveLighting(
+                foregroundLighting.Resolve(
                     fg, 1, 
                     Width, Height,
                     hdrConfiguration

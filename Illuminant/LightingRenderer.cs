@@ -173,13 +173,17 @@ namespace Squared.Illuminant {
         private readonly Dictionary<Polygon, Texture2D> HeightVolumeVertexData = 
             new Dictionary<Polygon, Texture2D>(new ReferenceComparer<Polygon>());
 
-        private readonly RenderTarget2D _Lightmap;
-        private readonly List<RenderTarget2D> _LuminanceBuffers = new List<RenderTarget2D>();
+        private readonly BufferRing _Lightmaps;
 
         private DistanceField _DistanceField;
         private GBuffer _GBuffer;
 
-        private float[] _ReadbackBuffer;
+        private readonly BufferRing _LuminanceBuffers;
+        private readonly object     _LuminanceReadbackArrayLock = new object();
+        private          float[]    _LuminanceReadbackArray;
+
+        // private readonly BufferRing _LightProbeBuffers;
+        // private readonly Vector4[]  _LightProbeReadbackArray;
 
         private readonly Action<DeviceManager, object> BeginLightPass, EndLightPass, IlluminationBatchSetup;
 
@@ -223,25 +227,24 @@ namespace Squared.Illuminant {
                 );
 
                 FillIndexBuffer();
+            }            
 
-                _Lightmap = new RenderTarget2D(
-                    coordinator.Device, 
-                    Configuration.MaximumRenderSize.First, 
-                    Configuration.MaximumRenderSize.Second,
-                    false,
-                    Configuration.HighQuality
-                        ? SurfaceFormat.Rgba64
-                        : SurfaceFormat.Color,
-                    DepthFormat.None, 0, RenderTargetUsage.PreserveContents
-                );
+            _Lightmaps = new BufferRing(
+                coordinator,
+                Configuration.MaximumRenderSize.First, 
+                Configuration.MaximumRenderSize.Second,
+                false,
+                Configuration.HighQuality
+                    ? SurfaceFormat.Rgba64
+                    : SurfaceFormat.Color,
+                Configuration.RingBufferSize
+            );
 
-                if (Configuration.EnableBrightnessEstimation) {
-                    var width = Configuration.MaximumRenderSize.First / 2;
-                    var height = Configuration.MaximumRenderSize.Second / 2;
+            if (Configuration.EnableBrightnessEstimation) {
+                var width = Configuration.MaximumRenderSize.First / 2;
+                var height = Configuration.MaximumRenderSize.Second / 2;
 
-                    for (int i = 0; i < 3; i++)
-                        CreateLuminanceBuffer(coordinator.Device, width, height);
-                }
+                _LuminanceBuffers = new BufferRing(coordinator, width, height, true, SurfaceFormat.Single, Configuration.RingBufferSize);
             }
 
             EnsureGBuffer();
@@ -270,16 +273,6 @@ namespace Squared.Illuminant {
             Environment = environment;
 
             Coordinator.DeviceReset += Coordinator_DeviceReset;
-        }
-
-        private void CreateLuminanceBuffer (GraphicsDevice device, int width, int height) {
-            var buffer = new RenderTarget2D(
-                device, 
-                width, height, true,
-                SurfaceFormat.Single,
-                DepthFormat.None, 0, RenderTargetUsage.PreserveContents
-            );
-            _LuminanceBuffers.Add(buffer);
         }
 
         private void EnsureGBuffer () {
@@ -313,10 +306,13 @@ namespace Squared.Illuminant {
         }
 
         private void NameSurfaces () {
+            /*
             if (_Lightmap != null)
                 _Lightmap.SetName(ObjectNames.ToObjectID(this) + ":Lightmap");
             foreach (var lb in _LuminanceBuffers)
                 lb.SetName(ObjectNames.ToObjectID(this) + ":Luminance");
+            */
+
             if (_GBuffer != null)
                 _GBuffer.Texture.SetName(ObjectNames.ToObjectID(this) + ":GBuffer");
         }
@@ -364,10 +360,8 @@ namespace Squared.Illuminant {
             Coordinator.DisposeResource(QuadIndexBuffer);
             Coordinator.DisposeResource(_DistanceField);
             Coordinator.DisposeResource(_GBuffer);
-            Coordinator.DisposeResource(_Lightmap);
-
-            foreach (var lb in _LuminanceBuffers)
-                Coordinator.DisposeResource(lb);
+            Coordinator.DisposeResource(_Lightmaps);
+            Coordinator.DisposeResource(_LuminanceBuffers);
 
             foreach (var kvp in HeightVolumeVertexData)
                 Coordinator.DisposeResource(kvp.Value);
@@ -378,10 +372,8 @@ namespace Squared.Illuminant {
             */
         }
 
-        public RenderTarget2D Lightmap {
-            get {
-                return _Lightmap;
-            }
+        public RenderTarget2D GetLightmap (bool allowBlocking) {
+            return _Lightmaps.GetBuffer(allowBlocking);
         }
 
         private void ComputeUniforms () {
@@ -413,6 +405,9 @@ namespace Squared.Illuminant {
         private void _EndLightPass (DeviceManager device, object userData) {
             Materials.PopViewTransform();
             device.PopStates();
+
+            var buffer = (RenderTarget2D)userData;
+            _Lightmaps.MarkRenderComplete(buffer);
         }
 
         private void _IlluminationBatchSetup (DeviceManager device, object userData) {
@@ -481,17 +476,62 @@ namespace Squared.Illuminant {
             return result;
         }
 
+        private BufferRing.InProgressRender UpdateLuminanceBuffer (
+            IBatchContainer container, int layer,
+            RenderTarget2D lightmap, 
+            float intensityScale
+        ) {
+            var newLuminanceBuffer = _LuminanceBuffers.BeginDraw(true);
+            if (!newLuminanceBuffer)
+                throw new Exception("Failed to get luminance buffer");
+
+            var w = Configuration.RenderSize.First / 2;
+            var h = Configuration.RenderSize.Second / 2;
+            using (var copyGroup = BatchGroup.ForRenderTarget(
+                container, layer, newLuminanceBuffer.Buffer,
+                (dm, _) => {
+                    dm.Device.Viewport = new Viewport(0, 0, w, h);
+                    Materials.PushViewTransform(ViewTransform.CreateOrthographic(w, h));
+                },
+                (dm, _) => {
+                    Materials.PopViewTransform();
+                    // FIXME: Maybe don't do this until Present?
+                    newLuminanceBuffer.Dispose();
+                }
+            )) {
+                if (RenderTrace.EnableTracing)
+                    RenderTrace.Marker(copyGroup, -1, "LightingRenderer {0} : Generate HDR Buffer", this.ToObjectID());
+
+                var ir = new ImperativeRenderer(copyGroup, Materials);
+                var m = IlluminantMaterials.CalculateLuminance;
+                ir.Clear(color: Color.Transparent);
+                ir.Draw(
+                    lightmap, 
+                    new Rectangle(0, 0, w, h), 
+                    new Rectangle(0, 0, Configuration.RenderSize.First, Configuration.RenderSize.Second), 
+                    material: m
+                );
+            }
+
+            // FIXME: Wait for valid data?
+            return newLuminanceBuffer;
+        }
+
         /// <summary>
         /// Updates the lightmap in the target batch container on the specified layer.
-        /// To display lighting, use ResolveLighting.
+        /// To display lighting, call RenderedLighting.Resolve on the result.
         /// </summary>
         /// <param name="container">The batch container to render lighting into.</param>
         /// <param name="layer">The layer to render lighting into.</param>
         /// <param name="intensityScale">A factor to scale the intensity of all light sources. You can use this to rescale the intensity of light values for HDR.</param>
-        public BrightnessDataToken RenderLighting (
+        public RenderedLighting RenderLighting (
             IBatchContainer container, int layer, float intensityScale = 1.0f
         ) {
-            BrightnessDataToken result = new BrightnessDataToken(this, 1.0f / intensityScale);
+            var lightmap = _Lightmaps.BeginDraw(true);
+
+            RenderedLighting result = new RenderedLighting(
+                this, lightmap.Buffer, 1.0f / intensityScale
+            );
 
             int layerIndex = 0;
 
@@ -501,44 +541,16 @@ namespace Squared.Illuminant {
                 // HACK: We make a copy of the previous lightmap so that brightness estimation can read it, without
                 //  stalling on the current lightmap being rendered
                 if (Configuration.EnableBrightnessEstimation) {
-                    RenderTarget2D newLuminanceBuffer;
-                    lock (_LuminanceBuffers) {
-                        newLuminanceBuffer = _LuminanceBuffers[0];
-                        _LuminanceBuffers.RemoveAt(0);
-                    }
-
-                    var w = Configuration.RenderSize.First / 2;
-                    var h = Configuration.RenderSize.Second / 2;
-                    using (var copyGroup = BatchGroup.ForRenderTarget(
-                        outerGroup, 0, newLuminanceBuffer,
-                        (dm, _) => {
-                            dm.Device.Viewport = new Viewport(0, 0, w, h);
-                            Materials.PushViewTransform(ViewTransform.CreateOrthographic(w, h));
-                        },
-                        (dm, _) => {
-                            Materials.PopViewTransform();
-                            lock (_LuminanceBuffers)
-                                _LuminanceBuffers.Add(newLuminanceBuffer);
-                        }
-                    )) {
-                        if (RenderTrace.EnableTracing)
-                            RenderTrace.Marker(copyGroup, -1, "LightingRenderer {0} : Generate HDR Buffer", this.ToObjectID());
-
-                        var ir = new ImperativeRenderer(copyGroup, Materials);
-                        var m = IlluminantMaterials.CalculateLuminance;
-                        ir.Clear(color: Color.Transparent);
-                        ir.Draw(
-                            _Lightmap, 
-                            new Rectangle(0, 0, w, h), 
-                            new Rectangle(0, 0, Configuration.RenderSize.First, Configuration.RenderSize.Second), 
-                            material: m
-                        );
-                    }
-
-                    result = new BrightnessDataToken(this, newLuminanceBuffer, 1.0f / intensityScale);
+                    var mostRecentLightmap = _Lightmaps.GetBuffer(false);
+                    if (mostRecentLightmap != null)
+                        result.LuminanceBuffer = UpdateLuminanceBuffer(outerGroup, 0, mostRecentLightmap, intensityScale).Buffer;
                 }
 
-                using (var resultGroup = BatchGroup.ForRenderTarget(outerGroup, 1, _Lightmap, before: BeginLightPass, after: EndLightPass)) {
+                using (var resultGroup = BatchGroup.ForRenderTarget(
+                    outerGroup, 1, lightmap.Buffer, 
+                    before: BeginLightPass, after: EndLightPass,
+                    userData: lightmap.Buffer
+                )) {
                     if (RenderTrace.EnableTracing)
                         RenderTrace.Marker(resultGroup, -9999, "LightingRenderer {0} : Begin", this.ToObjectID());
 
@@ -673,10 +685,11 @@ namespace Squared.Illuminant {
         /// </summary>
         /// <param name="container">The batch container to resolve lighting into.</param>
         /// <param name="layer">The layer to resolve lighting into.</param>
-        public void ResolveLighting (
-            IBatchContainer container, int layer, 
-            float? width = null, float? height = null, 
-            HDRConfiguration? hdr = null
+        private void ResolveLighting (
+            IBatchContainer container, int layer,
+            RenderTarget2D lightmap,
+            float? width, float? height, 
+            HDRConfiguration? hdr
         ) {
             Material m;
             if (hdr.HasValue && hdr.Value.Mode == HDRMode.GammaCompress)
@@ -725,12 +738,12 @@ namespace Squared.Illuminant {
                 }
             });
 
-            var bounds = _Lightmap.BoundsFromRectangle(
+            var bounds = lightmap.BoundsFromRectangle(
                 new Rectangle(0, 0, Configuration.RenderSize.First, Configuration.RenderSize.Second)
             );
 
             var dc = new BitmapDrawCall(
-                _Lightmap, Vector2.Zero, bounds                
+                lightmap, Vector2.Zero, bounds                
             );
             dc.Scale = new Vector2(
                 width.GetValueOrDefault(Configuration.RenderSize.First) / Configuration.RenderSize.First,
@@ -1643,6 +1656,11 @@ namespace Squared.Illuminant {
         //  renderer can use to estimate the brightness of the scene for HDR.
         public readonly bool      EnableBrightnessEstimation;
 
+        // Determines how large the ring buffers are. Larger ring buffers use
+        //  more memory but reduce the likelihood that draw or readback operations
+        //  will stall waiting on the previous frame.
+        public readonly int       RingBufferSize;
+
         // Scales world coordinates when rendering the G-buffer and lightmap
         public Vector2   RenderScale    = Vector2.One;
 
@@ -1669,12 +1687,14 @@ namespace Squared.Illuminant {
 
         public RendererConfiguration (
             int maxWidth, int maxHeight, bool highQuality,
-            bool enableBrightnessEstimation = false
+            bool enableBrightnessEstimation = false,
+            int ringBufferSize = 3
         ) {
             HighQuality = highQuality;
             MaximumRenderSize = new Pair<int>(maxWidth, maxHeight);
             RenderSize = MaximumRenderSize;
             EnableBrightnessEstimation = enableBrightnessEstimation;
+            RingBufferSize = ringBufferSize;
         }
     }
 

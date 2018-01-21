@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -235,59 +236,57 @@ namespace Squared.Illuminant {
             int i = 0;
             float x1 = Bounds.TopLeft.X, x2;
 
-            lock (h) {
-                double maxCount = h.SampleCount;
-                double logMaxCount = Math.Log(h.SampleCount + 1, SampleCountPower);
+            double maxCount = h.SampleCount;
+            double logMaxCount = Math.Log(h.SampleCount + 1, SampleCountPower);
 
-                foreach (var bucket in h.Buckets) {
-                    float bucketWidth = Bounds.Size.X * (bucket.BucketEnd - bucket.BucketStart) / h.MaxInputValue;
-                    var scaledLogCount = Math.Log(bucket.Count + 1, SampleCountPower) / logMaxCount;
-                    var scaledCount = bucket.Count / maxCount;
-                    var y2 = Bounds.BottomRight.Y;
-                    var y1 = y2 - (float)((scaledCount + scaledLogCount) * 0.5 * Bounds.Size.Y);
-                    x2 = x1 + bucketWidth;
+            foreach (var bucket in h.Buckets) {
+                float bucketWidth = Bounds.Size.X * (bucket.BucketEnd - bucket.BucketStart) / h.MaxInputValue;
+                var scaledLogCount = Math.Log(bucket.Count + 1, SampleCountPower) / logMaxCount;
+                var scaledCount = bucket.Count / maxCount;
+                var y2 = Bounds.BottomRight.Y;
+                var y1 = y2 - (float)((scaledCount + scaledLogCount) * 0.5 * Bounds.Size.Y);
+                x2 = x1 + bucketWidth;
 
-                    var bucketValue = (bucket.BucketStart + bucket.BucketEnd) / 2f;
-                    var lowIndex = Arithmetic.Clamp((int)Math.Floor(bucketValue), 0, ValueColors.Length - 1);
-                    var highIndex = Arithmetic.Clamp(lowIndex + 1, 0, ValueColors.Length - 1);
-                    var elementColor = Color.Lerp(ValueColors[lowIndex], ValueColors[highIndex], bucketValue - (float)Math.Floor(bucketValue));
+                var bucketValue = (bucket.BucketStart + bucket.BucketEnd) / 2f;
+                var lowIndex = Arithmetic.Clamp((int)Math.Floor(bucketValue), 0, ValueColors.Length - 1);
+                var highIndex = Arithmetic.Clamp(lowIndex + 1, 0, ValueColors.Length - 1);
+                var elementColor = Color.Lerp(ValueColors[lowIndex], ValueColors[highIndex], bucketValue - (float)Math.Floor(bucketValue));
 
-                    ir.FillRectangle(
-                        new Bounds(new Vector2(x1, y1), new Vector2(x2, y2)), 
-                        elementColor, layer: 2
-                    ); 
+                ir.FillRectangle(
+                    new Bounds(new Vector2(x1, y1), new Vector2(x2, y2)), 
+                    elementColor, layer: 2
+                ); 
 
-                    x1 = x2;
-                    i++;
-                }
+                x1 = x2;
+                i++;
+            }
 
-                if (percentiles != null)
-                foreach (var percentile in percentiles) {
-                    int bucketIndex;
-                    float value;
-                    if (!h.GetPercentile(percentile, out bucketIndex, out value))
-                        continue;
+            if (percentiles != null)
+            foreach (var percentile in percentiles) {
+                int bucketIndex;
+                float value;
+                if (!h.GetPercentile(percentile, out bucketIndex, out value))
+                    continue;
 
-                    var x = Arithmetic.Lerp(Bounds.TopLeft.X, Bounds.BottomRight.X, Arithmetic.Clamp(value / h.MaxInputValue, 0, 1));
-                    var halfWidth = PercentileWidth / 2f;
+                var x = Arithmetic.Lerp(Bounds.TopLeft.X, Bounds.BottomRight.X, Arithmetic.Clamp(value / h.MaxInputValue, 0, 1));
+                var halfWidth = PercentileWidth / 2f;
 
-                    ir.FillRectangle(
-                        new Bounds(new Vector2(x - halfWidth, Bounds.TopLeft.Y), new Vector2(x + halfWidth, Bounds.BottomRight.Y)), 
-                        PercentileColor, layer: 3
-                    );
-                }
+                ir.FillRectangle(
+                    new Bounds(new Vector2(x - halfWidth, Bounds.TopLeft.Y), new Vector2(x + halfWidth, Bounds.BottomRight.Y)), 
+                    PercentileColor, layer: 3
+                );
+            }
 
-                if (rangeMin.HasValue || rangeMax.HasValue) {
-                    float min = rangeMin.GetValueOrDefault(0);
-                    float max = rangeMax.GetValueOrDefault(h.MaxInputValue);
-                    x1 = Arithmetic.Lerp(Bounds.TopLeft.X, Bounds.BottomRight.X, Arithmetic.Clamp(min / h.MaxInputValue, 0, 1));
-                    x2 = Arithmetic.Lerp(Bounds.TopLeft.X, Bounds.BottomRight.X, Arithmetic.Clamp(max / h.MaxInputValue, 0, 1));
+            if (rangeMin.HasValue || rangeMax.HasValue) {
+                float min = rangeMin.GetValueOrDefault(0);
+                float max = rangeMax.GetValueOrDefault(h.MaxInputValue);
+                x1 = Arithmetic.Lerp(Bounds.TopLeft.X, Bounds.BottomRight.X, Arithmetic.Clamp(min / h.MaxInputValue, 0, 1));
+                x2 = Arithmetic.Lerp(Bounds.TopLeft.X, Bounds.BottomRight.X, Arithmetic.Clamp(max / h.MaxInputValue, 0, 1));
 
-                    ir.FillRectangle(
-                        new Bounds(new Vector2(x1, Bounds.TopLeft.Y), new Vector2(x2, Bounds.BottomRight.Y)),
-                        RangeColor, layer: 1
-                    );
-                }
+                ir.FillRectangle(
+                    new Bounds(new Vector2(x1, Bounds.TopLeft.Y), new Vector2(x2, Bounds.BottomRight.Y)),
+                    RangeColor, layer: 1
+                );
             }
         }
     }

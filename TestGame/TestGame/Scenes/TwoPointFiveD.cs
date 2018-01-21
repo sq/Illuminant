@@ -44,14 +44,12 @@ namespace TestGame.Scenes {
 
         RendererQualitySettings DirectionalQuality;
 
-        object HistogramLock = new object();
-        Histogram Histogram, NextHistogram;
+        Histogram Histogram;
 
         public TwoPointFiveDTest (TestGame game, int width, int height)
             : base(game, 1024, 1024) {
 
             Histogram = new Histogram(4f, 2f);
-            NextHistogram = new Histogram(4f, 2f);
 
             Deterministic.Value = true;
             ShowHistogram.Value = true;
@@ -257,20 +255,12 @@ namespace TestGame.Scenes {
             )) {
                 ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black);
 
-                var brightness = Renderer.RenderLighting(bg, 1, 1.0f / LightScaleFactor);
-                Renderer.ResolveLighting(bg, 2, Width, Height, hdr: new HDRConfiguration { InverseScaleFactor = LightScaleFactor });
+                var lighting = Renderer.RenderLighting(bg, 1, 1.0f / LightScaleFactor);
+                lighting.Resolve(bg, 2, Width, Height, hdr: new HDRConfiguration { InverseScaleFactor = LightScaleFactor });
 
-                brightness.TryComputeHistogram(
-                    NextHistogram, 
-                    (h) => {
-                        lock (HistogramLock) {
-                            if (h != NextHistogram)
-                                return;
-
-                            NextHistogram = Histogram;
-                            Histogram = h;
-                        }
-                    }
+                lighting.TryComputeHistogram(
+                    Histogram, 
+                    null
                 );
             };
 
@@ -337,15 +327,12 @@ namespace TestGame.Scenes {
                 }
 
                 if (ShowHistogram) {
-                    Histogram h;
-                    lock (HistogramLock)
-                        h = Histogram;
-
                     var visualizer = new HistogramVisualizer {
                         Materials = Game.Materials,
                         Bounds = Bounds.FromPositionAndSize(new Vector2(Width + 10, 10), new Vector2(600, 800))
                     };
-                    visualizer.Draw(group, 5, h, new[] { 40.0f, 90.0f });
+                    lock (Histogram)
+                        visualizer.Draw(group, 5, Histogram, new[] { 40.0f, 90.0f });
                 }
             }
         }
