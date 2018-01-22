@@ -335,13 +335,6 @@ namespace Squared.Illuminant {
         }
 
         private void Coordinator_DeviceReset (object sender, EventArgs e) {
-            lock (InProgressRenders) {
-                foreach (var ipr in InProgressRenders)
-                    ipr.Ready.Set();
-
-                InProgressRenders.Clear();
-            }
-
             FillIndexBuffer();
         }
 
@@ -553,6 +546,9 @@ namespace Squared.Illuminant {
                 // HACK: We make a copy of the previous lightmap so that brightness estimation can read it, without
                 //  stalling on the current lightmap being rendered
                 if (Configuration.EnableBrightnessEstimation) {
+                    var q = Coordinator.ThreadGroup.GetQueueForType<HistogramUpdateTask>();
+                    // q.WaitUntilDrained();
+
                     var mostRecentLightmap = _Lightmaps.GetBuffer(false);
                     if (mostRecentLightmap != null)
                         result.LuminanceBuffer = UpdateLuminanceBuffer(outerGroup, 0, mostRecentLightmap, intensityScale).Buffer;
@@ -627,13 +623,6 @@ namespace Squared.Illuminant {
                         RenderTrace.Marker(resultGroup, 9999, "LightingRenderer {0} : End", this.ToObjectID());
                 }
             }
-
-            Coordinator.AfterPresent(() => {
-                lock (InProgressRenders)
-                    InProgressRenders.Remove(result);
-
-                result.Ready.Set();
-            });
 
             return result;
         }
