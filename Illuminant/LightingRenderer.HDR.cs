@@ -50,7 +50,7 @@ namespace Squared.Illuminant {
 
     public sealed partial class LightingRenderer : IDisposable, INameableGraphicsObject {
         private struct HistogramUpdateTask : IWorkItem {
-            public object UseResourceLock;
+            public LightingRenderer Renderer;
             public RenderTarget2D Texture;
             public int LevelIndex;
             public Histogram Histogram;
@@ -61,17 +61,21 @@ namespace Squared.Illuminant {
             public void Execute () {
                 var count = Width * Height;
 
-                using (var buffer = BufferPool<float>.Allocate(count)) {
-                    lock (UseResourceLock)
+                lock (Renderer._LuminanceReadbackArrayLock) {
+                    var buffer = Renderer._LuminanceReadbackArray;
+                    if ((buffer == null) || (buffer.Length < count))
+                        buffer = Renderer._LuminanceReadbackArray = new float[count];
+
+                    lock (Renderer.Coordinator.UseResourceLock)
                         Texture.GetData(
                             LevelIndex, new Rectangle(0, 0, Width, Height),
-                            buffer.Data, 0, count
+                            buffer, 0, count
                         );
 
                     Histogram.Lock.EnterWriteLock();
                     try {
                         Histogram.Clear();
-                        Histogram.Add(buffer.Data, count, ScaleFactor);
+                        Histogram.Add(buffer, count, ScaleFactor);
                     } finally {
                         Histogram.Lock.ExitWriteLock();
                     }
@@ -147,12 +151,10 @@ namespace Squared.Illuminant {
                 var levelWidth = LuminanceBuffer.Width / divisor;
                 var levelHeight = LuminanceBuffer.Height / divisor;
 
-                var q = Renderer.Coordinator.ThreadGroup.GetQueueForType<HistogramUpdateTask>();
-
                 var self = this;
 
-                q.Enqueue(new HistogramUpdateTask {
-                    UseResourceLock = Renderer.Coordinator.UseResourceLock,
+                Renderer.Coordinator.ThreadGroup.Enqueue(new HistogramUpdateTask {
+                    Renderer = Renderer,
                     Texture = self.LuminanceBuffer,
                     LevelIndex = levelIndex,
                     Histogram = histogram,

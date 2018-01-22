@@ -200,13 +200,12 @@ namespace Squared.Illuminant {
             Max = max;
         }
 
-        public Bucket[] Buckets {
+        public IEnumerable<Bucket> Buckets {
             get {
                 if (!Lock.IsReadLockHeld)
                     throw new InvalidOperationException();
 
                 float minValue;
-                var buckets = new Bucket[BucketCount];
                 for (int i = 0; i < BucketCount; i++) {
                     if (i > 0)
                         minValue = BucketMaxValues[i - 1];
@@ -215,7 +214,7 @@ namespace Squared.Illuminant {
 
                     var state = States[i];
 
-                    buckets[i] = new Bucket {
+                    yield return new Bucket {
                         BucketStart = minValue,
                         BucketEnd = BucketMaxValues[i],
                         Count = state.Count,
@@ -224,8 +223,6 @@ namespace Squared.Illuminant {
                         Mean = state.Count > 0 ? state.Sum / state.Count : 0
                     };
                 }
-
-                return buckets;
             }
         }
     }

@@ -182,8 +182,6 @@ namespace Squared.Illuminant {
         private readonly object     _LuminanceReadbackArrayLock = new object();
         private          float[]    _LuminanceReadbackArray;
 
-        private readonly HashSet<RenderedLighting> InProgressRenders = new HashSet<RenderedLighting>();
-
         // private readonly BufferRing _LightProbeBuffers;
         // private readonly Vector4[]  _LightProbeReadbackArray;
 
@@ -535,8 +533,6 @@ namespace Squared.Illuminant {
             var result = new RenderedLighting(
                 this, lightmap.Buffer, 1.0f / intensityScale
             );
-            lock (InProgressRenders)
-                InProgressRenders.Add(result);
 
             int layerIndex = 0;
 
@@ -1696,7 +1692,7 @@ namespace Squared.Illuminant {
         public RendererConfiguration (
             int maxWidth, int maxHeight, bool highQuality,
             bool enableBrightnessEstimation = false,
-            int ringBufferSize = 3
+            int ringBufferSize = 1
         ) {
             HighQuality = highQuality;
             MaximumRenderSize = new Pair<int>(maxWidth, maxHeight);
