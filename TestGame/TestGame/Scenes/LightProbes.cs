@@ -107,7 +107,7 @@ namespace TestGame.Scenes {
                         OcclusionToOpacityPower = 0.7f,
                         MaxConeRadius = 24,
                     },
-                    EnableGBuffer = true
+                    EnableGBuffer = false
                 }
             );
 

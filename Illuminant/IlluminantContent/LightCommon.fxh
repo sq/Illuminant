@@ -29,7 +29,7 @@ void sampleGBuffer (
     out float3 normal
 ) {
     [branch]
-    if (GBufferTexelSize.x >= 0) {
+    if (any(GBufferTexelSize)) {
         // FIXME: Should we be offsetting distance field samples too?
         float2 uv     = (screenPositionPx + 0.5) * GBufferTexelSize;
         float4 sample = tex2Dlod(GBufferSampler, float4(uv, 0, 0));
