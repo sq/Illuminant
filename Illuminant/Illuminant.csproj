@@ -78,6 +78,7 @@
     <Compile Include="Histogram.cs" />
     <Compile Include="IlluminantMaterials.cs" />
     <Compile Include="LightingRenderer.HDR.cs" />
+    <Compile Include="LightProbe.cs" />
     <Compile Include="MersenneTwister.cs" />
     <Compile Include="ParticleMaterials.cs" />
     <Compile Include="LightingRenderer.cs" />

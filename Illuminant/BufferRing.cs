@@ -47,7 +47,7 @@ namespace Squared.Illuminant {
 
         public BufferRing (
             RenderCoordinator coordinator, int width, int height, 
-            bool mipMap, SurfaceFormat format, int ringSize = 3
+            bool mipMap, SurfaceFormat format, int ringSize = 2
         ) {
             Coordinator = coordinator;
 

@@ -28,22 +28,15 @@ void DirectionalLightVertexShader(
 }
 
 float DirectionalLightPixelCore(
-    in float2 worldPosition       : TEXCOORD2,
+    in float3 shadedPixelPosition,
+    in float3 shadedPixelNormal,
     in float3 lightDirection      : TEXCOORD0,
     // enableShadows, shadowTraceLength, shadowSoftness, shadowRampRate
     in float4 lightProperties     : TEXCOORD1,
     // aoRadius, shadowDistanceFalloff, shadowRampLength
     in float3 moreLightProperties : TEXCOORD3,
-    in float2 vpos                : VPOS,
     in bool   useOpacityRamp
 ) {
-    float3 shadedPixelPosition;
-    float3 shadedPixelNormal;
-    sampleGBuffer(
-        vpos,
-        shadedPixelPosition, shadedPixelNormal
-    );
-
     float lightOpacity = computeDirectionalLightOpacity(lightDirection, shadedPixelNormal);
     bool visible = (shadedPixelPosition.x > -9999);
 
@@ -95,8 +88,15 @@ void DirectionalLightPixelShader(
     in  float2 vpos                : VPOS,
     out float4 result              : COLOR0
 ) {
+    float3 shadedPixelPosition;
+    float3 shadedPixelNormal;
+    sampleGBuffer(
+        vpos,
+        shadedPixelPosition, shadedPixelNormal
+    );
+
     float opacity = DirectionalLightPixelCore(
-        worldPosition, lightDirection, lightProperties, moreLightProperties, vpos, false
+        shadedPixelPosition, shadedPixelNormal, lightDirection, lightProperties, moreLightProperties, false
     );
 
     float4 lightColorActual = float4(color.rgb * color.a * opacity, 1);
@@ -112,8 +112,15 @@ void DirectionalLightWithRampPixelShader(
     in  float2 vpos                : VPOS,
     out float4 result              : COLOR0
 ) {
+    float3 shadedPixelPosition;
+    float3 shadedPixelNormal;
+    sampleGBuffer(
+        vpos,
+        shadedPixelPosition, shadedPixelNormal
+    );
+
     float opacity = DirectionalLightPixelCore(
-        worldPosition, lightDirection, lightProperties, moreLightProperties, vpos, true
+        shadedPixelPosition, shadedPixelNormal, lightDirection, lightProperties, moreLightProperties, true
     );
 
     float4 lightColorActual = float4(color.rgb * color.a * opacity, 1);

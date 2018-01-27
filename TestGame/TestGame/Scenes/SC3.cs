@@ -420,7 +420,7 @@ namespace TestGame.Scenes {
                 }
 
                 if (newHistogram == null)
-                    newHistogram = new Histogram(4f, 2);
+                    newHistogram = new Histogram(4f, 2, ignoreZeroes: true);
 
                 lighting.TryComputeHistogram(
                     newHistogram, 

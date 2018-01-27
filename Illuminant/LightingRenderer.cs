@@ -1692,7 +1692,7 @@ namespace Squared.Illuminant {
         public RendererConfiguration (
             int maxWidth, int maxHeight, bool highQuality,
             bool enableBrightnessEstimation = false,
-            int ringBufferSize = 1
+            int ringBufferSize = 2
         ) {
             HighQuality = highQuality;
             MaximumRenderSize = new Pair<int>(maxWidth, maxHeight);

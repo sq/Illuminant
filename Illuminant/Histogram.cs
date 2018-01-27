@@ -15,6 +15,14 @@ using Squared.Util;
 
 namespace Squared.Illuminant {
     public unsafe class Histogram : IDisposable {
+        private struct FloatComparer : IComparer<float> {
+            public static readonly FloatComparer Instance = new FloatComparer();
+
+            public int Compare (float lhs, float rhs) {
+                return lhs.CompareTo(rhs);
+            }
+        }
+
         public struct Bucket {
             public float BucketStart, BucketEnd;
             public float Min, Max, Mean;
@@ -43,6 +51,7 @@ namespace Squared.Illuminant {
         public float Min { get; private set; }
         public float Max { get; private set; }
         public float Mean { get; private set; }
+        public float Median { get; private set; }
 
         public bool IgnoreZeroes;
 
@@ -162,6 +171,15 @@ namespace Squared.Illuminant {
 
             var totalAdded = 0;
 
+            Array.Sort(buffer, 0, count);
+
+            int medianOffset = 0;
+            if (IgnoreZeroes)
+                medianOffset = Array.LastIndexOf(buffer, 0);
+
+            var medianIndex = Arithmetic.Clamp(((count - medianOffset) / 2) + medianOffset, 0, count - 1);
+            Median = buffer[medianIndex] * scaleFactor;
+
             fixed (float* pBuffer = buffer)
             for (int i = 0; i < count; i++) {
                 var rawValue = pBuffer[i];
@@ -230,7 +248,7 @@ namespace Squared.Illuminant {
     public class HistogramVisualizer {
         public float SampleCountPower = 3;
         public Color BorderColor = Color.White, BackgroundColor = Color.MidnightBlue * 0.75f;
-        public Color PercentileColor = Color.White, RangeColor = Color.White * 0.33f;
+        public Color PercentileColor = Color.White, RangeColor = Color.White * 0.33f, MedianColor = Color.SpringGreen;
         public float PercentileWidth = 1f;
         public Color[] ValueColors = new[] { Color.Black, Color.White, Color.Yellow, Color.Red };
         public DefaultMaterialSet Materials;
@@ -295,6 +313,17 @@ namespace Squared.Illuminant {
                     ir.FillRectangle(
                         new Bounds(new Vector2(x - halfWidth, Bounds.TopLeft.Y), new Vector2(x + halfWidth, Bounds.BottomRight.Y)), 
                         PercentileColor, layer: 3
+                    );
+                }
+
+                {
+                    var median = h.Median;
+                    var x = Arithmetic.Lerp(Bounds.TopLeft.X, Bounds.BottomRight.X, Arithmetic.Clamp(median / h.MaxInputValue, 0, 1));
+                    var halfWidth = PercentileWidth / 2f;
+
+                    ir.FillRectangle(
+                        new Bounds(new Vector2(x - halfWidth, Bounds.TopLeft.Y), new Vector2(x + halfWidth, Bounds.BottomRight.Y)), 
+                        MedianColor, layer: 3
                     );
                 }
 
