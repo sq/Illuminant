@@ -64,6 +64,9 @@ void sampleGBuffer (
 float computeNormalFactor (
     float3 lightNormal, float3 shadedPixelNormal
 ) {
+    if (!any(shadedPixelNormal))
+        return 1;
+
     float d = dot(-lightNormal, shadedPixelNormal);
 
     // HACK: We allow the light to be somewhat behind the surface without occluding it,
@@ -116,5 +119,7 @@ void sampleLightProbeBuffer (
     float2 uv1 = ((screenPositionPx * float2(1, 2)) + 0.5) * GBufferTexelSize;
     float2 uv2 = ((screenPositionPx * float2(1, 2)) + float2(0.5, 1.5)) * GBufferTexelSize;
     worldPosition = tex2Dlod(GBufferSampler, float4(uv1, 0, 0)).xyz;
-    normal = (tex2Dlod(GBufferSampler, float4(uv2, 0, 0)).xyz - 0.5) * 2.0;
+    float4 normalSample = tex2Dlod(GBufferSampler, float4(uv2, 0, 0));    
+    normal = (normalSample.xyz - 0.5) * 2.0;
+    // hasNormal = normalSample.w > 0;
 }

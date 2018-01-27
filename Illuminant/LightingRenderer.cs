@@ -400,7 +400,8 @@ namespace Squared.Illuminant {
         }
 
         public RenderTarget2D GetLightmap (bool allowBlocking) {
-            return _Lightmaps.GetBuffer(allowBlocking);
+            long temp;
+            return _Lightmaps.GetBuffer(allowBlocking, out temp);
         }
 
         private void ComputeUniforms () {
@@ -589,13 +590,15 @@ namespace Squared.Illuminant {
             var lightProbe = default(BufferRing.InProgressRender);
 
             if (Probes.Count > 0) {
-                var lastProbes = _LightProbeValueBuffers.GetBuffer(false);
+                long lastProbesTimestamp;
+                var lastProbes = _LightProbeValueBuffers.GetBuffer(false, out lastProbesTimestamp);
                 if (lastProbes != null) {
                     var q = Coordinator.ThreadGroup.GetQueueForType<LightProbeDownloadTask>();
                     q.Enqueue(new LightProbeDownloadTask {
                         Renderer = this,
                         ScaleFactor = 1.0f / intensityScale,
-                        Texture = lastProbes
+                        Texture = lastProbes,
+                        Timestamp = lastProbesTimestamp
                     });
                 }
 
@@ -619,9 +622,10 @@ namespace Squared.Illuminant {
                 //  stalling on the current lightmap being rendered
                 if (Configuration.EnableBrightnessEstimation) {
                     var q = Coordinator.ThreadGroup.GetQueueForType<HistogramUpdateTask>();
+                    long temp;
                     // q.WaitUntilDrained();
 
-                    var mostRecentLightmap = _Lightmaps.GetBuffer(false);
+                    var mostRecentLightmap = _Lightmaps.GetBuffer(false, out temp);
                     if (mostRecentLightmap != null)
                         result.LuminanceBuffer = UpdateLuminanceBuffer(outerGroup, 0, mostRecentLightmap, intensityScale).Buffer;
                 }
@@ -689,10 +693,13 @@ namespace Squared.Illuminant {
 
                 if (Probes.Count > 0)
                 using (var lightProbeGroup = BatchGroup.ForRenderTarget(
-                    outerGroup, 2, lightProbe.Buffer, 
+                    outerGroup, 3, lightProbe.Buffer, 
                     before: BeginLightPass, after: EndLightProbePass,
                     userData: lightProbe.Buffer
                 )) {
+                    if (RenderTrace.EnableTracing)
+                        RenderTrace.Marker(outerGroup, 2, "LightingRenderer {0} : Update light probes", this.ToObjectID());
+
                     if (Probes.IsDirty) {
                         UpdateLightProbeTexture();
                         Probes.IsDirty = false;
@@ -737,7 +744,10 @@ namespace Squared.Illuminant {
                 lock (Probes)
                 foreach (var probe in Probes) {
                     buffer.Data[x] = new Vector4(probe.Position, 0);
-                    buffer.Data[x + Configuration.MaximumLightProbeCount] = new Vector4(probe.Normal, 0);
+                    if (probe.Normal.HasValue)
+                        buffer.Data[x + Configuration.MaximumLightProbeCount] = new Vector4(probe.Normal.Value, 1);
+                    else
+                        buffer.Data[x + Configuration.MaximumLightProbeCount] = Vector4.Zero;
                     x += 1;
                 }
 

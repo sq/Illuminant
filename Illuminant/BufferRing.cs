@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework.Graphics;
 using Squared.Render;
+using Squared.Util;
 
 namespace Squared.Illuminant {
     public class BufferRing : IDisposable {
@@ -39,7 +40,8 @@ namespace Squared.Illuminant {
         private readonly RenderCoordinator Coordinator;
         private readonly List<RenderTarget2D> Buffers = new List<RenderTarget2D>();
         private readonly HashSet<RenderTarget2D> InProgressBuffers = new HashSet<RenderTarget2D>();
-
+        
+        private long           MostRecentValidBufferTimestamp;
         private RenderTarget2D MostRecentValidBuffer = null;
         private ManualResetEventSlim InProgressSignal = new ManualResetEventSlim();
 
@@ -88,7 +90,7 @@ namespace Squared.Illuminant {
             return new InProgressRender(this, buffer);
         }
 
-        public RenderTarget2D GetBuffer (bool allowBlocking) {
+        public RenderTarget2D GetBuffer (bool allowBlocking, out long timestamp) {
             Monitor.Enter(Buffers);
 
             while ((MostRecentValidBuffer == null) && allowBlocking) {
@@ -98,6 +100,7 @@ namespace Squared.Illuminant {
             }
 
             var result = MostRecentValidBuffer;
+            timestamp = MostRecentValidBufferTimestamp;
             Monitor.Exit(Buffers);
 
             return result;
@@ -107,6 +110,7 @@ namespace Squared.Illuminant {
             lock (Buffers) {
                 InProgressBuffers.Remove(buffer);
                 MostRecentValidBuffer = buffer;
+                MostRecentValidBufferTimestamp = Time.Ticks;
                 InProgressSignal.Set();
             }
         }

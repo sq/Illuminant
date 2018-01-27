@@ -112,16 +112,15 @@ namespace TestGame.Scenes {
 
             Environment.Lights.Add(new DirectionalLightSource {
                 Direction = new Vector3(-0.75f, -0.7f, -0.33f),
-                Color = new Vector4(0.2f, 0.4f, 0.6f, 0.4f),
+                Color = new Vector4(0.25f, 0.45f, 0.65f, 0.6f),
                 CastsShadows = false
             });
 
             Environment.Lights.Add(new SphereLightSource {
-                Position = new Vector3(500, 350, 30),
-                Color = new Vector4(0.5f, 0.3f, 0.15f, 0.9f),
-                Radius = 96,
-                RampLength = 300,
-                CastsShadows = false
+                Position = new Vector3(500, 350, 100),
+                Color = new Vector4(1f, 0.7f, 0.15f, 1f),
+                Radius = 128,
+                RampLength = 360
             });
 
             Environment.Obstructions.Add(new LightObstruction(
@@ -135,19 +134,22 @@ namespace TestGame.Scenes {
             ));
 
             Renderer.Probes.Add(new LightProbe {
-                Position = new Vector3(50, 50, 0)
+                Position = new Vector3(50, 50, 1)
             });
 
             Renderer.Probes.Add(new LightProbe {
-                Position = new Vector3(375, 300, 0)
+                Position = new Vector3(375, 300, 6)
             });
 
             Renderer.Probes.Add(new LightProbe {
-                Position = new Vector3(500, 350, 0)
+                Position = new Vector3(500, 350, 12)
             });
 
             Renderer.Probes.Add(new LightProbe {
-                Position = new Vector3(500, 450, 0)
+                Position = new Vector3(500, 450, 18)
+            });
+
+            Renderer.Probes.Add(new LightProbe {
             });
         }
         
@@ -189,6 +191,19 @@ namespace TestGame.Scenes {
                     samplerState: SamplerState.LinearClamp
                 ))
                     bb.Add(new BitmapDrawCall(Lightmap, Vector2.Zero));
+
+                using (var gb = GeometryBatch.New(
+                    group, 2,
+                    Game.Materials.Get(Game.Materials.ScreenSpaceGeometry, blendState: BlendState.Opaque)
+                )) {
+                    foreach (var p in Renderer.Probes) {
+                        var c = new Color(p.Value.X, p.Value.Y, p.Value.Z, 1);
+                        var center = new Vector2(p.Position.X, p.Position.Y);
+                        var size = new Vector2(6, 6);
+                        gb.AddFilledQuad(center - size, center + size, c);
+                        gb.AddOutlinedQuad(center - size, center + size, Color.White);
+                    }
+                }
 
                 if (ShowDistanceField) {
                     float dfScale = Math.Min(
@@ -234,7 +249,7 @@ namespace TestGame.Scenes {
                 var ms = Mouse.GetState();
                 Game.IsMouseVisible = true;
 
-                var mousePos = new Vector3(ms.X, ms.Y, 0);
+                Renderer.Probes.Last().Position = new Vector3(ms.X, ms.Y, 32);
             }
         }
     }

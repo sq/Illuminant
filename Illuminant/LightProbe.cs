@@ -79,7 +79,8 @@ namespace Squared.Illuminant {
     public class LightProbe {
         internal WeakReference<LightProbeCollection> Collection = null;
 
-        internal Vector3 _Position = Vector3.Zero, _Normal = Vector3.UnitZ;
+        internal Vector3 _Position = Vector3.Zero;
+        internal Vector3? _Normal = null;
 
         public long PreviouslyUpdatedWhen, UpdatedWhen;
         public Vector4 PreviousValue, Value;
@@ -105,7 +106,7 @@ namespace Squared.Illuminant {
             }
         }
 
-        public Vector3 Normal { 
+        public Vector3? Normal { 
             get {
                 return _Normal;
             }
@@ -120,6 +121,7 @@ namespace Squared.Illuminant {
         private struct LightProbeDownloadTask : IWorkItem {
             public LightingRenderer Renderer;
             public RenderTarget2D Texture;
+            public long Timestamp;
             public float ScaleFactor;
 
             public void Execute () {
@@ -141,6 +143,11 @@ namespace Squared.Illuminant {
 
                     lock (Renderer.Probes)
                     foreach (var p in Renderer.Probes) {
+                        if (p.UpdatedWhen >= Timestamp) {
+                            i++;
+                            continue;
+                        }
+
                         p.PreviouslyUpdatedWhen = p.UpdatedWhen;
                         p.PreviousValue = p.Value;
                         p.UpdatedWhen = now;
