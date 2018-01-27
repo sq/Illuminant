@@ -8,8 +8,9 @@ namespace Squared.Illuminant {
         public readonly DefaultMaterialSet MaterialSet;
 
         public Material SphereLight, DirectionalLight;
-        public Material SphereLightProbe, DirectionalLightProbe;
         public Material SphereLightWithDistanceRamp, SphereLightWithOpacityRamp, DirectionalLightWithRamp;
+        public Material SphereLightProbe, DirectionalLightProbe;
+        public Material SphereLightProbeWithDistanceRamp, SphereLightProbeWithOpacityRamp, DirectionalLightProbeWithRamp;
         public Material DistanceFieldExterior, DistanceFieldInterior;
         public Material[] DistanceFunctionTypes;
         public Material ClearDistanceFieldSlice;

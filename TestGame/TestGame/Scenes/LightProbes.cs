@@ -27,7 +27,8 @@ namespace TestGame.Scenes {
 
         Toggle ShowGBuffer,
             ShowLightmap,
-            ShowDistanceField;
+            ShowDistanceField,
+            UseRampTexture;
 
         Slider DistanceFieldResolution,
             LightmapScaleRatio;
@@ -37,10 +38,12 @@ namespace TestGame.Scenes {
 
             DistanceFieldResolution.Value = 0.25f;
             LightmapScaleRatio.Value = 1.0f;
+            UseRampTexture.Value = true;
 
             ShowLightmap.Key = Keys.L;
             ShowGBuffer.Key = Keys.G;
             ShowDistanceField.Key = Keys.D;
+            UseRampTexture.Key = Keys.P;
 
             DistanceFieldResolution.MinusKey = Keys.D3;
             DistanceFieldResolution.PlusKey = Keys.D4;
@@ -266,6 +269,8 @@ namespace TestGame.Scenes {
                 Game.IsMouseVisible = true;
 
                 Renderer.Probes.Last().Position = new Vector3(ms.X, ms.Y, 32);
+
+                Environment.Lights.Last().RampTexture = UseRampTexture ? Game.RampTexture : null;
             }
         }
     }

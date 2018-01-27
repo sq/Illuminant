@@ -83,14 +83,21 @@ namespace Squared.Illuminant {
                                     ? parent.IlluminantMaterials.SphereLightWithDistanceRamp
                                     : parent.IlluminantMaterials.SphereLightWithOpacityRamp
                             );
-                        // FIXME: Ramp options
-                        ProbeMaterial = parent.IlluminantMaterials.SphereLightProbe;
+                        ProbeMaterial = (key.RampTexture == null)
+                            ? parent.IlluminantMaterials.SphereLightProbe
+                            : (
+                                key.DistanceRamp
+                                    ? parent.IlluminantMaterials.SphereLightProbeWithDistanceRamp
+                                    : parent.IlluminantMaterials.SphereLightProbeWithOpacityRamp
+                            );
                         break;
                     case LightSourceTypeID.Directional:
                         Material = (key.RampTexture == null)
                             ? parent.IlluminantMaterials.DirectionalLight
                             : parent.IlluminantMaterials.DirectionalLightWithRamp;
-                        ProbeMaterial = parent.IlluminantMaterials.DirectionalLightProbe;
+                        ProbeMaterial = (key.RampTexture == null)
+                            ? parent.IlluminantMaterials.DirectionalLightProbe
+                            : parent.IlluminantMaterials.DirectionalLightProbeWithRamp;
                         break;
                     default:
                         throw new NotImplementedException(key.Type.ToString());
@@ -476,8 +483,7 @@ namespace Squared.Illuminant {
 
             ltrs.ProbeMaterial.Effect.Parameters["GBuffer"].SetValue(_LightProbeDataTexture);
             ltrs.ProbeMaterial.Effect.Parameters["GBufferTexelSize"].SetValue(new Vector2(1.0f / Configuration.MaximumLightProbeCount, 1.0f / 2.0f));
-            // FIXME: Not implemented
-            // ltrs.ProbeMaterial.Effect.Parameters["RampTexture"].SetValue(ltrs.Key.RampTexture);
+            ltrs.ProbeMaterial.Effect.Parameters["RampTexture"].SetValue(ltrs.Key.RampTexture);
         }
 
         private void SetGBufferParameters (EffectParameterCollection p) {

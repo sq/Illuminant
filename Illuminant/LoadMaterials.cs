@@ -7,9 +7,10 @@ using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Squared.Render;
 using Squared.Render.Convenience;
+using Squared.Render.Tracing;
 
 namespace Squared.Illuminant {
-    public sealed partial class LightingRenderer : IDisposable {
+    public sealed partial class LightingRenderer : IDisposable, INameableGraphicsObject {
         private void DefineMaterial (Material m) {
             Materials.Add(m);
         }
@@ -32,14 +33,6 @@ namespace Squared.Illuminant {
                     content.Load<Effect>("DirectionalLight"), "DirectionalLight", dBegin, dEnd
                 ));
 
-                DefineMaterial(IlluminantMaterials.SphereLightProbe = new Material(
-                    content.Load<Effect>("SphereLight"), "SphereLightProbe", dBegin, dEnd
-                ));
-
-                DefineMaterial(IlluminantMaterials.DirectionalLightProbe = new Material(
-                    content.Load<Effect>("DirectionalLight"), "DirectionalLightProbe", dBegin, dEnd
-                ));
-
                 DefineMaterial(IlluminantMaterials.SphereLightWithDistanceRamp = new Material(
                     content.Load<Effect>("SphereLight"), "SphereLightWithDistanceRamp", dBegin, dEnd
                 ));
@@ -50,6 +43,26 @@ namespace Squared.Illuminant {
 
                 DefineMaterial(IlluminantMaterials.DirectionalLightWithRamp = new Material(
                     content.Load<Effect>("DirectionalLight"), "DirectionalLightWithRamp", dBegin, dEnd
+                ));
+
+                DefineMaterial(IlluminantMaterials.SphereLightProbe = new Material(
+                    content.Load<Effect>("SphereLight"), "SphereLightProbe", dBegin, dEnd
+                ));
+
+                DefineMaterial(IlluminantMaterials.SphereLightProbeWithDistanceRamp = new Material(
+                    content.Load<Effect>("SphereLight"), "SphereLightProbeWithDistanceRamp", dBegin, dEnd
+                ));
+
+                DefineMaterial(IlluminantMaterials.SphereLightProbeWithOpacityRamp = new Material(
+                    content.Load<Effect>("SphereLight"), "SphereLightProbeWithOpacityRamp", dBegin, dEnd
+                ));
+
+                DefineMaterial(IlluminantMaterials.DirectionalLightProbe = new Material(
+                    content.Load<Effect>("DirectionalLight"), "DirectionalLightProbe", dBegin, dEnd
+                ));
+
+                DefineMaterial(IlluminantMaterials.DirectionalLightProbeWithRamp = new Material(
+                    content.Load<Effect>("DirectionalLight"), "DirectionalLightProbeWithRamp", dBegin, dEnd
                 ));
 
                 DefineMaterial(IlluminantMaterials.DistanceFieldExterior = 

@@ -194,6 +194,50 @@ void SphereLightProbePixelShader(
     result = float4(color.rgb * color.a * opacity, 1);
 }
 
+void SphereLightProbeWithDistanceRampPixelShader(
+    in  float3 lightCenter : TEXCOORD0,
+    in  float4 lightProperties : TEXCOORD1,
+    in  float3 moreLightProperties : TEXCOORD3,
+    in  float4 color : COLOR0,
+    in  float2 vpos : VPOS,
+    out float4 result : COLOR0
+) {
+    float3 shadedPixelPosition;
+    float3 shadedPixelNormal;
+    sampleLightProbeBuffer(
+        vpos,
+        shadedPixelPosition, shadedPixelNormal
+    );
+
+    float opacity = SphereLightPixelCore(
+        shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties, true, false
+    );
+
+    result = float4(color.rgb * color.a * opacity, 1);
+}
+
+void SphereLightProbeWithOpacityRampPixelShader(
+    in  float3 lightCenter : TEXCOORD0,
+    in  float4 lightProperties : TEXCOORD1,
+    in  float3 moreLightProperties : TEXCOORD3,
+    in  float4 color : COLOR0,
+    in  float2 vpos : VPOS,
+    out float4 result : COLOR0
+) {
+    float3 shadedPixelPosition;
+    float3 shadedPixelNormal;
+    sampleLightProbeBuffer(
+        vpos,
+        shadedPixelPosition, shadedPixelNormal
+    );
+
+    float opacity = SphereLightPixelCore(
+        shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties, false, true
+    );
+
+    result = float4(color.rgb * color.a * opacity, 1);
+}
+
 technique SphereLight {
     pass P0
     {
@@ -223,5 +267,21 @@ technique SphereLightProbe {
     {
         vertexShader = compile vs_3_0 SphereLightProbeVertexShader();
         pixelShader = compile ps_3_0 SphereLightProbePixelShader();
+    }
+}
+
+technique SphereLightProbeWithDistanceRamp {
+    pass P0
+    {
+        vertexShader = compile vs_3_0 SphereLightProbeVertexShader();
+        pixelShader = compile ps_3_0 SphereLightProbeWithDistanceRampPixelShader();
+    }
+}
+
+technique SphereLightProbeWithOpacityRamp {
+    pass P0
+    {
+        vertexShader = compile vs_3_0 SphereLightProbeVertexShader();
+        pixelShader = compile ps_3_0 SphereLightProbeWithOpacityRampPixelShader();
     }
 }
