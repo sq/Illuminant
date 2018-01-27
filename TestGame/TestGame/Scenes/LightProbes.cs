@@ -78,7 +78,7 @@ namespace TestGame.Scenes {
 
             DistanceField = new DistanceField(
                 Game.RenderCoordinator, 1024, 1024, Environment.MaximumZ,
-                16, DistanceFieldResolution.Value
+                8, DistanceFieldResolution.Value
             );
             if (Renderer != null) {
                 Renderer.DistanceField = DistanceField;
@@ -125,12 +125,12 @@ namespace TestGame.Scenes {
 
             Environment.Obstructions.Add(new LightObstruction(
                 LightObstructionType.Box, 
-                new Vector3(500, 750, 0), new Vector3(50, 100, 15f)
+                new Vector3(500, 750, 0), new Vector3(50, 100, 100f)
             ));
 
             Environment.Obstructions.Add(new LightObstruction(
                 LightObstructionType.Ellipsoid, 
-                new Vector3(300, 250, 0), new Vector3(40, 45, 30f)
+                new Vector3(300, 250, 0), new Vector3(40, 45, 100f)
             ));
 
             Renderer.Probes.Add(new LightProbe {
