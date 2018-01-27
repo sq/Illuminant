@@ -113,6 +113,7 @@ namespace TestGame.Scenes {
             Environment.Lights.Add(new DirectionalLightSource {
                 Direction = new Vector3(-0.75f, -0.7f, -0.33f),
                 Color = new Vector4(0.2f, 0.4f, 0.6f, 0.4f),
+                CastsShadows = false
             });
 
             Environment.Lights.Add(new SphereLightSource {
@@ -120,6 +121,7 @@ namespace TestGame.Scenes {
                 Color = new Vector4(0.5f, 0.3f, 0.15f, 0.9f),
                 Radius = 96,
                 RampLength = 300,
+                CastsShadows = false
             });
 
             Environment.Obstructions.Add(new LightObstruction(
@@ -137,15 +139,15 @@ namespace TestGame.Scenes {
             });
 
             Renderer.Probes.Add(new LightProbe {
-                Position = new Vector3(250, 50, 0)
+                Position = new Vector3(375, 300, 0)
             });
 
             Renderer.Probes.Add(new LightProbe {
-                Position = new Vector3(250, 250, 0)
+                Position = new Vector3(500, 350, 0)
             });
 
             Renderer.Probes.Add(new LightProbe {
-                Position = new Vector3(450, 450, 0)
+                Position = new Vector3(500, 450, 0)
             });
         }
         

@@ -28,15 +28,14 @@ void DirectionalLightVertexShader(
 }
 
 void DirectionalLightProbeVertexShader(
-    in float2 cornerWeight           : POSITION0,
+    in float2 position               : POSITION0,
     inout float4 color               : COLOR0,
     inout float3 lightDirection      : TEXCOORD0,
     inout float4 lightProperties     : TEXCOORD1,
     inout float3 moreLightProperties : TEXCOORD3,
     out float4   result              : POSITION0
 ) {
-    float2 tl = -999999, br = 999999;
-    float2 clipPosition = lerp(tl, br, cornerWeight);
+    float2 clipPosition = float2(position.x > 0 ? 999 : -999, position.y > 0 ? 999 : -999);
 
     result = float4(clipPosition.xy, 0, 1);
 }

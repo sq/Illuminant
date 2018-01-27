@@ -37,8 +37,7 @@ void SphereLightProbeVertexShader(
     inout float3 moreLightProperties : TEXCOORD3,
     out float4 result                : POSITION0
 ) {
-    float2 tl = -999999, br = 999999;
-    float2 clipPosition = lerp(tl, br, cornerWeight);
+    float2 clipPosition = float2(cornerWeight.x > 0 ? 999 : -999, cornerWeight.y > 0 ? 999 : -999);
 
     result = float4(clipPosition.xy, 0, 1);
 }
@@ -189,7 +188,7 @@ void SphereLightProbePixelShader(
     );
 
     float opacity = SphereLightPixelCore(
-        shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties, false, true
+        shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties, false, false
     );
 
     result = float4(color.rgb * color.a * opacity, 1);

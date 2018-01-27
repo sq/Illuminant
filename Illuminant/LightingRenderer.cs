@@ -261,7 +261,7 @@ namespace Squared.Illuminant {
             _LightProbeValueBuffers = new BufferRing(
                 coordinator,
                 Configuration.MaximumLightProbeCount, 
-                2,
+                1,
                 false,
                 Configuration.HighQuality
                     ? SurfaceFormat.Rgba64
@@ -463,6 +463,8 @@ namespace Squared.Illuminant {
         private void _LightProbeBatchSetup (DeviceManager device, object userData) {
             var ltrs = (LightTypeRenderState)userData;
 
+            device.Device.Viewport = new Viewport(0, 0, Probes.Count, 1);
+
             // Not necessary because first pass did it.
             /*
             lock (_LightStateLock)
@@ -472,6 +474,9 @@ namespace Squared.Illuminant {
             device.Device.BlendState = RenderStates.AdditiveBlend;
 
             SetLightShaderParameters(ltrs.ProbeMaterial, ltrs.Key.Quality);
+
+            ltrs.ProbeMaterial.Effect.Parameters["GBuffer"].SetValue(_LightProbeDataTexture);
+            ltrs.ProbeMaterial.Effect.Parameters["GBufferTexelSize"].SetValue(new Vector2(1.0f / Configuration.MaximumLightProbeCount, 1.0f / 2.0f));
             // FIXME: Not implemented
             // ltrs.ProbeMaterial.Effect.Parameters["RampTexture"].SetValue(ltrs.Key.RampTexture);
         }
@@ -694,7 +699,7 @@ namespace Squared.Illuminant {
                             RenderTrace.Marker(lightProbeGroup, layerIndex++, "LightingRenderer {0} : Render {1} {2} light(s)", this.ToObjectID(), count, ltrs.Key.Type);
 
                         using (var nb = NativeBatch.New(
-                            lightProbeGroup, layerIndex++, ltrs.Material, LightProbeBatchSetup, userData: ltrs
+                            lightProbeGroup, layerIndex++, ltrs.ProbeMaterial, LightProbeBatchSetup, userData: ltrs
                         )) {
                             nb.Add(new NativeDrawCall(
                                 PrimitiveType.TriangleList,
@@ -718,6 +723,7 @@ namespace Squared.Illuminant {
                 foreach (var probe in Probes) {
                     buffer.Data[x] = new Vector4(probe.Position, 0);
                     buffer.Data[x + Configuration.MaximumLightProbeCount] = new Vector4(probe.Normal, 0);
+                    x += 1;
                 }
 
                 lock (Coordinator.UseResourceLock)
