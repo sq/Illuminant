@@ -170,7 +170,7 @@ namespace Squared.Illuminant {
         public  readonly DefaultMaterialSet   Materials;
         public           IlluminantMaterials  IlluminantMaterials { get; private set; }
 
-        public  readonly LightProbeCollection Probes = new LightProbeCollection();
+        public  readonly LightProbeCollection Probes;
 
         public  readonly DepthStencilState TopFaceDepthStencilState, FrontFaceDepthStencilState;
         public  readonly DepthStencilState DistanceInteriorStencilState, DistanceExteriorStencilState;
@@ -305,6 +305,7 @@ namespace Squared.Illuminant {
             LoadMaterials(content);
 
             Environment = environment;
+            Probes = new LightProbeCollection(Configuration.MaximumLightProbeCount);
 
             Coordinator.DeviceReset += Coordinator_DeviceReset;
         }
@@ -432,8 +433,14 @@ namespace Squared.Illuminant {
             var vt = ViewTransform.CreateOrthographic(
                 buffer.Width, buffer.Height
             );
+
+            var coordOffset = new Vector2(1.0f / Configuration.RenderScale.X, 1.0f / Configuration.RenderScale.Y) * 0.5f;
+
             vt.Position = Materials.ViewportPosition;
             vt.Scale = Materials.ViewportScale;
+
+            if (Configuration.ScaleCompensation)
+                vt.Position += coordOffset;
 
             device.PushStates();
             Materials.PushViewTransform(ref vt);
@@ -749,9 +756,11 @@ namespace Squared.Illuminant {
 
                 lock (Probes)
                 foreach (var probe in Probes) {
-                    buffer.Data[x] = new Vector4(probe.Position, 0);
-                    if (probe.Normal.HasValue)
-                        buffer.Data[x + Configuration.MaximumLightProbeCount] = new Vector4(probe.Normal.Value, 1);
+                    var p = probe._Position;
+                    var n = probe._Normal;
+                    buffer.Data[x] = new Vector4(p, 0);
+                    if (n.HasValue)
+                        buffer.Data[x + Configuration.MaximumLightProbeCount] = new Vector4(n.Value, 1);
                     else
                         buffer.Data[x + Configuration.MaximumLightProbeCount] = Vector4.Zero;
                     x += 1;
@@ -786,11 +795,8 @@ namespace Squared.Illuminant {
         }
 
         private void RenderDirectionalLightSource (DirectionalLightSource lightSource, float intensityScale, LightTypeRenderState ltrs) {
-            var lightDirection = lightSource.Direction;
-            lightDirection.Normalize();
-
             LightVertex vertex;
-            vertex.LightCenter = lightDirection;
+            vertex.LightCenter = lightSource._Direction;
             vertex.Color = lightSource.Color;
             vertex.Color.W *= (lightSource.Opacity * intensityScale);
             vertex.LightProperties = new Vector4(
@@ -802,7 +808,7 @@ namespace Squared.Illuminant {
             vertex.MoreLightProperties = new Vector3(
                 lightSource.AmbientOcclusionRadius,
                 lightSource.ShadowDistanceFalloff.GetValueOrDefault(-99999),
-                lightSource.ShadowRampLength
+                0
             );
 
             var lightBounds = new Bounds(
@@ -886,7 +892,7 @@ namespace Squared.Illuminant {
             );
 
             var dc = new BitmapDrawCall(
-                lightmap, Vector2.Zero, bounds                
+                lightmap, Vector2.Zero, bounds
             );
             dc.Scale = new Vector2(
                 width.GetValueOrDefault(Configuration.RenderSize.First) / Configuration.RenderSize.First,
@@ -1778,6 +1784,9 @@ namespace Squared.Illuminant {
             out Vector2 computedViewPosition, 
             out Vector2 computedUvOffset
         ) {
+            // HACK: Two conflicting approaches to fixing this
+            Configuration.ScaleCompensation = false;
+
             var truncated = new Vector2(
                 (float)Math.Truncate(viewPosition.X * Configuration.RenderScale.X),
                 (float)Math.Truncate(viewPosition.Y * Configuration.RenderScale.Y)
@@ -1787,85 +1796,6 @@ namespace Squared.Illuminant {
             var offsetInLightmapTexels = offsetInPixels * Configuration.RenderScale;
             computedUvOffset = offsetInLightmapTexels / new Vector2(lightmapWidth, lightmapHeight);
         }
-    }
-
-    public class RendererConfiguration {
-        // The maximum width and height of the viewport.
-        public readonly Pair<int> MaximumRenderSize;
-
-        public readonly int       MaximumLightProbeCount;
-
-        // Uses a high-precision g-buffer and internal lightmap.
-        public readonly bool      HighQuality;
-        // Generates downscaled versions of the internal lightmap that the
-        //  renderer can use to estimate the brightness of the scene for HDR.
-        public readonly bool      EnableBrightnessEstimation;
-
-        // Determines how large the ring buffers are. Larger ring buffers use
-        //  more memory but reduce the likelihood that draw or readback operations
-        //  will stall waiting on the previous frame.
-        public readonly int       RingBufferSize;
-
-        // Scales world coordinates when rendering the G-buffer and lightmap
-        public Vector2   RenderScale    = Vector2.One;
-
-        // The current width and height of the viewport.
-        // Must not be larger than MaximumRenderSize.
-        public Pair<int> RenderSize;
-
-        // Sets the default ramp texture to use for lights with no ramp texture set.
-        public Texture2D DefaultRampTexture;
-
-        // Sets the default quality configuration to use for lights with
-        //  no configuration set.
-        public RendererQualitySettings DefaultQuality = 
-            new RendererQualitySettings();
-
-        // The maximum number of distance field slices to update per frame.
-        // Setting this value too high can crash your video driver.
-        public int  MaxFieldUpdatesPerFrame = 1;
-
-        public bool EnableGBuffer     = true;
-        public bool GBufferCaching    = true;
-        public bool TwoPointFiveD     = false;
-        public bool RenderGroundPlane = true;
-
-        public RendererConfiguration (
-            int maxWidth, int maxHeight, bool highQuality,
-            bool enableBrightnessEstimation = false,
-            int ringBufferSize = 2,
-            int maximumLightProbeCount = 512
-        ) {
-            HighQuality = highQuality;
-            MaximumRenderSize = new Pair<int>(maxWidth, maxHeight);
-            RenderSize = MaximumRenderSize;
-            EnableBrightnessEstimation = enableBrightnessEstimation;
-            RingBufferSize = ringBufferSize;
-            MaximumLightProbeCount = maximumLightProbeCount;
-        }
-    }
-
-    public class RendererQualitySettings {
-        // Individual cone trace steps are not allowed to be any shorter than this.
-        // Improves the worst-case performance of the trace and avoids spending forever
-        //  stepping short distances around the edges of objects.
-        // Setting this to 1 produces the 'best' results but larger values tend to look
-        //  just fine. If this is too high you will get banding artifacts.
-        public float MinStepSize             = 3.0f;
-        // Long step distances are scaled by this factor. A factor < 1.0
-        //  eliminates banding artifacts in the soft area between full/no shadow,
-        //  at the cost of additional cone trace steps.
-        // This effectively increases how much time we spend outside of objects,
-        //  producing higher quality as a side effect.
-        // Only set this above 1.0 if you love goofy looking artifacts
-        public float LongStepFactor          = 1.0f;
-        // Terminates a cone trace after this many steps.
-        // Mitigates the performance hit for complex traces near the edge of objects.
-        // Most traces will not hit this cap.
-        public int   MaxStepCount            = 64;
-        public float MaxConeRadius           = 24;
-        public float ConeGrowthFactor        = 1.0f;
-        public float OcclusionToOpacityPower = 1;
     }
 
     public enum VisualizationMode {

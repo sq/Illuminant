@@ -13,15 +13,24 @@ using Squared.Util;
 
 namespace Squared.Illuminant {
     public class LightProbeCollection : IEnumerable<LightProbe> {
-        private readonly List<LightProbe> Probes = new List<LightProbe>();
+        private readonly List<LightProbe> Probes;
 
+        public readonly int MaximumCount;
         public bool IsDirty { get; internal set; }
+
+        public LightProbeCollection (int maximumCount) {
+            MaximumCount = maximumCount;
+            Probes = new List<LightProbe>(maximumCount);
+        }
 
         public void Add (LightProbe probe) {
             lock (Probes) {
                 LightProbeCollection oldParent;
                 if ((probe.Collection != null) && probe.Collection.TryGetTarget(out oldParent))
                     throw new InvalidOperationException("Probe already in a collection");
+
+                if (Probes.Count >= MaximumCount)
+                    throw new InvalidOperationException("List full");
 
                 probe.Collection = new WeakReference<LightProbeCollection>(this);
                 Probes.Add(probe);

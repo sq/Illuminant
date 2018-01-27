@@ -26,7 +26,7 @@ namespace TestGame.Scenes {
         float LightZ;
 
         const int MultisampleCount = 0;
-        const int LightmapScaleRatio = 16;
+        const int LightmapScaleRatio = 4;
         const int MaxStepCount = 128;
 
         bool ShowGBuffer       = false;

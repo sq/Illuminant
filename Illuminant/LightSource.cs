@@ -19,23 +19,42 @@ namespace Squared.Illuminant {
 
         public object UserData;
 
-        // The color of the light's illumination.
-        // Note that this color is a Vector4 so that you can use HDR (greater than one) lighting values.
-        // Alpha is *not* premultiplied (maybe it should be?)
+        /// <summary>
+        /// The color of the light's illumination.
+        /// Note that this color is a Vector4 so that you can use HDR (greater than one) lighting values.
+        /// Alpha is *not* premultiplied (maybe it should be?)
+        /// </summary>
         public Vector4   Color = Vector4.One;
-        // A separate opacity factor that you can use to easily fade lights in/out.
+        /// <summary>
+        /// A separate opacity factor that you can use to easily fade lights in/out.
+        /// </summary>
         public float     Opacity = 1.0f;
+        /// <summary>
+        /// If set, volumes within the distance field will obstruct light from this light source,
+        ///  creating shadows. Otherwise, any objects facing this light will be lit (if in range).
+        /// </summary>
         public bool      CastsShadows = true;
         // FIXME: Not implemented in shaders
         public float?    ShadowDistanceFalloff = null;
-        // Uniformly obscures light if it is within N pixels of any obstacle.
+        /// <summary>
+        /// Uniformly obscures light if it is within N pixels of any obstacle. This produces
+        ///  a 'blob shadow' around volumes within the distance field.
+        /// </summary>
         public float     AmbientOcclusionRadius = 0;
-        // Allows you to scale the falloff of the light along the Y axis to fake foreshortening.
+        /// <summary>
+        /// Allows you to scale the falloff of the light along the Y axis to fake foreshortening,
+        ///  turning a spherical light into an ellipse. Isometric or 2.5D perspectives may look
+        ///  better with this option adjusted.
+        /// </summary>
         public float     FalloffYFactor = 1;
-        // Allows you to optionally set a ramp texture to control the appearance of light falloff
+        /// <summary>
+        /// Allows you to optionally set a ramp texture to control the appearance of light falloff.
+        /// </summary>
         public Texture2D RampTexture = null;
-        // Allows you to optionally override quality settings for this light
-        // NOTE: It is *much* faster to share a single settings instance for many lights!
+        /// <summary>
+        /// Allows you to optionally override quality settings for this light.
+        /// It is *much* faster to share a single settings instance for many lights!
+        /// </summary>
         public RendererQualitySettings Quality = null;
 
 
@@ -45,13 +64,24 @@ namespace Squared.Illuminant {
     }
 
     public class DirectionalLightSource : LightSource {
+        internal Vector3 _Direction;
+
         /// <summary>
         /// The direction light travels.
         /// </summary>
-        public Vector3 Direction;
+        public Vector3 Direction {
+            get {
+                return _Direction;
+            }
+            set {
+                value.Normalize();
+                _Direction = value;
+            }
+        }
         /// <summary>
         /// The distance in pixels that will be traced to find light obstructions.
-        /// A larger value produces more accurate directional shadows at increased cost.
+        /// A larger value produces more accurate directional shadows at increased cost
+        ///  because a directional light's light source is an infinite distance away.
         /// </summary>
         public float   ShadowTraceLength = 256;
         /// <summary>
@@ -62,10 +92,6 @@ namespace Squared.Illuminant {
         /// Controls how quickly directional light shadows become fuzzy.
         /// </summary>
         public float   ShadowRampRate = 0.5f;
-        /// <summary>
-        /// Controls the length of the shadow softness ramp.
-        /// </summary>
-        public float   ShadowRampLength = 256f;
 
         public DirectionalLightSource ()
             : base (LightSourceTypeID.Directional) {
@@ -74,7 +100,7 @@ namespace Squared.Illuminant {
         public DirectionalLightSource Clone () {
             var result = new DirectionalLightSource {
                 UserData = UserData,
-                Direction = Direction,
+                _Direction = _Direction,
                 ShadowTraceLength = ShadowTraceLength,
                 ShadowSoftness = ShadowSoftness,
                 ShadowRampRate = ShadowRampRate,

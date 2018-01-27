@@ -81,7 +81,7 @@ namespace TestGame.Scenes {
 
             DistanceField = new DistanceField(
                 Game.RenderCoordinator, 1024, 1024, Environment.MaximumZ,
-                8, DistanceFieldResolution.Value
+                16, DistanceFieldResolution.Value
             );
             if (Renderer != null) {
                 Renderer.DistanceField = DistanceField;
@@ -93,7 +93,7 @@ namespace TestGame.Scenes {
             Environment = new LightingEnvironment();
 
             Environment.GroundZ = 0;
-            Environment.MaximumZ = 128;
+            Environment.MaximumZ = 100;
 
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
@@ -116,7 +116,7 @@ namespace TestGame.Scenes {
             Environment.Lights.Add(new DirectionalLightSource {
                 Direction = new Vector3(-0.75f, -0.7f, -0.33f),
                 Color = new Vector4(0.25f, 0.45f, 0.65f, 0.6f),
-                CastsShadows = false
+                ShadowTraceLength = 64
             });
 
             Environment.Lights.Add(new SphereLightSource {
@@ -128,12 +128,12 @@ namespace TestGame.Scenes {
 
             Environment.Obstructions.Add(new LightObstruction(
                 LightObstructionType.Box, 
-                new Vector3(500, 750, 0), new Vector3(50, 100, 100f)
+                new Vector3(500, 750, 60), new Vector3(50, 100, 100f)
             ));
 
             Environment.Obstructions.Add(new LightObstruction(
                 LightObstructionType.Ellipsoid, 
-                new Vector3(300, 250, 0), new Vector3(40, 45, 100f)
+                new Vector3(300, 250, 60), new Vector3(40, 45, 100f)
             ));
 
             Renderer.Probes.Add(new LightProbe {
@@ -218,9 +218,13 @@ namespace TestGame.Scenes {
                     foreach (var p in Renderer.Probes) {
                         var c = new Color(p.Value.X, p.Value.Y, p.Value.Z, 1);
                         var center = new Vector2(p.Position.X, p.Position.Y);
-                        var size = new Vector2(6, 6);
+                        var size = new Vector2(8, 8);
                         gb.AddFilledQuad(center - size, center + size, c);
-                        gb.AddOutlinedQuad(center - size, center + size, Color.White);
+                        gb.AddOutlinedQuad(center - size, center + size, Color.Silver);
+                        var n = p.Normal.GetValueOrDefault(Vector3.Zero);
+                        float sz2 = 20;
+                        var ep = center + new Vector2(n.X * sz2, n.Y * sz2);
+                        gb.AddLine(center, ep, Color.White);
                     }
                 }
 
@@ -268,7 +272,19 @@ namespace TestGame.Scenes {
                 var ms = Mouse.GetState();
                 Game.IsMouseVisible = true;
 
-                Renderer.Probes.Last().Position = new Vector3(ms.X, ms.Y, 32);
+                var mousePos = new Vector3(ms.X, ms.Y, 1);
+                if (ms.LeftButton == ButtonState.Pressed) {
+                    var d = mousePos - Renderer.Probes.Last().Position;
+                    d.Z = 0;
+                    if (d.Length() >= 1) {
+                        d.Normalize();
+                        Renderer.Probes.Last().Normal = d;
+                    } else {
+                        Renderer.Probes.Last().Normal = null;
+                    }
+                } else {
+                    Renderer.Probes.Last().Position = mousePos;
+                }
 
                 Environment.Lights.Last().RampTexture = UseRampTexture ? Game.RampTexture : null;
             }
