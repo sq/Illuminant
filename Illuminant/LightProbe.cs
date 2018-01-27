@@ -14,7 +14,7 @@ namespace Squared.Illuminant {
 
         public void Add (LightProbe probe) {
             LightProbeCollection oldParent;
-            if (probe.Collection.TryGetTarget(out oldParent))
+            if ((probe.Collection != null) && probe.Collection.TryGetTarget(out oldParent))
                 throw new InvalidOperationException("Probe already in a collection");
 
             probe.Collection = new WeakReference<LightProbeCollection>(this);
@@ -60,12 +60,17 @@ namespace Squared.Illuminant {
     public class LightProbe {
         internal WeakReference<LightProbeCollection> Collection = null;
 
-        internal Vector3 _Position, _Normal;
+        internal Vector3 _Position = Vector3.Zero, _Normal = Vector3.UnitZ;
 
         public long PreviouslyUpdatedWhen, UpdatedWhen;
         public Vector3 PreviousValue, Value;
 
+        public object UserData;
+
         private void SetDirty () {
+            if (Collection == null)
+                return;
+
             LightProbeCollection parent;
             if (Collection.TryGetTarget(out parent))
                 parent.IsDirty = true;

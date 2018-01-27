@@ -32,11 +32,11 @@ namespace Squared.Illuminant {
                     content.Load<Effect>("DirectionalLight"), "DirectionalLight", dBegin, dEnd
                 ));
 
-                DefineMaterial(IlluminantMaterials.SphereLight = new Material(
+                DefineMaterial(IlluminantMaterials.SphereLightProbe = new Material(
                     content.Load<Effect>("SphereLight"), "SphereLightProbe", dBegin, dEnd
                 ));
 
-                DefineMaterial(IlluminantMaterials.DirectionalLight = new Material(
+                DefineMaterial(IlluminantMaterials.DirectionalLightProbe = new Material(
                     content.Load<Effect>("DirectionalLight"), "DirectionalLightProbe", dBegin, dEnd
                 ));
 

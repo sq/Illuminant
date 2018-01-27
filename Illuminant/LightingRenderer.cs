@@ -251,6 +251,13 @@ namespace Squared.Illuminant {
                 Configuration.RingBufferSize
             );
 
+            lock (Coordinator.CreateResourceLock)
+                _LightProbeDataTexture = new Texture2D(
+                    coordinator.Device,
+                    Configuration.MaximumLightProbeCount,
+                    2, false, SurfaceFormat.Vector4
+                );
+
             _LightProbeValueBuffers = new BufferRing(
                 coordinator,
                 Configuration.MaximumLightProbeCount, 
@@ -414,10 +421,10 @@ namespace Squared.Illuminant {
         private void _BeginLightPass (DeviceManager device, object userData) {
             var buffer = (RenderTarget2D)userData;
 
-            device.Device.Viewport = new Viewport(0, 0, Configuration.RenderSize.First, Configuration.RenderSize.Second);
+            device.Device.Viewport = new Viewport(0, 0, buffer.Width, buffer.Height);
 
             var vt = ViewTransform.CreateOrthographic(
-                Configuration.RenderSize.First, Configuration.RenderSize.Second
+                buffer.Width, buffer.Height
             );
             vt.Position = Materials.ViewportPosition;
             vt.Scale = Materials.ViewportScale;
@@ -670,6 +677,9 @@ namespace Squared.Illuminant {
                     before: BeginLightPass, after: EndLightProbePass,
                     userData: lightProbe.Buffer
                 )) {
+                    if (Probes.IsDirty)
+                        UpdateLightProbeTexture();
+
                     ClearBatch.AddNew(
                         lightProbeGroup, -1, Materials.Clear, Color.Transparent
                     );
@@ -700,6 +710,19 @@ namespace Squared.Illuminant {
             }
 
             return result;
+        }
+
+        private void UpdateLightProbeTexture () {
+            using (var buffer = BufferPool<Vector4>.Allocate(Configuration.MaximumLightProbeCount * 2)) {
+                int x = 0;
+                foreach (var probe in Probes) {
+                    buffer.Data[x] = new Vector4(probe.Position, 0);
+                    buffer.Data[x + Configuration.MaximumLightProbeCount] = new Vector4(probe.Normal, 0);
+                }
+
+                lock (Coordinator.UseResourceLock)
+                    _LightProbeDataTexture.SetData(buffer.Data);
+            }
         }
 
         private void RenderPointLightSource (SphereLightSource lightSource, float intensityScale, LightTypeRenderState ltrs) {
