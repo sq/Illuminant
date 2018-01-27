@@ -20,6 +20,11 @@ namespace Squared.Illuminant {
         public readonly int       MaximumLightProbeCount;
 
         /// <summary>
+        /// The maximum number of global illumination probes to update.
+        /// </summary>
+        public readonly int       MaximumGIProbeCount;
+
+        /// <summary>
         /// Uses a high-precision g-buffer and internal lightmap.
         /// </summary>
         public readonly bool      HighQuality;
@@ -30,6 +35,8 @@ namespace Squared.Illuminant {
         /// This property enables use of RenderedLighting.TryComputeHistogram.
         /// </summary>
         public readonly bool      EnableBrightnessEstimation;
+
+        public readonly bool      EnableGlobalIllumination;
 
         /// <summary>
         /// Determines how large the ring buffers are. Larger ring buffers use
@@ -104,15 +111,19 @@ namespace Squared.Illuminant {
         public RendererConfiguration (
             int maxWidth, int maxHeight, bool highQuality,
             bool enableBrightnessEstimation = false,
+            bool enableGlobalIllumination = false,
             int ringBufferSize = 2,
-            int maximumLightProbeCount = 512
+            int maximumLightProbeCount = 512,
+            int maximumGIProbeCount = 1024
         ) {
             HighQuality = highQuality;
             MaximumRenderSize = new Pair<int>(maxWidth, maxHeight);
             RenderSize = MaximumRenderSize;
             EnableBrightnessEstimation = enableBrightnessEstimation;
+            EnableGlobalIllumination = enableGlobalIllumination;
             RingBufferSize = ringBufferSize;
             MaximumLightProbeCount = maximumLightProbeCount;
+            MaximumGIProbeCount = maximumGIProbeCount;
         }
     }
 

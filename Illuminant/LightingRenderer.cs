@@ -199,6 +199,9 @@ namespace Squared.Illuminant {
         private readonly object     _LightProbeReadbackArrayLock = new object();
         private          HalfVector4[]  _LightProbeReadbackArray;
 
+        private readonly RenderTarget2D _SelectedGIProbes;
+        private readonly RenderTarget2D _GIProbeValues;
+
         private readonly Action<DeviceManager, object> 
             BeginLightPass, EndLightPass, EndLightProbePass, 
             IlluminationBatchSetup, LightProbeBatchSetup;
@@ -274,6 +277,19 @@ namespace Squared.Illuminant {
                 Configuration.RingBufferSize
             );
 
+            if (Configuration.EnableGlobalIllumination)
+            lock (Coordinator.CreateResourceLock) {
+                _SelectedGIProbes = new RenderTarget2D(
+                    coordinator.Device, Configuration.MaximumGIProbeCount, 6 * 2, false,
+                    SurfaceFormat.Vector4, DepthFormat.None, 0, RenderTargetUsage.PreserveContents
+                );
+
+                _GIProbeValues = new RenderTarget2D(
+                    coordinator.Device, Configuration.MaximumGIProbeCount, 6, false,
+                    SurfaceFormat.HdrBlendable, DepthFormat.None, 0, RenderTargetUsage.PreserveContents
+                );
+            }
+
             if (Configuration.EnableBrightnessEstimation) {
                 var width = Configuration.MaximumRenderSize.First / 2;
                 var height = Configuration.MaximumRenderSize.Second / 2;
@@ -308,6 +324,10 @@ namespace Squared.Illuminant {
             Probes = new LightProbeCollection(Configuration.MaximumLightProbeCount);
 
             Coordinator.DeviceReset += Coordinator_DeviceReset;
+        }
+
+        public void CreateGIProbes (Vector2? interval = null) {
+            var _interval = interval.GetValueOrDefault(Vector2.One * 48);
         }
 
         private void EnsureGBuffer () {

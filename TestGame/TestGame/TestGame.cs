@@ -33,7 +33,7 @@ namespace TestGame {
         public Texture2D RampTexture;
 
         public readonly Scene[] Scenes;
-        public int ActiveSceneIndex = 6;
+        public int ActiveSceneIndex = 7;
 
         private int LastPerformanceStatPrimCount = 0;
 
@@ -67,7 +67,8 @@ namespace TestGame {
                 new DistanceFieldEditor(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new ScrollingGeo(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new SimpleParticles(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new LightProbeTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
+                new LightProbeTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
+                new GlobalIlluminationTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
             };
         }
 
