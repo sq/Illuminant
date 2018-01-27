@@ -150,6 +150,22 @@ namespace TestGame.Scenes {
             });
 
             Renderer.Probes.Add(new LightProbe {
+                Position = new Vector3(600, 600, 18)
+            });
+
+            Renderer.Probes.Add(new LightProbe {
+                Position = new Vector3(10, 10, 0)
+            });
+
+            Renderer.Probes.Add(new LightProbe {
+                Position = new Vector3(10, 700, 0)
+            });
+
+            Renderer.Probes.Add(new LightProbe {
+                Position = new Vector3(700, 10, 0)
+            });
+
+            Renderer.Probes.Add(new LightProbe {
             });
         }
         
