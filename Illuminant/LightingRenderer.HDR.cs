@@ -101,14 +101,17 @@ namespace Squared.Illuminant {
             public   readonly LightingRenderer Renderer;
             public   readonly float            InverseScaleFactor;
             private  readonly RenderTarget2D   Lightmap;
+            private  readonly RenderTarget2D   LightProbeValues;
             internal          RenderTarget2D   LuminanceBuffer;
             private  readonly int              Width, Height;
 
             internal RenderedLighting (
-                LightingRenderer renderer, RenderTarget2D lightmap, float inverseScaleFactor
+                LightingRenderer renderer, RenderTarget2D lightmap, float inverseScaleFactor,
+                RenderTarget2D lightProbeValues
             ) {
                 Renderer = renderer;
                 Lightmap = lightmap;
+                LightProbeValues = lightProbeValues;
                 LuminanceBuffer = null;
                 InverseScaleFactor = inverseScaleFactor;
                 Width = renderer.Configuration.RenderSize.First;

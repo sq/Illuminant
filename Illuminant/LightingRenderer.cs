@@ -190,7 +190,7 @@ namespace Squared.Illuminant {
         private readonly Texture2D  _LightProbeDataTexture;
         private readonly BufferRing _LightProbeValueBuffers;
         private readonly object     _LightProbeReadbackArrayLock = new object();
-        private readonly Vector4[]  _LightProbeReadbackArray;
+        private          HalfVector4[]  _LightProbeReadbackArray;
 
         private readonly Action<DeviceManager, object> 
             BeginLightPass, EndLightPass, EndLightProbePass, 
@@ -263,9 +263,7 @@ namespace Squared.Illuminant {
                 Configuration.MaximumLightProbeCount, 
                 1,
                 false,
-                Configuration.HighQuality
-                    ? SurfaceFormat.Rgba64
-                    : SurfaceFormat.Color,
+                SurfaceFormat.HdrBlendable,
                 Configuration.RingBufferSize
             );
 
@@ -588,13 +586,26 @@ namespace Squared.Illuminant {
             IBatchContainer container, int layer, float intensityScale = 1.0f
         ) {
             var lightmap = _Lightmaps.BeginDraw(true);
-            var result = new RenderedLighting(
-                this, lightmap.Buffer, 1.0f / intensityScale
-            );
-
             var lightProbe = default(BufferRing.InProgressRender);
-            if (Probes.Count > 0)
+
+            if (Probes.Count > 0) {
+                var lastProbes = _LightProbeValueBuffers.GetBuffer(false);
+                if (lastProbes != null) {
+                    var q = Coordinator.ThreadGroup.GetQueueForType<LightProbeDownloadTask>();
+                    q.Enqueue(new LightProbeDownloadTask {
+                        Renderer = this,
+                        ScaleFactor = 1.0f / intensityScale,
+                        Texture = lastProbes
+                    });
+                }
+
                 lightProbe = _LightProbeValueBuffers.BeginDraw(true);
+            }
+
+            var result = new RenderedLighting(
+                this, lightmap.Buffer, 1.0f / intensityScale,
+                lightProbe.Buffer
+            );
 
             int layerIndex = 0;
 
@@ -682,8 +693,10 @@ namespace Squared.Illuminant {
                     before: BeginLightPass, after: EndLightProbePass,
                     userData: lightProbe.Buffer
                 )) {
-                    if (Probes.IsDirty)
+                    if (Probes.IsDirty) {
                         UpdateLightProbeTexture();
+                        Probes.IsDirty = false;
+                    }
 
                     ClearBatch.AddNew(
                         lightProbeGroup, -1, Materials.Clear, Color.Transparent
@@ -720,6 +733,8 @@ namespace Squared.Illuminant {
         private void UpdateLightProbeTexture () {
             using (var buffer = BufferPool<Vector4>.Allocate(Configuration.MaximumLightProbeCount * 2)) {
                 int x = 0;
+
+                lock (Probes)
                 foreach (var probe in Probes) {
                     buffer.Data[x] = new Vector4(probe.Position, 0);
                     buffer.Data[x + Configuration.MaximumLightProbeCount] = new Vector4(probe.Normal, 0);
