@@ -29,6 +29,20 @@ void SphereLightVertexShader(
     result = float4(transformedPosition.xy, 0, transformedPosition.w);
 }
 
+void SphereLightProbeVertexShader(
+    in float2 cornerWeight           : POSITION0,
+    inout float4 color               : COLOR0,
+    inout float3 lightCenter         : TEXCOORD0,
+    inout float4 lightProperties     : TEXCOORD1,
+    inout float3 moreLightProperties : TEXCOORD3,
+    out float4 result                : POSITION0
+) {
+    float2 tl = -999999, br = 999999;
+    float2 clipPosition = lerp(tl, br, cornerWeight);
+
+    result = float4(clipPosition.xy, 0, 1);
+}
+
 float SphereLightPixelCore(
     in float3 shadedPixelPosition,
     in float3 shadedPixelNormal,
@@ -159,6 +173,28 @@ void SphereLightWithOpacityRampPixelShader(
     result = float4(color.rgb * color.a * opacity, 1);
 }
 
+void SphereLightProbePixelShader(
+    in  float3 lightCenter : TEXCOORD0,
+    in  float4 lightProperties : TEXCOORD1,
+    in  float3 moreLightProperties : TEXCOORD3,
+    in  float4 color : COLOR0,
+    in  float2 vpos : VPOS,
+    out float4 result : COLOR0
+) {
+    float3 shadedPixelPosition;
+    float3 shadedPixelNormal;
+    sampleLightProbeBuffer(
+        vpos,
+        shadedPixelPosition, shadedPixelNormal
+    );
+
+    float opacity = SphereLightPixelCore(
+        shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties, false, true
+    );
+
+    result = float4(color.rgb * color.a * opacity, 1);
+}
+
 technique SphereLight {
     pass P0
     {
@@ -180,5 +216,13 @@ technique SphereLightWithOpacityRamp {
     {
         vertexShader = compile vs_3_0 SphereLightVertexShader();
         pixelShader = compile ps_3_0 SphereLightWithOpacityRampPixelShader();
+    }
+}
+
+technique SphereLightProbe {
+    pass P0
+    {
+        vertexShader = compile vs_3_0 SphereLightProbeVertexShader();
+        pixelShader = compile ps_3_0 SphereLightProbePixelShader();
     }
 }

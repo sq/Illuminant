@@ -23,7 +23,7 @@ sampler GBufferSampler : register(s2) {
 };
 
 // returns world position data from the gbuffer at the specified screen position
-void sampleGBuffer(
+void sampleGBuffer (
     float2 screenPositionPx,
     out float3 worldPosition,
     out float3 normal
@@ -61,7 +61,7 @@ void sampleGBuffer(
     }
 }
 
-float computeNormalFactor(
+float computeNormalFactor (
     float3 lightNormal, float3 shadedPixelNormal
 ) {
     float d = dot(-lightNormal, shadedPixelNormal);
@@ -71,7 +71,7 @@ float computeNormalFactor(
     return pow(clamp((d + DOT_OFFSET) / DOT_RAMP_RANGE, 0, 1), DOT_EXPONENT);
 }
 
-float computeSphereLightOpacity(
+float computeSphereLightOpacity (
     float3 shadedPixelPosition, float3 shadedPixelNormal,
     float3 lightCenter, float4 lightProperties, 
     float yDistanceFactor, out bool distanceFalloff 
@@ -101,9 +101,20 @@ float computeSphereLightOpacity(
     return normalFactor * distanceFactor;
 }
 
-float computeDirectionalLightOpacity(
+float computeDirectionalLightOpacity (
     float3 lightDirection, float3 shadedPixelNormal
 ) {
     float  normalFactor = computeNormalFactor(lightDirection, shadedPixelNormal);
     return normalFactor;
+}
+
+void sampleLightProbeBuffer (
+    float2 screenPositionPx,
+    out float3 worldPosition,
+    out float3 normal
+) {
+    float2 uv1 = ((screenPositionPx * float2(1, 2)) + 0.5) * GBufferTexelSize;
+    float2 uv2 = ((screenPositionPx * float2(1, 2)) + float2(0.5, 1.5)) * GBufferTexelSize;
+    worldPosition = tex2Dlod(GBufferSampler, float4(uv1, 0, 0)).xyz;
+    normal = (tex2Dlod(GBufferSampler, float4(uv2, 0, 0)).xyz - 0.5) * 2.0;
 }

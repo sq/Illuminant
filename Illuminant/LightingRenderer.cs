@@ -65,7 +65,7 @@ namespace Squared.Illuminant {
             public  readonly LightTypeRenderStateKey    Key;
             public  readonly object                     Lock = new object();
             public  readonly UnorderedList<LightVertex> LightVertices = new UnorderedList<LightVertex>(512);
-            public  readonly Material                   Material;
+            public  readonly Material                   Material, ProbeMaterial;
 
             private int                                 CurrentVertexCount = 0;
             private DynamicVertexBuffer                 LightVertexBuffer = null;
@@ -83,11 +83,14 @@ namespace Squared.Illuminant {
                                     ? parent.IlluminantMaterials.SphereLightWithDistanceRamp
                                     : parent.IlluminantMaterials.SphereLightWithOpacityRamp
                             );
+                        // FIXME: Ramp options
+                        ProbeMaterial = parent.IlluminantMaterials.SphereLightProbe;
                         break;
                     case LightSourceTypeID.Directional:
                         Material = (key.RampTexture == null)
                             ? parent.IlluminantMaterials.DirectionalLight
                             : parent.IlluminantMaterials.DirectionalLightWithRamp;
+                        ProbeMaterial = parent.IlluminantMaterials.DirectionalLightProbe;
                         break;
                     default:
                         throw new NotImplementedException(key.Type.ToString());
@@ -155,10 +158,12 @@ namespace Squared.Illuminant {
 
         const int        DistanceLimit = 520;
         
-        public  readonly RenderCoordinator   Coordinator;
+        public  readonly RenderCoordinator    Coordinator;
 
-        public  readonly DefaultMaterialSet  Materials;
-        public           IlluminantMaterials IlluminantMaterials { get; private set; }
+        public  readonly DefaultMaterialSet   Materials;
+        public           IlluminantMaterials  IlluminantMaterials { get; private set; }
+
+        public  readonly LightProbeCollection Probes = new LightProbeCollection();
 
         public  readonly DepthStencilState TopFaceDepthStencilState, FrontFaceDepthStencilState;
         public  readonly DepthStencilState DistanceInteriorStencilState, DistanceExteriorStencilState;
@@ -182,10 +187,14 @@ namespace Squared.Illuminant {
         private readonly object     _LuminanceReadbackArrayLock = new object();
         private          float[]    _LuminanceReadbackArray;
 
-        // private readonly BufferRing _LightProbeBuffers;
-        // private readonly Vector4[]  _LightProbeReadbackArray;
+        private readonly Texture2D  _LightProbeDataTexture;
+        private readonly BufferRing _LightProbeValueBuffers;
+        private readonly object     _LightProbeReadbackArrayLock = new object();
+        private readonly Vector4[]  _LightProbeReadbackArray;
 
-        private readonly Action<DeviceManager, object> BeginLightPass, EndLightPass, IlluminationBatchSetup;
+        private readonly Action<DeviceManager, object> 
+            BeginLightPass, EndLightPass, EndLightProbePass, 
+            IlluminationBatchSetup, LightProbeBatchSetup;
 
         private readonly object _LightStateLock = new object();
         private readonly Dictionary<LightTypeRenderStateKey, LightTypeRenderState> LightRenderStates = 
@@ -213,9 +222,11 @@ namespace Squared.Illuminant {
 
             IlluminantMaterials = new IlluminantMaterials(materials);
 
-            BeginLightPass     = _BeginLightPass;
-            EndLightPass       = _EndLightPass;
+            BeginLightPass    = _BeginLightPass;
+            EndLightPass      = _EndLightPass;
+            EndLightProbePass = _EndLightProbePass;
             IlluminationBatchSetup = _IlluminationBatchSetup;
+            LightProbeBatchSetup   = _LightProbeBatchSetup;
 
             lock (coordinator.CreateResourceLock) {
                 QuadIndexBuffer = new IndexBuffer(
@@ -233,6 +244,17 @@ namespace Squared.Illuminant {
                 coordinator,
                 Configuration.MaximumRenderSize.First, 
                 Configuration.MaximumRenderSize.Second,
+                false,
+                Configuration.HighQuality
+                    ? SurfaceFormat.Rgba64
+                    : SurfaceFormat.Color,
+                Configuration.RingBufferSize
+            );
+
+            _LightProbeValueBuffers = new BufferRing(
+                coordinator,
+                Configuration.MaximumLightProbeCount, 
+                2,
                 false,
                 Configuration.HighQuality
                     ? SurfaceFormat.Rgba64
@@ -412,6 +434,14 @@ namespace Squared.Illuminant {
             _Lightmaps.MarkRenderComplete(buffer);
         }
 
+        private void _EndLightProbePass (DeviceManager device, object userData) {
+            Materials.PopViewTransform();
+            device.PopStates();
+
+            var buffer = (RenderTarget2D)userData;
+            _LightProbeValueBuffers.MarkRenderComplete(buffer);
+        }
+
         private void _IlluminationBatchSetup (DeviceManager device, object userData) {
             var ltrs = (LightTypeRenderState)userData;
             lock (_LightStateLock)
@@ -421,6 +451,22 @@ namespace Squared.Illuminant {
 
             SetLightShaderParameters(ltrs.Material, ltrs.Key.Quality);
             ltrs.Material.Effect.Parameters["RampTexture"].SetValue(ltrs.Key.RampTexture);
+        }
+
+        private void _LightProbeBatchSetup (DeviceManager device, object userData) {
+            var ltrs = (LightTypeRenderState)userData;
+
+            // Not necessary because first pass did it.
+            /*
+            lock (_LightStateLock)
+                ltrs.UpdateVertexBuffer();
+            */
+
+            device.Device.BlendState = RenderStates.AdditiveBlend;
+
+            SetLightShaderParameters(ltrs.ProbeMaterial, ltrs.Key.Quality);
+            // FIXME: Not implemented
+            // ltrs.ProbeMaterial.Effect.Parameters["RampTexture"].SetValue(ltrs.Key.RampTexture);
         }
 
         private void SetGBufferParameters (EffectParameterCollection p) {
@@ -534,11 +580,18 @@ namespace Squared.Illuminant {
                 this, lightmap.Buffer, 1.0f / intensityScale
             );
 
+            var lightProbe = default(BufferRing.InProgressRender);
+            if (Probes.Count > 0)
+                lightProbe = _LightProbeValueBuffers.BeginDraw(true);
+
             int layerIndex = 0;
 
             ComputeUniforms();
 
             using (var outerGroup = BatchGroup.New(container, layer)) {
+                if (RenderTrace.EnableTracing)
+                    RenderTrace.Marker(outerGroup, -9999, "LightingRenderer {0} : Begin", this.ToObjectID());
+
                 // HACK: We make a copy of the previous lightmap so that brightness estimation can read it, without
                 //  stalling on the current lightmap being rendered
                 if (Configuration.EnableBrightnessEstimation) {
@@ -555,14 +608,9 @@ namespace Squared.Illuminant {
                     before: BeginLightPass, after: EndLightPass,
                     userData: lightmap.Buffer
                 )) {
-                    if (RenderTrace.EnableTracing)
-                        RenderTrace.Marker(resultGroup, -9999, "LightingRenderer {0} : Begin", this.ToObjectID());
-
                     ClearBatch.AddNew(
                         resultGroup, -1, Materials.Clear, new Color(0, 0, 0, Configuration.RenderGroundPlane ? 1f : 0f)
                     );
-
-                    int j = 0;
 
                     // TODO: Use threads?
                     lock (_LightStateLock) {
@@ -614,10 +662,41 @@ namespace Squared.Illuminant {
                             }
                         }
                     }
-
-                    if (RenderTrace.EnableTracing)
-                        RenderTrace.Marker(resultGroup, 9999, "LightingRenderer {0} : End", this.ToObjectID());
                 }
+
+                if (Probes.Count > 0)
+                using (var lightProbeGroup = BatchGroup.ForRenderTarget(
+                    outerGroup, 2, lightProbe.Buffer, 
+                    before: BeginLightPass, after: EndLightProbePass,
+                    userData: lightProbe.Buffer
+                )) {
+                    ClearBatch.AddNew(
+                        lightProbeGroup, -1, Materials.Clear, Color.Transparent
+                    );
+
+                    foreach (var kvp in LightRenderStates) {
+                        var ltrs = kvp.Value;
+                        var count = ltrs.LightVertices.Count / 4;
+                        if (count <= 0)
+                            continue;
+
+                        if (RenderTrace.EnableTracing)
+                            RenderTrace.Marker(lightProbeGroup, layerIndex++, "LightingRenderer {0} : Render {1} {2} light(s)", this.ToObjectID(), count, ltrs.Key.Type);
+
+                        using (var nb = NativeBatch.New(
+                            lightProbeGroup, layerIndex++, ltrs.Material, LightProbeBatchSetup, userData: ltrs
+                        )) {
+                            nb.Add(new NativeDrawCall(
+                                PrimitiveType.TriangleList,
+                                ltrs.GetVertexBuffer(), 0,
+                                QuadIndexBuffer, 0, 0, ltrs.LightVertices.Count, 0, ltrs.LightVertices.Count / 2
+                            ));
+                        }
+                    }                    
+                }
+
+                if (RenderTrace.EnableTracing)
+                    RenderTrace.Marker(outerGroup, 9999, "LightingRenderer {0} : End", this.ToObjectID());
             }
 
             return result;
@@ -1654,6 +1733,8 @@ namespace Squared.Illuminant {
         // The maximum width and height of the viewport.
         public readonly Pair<int> MaximumRenderSize;
 
+        public readonly int       MaximumLightProbeCount;
+
         // Uses a high-precision g-buffer and internal lightmap.
         public readonly bool      HighQuality;
         // Generates downscaled versions of the internal lightmap that the
@@ -1692,13 +1773,15 @@ namespace Squared.Illuminant {
         public RendererConfiguration (
             int maxWidth, int maxHeight, bool highQuality,
             bool enableBrightnessEstimation = false,
-            int ringBufferSize = 2
+            int ringBufferSize = 2,
+            int maximumLightProbeCount = 512
         ) {
             HighQuality = highQuality;
             MaximumRenderSize = new Pair<int>(maxWidth, maxHeight);
             RenderSize = MaximumRenderSize;
             EnableBrightnessEstimation = enableBrightnessEstimation;
             RingBufferSize = ringBufferSize;
+            MaximumLightProbeCount = maximumLightProbeCount;
         }
     }
 

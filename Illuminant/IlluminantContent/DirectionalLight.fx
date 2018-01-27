@@ -27,6 +27,20 @@ void DirectionalLightVertexShader(
     result = float4(transformedPosition.xy, 0, transformedPosition.w);
 }
 
+void DirectionalLightProbeVertexShader(
+    in float2 cornerWeight           : POSITION0,
+    inout float4 color               : COLOR0,
+    inout float3 lightDirection      : TEXCOORD0,
+    inout float4 lightProperties     : TEXCOORD1,
+    inout float3 moreLightProperties : TEXCOORD3,
+    out float4   result              : POSITION0
+) {
+    float2 tl = -999999, br = 999999;
+    float2 clipPosition = lerp(tl, br, cornerWeight);
+
+    result = float4(clipPosition.xy, 0, 1);
+}
+
 float DirectionalLightPixelCore(
     in float3 shadedPixelPosition,
     in float3 shadedPixelNormal,
@@ -127,6 +141,29 @@ void DirectionalLightWithRampPixelShader(
     result = lightColorActual;
 }
 
+void DirectionalLightProbePixelShader(
+    in  float2 worldPosition       : TEXCOORD2,
+    in  float3 lightDirection      : TEXCOORD0,
+    in  float4 lightProperties     : TEXCOORD1,
+    in  float3 moreLightProperties : TEXCOORD3,
+    in  float4 color               : COLOR0,
+    in  float2 vpos                : VPOS,
+    out float4 result              : COLOR0
+) {
+    float3 shadedPixelPosition;
+    float3 shadedPixelNormal;
+    sampleLightProbeBuffer(
+        vpos,
+        shadedPixelPosition, shadedPixelNormal
+    );
+
+    float opacity = DirectionalLightPixelCore(
+        shadedPixelPosition, shadedPixelNormal, lightDirection, lightProperties, moreLightProperties, false
+    );
+
+    result = float4(color.rgb * color.a * opacity, 1);
+}
+
 technique DirectionalLight {
     pass P0
     {
@@ -140,5 +177,13 @@ technique DirectionalLightWithRamp {
     {
         vertexShader = compile vs_3_0 DirectionalLightVertexShader();
         pixelShader  = compile ps_3_0 DirectionalLightWithRampPixelShader();
+    }
+}
+
+technique DirectionalLightProbe {
+    pass P0
+    {
+        vertexShader = compile vs_3_0 DirectionalLightProbeVertexShader();
+        pixelShader = compile ps_3_0 DirectionalLightProbePixelShader();
     }
 }
