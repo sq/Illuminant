@@ -3,53 +3,62 @@
 
 #define SAMPLE sampleDistanceField
 #define TVARS  DistanceFieldConstants
-#define OFFSET 1.0
+#define OFFSET 3.0
+#define SEARCH_DISTANCE 1024
 
 #include "VisualizeCommon.fxh"
 
 static const float3 Normals[] = {
-    {-1, 0, 0},
-    {1, 0, 0},
-    {0, -1, 0},
-    {0, 1, 0},
-    {0, 0, -1}
+    {-1, 0, 0}
+    ,{1, 0, 0}
+    ,{0, -1, 0}
+    ,{0, 1, 0}
+    ,{0, 0, -1}
+    ,{0, 0, 1}
 };
 
 uniform float Time;
 
+// uniform float  MaxSearchDistance;
+uniform float2 RequestedPositionTexelSize;
+
+Texture2D RequestedPositions       : register(t2);
+sampler   RequestedPositionSampler : register(s2) {
+    Texture = (RequestedPositions);
+    AddressU = CLAMP;
+    AddressV = CLAMP;
+    MipFilter = POINT;
+    MinFilter = POINT;
+    MagFilter = POINT;
+};
+
 void ProbeSelectorVertexShader (
-    inout float4 position      : POSITION0,
-    inout float3 probePosition : POSITION1
+    inout float4 position      : POSITION0
 ) {
 }
 
 void ProbeSelectorPixelShader(
-    in  float3 probePosition : POSITION1,
-    in  float2 vpos : VPOS,
-    out float4 result : COLOR0
+    in  float2 vpos           : VPOS,
+    out float4 resultPosition : COLOR0,
+    out float4 resultNormal   : COLOR1
 ) {
-    int index = floor(vpos.y / 2);
-    int subIndex = floor(vpos.y % 2);
-    float3 normal = normalize(Normals[index]);
+    float3 normal = normalize(Normals[vpos.y]);
 
-    [branch]
-    if (subIndex == 1) {
-        result = float4(-normal, 1);
-        return;
-    }
-
-    // TODO: One fragment per probe and use MRT to output position and normal
+    float2 uv = vpos * RequestedPositionTexelSize;
+    float3 requestedPosition = tex2Dlod(RequestedPositionSampler, float4(uv, 0, 0)).xyz;
 
     DistanceFieldConstants vars = makeDistanceFieldConstants();
 
     float intersectionDistance;
     float3 estimatedIntersection;
+    float3 ray = normal * SEARCH_DISTANCE;
 
-    if (traceSurface(probePosition, normal, intersectionDistance, estimatedIntersection, vars)) {
-        result = float4(estimatedIntersection - (normal * OFFSET), 1);
-        // float3 normal = estimateNormal(estimatedIntersection, vars);
+    if (traceSurface(requestedPosition, ray, intersectionDistance, estimatedIntersection, vars)) {
+        resultPosition = float4(estimatedIntersection - (normal * OFFSET), 1);
+        resultNormal = float4(-normal, 1);
     } else {
-        result = 0;
+        resultPosition = 0;
+        resultNormal = 0;
     }
 }
 

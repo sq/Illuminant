@@ -69,6 +69,11 @@ namespace Squared.Illuminant {
         public RendererQualitySettings DefaultQuality = 
             new RendererQualitySettings();
 
+        public RendererQualitySettings GIProbeQuality =
+            new RendererQualitySettings();
+    
+        public float GIProbeMaxSearchDistance = 256;
+
         /// <summary>
         /// The maximum number of distance field slices to update per frame.
         /// Setting this value too high can crash your video driver.
@@ -114,7 +119,7 @@ namespace Squared.Illuminant {
             bool enableGlobalIllumination = false,
             int ringBufferSize = 2,
             int maximumLightProbeCount = 512,
-            int maximumGIProbeCount = 1024
+            int maximumGIProbeCount = 2048
         ) {
             HighQuality = highQuality;
             MaximumRenderSize = new Pair<int>(maxWidth, maxHeight);

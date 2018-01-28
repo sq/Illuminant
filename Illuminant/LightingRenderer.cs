@@ -174,7 +174,7 @@ namespace Squared.Illuminant {
 
         public  readonly DepthStencilState TopFaceDepthStencilState, FrontFaceDepthStencilState;
         public  readonly DepthStencilState DistanceInteriorStencilState, DistanceExteriorStencilState;
-        public  readonly DepthStencilState SphereLightDepthStencilState;
+        public  readonly DepthStencilState NeutralDepthStencilState;
 
         private readonly IndexBuffer         QuadIndexBuffer;
 
@@ -197,14 +197,21 @@ namespace Squared.Illuminant {
         private readonly Texture2D  _LightProbePositions, _LightProbeNormals;
         private readonly BufferRing _LightProbeValueBuffers;
         private readonly object     _LightProbeReadbackArrayLock = new object();
-        private          HalfVector4[]  _LightProbeReadbackArray;
+        private          HalfVector4[] _LightProbeReadbackArray;
 
-        private readonly RenderTarget2D _SelectedGIProbes;
+        const int GIProbeRowCount = 4;
+
+        private readonly RenderTarget2D _SelectedGIProbePositions, _SelectedGIProbeNormals;
         private readonly RenderTarget2D _GIProbeValues;
+        private readonly Texture2D _RequestedGIProbePositions;
+        private bool _GIProbesDirty;
 
-        private readonly Action<DeviceManager, object> 
-            BeginLightPass, EndLightPass, EndLightProbePass, 
-            IlluminationBatchSetup, LightProbeBatchSetup;
+        private readonly List<GIProbe> _GIProbes = new List<GIProbe>();
+
+        private readonly Action<DeviceManager, object>
+            BeginLightPass, EndLightPass, EndLightProbePass,
+            IlluminationBatchSetup, LightProbeBatchSetup,
+            GIProbeBatchSetup, EndGIProbePass;
 
         private readonly object _LightStateLock = new object();
         private readonly Dictionary<LightTypeRenderStateKey, LightTypeRenderState> LightRenderStates = 
@@ -235,8 +242,10 @@ namespace Squared.Illuminant {
             BeginLightPass    = _BeginLightPass;
             EndLightPass      = _EndLightPass;
             EndLightProbePass = _EndLightProbePass;
+            EndGIProbePass    = _EndGIProbePass;
             IlluminationBatchSetup = _IlluminationBatchSetup;
             LightProbeBatchSetup   = _LightProbeBatchSetup;
+            GIProbeBatchSetup      = _GIProbeBatchSetup;
 
             lock (coordinator.CreateResourceLock) {
                 QuadIndexBuffer = new IndexBuffer(
@@ -285,13 +294,22 @@ namespace Squared.Illuminant {
 
             if (Configuration.EnableGlobalIllumination)
             lock (Coordinator.CreateResourceLock) {
-                _SelectedGIProbes = new RenderTarget2D(
-                    coordinator.Device, Configuration.MaximumGIProbeCount, 6 * 2, false,
+                _RequestedGIProbePositions = new Texture2D(
+                    coordinator.Device, Configuration.MaximumGIProbeCount, 1, false, SurfaceFormat.Vector4
+                );
+
+                _SelectedGIProbePositions = new RenderTarget2D(
+                    coordinator.Device, Configuration.MaximumGIProbeCount, GIProbeRowCount, false,
+                    SurfaceFormat.Vector4, DepthFormat.None, 0, RenderTargetUsage.PreserveContents
+                );
+
+                _SelectedGIProbeNormals = new RenderTarget2D(
+                    coordinator.Device, Configuration.MaximumGIProbeCount, GIProbeRowCount, false,
                     SurfaceFormat.Vector4, DepthFormat.None, 0, RenderTargetUsage.PreserveContents
                 );
 
                 _GIProbeValues = new RenderTarget2D(
-                    coordinator.Device, Configuration.MaximumGIProbeCount, 6, false,
+                    coordinator.Device, Configuration.MaximumGIProbeCount, GIProbeRowCount, false,
                     SurfaceFormat.HdrBlendable, DepthFormat.None, 0, RenderTargetUsage.PreserveContents
                 );
             }
@@ -319,7 +337,7 @@ namespace Squared.Illuminant {
                 DepthBufferWriteEnable = true
             };
             
-            SphereLightDepthStencilState = new DepthStencilState {
+            NeutralDepthStencilState = new DepthStencilState {
                 StencilEnable = false,
                 DepthBufferEnable = false
             };
@@ -332,8 +350,44 @@ namespace Squared.Illuminant {
             Coordinator.DeviceReset += Coordinator_DeviceReset;
         }
 
-        public void CreateGIProbes (Vector2? interval = null) {
+        public IReadOnlyList<GIProbe> GIProbes {
+            get {
+                return _GIProbes;
+            }
+        }
+
+        public void CreateGIProbes (float elevation = 16, Vector2? interval = null) {
             var _interval = interval.GetValueOrDefault(Vector2.One * 48);
+            var count = Configuration.MaximumGIProbeCount;
+
+            lock (_GIProbes) {
+                _GIProbes.Clear();
+
+                using (var buffer = BufferPool<Vector4>.Allocate(count)) {
+                    var position = _interval * 0.5f;
+
+                    int totalCreated = 0;
+                    for (int i = 0; i < count; i++) {
+                        var pos3 = new Vector3(position, elevation);
+
+                        _GIProbes.Add(new GIProbe(pos3));
+                        buffer.Data[i] = new Vector4(pos3, 1);
+
+                        position.X += _interval.X;
+                        if (position.X > DistanceField.VirtualWidth) {
+                            position.X = _interval.X * 0.5f;
+                            position.Y += _interval.Y;
+                            if (position.Y > DistanceField.VirtualHeight)
+                                break;
+                        }
+                    }
+
+                    lock (Coordinator.UseResourceLock)
+                        _RequestedGIProbePositions.SetData(buffer.Data);
+
+                    _GIProbesDirty = true;
+                }
+            }
         }
 
         private void EnsureGBuffer () {
@@ -423,6 +477,13 @@ namespace Squared.Illuminant {
             Coordinator.DisposeResource(_GBuffer);
             Coordinator.DisposeResource(_Lightmaps);
             Coordinator.DisposeResource(_LuminanceBuffers);
+            Coordinator.DisposeResource(_LightProbePositions);
+            Coordinator.DisposeResource(_LightProbeNormals);
+            Coordinator.DisposeResource(_LightProbeValueBuffers);
+            Coordinator.DisposeResource(_RequestedGIProbePositions);
+            Coordinator.DisposeResource(_SelectedGIProbePositions);
+            Coordinator.DisposeResource(_SelectedGIProbeNormals);
+            Coordinator.DisposeResource(_GIProbeValues);
 
             foreach (var kvp in HeightVolumeVertexData)
                 Coordinator.DisposeResource(kvp.Value);
@@ -488,6 +549,11 @@ namespace Squared.Illuminant {
             _LightProbeValueBuffers.MarkRenderComplete(buffer);
         }
 
+        private void _EndGIProbePass (DeviceManager device, object userData) {
+            Materials.PopViewTransform();
+            device.PopStates();
+        }
+
         private void _IlluminationBatchSetup (DeviceManager device, object userData) {
             var ltrs = (LightTypeRenderState)userData;
             lock (_LightStateLock)
@@ -503,13 +569,6 @@ namespace Squared.Illuminant {
             var ltrs = (LightTypeRenderState)userData;
 
             device.Device.Viewport = new Viewport(0, 0, Probes.Count, 1);
-
-            // Not necessary because first pass did it.
-            /*
-            lock (_LightStateLock)
-                ltrs.UpdateVertexBuffer();
-            */
-
             device.Device.BlendState = RenderStates.AdditiveBlend;
 
             SetLightShaderParameters(ltrs.ProbeMaterial, ltrs.Key.Quality);
@@ -517,6 +576,20 @@ namespace Squared.Illuminant {
             ltrs.ProbeMaterial.Effect.Parameters["GBuffer"].SetValue(_LightProbePositions);
             ltrs.ProbeMaterial.Effect.Parameters["GBufferTexelSize"].SetValue(new Vector2(1.0f / Configuration.MaximumLightProbeCount, 1.0f));
             ltrs.ProbeMaterial.Effect.Parameters["ProbeNormals"].SetValue(_LightProbeNormals);
+            ltrs.ProbeMaterial.Effect.Parameters["RampTexture"].SetValue(ltrs.Key.RampTexture);
+        }
+
+        private void _GIProbeBatchSetup (DeviceManager device, object userData) {
+            var ltrs = (LightTypeRenderState)userData;
+
+            device.Device.Viewport = new Viewport(0, 0, _GIProbes.Count, GIProbeRowCount);
+            device.Device.BlendState = RenderStates.AdditiveBlend;
+
+            SetLightShaderParameters(ltrs.ProbeMaterial, ltrs.Key.Quality);
+
+            ltrs.ProbeMaterial.Effect.Parameters["GBuffer"].SetValue(_SelectedGIProbePositions);
+            ltrs.ProbeMaterial.Effect.Parameters["GBufferTexelSize"].SetValue(new Vector2(1.0f / _SelectedGIProbePositions.Width, 1.0f / GIProbeRowCount));
+            ltrs.ProbeMaterial.Effect.Parameters["ProbeNormals"].SetValue(_SelectedGIProbeNormals);
             ltrs.ProbeMaterial.Effect.Parameters["RampTexture"].SetValue(ltrs.Key.RampTexture);
         }
 
@@ -645,6 +718,15 @@ namespace Squared.Illuminant {
                 lightProbe = _LightProbeValueBuffers.BeginDraw(true);
             }
 
+            lock (_GIProbes)
+            if (_GIProbes.Count > 0) {
+                var q = Coordinator.ThreadGroup.GetQueueForType<GIProbeDownloadTask>();
+                q.Enqueue(new GIProbeDownloadTask {
+                    Renderer = this,
+                    ScaleFactor = 1.0f / intensityScale
+                });
+            }
+
             var result = new RenderedLighting(
                 this, lightmap.Buffer, 1.0f / intensityScale,
                 lightProbe.Buffer
@@ -731,50 +813,128 @@ namespace Squared.Illuminant {
                     }
                 }
 
-                if (Probes.Count > 0)
-                using (var lightProbeGroup = BatchGroup.ForRenderTarget(
-                    outerGroup, 3, lightProbe.Buffer, 
-                    before: BeginLightPass, after: EndLightProbePass,
-                    userData: lightProbe.Buffer
-                )) {
-                    if (RenderTrace.EnableTracing)
-                        RenderTrace.Marker(outerGroup, 2, "LightingRenderer {0} : Update light probes", this.ToObjectID());
-
+                if (Probes.Count > 0) {
                     if (Probes.IsDirty) {
                         UpdateLightProbeTexture();
                         Probes.IsDirty = false;
                     }
-
-                    ClearBatch.AddNew(
-                        lightProbeGroup, -1, Materials.Clear, Color.Transparent
-                    );
-
-                    foreach (var kvp in LightRenderStates) {
-                        var ltrs = kvp.Value;
-                        var count = ltrs.LightVertices.Count / 4;
-                        if (count <= 0)
-                            continue;
-
-                        if (RenderTrace.EnableTracing)
-                            RenderTrace.Marker(lightProbeGroup, layerIndex++, "LightingRenderer {0} : Render {1} {2} light(s)", this.ToObjectID(), count, ltrs.Key.Type);
-
-                        using (var nb = NativeBatch.New(
-                            lightProbeGroup, layerIndex++, ltrs.ProbeMaterial, LightProbeBatchSetup, userData: ltrs
-                        )) {
-                            nb.Add(new NativeDrawCall(
-                                PrimitiveType.TriangleList,
-                                ltrs.GetVertexBuffer(), 0,
-                                QuadIndexBuffer, 0, 0, ltrs.LightVertices.Count, 0, ltrs.LightVertices.Count / 2
-                            ));
-                        }
-                    }                    
+                    UpdateLightProbes(outerGroup, 3, lightProbe.Buffer, false);
                 }
+
+                UpdateGIProbes(outerGroup, 4);
 
                 if (RenderTrace.EnableTracing)
                     RenderTrace.Marker(outerGroup, 9999, "LightingRenderer {0} : End", this.ToObjectID());
             }
 
             return result;
+        }
+
+        private void UpdateLightProbes (IBatchContainer container, int layer, RenderTarget2D renderTarget, bool isForGi) {
+            using (var lightProbeGroup = BatchGroup.ForRenderTarget(
+                container, layer, renderTarget, 
+                before: BeginLightPass, after: isForGi ? EndGIProbePass : EndLightProbePass,
+                userData: renderTarget
+            )) {
+                if (RenderTrace.EnableTracing)
+                    RenderTrace.Marker(lightProbeGroup, -2, "LightingRenderer {0} : Update {1} probes", this.ToObjectID(), isForGi ? "GI" : "Light");
+
+                ClearBatch.AddNew(
+                    lightProbeGroup, -1, Materials.Clear, Color.Transparent
+                );
+
+                int layerIndex = 0;
+                foreach (var kvp in LightRenderStates) {
+                    var ltrs = kvp.Value;
+                    var count = ltrs.LightVertices.Count / 4;
+                    if (count <= 0)
+                        continue;
+
+                    if (RenderTrace.EnableTracing)
+                        RenderTrace.Marker(lightProbeGroup, layerIndex++, "LightingRenderer {0} : Render {1} {2} light(s)", this.ToObjectID(), count, ltrs.Key.Type);
+
+                    using (var nb = NativeBatch.New(
+                        lightProbeGroup, layerIndex++, ltrs.ProbeMaterial, isForGi ? GIProbeBatchSetup : LightProbeBatchSetup, userData: ltrs
+                    )) {
+                        nb.Add(new NativeDrawCall(
+                            PrimitiveType.TriangleList,
+                            ltrs.GetVertexBuffer(), 0,
+                            QuadIndexBuffer, 0, 0, ltrs.LightVertices.Count, 0, ltrs.LightVertices.Count / 2
+                        ));
+                    }
+                }                    
+            }
+        }
+
+        private GIProbeRadiance? UnpackGIProbeRadiance (
+            Vector4[] positions, Vector4[] normals, HalfVector4[] colors,
+            int column, int row, float scaleFactor
+        ) {
+            var index = (Configuration.MaximumGIProbeCount * row) + column;
+            var pos = positions[index];
+            var norm = normals[index];
+
+            if ((pos.W < 1) || (norm.W < 1))
+                return null;
+
+            return new GIProbeRadiance {
+                Position = new Vector3(pos.X, pos.Y, pos.Z),
+                SurfaceNormal = new Vector3(norm.X, norm.Y, norm.Z),
+                Value = colors[index].ToVector4() * scaleFactor
+            };
+        }
+
+        private void UpdateGIProbes (IBatchContainer container, int layer) {
+            if (_GIProbes.Count == 0)
+                return;
+
+            using (var group = BatchGroup.New(container, layer)) {
+                if (_GIProbesDirty) {
+                    SelectGIProbes(group, 0);
+                    // _GIProbesDirty = false;
+                }
+
+                UpdateLightProbes(group, 1, _GIProbeValues, true);
+            }
+        }
+
+        private void SelectGIProbes (IBatchContainer container, int layer) {
+            var m = IlluminantMaterials.GIProbeSelector;
+            var p = m.Effect.Parameters;
+
+            using (var rt = BatchGroup.New(
+                container, layer,
+                (dm, _) => {
+                    dm.PushRenderTargets(new RenderTargetBinding[] { _SelectedGIProbePositions, _SelectedGIProbeNormals });
+                    dm.Device.Viewport = new Viewport(0, 0, _GIProbes.Count, GIProbeRowCount);
+
+                    SetDistanceFieldParameters(m, true, Configuration.GIProbeQuality);
+
+                    p["RequestedPositionTexelSize"].SetValue(new Vector2(1.0f / _RequestedGIProbePositions.Width, 1));
+                    p["RequestedPositions"].SetValue(_RequestedGIProbePositions);
+                    // p["MaxSearchDistance"].SetValue(Configuration.GIProbeMaxSearchDistance);
+
+                    m.Flush();
+                },
+                (dm, _) => {
+                    dm.PopRenderTarget();
+                }
+            ))
+            using (var pb = PrimitiveBatch<GIProbeSelectorVertex>.New(rt, 1, m)) {
+                RenderTrace.Marker(rt, 0, "Select GI probe locations");
+
+                var pdc = new PrimitiveDrawCall<GIProbeSelectorVertex>(
+                    PrimitiveType.TriangleList,
+                    new [] {
+                        new GIProbeSelectorVertex(-1, -1),
+                        new GIProbeSelectorVertex(1, -1),
+                        new GIProbeSelectorVertex(1, 1),
+                        new GIProbeSelectorVertex(-1, 1)
+                    },
+                    0, 4, QuadIndices, 0, 2
+                );
+                pb.Add(ref pdc);
+            }
         }
 
         private void UpdateLightProbeTexture () {
@@ -786,7 +946,7 @@ namespace Squared.Illuminant {
                     buffer.Data[x++] = new Vector4(probe._Position, 1);
 
                 lock (Coordinator.UseResourceLock)
-                    _LightProbePositions.SetData(buffer.Data);
+                    _LightProbePositions.SetData(buffer.Data, 0, Configuration.MaximumLightProbeCount);
 
                 x = 0;
 
@@ -799,7 +959,7 @@ namespace Squared.Illuminant {
                 }
 
                 lock (Coordinator.UseResourceLock)
-                    _LightProbeNormals.SetData(buffer.Data);
+                    _LightProbeNormals.SetData(buffer.Data, 0, Configuration.MaximumLightProbeCount);
             }
         }
 

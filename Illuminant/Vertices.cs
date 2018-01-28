@@ -218,21 +218,18 @@ namespace Squared.Illuminant {
 
     public struct GIProbeSelectorVertex : IVertexType {
         public Vector4 Position;
-        public Vector3 ProbePosition;
 
         public static VertexDeclaration _VertexDeclaration;
 
-        public GIProbeSelectorVertex (float x, float y, Vector3 probePosition) {
+        public GIProbeSelectorVertex (float x, float y) {
             Position = new Vector4(x, y, 0, 1);
-            ProbePosition = probePosition;
         }
 
         static GIProbeSelectorVertex () {
             var tThis = typeof(GIProbeSelectorVertex);
 
             _VertexDeclaration = new VertexDeclaration(
-                new VertexElement(Marshal.OffsetOf(tThis, "Position").ToInt32(), VertexElementFormat.Vector4, VertexElementUsage.Position, 0),
-                new VertexElement(Marshal.OffsetOf(tThis, "ProbePosition").ToInt32(), VertexElementFormat.Vector3, VertexElementUsage.Position, 1)
+                new VertexElement(Marshal.OffsetOf(tThis, "Position").ToInt32(), VertexElementFormat.Vector4, VertexElementUsage.Position, 0)
             );
         }
 

@@ -23,6 +23,7 @@ namespace Squared.Illuminant {
         public Material ObjectSurfaces, ObjectOutlines;
         public Material FunctionSurface, FunctionOutline;
         public Material CalculateLuminance;
+        public Material GIProbeSelector;
 
         internal readonly Effect[] EffectsToSetGammaCompressionParametersOn;
         internal readonly Effect[] EffectsToSetToneMappingParametersOn;

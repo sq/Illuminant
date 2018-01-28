@@ -140,8 +140,9 @@ float sampleDistanceField (
     float slicePosition = clamp(position.z * vars.zToSliceIndex, 0, vars.sliceCountZMinus1);
     float virtualSliceIndex = floor(slicePosition);
     
-    float3 clampedPosition = clamp(position + float3(1, 1, 0), 1, DistanceField.Extent - 1);
-    float distanceToVolume = length(clampedPosition - position);
+    float3 offsetPosition = position + float3(1, 1, 0);
+    float3 clampedPosition = clamp(offsetPosition, 1, DistanceField.Extent - 1);
+    float distanceToVolume = length(clampedPosition - offsetPosition);
 
     float4 uv = float4(
         computeDistanceFieldSliceUv(virtualSliceIndex, vars.invSliceCountXTimesOneThird) +

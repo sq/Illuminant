@@ -127,6 +127,10 @@ void sampleLightProbeBuffer (
     out float4 normal
 ) {
     float2 uv = screenPositionPx * GBufferTexelSize;
-    worldPosition = tex2Dlod(GBufferSampler, float4(uv, 0, 0)).xyz;
+    float4 positionSample = tex2Dlod(GBufferSampler, float4(uv, 0, 0));
+    if (positionSample.w <= 0)
+        discard;
+
+    worldPosition = positionSample.xyz;
     normal = tex2Dlod(LightProbeNormalSampler, float4(uv, 0, 0));
 }

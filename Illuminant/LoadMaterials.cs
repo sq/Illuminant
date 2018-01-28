@@ -20,7 +20,7 @@ namespace Squared.Illuminant {
                 var dBegin = new[] {
                     MaterialUtil.MakeDelegate(
                         rasterizerState: RasterizerState.CullNone,
-                        depthStencilState: SphereLightDepthStencilState
+                        depthStencilState: NeutralDepthStencilState
                     )
                 };
                 Action<DeviceManager>[] dEnd = null;
@@ -63,6 +63,10 @@ namespace Squared.Illuminant {
 
                 DefineMaterial(IlluminantMaterials.DirectionalLightProbeWithRamp = new Material(
                     content.Load<Effect>("DirectionalLight"), "DirectionalLightProbeWithRamp", dBegin, dEnd
+                ));
+
+                DefineMaterial(IlluminantMaterials.GIProbeSelector = new Material(
+                    content.Load<Effect>("GIProbeSelector"), "ProbeSelector", dBegin, dEnd
                 ));
 
                 DefineMaterial(IlluminantMaterials.DistanceFieldExterior = 
