@@ -33,7 +33,7 @@ namespace TestGame {
         public Texture2D RampTexture;
 
         public readonly Scene[] Scenes;
-        public int ActiveSceneIndex = 7;
+        public int ActiveSceneIndex = 6;
 
         private int LastPerformanceStatPrimCount = 0;
 

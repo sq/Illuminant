@@ -194,7 +194,7 @@ namespace Squared.Illuminant {
         private readonly object     _LuminanceReadbackArrayLock = new object();
         private          float[]    _LuminanceReadbackArray;
 
-        private readonly Texture2D  _LightProbeDataTexture;
+        private readonly Texture2D  _LightProbePositions, _LightProbeNormals;
         private readonly BufferRing _LightProbeValueBuffers;
         private readonly object     _LightProbeReadbackArrayLock = new object();
         private          HalfVector4[]  _LightProbeReadbackArray;
@@ -261,12 +261,18 @@ namespace Squared.Illuminant {
                 Configuration.RingBufferSize
             );
 
-            lock (Coordinator.CreateResourceLock)
-                _LightProbeDataTexture = new Texture2D(
+            lock (Coordinator.CreateResourceLock) {
+                _LightProbePositions = new Texture2D(
                     coordinator.Device,
                     Configuration.MaximumLightProbeCount,
-                    2, false, SurfaceFormat.Vector4
+                    1, false, SurfaceFormat.Vector4
                 );
+                _LightProbeNormals = new Texture2D(
+                    coordinator.Device,
+                    Configuration.MaximumLightProbeCount,
+                    1, false, SurfaceFormat.Vector4
+                );
+            }
 
             _LightProbeValueBuffers = new BufferRing(
                 coordinator,
@@ -508,8 +514,9 @@ namespace Squared.Illuminant {
 
             SetLightShaderParameters(ltrs.ProbeMaterial, ltrs.Key.Quality);
 
-            ltrs.ProbeMaterial.Effect.Parameters["GBuffer"].SetValue(_LightProbeDataTexture);
-            ltrs.ProbeMaterial.Effect.Parameters["GBufferTexelSize"].SetValue(new Vector2(1.0f / Configuration.MaximumLightProbeCount, 1.0f / 2.0f));
+            ltrs.ProbeMaterial.Effect.Parameters["GBuffer"].SetValue(_LightProbePositions);
+            ltrs.ProbeMaterial.Effect.Parameters["GBufferTexelSize"].SetValue(new Vector2(1.0f / Configuration.MaximumLightProbeCount, 1.0f));
+            ltrs.ProbeMaterial.Effect.Parameters["ProbeNormals"].SetValue(_LightProbeNormals);
             ltrs.ProbeMaterial.Effect.Parameters["RampTexture"].SetValue(ltrs.Key.RampTexture);
         }
 
@@ -771,23 +778,28 @@ namespace Squared.Illuminant {
         }
 
         private void UpdateLightProbeTexture () {
-            using (var buffer = BufferPool<Vector4>.Allocate(Configuration.MaximumLightProbeCount * 2)) {
+            using (var buffer = BufferPool<Vector4>.Allocate(Configuration.MaximumLightProbeCount)) {
                 int x = 0;
 
                 lock (Probes)
+                foreach (var probe in Probes)
+                    buffer.Data[x++] = new Vector4(probe._Position, 1);
+
+                lock (Coordinator.UseResourceLock)
+                    _LightProbePositions.SetData(buffer.Data);
+
+                x = 0;
+
+                lock (Probes)
                 foreach (var probe in Probes) {
-                    var p = probe._Position;
-                    var n = probe._Normal;
-                    buffer.Data[x] = new Vector4(p, 0);
-                    if (n.HasValue)
-                        buffer.Data[x + Configuration.MaximumLightProbeCount] = new Vector4(n.Value, 1);
+                    if (probe._Normal.HasValue)
+                        buffer.Data[x++] = new Vector4(probe._Normal.Value, 1);
                     else
-                        buffer.Data[x + Configuration.MaximumLightProbeCount] = Vector4.Zero;
-                    x += 1;
+                        buffer.Data[x++] = Vector4.Zero;
                 }
 
                 lock (Coordinator.UseResourceLock)
-                    _LightProbeDataTexture.SetData(buffer.Data);
+                    _LightProbeNormals.SetData(buffer.Data);
             }
         }
 

@@ -22,6 +22,16 @@ sampler GBufferSampler : register(s2) {
     MagFilter = POINT;
 };
 
+Texture2D ProbeNormals : register(t4);
+sampler LightProbeNormalSampler : register(s4) {
+    Texture = (ProbeNormals);
+    AddressU  = CLAMP;
+    AddressV  = CLAMP;
+    MipFilter = POINT;
+    MinFilter = POINT;
+    MagFilter = POINT;
+};
+
 // returns world position data from the gbuffer at the specified screen position
 void sampleGBuffer (
     float2 screenPositionPx,
@@ -116,8 +126,7 @@ void sampleLightProbeBuffer (
     out float3 worldPosition,
     out float4 normal
 ) {
-    float2 uv1 = ((screenPositionPx * float2(1, 2))) * GBufferTexelSize;
-    float2 uv2 = ((screenPositionPx * float2(1, 2)) + float2(0, 1)) * GBufferTexelSize;
-    worldPosition = tex2Dlod(GBufferSampler, float4(uv1, 0, 0)).xyz;
-    normal = tex2Dlod(GBufferSampler, float4(uv2, 0, 0));
+    float2 uv = screenPositionPx * GBufferTexelSize;
+    worldPosition = tex2Dlod(GBufferSampler, float4(uv, 0, 0)).xyz;
+    normal = tex2Dlod(LightProbeNormalSampler, float4(uv, 0, 0));
 }
