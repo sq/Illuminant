@@ -133,7 +133,7 @@ namespace TestGame.Scenes {
                 Renderer.InvalidateFields();
             }
 
-            Renderer.CreateGIProbes(32, new Vector2(75, 75));
+            Renderer.CreateGIProbes(32, new Vector2(40, 40));
         }
 
         public override void LoadContent () {
@@ -206,7 +206,7 @@ namespace TestGame.Scenes {
                 (int)(Renderer.Configuration.MaximumRenderSize.Second * LightmapScaleRatio)
             );
 
-            Renderer.InvalidateFields();
+            // Renderer.InvalidateFields();
             Renderer.UpdateFields(frame, -2);
 
             using (var bg = BatchGroup.ForRenderTarget(

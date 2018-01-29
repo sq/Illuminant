@@ -194,22 +194,32 @@ namespace Squared.Illuminant {
                 var now = Time.Ticks;
 
                 var w = Renderer.Configuration.MaximumGIProbeCount;
-                var positions = new Vector4[w * GIProbeRowCount];
-                var normals = new Vector4[w * GIProbeRowCount];
-                var colors = new HalfVector4[w * GIProbeRowCount];
+                var c = w * GIProbeRowCount;
+                BufferPool<Vector4>.Buffer positions = default(BufferPool<Vector4>.Buffer), 
+                    normals = default(BufferPool<Vector4>.Buffer);
+
                 var wereSelected = Renderer._GIProbesWereSelected;
                 Renderer._GIProbesWereSelected = false;
 
+                if (wereSelected) {
+                    positions = BufferPool<Vector4>.Allocate(c);
+                    normals = BufferPool<Vector4>.Allocate(c);
+                }
+
+                var colors = Renderer._GIProbeReadbackArray;
+                if ((colors == null) || (colors.Length < c))
+                    Renderer._GIProbeReadbackArray = colors = new HalfVector4[c];
+
                 lock (Renderer.Coordinator.UseResourceLock) {
                     if (wereSelected) {
-                        Renderer._SelectedGIProbePositions.GetData(positions);
-                        Renderer._SelectedGIProbeNormals.GetData(normals);
+                        Renderer._SelectedGIProbePositions.GetData(positions.Data, 0, c);
+                        Renderer._SelectedGIProbeNormals.GetData(normals.Data, 0, c);
                     }
-                    Renderer._GIProbeValues.GetData(colors);
+                    Renderer._GIProbeValues.GetData(colors, 0, c);
                 }
 
                 lock (Renderer._GIProbes)
-                for (int i = 0, c = Renderer._GIProbes.Count; i < c; i++) {
+                for (int i = 0; i < Renderer._GIProbes.Count; i++) {
                     var probe = Renderer._GIProbes[i];
                     
                     lock (probe)
@@ -226,6 +236,11 @@ namespace Squared.Illuminant {
                             probe.Samples[j] = _rad;
                         }
                     }
+                }
+
+                if (wereSelected) {
+                    positions.Dispose();
+                    normals.Dispose();
                 }
 
                 return;

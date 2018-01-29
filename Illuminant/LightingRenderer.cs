@@ -205,6 +205,7 @@ namespace Squared.Illuminant {
         private readonly RenderTarget2D _GIProbeValues;
         private readonly Texture2D _RequestedGIProbePositions;
         private bool _GIProbesDirty, _GIProbesWereSelected;
+        private          HalfVector4[] _GIProbeReadbackArray;
 
         private readonly List<GIProbe> _GIProbes = new List<GIProbe>();
 
