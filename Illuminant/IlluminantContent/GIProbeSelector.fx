@@ -4,7 +4,7 @@
 #define SAMPLE sampleDistanceField
 #define TVARS  DistanceFieldConstants
 #define OFFSET 1
-#define SEARCH_DISTANCE 256
+#define SEARCH_DISTANCE 1024
 
 #include "VisualizeCommon.fxh"
 

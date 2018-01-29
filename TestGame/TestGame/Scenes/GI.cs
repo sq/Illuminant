@@ -133,7 +133,7 @@ namespace TestGame.Scenes {
                 Renderer.InvalidateFields();
             }
 
-            Renderer.CreateGIProbes(32, new Vector2(50, 50));
+            Renderer.CreateGIProbes(32, new Vector2(75, 75));
         }
 
         public override void LoadContent () {

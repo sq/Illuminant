@@ -20,7 +20,7 @@
 #define UNSHADOWED_THRESHOLD 0.95
 
 // We manually increase distance samples in order to avoid tiny shadow artifact specks at the edges of surfaces
-#define HACK_DISTANCE_OFFSET 1.95
+#define HACK_DISTANCE_OFFSET 2
 
 struct TraceParameters {
     float3 start;
