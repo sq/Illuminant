@@ -126,14 +126,14 @@ namespace TestGame.Scenes {
 
             DistanceField = new DistanceField(
                 Game.RenderCoordinator, Width, Height, Environment.MaximumZ,
-                64, DistanceFieldResolution.Value
+                32, DistanceFieldResolution.Value
             );
             if (Renderer != null) {
                 Renderer.DistanceField = DistanceField;
                 Renderer.InvalidateFields();
             }
 
-            Renderer.CreateGIProbes(Vector2.One * 64);
+            Renderer.CreateGIProbes(32, new Vector2(50, 50));
         }
 
         public override void LoadContent () {
@@ -235,6 +235,25 @@ namespace TestGame.Scenes {
                     samplerState: SamplerState.LinearClamp
                 ))
                     bb.Add(new BitmapDrawCall(Lightmap, Vector2.Zero));
+
+                using (var gb = GeometryBatch.New(
+                    group, 2,
+                    Game.Materials.Get(Game.Materials.ScreenSpaceGeometry, blendState: BlendState.Opaque)
+                )) {
+                    foreach (var p in Renderer.GIProbes) {
+                        lock (p) {
+                            if (p.Samples.Count == 0)
+                                continue;
+
+                            foreach (var rad in p.Samples) {
+                                var c = new Color(rad.Value.X, rad.Value.Y, rad.Value.Z, 1);
+                                var center = new Vector2(p.Position.X + (rad.SurfaceNormal.X * -5), p.Position.Y + (rad.SurfaceNormal.Y * -5));
+                                var size = new Vector2(2.2f, 2.2f);
+                                gb.AddFilledQuad(center - size, center + size, c);
+                            }
+                        }
+                    }
+                }
 
                 if (ShowDistanceField) {
                     float dfScale = Math.Min(

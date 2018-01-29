@@ -19,6 +19,9 @@
 #define FULLY_SHADOWED_THRESHOLD 0.1
 #define UNSHADOWED_THRESHOLD 0.95
 
+// We manually increase distance samples in order to avoid tiny shadow artifact specks at the edges of surfaces
+#define HACK_DISTANCE_OFFSET 1.95
+
 struct TraceParameters {
     float3 start;
     float3 direction;
@@ -35,7 +38,7 @@ float coneTraceStep(
         (config.y * offset) + MIN_CONE_RADIUS, config.x
     );
 
-    float localVisibility = clamp((distanceToObstacle / localSphereRadius), 0, 1);
+    float localVisibility = clamp(((distanceToObstacle + HACK_DISTANCE_OFFSET) / localSphereRadius), 0, 1);
     visibility = min(visibility, localVisibility);
 
     return max(

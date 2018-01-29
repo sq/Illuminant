@@ -3,8 +3,8 @@
 
 #define SAMPLE sampleDistanceField
 #define TVARS  DistanceFieldConstants
-#define OFFSET 3.0
-#define SEARCH_DISTANCE 1024
+#define OFFSET 1
+#define SEARCH_DISTANCE 256
 
 #include "VisualizeCommon.fxh"
 
@@ -13,8 +13,10 @@ static const float3 Normals[] = {
     ,{1, 0, 0}
     ,{0, -1, 0}
     ,{0, 1, 0}
-    ,{0, 0, -1}
-    ,{0, 0, 1}
+    ,{-1, -1, 0}
+    ,{ 1, 1, 0 }
+    ,{ 1, -1, 0 }
+    ,{ -1, 1, 0 }
 };
 
 uniform float Time;
@@ -48,6 +50,15 @@ void ProbeSelectorPixelShader(
     float3 requestedPosition = tex2Dlod(RequestedPositionSampler, float4(uv, 0, 0)).xyz;
 
     DistanceFieldConstants vars = makeDistanceFieldConstants();
+
+    float initialDistance = sampleDistanceField(requestedPosition, vars);
+
+    [branch]
+    if (initialDistance <= 1) {
+        resultPosition = 0;
+        resultNormal = 0;
+        return;
+    }
 
     float intersectionDistance;
     float3 estimatedIntersection;

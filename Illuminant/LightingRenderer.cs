@@ -199,7 +199,7 @@ namespace Squared.Illuminant {
         private readonly object     _LightProbeReadbackArrayLock = new object();
         private          HalfVector4[] _LightProbeReadbackArray;
 
-        const int GIProbeRowCount = 4;
+        const int GIProbeRowCount = 8;
 
         private readonly RenderTarget2D _SelectedGIProbePositions, _SelectedGIProbeNormals;
         private readonly RenderTarget2D _GIProbeValues;

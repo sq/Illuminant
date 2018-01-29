@@ -134,64 +134,10 @@ namespace Squared.Illuminant {
 
     public class GIProbe {
         public readonly Vector3 Position;
-
-        public GIProbeRadiance? Left, Right;
-        public GIProbeRadiance? Forward, Back;
-        /*
-        public GIProbeRadiance? Up, Down;
-        */
+        public readonly List<GIProbeRadiance> Samples = new List<GIProbeRadiance>();
 
         internal GIProbe (Vector3 position) {
             Position = position;
-        }
-
-        public GIProbeRadiance? this [int index] {
-            get {
-                switch (index) {
-                    case 0:
-                        return Left;
-                    case 1:
-                        return Right;
-                    case 2:
-                        return Back;
-                    case 3:
-                        return Forward;
-                        /*
-                    case 4:
-                        return Down;
-                    case 5:
-                        return Up;
-                        */
-                }
-
-                throw new ArgumentException();
-            }
-            set {
-                switch (index) {
-                    case 0:
-                        Left = value;
-                        return;
-                    case 1:
-                        Right = value;
-                        return;
-                    case 2:
-                        Back = value;
-                        return;
-                    case 3:
-                        Forward = value;
-                        return;
-                        /*
-                    case 4:
-                        Down = value;
-                        return;
-                    case 5:
-                        Up = value;
-                        return;
-                        */
-                }
-
-                throw new ArgumentException();
-            }
         }
     }
 
@@ -260,8 +206,15 @@ namespace Squared.Illuminant {
                 lock (Renderer._GIProbes)
                 for (int i = 0, c = Renderer._GIProbes.Count; i < c; i++) {
                     var probe = Renderer._GIProbes[i];
-                    for (int j = 0; j < GIProbeRowCount; j++)
-                        probe[j] = Renderer.UnpackGIProbeRadiance(positions, normals, colors, i, j, ScaleFactor);
+
+                    lock (probe) {
+                        probe.Samples.Clear();
+                        for (int j = 0; j < GIProbeRowCount; j++) {
+                            var rad = Renderer.UnpackGIProbeRadiance(positions, normals, colors, i, j, ScaleFactor);
+                            if (rad.HasValue)
+                                probe.Samples.Add(rad.Value);
+                        }
+                    }
                 }
 
                 return;
