@@ -222,7 +222,7 @@ namespace TestGame.Scenes {
             )) {
                 ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black);
 
-                var lighting = Renderer.RenderLighting(bg, 1, 1.0f / LightScaleFactor);
+                var lighting = Renderer.RenderLighting(bg, 1, 1.0f / LightScaleFactor, false);
                 lighting.Resolve(bg, 2, Width, Height, hdr: new HDRConfiguration { InverseScaleFactor = LightScaleFactor });
             };
 
@@ -242,10 +242,10 @@ namespace TestGame.Scenes {
                 )) {
                     foreach (var p in Renderer.GIProbes) {
                         lock (p) {
-                            if (p.Samples.Count == 0)
-                                continue;
-
-                            foreach (var rad in p.Samples) {
+                            foreach (var _rad in p.Samples) {
+                                if (!_rad.HasValue)
+                                    continue;
+                                var rad = _rad.Value;
                                 var c = new Color(rad.Value.X, rad.Value.Y, rad.Value.Z, 1);
                                 var center = new Vector2(p.Position.X + (rad.SurfaceNormal.X * -5), p.Position.Y + (rad.SurfaceNormal.Y * -5));
                                 var size = new Vector2(2.2f, 2.2f);

@@ -199,12 +199,12 @@ namespace Squared.Illuminant {
         private readonly object     _LightProbeReadbackArrayLock = new object();
         private          HalfVector4[] _LightProbeReadbackArray;
 
-        const int GIProbeRowCount = 8;
+        internal const int GIProbeRowCount = 8;
 
         private readonly RenderTarget2D _SelectedGIProbePositions, _SelectedGIProbeNormals;
         private readonly RenderTarget2D _GIProbeValues;
         private readonly Texture2D _RequestedGIProbePositions;
-        private bool _GIProbesDirty;
+        private bool _GIProbesDirty, _GIProbesWereSelected;
 
         private readonly List<GIProbe> _GIProbes = new List<GIProbe>();
 
@@ -448,6 +448,7 @@ namespace Squared.Illuminant {
         }
 
         private void Coordinator_DeviceReset (object sender, EventArgs e) {
+            _GIProbesDirty = true;
             FillIndexBuffer();
         }
 
@@ -696,8 +697,10 @@ namespace Squared.Illuminant {
         /// <param name="container">The batch container to render lighting into.</param>
         /// <param name="layer">The layer to render lighting into.</param>
         /// <param name="intensityScale">A factor to scale the intensity of all light sources. You can use this to rescale the intensity of light values for HDR.</param>
+        /// <param name="paintDirectIllumination">If false, direct illumination will not be rendered (only light probes will be updated).</param>
         public RenderedLighting RenderLighting (
-            IBatchContainer container, int layer, float intensityScale = 1.0f
+            IBatchContainer container, int layer, 
+            float intensityScale = 1.0f, bool paintDirectIllumination = true
         ) {
             var lightmap = _Lightmaps.BeginDraw(true);
             var lightProbe = default(BufferRing.InProgressRender);
@@ -791,6 +794,7 @@ namespace Squared.Illuminant {
                         foreach (var kvp in LightRenderStates)
                             kvp.Value.UpdateVertexBuffer();
 
+                        if (paintDirectIllumination)
                         foreach (var kvp in LightRenderStates) {
                             var ltrs = kvp.Value;
                             var count = ltrs.LightVertices.Count / 4;
@@ -889,10 +893,8 @@ namespace Squared.Illuminant {
                 return;
 
             using (var group = BatchGroup.New(container, layer)) {
-                if (_GIProbesDirty) {
+                if (_GIProbesDirty)
                     SelectGIProbes(group, 0);
-                    // _GIProbesDirty = false;
-                }
 
                 UpdateLightProbes(group, 1, _GIProbeValues, true);
             }
@@ -918,6 +920,8 @@ namespace Squared.Illuminant {
                 },
                 (dm, _) => {
                     dm.PopRenderTarget();
+                    _GIProbesDirty = false;
+                    _GIProbesWereSelected = true;
                 }
             ))
             using (var pb = PrimitiveBatch<GIProbeSelectorVertex>.New(rt, 1, m)) {

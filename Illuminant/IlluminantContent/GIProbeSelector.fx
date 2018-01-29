@@ -17,6 +17,7 @@ static const float3 Normals[] = {
     ,{ 1, 1, 0 }
     ,{ 1, -1, 0 }
     ,{ -1, 1, 0 }
+    // TODO: Add down vector and collide with ground plane (based on GBuffer maybe?)
 };
 
 uniform float Time;

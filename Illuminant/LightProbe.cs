@@ -134,7 +134,8 @@ namespace Squared.Illuminant {
 
     public class GIProbe {
         public readonly Vector3 Position;
-        public readonly List<GIProbeRadiance> Samples = new List<GIProbeRadiance>();
+        public readonly GIProbeRadiance?[] Samples = 
+            new GIProbeRadiance?[LightingRenderer.GIProbeRowCount];
 
         internal GIProbe (Vector3 position) {
             Position = position;
@@ -196,23 +197,33 @@ namespace Squared.Illuminant {
                 var positions = new Vector4[w * GIProbeRowCount];
                 var normals = new Vector4[w * GIProbeRowCount];
                 var colors = new HalfVector4[w * GIProbeRowCount];
+                var wereSelected = Renderer._GIProbesWereSelected;
+                Renderer._GIProbesWereSelected = false;
 
                 lock (Renderer.Coordinator.UseResourceLock) {
-                    Renderer._SelectedGIProbePositions.GetData(positions);
-                    Renderer._SelectedGIProbeNormals.GetData(normals);
+                    if (wereSelected) {
+                        Renderer._SelectedGIProbePositions.GetData(positions);
+                        Renderer._SelectedGIProbeNormals.GetData(normals);
+                    }
                     Renderer._GIProbeValues.GetData(colors);
                 }
 
                 lock (Renderer._GIProbes)
                 for (int i = 0, c = Renderer._GIProbes.Count; i < c; i++) {
                     var probe = Renderer._GIProbes[i];
-
-                    lock (probe) {
-                        probe.Samples.Clear();
+                    
+                    lock (probe)
+                    if (wereSelected) {
+                        for (int j = 0; j < GIProbeRowCount; j++)
+                            probe.Samples[j] = Renderer.UnpackGIProbeRadiance(positions, normals, colors, i, j, ScaleFactor);
+                    } else {
                         for (int j = 0; j < GIProbeRowCount; j++) {
-                            var rad = Renderer.UnpackGIProbeRadiance(positions, normals, colors, i, j, ScaleFactor);
-                            if (rad.HasValue)
-                                probe.Samples.Add(rad.Value);
+                            var rad = probe.Samples[j];
+                            if (!rad.HasValue)
+                                continue;
+                            var _rad = rad.Value;
+                            _rad.Value = colors[i + (j * w)].ToVector4() * ScaleFactor;
+                            probe.Samples[j] = _rad;
                         }
                     }
                 }
