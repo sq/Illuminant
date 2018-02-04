@@ -124,18 +124,10 @@ namespace Squared.Illuminant {
                 SetDirty();
             }
         }
-    }
-
-    public struct GIProbeRadiance {
-        public Vector3 Position;
-        public Vector3 SurfaceNormal;
-        public Vector4 Value;
-    }
+    }    
 
     public class GIProbe {
         public readonly Vector3 Position;
-        public readonly GIProbeRadiance?[] Samples = 
-            new GIProbeRadiance?[LightingRenderer.GIProbeRowCount];
 
         internal GIProbe (Vector3 position) {
             Position = position;
@@ -184,6 +176,7 @@ namespace Squared.Illuminant {
             }
         }
 
+        /*
         private struct GIProbeDownloadTask : IWorkItem {
             public LightingRenderer Renderer;
             public long Timestamp;
@@ -195,15 +188,15 @@ namespace Squared.Illuminant {
 
                 var w = Renderer.Configuration.MaximumGIProbeCount;
                 var c = w * GIProbeRowCount;
-                BufferPool<Vector4>.Buffer positions = default(BufferPool<Vector4>.Buffer), 
-                    normals = default(BufferPool<Vector4>.Buffer);
+                var positions = default(BufferPool<HalfVector4>.Buffer);
+                var normals = default(BufferPool<HalfVector4>.Buffer);
 
                 var wereSelected = Renderer._GIProbesWereSelected;
                 Renderer._GIProbesWereSelected = false;
 
                 if (wereSelected) {
-                    positions = BufferPool<Vector4>.Allocate(c);
-                    normals = BufferPool<Vector4>.Allocate(c);
+                    positions = BufferPool<HalfVector4>.Allocate(c);
+                    normals = BufferPool<HalfVector4>.Allocate(c);
                 }
 
                 var colors = Renderer._GIProbeReadbackArray;
@@ -246,5 +239,6 @@ namespace Squared.Illuminant {
                 return;
             }
         }
+        */
     }
 }

@@ -25,6 +25,12 @@ namespace Squared.Illuminant {
         public readonly int       MaximumGIProbeCount;
 
         /// <summary>
+        /// Determines how many samples contribute to the value of each GI probe.
+        /// </summary>
+        public readonly GIProbeQualityLevels 
+                                  GIProbeQualityLevel;
+
+        /// <summary>
         /// Uses a high-precision g-buffer and internal lightmap.
         /// </summary>
         public readonly bool      HighQuality;

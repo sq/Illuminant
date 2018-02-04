@@ -7,13 +7,16 @@
 #define OFFSET 1
 #define SEARCH_DISTANCE 1024
 #define FUDGE 0.375
+#define DO_FIRST_BOUNCE false
+#define DROP_DEAD_SAMPLES_FROM_SH true
 
 #include "VisualizeCommon.fxh"
 
 #include "SphericalHarmonics.fxh"
 
-static const float NormalCount = 64;
-static const float NormalSliceSize = 21;
+uniform float NormalCount;
+static const float NormalSliceCount = 3;
+static const float SliceIndexToZ = 2.5;
 
 uniform float Time;
 
@@ -59,13 +62,14 @@ float3 ComputeRowNormal(float row) {
         return float3(0, 0, 1);
 
     row -= 1;
-    float sliceIndex = floor(row / NormalSliceSize);
-    float radians = row / NormalSliceSize * 2 * Pi;
+    float normalSliceSize = floor((NormalCount - 1) / NormalSliceCount);
+    float sliceIndex = floor(row / normalSliceSize);
+    float radians = (row + (sliceIndex * 0.33)) / normalSliceSize * 2 * Pi;
 
     float2 xy;
     sincos(radians, xy.x, xy.y);
 
-    return normalize(float3(xy, sliceIndex / 2.8));
+    return normalize(float3(xy, sliceIndex / SliceIndexToZ));
 }
 
 void ProbeSelectorPixelShader(
@@ -90,16 +94,21 @@ void ProbeSelectorPixelShader(
         return;
     }
 
-    float intersectionDistance;
-    float3 estimatedIntersection;
-    float3 ray = normal * SEARCH_DISTANCE;
+    if (DO_FIRST_BOUNCE) {
+        float intersectionDistance;
+        float3 estimatedIntersection;
+        float3 ray = normal * SEARCH_DISTANCE;
 
-    if (traceSurface(requestedPosition, ray, intersectionDistance, estimatedIntersection, vars)) {
-        resultPosition = float4(estimatedIntersection - (normal * OFFSET), 1);
-        resultNormal = float4(-normal, 1);
+        if (traceSurface(requestedPosition, ray, intersectionDistance, estimatedIntersection, vars)) {
+            resultPosition = float4(estimatedIntersection - (normal * OFFSET), 1);
+            resultNormal = float4(-normal, 1);
+        } else {
+            resultPosition = 0;
+            resultNormal = 0;
+        }
     } else {
-        resultPosition = 0;
-        resultNormal = 0;
+        resultPosition = float4(requestedPosition, 1);
+        resultNormal = float4(normal, 1);
     }
 }
 
@@ -110,9 +119,8 @@ void SHGeneratorPixelShader(
     int y = max(0, floor(vpos.y));
 
     SH9Color r;
-    for (int i = 0; i < SHValueCount; i++)
-        r.c[i] = 0;
 
+    float received = 0;
     float divisor = 0.001;
 
     for (float idx = 0; idx < NormalCount; idx++) {
@@ -129,13 +137,16 @@ void SHGeneratorPixelShader(
         for (int j = 0; j < SHValueCount; j++)
             r.c[j] += cos.c[j] * value.rgb;
 
-        divisor += 1;
+        received += 1;
     }
 
-    SHScaleColorByCosine(r);
+    if (DROP_DEAD_SAMPLES_FROM_SH)
+        SHScaleColorByCosine(r, received);
+    else
+        SHScaleColorByCosine(r, NormalCount);
 
-    result.rgb = r.c[y] / divisor;
-    result.a = divisor;
+    result.rgb = r.c[y];
+    result.a = received;
 }
 
 void SHVisualizerPixelShader(
@@ -147,19 +158,20 @@ void SHVisualizerPixelShader(
     float3 irradiance = 0;
 
     float probeIndex = _probeIndex.x;
+    float4 uv = float4(probeIndex * ProbeValuesTexelSize.x, 0, 0, 0);
+    float received = 0;
 
     for (int y = 0; y < SHTexelCount; y++) {
-        float4 uv = float4(probeIndex * ProbeValuesTexelSize.x, (y + FUDGE) * ProbeValuesTexelSize.y, 0, 0);
+        uv.y = (y + FUDGE) * ProbeValuesTexelSize.y;
         float4 coeff = tex2Dlod(ProbeValuesSampler, uv);
-
-        // HACK: If the probe received no light (for example from being inside an object) then kill the visualization
-        [branch]
-        if (coeff.a < 1) {
-            discard;
-            return;
-        }
-
         rad.c[y] = coeff.rgb;
+        received += coeff.a;
+    }
+
+    [branch]
+    if (received < 1) {
+        discard;
+        return;
     }
 
     float xyLength = length(localPosition);
@@ -172,7 +184,7 @@ void SHVisualizerPixelShader(
     SHScaleByCosine(cos);
 
     // FIXME: This doesn't seem like it should be necessary but without it the probes look really dark
-    SHScaleColorByCosine(rad);
+    SHScaleColorByCosine(rad, 1);
 
     for (int i = 0; i < SHValueCount; i++)
         irradiance += rad.c[i] * cos.c[i];

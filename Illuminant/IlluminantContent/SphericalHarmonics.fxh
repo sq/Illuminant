@@ -48,16 +48,20 @@ void SHScaleByCosine (inout SH9 r) {
     r.c[8] *= CosineA2;
 }
 
-void SHScaleColorByCosine (inout SH9Color r) {
-    r.c[0] *= CosineA0;
+void SHScaleColorByCosine (inout SH9Color r, float divisor) {
+    float a0 = CosineA0 / divisor;
+    float a1 = CosineA1 / divisor;
+    float a2 = CosineA2 / divisor;
 
-    r.c[1] *= CosineA1;
-    r.c[2] *= CosineA1;
-    r.c[3] *= CosineA1;
+    r.c[0] *= a0;
 
-    r.c[4] *= CosineA2;
-    r.c[5] *= CosineA2;
-    r.c[6] *= CosineA2;
-    r.c[7] *= CosineA2;
-    r.c[8] *= CosineA2;
+    r.c[1] *= a1;
+    r.c[2] *= a1;
+    r.c[3] *= a1;
+
+    r.c[4] *= a2;
+    r.c[5] *= a2;
+    r.c[6] *= a2;
+    r.c[7] *= a2;
+    r.c[8] *= a2;
 }

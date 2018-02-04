@@ -34,7 +34,9 @@ namespace TestGame.Scenes {
             TwoPointFiveD,
             RenderDirectLight,
             // ShowProbes,
-            ShowProbeSH;
+            ShowProbeSH,
+            EnablePointLight,
+            EnableDirectionalLights;
 
         Slider DistanceFieldResolution,
             LightmapScaleRatio;
@@ -48,16 +50,18 @@ namespace TestGame.Scenes {
             DistanceFieldResolution.Value = 0.25f;
             LightmapScaleRatio.Value = 1.0f;
             RenderDirectLight.Value = true;
-            // ShowProbes.Value = false;
             ShowProbeSH.Value = true;
+            EnablePointLight.Value = true;
+            EnableDirectionalLights.Value = true;
 
             ShowGBuffer.Key = Keys.G;
             TwoPointFiveD.Key = Keys.D2;
             TwoPointFiveD.Changed += (s, e) => Renderer.InvalidateFields();
             ShowDistanceField.Key = Keys.D;
             RenderDirectLight.Key = Keys.L;
-            // ShowProbes.Key = Keys.P;
             ShowProbeSH.Key = Keys.S;
+            EnableDirectionalLights.Key = Keys.D3;
+            EnablePointLight.Key = Keys.D4;
 
             DistanceFieldResolution.MinusKey = Keys.D3;
             DistanceFieldResolution.PlusKey = Keys.D4;
@@ -255,26 +259,6 @@ namespace TestGame.Scenes {
                 ))
                     bb.Add(new BitmapDrawCall(Lightmap, Vector2.Zero));
 
-                if (false) // ShowProbes)
-                using (var gb = GeometryBatch.New(
-                    group, 2,
-                    Game.Materials.Get(Game.Materials.ScreenSpaceGeometry, blendState: BlendState.Opaque)
-                )) {
-                    foreach (var p in Renderer.GIProbes) {
-                        lock (p) {
-                            foreach (var _rad in p.Samples) {
-                                if (!_rad.HasValue)
-                                    continue;
-                                var rad = _rad.Value;
-                                var c = new Color(rad.Value.X, rad.Value.Y, rad.Value.Z, 1);
-                                var center = new Vector2(p.Position.X + (rad.SurfaceNormal.X * -5.25f), p.Position.Y + (rad.SurfaceNormal.Y * -5.25f));
-                                var size = new Vector2(2f, 2f);
-                                gb.AddFilledQuad(center - size, center + size, c);
-                            }
-                        }
-                    }
-                }
-
                 if (ShowProbeSH)
                     Renderer.VisualizeGIProbes(group, 2, 16);
 
@@ -330,17 +314,11 @@ namespace TestGame.Scenes {
                 var mousePos = new Vector3(ms.X, ms.Y, LightZ);
 
                 MovableLight.Position = mousePos;
-                // MovableLight.Color.W = Arithmetic.Pulse((float)Time.Seconds / 3f, 0.3f, 1f);
+                MovableLight.Opacity = EnablePointLight ? 1 : 0;
+                MovableLight.Color.W = Arithmetic.Pulse((float)Time.Seconds / 3f, 0.4f, 0.6f);
 
-                if (false) {
-                    var d = mousePos - new Vector3(Width / 2f, Height / 2f, 0);
-                    var l = d.Length();
-                    d.Normalize();
-                    d.Z = -(3 - Arithmetic.Clamp(l / 300f, 0, 3));
-                    var dl = Environment.Lights.OfType<DirectionalLightSource>().FirstOrDefault();
-                    if (dl != null)
-                        dl.Direction = d;
-                }
+                foreach (var d in Environment.Lights.OfType<DirectionalLightSource>())
+                    d.Opacity = EnableDirectionalLights ? 1 : 0;
             }
         }
     }

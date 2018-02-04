@@ -15,39 +15,6 @@ using Squared.Threading;
 using Squared.Util;
 
 namespace Squared.Illuminant {
-    public struct HDRConfiguration {
-        public struct GammaCompressionConfiguration {
-            public float MiddleGray, AverageLuminance, MaximumLuminance;
-        }
-
-        public struct ToneMappingConfiguration {
-            public float WhitePoint;
-        }
-
-        public HDRMode Mode;
-        public float InverseScaleFactor;
-        public float Offset;
-        public GammaCompressionConfiguration GammaCompression;
-        public ToneMappingConfiguration ToneMapping;
-
-        private float ExposureMinusOne;
-
-        public float Exposure {
-            get {
-                return ExposureMinusOne + 1;
-            }
-            set {
-                ExposureMinusOne = value - 1;
-            }
-        }
-    }
-
-    public enum HDRMode {
-        None,
-        GammaCompress,
-        ToneMap
-    }    
-
     public sealed partial class LightingRenderer : IDisposable, INameableGraphicsObject {
         private struct HistogramUpdateTask : IWorkItem {
             public LightingRenderer Renderer;
@@ -171,4 +138,38 @@ namespace Squared.Illuminant {
             }
         }
     }
+
+    public struct HDRConfiguration {
+        public struct GammaCompressionConfiguration {
+            public float MiddleGray, AverageLuminance, MaximumLuminance;
+        }
+
+        public struct ToneMappingConfiguration {
+            public float WhitePoint;
+        }
+
+        public HDRMode Mode;
+        public float InverseScaleFactor;
+        public float Offset;
+        public GammaCompressionConfiguration GammaCompression;
+        public ToneMappingConfiguration ToneMapping;
+
+        private float ExposureMinusOne;
+
+        public float Exposure {
+            get {
+                return ExposureMinusOne + 1;
+            }
+            set {
+                ExposureMinusOne = value - 1;
+            }
+        }
+    }
+
+    public enum HDRMode {
+        None,
+        GammaCompress,
+        ToneMap
+    }    
+
 }
