@@ -142,7 +142,7 @@ namespace TestGame.Scenes {
                 Renderer.InvalidateFields();
             }
 
-            Renderer.CreateGIProbes(0, new Vector2(50, 80));
+            Renderer.CreateGIProbes(0, new Vector2(52, 52));
         }
 
         public override void LoadContent () {
@@ -155,7 +155,8 @@ namespace TestGame.Scenes {
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(
-                    Width, Height, true, false, enableGlobalIllumination: true
+                    Width, Height, true, false, enableGlobalIllumination: true,
+                    maximumGIProbeCount: 900
                 ) {
                     MaxFieldUpdatesPerFrame = 3,
                     DefaultQuality = {
@@ -187,7 +188,6 @@ namespace TestGame.Scenes {
                 OcclusionToOpacityPower = 0.7f,
             };
 
-            /*
             Environment.Lights.Add(new DirectionalLightSource {
                 Direction = new Vector3(-0.75f, -0.7f, -0.2f),
                 Color = new Vector4(0.1f, 0.0f, 0.8f, 0.6f),
@@ -199,7 +199,6 @@ namespace TestGame.Scenes {
                 Color = new Vector4(0.1f, 0.8f, 0.0f, 0.6f),
                 Quality = DirectionalQuality
             });
-            */
 
             if (false)
             Environment.Lights.Add(new DirectionalLightSource {
