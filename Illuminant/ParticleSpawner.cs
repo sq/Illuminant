@@ -5,12 +5,11 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Squared.Illuminant.Transforms;
 using Squared.Illuminant.Uniforms;
 using Squared.Illuminant.Util;
 using Squared.Render;
 
-namespace Squared.Illuminant.Transforms {
+namespace Squared.Illuminant.Particles.Transforms {
     public class Spawner : ParticleTransform {
         public float    MinInterval, MaxInterval;
         public float    MinCount, MaxCount;

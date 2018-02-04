@@ -7,7 +7,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Squared.Render;
 
-namespace Squared.Illuminant.Transforms {
+namespace Squared.Illuminant.Particles.Transforms {
     public enum AreaType : int {
         None = 0,
         Ellipsoid = 1,

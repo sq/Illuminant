@@ -8,9 +8,9 @@ using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Squared.Illuminant.Util;
 using Squared.Render;
-using Chunk = Squared.Illuminant.ParticleSystem.Slice.Chunk;
+using Chunk = Squared.Illuminant.Particles.ParticleSystem.Slice.Chunk;
 
-namespace Squared.Illuminant {
+namespace Squared.Illuminant.Particles {
     public partial class ParticleEngine : IDisposable {
         public bool IsDisposed { get; private set; }
         

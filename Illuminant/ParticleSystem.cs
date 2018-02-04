@@ -15,7 +15,7 @@ using Squared.Render.Tracing;
 using Squared.Threading;
 using Squared.Util;
 
-namespace Squared.Illuminant {
+namespace Squared.Illuminant.Particles {
     public class ParticleSystem : IDisposable {
         internal struct SpawnState {
             public int Offset, Free;
@@ -248,7 +248,7 @@ namespace Squared.Illuminant {
         public readonly ParticleEngine                     Engine;
         public readonly ParticleSystemConfiguration        Configuration;
         public readonly List<Transforms.ParticleTransform> Transforms = 
-            new List<Illuminant.Transforms.ParticleTransform>();
+            new List<Transforms.ParticleTransform>();
 
         // 3 because we go
         // old -> a -> b -> a -> ... -> done

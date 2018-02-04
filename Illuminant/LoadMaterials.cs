@@ -172,7 +172,9 @@ namespace Squared.Illuminant {
             }, null);
         }
     }
+}
 
+namespace Squared.Illuminant.Particles {
     public sealed partial class ParticleEngine : IDisposable {
         private void DefineMaterial (Material m) {
             Materials.Add(m);
