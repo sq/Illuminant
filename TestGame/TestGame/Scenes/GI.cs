@@ -172,7 +172,7 @@ namespace TestGame.Scenes {
 
             MovableLight = new SphereLightSource {
                 Position = new Vector3(64, 64, 0.7f),
-                Color = new Vector4(1f, 0.2f, 0.2f, 0.5f),
+                Color = new Vector4(1f, 0.2f, 0.2f, 1f),
                 Radius = 500,
                 RampLength = 50,
                 RampMode = LightSourceRampMode.Linear

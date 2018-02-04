@@ -6,7 +6,7 @@
 #define TVARS  DistanceFieldConstants
 #define OFFSET 1
 #define SEARCH_DISTANCE 1024
-#define FUDGE 0.45
+#define FUDGE 0.375
 
 #include "VisualizeCommon.fxh"
 
@@ -150,7 +150,6 @@ void SHGeneratorPixelShader(
             continue;
 
         float3 normal = normalize(Normals[idx]);
-        float a, b, c, d, e, f, g, h, i;
         SH9 cos = SHCosineLobe(normal);
 
         for (int j = 0; j < SHValueCount; j++)
@@ -159,7 +158,7 @@ void SHGeneratorPixelShader(
         divisor += 1;
     }
 
-    result.rgb = max(0, r.c[y] / divisor);
+    result.rgb = r.c[y] / divisor;
     result.a = 1;
 }
 
@@ -183,7 +182,7 @@ void SHVisualizerPixelShader(
     SH9 cos = SHCosineLobe(normal);
 
     for (int i = 0; i < SHValueCount; i++)
-        irradiance += rad.c[i] * max(0, cos.c[i]);
+        irradiance += rad.c[i] * cos.c[i];
 
     // FIXME: InverseScaleFactor
     float3 resultRgb = irradiance * irradiance;
