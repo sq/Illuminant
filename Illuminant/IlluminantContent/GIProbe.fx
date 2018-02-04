@@ -77,6 +77,8 @@ void ProbeSelectorPixelShader(
     float3 requestedPosition = tex2Dlod(RequestedPositionSampler, float4(uv, 0, 0)).xyz;
     int y = max(0, floor(vpos.y));
 
+    float3 normal = ComputeRowNormal(y);
+
     DistanceFieldConstants vars = makeDistanceFieldConstants();
 
     float initialDistance = sampleDistanceField(requestedPosition, vars);
@@ -88,44 +90,17 @@ void ProbeSelectorPixelShader(
         return;
     }
 
-    resultPosition = float4(requestedPosition.xyz, 1);
-    resultNormal = float4(ComputeRowNormal(y), 1);
+    float intersectionDistance;
+    float3 estimatedIntersection;
+    float3 ray = normal * SEARCH_DISTANCE;
 
-    /*
-
-    [branch]
-    if (vpos.y < 0.9) {
-        resultPosition = float4(requestedPosition.xyz, 1);
-        resultNormal = float4(0, 0, 1, 1);
-        return;
+    if (traceSurface(requestedPosition, ray, intersectionDistance, estimatedIntersection, vars)) {
+        resultPosition = float4(estimatedIntersection - (normal * OFFSET), 1);
+        resultNormal = float4(-normal, 1);
     } else {
-        float3 normal = normalize(Normals[vpos.y]);
-
-        DistanceFieldConstants vars = makeDistanceFieldConstants();
-
-        float initialDistance = sampleDistanceField(requestedPosition, vars);
-
-        [branch]
-        if (initialDistance <= 2) {
-            resultPosition = 0;
-            resultNormal = 0;
-            return;
-        }
-
-        float intersectionDistance;
-        float3 estimatedIntersection;
-        float3 ray = normal * SEARCH_DISTANCE;
-
-        if (traceSurface(requestedPosition, ray, intersectionDistance, estimatedIntersection, vars)) {
-            resultPosition = float4(estimatedIntersection - (normal * OFFSET), 1);
-            resultNormal = float4(-normal, 1);
-        } else {
-            resultPosition = 0;
-            resultNormal = 0;
-        }
+        resultPosition = 0;
+        resultNormal = 0;
     }
-
-    */
 }
 
 void SHGeneratorPixelShader(
@@ -160,7 +135,7 @@ void SHGeneratorPixelShader(
     SHScaleColorByCosine(r);
 
     result.rgb = r.c[y] / divisor;
-    result.a = 1;
+    result.a = divisor;
 }
 
 void SHVisualizerPixelShader(
@@ -175,7 +150,16 @@ void SHVisualizerPixelShader(
 
     for (int y = 0; y < SHTexelCount; y++) {
         float4 uv = float4(probeIndex * ProbeValuesTexelSize.x, (y + FUDGE) * ProbeValuesTexelSize.y, 0, 0);
-        rad.c[y] = tex2Dlod(ProbeValuesSampler, uv).rgb;
+        float4 coeff = tex2Dlod(ProbeValuesSampler, uv);
+
+        // HACK: If the probe received no light (for example from being inside an object) then kill the visualization
+        [branch]
+        if (coeff.a < 1) {
+            discard;
+            return;
+        }
+
+        rad.c[y] = coeff.rgb;
     }
 
     float xyLength = length(localPosition);

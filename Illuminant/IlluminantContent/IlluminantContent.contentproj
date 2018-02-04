@@ -136,7 +136,6 @@
       <Name>GIProbe</Name>
       <Importer>EffectImporter</Importer>
       <Processor>EffectProcessor</Processor>
-      <ProcessorParameters_DebugMode>Debug</ProcessorParameters_DebugMode>
     </Compile>
     <None Include="VisualizeCommon.fxh">
       <Name>VisualizeCommon</Name>
