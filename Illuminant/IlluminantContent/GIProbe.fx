@@ -156,22 +156,22 @@ void SHVisualizerPixelShader(
 
     for (int y = 0; y < SHTexelCount; y++) {
         float4 uv = float4(probeIndex.x * ProbeValuesTexelSize.x, y * ProbeValuesTexelSize.y, 0, 0);
-        float valueGrey = tex2Dlod(ProbeValuesSampler, uv).r;
-
-        float3 normal = normalize(float3(localPosition.x, localPosition.y, 0.001));
-        float a, b, c, d, e, f, g, h, i;
-        SHCosineLobe(normal, a, b, c, d, e, f, g, h, i);
-
-        irradiance += a * valueGrey;
-        irradiance += b * valueGrey;
-        irradiance += c * valueGrey;
-        irradiance += d * valueGrey;
-        irradiance += e * valueGrey;
-        irradiance += f * valueGrey;
-        irradiance += g * valueGrey;
-        irradiance += h * valueGrey;
-        irradiance += i * valueGrey;
+        sh[y] = tex2Dlod(ProbeValuesSampler, uv).r;
     }
+
+    float3 normal = normalize(float3(localPosition.x, localPosition.y, 0.001));
+    float a, b, c, d, e, f, g, h, i;
+    SHCosineLobe(normal, a, b, c, d, e, f, g, h, i);
+
+    irradiance += a * sh[0];
+    irradiance += b * sh[1];
+    irradiance += c * sh[2];
+    irradiance += d * sh[3];
+    irradiance += e * sh[4];
+    irradiance += f * sh[5];
+    irradiance += g * sh[6];
+    irradiance += h * sh[7];
+    irradiance += i * sh[8];
 
     // FIXME: InverseScaleFactor
     float resultGrey = irradiance * (1.0f / Pi);

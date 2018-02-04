@@ -248,7 +248,7 @@ namespace Squared.Illuminant {
         public static VertexDeclaration _VertexDeclaration;
 
         public VisualizeGIProbeVertex (Vector3 worldPosition, float x, float y, short index) {
-            const float radius = 6;
+            const float radius = 9;
             Position = new Vector4(worldPosition.X - (x * radius), worldPosition.Y - (y * radius), 0, 1);
             LocalPosition = new Vector2(x, y);
             ProbeIndex = Reserved = index;
