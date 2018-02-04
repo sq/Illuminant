@@ -68,14 +68,14 @@ namespace TestGame.Scenes {
             UseRampTexture.Key = Keys.P;
             Deterministic.Key = Keys.R;
 
-            DistanceFieldResolution.MinusKey = Keys.D3;
-            DistanceFieldResolution.PlusKey = Keys.D4;
+            DistanceFieldResolution.MinusKey = Keys.D5;
+            DistanceFieldResolution.PlusKey = Keys.D6;
             DistanceFieldResolution.Min = 0.1f;
             DistanceFieldResolution.Max = 1.0f;
             DistanceFieldResolution.Speed = 0.05f;
 
-            LightmapScaleRatio.MinusKey = Keys.D6;
-            LightmapScaleRatio.PlusKey = Keys.D7;
+            LightmapScaleRatio.MinusKey = Keys.D7;
+            LightmapScaleRatio.PlusKey = Keys.D8;
             LightmapScaleRatio.Min = 0.05f;
             LightmapScaleRatio.Max = 1.0f;
             LightmapScaleRatio.Speed = 0.1f;

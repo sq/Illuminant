@@ -125,7 +125,8 @@ namespace Squared.Illuminant {
             bool enableGlobalIllumination = false,
             int ringBufferSize = 2,
             int maximumLightProbeCount = 256,
-            int maximumGIProbeCount = 1024
+            int maximumGIProbeCount = 1024,
+            GIProbeQualityLevels giProbeQualityLevel = GIProbeQualityLevels.Medium
         ) {
             HighQuality = highQuality;
             MaximumRenderSize = new Pair<int>(maxWidth, maxHeight);
@@ -137,6 +138,7 @@ namespace Squared.Illuminant {
             // HACK: Texture coordinates get all mangled if these values aren't powers of two. Ugh.
             MaximumLightProbeCount = (int)Math.Pow(2, Math.Ceiling(Math.Log(maximumLightProbeCount, 2)));
             MaximumGIProbeCount = (int)Math.Pow(2, Math.Ceiling(Math.Log(maximumGIProbeCount, 2)));
+            GIProbeQualityLevel = giProbeQualityLevel;
 
             if (MaximumLightProbeCount > 2048)
                 throw new ArgumentException("Maximum light probe count is 2048");

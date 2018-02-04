@@ -13,7 +13,6 @@ using Squared.Util;
 
 namespace Squared.Illuminant {
     public sealed partial class LightingRenderer : IDisposable, INameableGraphicsObject {
-        internal const int GIProbeNormalCount = 64;
         internal const int SHValueCount = 9;
 
         private readonly RenderTarget2D _SelectedGIProbePositions, _SelectedGIProbeNormals;
@@ -26,6 +25,12 @@ namespace Squared.Illuminant {
         public IReadOnlyList<GIProbe> GIProbes {
             get {
                 return _GIProbes;
+            }
+        }
+
+        internal int GIProbeNormalCount {
+            get {
+                return (int)Configuration.GIProbeQualityLevel;
             }
         }
 
