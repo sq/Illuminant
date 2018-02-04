@@ -47,7 +47,7 @@ namespace TestGame.Scenes {
             TwoPointFiveD.Value = true;
             DistanceFieldResolution.Value = 0.25f;
             LightmapScaleRatio.Value = 1.0f;
-            RenderDirectLight.Value = true;
+            RenderDirectLight.Value = false;
             ShowProbes.Value = false;
             ShowProbeSH.Value = true;
 
@@ -259,8 +259,8 @@ namespace TestGame.Scenes {
                                     continue;
                                 var rad = _rad.Value;
                                 var c = new Color(rad.Value.X, rad.Value.Y, rad.Value.Z, 1);
-                                var center = new Vector2(p.Position.X + (rad.SurfaceNormal.X * -5), p.Position.Y + (rad.SurfaceNormal.Y * -5));
-                                var size = new Vector2(2.2f, 2.2f);
+                                var center = new Vector2(p.Position.X + (rad.SurfaceNormal.X * -5.25f), p.Position.Y + (rad.SurfaceNormal.Y * -5.25f));
+                                var size = new Vector2(2f, 2f);
                                 gb.AddFilledQuad(center - size, center + size, c);
                             }
                         }

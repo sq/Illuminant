@@ -199,7 +199,7 @@ namespace Squared.Illuminant {
         private readonly object     _LightProbeReadbackArrayLock = new object();
         private          HalfVector4[] _LightProbeReadbackArray;
 
-        internal const int GIProbeRowCount = 8;
+        internal const int GIProbeRowCount = 1;
         internal const int SHValueCount = 9;
 
         private readonly RenderTarget2D _SelectedGIProbePositions, _SelectedGIProbeNormals;
@@ -317,7 +317,7 @@ namespace Squared.Illuminant {
 
                 _GIProbeSH = new RenderTarget2D(
                     coordinator.Device, Configuration.MaximumGIProbeCount, SHValueCount, false,
-                    SurfaceFormat.Single, DepthFormat.None, 0, RenderTargetUsage.PreserveContents
+                    SurfaceFormat.Vector4, DepthFormat.None, 0, RenderTargetUsage.PreserveContents
                 );
             }
 

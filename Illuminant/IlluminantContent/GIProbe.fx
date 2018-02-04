@@ -11,9 +11,10 @@
 
 #include "SphericalHarmonics.fxh"
 
-static const int NormalCount = 8;
+static const int NormalCount = 9;
 static const float3 Normals[] = {
-    {-1, 0, 0}
+     { 0, 0, 1 }
+    ,{-1, 0, 0}
     ,{1, 0, 0}
     ,{0, -1, 0}
     ,{0, 1, 0}
@@ -68,32 +69,39 @@ void ProbeSelectorPixelShader(
     out float4 resultPosition : COLOR0,
     out float4 resultNormal   : COLOR1
 ) {
-    float3 normal = normalize(Normals[vpos.y]);
-
     float2 uv = vpos * RequestedPositionTexelSize;
     float3 requestedPosition = tex2Dlod(RequestedPositionSampler, float4(uv, 0, 0)).xyz;
 
-    DistanceFieldConstants vars = makeDistanceFieldConstants();
-
-    float initialDistance = sampleDistanceField(requestedPosition, vars);
-
     [branch]
-    if (initialDistance <= 2) {
-        resultPosition = 0;
-        resultNormal = 0;
+    if (vpos.y < 0.9) {
+        resultPosition = float4(requestedPosition.xyz, 1);
+        resultNormal = float4(0, 0, 1, 1);
         return;
-    }
-
-    float intersectionDistance;
-    float3 estimatedIntersection;
-    float3 ray = normal * SEARCH_DISTANCE;
-
-    if (traceSurface(requestedPosition, ray, intersectionDistance, estimatedIntersection, vars)) {
-        resultPosition = float4(estimatedIntersection - (normal * OFFSET), 1);
-        resultNormal = float4(-normal, 1);
     } else {
-        resultPosition = 0;
-        resultNormal = 0;
+        float3 normal = normalize(Normals[vpos.y]);
+
+        DistanceFieldConstants vars = makeDistanceFieldConstants();
+
+        float initialDistance = sampleDistanceField(requestedPosition, vars);
+
+        [branch]
+        if (initialDistance <= 2) {
+            resultPosition = 0;
+            resultNormal = 0;
+            return;
+        }
+
+        float intersectionDistance;
+        float3 estimatedIntersection;
+        float3 ray = normal * SEARCH_DISTANCE;
+
+        if (traceSurface(requestedPosition, ray, intersectionDistance, estimatedIntersection, vars)) {
+            resultPosition = float4(estimatedIntersection - (normal * OFFSET), 1);
+            resultNormal = float4(-normal, 1);
+        } else {
+            resultPosition = 0;
+            resultNormal = 0;
+        }
     }
 }
 
@@ -103,27 +111,26 @@ void SHGeneratorPixelShader(
 ) {
     float x = vpos.x * ProbeValuesTexelSize.x;
 
-    float ra = 0, rb = 0, rc = 0, rd = 0, re = 0, rf = 0, rg = 0, rh = 0, ri = 0;
+    float4 ra = 0, rb = 0, rc = 0, rd = 0, re = 0, rf = 0, rg = 0, rh = 0, ri = 0;
 
     for (int idx = 0; idx < NormalCount; idx++) {
         float4 uv = float4(x, idx * ProbeValuesTexelSize.y, 0, 0);
         // FIXME: InverseScaleFactor
-        float3 value = tex2Dlod(ProbeValuesSampler, uv) * float3(0.299f, 0.587f, 0.114f);
-        float valueGrey = value.r + value.g + value.b;
+        float4 value = tex2Dlod(ProbeValuesSampler, uv);
 
         float3 normal = normalize(Normals[idx]);
         float a, b, c, d, e, f, g, h, i;
         SHCosineLobe(normal, a, b, c, d, e, f, g, h, i);
 
-        ra += a * valueGrey;
-        rb += b * valueGrey;
-        rc += c * valueGrey;
-        rd += d * valueGrey;
-        re += e * valueGrey;
-        rf += f * valueGrey;
-        rg += g * valueGrey;
-        rh += h * valueGrey;
-        ri += i * valueGrey;
+        ra += a * value;
+        rb += b * value;
+        rc += c * value;
+        rd += d * value;
+        re += e * value;
+        rf += f * value;
+        rg += g * value;
+        rh += h * value;
+        ri += i * value;
     }
 
     if (vpos.y == 0)
@@ -151,15 +158,17 @@ void SHVisualizerPixelShader(
     in int2    probeIndex    : BLENDINDICES0,
     out float4 result        : COLOR0
 ) {
-    float sh[9];
-    float irradiance = 0;
+    float3 sh[9];
+    float3 irradiance = 0;
 
     for (int y = 0; y < SHTexelCount; y++) {
         float4 uv = float4(probeIndex.x * ProbeValuesTexelSize.x, y * ProbeValuesTexelSize.y, 0, 0);
-        sh[y] = tex2Dlod(ProbeValuesSampler, uv).r;
+        sh[y] = tex2Dlod(ProbeValuesSampler, uv).rgb;
     }
 
-    float3 normal = normalize(float3(localPosition.x, localPosition.y, 0.001));
+    float xyLength = length(localPosition);
+    float3 normal = float3(-localPosition.x, -localPosition.y, -clamp(1 - xyLength, 0, 1));
+    normal = normalize(normal);
     float a, b, c, d, e, f, g, h, i;
     SHCosineLobe(normal, a, b, c, d, e, f, g, h, i);
 
@@ -174,8 +183,9 @@ void SHVisualizerPixelShader(
     irradiance += i * sh[8];
 
     // FIXME: InverseScaleFactor
-    float resultGrey = irradiance * (1.0f / Pi);
-    result = float4(resultGrey, resultGrey, resultGrey, 1);
+    float3 resultRgb = irradiance * (1.0f / Pi);
+    float  fade = 1.0 - clamp((xyLength - 0.9) / 0.1, 0, 1);
+    result = float4(resultRgb * fade, fade);
 }
 
 technique ProbeSelector {
