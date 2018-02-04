@@ -276,7 +276,7 @@ namespace TestGame.Scenes {
                 }
 
                 if (ShowProbeSH)
-                    Renderer.VisualizeGIProbes(group, 2, 25);
+                    Renderer.VisualizeGIProbes(group, 2, 16);
 
                 if (ShowDistanceField) {
                     float dfScale = Math.Min(

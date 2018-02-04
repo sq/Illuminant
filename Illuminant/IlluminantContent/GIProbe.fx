@@ -187,15 +187,16 @@ void SHVisualizerPixelShader(
 
     SHScaleByCosine(cos);
 
-    /*
+    // FIXME: This doesn't seem like it should be necessary but without it the probes look really dark
     SHScaleColorByCosine(rad);
-    */
 
     for (int i = 0; i < SHValueCount; i++)
         irradiance += rad.c[i] * cos.c[i];
 
     // FIXME: InverseScaleFactor
-    float3 resultRgb = (irradiance * irradiance); // * (1.0 / Pi);
+    float3 resultRgb = (irradiance * irradiance)
+        // HACK: This seems to be needed to compensate for the cosine scaling of the color value
+        * (1.0 / Pi);
     float  fade = 1.0 - clamp((xyLength - 0.9) / 0.1, 0, 1);
     result = float4(resultRgb * fade, fade);
 }
