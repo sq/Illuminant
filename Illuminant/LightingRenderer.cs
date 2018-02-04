@@ -199,7 +199,7 @@ namespace Squared.Illuminant {
         private readonly object     _LightProbeReadbackArrayLock = new object();
         private          HalfVector4[] _LightProbeReadbackArray;
 
-        internal const int GIProbeRowCount = 1;
+        internal const int GIProbeRowCount = 13;
         internal const int SHValueCount = 9;
 
         private readonly RenderTarget2D _SelectedGIProbePositions, _SelectedGIProbeNormals;
@@ -900,7 +900,10 @@ namespace Squared.Illuminant {
             if (_GIProbes.Count == 0)
                 return;
 
-            using (var group = BatchGroup.New(container, layer)) {
+            using (var group = BatchGroup.New(container, layer, null, (dm, _) => {
+                for (int i = 0; i < 16; i++)
+                    dm.Device.Textures[i] = null;
+            })) {
                 if (_GIProbesDirty)
                     SelectGIProbes(group, 0);
 
@@ -986,12 +989,20 @@ namespace Squared.Illuminant {
             }
         }
 
-        public void VisualizeGIProbes (IBatchContainer container, int layer) {
-            var m = IlluminantMaterials.VisualizeGIProbeSH;
+        public void VisualizeGIProbes (IBatchContainer container, int layer, float radius) {
+            var m = Materials.Get(IlluminantMaterials.VisualizeGIProbeSH, blendState: BlendState.AlphaBlend);
             var p = m.Effect.Parameters;
 
+            using (var group = BatchGroup.New(
+                container, layer,
+                null,
+                (dm, _) => {
+                    for (int i = 0; i < 16; i++)
+                        dm.Device.Textures[i] = null;
+                }
+            ))
             using (var pb = PrimitiveBatch<VisualizeGIProbeVertex>.New(
-                container, layer, m,
+                group, 1, m,
                 (dm, _) => {
                     p["ProbeValuesTexelSize"].SetValue(new Vector2(1.0f / _GIProbeSH.Width, 1.0f / _GIProbeSH.Height));
                     p["ProbeValues"].SetValue(_GIProbeSH);
@@ -999,7 +1010,7 @@ namespace Squared.Illuminant {
                     m.Flush();
                 }
             )) {
-                RenderTrace.Marker(container, layer, "Visualize GI probes");
+                RenderTrace.Marker(group, 0, "Visualize GI probes");
 
                 var count = (short)GIProbes.Count;
                 var buf = new VisualizeGIProbeVertex[count * 4];
@@ -1012,10 +1023,10 @@ namespace Squared.Illuminant {
                         pos = probe.Position;
 
                     var j = i * 4;
-                    buf[j + 0] = new VisualizeGIProbeVertex(pos, -1, -1, i);
-                    buf[j + 1] = new VisualizeGIProbeVertex(pos, 1, -1, i);
-                    buf[j + 2] = new VisualizeGIProbeVertex(pos, 1, 1, i);
-                    buf[j + 3] = new VisualizeGIProbeVertex(pos, -1, 1, i);
+                    buf[j + 0] = new VisualizeGIProbeVertex(pos, -1, -1, i, radius);
+                    buf[j + 1] = new VisualizeGIProbeVertex(pos, 1, -1, i, radius);
+                    buf[j + 2] = new VisualizeGIProbeVertex(pos, 1, 1, i, radius);
+                    buf[j + 3] = new VisualizeGIProbeVertex(pos, -1, 1, i, radius);
 
                     var pdc = new PrimitiveDrawCall<VisualizeGIProbeVertex>(
                         PrimitiveType.TriangleList,

@@ -132,6 +132,7 @@ namespace TestGame {
                 blendState: BlendState.Opaque, 
                 depthStencilState: DepthStencilState.None, 
                 rasterizerState: RasterizerState.CullNone,
+                samplerState: SamplerState.LinearClamp,
                 worldSpace: false,
                 layer: 9999
             );
@@ -209,6 +210,7 @@ namespace TestGame {
                     blendState: BlendState.AlphaBlend,
                     depthStencilState: DepthStencilState.None,
                     rasterizerState: RasterizerState.CullNone,
+                    samplerState: SamplerState.LinearClamp,
                     worldSpace: false,
                     layer: layer
                 );

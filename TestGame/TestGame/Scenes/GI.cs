@@ -33,7 +33,7 @@ namespace TestGame.Scenes {
             ShowDistanceField,
             TwoPointFiveD,
             RenderDirectLight,
-            ShowProbes,
+            // ShowProbes,
             ShowProbeSH;
 
         Slider DistanceFieldResolution,
@@ -47,8 +47,8 @@ namespace TestGame.Scenes {
             TwoPointFiveD.Value = true;
             DistanceFieldResolution.Value = 0.25f;
             LightmapScaleRatio.Value = 1.0f;
-            RenderDirectLight.Value = false;
-            ShowProbes.Value = false;
+            RenderDirectLight.Value = true;
+            // ShowProbes.Value = false;
             ShowProbeSH.Value = true;
 
             ShowGBuffer.Key = Keys.G;
@@ -56,7 +56,7 @@ namespace TestGame.Scenes {
             TwoPointFiveD.Changed += (s, e) => Renderer.InvalidateFields();
             ShowDistanceField.Key = Keys.D;
             RenderDirectLight.Key = Keys.L;
-            ShowProbes.Key = Keys.P;
+            // ShowProbes.Key = Keys.P;
             ShowProbeSH.Key = Keys.S;
 
             DistanceFieldResolution.MinusKey = Keys.D3;
@@ -142,7 +142,7 @@ namespace TestGame.Scenes {
                 Renderer.InvalidateFields();
             }
 
-            Renderer.CreateGIProbes(32, new Vector2(40, 40));
+            Renderer.CreateGIProbes(0, new Vector2(36, 36));
         }
 
         public override void LoadContent () {
@@ -172,9 +172,9 @@ namespace TestGame.Scenes {
 
             MovableLight = new SphereLightSource {
                 Position = new Vector3(64, 64, 0.7f),
-                Color = new Vector4(1f, 1f, 1f, 0.5f),
-                Radius = 24,
-                RampLength = 550,
+                Color = new Vector4(1f, 0.2f, 0.2f, 0.5f),
+                Radius = 500,
+                RampLength = 50,
                 RampMode = LightSourceRampMode.Linear
             };
 
@@ -187,15 +187,24 @@ namespace TestGame.Scenes {
                 OcclusionToOpacityPower = 0.7f,
             };
 
+            if (false)
             Environment.Lights.Add(new DirectionalLightSource {
                 Direction = new Vector3(-0.75f, -0.7f, -0.33f),
-                Color = new Vector4(0.2f, 0.4f, 0.6f, 0.4f),
+                Color = new Vector4(0.1f, 0.0f, 0.8f, 0.6f),
                 Quality = DirectionalQuality
             });
 
+            if (false)
             Environment.Lights.Add(new DirectionalLightSource {
                 Direction = new Vector3(0.35f, -0.05f, -0.75f),
-                Color = new Vector4(0.5f, 0.3f, 0.15f, 0.3f),
+                Color = new Vector4(0.1f, 0.8f, 0.0f, 0.6f),
+                Quality = DirectionalQuality
+            });
+
+            if (false)
+            Environment.Lights.Add(new DirectionalLightSource {
+                Direction = new Vector3(-1f, -0.1f, -0.1f),
+                Color = new Vector4(1f, 1f, 1f, 0.5f),
                 Quality = DirectionalQuality
             });
 
@@ -247,7 +256,7 @@ namespace TestGame.Scenes {
                 ))
                     bb.Add(new BitmapDrawCall(Lightmap, Vector2.Zero));
 
-                if (ShowProbes)
+                if (false) // ShowProbes)
                 using (var gb = GeometryBatch.New(
                     group, 2,
                     Game.Materials.Get(Game.Materials.ScreenSpaceGeometry, blendState: BlendState.Opaque)
@@ -268,7 +277,7 @@ namespace TestGame.Scenes {
                 }
 
                 if (ShowProbeSH)
-                    Renderer.VisualizeGIProbes(group, 2);
+                    Renderer.VisualizeGIProbes(group, 2, 18);
 
                 if (ShowDistanceField) {
                     float dfScale = Math.Min(
@@ -322,7 +331,17 @@ namespace TestGame.Scenes {
                 var mousePos = new Vector3(ms.X, ms.Y, LightZ);
 
                 MovableLight.Position = mousePos;
-                MovableLight.Color.W = Arithmetic.Pulse((float)Time.Seconds / 3f, 0.3f, 1f);
+                // MovableLight.Color.W = Arithmetic.Pulse((float)Time.Seconds / 3f, 0.3f, 1f);
+
+                if (false) {
+                    var d = mousePos - new Vector3(Width / 2f, Height / 2f, 0);
+                    var l = d.Length();
+                    d.Normalize();
+                    d.Z = -(3 - Arithmetic.Clamp(l / 300f, 0, 3));
+                    var dl = Environment.Lights.OfType<DirectionalLightSource>().FirstOrDefault();
+                    if (dl != null)
+                        dl.Direction = d;
+                }
             }
         }
     }

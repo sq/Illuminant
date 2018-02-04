@@ -6,22 +6,27 @@
 #define TVARS  DistanceFieldConstants
 #define OFFSET 1
 #define SEARCH_DISTANCE 1024
+#define FUDGE 0.45
 
 #include "VisualizeCommon.fxh"
 
 #include "SphericalHarmonics.fxh"
 
-static const int NormalCount = 9;
+static const int NormalCount = 13;
 static const float3 Normals[] = {
      { 0, 0, 1 }
-    ,{-1, 0, 0}
-    ,{1, 0, 0}
-    ,{0, -1, 0}
-    ,{0, 1, 0}
     ,{-1, -1, 0}
     ,{ 1, 1, 0 }
     ,{ 1, -1, 0 }
     ,{ -1, 1, 0 }
+    ,{ -1, 0, 1 }
+    ,{ 1, 0, 1 }
+    ,{ 0, -1, 1 }
+    ,{ 0, 1, 1 }
+    ,{ -1, 0, 0 }
+    ,{ 1, 0, 0 }
+    ,{ 0, -1, 0 }
+    ,{ 0, 1, 0 }
     // TODO: Add down vector and collide with ground plane (based on GBuffer maybe?)
 };
 
@@ -69,8 +74,25 @@ void ProbeSelectorPixelShader(
     out float4 resultPosition : COLOR0,
     out float4 resultNormal   : COLOR1
 ) {
-    float2 uv = vpos * RequestedPositionTexelSize;
+    float2 uv = (vpos + FUDGE) * RequestedPositionTexelSize;
     float3 requestedPosition = tex2Dlod(RequestedPositionSampler, float4(uv, 0, 0)).xyz;
+    int y = max(0, floor(vpos.y));
+
+    DistanceFieldConstants vars = makeDistanceFieldConstants();
+
+    float initialDistance = sampleDistanceField(requestedPosition, vars);
+
+    [branch]
+    if (initialDistance <= 2) {
+        resultPosition = 0;
+        resultNormal = 0;
+        return;
+    }
+
+    resultPosition = float4(requestedPosition.xyz, 1);
+    resultNormal = float4(normalize(Normals[y]), 1);
+
+    /*
 
     [branch]
     if (vpos.y < 0.9) {
@@ -103,54 +125,42 @@ void ProbeSelectorPixelShader(
             resultNormal = 0;
         }
     }
+
+    */
 }
 
 void SHGeneratorPixelShader(
     in  float2 vpos   : VPOS,
     out float4 result : COLOR0
 ) {
-    float x = vpos.x * ProbeValuesTexelSize.x;
+    int y = max(0, floor(vpos.y));
 
-    float4 ra = 0, rb = 0, rc = 0, rd = 0, re = 0, rf = 0, rg = 0, rh = 0, ri = 0;
+    SH9Color r;
+    for (int i = 0; i < SHValueCount; i++)
+        r.c[i] = 0;
+
+    float divisor = 0;
 
     for (int idx = 0; idx < NormalCount; idx++) {
-        float4 uv = float4(x, idx * ProbeValuesTexelSize.y, 0, 0);
+        float4 uv = float4((vpos.x + FUDGE) * ProbeValuesTexelSize.x, (idx + FUDGE) * ProbeValuesTexelSize.y, 0, 0);
         // FIXME: InverseScaleFactor
         float4 value = tex2Dlod(ProbeValuesSampler, uv);
 
+        if (value.w < 0.9)
+            continue;
+
         float3 normal = normalize(Normals[idx]);
         float a, b, c, d, e, f, g, h, i;
-        SHCosineLobe(normal, a, b, c, d, e, f, g, h, i);
+        SH9 cos = SHCosineLobe(normal);
 
-        ra += a * value;
-        rb += b * value;
-        rc += c * value;
-        rd += d * value;
-        re += e * value;
-        rf += f * value;
-        rg += g * value;
-        rh += h * value;
-        ri += i * value;
+        for (int j = 0; j < SHValueCount; j++)
+            r.c[j] += cos.c[j] * value.rgb;
+
+        divisor += 1;
     }
 
-    if (vpos.y == 0)
-        result = ra / NormalCount;
-    else if (vpos.y == 1)
-        result = rb / NormalCount;
-    else if (vpos.y == 2)
-        result = rc / NormalCount;
-    else if (vpos.y == 3)
-        result = rd / NormalCount;
-    else if (vpos.y == 4)
-        result = re / NormalCount;
-    else if (vpos.y == 5)
-        result = rf / NormalCount;
-    else if (vpos.y == 6)
-        result = rg / NormalCount;
-    else if (vpos.y == 7)
-        result = rh / NormalCount;
-    else
-        result = ri / NormalCount;
+    result.rgb = max(0, r.c[y] / divisor);
+    result.a = 1;
 }
 
 void SHVisualizerPixelShader(
@@ -158,32 +168,25 @@ void SHVisualizerPixelShader(
     in int2    probeIndex    : BLENDINDICES0,
     out float4 result        : COLOR0
 ) {
-    float3 sh[9];
+    SH9Color rad;
     float3 irradiance = 0;
 
     for (int y = 0; y < SHTexelCount; y++) {
-        float4 uv = float4(probeIndex.x * ProbeValuesTexelSize.x, y * ProbeValuesTexelSize.y, 0, 0);
-        sh[y] = tex2Dlod(ProbeValuesSampler, uv).rgb;
+        float4 uv = float4((probeIndex.x + FUDGE) * ProbeValuesTexelSize.x, (y + FUDGE) * ProbeValuesTexelSize.y, 0, 0);
+        rad.c[y] = tex2Dlod(ProbeValuesSampler, uv).rgb;
     }
 
     float xyLength = length(localPosition);
-    float3 normal = float3(-localPosition.x, -localPosition.y, -clamp(1 - xyLength, 0, 1));
+    float z = 1 - clamp(xyLength / 0.9, 0, 1);
+    float3 normal = float3(localPosition.x * 1.1, localPosition.y * 1.1, z * z);
     normal = normalize(normal);
-    float a, b, c, d, e, f, g, h, i;
-    SHCosineLobe(normal, a, b, c, d, e, f, g, h, i);
+    SH9 cos = SHCosineLobe(normal);
 
-    irradiance += a * sh[0];
-    irradiance += b * sh[1];
-    irradiance += c * sh[2];
-    irradiance += d * sh[3];
-    irradiance += e * sh[4];
-    irradiance += f * sh[5];
-    irradiance += g * sh[6];
-    irradiance += h * sh[7];
-    irradiance += i * sh[8];
+    for (int i = 0; i < SHValueCount; i++)
+        irradiance += rad.c[i] * max(0, cos.c[i]);
 
     // FIXME: InverseScaleFactor
-    float3 resultRgb = irradiance * (1.0f / Pi);
+    float3 resultRgb = irradiance * irradiance;
     float  fade = 1.0 - clamp((xyLength - 0.9) / 0.1, 0, 1);
     result = float4(resultRgb * fade, fade);
 }
