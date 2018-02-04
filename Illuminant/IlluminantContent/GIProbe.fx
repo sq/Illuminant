@@ -12,23 +12,8 @@
 
 #include "SphericalHarmonics.fxh"
 
-static const int NormalCount = 13;
-static const float3 Normals[] = {
-     { 0, 0, 1 }
-    ,{-1, -1, 0}
-    ,{ 1, 1, 0 }
-    ,{ 1, -1, 0 }
-    ,{ -1, 1, 0 }
-    ,{ -1, 0, 1 }
-    ,{ 1, 0, 1 }
-    ,{ 0, -1, 1 }
-    ,{ 0, 1, 1 }
-    ,{ -1, 0, 0 }
-    ,{ 1, 0, 0 }
-    ,{ 0, -1, 0 }
-    ,{ 0, 1, 0 }
-    // TODO: Add down vector and collide with ground plane (based on GBuffer maybe?)
-};
+static const float NormalCount = 64;
+static const float NormalSliceSize = 21;
 
 uniform float Time;
 
@@ -69,6 +54,20 @@ void SHVisualizerVertexShader (
     result = TransformPosition(float4(position.xy, 0, 1), 0);
 }
 
+float3 ComputeRowNormal(float row) {
+    if (row < 1)
+        return float3(0, 0, 1);
+
+    row -= 1;
+    float sliceIndex = floor(row / NormalSliceSize);
+    float radians = row / NormalSliceSize * 2 * Pi;
+
+    float2 xy;
+    sincos(radians, xy.x, xy.y);
+
+    return normalize(float3(xy, sliceIndex / 2.8));
+}
+
 void ProbeSelectorPixelShader(
     in  float2 vpos           : VPOS,
     out float4 resultPosition : COLOR0,
@@ -90,7 +89,7 @@ void ProbeSelectorPixelShader(
     }
 
     resultPosition = float4(requestedPosition.xyz, 1);
-    resultNormal = float4(normalize(Normals[y]), 1);
+    resultNormal = float4(ComputeRowNormal(y), 1);
 
     /*
 
@@ -139,9 +138,9 @@ void SHGeneratorPixelShader(
     for (int i = 0; i < SHValueCount; i++)
         r.c[i] = 0;
 
-    float divisor = 0;
+    float divisor = 0.001;
 
-    for (int idx = 0; idx < NormalCount; idx++) {
+    for (float idx = 0; idx < NormalCount; idx++) {
         float4 uv = float4((vpos.x + FUDGE) * ProbeValuesTexelSize.x, (idx + FUDGE) * ProbeValuesTexelSize.y, 0, 0);
         // FIXME: InverseScaleFactor
         float4 value = tex2Dlod(ProbeValuesSampler, uv);
@@ -149,7 +148,7 @@ void SHGeneratorPixelShader(
         if (value.w < 0.9)
             continue;
 
-        float3 normal = normalize(Normals[idx]);
+        float3 normal = ComputeRowNormal(idx);
         SH9 cos = SHCosineLobe(normal);
 
         for (int j = 0; j < SHValueCount; j++)
@@ -158,34 +157,45 @@ void SHGeneratorPixelShader(
         divisor += 1;
     }
 
+    SHScaleColorByCosine(r);
+
     result.rgb = r.c[y] / divisor;
     result.a = 1;
 }
 
 void SHVisualizerPixelShader(
     in float2  localPosition : TEXCOORD0,
-    in int2    probeIndex    : BLENDINDICES0,
+    in int2    _probeIndex   : BLENDINDICES0,
     out float4 result        : COLOR0
 ) {
     SH9Color rad;
     float3 irradiance = 0;
 
+    float probeIndex = _probeIndex.x;
+
     for (int y = 0; y < SHTexelCount; y++) {
-        float4 uv = float4((probeIndex.x + FUDGE) * ProbeValuesTexelSize.x, (y + FUDGE) * ProbeValuesTexelSize.y, 0, 0);
+        float4 uv = float4(probeIndex * ProbeValuesTexelSize.x, (y + FUDGE) * ProbeValuesTexelSize.y, 0, 0);
         rad.c[y] = tex2Dlod(ProbeValuesSampler, uv).rgb;
     }
 
     float xyLength = length(localPosition);
     float z = 1 - clamp(xyLength / 0.9, 0, 1);
-    float3 normal = float3(localPosition.x * 1.1, localPosition.y * 1.1, z * z);
+    // FIXME: Correct?
+    float3 normal = float3(localPosition.x * -1.1, localPosition.y * -1.1, z * z);
     normal = normalize(normal);
     SH9 cos = SHCosineLobe(normal);
+
+    SHScaleByCosine(cos);
+
+    /*
+    SHScaleColorByCosine(rad);
+    */
 
     for (int i = 0; i < SHValueCount; i++)
         irradiance += rad.c[i] * cos.c[i];
 
     // FIXME: InverseScaleFactor
-    float3 resultRgb = irradiance * irradiance;
+    float3 resultRgb = (irradiance * irradiance); // * (1.0 / Pi);
     float  fade = 1.0 - clamp((xyLength - 0.9) / 0.1, 0, 1);
     result = float4(resultRgb * fade, fade);
 }

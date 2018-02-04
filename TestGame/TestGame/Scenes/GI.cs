@@ -142,7 +142,7 @@ namespace TestGame.Scenes {
                 Renderer.InvalidateFields();
             }
 
-            Renderer.CreateGIProbes(0, new Vector2(36, 36));
+            Renderer.CreateGIProbes(0, new Vector2(50, 80));
         }
 
         public override void LoadContent () {
@@ -172,9 +172,9 @@ namespace TestGame.Scenes {
 
             MovableLight = new SphereLightSource {
                 Position = new Vector3(64, 64, 0.7f),
-                Color = new Vector4(1f, 0.2f, 0.2f, 1f),
-                Radius = 500,
-                RampLength = 50,
+                Color = new Vector4(1f, 0.2f, 0.2f, 0.5f),
+                Radius = 300,
+                RampLength = 200,
                 RampMode = LightSourceRampMode.Linear
             };
 
@@ -187,19 +187,19 @@ namespace TestGame.Scenes {
                 OcclusionToOpacityPower = 0.7f,
             };
 
-            if (false)
+            /*
             Environment.Lights.Add(new DirectionalLightSource {
-                Direction = new Vector3(-0.75f, -0.7f, -0.33f),
+                Direction = new Vector3(-0.75f, -0.7f, -0.2f),
                 Color = new Vector4(0.1f, 0.0f, 0.8f, 0.6f),
                 Quality = DirectionalQuality
             });
 
-            if (false)
             Environment.Lights.Add(new DirectionalLightSource {
-                Direction = new Vector3(0.35f, -0.05f, -0.75f),
+                Direction = new Vector3(0.5f, -0.7f, -0.3f),
                 Color = new Vector4(0.1f, 0.8f, 0.0f, 0.6f),
                 Quality = DirectionalQuality
             });
+            */
 
             if (false)
             Environment.Lights.Add(new DirectionalLightSource {
@@ -277,7 +277,7 @@ namespace TestGame.Scenes {
                 }
 
                 if (ShowProbeSH)
-                    Renderer.VisualizeGIProbes(group, 2, 18);
+                    Renderer.VisualizeGIProbes(group, 2, 25);
 
                 if (ShowDistanceField) {
                     float dfScale = Math.Min(

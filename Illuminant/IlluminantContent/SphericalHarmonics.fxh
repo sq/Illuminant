@@ -5,34 +5,59 @@ static const float CosineA0 = Pi;
 static const float CosineA1 = (2.0f * Pi) / 3.0f;
 static const float CosineA2 = Pi * 0.25f;
 
-struct SH9
-{
+struct SH9 {
     float c[9];
 };
 
-struct SH9Color
-{
+struct SH9Color {
     float3 c[9];
 };
 
-SH9 SHCosineLobe(in float3 dir)
-{
+SH9 SHCosineLobe (in float3 dir) {
     SH9 sh;
 
     // Band 0
-    sh.c[0] = 0.282095f * CosineA0;
+    sh.c[0] = 0.282095f;
 
     // Band 1
-    sh.c[1] = 0.488603f * dir.y * CosineA1;
-    sh.c[2] = 0.488603f * dir.z * CosineA1;
-    sh.c[3] = 0.488603f * dir.x * CosineA1;
+    sh.c[1] = 0.488603f * dir.y;
+    sh.c[2] = 0.488603f * dir.z;
+    sh.c[3] = 0.488603f * dir.x;
 
     // Band 2
-    sh.c[4] = 1.092548f * dir.x * dir.y * CosineA2;
-    sh.c[5] = 1.092548f * dir.y * dir.z * CosineA2;
-    sh.c[6] = 0.315392f * (3.0f * dir.z * dir.z - 1.0f) * CosineA2;
-    sh.c[7] = 1.092548f * dir.x * dir.z * CosineA2;
-    sh.c[8] = 0.546274f * (dir.x * dir.x - dir.y * dir.y) * CosineA2;
+    sh.c[4] = 1.092548f * dir.x * dir.y;
+    sh.c[5] = 1.092548f * dir.y * dir.z;
+    sh.c[6] = 0.315392f * (3.0f * dir.z * dir.z - 1.0f);
+    sh.c[7] = 1.092548f * dir.x * dir.z;
+    sh.c[8] = 0.546274f * (dir.x * dir.x - dir.y * dir.y);
 
     return sh;
+}
+
+void SHScaleByCosine (inout SH9 r) {
+    r.c[0] *= CosineA0;
+
+    r.c[1] *= CosineA1;
+    r.c[2] *= CosineA1;
+    r.c[3] *= CosineA1;
+
+    r.c[4] *= CosineA2;
+    r.c[5] *= CosineA2;
+    r.c[6] *= CosineA2;
+    r.c[7] *= CosineA2;
+    r.c[8] *= CosineA2;
+}
+
+void SHScaleColorByCosine (inout SH9Color r) {
+    r.c[0] *= CosineA0;
+
+    r.c[1] *= CosineA1;
+    r.c[2] *= CosineA1;
+    r.c[3] *= CosineA1;
+
+    r.c[4] *= CosineA2;
+    r.c[5] *= CosineA2;
+    r.c[6] *= CosineA2;
+    r.c[7] *= CosineA2;
+    r.c[8] *= CosineA2;
 }
