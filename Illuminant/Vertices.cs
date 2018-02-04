@@ -216,20 +216,51 @@ namespace Squared.Illuminant {
         }
     }
 
-    public struct GIProbeSelectorVertex : IVertexType {
+    public struct GIProbeVertex : IVertexType {
         public Vector4 Position;
 
         public static VertexDeclaration _VertexDeclaration;
 
-        public GIProbeSelectorVertex (float x, float y) {
+        public GIProbeVertex (float x, float y) {
             Position = new Vector4(x, y, 0, 1);
         }
 
-        static GIProbeSelectorVertex () {
-            var tThis = typeof(GIProbeSelectorVertex);
+        static GIProbeVertex () {
+            var tThis = typeof(GIProbeVertex);
 
             _VertexDeclaration = new VertexDeclaration(
                 new VertexElement(Marshal.OffsetOf(tThis, "Position").ToInt32(), VertexElementFormat.Vector4, VertexElementUsage.Position, 0)
+            );
+        }
+
+        public VertexDeclaration VertexDeclaration {
+            get {
+                return _VertexDeclaration;
+            }
+        }
+    }
+
+    public struct VisualizeGIProbeVertex : IVertexType {
+        public Vector4 Position;
+        public Vector2 LocalPosition;
+        public short   ProbeIndex, Reserved;
+
+        public static VertexDeclaration _VertexDeclaration;
+
+        public VisualizeGIProbeVertex (Vector3 worldPosition, float x, float y, short index) {
+            const float radius = 6;
+            Position = new Vector4(worldPosition.X - (x * radius), worldPosition.Y - (y * radius), 0, 1);
+            LocalPosition = new Vector2(x, y);
+            ProbeIndex = Reserved = index;
+        }
+
+        static VisualizeGIProbeVertex () {
+            var tThis = typeof(VisualizeGIProbeVertex);
+
+            _VertexDeclaration = new VertexDeclaration(
+                new VertexElement(Marshal.OffsetOf(tThis, "Position").ToInt32(), VertexElementFormat.Vector4, VertexElementUsage.Position, 0),
+                new VertexElement(Marshal.OffsetOf(tThis, "LocalPosition").ToInt32(), VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 0),
+                new VertexElement(Marshal.OffsetOf(tThis, "ProbeIndex").ToInt32(), VertexElementFormat.Short2, VertexElementUsage.BlendIndices, 0)
             );
         }
 

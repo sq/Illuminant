@@ -27,11 +27,14 @@ namespace TestGame.Scenes {
 
         const int MultisampleCount = 0;
         const int MaxStepCount = 128;
-        const float LightScaleFactor = 4;
+        const float LightScaleFactor = 1;
 
         Toggle ShowGBuffer,
             ShowDistanceField,
-            TwoPointFiveD;
+            TwoPointFiveD,
+            RenderDirectLight,
+            ShowProbes,
+            ShowProbeSH;
 
         Slider DistanceFieldResolution,
             LightmapScaleRatio;
@@ -44,11 +47,17 @@ namespace TestGame.Scenes {
             TwoPointFiveD.Value = true;
             DistanceFieldResolution.Value = 0.25f;
             LightmapScaleRatio.Value = 1.0f;
+            RenderDirectLight.Value = true;
+            ShowProbes.Value = false;
+            ShowProbeSH.Value = true;
 
             ShowGBuffer.Key = Keys.G;
             TwoPointFiveD.Key = Keys.D2;
             TwoPointFiveD.Changed += (s, e) => Renderer.InvalidateFields();
             ShowDistanceField.Key = Keys.D;
+            RenderDirectLight.Key = Keys.L;
+            ShowProbes.Key = Keys.P;
+            ShowProbeSH.Key = Keys.S;
 
             DistanceFieldResolution.MinusKey = Keys.D3;
             DistanceFieldResolution.PlusKey = Keys.D4;
@@ -190,10 +199,12 @@ namespace TestGame.Scenes {
                 Quality = DirectionalQuality
             });
 
-            Rect(new Vector2(330, 300), new Vector2(Width, 350), 0f, 55f);
+            Rect(new Vector2(330, 300), new Vector2(Width, 340), 0f, 45f);
 
             for (int i = 0; i < 8; i++)
                 Pillar(new Vector2(30 + (i * 270), 560));
+
+            Rect(new Vector2(630, 800), new Vector2(Width, 840), 0f, 45f);
         }
         
         public override void Draw (Squared.Render.Frame frame) {
@@ -222,7 +233,7 @@ namespace TestGame.Scenes {
             )) {
                 ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black);
 
-                var lighting = Renderer.RenderLighting(bg, 1, 1.0f / LightScaleFactor, false);
+                var lighting = Renderer.RenderLighting(bg, 1, 1.0f / LightScaleFactor, RenderDirectLight);
                 lighting.Resolve(bg, 2, Width, Height, hdr: new HDRConfiguration { InverseScaleFactor = LightScaleFactor });
             };
 
@@ -236,6 +247,7 @@ namespace TestGame.Scenes {
                 ))
                     bb.Add(new BitmapDrawCall(Lightmap, Vector2.Zero));
 
+                if (ShowProbes)
                 using (var gb = GeometryBatch.New(
                     group, 2,
                     Game.Materials.Get(Game.Materials.ScreenSpaceGeometry, blendState: BlendState.Opaque)
@@ -254,6 +266,9 @@ namespace TestGame.Scenes {
                         }
                     }
                 }
+
+                if (ShowProbeSH)
+                    Renderer.VisualizeGIProbes(group, 2);
 
                 if (ShowDistanceField) {
                     float dfScale = Math.Min(

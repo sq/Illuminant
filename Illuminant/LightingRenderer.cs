@@ -200,9 +200,10 @@ namespace Squared.Illuminant {
         private          HalfVector4[] _LightProbeReadbackArray;
 
         internal const int GIProbeRowCount = 8;
+        internal const int SHValueCount = 9;
 
         private readonly RenderTarget2D _SelectedGIProbePositions, _SelectedGIProbeNormals;
-        private readonly RenderTarget2D _GIProbeValues;
+        private readonly RenderTarget2D _GIProbeValues, _GIProbeSH;
         private readonly Texture2D _RequestedGIProbePositions;
         private bool _GIProbesDirty, _GIProbesWereSelected;
         private          HalfVector4[] _GIProbeReadbackArray;
@@ -312,6 +313,11 @@ namespace Squared.Illuminant {
                 _GIProbeValues = new RenderTarget2D(
                     coordinator.Device, Configuration.MaximumGIProbeCount, GIProbeRowCount, false,
                     SurfaceFormat.HdrBlendable, DepthFormat.None, 0, RenderTargetUsage.PreserveContents
+                );
+
+                _GIProbeSH = new RenderTarget2D(
+                    coordinator.Device, Configuration.MaximumGIProbeCount, SHValueCount, false,
+                    SurfaceFormat.Single, DepthFormat.None, 0, RenderTargetUsage.PreserveContents
                 );
             }
 
@@ -486,6 +492,7 @@ namespace Squared.Illuminant {
             Coordinator.DisposeResource(_SelectedGIProbePositions);
             Coordinator.DisposeResource(_SelectedGIProbeNormals);
             Coordinator.DisposeResource(_GIProbeValues);
+            Coordinator.DisposeResource(_GIProbeSH);
 
             foreach (var kvp in HeightVolumeVertexData)
                 Coordinator.DisposeResource(kvp.Value);
@@ -898,6 +905,7 @@ namespace Squared.Illuminant {
                     SelectGIProbes(group, 0);
 
                 UpdateLightProbes(group, 1, _GIProbeValues, true);
+                UpdateGIProbeSH(group, 2, _GIProbeValues, _GIProbeSH);
             }
         }
 
@@ -925,20 +933,96 @@ namespace Squared.Illuminant {
                     _GIProbesWereSelected = true;
                 }
             ))
-            using (var pb = PrimitiveBatch<GIProbeSelectorVertex>.New(rt, 1, m)) {
+            using (var pb = PrimitiveBatch<GIProbeVertex>.New(rt, 1, m)) {
                 RenderTrace.Marker(rt, 0, "Select GI probe locations");
 
-                var pdc = new PrimitiveDrawCall<GIProbeSelectorVertex>(
+                var pdc = new PrimitiveDrawCall<GIProbeVertex>(
                     PrimitiveType.TriangleList,
                     new [] {
-                        new GIProbeSelectorVertex(-1, -1),
-                        new GIProbeSelectorVertex(1, -1),
-                        new GIProbeSelectorVertex(1, 1),
-                        new GIProbeSelectorVertex(-1, 1)
+                        new GIProbeVertex(-1, -1),
+                        new GIProbeVertex(1, -1),
+                        new GIProbeVertex(1, 1),
+                        new GIProbeVertex(-1, 1)
                     },
                     0, 4, QuadIndices, 0, 2
                 );
                 pb.Add(ref pdc);
+            }
+        }
+
+        private void UpdateGIProbeSH (IBatchContainer container, int layer, RenderTarget2D probeValues, RenderTarget2D result) {
+            var m = IlluminantMaterials.GIProbeSHGenerator;
+            var p = m.Effect.Parameters;
+
+            using (var rt = BatchGroup.New(
+                container, layer,
+                (dm, _) => {
+                    dm.PushRenderTarget(result);
+                    dm.Device.Viewport = new Viewport(0, 0, _GIProbes.Count, SHValueCount);
+
+                    p["ProbeValuesTexelSize"].SetValue(new Vector2(1.0f / probeValues.Width, 1.0f / probeValues.Height));
+                    p["ProbeValues"].SetValue(probeValues);
+
+                    m.Flush();
+                },
+                (dm, _) => {
+                    dm.PopRenderTarget();
+                }
+            ))
+            using (var pb = PrimitiveBatch<GIProbeVertex>.New(rt, 1, m)) {
+                RenderTrace.Marker(rt, 0, "Update GI probe spherical harmonics");
+
+                var pdc = new PrimitiveDrawCall<GIProbeVertex>(
+                    PrimitiveType.TriangleList,
+                    new [] {
+                        new GIProbeVertex(-1, -1),
+                        new GIProbeVertex(1, -1),
+                        new GIProbeVertex(1, 1),
+                        new GIProbeVertex(-1, 1)
+                    },
+                    0, 4, QuadIndices, 0, 2
+                );
+                pb.Add(ref pdc);
+            }
+        }
+
+        public void VisualizeGIProbes (IBatchContainer container, int layer) {
+            var m = IlluminantMaterials.VisualizeGIProbeSH;
+            var p = m.Effect.Parameters;
+
+            using (var pb = PrimitiveBatch<VisualizeGIProbeVertex>.New(
+                container, layer, m,
+                (dm, _) => {
+                    p["ProbeValuesTexelSize"].SetValue(new Vector2(1.0f / _GIProbeSH.Width, 1.0f / _GIProbeSH.Height));
+                    p["ProbeValues"].SetValue(_GIProbeSH);
+
+                    m.Flush();
+                }
+            )) {
+                RenderTrace.Marker(container, layer, "Visualize GI probes");
+
+                var count = (short)GIProbes.Count;
+                var buf = new VisualizeGIProbeVertex[count * 4];
+
+                for (short i = 0; i < count; i++) {
+                    var probe = GIProbes[i];
+
+                    Vector3 pos;
+                    lock (probe)
+                        pos = probe.Position;
+
+                    var j = i * 4;
+                    buf[j + 0] = new VisualizeGIProbeVertex(pos, -1, -1, i);
+                    buf[j + 1] = new VisualizeGIProbeVertex(pos, 1, -1, i);
+                    buf[j + 2] = new VisualizeGIProbeVertex(pos, 1, 1, i);
+                    buf[j + 3] = new VisualizeGIProbeVertex(pos, -1, 1, i);
+
+                    var pdc = new PrimitiveDrawCall<VisualizeGIProbeVertex>(
+                        PrimitiveType.TriangleList,
+                        buf, j, 4, QuadIndices, 0, 2
+                    );
+                    pb.Add(ref pdc);
+                }
             }
         }
 

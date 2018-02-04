@@ -66,7 +66,15 @@ namespace Squared.Illuminant {
                 ));
 
                 DefineMaterial(IlluminantMaterials.GIProbeSelector = new Material(
-                    content.Load<Effect>("GIProbeSelector"), "ProbeSelector", dBegin, dEnd
+                    content.Load<Effect>("GIProbe"), "ProbeSelector", dBegin, dEnd
+                ));
+
+                DefineMaterial(IlluminantMaterials.GIProbeSHGenerator = new Material(
+                    content.Load<Effect>("GIProbe"), "SHGenerator", dBegin, dEnd
+                ));
+
+                DefineMaterial(IlluminantMaterials.VisualizeGIProbeSH = new Material(
+                    content.Load<Effect>("GIProbe"), "SHVisualizer", dBegin, dEnd
                 ));
 
                 DefineMaterial(IlluminantMaterials.DistanceFieldExterior = 

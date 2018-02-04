@@ -46,7 +46,7 @@ namespace TestGame {
             Graphics.PreferredBackBufferWidth = 1920;
             Graphics.PreferredBackBufferHeight = 1080;
             Graphics.SynchronizeWithVerticalRetrace = true;
-            Graphics.PreferMultiSampling = true;
+            Graphics.PreferMultiSampling = false;
             Graphics.IsFullScreen = false;
 
             Content.RootDirectory = "Content";
@@ -203,32 +203,35 @@ namespace TestGame {
             var count = Settings.Count;
             var lineHeight = Game.Font.LineSpacing * scale;
 
-            var ir = new ImperativeRenderer(
-                container, Game.Materials, 
-                blendState: BlendState.AlphaBlend, 
-                depthStencilState: DepthStencilState.None, 
-                rasterizerState: RasterizerState.CullNone,
-                worldSpace: false,
-                layer: layer
-            );
+            using (var buffer = BufferPool<BitmapDrawCall>.Allocate(4096)) {
+                var ir = new ImperativeRenderer(
+                    container, Game.Materials,
+                    blendState: BlendState.AlphaBlend,
+                    depthStencilState: DepthStencilState.None,
+                    rasterizerState: RasterizerState.CullNone,
+                    worldSpace: false,
+                    layer: layer
+                );
 
-            float y = Game.Graphics.PreferredBackBufferHeight - (count * lineHeight) - 10;
-            var sle = new StringLayoutEngine {
-                position = new Vector2(10, y),
-                scale = scale,
-                color = Color.White
-            };
+                float y = Game.Graphics.PreferredBackBufferHeight - (count * lineHeight) - 10;
+                var sle = new StringLayoutEngine {
+                    position = new Vector2(10, y),
+                    scale = scale,
+                    color = Color.White,
+                    buffer = new ArraySegment<BitmapDrawCall>(buffer.Data)
+                };
 
-            sle.Initialize();
+                sle.Initialize();
 
-            var gs = new SpriteFontGlyphSource(Game.Font);
-            foreach (var s in Settings) {
-                sle.AppendText(gs, s.ToString());
-                sle.AppendText(gs, Environment.NewLine);
+                var gs = new SpriteFontGlyphSource(Game.Font);
+                foreach (var s in Settings) {
+                    sle.AppendText(gs, s.ToString());
+                    sle.AppendText(gs, Environment.NewLine);
+                }
+
+                var sl = sle.Finish();
+                ir.DrawMultiple(sl.DrawCalls);
             }
-
-            var sl = sle.Finish();
-            ir.DrawMultiple(sl.DrawCalls);
         }
 
         internal bool KeyWasPressed (Keys key) {
