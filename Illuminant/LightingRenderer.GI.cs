@@ -29,6 +29,11 @@ namespace Squared.Illuminant {
             }
         }
 
+        private void _EndGIProbePass (DeviceManager device, object userData) {
+            Materials.PopViewTransform();
+            device.PopStates();
+        }
+
         public void CreateGIProbes (float elevation = 16, Vector2? interval = null) {
             var _interval = interval.GetValueOrDefault(Vector2.One * 48);
             var count = Configuration.MaximumGIProbeCount;
