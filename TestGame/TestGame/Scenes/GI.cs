@@ -28,10 +28,10 @@ namespace TestGame.Scenes {
         const int MultisampleCount = 0;
         const int MaxStepCount = 128;
         const float LightScaleFactor = 1;
-        const float AORadius = 10;
-        const float AOOpacity = 0.4f;
+        const float AORadius = 0;
+        const float AOOpacity = 0f;
         const float ProbeZ = 1;
-        const float ProbeInterval = 52;
+        const float ProbeInterval = 48;
         const float ProbeVisSize = 20;
         const float ProbeVisBrightness = 1.1f;
 
@@ -56,9 +56,9 @@ namespace TestGame.Scenes {
             TwoPointFiveD.Value = true;
             DistanceFieldResolution.Value = 0.25f;
             LightmapScaleRatio.Value = 1.0f;
-            RenderDirectLight.Value = false;
+            RenderDirectLight.Value = true;
             RenderIndirectLight.Value = true;
-            ShowProbeSH.Value = true;
+            ShowProbeSH.Value = false;
             EnableShadows.Value = true;
             EnablePointLight.Value = true;
             EnableDirectionalLights.Value = true;
@@ -166,14 +166,14 @@ namespace TestGame.Scenes {
             Environment.MaximumZ = 128;
             Environment.ZToYMultiplier = 2.5f;
 
-            Environment.GIProbeOffset = new Vector3(ProbeInterval / 2f, ProbeInterval / 2f, 2);
+            Environment.GIProbeOffset = new Vector3(ProbeInterval / 2f, ProbeInterval / 2f, 30);
             Environment.GIProbeInterval = new Vector2(ProbeInterval, ProbeInterval);
 
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(
                     Width, Height, true, false, enableGlobalIllumination: true,
-                    maximumGIProbeCount: 900, giProbeQualityLevel: GIProbeQualityLevels.Medium
+                    maximumGIProbeCount: 2048, giProbeQualityLevel: GIProbeQualityLevels.High
                 ) {
                     MaxFieldUpdatesPerFrame = 3,
                     DefaultQuality = {
@@ -232,8 +232,8 @@ namespace TestGame.Scenes {
 
             Rect(new Vector2(330, 300), new Vector2(Width, 340), 0f, 45f);
 
-            for (int i = 0; i < 8; i++)
-                Pillar(new Vector2(30 + (i * 270), 560));
+            for (int i = 0; i < 12; i++)
+                Pillar(new Vector2(30 + (i * 220), 560));
 
             Rect(new Vector2(630, 800), new Vector2(Width, 840), 0f, 45f);
         }

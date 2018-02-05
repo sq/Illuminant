@@ -81,12 +81,17 @@ namespace Squared.Illuminant {
         /// <summary>
         /// The maximum distance that GI probe selection will search for surfaces.
         /// </summary>
-        public float GIBounceSearchDistance = 512;
+        public float GIBounceSearchDistance = 1024;
 
         /// <summary>
         /// The distance at which GI probe light values fade to black.
         /// </summary>
-        public float GIBounceFalloffDistance = 500;
+        public float GIBounceFalloffDistance = 800;
+
+        /// <summary>
+        /// The distance at which a GI probe stops contributing light.
+        /// </summary>
+        public float GIRadianceFalloffDistance = 100;
 
         /// <summary>
         /// The maximum number of distance field slices to update per frame.

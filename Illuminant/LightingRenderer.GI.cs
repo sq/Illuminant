@@ -247,11 +247,11 @@ namespace Squared.Illuminant {
             using (var group = BatchGroup.New(
                 container, layer,
                 (dm, _) => {
-                    dm.Device.BlendState = BlendState.Opaque;
+                    dm.Device.BlendState = RenderStates.AdditiveBlend;
 
                     SetLightShaderParameters(m, Configuration.DefaultQuality);
 
-                    p["Brightness"].SetValue(1);
+                    p["RadianceFalloffDistance"].SetValue(Configuration.GIRadianceFalloffDistance);
                     p["ProbeOffset"].SetValue(Environment.GIProbeOffset);
                     p["ProbeInterval"].SetValue(Environment.GIProbeInterval);
                     p["ProbeCount"].SetValue(new Vector2(_GIProbeCountX, _GIProbeCountY));

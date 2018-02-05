@@ -20,6 +20,7 @@ uniform float2 ProbeCount;
 uniform float Time;
 
 uniform float Brightness;
+uniform float RadianceFalloffDistance;
 
 uniform float2 SphericalHarmonicsTexelSize;
 
@@ -127,8 +128,9 @@ void SHRendererPixelShader(
     );
 
     float2 probeSpacePosition = shadedPixelPosition.xy - ProbeOffset;
-    float2 probeIndexTl = floor(probeSpacePosition / ProbeInterval.xy);
-    float2 probeIndexBr = ceil(probeSpacePosition / ProbeInterval.xy);
+    float2 probeIndexTl = max(floor(probeSpacePosition / ProbeInterval.xy), float2(0, 0));
+    float2 tlProbePosition = (probeIndexTl * ProbeInterval.xy);
+    float2 probeIndexBr = min(ceil(probeSpacePosition / ProbeInterval.xy), ProbeCount - 1);
 
     float2 probeIndices[4] = { 
         probeIndexTl, 
@@ -136,30 +138,52 @@ void SHRendererPixelShader(
         float2(probeIndexTl.x, probeIndexBr.y),
         probeIndexBr
     };
-    float    weights[4] = {0.25, 0.25, 0.25, 0.25};
+    float2 weightXY = (probeSpacePosition - tlProbePosition) / ProbeInterval.xy;
+    float weights[4] = {
+        0,
+        weightXY.x * (1 - weightXY.y),
+        (1 - weightXY.x) * weightXY.y,
+        weightXY.x * weightXY.y,
+    };
+    weights[0] = 1 - (weights[1] + weights[2] + weights[3]);
+
+    /*
+    result = float4(weights[0], weights[1], weights[2], 1);
+    return;
+    */
 
     /*
     result = float4(probeIndexXy.x / 40, probeIndexXy.y / 40, probeIndex / 1024, 1);
     return;
     */
-    // float3 irradiance = computeSHIrradiance(probes[0], -normalize(vectorToProbe));
 
     float3 irradiance = 0;
+    float divisor = 0.0001;
 
+    SH9 cos = SHCosineLobe(shadedPixelNormal);
+    SHScaleByCosine(cos);
+
+    [loop]
     for (int i = 0; i < 4; i++) {
         SH9Color probe;
         float3 probePosition;
 
-        readSHProbeXy(probeIndices[i], probe, probePosition);
+        float received = readSHProbeXy(probeIndices[i], probe, probePosition);
+        [branch]
+        if (received < 1)
+            continue;
+
+        float3 localIrradiance = 0;
+        for (int j = 0; j < SHValueCount; j++)
+            localIrradiance += probe.c[j] * cos.c[j];
 
         float3 vectorToProbe = shadedPixelPosition - probePosition;
-        float3 normal = normalize(vectorToProbe);
+        // float3 normal = normalize(vectorToProbe);
+        float distance = length(vectorToProbe);
+        float distanceWeight = 1; // - clamp(distance / RadianceFalloffDistance, 0, 1);
+        float localWeight = distanceWeight * weights[i];
 
-        SH9 cos = SHCosineLobe(normal);
-        SHScaleByCosine(cos);
-
-        for (int j = 0; j < SHValueCount; j++)
-            irradiance += probe.c[j] * cos.c[j] * weights[i];
+        irradiance += (localIrradiance * localWeight);
     }
 
     result = float4(irradiance, 1);
