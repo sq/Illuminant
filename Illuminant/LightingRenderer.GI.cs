@@ -19,6 +19,7 @@ namespace Squared.Illuminant {
         private readonly RenderTarget2D _SelectedGIProbePositions, _SelectedGIProbeNormals;
         private readonly RenderTarget2D _GIProbeValues, _GIProbeSH;
         private bool _GIProbesDirty, _GIProbesWereSelected;
+        private int _GIProbeCountX, _GIProbeCountY;
 
         private Vector3 LastGIProbeOffset;
         private Vector2 LastGIProbeInterval;
@@ -100,10 +101,11 @@ namespace Squared.Illuminant {
             var p = m.Effect.Parameters;
 
             var extent = Extent3;
-            var countX = (int)Math.Ceiling((extent.X - Environment.GIProbeOffset.X) / Environment.GIProbeInterval.X);
-            var countY = (int)Math.Ceiling((extent.Y - Environment.GIProbeOffset.Y) / Environment.GIProbeInterval.Y);
+            // FIXME: .Ceiling breaks really bad, WTF?
+            _GIProbeCountX = (int)Math.Floor((extent.X - Environment.GIProbeOffset.X) / Environment.GIProbeInterval.X);
+            _GIProbeCountY = (int)Math.Floor((extent.Y - Environment.GIProbeOffset.Y) / Environment.GIProbeInterval.Y);
 
-            GIProbeCount = countX * countY;
+            GIProbeCount = _GIProbeCountX * _GIProbeCountY;
             if (GIProbeCount > Configuration.MaximumGIProbeCount)
                 GIProbeCount = Configuration.MaximumGIProbeCount;
 
@@ -117,7 +119,7 @@ namespace Squared.Illuminant {
 
                     p["ProbeOffset"].SetValue(Environment.GIProbeOffset);
                     p["ProbeInterval"].SetValue(Environment.GIProbeInterval);
-                    p["ProbeCount"].SetValue(new Vector2(countX, countY));
+                    p["ProbeCount"].SetValue(new Vector2(_GIProbeCountX, _GIProbeCountY));
                     p["NormalCount"].SetValue(GIProbeNormalCount);
                     p["BounceFalloffDistance"].SetValue(Configuration.GIBounceFalloffDistance);
                     p["BounceSearchDistance"].SetValue(Configuration.GIBounceSearchDistance);
@@ -217,19 +219,15 @@ namespace Squared.Illuminant {
                 var count = (short)GIProbeCount;
                 var buf = new VisualizeGIProbeVertex[count * 6];
 
-                Vector3 pos = Environment.GIProbeOffset;
                 for (short i = 0; i < count; i++) {
+                    int y = i / _GIProbeCountX;
+                    int x = i - (y * _GIProbeCountX);
+                    Vector3 pos = Environment.GIProbeOffset + new Vector3(Environment.GIProbeInterval.X * x, Environment.GIProbeInterval.Y * y, 0);
                     var j = i * 6;
                     buf[j + 0] = new VisualizeGIProbeVertex(pos, -1, -1, i, radius); // 0
                     buf[j + 1] = buf[j + 3] = new VisualizeGIProbeVertex(pos, 1, -1, i, radius); // 1
                     buf[j + 4] = new VisualizeGIProbeVertex(pos, 1, 1, i, radius); // 2
-                    buf[j + 2] = buf[j + 5] = new VisualizeGIProbeVertex(pos, -1, 1, i, radius); // 3
-
-                    pos.X += Environment.GIProbeInterval.X;
-                    if (pos.X >= Extent3.X) {
-                        pos.X = Environment.GIProbeOffset.X;
-                        pos.Y += Environment.GIProbeInterval.Y;
-                    }
+                    buf[j + 2] = buf[j + 5] = new VisualizeGIProbeVertex(pos, -1, 1, i, radius); // 3                    
                 }
 
                 var pdc = new PrimitiveDrawCall<VisualizeGIProbeVertex>(
