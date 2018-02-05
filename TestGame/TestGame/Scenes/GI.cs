@@ -284,8 +284,8 @@ namespace TestGame.Scenes {
                 (int)(Renderer.Configuration.MaximumRenderSize.Second * LightmapScaleRatio)
             );
             Renderer.Configuration.GIBlendMode = AdditiveIndirectLight ? RenderStates.AdditiveBlend : RenderStates.MaxBlend;
-            Renderer.Configuration.GIBounceFalloffDistance = BounceDistance.Value;
-            Renderer.Configuration.GIBounceSearchDistance = BounceDistance.Value + 16;
+            Renderer.Configuration.GIBounceFalloffDistance = BounceDistance.Value * 1.5f;
+            Renderer.Configuration.GIBounceSearchDistance = BounceDistance.Value;
 
             // Renderer.InvalidateFields();
             Renderer.UpdateFields(frame, -2);

@@ -14,7 +14,7 @@ using Squared.Util;
 namespace Squared.Illuminant {
     public sealed partial class LightingRenderer : IDisposable, INameableGraphicsObject {
         // FIXME: 3 bounces *really* doesn't work how I want
-        public const int GIBounceCount = 2;
+        public const int GIBounceCount = 5;
 
         internal const int SHValueCount = 9;
 
@@ -101,22 +101,24 @@ namespace Squared.Illuminant {
                 if (_GIProbesDirty)
                     SelectGIProbes(group, 0);
 
-                int bounce = 0;
+                // Always update the first bounce so that it doesn't lag.
+                UpdateLightProbes(group, 1, _GIProbeValues, true);
+                UpdateGIProbeSH(group, 2, 0);
+                _GIProbeTimestamps[0] = Time.Ticks;
+
+                // Incrementally update the other bounces.
+                int bounce = 1;
                 long lowestTimestamp = long.MaxValue;
 
-                for (int i = 0; i < GIBounceCount; i++) {
+                for (int i = 1; i < GIBounceCount; i++) {
                     if (_GIProbeTimestamps[i] < lowestTimestamp) {
                         bounce = i;
                         lowestTimestamp = _GIProbeTimestamps[i];
                     }
                 }
 
-                if (bounce == 0)
-                    UpdateLightProbes(group, 1, _GIProbeValues, true);
-                else
-                    UpdateLightProbesFromGI(group, 1, _GIProbeValues, bounce - 1, 1.0f + (bounce * Configuration.GIBounceBrightnessAmplification));
-
-                UpdateGIProbeSH(group, 2, bounce);
+                UpdateLightProbesFromGI(group, 3, _GIProbeValues, bounce - 1, 1.0f + Configuration.GIBounceBrightnessAmplification);
+                UpdateGIProbeSH(group, 4, bounce);
 
                 _GIProbeTimestamps[bounce] = Time.Ticks;
             }

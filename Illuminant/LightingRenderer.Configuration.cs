@@ -89,7 +89,7 @@ namespace Squared.Illuminant {
         /// </summary>
         public float GIBounceFalloffDistance = 500;
 
-        public float GIBounceBrightnessAmplification = 1.0f;
+        public float GIBounceBrightnessAmplification = 1.33f;
 
         /// <summary>
         /// Configures how indirect light is integrated with direct light.
