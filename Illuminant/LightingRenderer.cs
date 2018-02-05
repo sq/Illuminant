@@ -1102,6 +1102,7 @@ namespace Squared.Illuminant {
                 _GBuffer.Invalidate();
             if (_DistanceField != null)
                 _DistanceField.Invalidate();
+            _GIProbesDirty = true;
         }
 
         public void UpdateFields (IBatchContainer container, int layer) {

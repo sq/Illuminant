@@ -28,11 +28,9 @@ namespace TestGame.Scenes {
         const int MultisampleCount = 0;
         const int MaxStepCount = 128;
         const float LightScaleFactor = 1;
-        const float AORadius = 0;
-        const float AOOpacity = 0f;
+        const float AORadius = 12;
+        const float AOOpacity = 0.5f;
         const float ProbeZ = 1;
-        const float ProbeInterval = 40;
-        const float ProbeVisSize = 20;
         const float ProbeVisBrightness = 1.1f;
 
         Toggle ShowGBuffer,
@@ -48,7 +46,8 @@ namespace TestGame.Scenes {
         Slider DistanceFieldResolution,
             LightmapScaleRatio,
             IndirectLightBrightness,
-            BounceDistance;
+            BounceDistance,
+            ProbeInterval;
 
         RendererQualitySettings DirectionalQuality;
 
@@ -66,6 +65,7 @@ namespace TestGame.Scenes {
             IndirectLightBrightness.Value = 1.0f;
             AdditiveIndirectLight.Value = false;
             BounceDistance.Value = 512;
+            ProbeInterval.Value = 64;
 
             ShowGBuffer.Key = Keys.G;
             TwoPointFiveD.Key = Keys.D2;
@@ -101,6 +101,12 @@ namespace TestGame.Scenes {
             BounceDistance.Min = 128f;
             BounceDistance.Max = 1024f;
             BounceDistance.Speed = 128f;
+
+            ProbeInterval.MinusKey = Keys.OemComma;
+            ProbeInterval.PlusKey = Keys.OemPeriod;
+            ProbeInterval.Min = 32f;
+            ProbeInterval.Max = 128f;
+            ProbeInterval.Speed = 8f;
 
             DistanceFieldResolution.Changed += (s, e) => CreateDistanceField();
         }
@@ -182,9 +188,6 @@ namespace TestGame.Scenes {
             Environment.MaximumZ = 128;
             Environment.ZToYMultiplier = 2.5f;
 
-            Environment.GIProbeOffset = new Vector3(ProbeInterval / 2f, ProbeInterval / 2f, 30);
-            Environment.GIProbeInterval = new Vector2(ProbeInterval, ProbeInterval);
-
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(
@@ -262,6 +265,9 @@ namespace TestGame.Scenes {
         public override void Draw (Squared.Render.Frame frame) {
             CreateRenderTargets();
 
+            Environment.GIProbeOffset = new Vector3(ProbeInterval / 2f, ProbeInterval / 2f, 30);
+            Environment.GIProbeInterval = new Vector2(ProbeInterval, ProbeInterval);
+
             Renderer.Configuration.TwoPointFiveD = TwoPointFiveD;
             Renderer.Configuration.RenderScale = Vector2.One * LightmapScaleRatio;
             Renderer.Configuration.RenderSize = new Pair<int>(
@@ -303,7 +309,7 @@ namespace TestGame.Scenes {
                     bb.Add(new BitmapDrawCall(Lightmap, Vector2.Zero));
 
                 if (ShowProbeSH)
-                    Renderer.VisualizeGIProbes(group, 2, ProbeVisSize, ProbeVisBrightness);
+                    Renderer.VisualizeGIProbes(group, 2, ProbeInterval.Value * 0.48f, ProbeVisBrightness);
 
                 if (ShowDistanceField) {
                     float dfScale = Math.Min(

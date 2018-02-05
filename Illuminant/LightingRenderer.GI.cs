@@ -110,8 +110,8 @@ namespace Squared.Illuminant {
 
             var extent = Extent3;
             // FIXME: .Ceiling breaks really bad, WTF?
-            _GIProbeCountX = (int)Math.Floor((extent.X - Environment.GIProbeOffset.X) / Environment.GIProbeInterval.X);
-            _GIProbeCountY = (int)Math.Floor((extent.Y - Environment.GIProbeOffset.Y) / Environment.GIProbeInterval.Y);
+            _GIProbeCountX = (int)Math.Ceiling((extent.X - Environment.GIProbeOffset.X) / Environment.GIProbeInterval.X);
+            _GIProbeCountY = (int)Math.Ceiling((extent.Y - Environment.GIProbeOffset.Y) / Environment.GIProbeInterval.Y);
 
             GIProbeCount = _GIProbeCountX * _GIProbeCountY;
             if (GIProbeCount > Configuration.MaximumGIProbeCount)
@@ -257,7 +257,7 @@ namespace Squared.Illuminant {
                 (dm, _) => {
                     dm.Device.BlendState = Configuration.GIBlendMode;
 
-                    SetLightShaderParameters(m, Configuration.DefaultQuality);
+                    SetLightShaderParameters(m, Configuration.GIProbeQuality);
 
                     p["Brightness"].SetValue(brightness);
                     p["ProbeOffset"].SetValue(Environment.GIProbeOffset);
@@ -295,6 +295,8 @@ namespace Squared.Illuminant {
     public enum GIProbeQualityLevels : int {
         Low = 32,
         Medium = 48,
-        High = 64
+        High = 64,
+        Excessive = 96,
+        Absurd = 128
     }
 }
