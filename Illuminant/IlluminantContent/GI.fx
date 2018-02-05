@@ -6,11 +6,14 @@
 
 #define OFFSET 1
 #define FUDGE 0.375
-#define SELF_OCCLUSION_HACK 2
+#define SELF_OCCLUSION_HACK 1.5
 
 #define ProbeLightDistanceFalloff false
-#define ProbeLightCastsShadows false
+#define ProbeLightCastsShadows true
 #define ProbeLightUsesPerProbeNormals false
+
+#define ConeShadowRadius 4
+#define ConeShadowRamp 2
 
 #include "SphericalHarmonics.fxh"
 
@@ -205,7 +208,7 @@ void SHRendererPixelShader(
 
         if (ProbeLightCastsShadows)
             coneWeight = coneTrace(
-                probePosition, float2(64, 1),
+                probePosition, float2(ConeShadowRadius, ConeShadowRamp),
                 float2(getConeGrowthFactor(), 1),
                 shadedPixelPosition + (SELF_OCCLUSION_HACK * normalToProbe),
                 vars
