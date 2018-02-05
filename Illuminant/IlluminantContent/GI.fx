@@ -118,17 +118,10 @@ float readSHProbeXy (float2 indexXy, out SH9Color result, out float3 position) {
     return readSHProbe(probeIndex, result);
 }
 
-void SHRendererPixelShader(
-    in float2 vpos : VPOS,
-    out float4 result : COLOR0
+float3 SHRendererPixelShaderCore(
+    float3 shadedPixelPosition,
+    float3 shadedPixelNormal
 ) {
-    float3 shadedPixelPosition;
-    float3 shadedPixelNormal;
-    sampleGBuffer(
-        vpos,
-        shadedPixelPosition, shadedPixelNormal
-    );
-
     float2 minIndex = float2(0, 0);
     float2 maxIndex = ProbeCount - 1;
 
@@ -137,9 +130,9 @@ void SHRendererPixelShader(
     float2 tlProbePosition = (probeIndexTl * ProbeInterval.xy);
     float2 probeIndexBr = clamp(ceil(probeSpacePosition / ProbeInterval.xy), minIndex, maxIndex);
 
-    float2 probeIndices[4] = { 
-        probeIndexTl, 
-        float2(probeIndexBr.x, probeIndexTl.y), 
+    float2 probeIndices[4] = {
+        probeIndexTl,
+        float2(probeIndexBr.x, probeIndexTl.y),
         float2(probeIndexTl.x, probeIndexBr.y),
         probeIndexBr
     };
@@ -151,16 +144,6 @@ void SHRendererPixelShader(
         weightXY.x * weightXY.y,
     };
     weights[0] = 1 - (weights[1] + weights[2] + weights[3]);
-
-    /*
-    result = float4(weights[0], weights[1], weights[2], 1);
-    return;
-    */
-
-    /*
-    result = float4(probeIndexXy.x / 40, probeIndexXy.y / 40, probeIndex / 1024, 1);
-    return;
-    */
 
     float3 irradiance = 0;
     float divisor = 0.0001;
@@ -209,10 +192,48 @@ void SHRendererPixelShader(
 
         float localWeight = weights[i] * coneWeight;
 
-        irradiance += (localIrradiance * Brightness * localWeight);
+        irradiance += (localIrradiance * localWeight);
     }
 
+    return irradiance;
+}
+
+void SHRendererPixelShader(
+    in float2 vpos : VPOS,
+    out float4 result : COLOR0
+) {
+    float3 shadedPixelPosition;
+    float3 shadedPixelNormal;
+    sampleGBuffer(
+        vpos,
+        shadedPixelPosition, shadedPixelNormal
+    );
+
+    float3 irradiance = SHRendererPixelShaderCore(
+        shadedPixelPosition, shadedPixelNormal
+    ) * Brightness;
+
     result = float4(irradiance, 1);
+}
+
+void LightProbeSHRendererPixelShader(
+    in float2 vpos : VPOS,
+    out float4 result : COLOR0
+) {
+    float3 shadedPixelPosition;
+    float4 shadedPixelNormal;
+    float opacity;
+
+    sampleLightProbeBuffer(
+        vpos,
+        shadedPixelPosition, shadedPixelNormal, opacity
+    );
+
+    float3 irradiance = SHRendererPixelShaderCore(
+        shadedPixelPosition, shadedPixelNormal
+    );
+
+    result = float4(irradiance * opacity * Brightness, 1);
 }
 
 technique VisualizeGI {
@@ -228,5 +249,13 @@ technique RenderGI {
     {
         vertexShader = compile vs_3_0 PassthroughVertexShader();
         pixelShader = compile ps_3_0 SHRendererPixelShader();
+    }
+}
+
+technique RenderLightProbesFromGI {
+    pass P0
+    {
+        vertexShader = compile vs_3_0 PassthroughVertexShader();
+        pixelShader = compile ps_3_0 LightProbeSHRendererPixelShader();
     }
 }

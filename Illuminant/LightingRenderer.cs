@@ -1111,6 +1111,9 @@ namespace Squared.Illuminant {
             if (_DistanceField != null)
                 _DistanceField.Invalidate();
             _GIProbesDirty = true;
+
+            for (int i = 0; i < GIBounceCount; i++)
+                _GIProbeTimestamps[i] = 0;
         }
 
         public void UpdateFields (IBatchContainer container, int layer) {

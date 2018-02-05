@@ -81,6 +81,10 @@ namespace Squared.Illuminant {
                     content.Load<Effect>("GI"), "RenderGI", dBegin, dEnd
                 ));
 
+                DefineMaterial(IlluminantMaterials.RenderLightProbesFromGI = new Material(
+                    content.Load<Effect>("GI"), "RenderLightProbesFromGI", dBegin, dEnd
+                ));
+
                 DefineMaterial(IlluminantMaterials.DistanceFieldExterior = 
                     new Material(
                         content.Load<Effect>("DistanceField"), "Exterior",

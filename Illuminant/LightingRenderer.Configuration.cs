@@ -89,6 +89,8 @@ namespace Squared.Illuminant {
         /// </summary>
         public float GIBounceFalloffDistance = 500;
 
+        public float GIBounceBrightnessAmplification = 1.0f;
+
         /// <summary>
         /// Configures how indirect light is integrated with direct light.
         /// An additive blend creates very bright areas where bounced light makes contact with surfaces,

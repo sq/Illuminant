@@ -65,8 +65,8 @@ namespace TestGame.Scenes {
             EnableDirectionalLights.Value = true;
             IndirectLightBrightness.Value = 1.0f;
             AdditiveIndirectLight.Value = false;
-            BounceDistance.Value = 512;
-            ProbeInterval.Value = 64;
+            BounceDistance.Value = 1024;
+            ProbeInterval.Value = 48;
             GISourceBounce.Value = 0;
 
             ShowGBuffer.Key = Keys.G;
