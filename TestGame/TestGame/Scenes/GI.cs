@@ -47,7 +47,8 @@ namespace TestGame.Scenes {
             LightmapScaleRatio,
             IndirectLightBrightness,
             BounceDistance,
-            ProbeInterval;
+            ProbeInterval,
+            GISourceBounce;
 
         RendererQualitySettings DirectionalQuality;
 
@@ -66,6 +67,7 @@ namespace TestGame.Scenes {
             AdditiveIndirectLight.Value = false;
             BounceDistance.Value = 512;
             ProbeInterval.Value = 64;
+            GISourceBounce.Value = 0;
 
             ShowGBuffer.Key = Keys.G;
             TwoPointFiveD.Key = Keys.D2;
@@ -108,6 +110,12 @@ namespace TestGame.Scenes {
             ProbeInterval.Min = 32f;
             ProbeInterval.Max = 128f;
             ProbeInterval.Speed = 8f;
+
+            GISourceBounce.MinusKey = Keys.OemSemicolon;
+            GISourceBounce.PlusKey = Keys.OemQuotes;
+            GISourceBounce.Min = 0f;
+            GISourceBounce.Max = LightingRenderer.GIBounceCount - 1;
+            GISourceBounce.Speed = 1f;
 
             DistanceFieldResolution.Changed += (s, e) => CreateDistanceField();
         }
@@ -295,7 +303,14 @@ namespace TestGame.Scenes {
             )) {
                 ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black);
 
-                var lighting = Renderer.RenderLighting(bg, 1, 1.0f / LightScaleFactor, RenderDirectLight, IndirectLightBrightness);
+                var lighting = Renderer.RenderLighting(
+                    bg, 1, 1.0f / LightScaleFactor, 
+                    RenderDirectLight,
+                    new GIRenderSettings {
+                        BounceIndex = (int)GISourceBounce.Value,
+                        Brightness = IndirectLightBrightness
+                    }
+                );
                 lighting.Resolve(bg, 2, Width, Height, hdr: new HDRConfiguration { InverseScaleFactor = LightScaleFactor });
             };
 
@@ -310,7 +325,11 @@ namespace TestGame.Scenes {
                     bb.Add(new BitmapDrawCall(Lightmap, Vector2.Zero));
 
                 if (ShowProbeSH)
-                    Renderer.VisualizeGIProbes(group, 2, ProbeInterval.Value * 0.48f, ProbeVisBrightness);
+                    Renderer.VisualizeGIProbes(
+                        group, 2, ProbeInterval.Value * 0.48f, 
+                        bounceIndex: (int)GISourceBounce.Value, 
+                        brightness: ProbeVisBrightness
+                    );
 
                 if (ShowDistanceField) {
                     float dfScale = Math.Min(

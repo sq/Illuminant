@@ -294,11 +294,12 @@ namespace Squared.Illuminant {
                     coordinator.Device, Configuration.MaximumGIProbeCount, GIProbeNormalCount, false,
                     SurfaceFormat.HdrBlendable, DepthFormat.None, 0, RenderTargetUsage.PreserveContents
                 );
-
-                _GIProbeSH = new RenderTarget2D(
-                    coordinator.Device, Configuration.MaximumGIProbeCount, SHValueCount, false,
-                    SurfaceFormat.HalfVector4, DepthFormat.None, 0, RenderTargetUsage.PreserveContents
-                );
+                
+                for (int i = 0; i < _GIProbeBounces.Length; i++)
+                    _GIProbeBounces[i] = new RenderTarget2D(
+                        coordinator.Device, Configuration.MaximumGIProbeCount, SHValueCount, false,
+                        SurfaceFormat.HalfVector4, DepthFormat.None, 0, RenderTargetUsage.PreserveContents
+                    );
             }
 
             if (Configuration.EnableBrightnessEstimation) {
@@ -406,7 +407,9 @@ namespace Squared.Illuminant {
             Coordinator.DisposeResource(_SelectedGIProbePositions);
             Coordinator.DisposeResource(_SelectedGIProbeNormals);
             Coordinator.DisposeResource(_GIProbeValues);
-            Coordinator.DisposeResource(_GIProbeSH);
+
+            foreach (var rt in _GIProbeBounces)
+                Coordinator.DisposeResource(rt);
 
             foreach (var kvp in HeightVolumeVertexData)
                 Coordinator.DisposeResource(kvp.Value);
@@ -568,12 +571,12 @@ namespace Squared.Illuminant {
         /// <param name="layer">The layer to render lighting into.</param>
         /// <param name="intensityScale">A factor to scale the intensity of all light sources. You can use this to rescale the intensity of light values for HDR.</param>
         /// <param name="paintDirectIllumination">If false, direct illumination will not be rendered (only light probes will be updated).</param>
-        /// <param name="globalIlluminationBrightness">Configures how bright global illumination will be. Set to 0 to hide it entirely.</param>
+        /// <param name="indirectIlluminationSettings">If specified, indirect illumination is rendered based on the provided settings.</param>
         public RenderedLighting RenderLighting (
             IBatchContainer container, int layer, 
             float intensityScale = 1.0f, 
             bool paintDirectIllumination = true,
-            float globalIlluminationBrightness = 1.0f
+            GIRenderSettings indirectIlluminationSettings = null
         ) {
             var lightmap = _Lightmaps.BeginDraw(true);
             var lightProbe = default(BufferRing.InProgressRender);
@@ -690,8 +693,13 @@ namespace Squared.Illuminant {
                             }
                         }
 
-                        if (Configuration.EnableGlobalIllumination && (GIProbeCount > 0) && (globalIlluminationBrightness > 0))
-                            RenderGlobalIllumination(resultGroup, layerIndex++, globalIlluminationBrightness);
+                        if (
+                            Configuration.EnableGlobalIllumination && 
+                            (GIProbeCount > 0) &&
+                            (indirectIlluminationSettings != null) &&
+                            (indirectIlluminationSettings.Brightness > 0)
+                        )
+                            RenderGlobalIllumination(resultGroup, layerIndex++, indirectIlluminationSettings.Brightness, indirectIlluminationSettings.BounceIndex);
                     }
                 }
 
