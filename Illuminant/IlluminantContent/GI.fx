@@ -4,12 +4,13 @@
 #include "DistanceFieldCommon.fxh"
 #include "ConeTrace.fxh"
 
-#define SAMPLE sampleDistanceField
-#define TVARS  DistanceFieldConstants
 #define OFFSET 1
 #define FUDGE 0.375
+#define SELF_OCCLUSION_HACK 2
 
-#include "VisualizeCommon.fxh"
+#define ProbeLightDistanceFalloff false
+#define ProbeLightCastsShadows false
+#define ProbeLightUsesPerProbeNormals false
 
 #include "SphericalHarmonics.fxh"
 
@@ -127,10 +128,13 @@ void SHRendererPixelShader(
         shadedPixelPosition, shadedPixelNormal
     );
 
+    float2 minIndex = float2(0, 0);
+    float2 maxIndex = ProbeCount - 1;
+
     float2 probeSpacePosition = shadedPixelPosition.xy - ProbeOffset;
-    float2 probeIndexTl = max(floor(probeSpacePosition / ProbeInterval.xy), float2(0, 0));
+    float2 probeIndexTl = clamp(floor(probeSpacePosition / ProbeInterval.xy), minIndex, maxIndex);
     float2 tlProbePosition = (probeIndexTl * ProbeInterval.xy);
-    float2 probeIndexBr = min(ceil(probeSpacePosition / ProbeInterval.xy), ProbeCount - 1);
+    float2 probeIndexBr = clamp(ceil(probeSpacePosition / ProbeInterval.xy), minIndex, maxIndex);
 
     float2 probeIndices[4] = { 
         probeIndexTl, 
@@ -160,8 +164,14 @@ void SHRendererPixelShader(
     float3 irradiance = 0;
     float divisor = 0.0001;
 
-    SH9 cos = SHCosineLobe(shadedPixelNormal);
-    SHScaleByCosine(cos);
+    DistanceFieldConstants vars = makeDistanceFieldConstants();
+
+    SH9 cos;
+
+    if (!ProbeLightUsesPerProbeNormals) {
+        cos = SHCosineLobe(shadedPixelNormal);
+        SHScaleByCosine(cos);
+    }
 
     [loop]
     for (int i = 0; i < 4; i++) {
@@ -173,15 +183,35 @@ void SHRendererPixelShader(
         if (received < 1)
             continue;
 
+        float3 vectorToProbe = probePosition - shadedPixelPosition;
+        float3 normalToProbe = normalize(vectorToProbe);
+
+        if (ProbeLightUsesPerProbeNormals) {
+            cos = SHCosineLobe(normalToProbe);
+            SHScaleByCosine(cos);
+        }
+
         float3 localIrradiance = 0;
         for (int j = 0; j < SHValueCount; j++)
             localIrradiance += probe.c[j] * cos.c[j];
 
-        float3 vectorToProbe = shadedPixelPosition - probePosition;
         // float3 normal = normalize(vectorToProbe);
-        float distance = length(vectorToProbe);
-        float distanceWeight = 1; // - clamp(distance / RadianceFalloffDistance, 0, 1);
-        float localWeight = distanceWeight * weights[i];
+        float distanceWeight = 1, coneWeight = 1;
+
+        if (ProbeLightDistanceFalloff) {
+            float distance = length(vectorToProbe);
+            distanceWeight -= clamp(distance / RadianceFalloffDistance, 0, 1);
+        }
+
+        if (ProbeLightCastsShadows)
+            coneWeight = coneTrace(
+                probePosition, float2(64, 1),
+                float2(getConeGrowthFactor(), 1),
+                shadedPixelPosition + (SELF_OCCLUSION_HACK * normalToProbe),
+                vars
+            );
+
+        float localWeight = distanceWeight * weights[i] * coneWeight;
 
         irradiance += (localIrradiance * localWeight);
     }

@@ -56,7 +56,7 @@ namespace TestGame.Scenes {
             TwoPointFiveD.Value = true;
             DistanceFieldResolution.Value = 0.25f;
             LightmapScaleRatio.Value = 1.0f;
-            RenderDirectLight.Value = true;
+            RenderDirectLight.Value = false;
             RenderIndirectLight.Value = true;
             ShowProbeSH.Value = false;
             EnableShadows.Value = true;
@@ -130,14 +130,14 @@ namespace TestGame.Scenes {
             Environment.HeightVolumes.Add(result);
         }
 
-        void Pillar (Vector2 center) {
+        void Pillar (Vector2 center, float scale) {
             const float totalHeight = 0.69f;
             const float baseHeight  = 0.085f;
             const float capHeight   = 0.09f;
 
-            var baseSizeTL = new Vector2(62, 65);
-            var baseSizeBR = new Vector2(64, 57);
-            Ellipse(center, 51f, 45f, 0, totalHeight * 128);
+            var baseSizeTL = new Vector2(62, 65) * scale;
+            var baseSizeBR = new Vector2(64, 57) * scale;
+            Ellipse(center, 51f * scale, 45f * scale, 0, totalHeight * 128);
             Rect(center - baseSizeTL, center + baseSizeBR, 0.0f, baseHeight * 128);
             Rect(center - baseSizeTL, center + baseSizeBR, (totalHeight - capHeight) * 128, capHeight * 128);
         }
@@ -191,9 +191,9 @@ namespace TestGame.Scenes {
             MovableLight = new SphereLightSource {
                 Position = new Vector3(64, 64, 0.7f),
                 Color = new Vector4(1f, 0.2f, 0.2f, 0.5f),
-                Radius = 300,
-                RampLength = 200,
-                RampMode = LightSourceRampMode.Linear,
+                Radius = 160,
+                RampLength = 60,
+                RampMode = LightSourceRampMode.Exponential,
                 AmbientOcclusionRadius = AORadius,
                 AmbientOcclusionOpacity = AOOpacity
             };
@@ -230,12 +230,12 @@ namespace TestGame.Scenes {
                 Quality = DirectionalQuality
             });
 
-            Rect(new Vector2(330, 300), new Vector2(Width, 340), 0f, 45f);
+            Rect(new Vector2(330, 300), new Vector2(Width, 340), 0f, 60f);
 
-            for (int i = 0; i < 12; i++)
-                Pillar(new Vector2(30 + (i * 220), 560));
+            for (int i = 0; i < 7; i++)
+                Pillar(new Vector2(10 + (i * 220), 500), 0.8f);
 
-            Rect(new Vector2(630, 800), new Vector2(Width, 840), 0f, 45f);
+            Rect(new Vector2(630, 650), new Vector2(Width, 690), 0f, 40f);
         }
         
         public override void Draw (Squared.Render.Frame frame) {

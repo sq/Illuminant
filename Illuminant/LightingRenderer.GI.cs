@@ -247,7 +247,7 @@ namespace Squared.Illuminant {
             using (var group = BatchGroup.New(
                 container, layer,
                 (dm, _) => {
-                    dm.Device.BlendState = RenderStates.AdditiveBlend;
+                    dm.Device.BlendState = RenderStates.MaxBlend;
 
                     SetLightShaderParameters(m, Configuration.DefaultQuality);
 
