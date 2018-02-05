@@ -89,6 +89,7 @@ namespace TestGame.Scenes {
             LightmapScaleRatio.Min = 0.05f;
             LightmapScaleRatio.Max = 1.0f;
             LightmapScaleRatio.Speed = 0.1f;
+            LightmapScaleRatio.Changed += (s, e) => Renderer.InvalidateFields();
 
             IndirectLightBrightness.MinusKey = Keys.D9;
             IndirectLightBrightness.PlusKey = Keys.D0;
