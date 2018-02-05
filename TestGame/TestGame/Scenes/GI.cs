@@ -39,6 +39,7 @@ namespace TestGame.Scenes {
             ShowDistanceField,
             TwoPointFiveD,
             RenderDirectLight,
+            RenderIndirectLight,
             EnableShadows,
             ShowProbeSH,
             EnablePointLight,
@@ -55,7 +56,8 @@ namespace TestGame.Scenes {
             TwoPointFiveD.Value = true;
             DistanceFieldResolution.Value = 0.25f;
             LightmapScaleRatio.Value = 1.0f;
-            RenderDirectLight.Value = true;
+            RenderDirectLight.Value = false;
+            RenderIndirectLight.Value = true;
             ShowProbeSH.Value = true;
             EnableShadows.Value = true;
             EnablePointLight.Value = true;
@@ -66,6 +68,7 @@ namespace TestGame.Scenes {
             TwoPointFiveD.Changed += (s, e) => Renderer.InvalidateFields();
             ShowDistanceField.Key = Keys.D;
             RenderDirectLight.Key = Keys.L;
+            RenderIndirectLight.Key = Keys.I;
             ShowProbeSH.Key = Keys.P;
             EnableShadows.Key = Keys.S;
             EnableDirectionalLights.Key = Keys.D3;
@@ -261,7 +264,7 @@ namespace TestGame.Scenes {
             )) {
                 ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black);
 
-                var lighting = Renderer.RenderLighting(bg, 1, 1.0f / LightScaleFactor, RenderDirectLight);
+                var lighting = Renderer.RenderLighting(bg, 1, 1.0f / LightScaleFactor, RenderDirectLight, RenderIndirectLight);
                 lighting.Resolve(bg, 2, Width, Height, hdr: new HDRConfiguration { InverseScaleFactor = LightScaleFactor });
             };
 

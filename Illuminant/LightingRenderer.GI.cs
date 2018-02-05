@@ -192,7 +192,7 @@ namespace Squared.Illuminant {
         }
 
         public void VisualizeGIProbes (IBatchContainer container, int layer, float radius, float brightness = 1) {
-            var m = Materials.Get(IlluminantMaterials.GIProbeSHVisualizer, blendState: BlendState.AlphaBlend);
+            var m = Materials.Get(IlluminantMaterials.VisualizeGI, blendState: BlendState.AlphaBlend);
             var p = m.Effect.Parameters;
 
             using (var group = BatchGroup.New(
@@ -233,6 +233,48 @@ namespace Squared.Illuminant {
                 var pdc = new PrimitiveDrawCall<VisualizeGIProbeVertex>(
                     PrimitiveType.TriangleList,
                     buf, 0, count * 2
+                );
+                pb.Add(ref pdc);
+            }
+        }
+
+        public void RenderGlobalIllumination (
+            IBatchContainer container, int layer
+        ) {
+            var m = IlluminantMaterials.RenderGI;
+            var p = m.Effect.Parameters;
+
+            using (var group = BatchGroup.New(
+                container, layer,
+                (dm, _) => {
+                    dm.Device.BlendState = BlendState.Opaque;
+
+                    p["Brightness"].SetValue(1);
+                    p["SphericalHarmonicsTexelSize"].SetValue(new Vector2(1.0f / _GIProbeSH.Width, 1.0f / _GIProbeSH.Height));
+                    p["SphericalHarmonics"].SetValue((Texture2D)null);
+                    p["SphericalHarmonics"].SetValue(_GIProbeSH);
+
+                    SetLightShaderParameters(m, Configuration.DefaultQuality);
+
+                    m.Flush();
+                },
+                (dm, _) => {
+                    for (int i = 0; i < 16; i++)
+                        dm.Device.Textures[i] = null;
+                }
+            ))
+            using (var pb = PrimitiveBatch<GIProbeVertex>.New(group, 1, m)) {
+                RenderTrace.Marker(group, 0, "Render global illumination");
+
+                var pdc = new PrimitiveDrawCall<GIProbeVertex>(
+                    PrimitiveType.TriangleList,
+                    new [] {
+                        new GIProbeVertex(-1, -1),
+                        new GIProbeVertex(1, -1),
+                        new GIProbeVertex(1, 1),
+                        new GIProbeVertex(-1, 1)
+                    },
+                    0, 4, QuadIndices, 0, 2
                 );
                 pb.Add(ref pdc);
             }

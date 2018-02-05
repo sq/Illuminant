@@ -161,54 +161,6 @@ void SHGeneratorPixelShader(
     result.a = received;
 }
 
-void SHVisualizerPixelShader(
-    in float2  localPosition : TEXCOORD0,
-    in int2    _probeIndex   : BLENDINDICES0,
-    out float4 result        : COLOR0
-) {
-    SH9Color rad;
-    float3 irradiance = 0;
-
-    float probeIndex = _probeIndex.x;
-    float4 uv = float4((probeIndex + FUDGE) * SphericalHarmonicsTexelSize.x, 0, 0, 0);
-    float received = 0;
-
-    for (int y = 0; y < SHTexelCount; y++) {
-        uv.y = (y + FUDGE) * SphericalHarmonicsTexelSize.y;
-        float4 coeff = tex2Dlod(SphericalHarmonicsSampler, uv);
-        rad.c[y] = coeff.rgb;
-        received += coeff.a;
-    }
-
-    [branch]
-    if (received < 1) {
-        discard;
-        return;
-    }
-
-    float xyLength = length(localPosition);
-    float z = 1 - clamp(xyLength / 0.9, 0, 1);
-    // FIXME: Correct?
-    float3 normal = float3(localPosition.x * -1.1, localPosition.y * -1.1, z * z);
-    normal = normalize(normal);
-    SH9 cos = SHCosineLobe(normal);
-
-    SHScaleByCosine(cos);
-
-    // FIXME: This doesn't seem like it should be necessary but without it the probes look really dark
-    // SHScaleColorByCosine(rad, 1);
-
-    for (int i = 0; i < SHValueCount; i++)
-        irradiance += rad.c[i] * cos.c[i];
-
-    // FIXME: InverseScaleFactor
-    float3 resultRgb = irradiance * Brightness;
-        // HACK: This seems to be needed to compensate for the cosine scaling of the color value
-        // * (1.0 / Pi);
-    float  fade = 1.0 - clamp((xyLength - 0.9) / 0.1, 0, 1);
-    result = float4(resultRgb * fade, fade);
-}
-
 technique ProbeSelector {
     pass P0
     {
@@ -222,13 +174,5 @@ technique SHGenerator {
     {
         vertexShader = compile vs_3_0 ProbeVertexShader();
         pixelShader = compile ps_3_0 SHGeneratorPixelShader();
-    }
-}
-
-technique SHVisualizer {
-    pass P0
-    {
-        vertexShader = compile vs_3_0 SHVisualizerVertexShader();
-        pixelShader = compile ps_3_0 SHVisualizerPixelShader();
     }
 }
