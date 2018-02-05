@@ -151,12 +151,14 @@ void DirectionalLightProbePixelShader(
 ) {
     float3 shadedPixelPosition;
     float4 shadedPixelNormal;
+    float opacity;
+
     sampleLightProbeBuffer(
         vpos,
-        shadedPixelPosition, shadedPixelNormal
+        shadedPixelPosition, shadedPixelNormal, opacity
     );
 
-    float opacity = DirectionalLightPixelCore(
+    opacity *= DirectionalLightPixelCore(
         shadedPixelPosition, shadedPixelNormal.xyz, lightDirection, lightProperties, moreLightProperties, false
     );
 
@@ -174,12 +176,14 @@ void DirectionalLightProbeWithRampPixelShader(
 ) {
     float3 shadedPixelPosition;
     float4 shadedPixelNormal;
+    float opacity;
+
     sampleLightProbeBuffer(
         vpos,
-        shadedPixelPosition, shadedPixelNormal
+        shadedPixelPosition, shadedPixelNormal, opacity
     );
 
-    float opacity = DirectionalLightPixelCore(
+    opacity *= DirectionalLightPixelCore(
         shadedPixelPosition, shadedPixelNormal.xyz, lightDirection, lightProperties, moreLightProperties, true
     );
 

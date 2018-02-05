@@ -136,6 +136,7 @@ namespace Squared.Illuminant {
                     SetDistanceFieldParameters(m, true, Configuration.GIProbeQuality);
 
                     p["NormalCount"].SetValue(GIProbeNormalCount);
+                    p["BounceFalloffDistance"].SetValue(Configuration.GIBounceFalloffDistance);
                     p["RequestedPositionTexelSize"].SetValue(new Vector2(1.0f / _RequestedGIProbePositions.Width, 1));
                     p["RequestedPositions"].SetValue(_RequestedGIProbePositions);
                     // p["MaxSearchDistance"].SetValue(Configuration.GIProbeMaxSearchDistance);

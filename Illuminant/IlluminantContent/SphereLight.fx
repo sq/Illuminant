@@ -182,12 +182,14 @@ void SphereLightProbePixelShader(
 ) {
     float3 shadedPixelPosition;
     float4 shadedPixelNormal;
+    float opacity;
+
     sampleLightProbeBuffer(
         vpos,
-        shadedPixelPosition, shadedPixelNormal
+        shadedPixelPosition, shadedPixelNormal, opacity
     );
 
-    float opacity = SphereLightPixelCore(
+    opacity *= SphereLightPixelCore(
         shadedPixelPosition, shadedPixelNormal.xyz, lightCenter, lightProperties, moreLightProperties, false, false
     );
 
@@ -204,12 +206,14 @@ void SphereLightProbeWithDistanceRampPixelShader(
 ) {
     float3 shadedPixelPosition;
     float4 shadedPixelNormal;
+    float opacity;
+
     sampleLightProbeBuffer(
         vpos,
-        shadedPixelPosition, shadedPixelNormal
+        shadedPixelPosition, shadedPixelNormal, opacity
     );
 
-    float opacity = SphereLightPixelCore(
+    opacity *= SphereLightPixelCore(
         shadedPixelPosition, shadedPixelNormal.xyz, lightCenter, lightProperties, moreLightProperties, true, false
     );
 
@@ -226,12 +230,14 @@ void SphereLightProbeWithOpacityRampPixelShader(
 ) {
     float3 shadedPixelPosition;
     float4 shadedPixelNormal;
+    float opacity;
+
     sampleLightProbeBuffer(
         vpos,
-        shadedPixelPosition, shadedPixelNormal
+        shadedPixelPosition, shadedPixelNormal, opacity
     );
 
-    float opacity = SphereLightPixelCore(
+    opacity *= SphereLightPixelCore(
         shadedPixelPosition, shadedPixelNormal.xyz, lightCenter, lightProperties, moreLightProperties, false, true
     );
 

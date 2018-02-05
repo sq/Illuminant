@@ -7,7 +7,7 @@
 #define OFFSET 1
 #define SEARCH_DISTANCE 1024
 #define FUDGE 0.375
-#define DO_FIRST_BOUNCE false
+#define DO_FIRST_BOUNCE true
 #define DROP_DEAD_SAMPLES_FROM_SH true
 
 #include "VisualizeCommon.fxh"
@@ -19,6 +19,8 @@ static const float NormalSliceCount = 3;
 static const float SliceIndexToZ = 2.5;
 
 uniform float Time;
+
+uniform float BounceFalloffDistance;
 
 // uniform float  MaxSearchDistance;
 uniform float2 RequestedPositionTexelSize, ProbeValuesTexelSize;
@@ -100,7 +102,10 @@ void ProbeSelectorPixelShader(
         float3 ray = normal * SEARCH_DISTANCE;
 
         if (traceSurface(requestedPosition, ray, intersectionDistance, estimatedIntersection, vars)) {
-            resultPosition = float4(estimatedIntersection - (normal * OFFSET), 1);
+            resultPosition = float4(
+                estimatedIntersection - (normal * OFFSET), 
+                1 - clamp(intersectionDistance / BounceFalloffDistance, 0, 1)
+            );
             resultNormal = float4(-normal, 1);
         } else {
             resultPosition = 0;
