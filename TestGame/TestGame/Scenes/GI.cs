@@ -28,8 +28,10 @@ namespace TestGame.Scenes {
         const int MultisampleCount = 0;
         const int MaxStepCount = 128;
         const float LightScaleFactor = 1;
-        const float AORadius = 0;
-        const float AOOpacity = 0f;
+        const float AORadius = 10;
+        const float AOOpacity = 0.4f;
+        const float ProbeInterval = 52;
+        const float ProbeVisSize = 18;
 
         Toggle ShowGBuffer,
             ShowDistanceField,
@@ -270,7 +272,7 @@ namespace TestGame.Scenes {
                     bb.Add(new BitmapDrawCall(Lightmap, Vector2.Zero));
 
                 if (ShowProbeSH)
-                    Renderer.VisualizeGIProbes(group, 2, 16);
+                    Renderer.VisualizeGIProbes(group, 2, ProbeVisSize);
 
                 if (ShowDistanceField) {
                     float dfScale = Math.Min(

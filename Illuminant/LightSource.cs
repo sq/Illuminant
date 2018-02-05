@@ -109,6 +109,11 @@ namespace Squared.Illuminant {
                 Opacity = Opacity,
                 CastsShadows = CastsShadows,
                 AmbientOcclusionRadius = AmbientOcclusionRadius,
+                AmbientOcclusionOpacity = AmbientOcclusionOpacity,
+                Quality = Quality,
+                FalloffYFactor = FalloffYFactor,
+                RampTexture = RampTexture,
+                ShadowDistanceFalloff = ShadowDistanceFalloff
             };
             return result;
         }
@@ -161,7 +166,11 @@ namespace Squared.Illuminant {
                 AmbientOcclusionRadius = AmbientOcclusionRadius,
                 RampMode = RampMode,
                 FalloffYFactor = FalloffYFactor,
-                ShadowDistanceFalloff = ShadowDistanceFalloff
+                ShadowDistanceFalloff = ShadowDistanceFalloff,
+                AmbientOcclusionOpacity = AmbientOcclusionOpacity,
+                Quality = Quality,
+                RampTexture = RampTexture,
+                UseDistanceForRampTexture = UseDistanceForRampTexture
             };
             return result;
         }

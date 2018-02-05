@@ -3,6 +3,7 @@
 #include "DistanceFieldCommon.fxh"
 #include "ConeTrace.fxh"
 #include "RampCommon.fxh"
+#include "AOCommon.fxh"
 
 #define SELF_OCCLUSION_HACK 1.1
 
@@ -58,12 +59,7 @@ float DirectionalLightPixelCore(
     // HACK: AO is only on upward-facing surfaces
     moreLightProperties.x *= max(0, shadedPixelNormal.z);
 
-    [branch]
-    if ((moreLightProperties.x >= 0.5) && (DistanceField.Extent.x > 0) && visible) {
-        float distance = sampleDistanceField(shadedPixelPosition, vars);
-        float aoRamp = (clamp(distance / moreLightProperties.x, 0, 1) * moreLightProperties.w) + (1 - moreLightProperties.w);
-        lightOpacity *= aoRamp;
-    }
+    computeAO(lightOpacity, shadedPixelPosition, shadedPixelNormal, moreLightProperties, vars, visible);
 
     bool traceShadows = visible && lightProperties.x && (lightOpacity >= 1 / 256.0);
 
@@ -161,6 +157,8 @@ void DirectionalLightProbePixelShader(
         shadedPixelPosition, shadedPixelNormal, opacity
     );
 
+    moreLightProperties.x = moreLightProperties.w = 0;
+
     opacity *= DirectionalLightPixelCore(
         shadedPixelPosition, shadedPixelNormal.xyz, lightDirection, lightProperties, moreLightProperties, false
     );
@@ -185,6 +183,8 @@ void DirectionalLightProbeWithRampPixelShader(
         vpos,
         shadedPixelPosition, shadedPixelNormal, opacity
     );
+
+    moreLightProperties.x = moreLightProperties.w = 0;
 
     opacity *= DirectionalLightPixelCore(
         shadedPixelPosition, shadedPixelNormal.xyz, lightDirection, lightProperties, moreLightProperties, true

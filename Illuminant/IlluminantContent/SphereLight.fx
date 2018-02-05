@@ -3,6 +3,7 @@
 #include "DistanceFieldCommon.fxh"
 #include "ConeTrace.fxh"
 #include "RampCommon.fxh"
+#include "AOCommon.fxh"
 
 #define SELF_OCCLUSION_HACK 1.1
 
@@ -72,12 +73,7 @@ float SphereLightPixelCore(
     if (useDistanceRamp)
         lightOpacity = SampleFromRamp(lightOpacity);
 
-    [branch]
-    if ((moreLightProperties.x >= 0.5) && (DistanceField.Extent.x > 0) && visible) {
-        float distance = sampleDistanceField(shadedPixelPosition, vars);
-        float aoRamp = (clamp(distance / moreLightProperties.x, 0, 1) * moreLightProperties.w) + (1 - moreLightProperties.w);
-        lightOpacity *= aoRamp;
-    }
+    computeAO(lightOpacity, shadedPixelPosition, shadedPixelNormal, moreLightProperties, vars, visible);
 
     bool traceShadows = visible && lightProperties.w && (lightOpacity >= 1 / 256.0);
 
@@ -192,6 +188,8 @@ void SphereLightProbePixelShader(
         shadedPixelPosition, shadedPixelNormal, opacity
     );
 
+    moreLightProperties.x = moreLightProperties.w = 0;
+
     opacity *= SphereLightPixelCore(
         shadedPixelPosition, shadedPixelNormal.xyz, lightCenter, lightProperties, moreLightProperties, false, false
     );
@@ -216,6 +214,8 @@ void SphereLightProbeWithDistanceRampPixelShader(
         shadedPixelPosition, shadedPixelNormal, opacity
     );
 
+    moreLightProperties.x = moreLightProperties.w = 0;
+
     opacity *= SphereLightPixelCore(
         shadedPixelPosition, shadedPixelNormal.xyz, lightCenter, lightProperties, moreLightProperties, true, false
     );
@@ -239,6 +239,8 @@ void SphereLightProbeWithOpacityRampPixelShader(
         vpos,
         shadedPixelPosition, shadedPixelNormal, opacity
     );
+
+    moreLightProperties.x = moreLightProperties.w = 0;
 
     opacity *= SphereLightPixelCore(
         shadedPixelPosition, shadedPixelNormal.xyz, lightCenter, lightProperties, moreLightProperties, false, true

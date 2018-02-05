@@ -25,7 +25,7 @@ namespace Squared.Illuminant {
                 new VertexElement(Marshal.OffsetOf(tThis, "Position").ToInt32(), VertexElementFormat.Vector2, VertexElementUsage.Position, 0),
                 new VertexElement(Marshal.OffsetOf(tThis, "LightCenter").ToInt32(), VertexElementFormat.Vector3, VertexElementUsage.TextureCoordinate, 0),
                 new VertexElement(Marshal.OffsetOf(tThis, "LightProperties").ToInt32(), VertexElementFormat.Vector4, VertexElementUsage.TextureCoordinate, 1),
-                new VertexElement(Marshal.OffsetOf(tThis, "MoreLightProperties").ToInt32(), VertexElementFormat.Vector3, VertexElementUsage.TextureCoordinate, 3),
+                new VertexElement(Marshal.OffsetOf(tThis, "MoreLightProperties").ToInt32(), VertexElementFormat.Vector4, VertexElementUsage.TextureCoordinate, 3),
                 new VertexElement(Marshal.OffsetOf(tThis, "Color").ToInt32(), VertexElementFormat.Vector4, VertexElementUsage.Color, 0)
             );
         }

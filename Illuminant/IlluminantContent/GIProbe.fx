@@ -7,7 +7,7 @@
 #define OFFSET 1
 #define FUDGE 0.375
 #define DO_FIRST_BOUNCE true
-#define DROP_DEAD_SAMPLES_FROM_SH true
+#define DROP_DEAD_SAMPLES_FROM_SH false
 
 #include "VisualizeCommon.fxh"
 
@@ -197,15 +197,15 @@ void SHVisualizerPixelShader(
     SHScaleByCosine(cos);
 
     // FIXME: This doesn't seem like it should be necessary but without it the probes look really dark
-    SHScaleColorByCosine(rad, 1);
+    // SHScaleColorByCosine(rad, 1);
 
     for (int i = 0; i < SHValueCount; i++)
         irradiance += rad.c[i] * cos.c[i];
 
     // FIXME: InverseScaleFactor
-    float3 resultRgb = (irradiance * irradiance)
+    float3 resultRgb = irradiance;
         // HACK: This seems to be needed to compensate for the cosine scaling of the color value
-        * (1.0 / Pi);
+        // * (1.0 / Pi);
     float  fade = 1.0 - clamp((xyLength - 0.9) / 0.1, 0, 1);
     result = float4(resultRgb * fade, fade);
 }
