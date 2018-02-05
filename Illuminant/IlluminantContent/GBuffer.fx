@@ -49,6 +49,11 @@ void HeightVolumePixelShader (
         float sp = vpos.y / Environment.RenderScale.y;
         float relativeY = wp - sp;
 
+        if (worldPosition.z < getGroundZ()) {
+            discard;
+            return;
+        }
+
         // HACK: We drop the world x axis and the normal y axis,
         //  and reconstruct those two values when sampling the g-buffer
         result = float4(

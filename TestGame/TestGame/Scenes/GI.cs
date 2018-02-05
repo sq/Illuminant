@@ -31,7 +31,8 @@ namespace TestGame.Scenes {
         const float AORadius = 10;
         const float AOOpacity = 0.4f;
         const float ProbeInterval = 52;
-        const float ProbeVisSize = 18;
+        const float ProbeVisSize = 20;
+        const float ProbeVisBrightness = 1.1f;
 
         Toggle ShowGBuffer,
             ShowDistanceField,
@@ -272,7 +273,7 @@ namespace TestGame.Scenes {
                     bb.Add(new BitmapDrawCall(Lightmap, Vector2.Zero));
 
                 if (ShowProbeSH)
-                    Renderer.VisualizeGIProbes(group, 2, ProbeVisSize);
+                    Renderer.VisualizeGIProbes(group, 2, ProbeVisSize, ProbeVisBrightness);
 
                 if (ShowDistanceField) {
                     float dfScale = Math.Min(

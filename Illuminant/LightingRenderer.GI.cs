@@ -209,8 +209,8 @@ namespace Squared.Illuminant {
             }
         }
 
-        public void VisualizeGIProbes (IBatchContainer container, int layer, float radius) {
-            var m = Materials.Get(IlluminantMaterials.VisualizeGIProbeSH, blendState: BlendState.AlphaBlend);
+        public void VisualizeGIProbes (IBatchContainer container, int layer, float radius, float brightness = 1) {
+            var m = Materials.Get(IlluminantMaterials.GIProbeSHVisualizer, blendState: BlendState.AlphaBlend);
             var p = m.Effect.Parameters;
 
             using (var group = BatchGroup.New(
@@ -224,6 +224,7 @@ namespace Squared.Illuminant {
             using (var pb = PrimitiveBatch<VisualizeGIProbeVertex>.New(
                 group, 1, m,
                 (dm, _) => {
+                    p["Brightness"].SetValue(brightness);
                     p["SphericalHarmonicsTexelSize"].SetValue(new Vector2(1.0f / _GIProbeSH.Width, 1.0f / _GIProbeSH.Height));
                     p["SphericalHarmonics"].SetValue((Texture2D)null);
                     p["SphericalHarmonics"].SetValue(_GIProbeSH);

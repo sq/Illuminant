@@ -8,6 +8,8 @@
 #define FUDGE 0.375
 #define DO_FIRST_BOUNCE true
 #define DROP_DEAD_SAMPLES_FROM_SH false
+// FIXME: Broken somehow
+#define ESTIMATED_NORMALS false
 
 #include "VisualizeCommon.fxh"
 
@@ -20,6 +22,7 @@ static const float SliceIndexToZ = 2.5;
 uniform float Time;
 
 uniform float BounceFalloffDistance, BounceSearchDistance;
+uniform float Brightness;
 
 uniform float2 RequestedPositionTexelSize, ProbeValuesTexelSize, SphericalHarmonicsTexelSize;
 
@@ -89,20 +92,19 @@ void ProbeSelectorPixelShader(
 ) {
     float2 uv = (vpos + FUDGE) * RequestedPositionTexelSize;
     float3 requestedPosition = tex2Dlod(RequestedPositionSampler, float4(uv, 0, 0)).xyz;
-    int y = max(0, floor(vpos.y));
 
-    float3 normal = ComputeRowNormal(y);
+    float3 normal = ComputeRowNormal(vpos.y);
 
     DistanceFieldConstants vars = makeDistanceFieldConstants();
 
     float initialDistance = sampleDistanceField(requestedPosition, vars);
 
+    resultPosition = 0;
+    resultNormal = 0;
+
     [branch]
-    if (initialDistance <= 2) {
-        resultPosition = 0;
-        resultNormal = 0;
+    if (initialDistance <= 2)
         return;
-    }
 
     if (DO_FIRST_BOUNCE) {
         float intersectionDistance;
@@ -114,10 +116,13 @@ void ProbeSelectorPixelShader(
                 estimatedIntersection - (normal * OFFSET), 
                 1 - clamp(intersectionDistance / BounceFalloffDistance, 0, 1)
             );
-            resultNormal = float4(-normal, 1);
-        } else {
-            resultPosition = 0;
-            resultNormal = 0;
+
+            if (ESTIMATED_NORMALS) {
+                float3 estimatedNormal = estimateNormal(estimatedIntersection, vars);
+                resultNormal = float4(estimatedNormal, 1);
+            } else {
+                resultNormal = float4(-normal, 1);
+            }
         }
     } else {
         resultPosition = float4(requestedPosition, 1);
@@ -203,7 +208,7 @@ void SHVisualizerPixelShader(
         irradiance += rad.c[i] * cos.c[i];
 
     // FIXME: InverseScaleFactor
-    float3 resultRgb = irradiance;
+    float3 resultRgb = irradiance * Brightness;
         // HACK: This seems to be needed to compensate for the cosine scaling of the color value
         // * (1.0 / Pi);
     float  fade = 1.0 - clamp((xyLength - 0.9) / 0.1, 0, 1);

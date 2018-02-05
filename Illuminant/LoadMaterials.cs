@@ -73,7 +73,7 @@ namespace Squared.Illuminant {
                     content.Load<Effect>("GIProbe"), "SHGenerator", dBegin, dEnd
                 ));
 
-                DefineMaterial(IlluminantMaterials.VisualizeGIProbeSH = new Material(
+                DefineMaterial(IlluminantMaterials.GIProbeSHVisualizer = new Material(
                     content.Load<Effect>("GIProbe"), "SHVisualizer", dBegin, dEnd
                 ));
 
