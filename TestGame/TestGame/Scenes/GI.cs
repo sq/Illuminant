@@ -30,6 +30,7 @@ namespace TestGame.Scenes {
         const float LightScaleFactor = 1;
         const float AORadius = 10;
         const float AOOpacity = 0.4f;
+        const float ProbeZ = 1;
         const float ProbeInterval = 52;
         const float ProbeVisSize = 20;
         const float ProbeVisBrightness = 1.1f;
@@ -148,12 +149,11 @@ namespace TestGame.Scenes {
                 Game.RenderCoordinator, Width, Height, Environment.MaximumZ,
                 32, DistanceFieldResolution.Value
             );
+
             if (Renderer != null) {
                 Renderer.DistanceField = DistanceField;
                 Renderer.InvalidateFields();
             }
-
-            Renderer.CreateGIProbes(0, new Vector2(52, 52));
         }
 
         public override void LoadContent () {
@@ -162,6 +162,9 @@ namespace TestGame.Scenes {
             Environment.GroundZ = 0;
             Environment.MaximumZ = 128;
             Environment.ZToYMultiplier = 2.5f;
+
+            Environment.GIProbeOffset = new Vector3(ProbeInterval / 2f, ProbeInterval / 2f, 2);
+            Environment.GIProbeInterval = new Vector2(ProbeInterval, ProbeInterval);
 
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 

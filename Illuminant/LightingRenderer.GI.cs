@@ -15,18 +15,13 @@ namespace Squared.Illuminant {
     public sealed partial class LightingRenderer : IDisposable, INameableGraphicsObject {
         internal const int SHValueCount = 9;
 
+        public int GIProbeCount { get; private set; }
         private readonly RenderTarget2D _SelectedGIProbePositions, _SelectedGIProbeNormals;
         private readonly RenderTarget2D _GIProbeValues, _GIProbeSH;
-        private readonly Texture2D _RequestedGIProbePositions;
         private bool _GIProbesDirty, _GIProbesWereSelected;
 
-        private readonly List<GIProbe> _GIProbes = new List<GIProbe>();
-
-        public IReadOnlyList<GIProbe> GIProbes {
-            get {
-                return _GIProbes;
-            }
-        }
+        private Vector3 LastGIProbeOffset;
+        private Vector2 LastGIProbeInterval;
 
         internal int GIProbeNormalCount {
             get {
@@ -37,46 +32,12 @@ namespace Squared.Illuminant {
         private void _EndGIProbePass (DeviceManager device, object userData) {
             Materials.PopViewTransform();
             device.PopStates();
-        }
-
-        public void CreateGIProbes (float elevation = 16, Vector2? interval = null) {
-            var _interval = interval.GetValueOrDefault(Vector2.One * 48);
-            var count = Configuration.MaximumGIProbeCount;
-
-            lock (_GIProbes) {
-                _GIProbes.Clear();
-
-                using (var buffer = BufferPool<Vector4>.Allocate(count)) {
-                    var position = _interval * 0.5f;
-
-                    int totalCreated = 0;
-                    for (int i = 0; i < count; i++) {
-                        var pos3 = new Vector3(position, elevation);
-
-                        _GIProbes.Add(new GIProbe(pos3));
-                        buffer.Data[i] = new Vector4(pos3, 1);
-
-                        position.X += _interval.X;
-                        if (position.X > DistanceField.VirtualWidth) {
-                            position.X = _interval.X * 0.5f;
-                            position.Y += _interval.Y;
-                            if (position.Y > DistanceField.VirtualHeight)
-                                break;
-                        }
-                    }
-
-                    lock (Coordinator.UseResourceLock)
-                        _RequestedGIProbePositions.SetData(buffer.Data);
-
-                    _GIProbesDirty = true;
-                }
-            }
-        }
+        }        
 
         private void _GIProbeBatchSetup (DeviceManager device, object userData) {
             var ltrs = (LightTypeRenderState)userData;
 
-            device.Device.Viewport = new Viewport(0, 0, _GIProbes.Count, GIProbeNormalCount);
+            device.Device.Viewport = new Viewport(0, 0, GIProbeCount, GIProbeNormalCount);
             device.Device.BlendState = RenderStates.AdditiveBlend;
 
             SetLightShaderParameters(ltrs.ProbeMaterial, ltrs.Key.Quality);
@@ -108,15 +69,26 @@ namespace Squared.Illuminant {
         */
 
         private void UpdateGIProbes (IBatchContainer container, int layer) {
-            if (_GIProbes.Count == 0)
+            if (!Configuration.EnableGlobalIllumination)
                 return;
 
             using (var group = BatchGroup.New(container, layer, null, (dm, _) => {
                 for (int i = 0; i < 16; i++)
                     dm.Device.Textures[i] = null;
             })) {
+                if (
+                    (LastGIProbeInterval != Environment.GIProbeInterval) ||
+                    (LastGIProbeOffset != Environment.GIProbeOffset)
+                )
+                    _GIProbesDirty = true;
+
                 if (_GIProbesDirty)
                     SelectGIProbes(group, 0);
+
+                /*
+                if (GIProbeCount == 0)
+                    return;
+                */
 
                 UpdateLightProbes(group, 1, _GIProbeValues, true);
                 UpdateGIProbeSH(group, 2);
@@ -127,18 +99,26 @@ namespace Squared.Illuminant {
             var m = IlluminantMaterials.GIProbeSelector;
             var p = m.Effect.Parameters;
 
+            var extent = Extent3;
+            var countX = (int)Math.Ceiling((extent.X - Environment.GIProbeOffset.X) / Environment.GIProbeInterval.X);
+            var countY = (int)Math.Ceiling((extent.Y - Environment.GIProbeOffset.Y) / Environment.GIProbeInterval.Y);
+
+            GIProbeCount = countX * countY;
+            if (GIProbeCount > Configuration.MaximumGIProbeCount)
+                GIProbeCount = Configuration.MaximumGIProbeCount;
+
             using (var rt = BatchGroup.New(
                 container, layer,
                 (dm, _) => {
                     dm.PushRenderTargets(new RenderTargetBinding[] { _SelectedGIProbePositions, _SelectedGIProbeNormals });
-                    dm.Device.Viewport = new Viewport(0, 0, _GIProbes.Count, GIProbeNormalCount);
+                    dm.Device.Viewport = new Viewport(0, 0, GIProbeCount, GIProbeNormalCount);
 
                     SetDistanceFieldParameters(m, true, Configuration.GIProbeQuality);
 
+                    p["ProbeOffset"].SetValue(Environment.GIProbeOffset);
+                    p["ProbeInterval"].SetValue(Environment.GIProbeInterval);
+                    p["ProbeCount"].SetValue(new Vector2(countX, countY));
                     p["NormalCount"].SetValue(GIProbeNormalCount);
-                    p["RequestedPositionTexelSize"].SetValue(new Vector2(1.0f / _RequestedGIProbePositions.Width, 1.0f / _RequestedGIProbePositions.Height));
-                    p["RequestedPositions"].SetValue((Texture2D)null);
-                    p["RequestedPositions"].SetValue(_RequestedGIProbePositions);
                     p["BounceFalloffDistance"].SetValue(Configuration.GIBounceFalloffDistance);
                     p["BounceSearchDistance"].SetValue(Configuration.GIBounceSearchDistance);
 
@@ -177,7 +157,7 @@ namespace Squared.Illuminant {
                 container, layer,
                 (dm, _) => {
                     dm.PushRenderTarget(_GIProbeSH);
-                    dm.Device.Viewport = new Viewport(0, 0, _GIProbes.Count, SHValueCount);
+                    dm.Device.Viewport = new Viewport(0, 0, GIProbeCount, SHValueCount);
 
                     p["NormalCount"].SetValue(GIProbeNormalCount);
                     p["ProbeValuesTexelSize"].SetValue(new Vector2(1.0f / _GIProbeValues.Width, 1.0f / _GIProbeValues.Height));
@@ -234,21 +214,22 @@ namespace Squared.Illuminant {
             )) {
                 RenderTrace.Marker(group, 0, "Visualize GI probes");
 
-                var count = (short)GIProbes.Count;
+                var count = (short)GIProbeCount;
                 var buf = new VisualizeGIProbeVertex[count * 6];
 
+                Vector3 pos = Environment.GIProbeOffset;
                 for (short i = 0; i < count; i++) {
-                    var probe = GIProbes[i];
-
-                    Vector3 pos;
-                    lock (probe)
-                        pos = probe.Position;
-
                     var j = i * 6;
                     buf[j + 0] = new VisualizeGIProbeVertex(pos, -1, -1, i, radius); // 0
                     buf[j + 1] = buf[j + 3] = new VisualizeGIProbeVertex(pos, 1, -1, i, radius); // 1
                     buf[j + 4] = new VisualizeGIProbeVertex(pos, 1, 1, i, radius); // 2
                     buf[j + 2] = buf[j + 5] = new VisualizeGIProbeVertex(pos, -1, 1, i, radius); // 3
+
+                    pos.X += Environment.GIProbeInterval.X;
+                    if (pos.X >= Extent3.X) {
+                        pos.X = Environment.GIProbeOffset.X;
+                        pos.Y += Environment.GIProbeInterval.Y;
+                    }
                 }
 
                 var pdc = new PrimitiveDrawCall<VisualizeGIProbeVertex>(

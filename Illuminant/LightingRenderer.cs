@@ -280,10 +280,6 @@ namespace Squared.Illuminant {
 
             if (Configuration.EnableGlobalIllumination)
             lock (Coordinator.CreateResourceLock) {
-                _RequestedGIProbePositions = new Texture2D(
-                    coordinator.Device, Configuration.MaximumGIProbeCount, 1, false, SurfaceFormat.Vector4
-                );
-
                 _SelectedGIProbePositions = new RenderTarget2D(
                     coordinator.Device, Configuration.MaximumGIProbeCount, GIProbeNormalCount, false,
                     SurfaceFormat.HalfVector4, DepthFormat.None, 0, RenderTargetUsage.PreserveContents
@@ -407,7 +403,6 @@ namespace Squared.Illuminant {
             Coordinator.DisposeResource(_LightProbePositions);
             Coordinator.DisposeResource(_LightProbeNormals);
             Coordinator.DisposeResource(_LightProbeValueBuffers);
-            Coordinator.DisposeResource(_RequestedGIProbePositions);
             Coordinator.DisposeResource(_SelectedGIProbePositions);
             Coordinator.DisposeResource(_SelectedGIProbeNormals);
             Coordinator.DisposeResource(_GIProbeValues);

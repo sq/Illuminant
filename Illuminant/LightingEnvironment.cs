@@ -26,6 +26,9 @@ namespace Squared.Illuminant {
         // Offsets Y coordinates by (Z * -ZToYMultiplier) if TwoPointFiveD is enabled
         public float ZToYMultiplier = 0f;
 
+        public Vector3 GIProbeOffset;
+        public Vector2 GIProbeInterval;
+
         public void Clear () {
             Lights.Clear();
             Obstructions.Clear();

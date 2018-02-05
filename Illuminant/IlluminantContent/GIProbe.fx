@@ -6,7 +6,7 @@
 #define TVARS  DistanceFieldConstants
 #define OFFSET 1
 #define FUDGE 0.375
-#define DO_FIRST_BOUNCE true
+#define DO_FIRST_BOUNCE false
 #define DROP_DEAD_SAMPLES_FROM_SH false
 // FIXME: Broken somehow
 #define ESTIMATED_NORMALS false
@@ -19,22 +19,16 @@ uniform float NormalCount;
 static const float NormalSliceCount = 3;
 static const float SliceIndexToZ = 2.5;
 
+uniform float3 ProbeOffset;
+uniform float2 ProbeInterval;
+uniform float2 ProbeCount;
+
 uniform float Time;
 
 uniform float BounceFalloffDistance, BounceSearchDistance;
 uniform float Brightness;
 
-uniform float2 RequestedPositionTexelSize, ProbeValuesTexelSize, SphericalHarmonicsTexelSize;
-
-Texture2D RequestedPositions       : register(t2);
-sampler   RequestedPositionSampler : register(s2) {
-    Texture = (RequestedPositions);
-    AddressU = CLAMP;
-    AddressV = CLAMP;
-    MipFilter = POINT;
-    MinFilter = POINT;
-    MagFilter = POINT;
-};
+uniform float2 ProbeValuesTexelSize, SphericalHarmonicsTexelSize;
 
 Texture2D ProbeValues        : register(t5);
 sampler   ProbeValuesSampler : register(s5) {
@@ -90,9 +84,9 @@ void ProbeSelectorPixelShader(
     out float4 resultPosition : COLOR0,
     out float4 resultNormal   : COLOR1
 ) {
-    float2 uv = (vpos + FUDGE) * RequestedPositionTexelSize;
-    float3 requestedPosition = tex2Dlod(RequestedPositionSampler, float4(uv, 0, 0)).xyz;
-
+    float yIndex = floor(vpos.x / ProbeCount.x);
+    float xIndex = vpos.x - (yIndex * ProbeCount.x);
+    float3 requestedPosition = ProbeOffset + float3(ProbeInterval.x * xIndex, ProbeInterval.y * yIndex, 0);
     float3 normal = ComputeRowNormal(vpos.y);
 
     DistanceFieldConstants vars = makeDistanceFieldConstants();
