@@ -5,7 +5,6 @@
 #define SAMPLE sampleDistanceField
 #define TVARS  DistanceFieldConstants
 #define OFFSET 1
-#define SEARCH_DISTANCE 1024
 #define FUDGE 0.375
 #define DO_FIRST_BOUNCE true
 #define DROP_DEAD_SAMPLES_FROM_SH true
@@ -20,10 +19,9 @@ static const float SliceIndexToZ = 2.5;
 
 uniform float Time;
 
-uniform float BounceFalloffDistance;
+uniform float BounceFalloffDistance, BounceSearchDistance;
 
-// uniform float  MaxSearchDistance;
-uniform float2 RequestedPositionTexelSize, ProbeValuesTexelSize;
+uniform float2 RequestedPositionTexelSize, ProbeValuesTexelSize, SphericalHarmonicsTexelSize;
 
 Texture2D RequestedPositions       : register(t2);
 sampler   RequestedPositionSampler : register(s2) {
@@ -35,9 +33,19 @@ sampler   RequestedPositionSampler : register(s2) {
     MagFilter = POINT;
 };
 
-Texture2D ProbeValues        : register(t4);
-sampler   ProbeValuesSampler : register(s4) {
+Texture2D ProbeValues        : register(t5);
+sampler   ProbeValuesSampler : register(s5) {
     Texture = (ProbeValues);
+    AddressU = CLAMP;
+    AddressV = CLAMP;
+    MipFilter = POINT;
+    MinFilter = POINT;
+    MagFilter = POINT;
+};
+
+Texture2D SphericalHarmonics        : register(t6);
+sampler   SphericalHarmonicsSampler : register(s6) {
+    Texture = (SphericalHarmonics);
     AddressU = CLAMP;
     AddressV = CLAMP;
     MipFilter = POINT;
@@ -99,7 +107,7 @@ void ProbeSelectorPixelShader(
     if (DO_FIRST_BOUNCE) {
         float intersectionDistance;
         float3 estimatedIntersection;
-        float3 ray = normal * SEARCH_DISTANCE;
+        float3 ray = normal * BounceSearchDistance;
 
         if (traceSurface(requestedPosition, ray, intersectionDistance, estimatedIntersection, vars)) {
             resultPosition = float4(
@@ -163,12 +171,12 @@ void SHVisualizerPixelShader(
     float3 irradiance = 0;
 
     float probeIndex = _probeIndex.x;
-    float4 uv = float4(probeIndex * ProbeValuesTexelSize.x, 0, 0, 0);
+    float4 uv = float4((probeIndex + FUDGE) * SphericalHarmonicsTexelSize.x, 0, 0, 0);
     float received = 0;
 
     for (int y = 0; y < SHTexelCount; y++) {
-        uv.y = (y + FUDGE) * ProbeValuesTexelSize.y;
-        float4 coeff = tex2Dlod(ProbeValuesSampler, uv);
+        uv.y = (y + FUDGE) * SphericalHarmonicsTexelSize.y;
+        float4 coeff = tex2Dlod(SphericalHarmonicsSampler, uv);
         rad.c[y] = coeff.rgb;
         received += coeff.a;
     }

@@ -17,7 +17,7 @@ void DirectionalLightVertexShader(
     inout float4 color               : COLOR0,
     inout float3 lightDirection      : TEXCOORD0,
     inout float4 lightProperties     : TEXCOORD1,
-    inout float3 moreLightProperties : TEXCOORD3,
+    inout float4 moreLightProperties : TEXCOORD3,
     out float2   worldPosition       : TEXCOORD2,
     out float4   result              : POSITION0
 ) {
@@ -32,7 +32,7 @@ void DirectionalLightProbeVertexShader(
     inout float4 color               : COLOR0,
     inout float3 lightDirection      : TEXCOORD0,
     inout float4 lightProperties     : TEXCOORD1,
-    inout float3 moreLightProperties : TEXCOORD3,
+    inout float4 moreLightProperties : TEXCOORD3,
     out float4   result              : POSITION0
 ) {
     float2 clipPosition = float2(position.x > 0 ? 999 : -999, position.y > 0 ? 999 : -999);
@@ -46,8 +46,8 @@ float DirectionalLightPixelCore(
     in float3 lightDirection      : TEXCOORD0,
     // enableShadows, shadowTraceLength, shadowSoftness, shadowRampRate
     in float4 lightProperties     : TEXCOORD1,
-    // aoRadius, shadowDistanceFalloff, shadowRampLength
-    in float3 moreLightProperties : TEXCOORD3,
+    // aoRadius, shadowDistanceFalloff, shadowRampLength, aoOpacity
+    in float4 moreLightProperties : TEXCOORD3,
     in bool   useOpacityRamp
 ) {
     float lightOpacity = computeDirectionalLightOpacity(lightDirection, shadedPixelNormal);
@@ -55,10 +55,13 @@ float DirectionalLightPixelCore(
 
     DistanceFieldConstants vars = makeDistanceFieldConstants();
 
+    // HACK: AO is only on upward-facing surfaces
+    moreLightProperties.x *= max(0, shadedPixelNormal.z);
+
     [branch]
     if ((moreLightProperties.x >= 0.5) && (DistanceField.Extent.x > 0) && visible) {
         float distance = sampleDistanceField(shadedPixelPosition, vars);
-        float aoRamp = clamp(distance / moreLightProperties.x, 0, 1);
+        float aoRamp = (clamp(distance / moreLightProperties.x, 0, 1) * moreLightProperties.w) + (1 - moreLightProperties.w);
         lightOpacity *= aoRamp;
     }
 
@@ -96,7 +99,7 @@ void DirectionalLightPixelShader(
     in  float2 worldPosition       : TEXCOORD2,
     in  float3 lightDirection      : TEXCOORD0,
     in  float4 lightProperties     : TEXCOORD1,
-    in  float3 moreLightProperties : TEXCOORD3,
+    in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : COLOR0,
     in  float2 vpos                : VPOS,
     out float4 result              : COLOR0
@@ -120,7 +123,7 @@ void DirectionalLightWithRampPixelShader(
     in  float2 worldPosition       : TEXCOORD2,
     in  float3 lightDirection      : TEXCOORD0,
     in  float4 lightProperties     : TEXCOORD1,
-    in  float3 moreLightProperties : TEXCOORD3,
+    in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : COLOR0,
     in  float2 vpos                : VPOS,
     out float4 result              : COLOR0
@@ -144,7 +147,7 @@ void DirectionalLightProbePixelShader(
     in  float2 worldPosition       : TEXCOORD2,
     in  float3 lightDirection      : TEXCOORD0,
     in  float4 lightProperties     : TEXCOORD1,
-    in  float3 moreLightProperties : TEXCOORD3,
+    in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : COLOR0,
     in  float2 vpos                : VPOS,
     out float4 result              : COLOR0
@@ -169,7 +172,7 @@ void DirectionalLightProbeWithRampPixelShader(
     in  float2 worldPosition       : TEXCOORD2,
     in  float3 lightDirection      : TEXCOORD0,
     in  float4 lightProperties     : TEXCOORD1,
-    in  float3 moreLightProperties : TEXCOORD3,
+    in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : COLOR0,
     in  float2 vpos                : VPOS,
     out float4 result              : COLOR0

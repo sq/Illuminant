@@ -41,6 +41,7 @@ namespace Squared.Illuminant {
         ///  a 'blob shadow' around volumes within the distance field.
         /// </summary>
         public float     AmbientOcclusionRadius = 0;
+        public float     AmbientOcclusionOpacity = 1;
         /// <summary>
         /// Allows you to scale the falloff of the light along the Y axis to fake foreshortening,
         ///  turning a spherical light into an ellipse. Isometric or 2.5D perspectives may look

@@ -28,12 +28,14 @@ namespace TestGame.Scenes {
         const int MultisampleCount = 0;
         const int MaxStepCount = 128;
         const float LightScaleFactor = 1;
+        const float AORadius = 0;
+        const float AOOpacity = 0f;
 
         Toggle ShowGBuffer,
             ShowDistanceField,
             TwoPointFiveD,
             RenderDirectLight,
-            // ShowProbes,
+            EnableShadows,
             ShowProbeSH,
             EnablePointLight,
             EnableDirectionalLights;
@@ -51,6 +53,7 @@ namespace TestGame.Scenes {
             LightmapScaleRatio.Value = 1.0f;
             RenderDirectLight.Value = true;
             ShowProbeSH.Value = true;
+            EnableShadows.Value = true;
             EnablePointLight.Value = true;
             EnableDirectionalLights.Value = true;
 
@@ -59,7 +62,8 @@ namespace TestGame.Scenes {
             TwoPointFiveD.Changed += (s, e) => Renderer.InvalidateFields();
             ShowDistanceField.Key = Keys.D;
             RenderDirectLight.Key = Keys.L;
-            ShowProbeSH.Key = Keys.S;
+            ShowProbeSH.Key = Keys.P;
+            EnableShadows.Key = Keys.S;
             EnableDirectionalLights.Key = Keys.D3;
             EnablePointLight.Key = Keys.D4;
 
@@ -160,7 +164,7 @@ namespace TestGame.Scenes {
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(
                     Width, Height, true, false, enableGlobalIllumination: true,
-                    maximumGIProbeCount: 900
+                    maximumGIProbeCount: 900, giProbeQualityLevel: GIProbeQualityLevels.Medium
                 ) {
                     MaxFieldUpdatesPerFrame = 3,
                     DefaultQuality = {
@@ -169,7 +173,7 @@ namespace TestGame.Scenes {
                         OcclusionToOpacityPower = 0.7f,
                         MaxConeRadius = 24,
                     },
-                    EnableGBuffer = true,
+                    EnableGBuffer = true
                 }
             );
 
@@ -180,7 +184,9 @@ namespace TestGame.Scenes {
                 Color = new Vector4(1f, 0.2f, 0.2f, 0.5f),
                 Radius = 300,
                 RampLength = 200,
-                RampMode = LightSourceRampMode.Linear
+                RampMode = LightSourceRampMode.Linear,
+                AmbientOcclusionRadius = AORadius,
+                AmbientOcclusionOpacity = AOOpacity
             };
 
             Environment.Lights.Add(MovableLight);
@@ -189,19 +195,23 @@ namespace TestGame.Scenes {
                 MinStepSize = 2f,
                 LongStepFactor = 0.95f,
                 MaxConeRadius = 24,
-                OcclusionToOpacityPower = 0.7f,
+                OcclusionToOpacityPower = 0.7f                
             };
 
             Environment.Lights.Add(new DirectionalLightSource {
                 Direction = new Vector3(-0.75f, -0.7f, -0.2f),
                 Color = new Vector4(0.1f, 0.0f, 0.8f, 0.6f),
-                Quality = DirectionalQuality
+                Quality = DirectionalQuality,
+                AmbientOcclusionRadius = AORadius,
+                AmbientOcclusionOpacity = AOOpacity
             });
 
             Environment.Lights.Add(new DirectionalLightSource {
                 Direction = new Vector3(0.5f, -0.7f, -0.3f),
                 Color = new Vector4(0.1f, 0.8f, 0.0f, 0.6f),
-                Quality = DirectionalQuality
+                Quality = DirectionalQuality,
+                AmbientOcclusionRadius = AORadius,
+                AmbientOcclusionOpacity = AOOpacity
             });
 
             if (false)
@@ -316,9 +326,12 @@ namespace TestGame.Scenes {
                 MovableLight.Position = mousePos;
                 MovableLight.Opacity = EnablePointLight ? 1 : 0;
                 MovableLight.Color.W = Arithmetic.Pulse((float)Time.Seconds / 3f, 0.4f, 0.6f);
+                MovableLight.CastsShadows = EnableShadows;
 
-                foreach (var d in Environment.Lights.OfType<DirectionalLightSource>())
+                foreach (var d in Environment.Lights.OfType<DirectionalLightSource>()) {
                     d.Opacity = EnableDirectionalLights ? 1 : 0;
+                    d.CastsShadows = EnableShadows;
+                }
             }
         }
     }

@@ -119,7 +119,7 @@ namespace Squared.Illuminant {
                     SelectGIProbes(group, 0);
 
                 UpdateLightProbes(group, 1, _GIProbeValues, true);
-                UpdateGIProbeSH(group, 2, _GIProbeValues, _GIProbeSH);
+                UpdateGIProbeSH(group, 2);
             }
         }
 
@@ -136,14 +136,17 @@ namespace Squared.Illuminant {
                     SetDistanceFieldParameters(m, true, Configuration.GIProbeQuality);
 
                     p["NormalCount"].SetValue(GIProbeNormalCount);
-                    p["BounceFalloffDistance"].SetValue(Configuration.GIBounceFalloffDistance);
-                    p["RequestedPositionTexelSize"].SetValue(new Vector2(1.0f / _RequestedGIProbePositions.Width, 1));
+                    p["RequestedPositionTexelSize"].SetValue(new Vector2(1.0f / _RequestedGIProbePositions.Width, 1.0f / _RequestedGIProbePositions.Height));
+                    p["RequestedPositions"].SetValue((Texture2D)null);
                     p["RequestedPositions"].SetValue(_RequestedGIProbePositions);
-                    // p["MaxSearchDistance"].SetValue(Configuration.GIProbeMaxSearchDistance);
+                    p["BounceFalloffDistance"].SetValue(Configuration.GIBounceFalloffDistance);
+                    p["BounceSearchDistance"].SetValue(Configuration.GIBounceSearchDistance);
 
                     m.Flush();
                 },
                 (dm, _) => {
+                    for (int i = 0; i < 16; i++)
+                        dm.Device.Textures[i] = null;
                     dm.PopRenderTarget();
                     _GIProbesDirty = false;
                     _GIProbesWereSelected = true;
@@ -166,23 +169,26 @@ namespace Squared.Illuminant {
             }
         }
 
-        private void UpdateGIProbeSH (IBatchContainer container, int layer, RenderTarget2D probeValues, RenderTarget2D result) {
+        private void UpdateGIProbeSH (IBatchContainer container, int layer) {
             var m = IlluminantMaterials.GIProbeSHGenerator;
             var p = m.Effect.Parameters;
 
             using (var rt = BatchGroup.New(
                 container, layer,
                 (dm, _) => {
-                    dm.PushRenderTarget(result);
+                    dm.PushRenderTarget(_GIProbeSH);
                     dm.Device.Viewport = new Viewport(0, 0, _GIProbes.Count, SHValueCount);
 
                     p["NormalCount"].SetValue(GIProbeNormalCount);
-                    p["ProbeValuesTexelSize"].SetValue(new Vector2(1.0f / probeValues.Width, 1.0f / probeValues.Height));
-                    p["ProbeValues"].SetValue(probeValues);
+                    p["ProbeValuesTexelSize"].SetValue(new Vector2(1.0f / _GIProbeValues.Width, 1.0f / _GIProbeValues.Height));
+                    p["ProbeValues"].SetValue((Texture2D)null);
+                    p["ProbeValues"].SetValue(_GIProbeValues);
 
                     m.Flush();
                 },
                 (dm, _) => {
+                    for (int i = 0; i < 16; i++)
+                        dm.Device.Textures[i] = null;
                     dm.PopRenderTarget();
                 }
             ))
@@ -218,8 +224,9 @@ namespace Squared.Illuminant {
             using (var pb = PrimitiveBatch<VisualizeGIProbeVertex>.New(
                 group, 1, m,
                 (dm, _) => {
-                    p["ProbeValuesTexelSize"].SetValue(new Vector2(1.0f / _GIProbeSH.Width, 1.0f / _GIProbeSH.Height));
-                    p["ProbeValues"].SetValue(_GIProbeSH);
+                    p["SphericalHarmonicsTexelSize"].SetValue(new Vector2(1.0f / _GIProbeSH.Width, 1.0f / _GIProbeSH.Height));
+                    p["SphericalHarmonics"].SetValue((Texture2D)null);
+                    p["SphericalHarmonics"].SetValue(_GIProbeSH);
 
                     m.Flush();
                 }

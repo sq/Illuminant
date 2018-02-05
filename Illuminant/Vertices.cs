@@ -13,7 +13,7 @@ namespace Squared.Illuminant {
         public Vector2 Position;
         public Vector3 LightCenter;
         public Vector4 LightProperties;
-        public Vector3 MoreLightProperties;
+        public Vector4 MoreLightProperties;
         public Vector4 Color;
 
         public static VertexDeclaration _VertexDeclaration;

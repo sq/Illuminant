@@ -723,6 +723,7 @@ namespace Squared.Illuminant {
             vertex.MoreLightProperties.X = lightSource.AmbientOcclusionRadius;
             vertex.MoreLightProperties.Y = lightSource.ShadowDistanceFalloff.GetValueOrDefault(-99999);
             vertex.MoreLightProperties.Z = lightSource.FalloffYFactor;
+            vertex.MoreLightProperties.W = lightSource.AmbientOcclusionOpacity;
 
             vertex.Position = new Vector2(0, 0);
             ltrs.LightVertices.Add(ref vertex);
@@ -745,10 +746,11 @@ namespace Squared.Illuminant {
                 lightSource.ShadowSoftness,
                 lightSource.ShadowRampRate
             );
-            vertex.MoreLightProperties = new Vector3(
+            vertex.MoreLightProperties = new Vector4(
                 lightSource.AmbientOcclusionRadius,
                 lightSource.ShadowDistanceFalloff.GetValueOrDefault(-99999),
-                0
+                0,
+                lightSource.AmbientOcclusionOpacity
             );
 
             var lightBounds = new Bounds(
