@@ -23,6 +23,7 @@ namespace Squared.Illuminant {
 
         private Vector3 LastGIProbeOffset;
         private Vector2 LastGIProbeInterval;
+        private float   LastGISearchDistance, LastGIBounceFalloff;
 
         internal int GIProbeNormalCount {
             get {
@@ -79,9 +80,16 @@ namespace Squared.Illuminant {
             })) {
                 if (
                     (LastGIProbeInterval != Environment.GIProbeInterval) ||
-                    (LastGIProbeOffset != Environment.GIProbeOffset)
-                )
+                    (LastGIProbeOffset != Environment.GIProbeOffset) ||
+                    (LastGISearchDistance != Configuration.GIBounceSearchDistance) ||
+                    (LastGIBounceFalloff != Configuration.GIBounceFalloffDistance)
+                ) {
                     _GIProbesDirty = true;
+                    LastGIProbeInterval = Environment.GIProbeInterval;
+                    LastGIProbeOffset = Environment.GIProbeOffset;
+                    LastGISearchDistance = Configuration.GIBounceSearchDistance;
+                    LastGIBounceFalloff = Configuration.GIBounceFalloffDistance;
+                }
 
                 if (_GIProbesDirty)
                     SelectGIProbes(group, 0);
@@ -239,7 +247,7 @@ namespace Squared.Illuminant {
         }
 
         public void RenderGlobalIllumination (
-            IBatchContainer container, int layer
+            IBatchContainer container, int layer, float brightness
         ) {
             var m = IlluminantMaterials.RenderGI;
             var p = m.Effect.Parameters;
@@ -247,11 +255,11 @@ namespace Squared.Illuminant {
             using (var group = BatchGroup.New(
                 container, layer,
                 (dm, _) => {
-                    dm.Device.BlendState = RenderStates.MaxBlend;
+                    dm.Device.BlendState = Configuration.GIBlendMode;
 
                     SetLightShaderParameters(m, Configuration.DefaultQuality);
 
-                    p["RadianceFalloffDistance"].SetValue(Configuration.GIRadianceFalloffDistance);
+                    p["Brightness"].SetValue(brightness);
                     p["ProbeOffset"].SetValue(Environment.GIProbeOffset);
                     p["ProbeInterval"].SetValue(Environment.GIProbeInterval);
                     p["ProbeCount"].SetValue(new Vector2(_GIProbeCountX, _GIProbeCountY));

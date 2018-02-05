@@ -568,11 +568,12 @@ namespace Squared.Illuminant {
         /// <param name="layer">The layer to render lighting into.</param>
         /// <param name="intensityScale">A factor to scale the intensity of all light sources. You can use this to rescale the intensity of light values for HDR.</param>
         /// <param name="paintDirectIllumination">If false, direct illumination will not be rendered (only light probes will be updated).</param>
-        /// <param name="paintGlobalIllumination">If true, global illumination will be rendered for every pixel using data from GI probes (if available).</param>
+        /// <param name="globalIlluminationBrightness">Configures how bright global illumination will be. Set to 0 to hide it entirely.</param>
         public RenderedLighting RenderLighting (
             IBatchContainer container, int layer, 
             float intensityScale = 1.0f, 
-            bool paintDirectIllumination = true, bool paintGlobalIllumination = true
+            bool paintDirectIllumination = true,
+            float globalIlluminationBrightness = 1.0f
         ) {
             var lightmap = _Lightmaps.BeginDraw(true);
             var lightProbe = default(BufferRing.InProgressRender);
@@ -689,8 +690,8 @@ namespace Squared.Illuminant {
                             }
                         }
 
-                        if (paintGlobalIllumination && Configuration.EnableGlobalIllumination && (GIProbeCount > 0))
-                            RenderGlobalIllumination(resultGroup, layerIndex++);
+                        if (Configuration.EnableGlobalIllumination && (GIProbeCount > 0) && (globalIlluminationBrightness > 0))
+                            RenderGlobalIllumination(resultGroup, layerIndex++, globalIlluminationBrightness);
                     }
                 }
 

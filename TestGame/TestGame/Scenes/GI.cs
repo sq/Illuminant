@@ -31,7 +31,7 @@ namespace TestGame.Scenes {
         const float AORadius = 0;
         const float AOOpacity = 0f;
         const float ProbeZ = 1;
-        const float ProbeInterval = 48;
+        const float ProbeInterval = 40;
         const float ProbeVisSize = 20;
         const float ProbeVisBrightness = 1.1f;
 
@@ -39,14 +39,16 @@ namespace TestGame.Scenes {
             ShowDistanceField,
             TwoPointFiveD,
             RenderDirectLight,
-            RenderIndirectLight,
             EnableShadows,
             ShowProbeSH,
             EnablePointLight,
-            EnableDirectionalLights;
+            EnableDirectionalLights,
+            AdditiveIndirectLight;
 
         Slider DistanceFieldResolution,
-            LightmapScaleRatio;
+            LightmapScaleRatio,
+            IndirectLightBrightness,
+            BounceDistance;
 
         RendererQualitySettings DirectionalQuality;
 
@@ -57,22 +59,24 @@ namespace TestGame.Scenes {
             DistanceFieldResolution.Value = 0.25f;
             LightmapScaleRatio.Value = 1.0f;
             RenderDirectLight.Value = false;
-            RenderIndirectLight.Value = true;
             ShowProbeSH.Value = false;
             EnableShadows.Value = true;
             EnablePointLight.Value = true;
             EnableDirectionalLights.Value = true;
+            IndirectLightBrightness.Value = 1.0f;
+            AdditiveIndirectLight.Value = false;
+            BounceDistance.Value = 512;
 
             ShowGBuffer.Key = Keys.G;
             TwoPointFiveD.Key = Keys.D2;
             TwoPointFiveD.Changed += (s, e) => Renderer.InvalidateFields();
             ShowDistanceField.Key = Keys.D;
             RenderDirectLight.Key = Keys.L;
-            RenderIndirectLight.Key = Keys.I;
             ShowProbeSH.Key = Keys.P;
             EnableShadows.Key = Keys.S;
             EnableDirectionalLights.Key = Keys.D3;
             EnablePointLight.Key = Keys.D4;
+            AdditiveIndirectLight.Key = Keys.A;
 
             DistanceFieldResolution.MinusKey = Keys.D5;
             DistanceFieldResolution.PlusKey = Keys.D6;
@@ -85,6 +89,18 @@ namespace TestGame.Scenes {
             LightmapScaleRatio.Min = 0.05f;
             LightmapScaleRatio.Max = 1.0f;
             LightmapScaleRatio.Speed = 0.1f;
+
+            IndirectLightBrightness.MinusKey = Keys.D9;
+            IndirectLightBrightness.PlusKey = Keys.D0;
+            IndirectLightBrightness.Min = 0f;
+            IndirectLightBrightness.Max = 4.0f;
+            IndirectLightBrightness.Speed = 0.333333f;
+
+            BounceDistance.MinusKey = Keys.OemMinus;
+            BounceDistance.PlusKey = Keys.OemPlus;
+            BounceDistance.Min = 128f;
+            BounceDistance.Max = 1024f;
+            BounceDistance.Speed = 128f;
 
             DistanceFieldResolution.Changed += (s, e) => CreateDistanceField();
         }
@@ -191,7 +207,7 @@ namespace TestGame.Scenes {
             MovableLight = new SphereLightSource {
                 Position = new Vector3(64, 64, 0.7f),
                 Color = new Vector4(1f, 0.2f, 0.2f, 0.5f),
-                Radius = 160,
+                Radius = 240,
                 RampLength = 60,
                 RampMode = LightSourceRampMode.Exponential,
                 AmbientOcclusionRadius = AORadius,
@@ -236,6 +252,11 @@ namespace TestGame.Scenes {
                 Pillar(new Vector2(10 + (i * 220), 500), 0.8f);
 
             Rect(new Vector2(630, 650), new Vector2(Width, 690), 0f, 40f);
+            Rect(new Vector2(630, 650), new Vector2(670, Height - 40), 0f, 40f);
+            Rect(new Vector2(630, 790), new Vector2(800, 830), 0f, 40f);
+            Rect(new Vector2(900, 790), new Vector2(Width, 830), 0f, 40f);
+            Rect(new Vector2(630, 930), new Vector2(900, 970), 0f, 40f);
+            Rect(new Vector2(1000, 930), new Vector2(Width - 100, 970), 0f, 40f);
         }
         
         public override void Draw (Squared.Render.Frame frame) {
@@ -247,6 +268,9 @@ namespace TestGame.Scenes {
                 (int)(Renderer.Configuration.MaximumRenderSize.First * LightmapScaleRatio),
                 (int)(Renderer.Configuration.MaximumRenderSize.Second * LightmapScaleRatio)
             );
+            Renderer.Configuration.GIBlendMode = AdditiveIndirectLight ? RenderStates.AdditiveBlend : RenderStates.MaxBlend;
+            Renderer.Configuration.GIBounceFalloffDistance = BounceDistance.Value;
+            Renderer.Configuration.GIBounceSearchDistance = BounceDistance.Value + 16;
 
             // Renderer.InvalidateFields();
             Renderer.UpdateFields(frame, -2);
@@ -264,7 +288,7 @@ namespace TestGame.Scenes {
             )) {
                 ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black);
 
-                var lighting = Renderer.RenderLighting(bg, 1, 1.0f / LightScaleFactor, RenderDirectLight, RenderIndirectLight);
+                var lighting = Renderer.RenderLighting(bg, 1, 1.0f / LightScaleFactor, RenderDirectLight, IndirectLightBrightness);
                 lighting.Resolve(bg, 2, Width, Height, hdr: new HDRConfiguration { InverseScaleFactor = LightScaleFactor });
             };
 
@@ -334,7 +358,7 @@ namespace TestGame.Scenes {
 
                 MovableLight.Position = mousePos;
                 MovableLight.Opacity = EnablePointLight ? 1 : 0;
-                MovableLight.Color.W = Arithmetic.Pulse((float)Time.Seconds / 3f, 0.4f, 0.6f);
+                MovableLight.Color.W = Arithmetic.Pulse((float)Time.Seconds / 4f, 0.7f, 1.0f);
                 MovableLight.CastsShadows = EnableShadows;
 
                 foreach (var d in Environment.Lights.OfType<DirectionalLightSource>()) {

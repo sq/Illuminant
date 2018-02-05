@@ -8,7 +8,6 @@
 #define FUDGE 0.375
 #define SELF_OCCLUSION_HACK 1.5
 
-#define ProbeLightDistanceFalloff false
 #define ProbeLightCastsShadows true
 #define ProbeLightUsesPerProbeNormals false
 
@@ -24,7 +23,6 @@ uniform float2 ProbeCount;
 uniform float Time;
 
 uniform float Brightness;
-uniform float RadianceFalloffDistance;
 
 uniform float2 SphericalHarmonicsTexelSize;
 
@@ -199,12 +197,7 @@ void SHRendererPixelShader(
             localIrradiance += probe.c[j] * cos.c[j];
 
         // float3 normal = normalize(vectorToProbe);
-        float distanceWeight = 1, coneWeight = 1;
-
-        if (ProbeLightDistanceFalloff) {
-            float distance = length(vectorToProbe);
-            distanceWeight -= clamp(distance / RadianceFalloffDistance, 0, 1);
-        }
+        float coneWeight = 1;
 
         if (ProbeLightCastsShadows)
             coneWeight = coneTrace(
@@ -214,9 +207,9 @@ void SHRendererPixelShader(
                 vars
             );
 
-        float localWeight = distanceWeight * weights[i] * coneWeight;
+        float localWeight = weights[i] * coneWeight;
 
-        irradiance += (localIrradiance * localWeight);
+        irradiance += (localIrradiance * Brightness * localWeight);
     }
 
     result = float4(irradiance, 1);

@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Squared.Render.Convenience;
 using Squared.Util;
 
 namespace Squared.Illuminant {
@@ -81,17 +82,19 @@ namespace Squared.Illuminant {
         /// <summary>
         /// The maximum distance that GI probe selection will search for surfaces.
         /// </summary>
-        public float GIBounceSearchDistance = 1024;
+        public float GIBounceSearchDistance = 512;
 
         /// <summary>
         /// The distance at which GI probe light values fade to black.
         /// </summary>
-        public float GIBounceFalloffDistance = 800;
+        public float GIBounceFalloffDistance = 500;
 
         /// <summary>
-        /// The distance at which a GI probe stops contributing light.
+        /// Configures how indirect light is integrated with direct light.
+        /// An additive blend creates very bright areas where bounced light makes contact with surfaces,
+        ///  while a max blend maintains the overall brightness of the scene and lightens dark areas.
         /// </summary>
-        public float GIRadianceFalloffDistance = 100;
+        public BlendState GIBlendMode = RenderStates.MaxBlend;
 
         /// <summary>
         /// The maximum number of distance field slices to update per frame.
