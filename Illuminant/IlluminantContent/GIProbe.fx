@@ -6,8 +6,8 @@
 #define TVARS  DistanceFieldConstants
 #define OFFSET 1
 #define FUDGE 0.375
-#define DO_FIRST_BOUNCE true
-#define DROP_DEAD_SAMPLES_FROM_SH false
+#define DO_FIRST_BOUNCE false
+#define DROP_DEAD_SAMPLES_FROM_SH true
 // FIXME: Broken somehow
 #define ESTIMATED_NORMALS false
 

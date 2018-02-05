@@ -109,6 +109,12 @@ void SHVisualizerPixelShader(
     result = float4(resultRgb * fade, fade);
 }
 
+float readSHProbeXy (float2 indexXy, out SH9Color result, out float3 position) {
+    float probeIndex = floor(indexXy.x + (indexXy.y * ProbeCount.x));
+    position = ProbeOffset + float3(ProbeInterval * indexXy, 0);
+    return readSHProbe(probeIndex, result);
+}
+
 void SHRendererPixelShader(
     in float2 vpos : VPOS,
     out float4 result : COLOR0
@@ -120,7 +126,43 @@ void SHRendererPixelShader(
         shadedPixelPosition, shadedPixelNormal
     );
 
-    result = float4((shadedPixelNormal * 0.5) + 0.5, 1);
+    float2 probeSpacePosition = shadedPixelPosition.xy - ProbeOffset;
+    float2 probeIndexTl = floor(probeSpacePosition / ProbeInterval.xy);
+    float2 probeIndexBr = ceil(probeSpacePosition / ProbeInterval.xy);
+
+    float2 probeIndices[4] = { 
+        probeIndexTl, 
+        float2(probeIndexBr.x, probeIndexTl.y), 
+        float2(probeIndexTl.x, probeIndexBr.y),
+        probeIndexBr
+    };
+    float    weights[4] = {0.25, 0.25, 0.25, 0.25};
+
+    /*
+    result = float4(probeIndexXy.x / 40, probeIndexXy.y / 40, probeIndex / 1024, 1);
+    return;
+    */
+    // float3 irradiance = computeSHIrradiance(probes[0], -normalize(vectorToProbe));
+
+    float3 irradiance = 0;
+
+    for (int i = 0; i < 4; i++) {
+        SH9Color probe;
+        float3 probePosition;
+
+        readSHProbeXy(probeIndices[i], probe, probePosition);
+
+        float3 vectorToProbe = shadedPixelPosition - probePosition;
+        float3 normal = normalize(vectorToProbe);
+
+        SH9 cos = SHCosineLobe(normal);
+        SHScaleByCosine(cos);
+
+        for (int j = 0; j < SHValueCount; j++)
+            irradiance += probe.c[j] * cos.c[j] * weights[i];
+    }
+
+    result = float4(irradiance, 1);
 }
 
 technique VisualizeGI {

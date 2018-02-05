@@ -249,12 +249,15 @@ namespace Squared.Illuminant {
                 (dm, _) => {
                     dm.Device.BlendState = BlendState.Opaque;
 
+                    SetLightShaderParameters(m, Configuration.DefaultQuality);
+
                     p["Brightness"].SetValue(1);
+                    p["ProbeOffset"].SetValue(Environment.GIProbeOffset);
+                    p["ProbeInterval"].SetValue(Environment.GIProbeInterval);
+                    p["ProbeCount"].SetValue(new Vector2(_GIProbeCountX, _GIProbeCountY));
                     p["SphericalHarmonicsTexelSize"].SetValue(new Vector2(1.0f / _GIProbeSH.Width, 1.0f / _GIProbeSH.Height));
                     p["SphericalHarmonics"].SetValue((Texture2D)null);
                     p["SphericalHarmonics"].SetValue(_GIProbeSH);
-
-                    SetLightShaderParameters(m, Configuration.DefaultQuality);
 
                     m.Flush();
                 },
