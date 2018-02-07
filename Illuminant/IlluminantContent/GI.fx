@@ -9,7 +9,6 @@
 #define SELF_OCCLUSION_HACK 1.5
 
 #define ProbeLightCastsShadows true
-#define ProbeLightUsesPerProbeNormals false
 
 #define ConeShadowRadius 4
 #define ConeShadowRamp 2
@@ -59,6 +58,7 @@ float readSHProbe (
     for (int y = 0; y < SHTexelCount; y++) {
         uv.y = (y + FUDGE) * SphericalHarmonicsTexelSize.y;
         float4 coeff = tex2Dlod(SphericalHarmonicsSampler, uv);
+        // FIXME: This loop is being unrolled here... is that bad?
         result.c[y] = coeff.rgb;
         received += coeff.a;
     }
@@ -117,6 +117,49 @@ float readSHProbeXy (float2 indexXy, out SH9Color result, out float3 position) {
     return readSHProbe(probeIndex, result);
 }
 
+float4 computeProbeRadiance(
+    in float3 shadedPixelPosition,
+    in float2 probeIndexXy,
+    in SH9 cos,
+    in DistanceFieldConstants vars
+) {
+    SH9Color probe;
+    float3 probePosition;
+
+    float received = readSHProbeXy(probeIndexXy, probe, probePosition);
+    [branch]
+    if (received < 1)
+        return float4(0, 0, 0, 0);
+
+    float3 vectorToProbe = probePosition - shadedPixelPosition;
+    float3 normalToProbe = normalize(vectorToProbe);
+    float3 localRadiance = 0;
+
+    for (int j = 0; j < SHValueCount; j++)
+        localRadiance += probe.c[j] * cos.c[j];
+
+    float coneWeight = 1;
+
+    if (ProbeLightCastsShadows)
+        coneWeight = coneTrace(
+            probePosition, float2(ConeShadowRadius, ConeShadowRamp),
+            float2(getConeGrowthFactor(), 1),
+            shadedPixelPosition + (SELF_OCCLUSION_HACK * normalToProbe),
+            vars
+        );
+
+    return float4(localRadiance * coneWeight, 1);
+}
+
+float4 conditionalBlend (float4 lhs, float4 rhs, float weight) {
+    if (lhs.w < 1)
+        return rhs;
+    else if (rhs.w < 1)
+        return lhs;
+
+    return lerp(lhs, rhs, weight);
+}
+
 float3 SHRendererPixelShaderCore(
     float3 shadedPixelPosition,
     float3 shadedPixelNormal
@@ -129,72 +172,40 @@ float3 SHRendererPixelShaderCore(
     float2 tlProbePosition = (probeIndexTl * ProbeInterval.xy);
     float2 probeIndexBr = clamp(ceil(probeSpacePosition / ProbeInterval.xy), minIndex, maxIndex);
 
+    float2 weightXY = (probeSpacePosition - tlProbePosition) / ProbeInterval.xy;
     float2 probeIndices[4] = {
         probeIndexTl,
         float2(probeIndexBr.x, probeIndexTl.y),
         float2(probeIndexTl.x, probeIndexBr.y),
         probeIndexBr
     };
-    float2 weightXY = (probeSpacePosition - tlProbePosition) / ProbeInterval.xy;
-    float weights[4] = {
-        0,
-        weightXY.x * (1 - weightXY.y),
-        (1 - weightXY.x) * weightXY.y,
-        weightXY.x * weightXY.y,
+    const float4 writeMasks[4] = {
+        float4(1, 0, 0, 0),
+        float4(0, 1, 0, 0),
+        float4(0, 0, 1, 0),
+        float4(0, 0, 0, 1)
     };
-    weights[0] = 1 - (weights[1] + weights[2] + weights[3]);
-
-    float3 irradiance = 0;
-    float divisor = 0.0001;
+    float4 radiances[4];
 
     DistanceFieldConstants vars = makeDistanceFieldConstants();
 
-    SH9 cos;
-
-    if (!ProbeLightUsesPerProbeNormals) {
-        cos = SHCosineLobe(shadedPixelNormal);
-        SHScaleByCosine(cos);
-    }
+    SH9 cos = SHCosineLobe(shadedPixelNormal);
+    SHScaleByCosine(cos);
 
     [loop]
     for (int i = 0; i < 4; i++) {
-        SH9Color probe;
-        float3 probePosition;
-
-        float received = readSHProbeXy(probeIndices[i], probe, probePosition);
-        [branch]
-        if (received < 1)
-            continue;
-
-        float3 vectorToProbe = probePosition - shadedPixelPosition;
-        float3 normalToProbe = normalize(vectorToProbe);
-
-        if (ProbeLightUsesPerProbeNormals) {
-            cos = SHCosineLobe(normalToProbe);
-            SHScaleByCosine(cos);
-        }
-
-        float3 localIrradiance = 0;
-        for (int j = 0; j < SHValueCount; j++)
-            localIrradiance += probe.c[j] * cos.c[j];
-
-        // float3 normal = normalize(vectorToProbe);
-        float coneWeight = 1;
-
-        if (ProbeLightCastsShadows)
-            coneWeight = coneTrace(
-                probePosition, float2(ConeShadowRadius, ConeShadowRamp),
-                float2(getConeGrowthFactor(), 1),
-                shadedPixelPosition + (SELF_OCCLUSION_HACK * normalToProbe),
-                vars
-            );
-
-        float localWeight = weights[i] * coneWeight;
-
-        irradiance += (localIrradiance * localWeight);
+        float4 mask = writeMasks[i];
+        float4 localRadiance = computeProbeRadiance(shadedPixelPosition, probeIndices[i], cos, vars);
+        radiances[0] = lerp(radiances[0], localRadiance, mask.x);
+        radiances[1] = lerp(radiances[1], localRadiance, mask.y);
+        radiances[2] = lerp(radiances[2], localRadiance, mask.z);
+        radiances[3] = lerp(radiances[3], localRadiance, mask.w);
     }
 
-    return irradiance;
+    float4 blendedT = conditionalBlend(radiances[0], radiances[1], weightXY.x);
+    float4 blendedB = conditionalBlend(radiances[2], radiances[3], weightXY.x);
+    float4 blended = conditionalBlend(blendedT, blendedB, weightXY.y);
+    return blended.rgb;
 }
 
 void SHRendererPixelShader(

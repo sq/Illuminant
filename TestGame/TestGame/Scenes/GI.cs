@@ -57,10 +57,10 @@ namespace TestGame.Scenes {
         public GlobalIlluminationTest (TestGame game, int width, int height)
             : base(game, width, height) {
 
-            TwoPointFiveD.Value = true;
+            TwoPointFiveD.Value = false;
             DistanceFieldResolution.Value = 0.25f;
             LightmapScaleRatio.Value = 1.0f;
-            RenderDirectLight.Value = true;
+            RenderDirectLight.Value = false;
             ShowProbeSH.Value = false;
             EnableShadows.Value = true;
             EnablePointLight.Value = true;
@@ -68,8 +68,8 @@ namespace TestGame.Scenes {
             IndirectLightBrightness.Value = 1.0f;
             AdditiveIndirectLight.Value = false;
             BounceDistance.Value = 1024;
-            ProbeInterval.Value = 48;
-            GISourceBounce.Value = 2;
+            ProbeInterval.Value = 32;
+            GISourceBounce.Value = 0;
             LightScaleFactor.Value = 2.0f;
             EdgeShadows.Value = true;
 
