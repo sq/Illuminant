@@ -341,8 +341,7 @@ namespace Squared.Illuminant {
 
                     SetLightShaderParameters(m, Configuration.GIProbeQuality);
 
-                    p["InverseScaleFactor"].SetValue(1.0f / intensityScale);
-                    p["Brightness"].SetValue(brightness);
+                    p["Brightness"].SetValue(brightness * intensityScale);
                     p["ProbeOffset"].SetValue(Environment.GIProbeOffset);
                     p["ProbeInterval"].SetValue(Environment.GIProbeInterval);
                     p["ProbeCount"].SetValue(new Vector2(_GIProbeCountX, _GIProbeCountY));

@@ -22,7 +22,6 @@ uniform float2 ProbeCount;
 
 uniform float Time;
 
-uniform float InverseScaleFactor;
 uniform float Brightness;
 
 uniform float2 SphericalHarmonicsTexelSize;
@@ -104,7 +103,6 @@ void SHVisualizerPixelShader(
 
     float3 irradiance = computeSHIrradiance(rad, normal);
 
-    // FIXME: InverseScaleFactor
     float3 resultRgb = irradiance * Brightness;
         // HACK: This seems to be needed to compensate for the cosine scaling of the color value
         // * (1.0 / Pi);

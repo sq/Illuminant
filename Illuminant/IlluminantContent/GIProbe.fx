@@ -129,7 +129,6 @@ void SHGeneratorPixelShader(
 
     for (float idx = 0; idx < NormalCount; idx++) {
         float4 uv = float4((vpos.x + FUDGE) * ProbeValuesTexelSize.x, (idx + FUDGE) * ProbeValuesTexelSize.y, 0, 0);
-        // FIXME: InverseScaleFactor
         float4 value = tex2Dlod(ProbeValuesSampler, uv);
 
         if (value.w < 0.9)
