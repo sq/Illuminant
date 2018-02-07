@@ -157,7 +157,12 @@ namespace Squared.Illuminant {
                     for (int i = 0; i < 16; i++)
                         dm.Device.Textures[i] = null;
                     dm.PopRenderTarget();
-                    _GIProbesDirty = false;
+
+                    // HACK: If probes are selected while the distance field is only partially generated, 
+                    //  they will potentially penetrate walls
+                    if (_DistanceField.ValidSliceCount >= _DistanceField.SliceCount)
+                        _GIProbesDirty = false;
+
                     _GIProbesWereSelected = true;
                 }
             ))

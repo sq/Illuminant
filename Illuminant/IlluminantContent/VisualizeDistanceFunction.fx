@@ -6,6 +6,8 @@ float evaluateFunctions (float3 worldPosition, float vars);
 
 #define SAMPLE evaluateFunctions
 #define TVARS  float
+#define TRACE_MIN_STEP_SIZE 2
+#define TRACE_FINAL_MIN_STEP_SIZE 12
 
 #include "VisualizeCommon.fxh"
 

@@ -3,6 +3,8 @@
 
 #define SAMPLE sampleDistanceField
 #define TVARS  DistanceFieldConstants
+#define TRACE_MIN_STEP_SIZE 2
+#define TRACE_FINAL_MIN_STEP_SIZE 12
 
 #include "VisualizeCommon.fxh"
 

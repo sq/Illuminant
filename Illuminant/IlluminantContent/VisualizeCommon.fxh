@@ -50,7 +50,7 @@ bool traceSurface (
         float3 samplePosition = rayStart + (rayDirection * positionAlongRay);
         float distance = SAMPLE(samplePosition, vars);
 
-        float minStepSize = max(2.5, (positionAlongRay / rayLength) * 12);
+        float minStepSize = max(TRACE_MIN_STEP_SIZE, (positionAlongRay / rayLength) * TRACE_FINAL_MIN_STEP_SIZE);
 
         if (distance <= minStepSize) {
             // HACK: Estimate a likely intersection point

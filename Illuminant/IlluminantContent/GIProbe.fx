@@ -11,6 +11,10 @@
 // FIXME: Broken somehow
 #define ESTIMATED_NORMALS false
 
+// Lower than the vis shaders to make sure we get well-placed GI probe positions
+#define TRACE_MIN_STEP_SIZE 0.5
+#define TRACE_FINAL_MIN_STEP_SIZE 2
+
 #include "VisualizeCommon.fxh"
 
 #include "SphericalHarmonics.fxh"
@@ -89,7 +93,7 @@ void ProbeSelectorPixelShader(
     resultNormal = 0;
 
     [branch]
-    if (initialDistance <= 2)
+    if (initialDistance <= 1.66)
         return;
 
     if (DO_FIRST_BOUNCE) {
@@ -99,7 +103,7 @@ void ProbeSelectorPixelShader(
 
         if (traceSurface(requestedPosition, ray, intersectionDistance, estimatedIntersection, vars)) {
             resultPosition = float4(
-                estimatedIntersection - (normal * OFFSET), 
+                estimatedIntersection,
                 1 - clamp(intersectionDistance / BounceFalloffDistance, 0, 1)
             );
 
