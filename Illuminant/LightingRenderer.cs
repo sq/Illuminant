@@ -297,7 +297,7 @@ namespace Squared.Illuminant {
                     coordinator.Device, Configuration.MaximumGIProbeCount, GIProbeNormalCount, false,
                     SurfaceFormat.HdrBlendable, DepthFormat.None, 0, RenderTargetUsage.PreserveContents
                 );
-
+                
                 for (int i = 0; i < _GIProbeBounces.Length; i++)
                     _GIProbeBounces[i] = new RenderTarget2D(
                         coordinator.Device, Configuration.MaximumGIProbeCount, SHValueCount, false,

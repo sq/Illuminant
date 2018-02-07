@@ -41,7 +41,8 @@ namespace TestGame.Scenes {
             ShowProbeSH,
             EnablePointLight,
             EnableDirectionalLights,
-            AdditiveIndirectLight;
+            AdditiveIndirectLight,
+            EdgeShadows;
 
         Slider DistanceFieldResolution,
             LightmapScaleRatio,
@@ -59,17 +60,18 @@ namespace TestGame.Scenes {
             TwoPointFiveD.Value = true;
             DistanceFieldResolution.Value = 0.25f;
             LightmapScaleRatio.Value = 1.0f;
-            RenderDirectLight.Value = false;
+            RenderDirectLight.Value = true;
             ShowProbeSH.Value = false;
             EnableShadows.Value = true;
             EnablePointLight.Value = true;
             EnableDirectionalLights.Value = false;
-            IndirectLightBrightness.Value = 3.0f;
+            IndirectLightBrightness.Value = 1.0f;
             AdditiveIndirectLight.Value = false;
             BounceDistance.Value = 1024;
             ProbeInterval.Value = 48;
-            GISourceBounce.Value = 0;
+            GISourceBounce.Value = 2;
             LightScaleFactor.Value = 4.0f;
+            EdgeShadows.Value = true;
 
             ShowGBuffer.Key = Keys.G;
             TwoPointFiveD.Key = Keys.D2;
@@ -81,6 +83,7 @@ namespace TestGame.Scenes {
             EnableDirectionalLights.Key = Keys.D3;
             EnablePointLight.Key = Keys.D4;
             AdditiveIndirectLight.Key = Keys.A;
+            EdgeShadows.Key = Keys.O;
 
             DistanceFieldResolution.MinusKey = Keys.D5;
             DistanceFieldResolution.PlusKey = Keys.D6;
@@ -231,7 +234,6 @@ namespace TestGame.Scenes {
                 Radius = 240,
                 RampLength = 60,
                 RampMode = LightSourceRampMode.Exponential,
-                AmbientOcclusionRadius = AORadius,
                 AmbientOcclusionOpacity = AOOpacity
             };
 
@@ -248,7 +250,6 @@ namespace TestGame.Scenes {
                 Direction = new Vector3(-0.75f, -0.7f, -0.2f),
                 Color = new Vector4(0.1f, 0.0f, 0.8f, 0.6f),
                 Quality = DirectionalQuality,
-                AmbientOcclusionRadius = AORadius,
                 AmbientOcclusionOpacity = AOOpacity
             });
 
@@ -256,7 +257,6 @@ namespace TestGame.Scenes {
                 Direction = new Vector3(0.5f, -0.7f, -0.3f),
                 Color = new Vector4(0.1f, 0.8f, 0.0f, 0.6f),
                 Quality = DirectionalQuality,
-                AmbientOcclusionRadius = AORadius,
                 AmbientOcclusionOpacity = AOOpacity
             });
 
@@ -293,8 +293,10 @@ namespace TestGame.Scenes {
                 (int)(Renderer.Configuration.MaximumRenderSize.Second * LightmapScaleRatio)
             );
             Renderer.Configuration.GIBlendMode = AdditiveIndirectLight ? RenderStates.AdditiveBlend : RenderStates.MaxBlend;
-            Renderer.Configuration.GIBounceFalloffDistance = BounceDistance.Value - 1;
             Renderer.Configuration.GIBounceSearchDistance = BounceDistance.Value;
+
+            foreach (var ls in Environment.Lights)
+                ls.AmbientOcclusionRadius = EdgeShadows ? AORadius : 0.0f;
 
             // Renderer.InvalidateFields();
             Renderer.UpdateFields(frame, -2);

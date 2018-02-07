@@ -25,7 +25,7 @@ namespace Squared.Illuminant {
 
         private Vector3 LastGIProbeOffset;
         private Vector2 LastGIProbeInterval;
-        private float   LastGISearchDistance, LastGIBounceFalloff;
+        private float   LastGISearchDistance;
 
         internal int GIProbeNormalCount {
             get {
@@ -83,14 +83,12 @@ namespace Squared.Illuminant {
                 if (
                     (LastGIProbeInterval != Environment.GIProbeInterval) ||
                     (LastGIProbeOffset != Environment.GIProbeOffset) ||
-                    (LastGISearchDistance != Configuration.GIBounceSearchDistance) ||
-                    (LastGIBounceFalloff != Configuration.GIBounceFalloffDistance)
+                    (LastGISearchDistance != Configuration.GIBounceSearchDistance)
                 ) {
                     _GIProbesDirty = true;
                     LastGIProbeInterval = Environment.GIProbeInterval;
                     LastGIProbeOffset = Environment.GIProbeOffset;
                     LastGISearchDistance = Configuration.GIBounceSearchDistance;
-                    LastGIBounceFalloff = Configuration.GIBounceFalloffDistance;
                     for (int i = 0; i < Configuration.MaximumGIBounceCount; i++)
                         _GIProbeTimestamps[i] = 0;
                 }
@@ -98,28 +96,25 @@ namespace Squared.Illuminant {
                 if (_GIProbesDirty)
                     SelectGIProbes(group, 0);
 
-                // Always update the first bounce so that it doesn't lag.
-                UpdateLightProbes(group, 1, _GIProbeValues, true, intensityScale);
-                UpdateGIProbeSH(group, 2, 0, intensityScale);
-                _GIProbeTimestamps[0] = Time.Ticks;
+                int bounce = 0;
+                long lowestTimestamp = long.MaxValue;
 
-                if (Configuration.MaximumGIBounceCount > 1) {
-                    // Incrementally update the other bounces.
-                    int bounce = 1;
-                    long lowestTimestamp = long.MaxValue;
-
-                    for (int i = 1; i < Configuration.MaximumGIBounceCount; i++) {
-                        if (_GIProbeTimestamps[i] < lowestTimestamp) {
-                            bounce = i;
-                            lowestTimestamp = _GIProbeTimestamps[i];
-                        }
+                for (int i = 0; i < Configuration.MaximumGIBounceCount; i++) {
+                    if (_GIProbeTimestamps[i] < lowestTimestamp) {
+                        bounce = i;
+                        lowestTimestamp = _GIProbeTimestamps[i];
                     }
-
-                    UpdateLightProbesFromGI(group, 3, _GIProbeValues, bounce - 1, Configuration.GIBounceBrightnessAmplification);
-                    UpdateGIProbeSH(group, 4, bounce, 1);
-
-                    _GIProbeTimestamps[bounce] = Time.Ticks;
                 }
+
+                if (bounce == 0) {
+                    UpdateLightProbes(group, 1, _GIProbeValues, true, intensityScale);
+                    UpdateGIProbeSH(group, 2, 0, intensityScale);
+                } else {
+                    UpdateLightProbesFromGI(group, 1, _GIProbeValues, bounce - 1);
+                    UpdateGIProbeSH(group, 2, bounce, 1);
+                }
+
+                _GIProbeTimestamps[bounce] = Time.Ticks;
             }
         }
 
@@ -148,7 +143,6 @@ namespace Squared.Illuminant {
                     p["ProbeInterval"].SetValue(Environment.GIProbeInterval);
                     p["ProbeCount"].SetValue(new Vector2(_GIProbeCountX, _GIProbeCountY));
                     p["NormalCount"].SetValue(GIProbeNormalCount);
-                    p["BounceFalloffDistance"].SetValue(Configuration.GIBounceFalloffDistance);
                     p["BounceSearchDistance"].SetValue(Configuration.GIBounceSearchDistance);
 
                     m.Flush();
@@ -183,7 +177,7 @@ namespace Squared.Illuminant {
             }
         }
 
-        private void UpdateLightProbesFromGI (IBatchContainer container, int layer, RenderTarget2D renderTarget, int sourceBounceIndex, float brightness) {
+        private void UpdateLightProbesFromGI (IBatchContainer container, int layer, RenderTarget2D renderTarget, int sourceBounceIndex) {
             var source = _GIProbeBounces[sourceBounceIndex];
             var m = IlluminantMaterials.RenderLightProbesFromGI;
             var p = m.Effect.Parameters;
@@ -196,7 +190,7 @@ namespace Squared.Illuminant {
 
                     SetLightShaderParameters(m, Configuration.GIProbeQuality);
 
-                    p["Brightness"].SetValue(brightness);
+                    p["Brightness"].SetValue(Configuration.GIBounceBrightnessAmplification);
 
                     p["GBuffer"].SetValue((Texture2D)null);
                     p["GBuffer"].SetValue(_SelectedGIProbePositions);
@@ -243,6 +237,7 @@ namespace Squared.Illuminant {
             var m = IlluminantMaterials.GIProbeSHGenerator;
             var p = m.Effect.Parameters;
 
+            var previousBounce = (bounceIndex > 0) ? _GIProbeBounces[bounceIndex - 1] : null;
             var bounce = _GIProbeBounces[bounceIndex];
 
             using (var rt = BatchGroup.New(
@@ -250,12 +245,20 @@ namespace Squared.Illuminant {
                 (dm, _) => {
                     dm.PushRenderTarget(bounce);
                     dm.Device.Viewport = new Viewport(0, 0, GIProbeCount, SHValueCount);
+                    dm.Device.BlendState = BlendState.Opaque;
 
                     p["InverseScaleFactor"].SetValue(1.0f / intensityScale);
                     p["NormalCount"].SetValue(GIProbeNormalCount);
                     p["ProbeValuesTexelSize"].SetValue(new Vector2(1.0f / _GIProbeValues.Width, 1.0f / _GIProbeValues.Height));
                     p["ProbeValues"].SetValue((Texture2D)null);
                     p["ProbeValues"].SetValue(_GIProbeValues);
+                    p["PreviousBounceTexelSize"].SetValue(
+                        (previousBounce != null)
+                            ? new Vector2(1.0f / previousBounce.Width, 1.0f / previousBounce.Height)
+                            : Vector2.Zero
+                    );
+                    p["PreviousBounce"].SetValue((Texture2D)null);
+                    p["PreviousBounce"].SetValue(previousBounce);
 
                     m.Flush();
                 },
@@ -264,21 +267,22 @@ namespace Squared.Illuminant {
                         dm.Device.Textures[i] = null;
                     dm.PopRenderTarget();
                 }
-            ))
-            using (var pb = PrimitiveBatch<GIProbeVertex>.New(rt, 1, m)) {
-                RenderTrace.Marker(rt, 0, "Update spherical harmonics for bounce {0}", bounceIndex);
+            )) {
+                using (var pb = PrimitiveBatch<GIProbeVertex>.New(rt, 1, m)) {
+                    RenderTrace.Marker(rt, 0, "Update spherical harmonics for bounce {0}", bounceIndex);
 
-                var pdc = new PrimitiveDrawCall<GIProbeVertex>(
-                    PrimitiveType.TriangleList,
-                    new [] {
-                        new GIProbeVertex(-1, -1),
-                        new GIProbeVertex(1, -1),
-                        new GIProbeVertex(1, 1),
-                        new GIProbeVertex(-1, 1)
-                    },
-                    0, 4, QuadIndices, 0, 2
-                );
-                pb.Add(ref pdc);
+                    var pdc = new PrimitiveDrawCall<GIProbeVertex>(
+                        PrimitiveType.TriangleList,
+                        new [] {
+                            new GIProbeVertex(-1, -1),
+                            new GIProbeVertex(1, -1),
+                            new GIProbeVertex(1, 1),
+                            new GIProbeVertex(-1, 1)
+                        },
+                        0, 4, QuadIndices, 0, 2
+                    );
+                    pb.Add(ref pdc);
+                }
             }
         }
 
@@ -331,7 +335,7 @@ namespace Squared.Illuminant {
         }
 
         internal void RenderGlobalIllumination (
-            IBatchContainer container, int layer, float brightness, int lastBounceIndex, float intensityScale
+            IBatchContainer container, int layer, float brightness, int bounceIndex, float intensityScale
         ) {
             var m = IlluminantMaterials.RenderGI;
             var p = m.Effect.Parameters;
@@ -356,34 +360,27 @@ namespace Squared.Illuminant {
                         dm.Device.Textures[i] = null;
                 }
             )) {
-                for (int i = 0; i <= lastBounceIndex; i++) {
-                    if (_GIProbeTimestamps[i] <= 0)
-                        continue;
-                    if (i != lastBounceIndex)
-                        continue;
-
-                    var source = _GIProbeBounces[i];
-                    using (var pb = PrimitiveBatch<GIProbeVertex>.New(
-                        group, (i * 2) + 1, m, 
-                        (dm, _) => {
-                            p["SphericalHarmonics"].SetValue((Texture2D)null);
-                            p["SphericalHarmonics"].SetValue(source);
-                        }
-                    )) {
-                        RenderTrace.Marker(group, i * 2, "Render global illumination from bounce {0}", i);
-
-                        var pdc = new PrimitiveDrawCall<GIProbeVertex>(
-                            PrimitiveType.TriangleList,
-                            new [] {
-                                new GIProbeVertex(-1, -1),
-                                new GIProbeVertex(1, -1),
-                                new GIProbeVertex(1, 1),
-                                new GIProbeVertex(-1, 1)
-                            },
-                            0, 4, QuadIndices, 0, 2
-                        );
-                        pb.Add(ref pdc);
+                var source = _GIProbeBounces[bounceIndex];
+                using (var pb = PrimitiveBatch<GIProbeVertex>.New(
+                    group, 1, m, 
+                    (dm, _) => {
+                        p["SphericalHarmonics"].SetValue((Texture2D)null);
+                        p["SphericalHarmonics"].SetValue(source);
                     }
+                )) {
+                    RenderTrace.Marker(group, 0, "Render global illumination from bounce {0}", bounceIndex);
+
+                    var pdc = new PrimitiveDrawCall<GIProbeVertex>(
+                        PrimitiveType.TriangleList,
+                        new [] {
+                            new GIProbeVertex(-1, -1),
+                            new GIProbeVertex(1, -1),
+                            new GIProbeVertex(1, 1),
+                            new GIProbeVertex(-1, 1)
+                        },
+                        0, 4, QuadIndices, 0, 2
+                    );
+                    pb.Add(ref pdc);
                 }
             }
         }

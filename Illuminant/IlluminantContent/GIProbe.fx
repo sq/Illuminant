@@ -7,7 +7,7 @@
 #define OFFSET 1
 #define FUDGE 0.375
 #define DO_FIRST_BOUNCE true
-#define DROP_DEAD_SAMPLES_FROM_SH true
+#define DROP_DEAD_SAMPLES_FROM_SH false
 // FIXME: Broken somehow
 #define ESTIMATED_NORMALS false
 
@@ -29,11 +29,11 @@ uniform float2 ProbeCount;
 
 uniform float Time;
 
-uniform float BounceFalloffDistance, BounceSearchDistance;
+uniform float BounceSearchDistance;
 uniform float InverseScaleFactor;
 uniform float Brightness;
 
-uniform float2 ProbeValuesTexelSize, SphericalHarmonicsTexelSize;
+uniform float2 ProbeValuesTexelSize, PreviousBounceTexelSize;
 
 Texture2D ProbeValues        : register(t5);
 sampler   ProbeValuesSampler : register(s5) {
@@ -45,9 +45,9 @@ sampler   ProbeValuesSampler : register(s5) {
     MagFilter = POINT;
 };
 
-Texture2D SphericalHarmonics        : register(t6);
-sampler   SphericalHarmonicsSampler : register(s6) {
-    Texture = (SphericalHarmonics);
+Texture2D PreviousBounce        : register(t6);
+sampler   PreviousBounceSampler : register(s6) {
+    Texture = (PreviousBounce);
     AddressU = CLAMP;
     AddressV = CLAMP;
     MipFilter = POINT;
@@ -103,8 +103,7 @@ void ProbeSelectorPixelShader(
 
         if (traceSurface(requestedPosition, ray, intersectionDistance, estimatedIntersection, vars)) {
             resultPosition = float4(
-                estimatedIntersection,
-                1 - clamp(intersectionDistance / BounceFalloffDistance, 0, 1)
+                estimatedIntersection, 1
             );
 
             if (ESTIMATED_NORMALS) {
@@ -152,7 +151,15 @@ void SHGeneratorPixelShader(
     else
         SHScaleColorByCosine(r, NormalCount);
 
-    result.rgb = r.c[y];
+    float3 previousBounceValue = 0;
+
+    if (any(PreviousBounceTexelSize)) {
+        float4 uv = float4((vpos + FUDGE) * PreviousBounceTexelSize, 0, 0);
+        float4 oldSample = tex2Dlod(PreviousBounceSampler, uv);
+        previousBounceValue = oldSample.rgb;
+    }
+
+    result.rgb = r.c[y] + previousBounceValue;
     result.a = received;
 }
 

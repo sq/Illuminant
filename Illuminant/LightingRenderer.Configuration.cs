@@ -90,15 +90,10 @@ namespace Squared.Illuminant {
         public float GIBounceSearchDistance = 512;
 
         /// <summary>
-        /// The distance at which GI probe light values fade to black.
-        /// </summary>
-        public float GIBounceFalloffDistance = 500;
-
-        /// <summary>
         /// Artificially increases the brightness of each global illumination bounce to compensate for
         ///  lost energy.
         /// </summary>
-        public float GIBounceBrightnessAmplification = 1.66f;
+        public float GIBounceBrightnessAmplification = 1.33f;
 
         /// <summary>
         /// Configures how indirect light is integrated with direct light.

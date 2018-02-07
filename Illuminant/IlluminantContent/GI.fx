@@ -230,9 +230,9 @@ void LightProbeSHRendererPixelShader(
 
     float3 irradiance = SHRendererPixelShaderCore(
         shadedPixelPosition, shadedPixelNormal
-    );
+    ) * opacity * Brightness;
 
-    result = float4(irradiance * opacity * Brightness, 1);
+    result = float4(irradiance, 1);
 }
 
 technique VisualizeGI {
