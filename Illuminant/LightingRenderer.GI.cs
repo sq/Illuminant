@@ -13,16 +13,13 @@ using Squared.Util;
 
 namespace Squared.Illuminant {
     public sealed partial class LightingRenderer : IDisposable, INameableGraphicsObject {
-        // FIXME: 3 bounces *really* doesn't work how I want
-        public const int GIBounceCount = 5;
-
         internal const int SHValueCount = 9;
 
         public int GIProbeCount { get; private set; }
         private readonly RenderTarget2D _SelectedGIProbePositions, _SelectedGIProbeNormals;
         private readonly RenderTarget2D _GIProbeValues;
-        private readonly RenderTarget2D[] _GIProbeBounces = new RenderTarget2D[GIBounceCount];
-        private readonly long[] _GIProbeTimestamps = new long[GIBounceCount];
+        private readonly RenderTarget2D[] _GIProbeBounces;
+        private readonly long[] _GIProbeTimestamps;
         private bool _GIProbesDirty, _GIProbesWereSelected;
         private int _GIProbeCountX, _GIProbeCountY;
 
@@ -94,7 +91,7 @@ namespace Squared.Illuminant {
                     LastGIProbeOffset = Environment.GIProbeOffset;
                     LastGISearchDistance = Configuration.GIBounceSearchDistance;
                     LastGIBounceFalloff = Configuration.GIBounceFalloffDistance;
-                    for (int i = 0; i < GIBounceCount; i++)
+                    for (int i = 0; i < Configuration.MaximumGIBounceCount; i++)
                         _GIProbeTimestamps[i] = 0;
                 }
 
@@ -106,12 +103,12 @@ namespace Squared.Illuminant {
                 UpdateGIProbeSH(group, 2, 0, intensityScale);
                 _GIProbeTimestamps[0] = Time.Ticks;
 
-                if (GIBounceCount > 1) {
+                if (Configuration.MaximumGIBounceCount > 1) {
                     // Incrementally update the other bounces.
                     int bounce = 1;
                     long lowestTimestamp = long.MaxValue;
 
-                    for (int i = 1; i < GIBounceCount; i++) {
+                    for (int i = 1; i < Configuration.MaximumGIBounceCount; i++) {
                         if (_GIProbeTimestamps[i] < lowestTimestamp) {
                             bounce = i;
                             lowestTimestamp = _GIProbeTimestamps[i];
@@ -356,6 +353,8 @@ namespace Squared.Illuminant {
             )) {
                 for (int i = 0; i <= lastBounceIndex; i++) {
                     if (_GIProbeTimestamps[i] <= 0)
+                        continue;
+                    if (i != lastBounceIndex)
                         continue;
 
                     var source = _GIProbeBounces[i];

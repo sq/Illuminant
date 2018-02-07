@@ -32,6 +32,11 @@ namespace Squared.Illuminant {
                                   GIProbeQualityLevel;
 
         /// <summary>
+        /// Determines how many bounces of indirect light can be simulated.
+        /// </summary>
+        public readonly int       MaximumGIBounceCount;
+
+        /// <summary>
         /// Uses a high-precision g-buffer and internal lightmap.
         /// </summary>
         public readonly bool      HighQuality;
@@ -89,7 +94,11 @@ namespace Squared.Illuminant {
         /// </summary>
         public float GIBounceFalloffDistance = 500;
 
-        public float GIBounceBrightnessAmplification = 1.5f;
+        /// <summary>
+        /// Artificially increases the brightness of each global illumination bounce to compensate for
+        ///  lost energy.
+        /// </summary>
+        public float GIBounceBrightnessAmplification = 1.66f;
 
         /// <summary>
         /// Configures how indirect light is integrated with direct light.
@@ -144,7 +153,8 @@ namespace Squared.Illuminant {
             int ringBufferSize = 2,
             int maximumLightProbeCount = 256,
             int maximumGIProbeCount = 1024,
-            GIProbeQualityLevels giProbeQualityLevel = GIProbeQualityLevels.Medium
+            GIProbeQualityLevels giProbeQualityLevel = GIProbeQualityLevels.Medium,
+            int maximumGIBounceCount = 2
         ) {
             HighQuality = highQuality;
             MaximumRenderSize = new Pair<int>(maxWidth, maxHeight);
@@ -156,6 +166,7 @@ namespace Squared.Illuminant {
             // HACK: Texture coordinates get all mangled if these values aren't powers of two. Ugh.
             MaximumLightProbeCount = (int)Math.Pow(2, Math.Ceiling(Math.Log(maximumLightProbeCount, 2)));
             MaximumGIProbeCount = (int)Math.Pow(2, Math.Ceiling(Math.Log(maximumGIProbeCount, 2)));
+            MaximumGIBounceCount = maximumGIBounceCount;
             GIProbeQualityLevel = giProbeQualityLevel;
 
             if (MaximumLightProbeCount > 2048)

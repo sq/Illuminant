@@ -25,6 +25,7 @@ namespace TestGame.Scenes {
 
         float LightZ;
 
+        const int BounceCount = 3;
         const int MultisampleCount = 0;
         const int MaxStepCount = 128;
         const float AORadius = 12;
@@ -62,13 +63,13 @@ namespace TestGame.Scenes {
             ShowProbeSH.Value = false;
             EnableShadows.Value = true;
             EnablePointLight.Value = true;
-            EnableDirectionalLights.Value = true;
-            IndirectLightBrightness.Value = 1.0f;
+            EnableDirectionalLights.Value = false;
+            IndirectLightBrightness.Value = 3.0f;
             AdditiveIndirectLight.Value = false;
             BounceDistance.Value = 1024;
             ProbeInterval.Value = 48;
             GISourceBounce.Value = 0;
-            LightScaleFactor.Value = 2.0f;
+            LightScaleFactor.Value = 4.0f;
 
             ShowGBuffer.Key = Keys.G;
             TwoPointFiveD.Key = Keys.D2;
@@ -115,7 +116,7 @@ namespace TestGame.Scenes {
             GISourceBounce.MinusKey = Keys.OemSemicolon;
             GISourceBounce.PlusKey = Keys.OemQuotes;
             GISourceBounce.Min = 0f;
-            GISourceBounce.Max = LightingRenderer.GIBounceCount - 1;
+            GISourceBounce.Max = BounceCount - 1;
             GISourceBounce.Speed = 1f;
 
             LightScaleFactor.MinusKey = Keys.Q;
@@ -208,7 +209,8 @@ namespace TestGame.Scenes {
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(
                     Width, Height, true, false, enableGlobalIllumination: true,
-                    maximumGIProbeCount: 2048, giProbeQualityLevel: GIProbeQualityLevels.High
+                    maximumGIProbeCount: 2048, giProbeQualityLevel: GIProbeQualityLevels.High,
+                    maximumGIBounceCount: BounceCount
                 ) {
                     MaxFieldUpdatesPerFrame = 3,
                     DefaultQuality = {
@@ -281,7 +283,7 @@ namespace TestGame.Scenes {
         public override void Draw (Squared.Render.Frame frame) {
             CreateRenderTargets();
 
-            Environment.GIProbeOffset = new Vector3(ProbeInterval / 2f, ProbeInterval / 2f, 30);
+            Environment.GIProbeOffset = new Vector3(ProbeInterval / 2f, ProbeInterval / 2f, 35);
             Environment.GIProbeInterval = new Vector2(ProbeInterval, ProbeInterval);
 
             Renderer.Configuration.TwoPointFiveD = TwoPointFiveD;
@@ -291,7 +293,7 @@ namespace TestGame.Scenes {
                 (int)(Renderer.Configuration.MaximumRenderSize.Second * LightmapScaleRatio)
             );
             Renderer.Configuration.GIBlendMode = AdditiveIndirectLight ? RenderStates.AdditiveBlend : RenderStates.MaxBlend;
-            Renderer.Configuration.GIBounceFalloffDistance = BounceDistance.Value * 1.5f;
+            Renderer.Configuration.GIBounceFalloffDistance = BounceDistance.Value - 1;
             Renderer.Configuration.GIBounceSearchDistance = BounceDistance.Value;
 
             // Renderer.InvalidateFields();
@@ -391,7 +393,7 @@ namespace TestGame.Scenes {
 
                 MovableLight.Position = mousePos;
                 MovableLight.Opacity = EnablePointLight ? 1 : 0;
-                MovableLight.Color.W = Arithmetic.Pulse((float)Time.Seconds / 4f, 0.7f, 1.0f);
+                MovableLight.Color.W = Arithmetic.Pulse((float)Time.Seconds / 4f, 0.7f, 0.9f);
                 MovableLight.CastsShadows = EnableShadows;
 
                 foreach (var d in Environment.Lights.OfType<DirectionalLightSource>()) {

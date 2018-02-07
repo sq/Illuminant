@@ -225,6 +225,9 @@ namespace Squared.Illuminant {
 
             IlluminantMaterials = new IlluminantMaterials(materials);
 
+            _GIProbeBounces = new RenderTarget2D[Configuration.MaximumGIBounceCount];
+            _GIProbeTimestamps = new long[Configuration.MaximumGIBounceCount];
+
             BeginLightPass    = _BeginLightPass;
             EndLightPass      = _EndLightPass;
             EndLightProbePass = _EndLightProbePass;
@@ -294,7 +297,7 @@ namespace Squared.Illuminant {
                     coordinator.Device, Configuration.MaximumGIProbeCount, GIProbeNormalCount, false,
                     SurfaceFormat.HdrBlendable, DepthFormat.None, 0, RenderTargetUsage.PreserveContents
                 );
-                
+
                 for (int i = 0; i < _GIProbeBounces.Length; i++)
                     _GIProbeBounces[i] = new RenderTarget2D(
                         coordinator.Device, Configuration.MaximumGIProbeCount, SHValueCount, false,
@@ -1116,7 +1119,7 @@ namespace Squared.Illuminant {
                 _DistanceField.Invalidate();
             _GIProbesDirty = true;
 
-            for (int i = 0; i < GIBounceCount; i++)
+            for (int i = 0; i < Configuration.MaximumGIBounceCount; i++)
                 _GIProbeTimestamps[i] = 0;
         }
 
