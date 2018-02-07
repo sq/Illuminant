@@ -75,7 +75,7 @@ namespace Squared.Illuminant {
         }
         */
 
-        private void UpdateGIProbes (IBatchContainer container, int layer) {
+        private void UpdateGIProbes (IBatchContainer container, int layer, float intensityScale) {
             if (!Configuration.EnableGlobalIllumination)
                 return;
 
@@ -102,25 +102,27 @@ namespace Squared.Illuminant {
                     SelectGIProbes(group, 0);
 
                 // Always update the first bounce so that it doesn't lag.
-                UpdateLightProbes(group, 1, _GIProbeValues, true);
-                UpdateGIProbeSH(group, 2, 0);
+                UpdateLightProbes(group, 1, _GIProbeValues, true, intensityScale);
+                UpdateGIProbeSH(group, 2, 0, intensityScale);
                 _GIProbeTimestamps[0] = Time.Ticks;
 
-                // Incrementally update the other bounces.
-                int bounce = 1;
-                long lowestTimestamp = long.MaxValue;
+                if (GIBounceCount > 1) {
+                    // Incrementally update the other bounces.
+                    int bounce = 1;
+                    long lowestTimestamp = long.MaxValue;
 
-                for (int i = 1; i < GIBounceCount; i++) {
-                    if (_GIProbeTimestamps[i] < lowestTimestamp) {
-                        bounce = i;
-                        lowestTimestamp = _GIProbeTimestamps[i];
+                    for (int i = 1; i < GIBounceCount; i++) {
+                        if (_GIProbeTimestamps[i] < lowestTimestamp) {
+                            bounce = i;
+                            lowestTimestamp = _GIProbeTimestamps[i];
+                        }
                     }
+
+                    UpdateLightProbesFromGI(group, 3, _GIProbeValues, bounce - 1, Configuration.GIBounceBrightnessAmplification);
+                    UpdateGIProbeSH(group, 4, bounce, 1);
+
+                    _GIProbeTimestamps[bounce] = Time.Ticks;
                 }
-
-                UpdateLightProbesFromGI(group, 3, _GIProbeValues, bounce - 1, 1.0f + Configuration.GIBounceBrightnessAmplification);
-                UpdateGIProbeSH(group, 4, bounce);
-
-                _GIProbeTimestamps[bounce] = Time.Ticks;
             }
         }
 
@@ -235,7 +237,7 @@ namespace Squared.Illuminant {
             }
         }
 
-        private void UpdateGIProbeSH (IBatchContainer container, int layer, int bounceIndex) {
+        private void UpdateGIProbeSH (IBatchContainer container, int layer, int bounceIndex, float intensityScale) {
             var m = IlluminantMaterials.GIProbeSHGenerator;
             var p = m.Effect.Parameters;
 
@@ -247,6 +249,7 @@ namespace Squared.Illuminant {
                     dm.PushRenderTarget(bounce);
                     dm.Device.Viewport = new Viewport(0, 0, GIProbeCount, SHValueCount);
 
+                    p["InverseScaleFactor"].SetValue(1.0f / intensityScale);
                     p["NormalCount"].SetValue(GIProbeNormalCount);
                     p["ProbeValuesTexelSize"].SetValue(new Vector2(1.0f / _GIProbeValues.Width, 1.0f / _GIProbeValues.Height));
                     p["ProbeValues"].SetValue((Texture2D)null);
@@ -326,7 +329,7 @@ namespace Squared.Illuminant {
         }
 
         internal void RenderGlobalIllumination (
-            IBatchContainer container, int layer, float brightness, int lastBounceIndex
+            IBatchContainer container, int layer, float brightness, int lastBounceIndex, float intensityScale
         ) {
             var m = IlluminantMaterials.RenderGI;
             var p = m.Effect.Parameters;
@@ -338,6 +341,7 @@ namespace Squared.Illuminant {
 
                     SetLightShaderParameters(m, Configuration.GIProbeQuality);
 
+                    p["InverseScaleFactor"].SetValue(1.0f / intensityScale);
                     p["Brightness"].SetValue(brightness);
                     p["ProbeOffset"].SetValue(Environment.GIProbeOffset);
                     p["ProbeInterval"].SetValue(Environment.GIProbeInterval);

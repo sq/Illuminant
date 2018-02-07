@@ -26,6 +26,7 @@ uniform float2 ProbeCount;
 uniform float Time;
 
 uniform float BounceFalloffDistance, BounceSearchDistance;
+uniform float InverseScaleFactor;
 uniform float Brightness;
 
 uniform float2 ProbeValuesTexelSize, SphericalHarmonicsTexelSize;
@@ -53,15 +54,6 @@ sampler   SphericalHarmonicsSampler : register(s6) {
 void ProbeVertexShader (
     inout float4 position      : POSITION0
 ) {
-}
-
-void SHVisualizerVertexShader (
-    in    float4 position       : POSITION0,
-    inout float2 localPosition  : TEXCOORD0,
-    inout int2   probeIndex     : BLENDINDICES0,
-    out   float4 result         : POSITION0
-) {
-    result = TransformPosition(float4(position.xy, 0, 1), 0);
 }
 
 float3 ComputeRowNormal(float row) {
@@ -147,7 +139,7 @@ void SHGeneratorPixelShader(
         SH9 cos = SHCosineLobe(normal);
 
         for (int j = 0; j < SHValueCount; j++)
-            r.c[j] += cos.c[j] * value.rgb;
+            r.c[j] += cos.c[j] * value.rgb * InverseScaleFactor;
 
         received += 1;
     }

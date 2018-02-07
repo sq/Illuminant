@@ -22,6 +22,7 @@ uniform float2 ProbeCount;
 
 uniform float Time;
 
+uniform float InverseScaleFactor;
 uniform float Brightness;
 
 uniform float2 SphericalHarmonicsTexelSize;

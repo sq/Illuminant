@@ -27,7 +27,6 @@ namespace TestGame.Scenes {
 
         const int MultisampleCount = 0;
         const int MaxStepCount = 128;
-        const float LightScaleFactor = 1;
         const float AORadius = 12;
         const float AOOpacity = 0.5f;
         const float ProbeZ = 1;
@@ -48,7 +47,8 @@ namespace TestGame.Scenes {
             IndirectLightBrightness,
             BounceDistance,
             ProbeInterval,
-            GISourceBounce;
+            GISourceBounce,
+            LightScaleFactor;
 
         RendererQualitySettings DirectionalQuality;
 
@@ -68,6 +68,7 @@ namespace TestGame.Scenes {
             BounceDistance.Value = 1024;
             ProbeInterval.Value = 48;
             GISourceBounce.Value = 0;
+            LightScaleFactor.Value = 2.0f;
 
             ShowGBuffer.Key = Keys.G;
             TwoPointFiveD.Key = Keys.D2;
@@ -116,6 +117,12 @@ namespace TestGame.Scenes {
             GISourceBounce.Min = 0f;
             GISourceBounce.Max = LightingRenderer.GIBounceCount - 1;
             GISourceBounce.Speed = 1f;
+
+            LightScaleFactor.MinusKey = Keys.Q;
+            LightScaleFactor.PlusKey = Keys.W;
+            LightScaleFactor.Min = 0.5f;
+            LightScaleFactor.Max = 6.0f;
+            LightScaleFactor.Speed = 0.5f;
 
             DistanceFieldResolution.Changed += (s, e) => CreateDistanceField();
         }

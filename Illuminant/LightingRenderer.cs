@@ -699,7 +699,11 @@ namespace Squared.Illuminant {
                             (indirectIlluminationSettings != null) &&
                             (indirectIlluminationSettings.Brightness > 0)
                         )
-                            RenderGlobalIllumination(resultGroup, layerIndex++, indirectIlluminationSettings.Brightness, indirectIlluminationSettings.BounceIndex);
+                            RenderGlobalIllumination(
+                                resultGroup, layerIndex++, 
+                                indirectIlluminationSettings.Brightness, indirectIlluminationSettings.BounceIndex,
+                                intensityScale
+                            );
                     }
                 }
 
@@ -709,10 +713,10 @@ namespace Squared.Illuminant {
                             UpdateLightProbeTexture();
                             Probes.IsDirty = false;
                         }
-                        UpdateLightProbes(outerGroup, 3, lightProbe.Buffer, false);
+                        UpdateLightProbes(outerGroup, 3, lightProbe.Buffer, false, intensityScale);
                     }
 
-                    UpdateGIProbes(outerGroup, 4);
+                    UpdateGIProbes(outerGroup, 4, intensityScale);
                 }
 
                 if (RenderTrace.EnableTracing)
