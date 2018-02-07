@@ -49,7 +49,7 @@ namespace TestGame.Scenes {
             IndirectLightBrightness,
             BounceDistance,
             ProbeInterval,
-            GISourceBounce,
+            GIBounceCount,
             LightScaleFactor;
 
         RendererQualitySettings DirectionalQuality;
@@ -57,21 +57,21 @@ namespace TestGame.Scenes {
         public GlobalIlluminationTest (TestGame game, int width, int height)
             : base(game, width, height) {
 
-            TwoPointFiveD.Value = false;
+            TwoPointFiveD.Value = true;
             DistanceFieldResolution.Value = 0.25f;
             LightmapScaleRatio.Value = 1.0f;
-            RenderDirectLight.Value = false;
+            RenderDirectLight.Value = true;
             ShowProbeSH.Value = false;
             EnableShadows.Value = true;
             EnablePointLight.Value = true;
             EnableDirectionalLights.Value = true;
             IndirectLightBrightness.Value = 1.0f;
-            AdditiveIndirectLight.Value = false;
-            BounceDistance.Value = 1024;
-            ProbeInterval.Value = 32;
-            GISourceBounce.Value = 0;
-            LightScaleFactor.Value = 2.0f;
-            EdgeShadows.Value = true;
+            AdditiveIndirectLight.Value = true;
+            BounceDistance.Value = 512;
+            ProbeInterval.Value = 48;
+            GIBounceCount.Value = 3;
+            LightScaleFactor.Value = 2.5f;
+            EdgeShadows.Value = false;
 
             ShowGBuffer.Key = Keys.G;
             TwoPointFiveD.Key = Keys.D2;
@@ -116,11 +116,11 @@ namespace TestGame.Scenes {
             ProbeInterval.Max = 128f;
             ProbeInterval.Speed = 8f;
 
-            GISourceBounce.MinusKey = Keys.OemSemicolon;
-            GISourceBounce.PlusKey = Keys.OemQuotes;
-            GISourceBounce.Min = 0f;
-            GISourceBounce.Max = BounceCount - 1;
-            GISourceBounce.Speed = 1f;
+            GIBounceCount.MinusKey = Keys.OemSemicolon;
+            GIBounceCount.PlusKey = Keys.OemQuotes;
+            GIBounceCount.Min = 0f;
+            GIBounceCount.Max = BounceCount;
+            GIBounceCount.Speed = 1f;
 
             LightScaleFactor.MinusKey = Keys.Q;
             LightScaleFactor.PlusKey = Keys.W;
@@ -232,8 +232,8 @@ namespace TestGame.Scenes {
             MovableLight = new SphereLightSource {
                 Position = new Vector3(64, 64, 0.7f),
                 Color = new Vector4(0.85f, 0.35f, 0.35f, 0.5f),
-                Radius = 320,
-                RampLength = 150,
+                Radius = 260,
+                RampLength = 48,
                 RampMode = LightSourceRampMode.Exponential,
                 AmbientOcclusionOpacity = AOOpacity
             };
@@ -324,13 +324,17 @@ namespace TestGame.Scenes {
             )) {
                 ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black);
 
+                var girs = new GIRenderSettings {
+                    BounceIndex = (int)GIBounceCount.Value - 1,
+                    Brightness = IndirectLightBrightness
+                };
+                if (GIBounceCount.Value == 0)
+                    girs = null;
+
                 var lighting = Renderer.RenderLighting(
                     bg, 1, 1.0f / LightScaleFactor, 
                     RenderDirectLight,
-                    new GIRenderSettings {
-                        BounceIndex = (int)GISourceBounce.Value,
-                        Brightness = IndirectLightBrightness
-                    }
+                    girs
                 );
                 lighting.Resolve(bg, 2, Width, Height, hdr: new HDRConfiguration { InverseScaleFactor = LightScaleFactor });
             };
@@ -345,10 +349,10 @@ namespace TestGame.Scenes {
                 ))
                     bb.Add(new BitmapDrawCall(Lightmap, Vector2.Zero));
 
-                if (ShowProbeSH)
+                if (ShowProbeSH && (GIBounceCount.Value > 0))
                     Renderer.VisualizeGIProbes(
                         group, 2, ProbeInterval.Value * 0.48f, 
-                        bounceIndex: (int)GISourceBounce.Value, 
+                        bounceIndex: (int)GIBounceCount.Value - 1, 
                         brightness: ProbeVisBrightness
                     );
 

@@ -159,7 +159,7 @@ void SHGeneratorPixelShader(
         previousBounceValue = oldSample.rgb;
     }
 
-    result.rgb = r.c[y] + previousBounceValue;
+    result.rgb = (r.c[y] * Brightness) + previousBounceValue;
     result.a = received;
 }
 

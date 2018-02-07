@@ -93,7 +93,7 @@ namespace Squared.Illuminant {
         /// Artificially increases the brightness of each global illumination bounce to compensate for
         ///  lost energy.
         /// </summary>
-        public float GIBounceBrightnessAmplification = 1.33f;
+        public float GIBounceBrightnessAmplification = 0.2f;
 
         /// <summary>
         /// Configures how indirect light is integrated with direct light.

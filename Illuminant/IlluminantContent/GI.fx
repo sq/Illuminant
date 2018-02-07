@@ -179,33 +179,28 @@ float3 SHRendererPixelShaderCore(
         float2(probeIndexTl.x, probeIndexBr.y),
         probeIndexBr
     };
-    const float4 writeMasks[4] = {
-        float4(1, 0, 0, 0),
-        float4(0, 1, 0, 0),
-        float4(0, 0, 1, 0),
-        float4(0, 0, 0, 1)
+    float weights[4] = {
+        0,
+        weightXY.x * (1 - weightXY.y),
+        (1 - weightXY.x) * weightXY.y,
+        weightXY.x * weightXY.y,
     };
-    float4 radiances[4];
+    weights[0] = 1 - (weights[1] + weights[2] + weights[3]);
 
     DistanceFieldConstants vars = makeDistanceFieldConstants();
 
     SH9 cos = SHCosineLobe(shadedPixelNormal);
     SHScaleByCosine(cos);
 
+    float3 irradiance = 0;
+
     [loop]
     for (int i = 0; i < 4; i++) {
-        float4 mask = writeMasks[i];
         float4 localRadiance = computeProbeRadiance(shadedPixelPosition, probeIndices[i], cos, vars);
-        radiances[0] = lerp(radiances[0], localRadiance, mask.x);
-        radiances[1] = lerp(radiances[1], localRadiance, mask.y);
-        radiances[2] = lerp(radiances[2], localRadiance, mask.z);
-        radiances[3] = lerp(radiances[3], localRadiance, mask.w);
+        irradiance += localRadiance.rgb * weights[i];
     }
 
-    float4 blendedT = conditionalBlend(radiances[0], radiances[1], weightXY.x);
-    float4 blendedB = conditionalBlend(radiances[2], radiances[3], weightXY.x);
-    float4 blended = conditionalBlend(blendedT, blendedB, weightXY.y);
-    return blended.rgb;
+    return irradiance;
 }
 
 void SHRendererPixelShader(

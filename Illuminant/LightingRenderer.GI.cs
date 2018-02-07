@@ -196,7 +196,7 @@ namespace Squared.Illuminant {
 
                     SetLightShaderParameters(m, Configuration.GIProbeQuality);
 
-                    p["Brightness"].SetValue(Configuration.GIBounceBrightnessAmplification);
+                    p["Brightness"].SetValue(1.0f);
 
                     p["GBuffer"].SetValue((Texture2D)null);
                     p["GBuffer"].SetValue(_SelectedGIProbePositions);
@@ -252,6 +252,8 @@ namespace Squared.Illuminant {
                     dm.PushRenderTarget(bounce);
                     dm.Device.Viewport = new Viewport(0, 0, GIProbeCount, SHValueCount);
                     dm.Device.BlendState = BlendState.Opaque;
+
+                    p["Brightness"].SetValue(1.0f + (Configuration.GIBounceBrightnessAmplification * bounceIndex));
 
                     p["InverseScaleFactor"].SetValue(1.0f / intensityScale);
                     p["NormalCount"].SetValue(GIProbeNormalCount);
