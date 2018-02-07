@@ -100,7 +100,7 @@ namespace TestGame.Scenes {
                 new RendererConfiguration(
                     1024, 1024, true, false
                 ) {
-                    MaxFieldUpdatesPerFrame = 3,
+                    MaximumFieldUpdatesPerFrame = 3,
                     DefaultQuality = {
                         MinStepSize = 1f,
                         LongStepFactor = 0.5f,

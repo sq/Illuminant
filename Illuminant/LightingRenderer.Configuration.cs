@@ -103,10 +103,17 @@ namespace Squared.Illuminant {
         public BlendState GIBlendMode = RenderStates.MaxBlend;
 
         /// <summary>
+        /// The maximum number of GI bounces to update per frame.
+        /// Higher values will come with a performance and memory usage cost, but will reduce
+        ///  lag between light/object movement and GI updates.
+        /// </summary>
+        public int  MaximumGIUpdatesPerFrame = 1;
+
+        /// <summary>
         /// The maximum number of distance field slices to update per frame.
         /// Setting this value too high can crash your video driver.
         /// </summary>
-        public int  MaxFieldUpdatesPerFrame = 1;
+        public int  MaximumFieldUpdatesPerFrame = 1;
 
         /// <summary>
         /// When rendering at a scale below 1.0, coordinates can get misaligned

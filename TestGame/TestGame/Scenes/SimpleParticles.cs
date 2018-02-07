@@ -180,7 +180,7 @@ namespace TestGame.Scenes {
                     64, 64, true
                 ) {
                     RenderScale = Vector2.One,
-                    MaxFieldUpdatesPerFrame = 1,
+                    MaximumFieldUpdatesPerFrame = 1,
                     DefaultQuality = {
                         MinStepSize = 1f,
                         LongStepFactor = 0.5f,

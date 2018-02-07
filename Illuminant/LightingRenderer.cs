@@ -1156,7 +1156,7 @@ namespace Squared.Illuminant {
             int sliceCount = _DistanceField.SliceCount;
             int slicesToUpdate =
                 Math.Min(
-                    Configuration.MaxFieldUpdatesPerFrame,
+                    Configuration.MaximumFieldUpdatesPerFrame,
                     _DistanceField.InvalidSlices.Count
                 );
             if (slicesToUpdate <= 0)

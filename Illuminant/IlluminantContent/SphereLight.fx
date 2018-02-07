@@ -21,7 +21,13 @@ void SphereLightVertexShader(
     float  radius = lightProperties.x + lightProperties.y + 1;
     float3 radius3 = float3(radius, radius, 0);
     float3 tl = lightCenter - radius3, br = lightCenter + radius3;
+
+    // Unfortunately we need to adjust both by the light's radius (to account for pixels above/below the center point
+    //  being lit in 2.5d projection), along with adjusting by the z of the light's centerpoint (to deal with pixels
+    //  at high elevation)
     tl.y -= radius * getInvZToYMultiplier();
+    tl.y -= lightCenter.z * getZToYMultiplier();
+
     worldPosition = lerp(tl, br, float3(cornerWeight, 0));
 
     float3 screenPosition = (worldPosition - float3(Viewport.Position.xy, 0));

@@ -96,26 +96,32 @@ namespace Squared.Illuminant {
                 if (_GIProbesDirty)
                     SelectGIProbes(group, 0);
 
-                int bounce = 0;
-                long lowestTimestamp = long.MaxValue;
-
-                for (int i = 0; i < Configuration.MaximumGIBounceCount; i++) {
-                    if (_GIProbeTimestamps[i] < lowestTimestamp) {
-                        bounce = i;
-                        lowestTimestamp = _GIProbeTimestamps[i];
-                    }
-                }
-
-                if (bounce == 0) {
-                    UpdateLightProbes(group, 1, _GIProbeValues, true, intensityScale);
-                    UpdateGIProbeSH(group, 2, 0, intensityScale);
-                } else {
-                    UpdateLightProbesFromGI(group, 1, _GIProbeValues, bounce - 1);
-                    UpdateGIProbeSH(group, 2, bounce, 1);
-                }
-
-                _GIProbeTimestamps[bounce] = Time.Ticks;
+                int bounceLayer = 1;
+                for (int i = 0; i < Math.Min(Configuration.MaximumGIBounceCount, Configuration.MaximumGIUpdatesPerFrame); i++)
+                    UpdateOldestGIBounce(group, ref bounceLayer, intensityScale);
             }
+        }
+
+        private void UpdateOldestGIBounce (IBatchContainer container, ref int layer, float intensityScale) {
+            int bounce = 0;
+            long lowestTimestamp = long.MaxValue;
+
+            for (int i = 0; i < Configuration.MaximumGIBounceCount; i++) {
+                if (_GIProbeTimestamps[i] < lowestTimestamp) {
+                    bounce = i;
+                    lowestTimestamp = _GIProbeTimestamps[i];
+                }
+            }
+
+            if (bounce == 0) {
+                UpdateLightProbes(container, layer++, _GIProbeValues, true, intensityScale);
+                UpdateGIProbeSH(container, layer++, 0, intensityScale);
+            } else {
+                UpdateLightProbesFromGI(container, layer++, _GIProbeValues, bounce - 1);
+                UpdateGIProbeSH(container, layer++, bounce, 1);
+            }
+
+            _GIProbeTimestamps[bounce] = Time.Ticks;
         }
 
         private void SelectGIProbes (IBatchContainer container, int layer) {

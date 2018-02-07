@@ -28,7 +28,7 @@ namespace TestGame.Scenes {
         const int BounceCount = 3;
         const int MultisampleCount = 0;
         const int MaxStepCount = 128;
-        const float AORadius = 12;
+        const float AORadius = 8;
         const float AOOpacity = 0.5f;
         const float ProbeZ = 1;
         const float ProbeVisBrightness = 1.1f;
@@ -64,13 +64,13 @@ namespace TestGame.Scenes {
             ShowProbeSH.Value = false;
             EnableShadows.Value = true;
             EnablePointLight.Value = true;
-            EnableDirectionalLights.Value = false;
+            EnableDirectionalLights.Value = true;
             IndirectLightBrightness.Value = 1.0f;
             AdditiveIndirectLight.Value = false;
             BounceDistance.Value = 1024;
             ProbeInterval.Value = 48;
             GISourceBounce.Value = 2;
-            LightScaleFactor.Value = 4.0f;
+            LightScaleFactor.Value = 2.0f;
             EdgeShadows.Value = true;
 
             ShowGBuffer.Key = Keys.G;
@@ -206,7 +206,7 @@ namespace TestGame.Scenes {
 
             Environment.GroundZ = 0;
             Environment.MaximumZ = 128;
-            Environment.ZToYMultiplier = 2.5f;
+            Environment.ZToYMultiplier = 1.9f;
 
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
@@ -215,7 +215,8 @@ namespace TestGame.Scenes {
                     maximumGIProbeCount: 2048, giProbeQualityLevel: GIProbeQualityLevels.High,
                     maximumGIBounceCount: BounceCount
                 ) {
-                    MaxFieldUpdatesPerFrame = 3,
+                    MaximumFieldUpdatesPerFrame = 3,
+                    MaximumGIUpdatesPerFrame = 3,
                     DefaultQuality = {
                         MinStepSize = 1f,
                         LongStepFactor = 0.5f,
@@ -230,9 +231,9 @@ namespace TestGame.Scenes {
 
             MovableLight = new SphereLightSource {
                 Position = new Vector3(64, 64, 0.7f),
-                Color = new Vector4(1f, 0.2f, 0.2f, 0.5f),
-                Radius = 240,
-                RampLength = 60,
+                Color = new Vector4(0.85f, 0.35f, 0.35f, 0.5f),
+                Radius = 320,
+                RampLength = 150,
                 RampMode = LightSourceRampMode.Exponential,
                 AmbientOcclusionOpacity = AOOpacity
             };
@@ -247,15 +248,22 @@ namespace TestGame.Scenes {
             };
 
             Environment.Lights.Add(new DirectionalLightSource {
-                Direction = new Vector3(-0.75f, -0.7f, -0.2f),
-                Color = new Vector4(0.1f, 0.0f, 0.8f, 0.6f),
+                Direction = new Vector3(-0.6f, -0.7f, -0.2f),
+                Color = new Vector4(0.3f, 0.1f, 0.8f, 0.6f),
                 Quality = DirectionalQuality,
                 AmbientOcclusionOpacity = AOOpacity
             });
 
             Environment.Lights.Add(new DirectionalLightSource {
                 Direction = new Vector3(0.5f, -0.7f, -0.3f),
-                Color = new Vector4(0.1f, 0.8f, 0.0f, 0.6f),
+                Color = new Vector4(0.1f, 0.8f, 0.3f, 0.6f),
+                Quality = DirectionalQuality,
+                AmbientOcclusionOpacity = AOOpacity
+            });
+
+            Environment.Lights.Add(new DirectionalLightSource {
+                Direction = new Vector3(0.12f, 0.7f, -0.7f),
+                Color = new Vector4(0.2f, 0.2f, 0.1f, 0.6f),
                 Quality = DirectionalQuality,
                 AmbientOcclusionOpacity = AOOpacity
             });
@@ -269,8 +277,10 @@ namespace TestGame.Scenes {
 
             Rect(new Vector2(330, 300), new Vector2(Width, 340), 0f, 60f);
 
-            for (int i = 0; i < 7; i++)
-                Pillar(new Vector2(10 + (i * 220), 500), 0.8f);
+            for (int i = 0; i < 10; i++) {
+                Pillar(new Vector2(10 + (i * 210), 430), 0.6f);
+                Pillar(new Vector2(50 + (i * 210), 600), 0.6f);
+            }
 
             Rect(new Vector2(630, 650), new Vector2(Width, 690), 0f, 40f);
             Rect(new Vector2(630, 650), new Vector2(670, Height - 40), 0f, 40f);

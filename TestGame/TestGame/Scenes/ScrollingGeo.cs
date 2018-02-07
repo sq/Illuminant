@@ -71,7 +71,7 @@ namespace TestGame.Scenes {
                     1024 / LightmapScaleRatio, 1024 / LightmapScaleRatio, true
                 ) {
                     RenderScale = new Vector2(1.0f / LightmapScaleRatio),
-                    MaxFieldUpdatesPerFrame = 1,
+                    MaximumFieldUpdatesPerFrame = 1,
                     DefaultQuality = {
                         MinStepSize = 1f,
                         LongStepFactor = 0.5f,

@@ -210,7 +210,7 @@ namespace TestGame.Scenes {
                 ) {
                     RenderScale = new Vector2(1.0f / BackgroundScaleRatio),
                     TwoPointFiveD = true,
-                    MaxFieldUpdatesPerFrame = 1,
+                    MaximumFieldUpdatesPerFrame = 1,
                     DefaultQuality = {
                         MinStepSize = 1.5f,
                         LongStepFactor = 0.7f,
@@ -228,7 +228,7 @@ namespace TestGame.Scenes {
                     Width / ForegroundScaleRatio, Height / ForegroundScaleRatio, true
                 ) {
                     RenderScale = new Vector2(1.0f / ForegroundScaleRatio),
-                    MaxFieldUpdatesPerFrame = 0,
+                    MaximumFieldUpdatesPerFrame = 0,
                     TwoPointFiveD = true,
                     DefaultQuality = {
                         MinStepSize = 1.5f,
