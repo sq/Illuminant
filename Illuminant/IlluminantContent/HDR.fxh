@@ -1,5 +1,6 @@
 uniform float Offset;
 uniform float ExposureMinusOne;
+uniform float GammaMinusOne;
 
 
 uniform float MiddleGray;

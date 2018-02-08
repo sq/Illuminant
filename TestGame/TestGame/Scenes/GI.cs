@@ -235,9 +235,9 @@ namespace TestGame.Scenes {
 
             MovableLight = new SphereLightSource {
                 Position = new Vector3(64, 64, 0.7f),
-                Color = new Vector4(0.85f, 0.35f, 0.35f, 0.5f),
-                Radius = 260,
-                RampLength = 48,
+                Color = new Vector4(0.85f, 0.35f, 0.35f, 0.6f),
+                Radius = 290,
+                RampLength = 64,
                 RampMode = LightSourceRampMode.Exponential,
                 AmbientOcclusionOpacity = AOOpacity
             };
@@ -253,37 +253,30 @@ namespace TestGame.Scenes {
 
             Environment.Lights.Add(new DirectionalLightSource {
                 Direction = new Vector3(-0.6f, -0.7f, -0.2f),
-                Color = new Vector4(0.3f, 0.1f, 0.8f, 0.6f),
+                Color = new Vector4(0.3f, 0.1f, 0.8f, 0.35f),
                 Quality = DirectionalQuality,
                 AmbientOcclusionOpacity = AOOpacity
             });
 
             Environment.Lights.Add(new DirectionalLightSource {
                 Direction = new Vector3(0.5f, -0.7f, -0.3f),
-                Color = new Vector4(0.1f, 0.8f, 0.3f, 0.6f),
+                Color = new Vector4(0.1f, 0.8f, 0.3f, 0.35f),
                 Quality = DirectionalQuality,
                 AmbientOcclusionOpacity = AOOpacity
             });
 
             Environment.Lights.Add(new DirectionalLightSource {
                 Direction = new Vector3(0.12f, 0.7f, -0.7f),
-                Color = new Vector4(0.2f, 0.2f, 0.1f, 0.6f),
+                Color = new Vector4(0.2f, 0.2f, 0.1f, 0.35f),
                 Quality = DirectionalQuality,
                 AmbientOcclusionOpacity = AOOpacity
-            });
-
-            if (false)
-            Environment.Lights.Add(new DirectionalLightSource {
-                Direction = new Vector3(-1f, -0.1f, -0.1f),
-                Color = new Vector4(1f, 1f, 1f, 0.5f),
-                Quality = DirectionalQuality
             });
 
             Rect(new Vector2(330, 300), new Vector2(Width, 340), 0f, 60f);
 
             for (int i = 0; i < 10; i++) {
-                Pillar(new Vector2(10 + (i * 210), 430), 0.6f);
-                Pillar(new Vector2(50 + (i * 210), 600), 0.6f);
+                Pillar(new Vector2(10 + (i * 210), 430), 0.63f);
+                Pillar(new Vector2(50 + (i * 210), 590), 0.63f);
             }
 
             Rect(new Vector2(630, 650), new Vector2(Width, 690), 0f, 40f);
@@ -341,8 +334,11 @@ namespace TestGame.Scenes {
                     girs
                 );
                 lighting.Resolve(
-                    bg, 2, Width, Height, 
-                    hdr: new HDRConfiguration { InverseScaleFactor = LightScaleFactor }, 
+                    bg, 2, Width, Height,
+                    hdr: new HDRConfiguration {
+                        InverseScaleFactor = LightScaleFactor,
+                        Gamma = sRGB ? 1.8f : 1.0f
+                    }, 
                     resolveToSRGB: sRGB
                 );
             };

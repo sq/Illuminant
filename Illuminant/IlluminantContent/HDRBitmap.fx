@@ -38,6 +38,7 @@ void ToneMappedPixelShader(
     float3 preToneMap = max(result.rgb + Offset, 0) * (ExposureMinusOne + 1);
 
     result = float4(Uncharted2Tonemap(preToneMap) / Uncharted2Tonemap1(WhitePoint), result.a);
+    result.rgb = pow(result.rgb, (GammaMinusOne + 1));
 }
 
 technique WorldSpaceGammaCompressedBitmap

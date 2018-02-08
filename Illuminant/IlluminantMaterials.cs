@@ -70,12 +70,13 @@ namespace Squared.Illuminant {
         /// <param name="exposure">A factor to multiply incoming values to make them brighter or darker.</param>
         /// <param name="whitePoint">The white point to set as the threshold above which any values become 1.0.</param>
         /// <param name="offset">A constant added to incoming values before exposure is applied.</param>
-        public void SetToneMappingParameters (float exposure, float whitePoint, float offset = 0) {
+        public void SetToneMappingParameters (float exposure, float whitePoint, float offset = 0, float gamma = 1) {
             const float min = 1 / 256f;
             const float max = 99999f;
 
             exposure = MathHelper.Clamp(exposure, min, max);
             whitePoint = MathHelper.Clamp(whitePoint, min, max);
+            gamma = MathHelper.Clamp(gamma, 0.1f, 4.0f);
 
             EffectsToSetToneMappingParametersOn[0] = ScreenSpaceToneMappedBitmap.Effect;
             EffectsToSetToneMappingParametersOn[1] = WorldSpaceToneMappedBitmap.Effect;
@@ -85,6 +86,7 @@ namespace Squared.Illuminant {
             foreach (var effect in EffectsToSetToneMappingParametersOn) {
                 effect.Parameters["Offset"].SetValue(offset);
                 effect.Parameters["ExposureMinusOne"].SetValue(exposure - 1);
+                effect.Parameters["GammaMinusOne"].SetValue(gamma - 1);
                 var wp = effect.Parameters["WhitePoint"];
                 if (wp != null)
                     wp.SetValue(whitePoint);

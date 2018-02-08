@@ -155,7 +155,7 @@ namespace Squared.Illuminant {
         public GammaCompressionConfiguration GammaCompression;
         public ToneMappingConfiguration ToneMapping;
 
-        private float ExposureMinusOne;
+        private float ExposureMinusOne, GammaMinusOne;
 
         public float Exposure {
             get {
@@ -163,6 +163,15 @@ namespace Squared.Illuminant {
             }
             set {
                 ExposureMinusOne = value - 1;
+            }
+        }
+
+        public float Gamma {
+            get {
+                return GammaMinusOne + 1;
+            }
+            set {
+                GammaMinusOne = value - 1;
             }
         }
     }

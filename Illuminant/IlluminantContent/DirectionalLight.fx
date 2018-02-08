@@ -15,7 +15,7 @@ float4 ApplyTransform (float3 position) {
 
 void DirectionalLightVertexShader(
     in float2    position            : POSITION0,
-    inout float4 color               : COLOR0,
+    inout float4 color               : TEXCOORD4,
     inout float3 lightDirection      : TEXCOORD0,
     inout float4 lightProperties     : TEXCOORD1,
     inout float4 moreLightProperties : TEXCOORD3,
@@ -30,7 +30,7 @@ void DirectionalLightVertexShader(
 
 void DirectionalLightProbeVertexShader(
     in float2 position               : POSITION0,
-    inout float4 color               : COLOR0,
+    inout float4 color               : TEXCOORD4,
     inout float3 lightDirection      : TEXCOORD0,
     inout float4 lightProperties     : TEXCOORD1,
     inout float4 moreLightProperties : TEXCOORD3,
@@ -96,7 +96,7 @@ void DirectionalLightPixelShader(
     in  float3 lightDirection      : TEXCOORD0,
     in  float4 lightProperties     : TEXCOORD1,
     in  float4 moreLightProperties : TEXCOORD3,
-    in  float4 color               : COLOR0,
+    in  float4 color               : TEXCOORD4,
     in  float2 vpos                : VPOS,
     out float4 result              : COLOR0
 ) {
@@ -120,7 +120,7 @@ void DirectionalLightWithRampPixelShader(
     in  float3 lightDirection      : TEXCOORD0,
     in  float4 lightProperties     : TEXCOORD1,
     in  float4 moreLightProperties : TEXCOORD3,
-    in  float4 color               : COLOR0,
+    in  float4 color               : TEXCOORD4,
     in  float2 vpos                : VPOS,
     out float4 result              : COLOR0
 ) {
@@ -144,7 +144,7 @@ void DirectionalLightProbePixelShader(
     in  float3 lightDirection      : TEXCOORD0,
     in  float4 lightProperties     : TEXCOORD1,
     in  float4 moreLightProperties : TEXCOORD3,
-    in  float4 color               : COLOR0,
+    in  float4 color               : TEXCOORD4,
     in  float2 vpos                : VPOS,
     out float4 result              : COLOR0
 ) {
@@ -171,7 +171,7 @@ void DirectionalLightProbeWithRampPixelShader(
     in  float3 lightDirection      : TEXCOORD0,
     in  float4 lightProperties     : TEXCOORD1,
     in  float4 moreLightProperties : TEXCOORD3,
-    in  float4 color               : COLOR0,
+    in  float4 color               : TEXCOORD4,
     in  float2 vpos                : VPOS,
     out float4 result              : COLOR0
 ) {

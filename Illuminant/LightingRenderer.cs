@@ -813,13 +813,15 @@ namespace Squared.Illuminant {
                         IlluminantMaterials.SetToneMappingParameters(
                             hdr.Value.Exposure,
                             hdr.Value.ToneMapping.WhitePoint,
-                            hdr.Value.Offset
+                            hdr.Value.Offset,
+                            hdr.Value.Gamma
                         );
                     else 
                         IlluminantMaterials.SetToneMappingParameters(
                             hdr.Value.Exposure,
                             1f,
-                            hdr.Value.Offset
+                            hdr.Value.Offset,
+                            hdr.Value.Gamma
                         );
                 }
             });

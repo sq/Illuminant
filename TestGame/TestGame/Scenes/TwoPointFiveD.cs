@@ -37,7 +37,8 @@ namespace TestGame.Scenes {
             UseRampTexture,
             Timelapse,
             TwoPointFiveD,
-            Deterministic;
+            Deterministic,
+            sRGB;
 
         Slider DistanceFieldResolution,
             LightmapScaleRatio;
@@ -67,6 +68,7 @@ namespace TestGame.Scenes {
             ShowHistogram.Key = Keys.H;
             UseRampTexture.Key = Keys.P;
             Deterministic.Key = Keys.R;
+            sRGB.Key = Keys.S;
 
             DistanceFieldResolution.MinusKey = Keys.D5;
             DistanceFieldResolution.PlusKey = Keys.D6;
@@ -257,7 +259,14 @@ namespace TestGame.Scenes {
                 ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black);
 
                 var lighting = Renderer.RenderLighting(bg, 1, 1.0f / LightScaleFactor);
-                lighting.Resolve(bg, 2, Width, Height, hdr: new HDRConfiguration { InverseScaleFactor = LightScaleFactor });
+                lighting.Resolve(
+                    bg, 2, Width, Height, 
+                    hdr: new HDRConfiguration {
+                        InverseScaleFactor = LightScaleFactor,
+                        Gamma = sRGB ? 2.3f : 1.0f
+                    }, 
+                    resolveToSRGB: sRGB
+                );
 
                 lighting.TryComputeHistogram(
                     Histogram, 
@@ -281,7 +290,9 @@ namespace TestGame.Scenes {
                         Game.Materials.Get(
                             ShowGBuffer
                                 ? Game.Materials.ScreenSpaceBitmap
-                                : Game.Materials.ScreenSpaceLightmappedBitmap,
+                                : (sRGB 
+                                    ? Game.Materials.ScreenSpaceLightmappedsRGBBitmap
+                                    : Game.Materials.ScreenSpaceLightmappedBitmap),
                             blendState: BlendState.Opaque
                         ),
                         samplerState: SamplerState.PointClamp
@@ -371,9 +382,10 @@ namespace TestGame.Scenes {
 
                 MovableLight.RampTexture = UseRampTexture ? Game.RampTexture : null;
 
-                if (Deterministic)
+                if (Deterministic) {
                     MovableLight.Position = new Vector3(671, 394, 97.5f);
-                else {
+                    MovableLight.Color.W = 0.5f;
+                } else {
                     MovableLight.Position = mousePos;
                     MovableLight.Color.W = Arithmetic.Pulse((float)Time.Seconds / 3f, 0.3f, 4f);
                 }
