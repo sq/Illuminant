@@ -171,6 +171,15 @@ namespace Squared.Illuminant {
             var m = IlluminantMaterials.GIProbeSelector;
             var p = m.Effect.Parameters;
 
+            if (
+                (Environment.GIProbeInterval.X < 1) || 
+                (Environment.GIProbeInterval.Y < 1) ||
+                (_DistanceField == null)
+            ) {
+                GIProbeCount = _GIProbeCountX = _GIProbeCountY = 0;
+                return;
+            }
+
             var extent = Extent3;
             _GIProbeCountX = (int)Math.Ceiling((extent.X - Environment.GIProbeOffset.X) / Environment.GIProbeInterval.X);
             _GIProbeCountY = (int)Math.Ceiling((extent.Y - Environment.GIProbeOffset.Y) / Environment.GIProbeInterval.Y);
@@ -178,6 +187,9 @@ namespace Squared.Illuminant {
             GIProbeCount = _GIProbeCountX * _GIProbeCountY;
             if (GIProbeCount > Configuration.MaximumGIProbeCount)
                 GIProbeCount = Configuration.MaximumGIProbeCount;
+
+            if (GIProbeCount < 1)
+                return;
 
             using (var rt = BatchGroup.New(
                 container, layer,
@@ -235,6 +247,9 @@ namespace Squared.Illuminant {
             var m = IlluminantMaterials.RenderLightProbesFromGI;
             var p = m.Effect.Parameters;
 
+            if (GIProbeCount < 1)
+                return;
+
             using (var group = BatchGroup.ForRenderTarget(
                 container, layer, renderTarget,
                 (dm, _) => {
@@ -287,6 +302,9 @@ namespace Squared.Illuminant {
         }
 
         private void UpdateGIProbeSH (IBatchContainer container, int layer, int bounceIndex, float intensityScale) {
+            if (GIProbeCount < 1)
+                return;
+
             var m = IlluminantMaterials.GIProbeSHGenerator;
             var p = m.Effect.Parameters;
 
