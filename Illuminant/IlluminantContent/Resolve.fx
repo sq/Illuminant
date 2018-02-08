@@ -20,6 +20,7 @@ sampler PointSampler : register(s7) {
 
 #define FAST_RESOLVE
 
+uniform bool  ResolveToSRGB;
 uniform float InverseScaleFactor;
 
 float4 ResolveCommon(
@@ -129,6 +130,8 @@ void LightingResolvePixelShader(
 
     result.rgb = max(0, result.rgb + Offset);
     result.rgb *= (ExposureMinusOne + 1);
+    if (ResolveToSRGB)
+        result.rgb = LinearToSRGB(result.rgb);
 }
 
 void GammaCompressedLightingResolvePixelShader(
@@ -148,6 +151,8 @@ void GammaCompressedLightingResolvePixelShader(
     );
 
     result = GammaCompress(result);
+    if (ResolveToSRGB)
+        result.rgb = LinearToSRGB(result.rgb);
 }
 
 void ToneMappedLightingResolvePixelShader(
@@ -169,6 +174,8 @@ void ToneMappedLightingResolvePixelShader(
     float3 preToneMap = max(0, result.rgb + Offset) * (ExposureMinusOne + 1);
 
     result = float4(Uncharted2Tonemap(preToneMap) / Uncharted2Tonemap1(WhitePoint), result.a);
+    if (ResolveToSRGB)
+        result.rgb = LinearToSRGB(result.rgb);
 }
 
 void CalculateLuminancePixelShader(

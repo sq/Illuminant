@@ -16,20 +16,21 @@ namespace Squared.Illuminant {
         internal const int SHValueCount = 9;
 
         public int GIProbeCount { get; private set; }
-        private readonly RenderTarget2D _SelectedGIProbePositions, _SelectedGIProbeNormals;
-        private readonly RenderTarget2D _GIProbeValues;
+        private          RenderTarget2D _SelectedGIProbePositions, _SelectedGIProbeNormals;
+        private          RenderTarget2D _GIProbeValues;
         private readonly RenderTarget2D[] _GIProbeBounces;
         private readonly long[] _GIProbeTimestamps;
-        private bool _GIProbesDirty, _GIProbesWereSelected;
+        private bool _GIProbesDirty;
         private int _GIProbeCountX, _GIProbeCountY;
 
+        private GIProbeSampleCounts LastGIProbeSampleCount;
         private Vector3 LastGIProbeOffset;
         private Vector2 LastGIProbeInterval;
         private float   LastGISearchDistance;
 
-        internal int GIProbeNormalCount {
+        internal int GIProbeSampleCount {
             get {
-                return (int)Configuration.GIProbeQualityLevel;
+                return (int)Configuration.GIProbeSampleCount;
             }
         }
 
@@ -41,13 +42,13 @@ namespace Squared.Illuminant {
         private void _GIProbeBatchSetup (DeviceManager device, object userData) {
             var ltrs = (LightTypeRenderState)userData;
 
-            device.Device.Viewport = new Viewport(0, 0, GIProbeCount, GIProbeNormalCount);
+            device.Device.Viewport = new Viewport(0, 0, GIProbeCount, GIProbeSampleCount);
             device.Device.BlendState = RenderStates.AdditiveBlend;
 
             SetLightShaderParameters(ltrs.ProbeMaterial, ltrs.Key.Quality);
 
             ltrs.ProbeMaterial.Effect.Parameters["GBuffer"].SetValue(_SelectedGIProbePositions);
-            ltrs.ProbeMaterial.Effect.Parameters["GBufferTexelSize"].SetValue(new Vector2(1.0f / _SelectedGIProbePositions.Width, 1.0f / GIProbeNormalCount));
+            ltrs.ProbeMaterial.Effect.Parameters["GBufferTexelSize"].SetValue(new Vector2(1.0f / _SelectedGIProbePositions.Width, 1.0f / GIProbeSampleCount));
             ltrs.ProbeMaterial.Effect.Parameters["ProbeNormals"].SetValue(_SelectedGIProbeNormals);
             ltrs.ProbeMaterial.Effect.Parameters["RampTexture"].SetValue(ltrs.Key.RampTexture);
         }
@@ -72,9 +73,51 @@ namespace Squared.Illuminant {
         }
         */
 
+        private void ReleaseGIProbeResources () {
+            Coordinator.DisposeResource(_SelectedGIProbePositions);
+            Coordinator.DisposeResource(_SelectedGIProbeNormals);
+            Coordinator.DisposeResource(_GIProbeValues);
+            foreach (var rt in _GIProbeBounces)
+                Coordinator.DisposeResource(rt);
+        }
+
+        private void CreateGIProbeResources () {
+            ReleaseGIProbeResources();
+
+            _GIProbesDirty = true;
+
+            _SelectedGIProbePositions = new RenderTarget2D(
+                Coordinator.Device, Configuration.MaximumGIProbeCount, GIProbeSampleCount, false,
+                SurfaceFormat.HalfVector4, DepthFormat.None, 0, RenderTargetUsage.PreserveContents
+            );
+
+            _SelectedGIProbeNormals = new RenderTarget2D(
+                Coordinator.Device, Configuration.MaximumGIProbeCount, GIProbeSampleCount, false,
+                SurfaceFormat.HalfVector4, DepthFormat.None, 0, RenderTargetUsage.PreserveContents
+            );
+
+            _GIProbeValues = new RenderTarget2D(
+                Coordinator.Device, Configuration.MaximumGIProbeCount, GIProbeSampleCount, false,
+                SurfaceFormat.HdrBlendable, DepthFormat.None, 0, RenderTargetUsage.PreserveContents
+            );
+                
+            for (int i = 0; i < _GIProbeBounces.Length; i++) {
+                _GIProbeBounces[i] = new RenderTarget2D(
+                    Coordinator.Device, Configuration.MaximumGIProbeCount, SHValueCount, false,
+                    SurfaceFormat.HalfVector4, DepthFormat.None, 0, RenderTargetUsage.PreserveContents
+                );
+                _GIProbeTimestamps[i] = 0;
+            }
+
+            LastGIProbeSampleCount = Configuration.GIProbeSampleCount;
+        }
+
         private void UpdateGIProbes (IBatchContainer container, int layer, float intensityScale) {
             if (!Configuration.EnableGlobalIllumination)
                 return;
+
+            if (LastGIProbeSampleCount != Configuration.GIProbeSampleCount)
+                CreateGIProbeResources();
 
             using (var group = BatchGroup.New(container, layer, null, (dm, _) => {
                 for (int i = 0; i < 16; i++)
@@ -129,7 +172,6 @@ namespace Squared.Illuminant {
             var p = m.Effect.Parameters;
 
             var extent = Extent3;
-            // FIXME: .Ceiling breaks really bad, WTF?
             _GIProbeCountX = (int)Math.Ceiling((extent.X - Environment.GIProbeOffset.X) / Environment.GIProbeInterval.X);
             _GIProbeCountY = (int)Math.Ceiling((extent.Y - Environment.GIProbeOffset.Y) / Environment.GIProbeInterval.Y);
 
@@ -141,14 +183,14 @@ namespace Squared.Illuminant {
                 container, layer,
                 (dm, _) => {
                     dm.PushRenderTargets(new RenderTargetBinding[] { _SelectedGIProbePositions, _SelectedGIProbeNormals });
-                    dm.Device.Viewport = new Viewport(0, 0, GIProbeCount, GIProbeNormalCount);
+                    dm.Device.Viewport = new Viewport(0, 0, GIProbeCount, GIProbeSampleCount);
 
                     SetDistanceFieldParameters(m, true, Configuration.GIProbeQuality);
 
                     p["ProbeOffset"].SetValue(Environment.GIProbeOffset);
                     p["ProbeInterval"].SetValue(Environment.GIProbeInterval);
                     p["ProbeCount"].SetValue(new Vector2(_GIProbeCountX, _GIProbeCountY));
-                    p["NormalCount"].SetValue(GIProbeNormalCount);
+                    p["NormalCount"].SetValue(GIProbeSampleCount);
                     p["BounceSearchDistance"].SetValue(Configuration.GIBounceSearchDistance);
 
                     m.Flush();
@@ -159,11 +201,16 @@ namespace Squared.Illuminant {
                     dm.PopRenderTarget();
 
                     // HACK: If probes are selected while the distance field is only partially generated, 
-                    //  they will potentially penetrate walls
-                    if (_DistanceField.ValidSliceCount >= _DistanceField.SliceCount)
+                    //  they will potentially penetrate walls. As a result we can't preserve those probes
+                    //  and should regenerate them at the next opportunity.
+                    // If the distance field is invalidated too frequently this will result in the GI
+                    //  probes always staying dirty, which may not be what you want.
+                    if (
+                        (_DistanceField.ValidSliceCount >= _DistanceField.SliceCount) &&
+                        (_DistanceField.InvalidSlices.Count == 0) &&
+                        Configuration.GICaching
+                    )
                         _GIProbesDirty = false;
-
-                    _GIProbesWereSelected = true;
                 }
             ))
             using (var pb = PrimitiveBatch<GIProbeVertex>.New(rt, 1, m)) {
@@ -191,7 +238,7 @@ namespace Squared.Illuminant {
             using (var group = BatchGroup.ForRenderTarget(
                 container, layer, renderTarget,
                 (dm, _) => {
-                    dm.Device.Viewport = new Viewport(0, 0, GIProbeCount, GIProbeNormalCount);
+                    dm.Device.Viewport = new Viewport(0, 0, GIProbeCount, GIProbeSampleCount);
                     dm.Device.BlendState = BlendState.Opaque;
 
                     SetLightShaderParameters(m, Configuration.GIProbeQuality);
@@ -200,7 +247,7 @@ namespace Squared.Illuminant {
 
                     p["GBuffer"].SetValue((Texture2D)null);
                     p["GBuffer"].SetValue(_SelectedGIProbePositions);
-                    p["GBufferTexelSize"].SetValue(new Vector2(1.0f / _SelectedGIProbePositions.Width, 1.0f / GIProbeNormalCount));
+                    p["GBufferTexelSize"].SetValue(new Vector2(1.0f / _SelectedGIProbePositions.Width, 1.0f / GIProbeSampleCount));
                     p["ProbeNormals"].SetValue((Texture2D)null);
                     p["ProbeNormals"].SetValue(_SelectedGIProbeNormals);
 
@@ -256,7 +303,7 @@ namespace Squared.Illuminant {
                     p["Brightness"].SetValue(1.0f + (Configuration.GIBounceBrightnessAmplification * bounceIndex));
 
                     p["InverseScaleFactor"].SetValue(1.0f / intensityScale);
-                    p["NormalCount"].SetValue(GIProbeNormalCount);
+                    p["NormalCount"].SetValue(GIProbeSampleCount);
                     p["ProbeValuesTexelSize"].SetValue(new Vector2(1.0f / _GIProbeValues.Width, 1.0f / _GIProbeValues.Height));
                     p["ProbeValues"].SetValue((Texture2D)null);
                     p["ProbeValues"].SetValue(_GIProbeValues);
@@ -394,7 +441,7 @@ namespace Squared.Illuminant {
         }
     }
 
-    public enum GIProbeQualityLevels : int {
+    public enum GIProbeSampleCounts : int {
         Low = 32,
         Medium = 48,
         High = 64,

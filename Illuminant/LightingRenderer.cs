@@ -282,28 +282,7 @@ namespace Squared.Illuminant {
             );
 
             if (Configuration.EnableGlobalIllumination)
-            lock (Coordinator.CreateResourceLock) {
-                _SelectedGIProbePositions = new RenderTarget2D(
-                    coordinator.Device, Configuration.MaximumGIProbeCount, GIProbeNormalCount, false,
-                    SurfaceFormat.HalfVector4, DepthFormat.None, 0, RenderTargetUsage.PreserveContents
-                );
-
-                _SelectedGIProbeNormals = new RenderTarget2D(
-                    coordinator.Device, Configuration.MaximumGIProbeCount, GIProbeNormalCount, false,
-                    SurfaceFormat.HalfVector4, DepthFormat.None, 0, RenderTargetUsage.PreserveContents
-                );
-
-                _GIProbeValues = new RenderTarget2D(
-                    coordinator.Device, Configuration.MaximumGIProbeCount, GIProbeNormalCount, false,
-                    SurfaceFormat.HdrBlendable, DepthFormat.None, 0, RenderTargetUsage.PreserveContents
-                );
-                
-                for (int i = 0; i < _GIProbeBounces.Length; i++)
-                    _GIProbeBounces[i] = new RenderTarget2D(
-                        coordinator.Device, Configuration.MaximumGIProbeCount, SHValueCount, false,
-                        SurfaceFormat.HalfVector4, DepthFormat.None, 0, RenderTargetUsage.PreserveContents
-                    );
-            }
+                CreateGIProbeResources();
 
             if (Configuration.EnableBrightnessEstimation) {
                 var width = Configuration.MaximumRenderSize.First / 2;
@@ -407,12 +386,8 @@ namespace Squared.Illuminant {
             Coordinator.DisposeResource(_LightProbePositions);
             Coordinator.DisposeResource(_LightProbeNormals);
             Coordinator.DisposeResource(_LightProbeValueBuffers);
-            Coordinator.DisposeResource(_SelectedGIProbePositions);
-            Coordinator.DisposeResource(_SelectedGIProbeNormals);
-            Coordinator.DisposeResource(_GIProbeValues);
 
-            foreach (var rt in _GIProbeBounces)
-                Coordinator.DisposeResource(rt);
+            ReleaseGIProbeResources();
 
             foreach (var kvp in HeightVolumeVertexData)
                 Coordinator.DisposeResource(kvp.Value);
@@ -798,7 +773,8 @@ namespace Squared.Illuminant {
             IBatchContainer container, int layer,
             RenderTarget2D lightmap,
             float? width, float? height, 
-            HDRConfiguration? hdr
+            HDRConfiguration? hdr,
+            bool resolveToSRGB
         ) {
             Material m;
             if (hdr.HasValue && hdr.Value.Mode == HDRMode.GammaCompress)
@@ -820,6 +796,7 @@ namespace Squared.Illuminant {
                         ? ((hdr.Value.InverseScaleFactor != 0) ? hdr.Value.InverseScaleFactor : 1.0f)
                         : 1.0f
                 );
+                p["ResolveToSRGB"].SetValue(resolveToSRGB);
 
                 var ub = Materials.GetUniformBinding<Uniforms.Environment>(m, "Environment");
                 ub.Value.Current = EnvironmentUniforms;

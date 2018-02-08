@@ -13,49 +13,52 @@ namespace Squared.Illuminant {
         /// <summary>
         /// The maximum width and height of the viewport.
         /// </summary>
-        public readonly Pair<int> MaximumRenderSize;
+        public readonly Pair<int>  MaximumRenderSize;
 
         /// <summary>
         /// The maximum number of light probes to update.
         /// </summary>
-        public readonly int       MaximumLightProbeCount;
+        public readonly int        MaximumLightProbeCount;
 
         /// <summary>
         /// The maximum number of global illumination probes to update.
         /// </summary>
-        public readonly int       MaximumGIProbeCount;
+        public readonly int        MaximumGIProbeCount;
 
         /// <summary>
         /// Determines how many samples contribute to the value of each GI probe.
         /// </summary>
-        public readonly GIProbeQualityLevels 
-                                  GIProbeQualityLevel;
+        public GIProbeSampleCounts GIProbeSampleCount;
 
         /// <summary>
         /// Determines how many bounces of indirect light can be simulated.
         /// </summary>
-        public readonly int       MaximumGIBounceCount;
+        public readonly int        MaximumGIBounceCount;
 
         /// <summary>
         /// Uses a high-precision g-buffer and internal lightmap.
         /// </summary>
-        public readonly bool      HighQuality;
+        public readonly bool       HighQuality;
 
         /// <summary>
         /// Generates downscaled versions of the internal lightmap that the
         ///  renderer can use to estimate the brightness of the scene for HDR.
         /// This property enables use of RenderedLighting.TryComputeHistogram.
         /// </summary>
-        public readonly bool      EnableBrightnessEstimation;
+        public readonly bool       EnableBrightnessEstimation;
 
-        public readonly bool      EnableGlobalIllumination;
+        /// <summary>
+        /// Enables the global illumination system. If set to false, none of the
+        ///  global illumination settings or APIs will have any effect.
+        /// </summary>
+        public readonly bool       EnableGlobalIllumination;
 
         /// <summary>
         /// Determines how large the ring buffers are. Larger ring buffers use
         ///  more memory but reduce the likelihood that draw or readback operations
         ///  will stall waiting on the previous frame.
         /// </summary>
-        public readonly int       RingBufferSize;
+        public readonly int        RingBufferSize;
 
         /// <summary>
         /// Scales world coordinates when rendering the G-buffer and lightmap.
@@ -81,11 +84,17 @@ namespace Squared.Illuminant {
         public RendererQualitySettings DefaultQuality = 
             new RendererQualitySettings();
 
+        /// <summary>
+        /// Sets the quality configuration to use for global illumination shadows and
+        ///  environment searches.
+        /// </summary>
         public RendererQualitySettings GIProbeQuality =
             new RendererQualitySettings();
     
         /// <summary>
         /// The maximum distance that GI probe selection will search for surfaces.
+        /// Higher values will increase the overall brightness of global illumination and also
+        ///  make it work in larger rooms and environments.
         /// </summary>
         public float GIBounceSearchDistance = 512;
 
@@ -134,6 +143,11 @@ namespace Squared.Illuminant {
         /// If disabled, the lighting renderer will regenerate its g-buffer every frame.
         /// </summary>
         public bool GBufferCaching    = true;
+
+        /// <summary>
+        /// If disabled, the lighting renderer will regenerate global illumination data every frame.
+        /// </summary>
+        public bool GICaching    = true;
         
         /// <summary>
         /// Enables 2.5D projection that maps the Z axis to the Y axis.
@@ -155,7 +169,7 @@ namespace Squared.Illuminant {
             int ringBufferSize = 2,
             int maximumLightProbeCount = 256,
             int maximumGIProbeCount = 1024,
-            GIProbeQualityLevels giProbeQualityLevel = GIProbeQualityLevels.Medium,
+            GIProbeSampleCounts giProbeQualityLevel = GIProbeSampleCounts.Medium,
             int maximumGIBounceCount = 2
         ) {
             HighQuality = highQuality;
@@ -169,7 +183,7 @@ namespace Squared.Illuminant {
             MaximumLightProbeCount = (int)Math.Pow(2, Math.Ceiling(Math.Log(maximumLightProbeCount, 2)));
             MaximumGIProbeCount = (int)Math.Pow(2, Math.Ceiling(Math.Log(maximumGIProbeCount, 2)));
             MaximumGIBounceCount = maximumGIBounceCount;
-            GIProbeQualityLevel = giProbeQualityLevel;
+            GIProbeSampleCount = giProbeQualityLevel;
 
             if (MaximumLightProbeCount > 2048)
                 throw new ArgumentException("Maximum light probe count is 2048");

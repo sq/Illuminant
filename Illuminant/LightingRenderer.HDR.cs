@@ -94,14 +94,15 @@ namespace Squared.Illuminant {
             public void Resolve (
                 IBatchContainer container, int layer,
                 float? width = null, float? height = null,
-                HDRConfiguration? hdr = null
+                HDRConfiguration? hdr = null, bool resolveToSRGB = false
             ) {
                 if (!IsValid)
                     throw new InvalidOperationException("Invalid");
 
                 Renderer.ResolveLighting(
                     container, layer,
-                    Lightmap, width, height, hdr
+                    Lightmap, width, height, hdr,
+                    resolveToSRGB
                 );
             }
 

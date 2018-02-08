@@ -28,8 +28,8 @@ namespace TestGame.Scenes {
         const int BounceCount = 3;
         const int MultisampleCount = 0;
         const int MaxStepCount = 128;
-        const float AORadius = 8;
-        const float AOOpacity = 0.5f;
+        const float AORadius = 6;
+        const float AOOpacity = 0.15f;
         const float ProbeZ = 1;
         const float ProbeVisBrightness = 1.1f;
 
@@ -42,7 +42,8 @@ namespace TestGame.Scenes {
             EnablePointLight,
             EnableDirectionalLights,
             AdditiveIndirectLight,
-            EdgeShadows;
+            EdgeShadows,
+            sRGB;
 
         Slider DistanceFieldResolution,
             LightmapScaleRatio,
@@ -84,6 +85,7 @@ namespace TestGame.Scenes {
             EnablePointLight.Key = Keys.D4;
             AdditiveIndirectLight.Key = Keys.A;
             EdgeShadows.Key = Keys.O;
+            sRGB.Key = Keys.R;
 
             DistanceFieldResolution.MinusKey = Keys.D5;
             DistanceFieldResolution.PlusKey = Keys.D6;
@@ -212,7 +214,7 @@ namespace TestGame.Scenes {
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(
                     Width, Height, true, false, enableGlobalIllumination: true,
-                    maximumGIProbeCount: 2048, giProbeQualityLevel: GIProbeQualityLevels.High,
+                    maximumGIProbeCount: 2048, giProbeQualityLevel: GIProbeSampleCounts.High,
                     maximumGIBounceCount: BounceCount
                 ) {
                     MaximumFieldUpdatesPerFrame = 3,
@@ -223,7 +225,9 @@ namespace TestGame.Scenes {
                         OcclusionToOpacityPower = 0.7f,
                         MaxConeRadius = 24,
                     },
-                    EnableGBuffer = true
+                    EnableGBuffer = true,
+                    GICaching = false,
+                    GBufferCaching = false
                 }
             );
 
@@ -336,7 +340,11 @@ namespace TestGame.Scenes {
                     RenderDirectLight,
                     girs
                 );
-                lighting.Resolve(bg, 2, Width, Height, hdr: new HDRConfiguration { InverseScaleFactor = LightScaleFactor });
+                lighting.Resolve(
+                    bg, 2, Width, Height, 
+                    hdr: new HDRConfiguration { InverseScaleFactor = LightScaleFactor }, 
+                    resolveToSRGB: sRGB
+                );
             };
 
             using (var group = BatchGroup.New(frame, 0)) {
@@ -344,7 +352,10 @@ namespace TestGame.Scenes {
 
                 using (var bb = BitmapBatch.New(
                     group, 1,
-                    Game.Materials.Get(Game.Materials.ScreenSpaceBitmap, blendState: BlendState.Opaque),
+                    Game.Materials.Get(
+                        Game.Materials.ScreenSpaceBitmap, 
+                        blendState: BlendState.Opaque
+                    ),
                     samplerState: SamplerState.LinearClamp
                 ))
                     bb.Add(new BitmapDrawCall(Lightmap, Vector2.Zero));
