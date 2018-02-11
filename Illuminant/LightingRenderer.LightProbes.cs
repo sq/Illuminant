@@ -42,9 +42,6 @@ namespace Squared.Illuminant {
         }
 
         private void UpdateLightProbes (IBatchContainer container, int layer, RenderTarget2D renderTarget, bool isForGi, float intensityScale) {
-            if (Probes.Count < 1)
-                return;
-
             using (var lightProbeGroup = BatchGroup.ForRenderTarget(
                 container, layer, renderTarget, 
                 before: BeginLightPass, after: isForGi ? EndGIProbePass : EndLightProbePass,

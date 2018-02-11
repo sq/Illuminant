@@ -209,11 +209,14 @@ namespace TestGame.Scenes {
             Environment.GroundZ = 0;
             Environment.MaximumZ = 128;
             Environment.ZToYMultiplier = 1.9f;
+            Environment.GIVolumes.Add(new GIVolume {
+                Bounds = Bounds.FromPositionAndSize(Vector2.Zero, new Vector2(Width, Height))
+            });
 
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(
-                    Width, Height, true, false, enableGlobalIllumination: true,
+                    Width, Height, true, true, enableGlobalIllumination: true,
                     maximumGIProbeCount: 2048, giProbeQualityLevel: GIProbeSampleCounts.High,
                     maximumGIBounceCount: BounceCount
                 ) {
@@ -290,8 +293,9 @@ namespace TestGame.Scenes {
         public override void Draw (Squared.Render.Frame frame) {
             CreateRenderTargets();
 
-            Environment.GIProbeOffset = new Vector3(ProbeInterval / 2f, ProbeInterval / 2f, 35);
-            Environment.GIProbeInterval = new Vector2(ProbeInterval, ProbeInterval);
+            var volume = Environment.GIVolumes[0];
+            volume.ProbeOffset = new Vector3(ProbeInterval / 2f, ProbeInterval / 2f, 35);
+            volume.ProbeInterval = new Vector2(ProbeInterval, ProbeInterval);
 
             Renderer.Configuration.TwoPointFiveD = TwoPointFiveD;
             Renderer.Configuration.RenderScale = Vector2.One * LightmapScaleRatio;

@@ -225,8 +225,8 @@ namespace Squared.Illuminant {
 
             IlluminantMaterials = new IlluminantMaterials(materials);
 
-            _GIProbeBounces = new RenderTarget2D[Configuration.MaximumGIBounceCount];
-            _GIProbeTimestamps = new long[Configuration.MaximumGIBounceCount];
+            _GIBounceTextures = new RenderTarget2D[Configuration.MaximumGIBounceCount];
+            _GIBounceTimestamps = new long[Configuration.MaximumGIBounceCount];
 
             BeginLightPass    = _BeginLightPass;
             EndLightPass      = _EndLightPass;
@@ -353,7 +353,7 @@ namespace Squared.Illuminant {
         }
 
         private void Coordinator_DeviceReset (object sender, EventArgs e) {
-            _GIProbesDirty = true;
+            Environment.GIVolumes.IsDirty = true;
             FillIndexBuffer();
         }
 
@@ -1096,10 +1096,10 @@ namespace Squared.Illuminant {
                 _GBuffer.Invalidate();
             if (_DistanceField != null)
                 _DistanceField.Invalidate();
-            _GIProbesDirty = true;
+            Environment.GIVolumes.IsDirty = true;
 
             for (int i = 0; i < Configuration.MaximumGIBounceCount; i++)
-                _GIProbeTimestamps[i] = 0;
+                _GIBounceTimestamps[i] = 0;
         }
 
         public void UpdateFields (IBatchContainer container, int layer) {

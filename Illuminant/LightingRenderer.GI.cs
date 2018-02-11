@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Graphics.PackedVector;
+using Squared.Game;
 using Squared.Render;
 using Squared.Render.Convenience;
 using Squared.Render.Tracing;
@@ -18,14 +20,10 @@ namespace Squared.Illuminant {
         public int GIProbeCount { get; private set; }
         private          RenderTarget2D _SelectedGIProbePositions, _SelectedGIProbeNormals;
         private          RenderTarget2D _GIProbeValues;
-        private readonly RenderTarget2D[] _GIProbeBounces;
-        private readonly long[] _GIProbeTimestamps;
-        private bool _GIProbesDirty;
-        private int _GIProbeCountX, _GIProbeCountY;
+        private readonly RenderTarget2D[] _GIBounceTextures;
+        private readonly long[] _GIBounceTimestamps;
 
         private GIProbeSampleCounts LastGIProbeSampleCount;
-        private Vector3 LastGIProbeOffset;
-        private Vector2 LastGIProbeInterval;
         private float   LastGISearchDistance;
 
         internal int GIProbeSampleCount {
@@ -77,14 +75,15 @@ namespace Squared.Illuminant {
             Coordinator.DisposeResource(_SelectedGIProbePositions);
             Coordinator.DisposeResource(_SelectedGIProbeNormals);
             Coordinator.DisposeResource(_GIProbeValues);
-            foreach (var rt in _GIProbeBounces)
+            foreach (var rt in _GIBounceTextures)
                 Coordinator.DisposeResource(rt);
         }
 
         private void CreateGIProbeResources () {
             ReleaseGIProbeResources();
 
-            _GIProbesDirty = true;
+            if (Environment != null)
+                Environment.GIVolumes.IsDirty = true;
 
             _SelectedGIProbePositions = new RenderTarget2D(
                 Coordinator.Device, Configuration.MaximumGIProbeCount, GIProbeSampleCount, false,
@@ -101,12 +100,12 @@ namespace Squared.Illuminant {
                 SurfaceFormat.HdrBlendable, DepthFormat.None, 0, RenderTargetUsage.PreserveContents
             );
                 
-            for (int i = 0; i < _GIProbeBounces.Length; i++) {
-                _GIProbeBounces[i] = new RenderTarget2D(
+            for (int i = 0; i < _GIBounceTextures.Length; i++) {
+                _GIBounceTextures[i] = new RenderTarget2D(
                     Coordinator.Device, Configuration.MaximumGIProbeCount, SHValueCount, false,
                     SurfaceFormat.HalfVector4, DepthFormat.None, 0, RenderTargetUsage.PreserveContents
                 );
-                _GIProbeTimestamps[i] = 0;
+                _GIBounceTimestamps[i] = 0;
             }
 
             LastGIProbeSampleCount = Configuration.GIProbeSampleCount;
@@ -124,20 +123,18 @@ namespace Squared.Illuminant {
                     dm.Device.Textures[i] = null;
             })) {
                 if (
-                    (LastGIProbeInterval != Environment.GIProbeInterval) ||
-                    (LastGIProbeOffset != Environment.GIProbeOffset) ||
                     (LastGISearchDistance != Configuration.GIBounceSearchDistance)
                 ) {
-                    _GIProbesDirty = true;
-                    LastGIProbeInterval = Environment.GIProbeInterval;
-                    LastGIProbeOffset = Environment.GIProbeOffset;
+                    Environment.GIVolumes.IsDirty = true;
                     LastGISearchDistance = Configuration.GIBounceSearchDistance;
-                    for (int i = 0; i < Configuration.MaximumGIBounceCount; i++)
-                        _GIProbeTimestamps[i] = 0;
                 }
 
-                if (_GIProbesDirty)
+                if (Environment.GIVolumes.IsDirty) {
+                    for (int i = 0; i < Configuration.MaximumGIBounceCount; i++)
+                        _GIBounceTimestamps[i] = 0;
+
                     SelectGIProbes(group, 0);
+                }
 
                 int bounceLayer = 1;
                 for (int i = 0; i < Math.Min(Configuration.MaximumGIBounceCount, Configuration.MaximumGIUpdatesPerFrame); i++)
@@ -150,9 +147,9 @@ namespace Squared.Illuminant {
             long lowestTimestamp = long.MaxValue;
 
             for (int i = 0; i < Configuration.MaximumGIBounceCount; i++) {
-                if (_GIProbeTimestamps[i] < lowestTimestamp) {
+                if (_GIBounceTimestamps[i] < lowestTimestamp) {
                     bounce = i;
-                    lowestTimestamp = _GIProbeTimestamps[i];
+                    lowestTimestamp = _GIBounceTimestamps[i];
                 }
             }
 
@@ -164,7 +161,24 @@ namespace Squared.Illuminant {
                 UpdateGIProbeSH(container, layer++, bounce, 1);
             }
 
-            _GIProbeTimestamps[bounce] = Time.Ticks;
+            _GIBounceTimestamps[bounce] = Time.Ticks;
+        }
+        
+        private GIProbeVertex[] MakeGIVolumeVertices (RenderTarget2D renderTarget, GIVolume volume) {
+            var offset = volume.ProbeOffset;
+            var intervalAndCount = new Vector4(
+                volume.ProbeInterval.X,
+                volume.ProbeInterval.Y,
+                volume.ProbeCountX,
+                volume.ProbeCountY
+            );
+
+            return new [] {
+                new GIProbeVertex(-1, -1, offset, intervalAndCount),
+                new GIProbeVertex(1, -1, offset, intervalAndCount),
+                new GIProbeVertex(1, 1, offset, intervalAndCount),
+                new GIProbeVertex(-1, 1, offset, intervalAndCount)
+            };
         }
 
         private void SelectGIProbes (IBatchContainer container, int layer) {
@@ -172,19 +186,22 @@ namespace Squared.Illuminant {
             var p = m.Effect.Parameters;
 
             if (
-                (Environment.GIProbeInterval.X < 1) || 
-                (Environment.GIProbeInterval.Y < 1) ||
+                (Environment.GIVolumes.Count < 1) ||
                 (_DistanceField == null)
             ) {
-                GIProbeCount = _GIProbeCountX = _GIProbeCountY = 0;
+                GIProbeCount = 0;
                 return;
             }
 
             var extent = Extent3;
-            _GIProbeCountX = (int)Math.Ceiling((extent.X - Environment.GIProbeOffset.X) / Environment.GIProbeInterval.X);
-            _GIProbeCountY = (int)Math.Ceiling((extent.Y - Environment.GIProbeOffset.Y) / Environment.GIProbeInterval.Y);
 
-            GIProbeCount = _GIProbeCountX * _GIProbeCountY;
+            GIProbeCount = 0;
+            foreach (var v in Environment.GIVolumes) {
+                v.IndexOffset = GIProbeCount;
+                v.UpdateCount();
+                GIProbeCount += v.ProbeCount;
+            }
+
             if (GIProbeCount > Configuration.MaximumGIProbeCount)
                 GIProbeCount = Configuration.MaximumGIProbeCount;
 
@@ -199,9 +216,6 @@ namespace Squared.Illuminant {
 
                     SetDistanceFieldParameters(m, true, Configuration.GIProbeQuality);
 
-                    p["ProbeOffset"].SetValue(Environment.GIProbeOffset);
-                    p["ProbeInterval"].SetValue(Environment.GIProbeInterval);
-                    p["ProbeCount"].SetValue(new Vector2(_GIProbeCountX, _GIProbeCountY));
                     p["NormalCount"].SetValue(GIProbeSampleCount);
                     p["BounceSearchDistance"].SetValue(Configuration.GIBounceSearchDistance);
 
@@ -222,20 +236,25 @@ namespace Squared.Illuminant {
                         (_DistanceField.InvalidSlices.Count == 0) &&
                         Configuration.GICaching
                     )
-                        _GIProbesDirty = false;
+                        Environment.GIVolumes.IsDirty = false;
                 }
-            ))
-            using (var pb = PrimitiveBatch<GIProbeVertex>.New(rt, 1, m)) {
+            )) {
                 RenderTrace.Marker(rt, 0, "Select GI probe locations");
+
+                RenderGIVolumes(rt, 1, m);
+            }
+        }
+
+        private void RenderGIVolumes (IBatchContainer container, int layer, Material material) {
+            using (var pb = PrimitiveBatch<GIProbeVertex>.New(
+                container, layer, material
+            ))
+            for (int i = 0; i < Environment.GIVolumes.Count; i++) {
+                var volume = Environment.GIVolumes[i];
 
                 var pdc = new PrimitiveDrawCall<GIProbeVertex>(
                     PrimitiveType.TriangleList,
-                    new [] {
-                        new GIProbeVertex(-1, -1),
-                        new GIProbeVertex(1, -1),
-                        new GIProbeVertex(1, 1),
-                        new GIProbeVertex(-1, 1)
-                    },
+                    MakeGIVolumeVertices(_SelectedGIProbePositions, volume),
                     0, 4, QuadIndices, 0, 2
                 );
                 pb.Add(ref pdc);
@@ -243,7 +262,7 @@ namespace Squared.Illuminant {
         }
 
         private void UpdateLightProbesFromGI (IBatchContainer container, int layer, RenderTarget2D renderTarget, int sourceBounceIndex) {
-            var source = _GIProbeBounces[sourceBounceIndex];
+            var source = _GIBounceTextures[sourceBounceIndex];
             var m = IlluminantMaterials.RenderLightProbesFromGI;
             var p = m.Effect.Parameters;
 
@@ -266,9 +285,6 @@ namespace Squared.Illuminant {
                     p["ProbeNormals"].SetValue((Texture2D)null);
                     p["ProbeNormals"].SetValue(_SelectedGIProbeNormals);
 
-                    p["ProbeOffset"].SetValue(Environment.GIProbeOffset);
-                    p["ProbeInterval"].SetValue(Environment.GIProbeInterval);
-                    p["ProbeCount"].SetValue(new Vector2(_GIProbeCountX, _GIProbeCountY));
                     p["SphericalHarmonicsTexelSize"].SetValue(new Vector2(1.0f / source.Width, 1.0f / source.Height));
                     p["SphericalHarmonics"].SetValue((Texture2D)null);
                     p["SphericalHarmonics"].SetValue(source);
@@ -279,25 +295,14 @@ namespace Squared.Illuminant {
                     for (int i = 0; i < 16; i++)
                         dm.Device.Textures[i] = null;
                 }
-            ))
-            using (var pb = PrimitiveBatch<GIProbeVertex>.New(group, 1, m)) {
-                RenderTrace.Marker(group, -2, "Update light probes from bounce {0}", sourceBounceIndex);
+            )) {
+                RenderTrace.Marker(group, 0, "Update light probes from bounce {0}", sourceBounceIndex);
 
                 ClearBatch.AddNew(
-                    group, -1, Materials.Clear, Color.Transparent
+                    group, 1, Materials.Clear, Color.Transparent
                 );
 
-                var pdc = new PrimitiveDrawCall<GIProbeVertex>(
-                    PrimitiveType.TriangleList,
-                    new [] {
-                        new GIProbeVertex(-1, -1),
-                        new GIProbeVertex(1, -1),
-                        new GIProbeVertex(1, 1),
-                        new GIProbeVertex(-1, 1)
-                    },
-                    0, 4, QuadIndices, 0, 2
-                );
-                pb.Add(ref pdc);
+                RenderGIVolumes(group, 2, m);
             }
         }
 
@@ -308,8 +313,8 @@ namespace Squared.Illuminant {
             var m = IlluminantMaterials.GIProbeSHGenerator;
             var p = m.Effect.Parameters;
 
-            var previousBounce = (bounceIndex > 0) ? _GIProbeBounces[bounceIndex - 1] : null;
-            var bounce = _GIProbeBounces[bounceIndex];
+            var previousBounce = (bounceIndex > 0) ? _GIBounceTextures[bounceIndex - 1] : null;
+            var bounce = _GIBounceTextures[bounceIndex];
 
             using (var rt = BatchGroup.New(
                 container, layer,
@@ -341,28 +346,16 @@ namespace Squared.Illuminant {
                     dm.PopRenderTarget();
                 }
             )) {
-                using (var pb = PrimitiveBatch<GIProbeVertex>.New(rt, 1, m)) {
-                    RenderTrace.Marker(rt, 0, "Update spherical harmonics for bounce {0}", bounceIndex);
+                RenderTrace.Marker(rt, 0, "Update spherical harmonics for bounce {0}", bounceIndex);
 
-                    var pdc = new PrimitiveDrawCall<GIProbeVertex>(
-                        PrimitiveType.TriangleList,
-                        new [] {
-                            new GIProbeVertex(-1, -1),
-                            new GIProbeVertex(1, -1),
-                            new GIProbeVertex(1, 1),
-                            new GIProbeVertex(-1, 1)
-                        },
-                        0, 4, QuadIndices, 0, 2
-                    );
-                    pb.Add(ref pdc);
-                }
+                RenderGIVolumes(rt, 1, m);
             }
         }
 
         public void VisualizeGIProbes (IBatchContainer container, int layer, float radius, int bounceIndex = 0, float brightness = 1) {
             var m = Materials.Get(IlluminantMaterials.VisualizeGI, blendState: BlendState.AlphaBlend);
             var p = m.Effect.Parameters;
-            var source = _GIProbeBounces[bounceIndex];
+            var source = _GIBounceTextures[bounceIndex];
 
             using (var group = BatchGroup.New(
                 container, layer,
@@ -387,16 +380,20 @@ namespace Squared.Illuminant {
 
                 var count = (short)GIProbeCount;
                 var buf = new VisualizeGIProbeVertex[count * 6];
+                short i = 0;
 
-                for (short i = 0; i < count; i++) {
-                    int y = i / _GIProbeCountX;
-                    int x = i - (y * _GIProbeCountX);
-                    Vector3 pos = Environment.GIProbeOffset + new Vector3(Environment.GIProbeInterval.X * x, Environment.GIProbeInterval.Y * y, 0);
-                    var j = i * 6;
-                    buf[j + 0] = new VisualizeGIProbeVertex(pos, -1, -1, i, radius); // 0
-                    buf[j + 1] = buf[j + 3] = new VisualizeGIProbeVertex(pos, 1, -1, i, radius); // 1
-                    buf[j + 4] = new VisualizeGIProbeVertex(pos, 1, 1, i, radius); // 2
-                    buf[j + 2] = buf[j + 5] = new VisualizeGIProbeVertex(pos, -1, 1, i, radius); // 3                    
+                foreach (var v in Environment.GIVolumes) {
+                    for (int j = 0; j < v.ProbeCount; j++) {
+                        int y = j / v.ProbeCountX;
+                        int x = j - (y * v.ProbeCountX);
+                        var pos = v.ProbeOffset + new Vector3(v.ProbeInterval.X * x, v.ProbeInterval.Y * y, 0);
+                        var k = i * 6;
+                        buf[k + 0] = new VisualizeGIProbeVertex(pos, -1, -1, i, radius); // 0
+                        buf[k + 1] = buf[k + 3] = new VisualizeGIProbeVertex(pos, 1, -1, i, radius); // 1
+                        buf[k + 4] = new VisualizeGIProbeVertex(pos, 1, 1, i, radius); // 2
+                        buf[k + 2] = buf[k + 5] = new VisualizeGIProbeVertex(pos, -1, 1, i, radius); // 3
+                        i++;
+                    }
                 }
 
                 var pdc = new PrimitiveDrawCall<VisualizeGIProbeVertex>(
@@ -412,6 +409,7 @@ namespace Squared.Illuminant {
         ) {
             var m = IlluminantMaterials.RenderGI;
             var p = m.Effect.Parameters;
+            var source = _GIBounceTextures[bounceIndex];
 
             using (var group = BatchGroup.New(
                 container, layer,
@@ -421,10 +419,9 @@ namespace Squared.Illuminant {
                     SetLightShaderParameters(m, Configuration.GIProbeQuality);
 
                     p["Brightness"].SetValue(brightness * intensityScale);
-                    p["ProbeOffset"].SetValue(Environment.GIProbeOffset);
-                    p["ProbeInterval"].SetValue(Environment.GIProbeInterval);
-                    p["ProbeCount"].SetValue(new Vector2(_GIProbeCountX, _GIProbeCountY));
                     p["SphericalHarmonicsTexelSize"].SetValue(new Vector2(1.0f / Configuration.MaximumGIProbeCount, 1.0f / SHValueCount));
+                    p["SphericalHarmonics"].SetValue((Texture2D)null);
+                    p["SphericalHarmonics"].SetValue(source);
 
                     m.Flush();
                 },
@@ -433,28 +430,9 @@ namespace Squared.Illuminant {
                         dm.Device.Textures[i] = null;
                 }
             )) {
-                var source = _GIProbeBounces[bounceIndex];
-                using (var pb = PrimitiveBatch<GIProbeVertex>.New(
-                    group, 1, m, 
-                    (dm, _) => {
-                        p["SphericalHarmonics"].SetValue((Texture2D)null);
-                        p["SphericalHarmonics"].SetValue(source);
-                    }
-                )) {
-                    RenderTrace.Marker(group, 0, "Render global illumination from bounce {0}", bounceIndex);
+                RenderTrace.Marker(group, 0, "Render global illumination from bounce {0}", bounceIndex);
 
-                    var pdc = new PrimitiveDrawCall<GIProbeVertex>(
-                        PrimitiveType.TriangleList,
-                        new [] {
-                            new GIProbeVertex(-1, -1),
-                            new GIProbeVertex(1, -1),
-                            new GIProbeVertex(1, 1),
-                            new GIProbeVertex(-1, 1)
-                        },
-                        0, 4, QuadIndices, 0, 2
-                    );
-                    pb.Add(ref pdc);
-                }
+                RenderGIVolumes(group, 1, m);
             }
         }
     }
@@ -470,5 +448,136 @@ namespace Squared.Illuminant {
     public class GIRenderSettings {
         public float Brightness = 1;
         public int   BounceIndex = 0;
+    }
+
+    public class GIVolume {
+        public GIVolumeCollection Collection { get; internal set; }
+
+        internal bool IsDirty = true;
+
+        internal Bounds _Bounds;
+        internal Vector3 _ProbeOffset;
+        internal Vector2 _ProbeInterval;
+
+        internal int IndexOffset;
+        internal int ProbeCount;
+        internal int ProbeCountX;
+        internal int ProbeCountY;
+
+        internal void UpdateCount () {
+            ProbeCountX = (int)Math.Ceiling((Bounds.Size.X - ProbeOffset.X) / ProbeInterval.X);
+            ProbeCountY = (int)Math.Ceiling((Bounds.Size.Y - ProbeOffset.Y) / ProbeInterval.Y);
+            ProbeCount = ProbeCountX * ProbeCountY;
+        }
+
+        public Bounds Bounds {
+            get {
+                return _Bounds;
+            }
+            set {
+                if (value.Equals(_Bounds))
+                    return;
+
+                if (Collection != null)
+                    Collection.IsDirty = true;
+
+                IsDirty = true;
+                _Bounds = value;
+            }
+        }
+
+        public Vector3 ProbeOffset {
+            get {
+                return _ProbeOffset;
+            }
+            set {
+                if (value == _ProbeOffset)
+                    return;
+
+                if (Collection != null)
+                    Collection.IsDirty = true;
+
+                IsDirty = true;
+                _ProbeOffset = value;
+            }
+        }
+
+        public Vector2 ProbeInterval {
+            get {
+                return _ProbeInterval;
+            }
+            set {
+                if (value == _ProbeInterval)
+                    return;
+
+                if (Collection != null)
+                    Collection.IsDirty = true;
+
+                IsDirty = true;
+                _ProbeInterval = value;
+            }
+        }
+    }
+
+    public class GIVolumeCollection : IEnumerable<GIVolume> {
+        internal readonly List<GIVolume> Volumes = new List<GIVolume>();
+        internal bool IsDirty = true;
+
+        public GIVolume this[int index] {
+            get {
+                return Volumes[index];
+            }
+        }
+
+        public int Count {
+            get {
+                return Volumes.Count;
+            }
+        }
+
+        public void Add (GIVolume item) {
+            if (item.Collection != null)
+                throw new InvalidOperationException("Already in another volume collection");
+
+            item.Collection = this;
+            Volumes.Add(item);
+            IsDirty = true;
+        }
+
+        public void Clear () {
+            foreach (var v in Volumes)
+                v.Collection = null;
+
+            Volumes.Clear();
+            IsDirty = true;
+        }
+
+        public bool Contains (GIVolume item) {
+            return Volumes.Contains(item);
+        }
+
+        public IEnumerator<GIVolume> GetEnumerator () {
+            return ((IList<GIVolume>)Volumes).GetEnumerator();
+        }
+
+        public bool Remove (GIVolume item) {
+            if (item.Collection != this)
+                throw new InvalidOperationException("Not in this collection");
+
+            item.Collection = null;
+            IsDirty = true;
+            return Volumes.Remove(item);
+        }
+
+        public void RemoveAt (int index) {
+            var item = Volumes[index];
+            item.Collection = null;
+            IsDirty = true;
+            Volumes.RemoveAt(index);
+        }
+
+        IEnumerator IEnumerable.GetEnumerator () {
+            return ((IList<GIVolume>)Volumes).GetEnumerator();
+        }
     }
 }
