@@ -163,7 +163,10 @@ namespace Squared.Illuminant {
             bounce.IsValid = true;
         }
         
-        private GIProbeVertex[] MakeGIVolumeVertices (RenderTarget2D renderTarget, GIVolume volume, bool screenSpace) {
+        private void MakeGIVolumeVertices (
+            GIProbeVertex[] buf, ref int offset, 
+            RenderTarget2D renderTarget, GIVolume volume, bool screenSpace
+        ) {
             Vector4 offsetAndBaseIndex, intervalAndCount;
 
             if (volume != null) {
@@ -199,12 +202,11 @@ namespace Squared.Illuminant {
                 y2 = 1;
             }
 
-            return new [] {
-                new GIProbeVertex(x1, y1, offsetAndBaseIndex, intervalAndCount),
-                new GIProbeVertex(x2, y1, offsetAndBaseIndex, intervalAndCount),
-                new GIProbeVertex(x2, y2, offsetAndBaseIndex, intervalAndCount),
-                new GIProbeVertex(x1, y2, offsetAndBaseIndex, intervalAndCount)
-            };
+            buf[offset + 0] = new GIProbeVertex(x1, y1, offsetAndBaseIndex, intervalAndCount);
+            buf[offset + 1] = new GIProbeVertex(x2, y1, offsetAndBaseIndex, intervalAndCount);
+            buf[offset + 2] = new GIProbeVertex(x2, y2, offsetAndBaseIndex, intervalAndCount);
+            buf[offset + 3] = new GIProbeVertex(x1, y2, offsetAndBaseIndex, intervalAndCount);
+            offset += 4;
         }
 
         private void SelectGIProbes (IBatchContainer container, int layer) {
@@ -275,6 +277,9 @@ namespace Squared.Illuminant {
         }
 
         private void RenderGIVolumes (IBatchContainer container, int layer, Material material, bool screenSpace) {
+            var buf = new GIProbeVertex[6 * Environment.GIVolumes.Count];
+            int j = 0;
+
             using (var pb = PrimitiveBatch<GIProbeVertex>.New(
                 container, layer, material
             ))
@@ -284,11 +289,11 @@ namespace Squared.Illuminant {
                     continue;
 
                 var pdc = new PrimitiveDrawCall<GIProbeVertex>(
-                    PrimitiveType.TriangleList,
-                    MakeGIVolumeVertices(_SelectedGIProbePositions, volume, screenSpace),
-                    0, 4, QuadIndices, 0, 2
+                    PrimitiveType.TriangleList, buf, j, 6, QuadIndices, 0, 2
                 );
                 pb.Add(ref pdc);
+
+                MakeGIVolumeVertices(buf, ref j, _SelectedGIProbePositions, volume, screenSpace);
             }
         }
 
@@ -384,10 +389,13 @@ namespace Squared.Illuminant {
                 using (var pb = PrimitiveBatch<GIProbeVertex>.New(
                     rt, 2, m
                 )) {
+                    var buf = new GIProbeVertex[4];
+                    int temp = 0;
+                    MakeGIVolumeVertices(buf, ref temp, _SelectedGIProbePositions, null, true);
+
                     var pdc = new PrimitiveDrawCall<GIProbeVertex>(
                         PrimitiveType.TriangleList,
-                        MakeGIVolumeVertices(_SelectedGIProbePositions, null, true),
-                        0, 4, QuadIndices, 0, 2
+                        buf, 0, 4, QuadIndices, 0, 2
                     );
                     pb.Add(ref pdc);
                 }

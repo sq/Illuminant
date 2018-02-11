@@ -62,9 +62,9 @@ namespace TestGame.Scenes {
             TwoPointFiveD.Value = true;
             DistanceFieldResolution.Value = 0.25f;
             LightmapScaleRatio.Value = 1.0f;
-            RenderDirectLight.Value = false;
-            ShowProbeSH.Value = true;
-            EnableShadows.Value = false;
+            RenderDirectLight.Value = true;
+            ShowProbeSH.Value = false;
+            EnableShadows.Value = true;
             EnablePointLight.Value = true;
             EnableDirectionalLights.Value = true;
             IndirectLightBrightness.Value = 1.0f;
@@ -226,15 +226,14 @@ namespace TestGame.Scenes {
                     maximumGIBounceCount: BounceCount
                 ) {
                     MaximumFieldUpdatesPerFrame = 3,
-                    MaximumGIUpdatesPerFrame = 3,
+                    MaximumGIUpdatesPerFrame = 1,
                     DefaultQuality = {
                         MinStepSize = 1f,
                         LongStepFactor = 0.5f,
                         OcclusionToOpacityPower = 0.7f,
                         MaxConeRadius = 24,
                     },
-                    EnableGBuffer = true,
-                    GICaching = false,
+                    EnableGBuffer = true
                 }
             );
 
