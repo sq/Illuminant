@@ -43,7 +43,8 @@ namespace TestGame.Scenes {
             EnableDirectionalLights,
             AdditiveIndirectLight,
             EdgeShadows,
-            sRGB;
+            sRGB,
+            MultipleVolumes;
 
         Slider DistanceFieldResolution,
             LightmapScaleRatio,
@@ -61,18 +62,19 @@ namespace TestGame.Scenes {
             TwoPointFiveD.Value = true;
             DistanceFieldResolution.Value = 0.25f;
             LightmapScaleRatio.Value = 1.0f;
-            RenderDirectLight.Value = true;
-            ShowProbeSH.Value = false;
-            EnableShadows.Value = true;
+            RenderDirectLight.Value = false;
+            ShowProbeSH.Value = true;
+            EnableShadows.Value = false;
             EnablePointLight.Value = true;
             EnableDirectionalLights.Value = true;
             IndirectLightBrightness.Value = 1.0f;
             AdditiveIndirectLight.Value = true;
             BounceDistance.Value = 512;
             ProbeInterval.Value = 48;
-            GIBounceCount.Value = 3;
+            GIBounceCount.Value = 1;
             LightScaleFactor.Value = 2.5f;
             EdgeShadows.Value = false;
+            MultipleVolumes.Value = false;
 
             ShowGBuffer.Key = Keys.G;
             TwoPointFiveD.Key = Keys.D2;
@@ -86,6 +88,7 @@ namespace TestGame.Scenes {
             AdditiveIndirectLight.Key = Keys.A;
             EdgeShadows.Key = Keys.O;
             sRGB.Key = Keys.R;
+            MultipleVolumes.Key = Keys.V;
 
             DistanceFieldResolution.MinusKey = Keys.D5;
             DistanceFieldResolution.PlusKey = Keys.D6;
@@ -209,9 +212,8 @@ namespace TestGame.Scenes {
             Environment.GroundZ = 0;
             Environment.MaximumZ = 128;
             Environment.ZToYMultiplier = 1.9f;
-            Environment.GIVolumes.Add(new GIVolume {
-                Bounds = Bounds.FromPositionAndSize(Vector2.Zero, new Vector2(Width, Height))
-            });
+            Environment.GIVolumes.Add(new GIVolume());
+            Environment.GIVolumes.Add(new GIVolume());
 
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
@@ -293,9 +295,18 @@ namespace TestGame.Scenes {
         public override void Draw (Squared.Render.Frame frame) {
             CreateRenderTargets();
 
-            var volume = Environment.GIVolumes[0];
-            volume.ProbeOffset = new Vector3(ProbeInterval / 2f, ProbeInterval / 2f, 35);
-            volume.ProbeInterval = new Vector2(ProbeInterval, ProbeInterval);
+            if (MultipleVolumes) {
+                Environment.GIVolumes[0].Bounds = Bounds.FromPositionAndSize(new Vector2(Width * 0.5f, 0), new Vector2(Width * 0.5f, Height * 0.5f));
+                Environment.GIVolumes[1].Bounds = Bounds.FromPositionAndSize(new Vector2(0, Height * 0.5f), new Vector2(Width * 0.5f, Height * 0.5f));
+            } else {
+                Environment.GIVolumes[0].Bounds = Bounds.FromPositionAndSize(Vector2.Zero, new Vector2(Width, Height));
+                Environment.GIVolumes[1].Bounds = default(Bounds);
+            }
+
+            foreach (var v in Environment.GIVolumes) {
+                v.ProbeOffset = new Vector3(ProbeInterval / 2f, ProbeInterval / 2f, 35);
+                v.ProbeInterval = new Vector2(ProbeInterval, ProbeInterval);
+            }
 
             Renderer.Configuration.TwoPointFiveD = TwoPointFiveD;
             Renderer.Configuration.RenderScale = Vector2.One * LightmapScaleRatio;
@@ -362,7 +373,7 @@ namespace TestGame.Scenes {
 
                 if (ShowProbeSH && (GIBounceCount.Value > 0))
                     Renderer.VisualizeGIProbes(
-                        group, 2, ProbeInterval.Value * 0.48f, 
+                        group, 2, ProbeInterval.Value * 0.4f, 
                         bounceIndex: (int)GIBounceCount.Value - 1, 
                         brightness: ProbeVisBrightness
                     );

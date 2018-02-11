@@ -157,7 +157,13 @@ float4 computeProbeRadiance(
             vars
         );
 
-    return float4(localRadiance * coneWeight, 1);
+    float intervalFalloff = max(probeIntervalAndCount.x, probeIntervalAndCount.y);
+    float distanceWeight = 1 - clamp(
+        max(0, length(vectorToProbe) - intervalFalloff) / intervalFalloff,
+        0, 1
+    );
+
+    return float4(localRadiance * coneWeight, distanceWeight);
 }
 
 float4 conditionalBlend (float4 lhs, float4 rhs, float weight) {
@@ -207,14 +213,16 @@ float3 SHRendererPixelShaderCore(
     SHScaleByCosine(cos);
 
     float3 irradiance = 0;
+    float maxDistanceWeight = 0;
 
     [loop]
     for (int i = 0; i < 4; i++) {
         float4 localRadiance = computeProbeRadiance(shadedPixelPosition, probeIndices[i], probeOffset, probeIntervalAndCount, cos, vars);
         irradiance += localRadiance.rgb * weights[i];
+        maxDistanceWeight = max(maxDistanceWeight, localRadiance.a);
     }
 
-    return irradiance;
+    return irradiance * maxDistanceWeight;
 }
 
 void SHRendererPixelShader(

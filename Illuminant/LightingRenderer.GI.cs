@@ -165,7 +165,7 @@ namespace Squared.Illuminant {
         }
         
         private GIProbeVertex[] MakeGIVolumeVertices (RenderTarget2D renderTarget, GIVolume volume) {
-            var offset = volume.ProbeOffset;
+            var offset = volume.ProbeOffset + new Vector3(volume.Bounds.TopLeft, 0);
             var intervalAndCount = new Vector4(
                 volume.ProbeInterval.X,
                 volume.ProbeInterval.Y,
@@ -197,6 +197,9 @@ namespace Squared.Illuminant {
 
             GIProbeCount = 0;
             foreach (var v in Environment.GIVolumes) {
+                if (!v.IsValid)
+                    continue;
+
                 v.IndexOffset = GIProbeCount;
                 v.UpdateCount();
                 GIProbeCount += v.ProbeCount;
@@ -251,6 +254,8 @@ namespace Squared.Illuminant {
             ))
             for (int i = 0; i < Environment.GIVolumes.Count; i++) {
                 var volume = Environment.GIVolumes[i];
+                if (!volume.IsValid)
+                    continue;
 
                 var pdc = new PrimitiveDrawCall<GIProbeVertex>(
                     PrimitiveType.TriangleList,
@@ -383,10 +388,13 @@ namespace Squared.Illuminant {
                 short i = 0;
 
                 foreach (var v in Environment.GIVolumes) {
+                    if (!v.IsValid)
+                        continue;
+
                     for (int j = 0; j < v.ProbeCount; j++) {
                         int y = j / v.ProbeCountX;
                         int x = j - (y * v.ProbeCountX);
-                        var pos = v.ProbeOffset + new Vector3(v.ProbeInterval.X * x, v.ProbeInterval.Y * y, 0);
+                        var pos = new Vector3(v.Bounds.TopLeft, 0) + v.ProbeOffset + new Vector3(v.ProbeInterval.X * x, v.ProbeInterval.Y * y, 0);
                         var k = i * 6;
                         buf[k + 0] = new VisualizeGIProbeVertex(pos, -1, -1, i, radius); // 0
                         buf[k + 1] = buf[k + 3] = new VisualizeGIProbeVertex(pos, 1, -1, i, radius); // 1
@@ -468,6 +476,13 @@ namespace Squared.Illuminant {
             ProbeCountX = (int)Math.Ceiling((Bounds.Size.X - ProbeOffset.X) / ProbeInterval.X);
             ProbeCountY = (int)Math.Ceiling((Bounds.Size.Y - ProbeOffset.Y) / ProbeInterval.Y);
             ProbeCount = ProbeCountX * ProbeCountY;
+        }
+
+        public bool IsValid {
+            get {
+                return (Bounds.Size.X > 0) && (Bounds.Size.Y > 0) &&
+                    (_ProbeInterval.X > 0) && (_ProbeInterval.Y > 0);
+            }
         }
 
         public Bounds Bounds {
