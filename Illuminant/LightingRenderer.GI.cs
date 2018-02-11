@@ -165,7 +165,8 @@ namespace Squared.Illuminant {
         }
         
         private GIProbeVertex[] MakeGIVolumeVertices (RenderTarget2D renderTarget, GIVolume volume) {
-            var offset = volume.ProbeOffset + new Vector3(volume.Bounds.TopLeft, 0);
+            var offsetAndBaseIndex = new Vector4(volume.ProbeOffset, volume.BaseIndex) + 
+                new Vector4(volume.Bounds.TopLeft, 0, 0);
             var intervalAndCount = new Vector4(
                 volume.ProbeInterval.X,
                 volume.ProbeInterval.Y,
@@ -174,10 +175,10 @@ namespace Squared.Illuminant {
             );
 
             return new [] {
-                new GIProbeVertex(-1, -1, offset, intervalAndCount),
-                new GIProbeVertex(1, -1, offset, intervalAndCount),
-                new GIProbeVertex(1, 1, offset, intervalAndCount),
-                new GIProbeVertex(-1, 1, offset, intervalAndCount)
+                new GIProbeVertex(-1, -1, offsetAndBaseIndex, intervalAndCount),
+                new GIProbeVertex(1, -1, offsetAndBaseIndex, intervalAndCount),
+                new GIProbeVertex(1, 1, offsetAndBaseIndex, intervalAndCount),
+                new GIProbeVertex(-1, 1, offsetAndBaseIndex, intervalAndCount)
             };
         }
 
@@ -200,7 +201,7 @@ namespace Squared.Illuminant {
                 if (!v.IsValid)
                     continue;
 
-                v.IndexOffset = GIProbeCount;
+                v.BaseIndex = GIProbeCount;
                 v.UpdateCount();
                 GIProbeCount += v.ProbeCount;
             }
@@ -467,7 +468,7 @@ namespace Squared.Illuminant {
         internal Vector3 _ProbeOffset;
         internal Vector2 _ProbeInterval;
 
-        internal int IndexOffset;
+        internal int BaseIndex;
         internal int ProbeCount;
         internal int ProbeCountX;
         internal int ProbeCountY;

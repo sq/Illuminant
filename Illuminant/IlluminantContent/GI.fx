@@ -33,8 +33,8 @@ sampler   SphericalHarmonicsSampler : register(s6) {
 
 void PassthroughVertexShader (
     inout float4 position      : POSITION0,
-    inout float3 probeOffset   : TEXCOORD0,
-    inout float4 probeIntervalAndCount : TEXCOORD1
+    inout float4 probeOffsetAndBaseIndex : TEXCOORD0,
+    inout float4 probeIntervalAndCount   : TEXCOORD1
 ) {
 }
 
@@ -66,7 +66,7 @@ float readSHProbe (
 
 float readSHProbeXy(
     float2 indexXy,
-    float3 probeOffset,
+    float4 probeOffsetAndBaseIndex,
     float4 probeIntervalAndCount,
     out SH9Color result,
     out float3 position
@@ -74,8 +74,8 @@ float readSHProbeXy(
     float2 probeInterval = probeIntervalAndCount.xy;
     float2 probeCount = probeIntervalAndCount.zw;
 
-    float probeIndex = floor(indexXy.x + (indexXy.y * probeCount.x));
-    position = probeOffset + float3(probeInterval * indexXy, 0);
+    float probeIndex = floor(indexXy.x + (indexXy.y * probeCount.x) + probeOffsetAndBaseIndex.w);
+    position = probeOffsetAndBaseIndex.xyz + float3(probeInterval * indexXy, 0);
     return readSHProbe(probeIndex, result);
 }
 
@@ -127,7 +127,7 @@ void SHVisualizerPixelShader(
 float4 computeProbeRadiance(
     in float3 shadedPixelPosition,
     in float2 probeIndexXy,
-    in float3 probeOffset,
+    in float4 probeOffsetAndBaseIndex,
     in float4 probeIntervalAndCount,
     in SH9 cos,
     in DistanceFieldConstants vars
@@ -135,7 +135,7 @@ float4 computeProbeRadiance(
     SH9Color probe;
     float3 probePosition;
 
-    float received = readSHProbeXy(probeIndexXy, probeOffset, probeIntervalAndCount, probe, probePosition);
+    float received = readSHProbeXy(probeIndexXy, probeOffsetAndBaseIndex, probeIntervalAndCount, probe, probePosition);
     [branch]
     if (received < 1)
         return float4(0, 0, 0, 0);
@@ -178,7 +178,7 @@ float4 conditionalBlend (float4 lhs, float4 rhs, float weight) {
 float3 SHRendererPixelShaderCore(
     float3 shadedPixelPosition,
     float3 shadedPixelNormal,
-    float3 probeOffset,
+    float4 probeOffsetAndBaseIndex,
     float4 probeIntervalAndCount
 ) {
     float2 probeInterval = probeIntervalAndCount.xy;
@@ -187,7 +187,7 @@ float3 SHRendererPixelShaderCore(
     float2 minIndex = float2(0, 0);
     float2 maxIndex = probeCount - 1;
 
-    float2 probeSpacePosition = shadedPixelPosition.xy - probeOffset;
+    float2 probeSpacePosition = shadedPixelPosition.xy - probeOffsetAndBaseIndex.xy;
     float2 probeIndexTl = clamp(floor(probeSpacePosition / probeInterval.xy), minIndex, maxIndex);
     float2 tlProbePosition = (probeIndexTl * probeInterval.xy);
     float2 probeIndexBr = clamp(ceil(probeSpacePosition / probeInterval.xy), minIndex, maxIndex);
@@ -217,7 +217,7 @@ float3 SHRendererPixelShaderCore(
 
     [loop]
     for (int i = 0; i < 4; i++) {
-        float4 localRadiance = computeProbeRadiance(shadedPixelPosition, probeIndices[i], probeOffset, probeIntervalAndCount, cos, vars);
+        float4 localRadiance = computeProbeRadiance(shadedPixelPosition, probeIndices[i], probeOffsetAndBaseIndex, probeIntervalAndCount, cos, vars);
         irradiance += localRadiance.rgb * weights[i];
         maxDistanceWeight = max(maxDistanceWeight, localRadiance.a);
     }
@@ -226,9 +226,9 @@ float3 SHRendererPixelShaderCore(
 }
 
 void SHRendererPixelShader(
-    in float2 vpos : VPOS,
-    in float3 probeOffset : TEXCOORD0,
-    in float4 probeIntervalAndCount : TEXCOORD1,
+    in  float2 vpos : VPOS,
+    in  float4 probeOffsetAndBaseIndex : TEXCOORD0,
+    in  float4 probeIntervalAndCount   : TEXCOORD1,
     out float4 result : COLOR0
 ) {
     float3 shadedPixelPosition;
@@ -239,16 +239,16 @@ void SHRendererPixelShader(
     );
 
     float3 irradiance = SHRendererPixelShaderCore(
-        shadedPixelPosition, shadedPixelNormal, probeOffset, probeIntervalAndCount
+        shadedPixelPosition, shadedPixelNormal, probeOffsetAndBaseIndex, probeIntervalAndCount
     ) * Brightness;
 
     result = float4(irradiance, 1);
 }
 
 void LightProbeSHRendererPixelShader(
-    in float2 vpos : VPOS,
-    in float3 probeOffset : TEXCOORD0,
-    in float4 probeIntervalAndCount : TEXCOORD1,
+    in  float2 vpos : VPOS,
+    in  float4 probeOffsetAndBaseIndex : TEXCOORD0,
+    in  float4 probeIntervalAndCount   : TEXCOORD1,
     out float4 result : COLOR0
 ) {
     float3 shadedPixelPosition;
@@ -256,12 +256,12 @@ void LightProbeSHRendererPixelShader(
     float opacity;
 
     sampleLightProbeBuffer(
-        vpos,
+        vpos + float2(probeOffsetAndBaseIndex.w, 0),
         shadedPixelPosition, shadedPixelNormal, opacity
     );
 
     float3 irradiance = SHRendererPixelShaderCore(
-        shadedPixelPosition, shadedPixelNormal, probeOffset, probeIntervalAndCount
+        shadedPixelPosition, shadedPixelNormal, probeOffsetAndBaseIndex, probeIntervalAndCount
     ) * opacity * Brightness;
 
     result = float4(irradiance, 1);

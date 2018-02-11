@@ -53,8 +53,8 @@ sampler   PreviousBounceSampler : register(s6) {
 
 void ProbeVertexShader (
     inout float4 position      : POSITION0,
-    inout float3 probeOffset   : TEXCOORD0,
-    inout float4 probeIntervalAndCount : TEXCOORD1
+    inout float4 probeOffsetAndBaseIndex : TEXCOORD0,
+    inout float4 probeIntervalAndCount   : TEXCOORD1
 ) {
 }
 
@@ -75,16 +75,17 @@ float3 ComputeRowNormal(float row) {
 
 void ProbeSelectorPixelShader(
     in  float2 vpos           : VPOS,
-    in  float3 probeOffset    : TEXCOORD0,
-    in  float4 probeIntervalAndCount : TEXCOORD1,
+    in  float4 probeOffsetAndBaseIndex : TEXCOORD0,
+    in  float4 probeIntervalAndCount   : TEXCOORD1,
     out float4 resultPosition : COLOR0,
     out float4 resultNormal   : COLOR1
 ) {
     float2 probeInterval = probeIntervalAndCount.xy;
     float2 probeCount = probeIntervalAndCount.zw;
-    float yIndex = floor(vpos.x / probeCount.x);
-    float xIndex = vpos.x - (yIndex * probeCount.x);
-    float3 requestedPosition = probeOffset + float3(probeInterval.x * xIndex, probeInterval.y * yIndex, 0);
+    float rawIndex = vpos.x - probeOffsetAndBaseIndex.w;
+    float yIndex = floor(rawIndex / probeCount.x);
+    float xIndex = rawIndex - (yIndex * probeCount.x);
+    float3 requestedPosition = probeOffsetAndBaseIndex.xyz + float3(probeInterval.x * xIndex, probeInterval.y * yIndex, 0);
     float3 normal = ComputeRowNormal(vpos.y);
 
     DistanceFieldConstants vars = makeDistanceFieldConstants();
@@ -123,8 +124,8 @@ void ProbeSelectorPixelShader(
 
 void SHGeneratorPixelShader(
     in  float2 vpos   : VPOS,
-    in  float3 probeOffset    : TEXCOORD0,
-    in  float4 probeIntervalAndCount : TEXCOORD1,
+    in  float4 probeOffsetAndBaseIndex : TEXCOORD0,
+    in  float4 probeIntervalAndCount   : TEXCOORD1,
     out float4 result : COLOR0
 ) {
     int y = max(0, floor(vpos.y));

@@ -219,14 +219,14 @@ namespace Squared.Illuminant {
 
     public struct GIProbeVertex : IVertexType {
         public Vector4 Position;
-        public Vector3 ProbeOffset;
+        public Vector4 ProbeOffsetAndBaseIndex;
         public Vector4 ProbeIntervalAndCount;
 
         public static VertexDeclaration _VertexDeclaration;
 
-        public GIProbeVertex (float x, float y, Vector3 offset, Vector4 intervalAndCount) {
+        public GIProbeVertex (float x, float y, Vector4 offsetAndBaseIndex, Vector4 intervalAndCount) {
             Position = new Vector4(x, y, 0, 1);
-            ProbeOffset = offset;
+            ProbeOffsetAndBaseIndex = offsetAndBaseIndex;
             ProbeIntervalAndCount = intervalAndCount;
         }
 
@@ -235,7 +235,7 @@ namespace Squared.Illuminant {
 
             _VertexDeclaration = new VertexDeclaration(
                 new VertexElement(Marshal.OffsetOf(tThis, "Position").ToInt32(), VertexElementFormat.Vector4, VertexElementUsage.Position, 0),
-                new VertexElement(Marshal.OffsetOf(tThis, "ProbeOffset").ToInt32(), VertexElementFormat.Vector3, VertexElementUsage.TextureCoordinate, 0),
+                new VertexElement(Marshal.OffsetOf(tThis, "ProbeOffsetAndBaseIndex").ToInt32(), VertexElementFormat.Vector4, VertexElementUsage.TextureCoordinate, 0),
                 new VertexElement(Marshal.OffsetOf(tThis, "ProbeIntervalAndCount").ToInt32(), VertexElementFormat.Vector4, VertexElementUsage.TextureCoordinate, 1)
             );
         }
