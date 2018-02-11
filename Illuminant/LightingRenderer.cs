@@ -1087,8 +1087,7 @@ namespace Squared.Illuminant {
         }
 
         public void InvalidateFields (
-            // TODO: Maybe remove this since I'm not sure it's useful at all.
-            Bounds3? region = null
+            bool rebuildGI = true
         ) {
             EnsureGBuffer();
             if (_GBuffer != null)
@@ -1097,6 +1096,8 @@ namespace Squared.Illuminant {
                 _DistanceField.Invalidate();
 
             Environment.GIVolumes.IsDirty = true;
+
+            if (rebuildGI)
             foreach (var b in _GIBounces) {
                 if (b != null)
                     b.Invalidate();

@@ -126,12 +126,8 @@ namespace Squared.Illuminant {
                     LastGISearchDistance = Configuration.GIBounceSearchDistance;
                 }
 
-                if (Environment.GIVolumes.IsDirty) {
-                    foreach (var b in _GIBounces)
-                        b.Invalidate();
-
+                if (Environment.GIVolumes.IsDirty)
                     SelectGIProbes(group, 0);
-                }
 
                 int bounceLayer = 1;
                 for (int i = 0; i < Math.Min(Configuration.MaximumGIBounceCount, Configuration.MaximumGIUpdatesPerFrame); i++)
@@ -151,12 +147,14 @@ namespace Squared.Illuminant {
                 }
             }
 
-            if (bounce.Index == 0) {
-                UpdateLightProbes(container, layer++, _GIProbeValues, true, intensityScale);
-                UpdateGIProbeSH(container, layer++, 0, intensityScale);
-            } else {
-                UpdateLightProbesFromGI(container, layer++, _GIProbeValues, bounce.Index - 1);
-                UpdateGIProbeSH(container, layer++, bounce.Index, 1);
+            if (GIProbeCount > 0) {
+                if (bounce.Index == 0) {
+                    UpdateLightProbes(container, layer++, _GIProbeValues, true, intensityScale);
+                    UpdateGIProbeSH(container, layer++, 0, intensityScale);
+                } else {
+                    UpdateLightProbesFromGI(container, layer++, _GIProbeValues, bounce.Index - 1);
+                    UpdateGIProbeSH(container, layer++, bounce.Index, 1);
+                }
             }
 
             bounce.Timestamp = Time.Ticks;
