@@ -212,8 +212,9 @@ namespace TestGame.Scenes {
             Environment.GroundZ = 0;
             Environment.MaximumZ = 128;
             Environment.ZToYMultiplier = 1.9f;
-            Environment.GIVolumes.Add(new GIVolume());
-            Environment.GIVolumes.Add(new GIVolume());
+
+            for (int i = 0; i < 4; i++)
+                Environment.GIVolumes.Add(new GIVolume());
 
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
@@ -297,11 +298,23 @@ namespace TestGame.Scenes {
             CreateRenderTargets();
 
             if (MultipleVolumes) {
-                Environment.GIVolumes[0].Bounds = Bounds.FromPositionAndSize(new Vector2(Width * 0.5f, 0), new Vector2(Width * 0.5f, Height * 0.5f));
-                Environment.GIVolumes[1].Bounds = Bounds.FromPositionAndSize(new Vector2(0, Height * 0.5f), new Vector2(Width * 0.5f, Height * 0.5f));
+                int w = Width, h = Height;
+                float w2 = Width * 0.4f, h2 = Height * 0.4f;
+                Environment.GIVolumes[0].Bounds = Bounds.FromPositionAndSize(new Vector2(w * 0, h * 0), new Vector2(w2, h2));
+                Environment.GIVolumes[1].Bounds = Bounds.FromPositionAndSize(new Vector2(w * 0.6f, h * 0), new Vector2(w2, h2));
+                Environment.GIVolumes[2].Bounds = Bounds.FromPositionAndSize(new Vector2(w * 0, h * 0.6f), new Vector2(w2, h2));
+                Environment.GIVolumes[3].Bounds = Bounds.FromPositionAndSize(new Vector2(w * 0.6f, h * 0.6f), new Vector2(w2, h2));
+
+                for (int i = 0; i < 4; i++)
+                    Environment.GIVolumes[i].Visible = true;
             } else {
                 Environment.GIVolumes[0].Bounds = Bounds.FromPositionAndSize(Vector2.Zero, new Vector2(Width, Height));
-                Environment.GIVolumes[1].Bounds = default(Bounds);
+                Environment.GIVolumes[0].Visible = true;
+
+                for (int i = 1; i < 4; i++) {
+                    Environment.GIVolumes[i].Bounds = default(Bounds);
+                    Environment.GIVolumes[i].Visible = false;
+                }
             }
 
             foreach (var v in Environment.GIVolumes) {

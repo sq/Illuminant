@@ -225,8 +225,7 @@ namespace Squared.Illuminant {
 
             IlluminantMaterials = new IlluminantMaterials(materials);
 
-            _GIBounceTextures = new RenderTarget2D[Configuration.MaximumGIBounceCount];
-            _GIBounceTimestamps = new long[Configuration.MaximumGIBounceCount];
+            _GIBounces = new GIBounce[Configuration.MaximumGIBounceCount];
 
             BeginLightPass    = _BeginLightPass;
             EndLightPass      = _EndLightPass;
@@ -1098,8 +1097,10 @@ namespace Squared.Illuminant {
                 _DistanceField.Invalidate();
 
             Environment.GIVolumes.IsDirty = true;
-            for (int i = 0; i < Configuration.MaximumGIBounceCount; i++)
-                _GIBounceTimestamps[i] = 0;
+            foreach (var b in _GIBounces) {
+                if (b != null)
+                    b.Invalidate();
+            }
         }
 
         public void UpdateFields (IBatchContainer container, int layer) {

@@ -9,6 +9,7 @@
 #define SELF_OCCLUSION_HACK 1.5
 
 #define ProbeLightCastsShadows true
+#define ProbeDistanceFalloff false
 
 #define ConeShadowRadius 4
 #define ConeShadowRamp 2
@@ -32,10 +33,22 @@ sampler   SphericalHarmonicsSampler : register(s6) {
 };
 
 void PassthroughVertexShader (
-    inout float4 position      : POSITION0,
+    inout float4 position                : POSITION0,
     inout float4 probeOffsetAndBaseIndex : TEXCOORD0,
     inout float4 probeIntervalAndCount   : TEXCOORD1
 ) {
+}
+
+void SHRendererVertexShader(
+    in    float4 worldPosition           : POSITION0,
+    inout float4 probeOffsetAndBaseIndex : TEXCOORD0,
+    inout float4 probeIntervalAndCount   : TEXCOORD1,
+    out   float4 result                  : POSITION0
+) {
+    float3 screenPosition = (worldPosition - float3(Viewport.Position.xy, 0));
+    screenPosition.xy *= Viewport.Scale * Environment.RenderScale;
+    float4 transformedPosition = mul(mul(float4(screenPosition.xyz, 1), Viewport.ModelView), Viewport.Projection);
+    result = float4(transformedPosition.xy, 0, transformedPosition.w);
 }
 
 void SHVisualizerVertexShader (
@@ -120,8 +133,10 @@ void SHVisualizerPixelShader(
         // HACK: This seems to be needed to compensate for the cosine scaling of the color value
         // * (1.0 / Pi);
 
-    float  fade = 1.0 - clamp((xyLength - 0.9) / 0.1, 0, 1);
-    result = float4(resultRgb * fade, fade);
+    float fade = clamp((xyLength - 0.80) / 0.10, 0, 1);
+    float fade2 = 1 - clamp((xyLength - 0.90) / 0.10, 0, 1);
+    float3 color = lerp(resultRgb, float3(0.1, 0.1, 0.1), fade);
+    result = float4(color * fade2, fade2);
 }
 
 float4 computeProbeRadiance(
@@ -157,14 +172,18 @@ float4 computeProbeRadiance(
             vars
         );
 
-    float intervalFalloff = max(probeIntervalAndCount.x, probeIntervalAndCount.y);
-    float intervalOffset = intervalFalloff + 2;
-    float distanceWeight = 1 - clamp(
-        max(0, length(vectorToProbe.xy) - intervalOffset) / intervalFalloff,
-        0, 1
-    );
+    if (ProbeDistanceFalloff) {
+        float intervalFalloff = max(probeIntervalAndCount.x, probeIntervalAndCount.y);
+        float intervalOffset = intervalFalloff + 2;
+        float distanceWeight = 1 - clamp(
+            max(0, length(vectorToProbe.xy) - intervalOffset) / intervalFalloff,
+            0, 1
+        );
 
-    return float4(localRadiance * coneWeight, distanceWeight);
+        return float4(localRadiance * coneWeight, distanceWeight);
+    } else {
+        return float4(localRadiance * coneWeight, 1);
+    }
 }
 
 float4 conditionalBlend (float4 lhs, float4 rhs, float weight) {
@@ -176,7 +195,7 @@ float4 conditionalBlend (float4 lhs, float4 rhs, float weight) {
     return lerp(lhs, rhs, weight);
 }
 
-float3 SHRendererPixelShaderCore(
+float4 SHRendererPixelShaderCore(
     float3 shadedPixelPosition,
     float3 shadedPixelNormal,
     float4 probeOffsetAndBaseIndex,
@@ -223,7 +242,7 @@ float3 SHRendererPixelShaderCore(
         maxDistanceWeight = max(maxDistanceWeight, localRadiance.a);
     }
 
-    return irradiance * maxDistanceWeight;
+    return float4(irradiance * maxDistanceWeight, 1);
 }
 
 void SHRendererPixelShader(
@@ -239,11 +258,14 @@ void SHRendererPixelShader(
         shadedPixelPosition, shadedPixelNormal
     );
 
-    float3 irradiance = SHRendererPixelShaderCore(
+    float4 irradiance = SHRendererPixelShaderCore(
         shadedPixelPosition, shadedPixelNormal, probeOffsetAndBaseIndex, probeIntervalAndCount
-    ) * Brightness;
+    );
 
-    result = float4(irradiance, 1);
+    if (ProbeDistanceFalloff && (irradiance.a < 1))
+        discard;
+
+    result = float4(irradiance.rgb * Brightness, irradiance.a);
 }
 
 void LightProbeSHRendererPixelShader(
@@ -257,15 +279,15 @@ void LightProbeSHRendererPixelShader(
     float opacity;
 
     sampleLightProbeBuffer(
-        vpos + float2(probeOffsetAndBaseIndex.w, 0),
+        vpos,
         shadedPixelPosition, shadedPixelNormal, opacity
     );
 
-    float3 irradiance = SHRendererPixelShaderCore(
+    float4 irradiance = SHRendererPixelShaderCore(
         shadedPixelPosition, shadedPixelNormal, probeOffsetAndBaseIndex, probeIntervalAndCount
-    ) * opacity * Brightness;
+    );
 
-    result = float4(irradiance, 1);
+    result = float4(irradiance.rgb * opacity * Brightness, 1);
 }
 
 technique VisualizeGI {
@@ -279,7 +301,7 @@ technique VisualizeGI {
 technique RenderGI {
     pass P0
     {
-        vertexShader = compile vs_3_0 PassthroughVertexShader();
+        vertexShader = compile vs_3_0 SHRendererVertexShader();
         pixelShader = compile ps_3_0 SHRendererPixelShader();
     }
 }
