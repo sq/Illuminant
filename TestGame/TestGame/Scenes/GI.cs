@@ -218,7 +218,9 @@ namespace TestGame.Scenes {
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(
-                    Width, Height, true, true, enableGlobalIllumination: true,
+                    Width, Height, true,
+                    enableBrightnessEstimation: false, 
+                    enableGlobalIllumination: true,
                     maximumGIProbeCount: 2048, giProbeQualityLevel: GIProbeSampleCounts.High,
                     maximumGIBounceCount: BounceCount
                 ) {
@@ -232,7 +234,6 @@ namespace TestGame.Scenes {
                     },
                     EnableGBuffer = true,
                     GICaching = false,
-                    GBufferCaching = false
                 }
             );
 
@@ -304,6 +305,7 @@ namespace TestGame.Scenes {
             }
 
             foreach (var v in Environment.GIVolumes) {
+                // FIXME: The 2nd one will have its offset slightly wrong
                 v.ProbeOffset = new Vector3(ProbeInterval / 2f, ProbeInterval / 2f, 35);
                 v.ProbeInterval = new Vector2(ProbeInterval, ProbeInterval);
             }

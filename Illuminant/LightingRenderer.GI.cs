@@ -164,21 +164,38 @@ namespace Squared.Illuminant {
             _GIBounceTimestamps[bounce] = Time.Ticks;
         }
         
-        private GIProbeVertex[] MakeGIVolumeVertices (RenderTarget2D renderTarget, GIVolume volume) {
-            var offsetAndBaseIndex = new Vector4(volume.ProbeOffset, volume.BaseIndex) + 
-                new Vector4(volume.Bounds.TopLeft, 0, 0);
-            var intervalAndCount = new Vector4(
-                volume.ProbeInterval.X,
-                volume.ProbeInterval.Y,
-                volume.ProbeCountX,
-                volume.ProbeCountY
-            );
+        private GIProbeVertex[] MakeGIVolumeVertices (RenderTarget2D renderTarget, GIVolume volume, bool fullSurface = false) {
+            Vector4 offsetAndBaseIndex, intervalAndCount;
+
+            if (volume != null) {
+                offsetAndBaseIndex = new Vector4(volume.ProbeOffset, volume.BaseIndex) + 
+                    new Vector4(volume.Bounds.TopLeft, 0, 0);
+                intervalAndCount = new Vector4(
+                    volume.ProbeInterval.X,
+                    volume.ProbeInterval.Y,
+                    volume.ProbeCountX,
+                    volume.ProbeCountY
+                );
+            } else {
+                offsetAndBaseIndex = intervalAndCount = Vector4.Zero;
+            }
+
+            float x1, x2;
+
+            if (fullSurface || (volume == null)) {
+                x1 = -1;
+                x2 = 1;
+            } else {
+                double div = 1.0 / GIProbeCount;
+                x1 = (float)((double)volume.BaseIndex * div * 2) - 1;
+                x2 = (float)((double)(volume.BaseIndex + volume.ProbeCount) * div * 2) - 1;
+            }
 
             return new [] {
-                new GIProbeVertex(-1, -1, offsetAndBaseIndex, intervalAndCount),
-                new GIProbeVertex(1, -1, offsetAndBaseIndex, intervalAndCount),
-                new GIProbeVertex(1, 1, offsetAndBaseIndex, intervalAndCount),
-                new GIProbeVertex(-1, 1, offsetAndBaseIndex, intervalAndCount)
+                new GIProbeVertex(x1, -1, offsetAndBaseIndex, intervalAndCount),
+                new GIProbeVertex(x2, -1, offsetAndBaseIndex, intervalAndCount),
+                new GIProbeVertex(x2, 1, offsetAndBaseIndex, intervalAndCount),
+                new GIProbeVertex(x1, 1, offsetAndBaseIndex, intervalAndCount)
             };
         }
 
@@ -245,11 +262,11 @@ namespace Squared.Illuminant {
             )) {
                 RenderTrace.Marker(rt, 0, "Select GI probe locations");
 
-                RenderGIVolumes(rt, 1, m);
+                RenderGIVolumes(rt, 1, m, false);
             }
         }
 
-        private void RenderGIVolumes (IBatchContainer container, int layer, Material material) {
+        private void RenderGIVolumes (IBatchContainer container, int layer, Material material, bool fullSurface) {
             using (var pb = PrimitiveBatch<GIProbeVertex>.New(
                 container, layer, material
             ))
@@ -260,7 +277,7 @@ namespace Squared.Illuminant {
 
                 var pdc = new PrimitiveDrawCall<GIProbeVertex>(
                     PrimitiveType.TriangleList,
-                    MakeGIVolumeVertices(_SelectedGIProbePositions, volume),
+                    MakeGIVolumeVertices(_SelectedGIProbePositions, volume, fullSurface),
                     0, 4, QuadIndices, 0, 2
                 );
                 pb.Add(ref pdc);
@@ -308,7 +325,7 @@ namespace Squared.Illuminant {
                     group, 1, Materials.Clear, Color.Transparent
                 );
 
-                RenderGIVolumes(group, 2, m);
+                RenderGIVolumes(group, 2, m, false);
             }
         }
 
@@ -354,7 +371,16 @@ namespace Squared.Illuminant {
             )) {
                 RenderTrace.Marker(rt, 0, "Update spherical harmonics for bounce {0}", bounceIndex);
 
-                RenderGIVolumes(rt, 1, m);
+                using (var pb = PrimitiveBatch<GIProbeVertex>.New(
+                    rt, 1, m
+                )) {
+                    var pdc = new PrimitiveDrawCall<GIProbeVertex>(
+                        PrimitiveType.TriangleList,
+                        MakeGIVolumeVertices(_SelectedGIProbePositions, null, true),
+                        0, 4, QuadIndices, 0, 2
+                    );
+                    pb.Add(ref pdc);
+                }
             }
         }
 
@@ -441,7 +467,7 @@ namespace Squared.Illuminant {
             )) {
                 RenderTrace.Marker(group, 0, "Render global illumination from bounce {0}", bounceIndex);
 
-                RenderGIVolumes(group, 1, m);
+                RenderGIVolumes(group, 1, m, true);
             }
         }
     }

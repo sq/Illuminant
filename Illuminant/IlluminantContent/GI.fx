@@ -158,8 +158,9 @@ float4 computeProbeRadiance(
         );
 
     float intervalFalloff = max(probeIntervalAndCount.x, probeIntervalAndCount.y);
+    float intervalOffset = intervalFalloff + 2;
     float distanceWeight = 1 - clamp(
-        max(0, length(vectorToProbe) - intervalFalloff) / intervalFalloff,
+        max(0, length(vectorToProbe.xy) - intervalOffset) / intervalFalloff,
         0, 1
     );
 

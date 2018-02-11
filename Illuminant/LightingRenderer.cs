@@ -1096,8 +1096,8 @@ namespace Squared.Illuminant {
                 _GBuffer.Invalidate();
             if (_DistanceField != null)
                 _DistanceField.Invalidate();
-            Environment.GIVolumes.IsDirty = true;
 
+            Environment.GIVolumes.IsDirty = true;
             for (int i = 0; i < Configuration.MaximumGIBounceCount; i++)
                 _GIBounceTimestamps[i] = 0;
         }
