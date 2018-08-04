@@ -68,7 +68,8 @@ namespace Squared.Illuminant {
             public  readonly LightingRenderer           Parent;
             public  readonly LightTypeRenderStateKey    Key;
             public  readonly object                     Lock = new object();
-            public  readonly UnorderedList<LightVertex> LightVertices = new UnorderedList<LightVertex>(512);
+            public  readonly UnorderedList<LightVertex> LightVertices = null;
+            public  readonly UnorderedList<ParticleLightVertex> ParticleLightVertices = null;
             public  readonly Material                   Material, ProbeMaterial;
 
             private int                                 CurrentVertexCount = 0;
@@ -77,6 +78,11 @@ namespace Squared.Illuminant {
             public LightTypeRenderState (LightingRenderer parent, LightTypeRenderStateKey key) {
                 Parent = parent;
                 Key    = key;
+
+                if (key.Type == LightSourceTypeID.Particle)
+                    ParticleLightVertices = new UnorderedList<ParticleLightVertex>(16);
+                else
+                    LightVertices = new UnorderedList<LightVertex>(512);
 
                 switch (key.Type) {
                     case LightSourceTypeID.Sphere:
@@ -117,30 +123,51 @@ namespace Squared.Illuminant {
                 }
             }
 
+            public int Count {
+                get {
+                    return LightVertices != null ? LightVertices.Count : ParticleLightVertices.Count;
+                }
+            }
+
+            public int Capacity {
+                get {
+                    return LightVertices != null ? LightVertices.Capacity : ParticleLightVertices.Capacity;
+                }
+            }
+
             public void UpdateVertexBuffer () {
                 lock (Lock) {
-                    if ((LightVertexBuffer != null) && (LightVertexBuffer.VertexCount < LightVertices.Count)) {
+                    var vertexCount = Count;
+                    var vertexCapacity = Capacity;
+
+                    if ((LightVertexBuffer != null) && (LightVertexBuffer.VertexCount < vertexCount)) {
                         Parent.Coordinator.DisposeResource(LightVertexBuffer);
                         LightVertexBuffer = null;
                     }
 
                     if (LightVertexBuffer == null) {
                         LightVertexBuffer = new DynamicVertexBuffer(
-                            Parent.Coordinator.Device, typeof(LightVertex),
-                            LightVertices.Capacity, BufferUsage.WriteOnly
+                            Parent.Coordinator.Device, (LightVertices != null) ? typeof(LightVertex) : typeof(ParticleLightVertex),
+                            vertexCapacity, BufferUsage.WriteOnly
                         );
                     }
 
-                    if (LightVertices.Count > 0)
-                        LightVertexBuffer.SetData(LightVertices.GetBuffer(), 0, LightVertices.Count, SetDataOptions.Discard);
+                    if (vertexCount > 0) {
+                        if (LightVertices != null)
+                            LightVertexBuffer.SetData(LightVertices.GetBuffer(), 0, vertexCount, SetDataOptions.Discard);
+                        else
+                            LightVertexBuffer.SetData(ParticleLightVertices.GetBuffer(), 0, vertexCount, SetDataOptions.Discard);
+                    }
 
-                    CurrentVertexCount = LightVertices.Count;
+                    CurrentVertexCount = vertexCount;
                 }
             }
 
             public DynamicVertexBuffer GetVertexBuffer () {
                 lock (Lock) {
-                    if ((LightVertexBuffer == null) || CurrentVertexCount != LightVertices.Count)
+                    var vertexCount = Count;
+
+                    if ((LightVertexBuffer == null) || CurrentVertexCount != vertexCount)
                         throw new InvalidOperationException("Vertex buffer not up-to-date");
 
                     return LightVertexBuffer;
@@ -642,8 +669,12 @@ namespace Squared.Illuminant {
 
                     // TODO: Use threads?
                     lock (_LightStateLock) {
-                        foreach (var kvp in LightRenderStates)
-                            kvp.Value.LightVertices.Clear();
+                        foreach (var kvp in LightRenderStates) {
+                            if (kvp.Value.LightVertices != null)
+                                kvp.Value.LightVertices.Clear();
+                            if (kvp.Value.ParticleLightVertices != null)
+                                kvp.Value.ParticleLightVertices.Clear();
+                        }
 
                         using (var buffer = BufferPool<LightSource>.Allocate(Environment.Lights.Count)) {
                             Environment.Lights.CopyTo(buffer.Data);
@@ -676,7 +707,7 @@ namespace Squared.Illuminant {
                         if (paintDirectIllumination)
                         foreach (var kvp in LightRenderStates) {
                             var ltrs = kvp.Value;
-                            var count = ltrs.LightVertices.Count / 4;
+                            var count = ltrs.Count / 4;
                             if (count <= 0)
                                 continue;
 
@@ -689,7 +720,7 @@ namespace Squared.Illuminant {
                                 nb.Add(new NativeDrawCall(
                                     PrimitiveType.TriangleList,
                                     ltrs.GetVertexBuffer(), 0,
-                                    QuadIndexBuffer, 0, 0, ltrs.LightVertices.Count, 0, ltrs.LightVertices.Count / 2
+                                    QuadIndexBuffer, 0, 0, ltrs.Count, 0, ltrs.Count / 2
                                 ));
                             }
                         }
@@ -748,24 +779,33 @@ namespace Squared.Illuminant {
         }
 
         private void RenderParticleLightSource (ParticleLightSource particleLightSource, float intensityScale, LightTypeRenderState ltrs) {
-            LightVertex vertex;
-            var lightSource = particleLightSource.Template;
-            vertex.LightCenter = lightSource.Position;
-            vertex.Color = lightSource.Color;
-            vertex.Color.W *= (lightSource.Opacity * intensityScale);
-            vertex.LightProperties.X = lightSource.Radius;
-            vertex.LightProperties.Y = lightSource.RampLength;
-            vertex.LightProperties.Z = (int)lightSource.RampMode;
-            vertex.LightProperties.W = lightSource.CastsShadows ? 1f : 0f;
-            vertex.MoreLightProperties.X = lightSource.AmbientOcclusionRadius;
-            vertex.MoreLightProperties.Y = lightSource.ShadowDistanceFalloff.GetValueOrDefault(-99999);
-            vertex.MoreLightProperties.Z = lightSource.FalloffYFactor;
-            vertex.MoreLightProperties.W = lightSource.AmbientOcclusionOpacity;
+            ParticleLightVertex vertex;
+            vertex.Offset = Vector2.Zero;
 
-            for (int i = 0; i < 4; i++) {
-                vertex.Corner = vertex.Unused = (short)i;
-                ltrs.LightVertices.Add(ref vertex);
-            }
+            // HACK: Workaround for Intel's terrible video drivers.
+            // No, I don't know why.
+            const float argh = 102400;
+
+            ltrs.ParticleLightVertices.Add(new ParticleLightVertex {
+                XY = new Vector2(-argh, -argh),
+                Corner = 0,
+                Unused = 0
+            });
+            ltrs.ParticleLightVertices.Add(new ParticleLightVertex {
+                XY = new Vector2(argh, -argh),
+                Corner = 1,
+                Unused = 1
+            });
+            ltrs.ParticleLightVertices.Add(new ParticleLightVertex {
+                XY = new Vector2(argh, argh),
+                Corner = 2,
+                Unused = 2
+            });
+            ltrs.ParticleLightVertices.Add(new ParticleLightVertex {
+                XY = new Vector2(-argh, argh),
+                Corner = 3,
+                Unused = 3
+            });
         }
 
         private void RenderDirectionalLightSource (DirectionalLightSource lightSource, float intensityScale, LightTypeRenderState ltrs) {

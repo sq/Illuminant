@@ -30,14 +30,14 @@ void SphereLightVertexShader(
 }
 
 void SphereLightProbeVertexShader(
-    in float2 cornerWeight           : POSITION0,
+    in int2 cornerIndex              : BLENDINDICES0,
     inout float4 color               : TEXCOORD4,
     inout float3 lightCenter         : TEXCOORD0,
     inout float4 lightProperties     : TEXCOORD1,
     inout float4 moreLightProperties : TEXCOORD3,
     out float4 result                : POSITION0
 ) {
-    float2 clipPosition = float2(cornerWeight.x > 0 ? 999 : -999, cornerWeight.y > 0 ? 999 : -999);
+    float2 clipPosition = LightCorners[cornerIndex.x] * 99999;
 
     result = float4(clipPosition.xy, 0, 1);
 }

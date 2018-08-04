@@ -57,7 +57,7 @@ namespace Squared.Illuminant {
                 int layerIndex = 0;
                 foreach (var kvp in LightRenderStates) {
                     var ltrs = kvp.Value;
-                    var count = ltrs.LightVertices.Count / 4;
+                    var count = ltrs.Count / 4;
                     if (count <= 0)
                         continue;
 
@@ -70,7 +70,7 @@ namespace Squared.Illuminant {
                         nb.Add(new NativeDrawCall(
                             PrimitiveType.TriangleList,
                             ltrs.GetVertexBuffer(), 0,
-                            QuadIndexBuffer, 0, 0, ltrs.LightVertices.Count, 0, ltrs.LightVertices.Count / 2
+                            QuadIndexBuffer, 0, 0, ltrs.Count, 0, ltrs.Count / 2
                         ));
                     }
                 }                    

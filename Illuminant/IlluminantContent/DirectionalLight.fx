@@ -14,7 +14,7 @@ float4 ApplyTransform (float3 position) {
 }
 
 void DirectionalLightVertexShader(
-    in float2    position            : POSITION0,
+    in int2 cornerIndex              : BLENDINDICES0,
     inout float4 color               : TEXCOORD4,
     inout float3 lightDirection      : TEXCOORD0,
     inout float4 lightProperties     : TEXCOORD1,
@@ -22,6 +22,7 @@ void DirectionalLightVertexShader(
     out float2   worldPosition       : TEXCOORD2,
     out float4   result              : POSITION0
 ) {
+    float2 position = LightCorners[cornerIndex.x] * 99999;
     worldPosition = position;
     // FIXME: Z
     float4 transformedPosition = ApplyTransform(float3(position, 0));
@@ -29,14 +30,14 @@ void DirectionalLightVertexShader(
 }
 
 void DirectionalLightProbeVertexShader(
-    in float2 position               : POSITION0,
+    in int2 cornerIndex              : BLENDINDICES0,
     inout float4 color               : TEXCOORD4,
     inout float3 lightDirection      : TEXCOORD0,
     inout float4 lightProperties     : TEXCOORD1,
     inout float4 moreLightProperties : TEXCOORD3,
     out float4   result              : POSITION0
 ) {
-    float2 clipPosition = float2(position.x > 0 ? 999 : -999, position.y > 0 ? 999 : -999);
+    float2 clipPosition = LightCorners[cornerIndex.x] * 99999;
 
     result = float4(clipPosition.xy, 0, 1);
 }

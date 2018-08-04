@@ -2,16 +2,16 @@
 #include "ParticleCommon.fxh"
 
 uniform float OpacityFromLife;
+uniform float4 LightProperties;
+uniform float4 MoreLightProperties;
+uniform float4 LightColor;
 
 void ParticleLightVertexShader(
     in int2 cornerIndex              : BLENDINDICES0,
     in float2 xy                     : POSITION0,
     in float2 offset                 : POSITION1,
     out float3 lightCenter           : TEXCOORD0,
-    inout float4 lightProperties     : TEXCOORD1,
-    inout float4 moreLightProperties : TEXCOORD2,
-    inout float4 color               : TEXCOORD3,
-    out float3 worldPosition         : TEXCOORD4,
+    out float3 worldPosition         : TEXCOORD1,
     out float4 result                : POSITION0
 ) {
     float3 corner = LightCorners[cornerIndex.x];
@@ -30,7 +30,7 @@ void ParticleLightVertexShader(
     */
 
     lightCenter = position.xyz;
-    float  radius = lightProperties.x + lightProperties.y + 1;
+    float  radius = LightProperties.x + LightProperties.y + 1;
     float3 radius3 = float3(radius, radius, 0);
     float3 tl = lightCenter - radius3, br = lightCenter + radius3;
 
@@ -50,10 +50,7 @@ void ParticleLightVertexShader(
 
 void ParticleLightPixelShader(
     in  float3 lightCenter         : TEXCOORD0,
-    in  float4 lightProperties     : TEXCOORD1,
-    in  float4 moreLightProperties : TEXCOORD2,
-    in  float4 color               : TEXCOORD3,
-    in  float3 worldPosition       : TEXCOORD4,
+    in  float3 worldPosition       : TEXCOORD1,
     in  float2 vpos                : VPOS,
     out float4 result              : COLOR0
 ) {
@@ -69,10 +66,10 @@ void ParticleLightPixelShader(
     );
 
     float opacity = SphereLightPixelCore(
-        shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties, false, false
+        shadedPixelPosition, shadedPixelNormal, lightCenter, LightProperties, MoreLightProperties, false, false
     );
 
-    result = float4(color.rgb * color.a * opacity, 1);
+    result = float4(LightColor.rgb * LightColor.a * opacity, 1);
 }
 
 technique ParticleLight {

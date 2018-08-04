@@ -41,6 +41,34 @@ namespace Squared.Illuminant {
     }    
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    public struct ParticleLightVertex : IVertexType {
+        // FIXME: Shouldn't this be V3? Blech
+        public Vector2 XY;
+        public Vector2 Offset;
+        public short Corner;
+        public short Unused;
+
+        public static VertexDeclaration _VertexDeclaration;
+
+        static ParticleLightVertex () {
+            var tThis = typeof(ParticleLightVertex);
+
+            _VertexDeclaration = new VertexDeclaration(
+                new VertexElement(Marshal.OffsetOf(tThis, "XY").ToInt32(), VertexElementFormat.Vector2, VertexElementUsage.Position, 0),
+                new VertexElement(Marshal.OffsetOf(tThis, "Offset").ToInt32(), VertexElementFormat.Vector2, VertexElementUsage.Position, 1),
+                new VertexElement(Marshal.OffsetOf(tThis, "Corner").ToInt32(), 
+                    VertexElementFormat.Short2, VertexElementUsage.BlendIndices, 0 )
+            );
+        }
+
+        public VertexDeclaration VertexDeclaration {
+            get {
+                return _VertexDeclaration;
+            }
+        }
+    }    
+
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct HeightVolumeVertex : IVertexType {
         public Vector3 Position;
         public Vector3 Normal;
