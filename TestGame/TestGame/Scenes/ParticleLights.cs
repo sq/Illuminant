@@ -57,8 +57,8 @@ namespace TestGame.Scenes {
             LightmapScaleRatio.Value = 1.0f;
             EnableShadows.Value = true;
             EnableDirectionalLights.Value = true;
-            EnableParticleLights.Value = true;
-            ParticleCollisions.Value = true;
+            EnableParticleLights.Value = false;
+            ParticleCollisions.Value = false;
             ShowParticles.Value = true;
             LightScaleFactor.Value = 2.5f;
 
@@ -92,11 +92,12 @@ namespace TestGame.Scenes {
             LightScaleFactor.Max = 6.0f;
             LightScaleFactor.Speed = 0.5f;
 
-            OpacityFromLife.MinusKey = Keys.OemOpenBrackets;
-            OpacityFromLife.PlusKey = Keys.OemCloseBrackets;
+            OpacityFromLife.MinusKey = Keys.OemSemicolon;
+            OpacityFromLife.PlusKey = Keys.OemQuotes;
             OpacityFromLife.Min = 50;
             OpacityFromLife.Max = 500;
             OpacityFromLife.Speed = 50f;
+            OpacityFromLife.Value = 100;
 
             DistanceFieldResolution.Changed += (s, e) => CreateDistanceField();
         }
@@ -201,8 +202,8 @@ namespace TestGame.Scenes {
             CreateDistanceField();
 
             Engine = new ParticleEngine(
-                Game.Content, Game.RenderCoordinator, Game.Materials, 
-                new ParticleEngineConfiguration ()
+                Game.Content, Game.RenderCoordinator, Game.Materials,
+                new ParticleEngineConfiguration (64)
             );
 
             SetupParticleSystem();
@@ -271,29 +272,35 @@ namespace TestGame.Scenes {
                 ) {
                     Texture = fireball,
                     TextureRegion = fireballRect,
-                    Size = new Vector2(34, 21) * 0.2f,
+                    Size = new Vector2(34, 21) * 1f,
                     AnimationRate = new Vector2(1 / 6f, 0),
                     RotationFromVelocity = true,
                     EscapeVelocity = 5f,
                     BounceVelocityMultiplier = 0.95f,
                     MaximumVelocity = 16f,
                     CollisionDistance = 1f,
-                    CollisionLifePenalty = 4
+                    CollisionLifePenalty = 4,
                 }
             ) {
                 Transforms = {
                     new Spawner {
                         IsActive = false,
-                        MinCount = 32,
-                        MaxCount = 1024,
+                        MinCount = 1,
+                        MaxCount = 128,
                         Position = new Formula {
-                            RandomOffset = new Vector4(-0.5f, -0.5f, 0f, 0f),
-                            RandomScale = new Vector4(100f, 100f, 50f, MaxLife - OpacityFromLife),
+                            RandomOffset = new Vector4(-0.5f, -0.5f, 0f, 1f),
+                            RandomScale = new Vector4(10f, 10f, 5f, MaxLife - OpacityFromLife),
                         },
+                        /*
                         Velocity = new Formula {
                             RandomOffset = new Vector4(-0.5f, -0.5f, 0f, 0f),
-                            RandomScale = new Vector4(3f, 3f, 0f, 0f),
+                            RandomScale = new Vector4(1f, 1f, 0f, 0f),
                             RandomCircularity = 1f
+                        },
+                        */
+                        Velocity = new Formula {
+                            RandomOffset = Vector4.Zero,
+                            RandomScale = Vector4.Zero
                         },
                         Attributes = new Formula {
                             Constant = new Vector4(0.09f, 0.09f, 0.09f, 1f),
@@ -368,13 +375,6 @@ namespace TestGame.Scenes {
                 ))
                     bb.Add(new BitmapDrawCall(Lightmap, Vector2.Zero));
 
-                if (ShowParticles)
-                    System.Render(
-                        group, 2, 
-                        material: Engine.ParticleMaterials.AttributeColor,
-                        blendState: BlendState.AlphaBlend
-                    );
-
                 if (ShowDistanceField) {
                     float dfScale = Math.Min(
                         (Game.Graphics.PreferredBackBufferWidth - 4) / (float)Renderer.DistanceField.Texture.Width,
@@ -408,6 +408,13 @@ namespace TestGame.Scenes {
                         ));
                 }                
             }
+
+            if (ShowParticles)
+                System.Render(
+                    frame, 10, 
+                    material: Engine.ParticleMaterials.AttributeColor,
+                    blendState: BlendState.AlphaBlend
+                );
         }
 
         public override void Update (GameTime gameTime) {
@@ -417,7 +424,7 @@ namespace TestGame.Scenes {
                 var ms = Mouse.GetState();
                 Game.IsMouseVisible = true;
 
-                LightZ = (ms.ScrollWheelValue / 4096.0f) * Environment.MaximumZ;
+                LightZ = ((ms.ScrollWheelValue / 4096.0f) * Environment.MaximumZ) + 32;
 
                 if (LightZ < 0.01f)
                     LightZ = 0.01f;
@@ -430,7 +437,7 @@ namespace TestGame.Scenes {
                 }
 
                 var s = System.Transforms.OfType<Spawner>().First();
-                s.Position.RandomOffset = new Vector4(mousePos, 0);
+                s.Position.Constant = new Vector4(mousePos, 0);
                 System.Configuration.OpacityFromLife = OpacityFromLife.Value;
                 s.IsActive = ms.LeftButton == ButtonState.Pressed;
             }

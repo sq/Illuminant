@@ -76,6 +76,9 @@ void VS_PosVelAttr (
         return;
 
     float angle = (atan2(velocity.y, velocity.x) + PI) * VelocityRotation;
+    // FIXME
+    // if (isinf (angle))
+        angle = 0;
     float3 rotatedCorner = ComputeRotatedCorner(cornerIndex.x, angle);
 
     VS_Core(

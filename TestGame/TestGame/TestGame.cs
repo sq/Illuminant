@@ -73,7 +73,7 @@ namespace TestGame {
                 new ParticleLights(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
             };
 
-            ActiveSceneIndex = 0;
+            ActiveSceneIndex = Scenes.Length - 1;
         }
 
         protected override void LoadContent () {

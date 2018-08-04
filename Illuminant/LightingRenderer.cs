@@ -688,6 +688,9 @@ namespace Squared.Illuminant {
                                 var directionalLightSource = lightSource as DirectionalLightSource;
                                 var particleLightSource = lightSource as ParticleLightSource;
 
+                                if ((particleLightSource != null) && (!particleLightSource.IsActive))
+                                    continue;
+
                                 var ltrs = GetLightRenderState(lightSource);
 
                                 if (pointLightSource != null)
@@ -708,20 +711,33 @@ namespace Squared.Illuminant {
                         foreach (var kvp in LightRenderStates) {
                             var ltrs = kvp.Value;
                             var count = ltrs.Count / 4;
-                            if (count <= 0)
-                                continue;
 
                             if (RenderTrace.EnableTracing)
                                 RenderTrace.Marker(resultGroup, layerIndex++, "LightingRenderer {0} : Render {1} {2} light(s)", this.ToObjectID(), count, ltrs.Key.Type);
 
-                            using (var nb = NativeBatch.New(
-                                resultGroup, layerIndex++, ltrs.Material, IlluminationBatchSetup, userData: ltrs
-                            )) {
-                                nb.Add(new NativeDrawCall(
-                                    PrimitiveType.TriangleList,
-                                    ltrs.GetVertexBuffer(), 0,
-                                    QuadIndexBuffer, 0, 0, ltrs.Count, 0, ltrs.Count / 2
-                                ));
+                            var pls = ltrs.Key.UniqueObject as ParticleLightSource;
+                            if (pls != null) {
+                                using (var bg = BatchGroup.New(
+                                    resultGroup, layerIndex++, (dm, _) => {
+                                        dm.ApplyMaterial (ltrs.Material);
+                                        IlluminationBatchSetup (dm, ltrs);
+                                    }
+                                )) {
+                                    pls.System.Render(bg, 0, ltrs.Material);
+                                }
+                            } else {
+                                if (count <= 0)
+                                    continue;
+
+                                using (var nb = NativeBatch.New(
+                                    resultGroup, layerIndex++, ltrs.Material, IlluminationBatchSetup, userData: ltrs
+                                )) {
+                                    nb.Add(new NativeDrawCall(
+                                        PrimitiveType.TriangleList,
+                                        ltrs.GetVertexBuffer(), 0,
+                                        QuadIndexBuffer, 0, 0, ltrs.Count, 0, ltrs.Count / 2
+                                    ));
+                                }
                             }
                         }
 
@@ -779,33 +795,7 @@ namespace Squared.Illuminant {
         }
 
         private void RenderParticleLightSource (ParticleLightSource particleLightSource, float intensityScale, LightTypeRenderState ltrs) {
-            ParticleLightVertex vertex;
-            vertex.Offset = Vector2.Zero;
-
-            // HACK: Workaround for Intel's terrible video drivers.
-            // No, I don't know why.
-            const float argh = 102400;
-
-            ltrs.ParticleLightVertices.Add(new ParticleLightVertex {
-                XY = new Vector2(-argh, -argh),
-                Corner = 0,
-                Unused = 0
-            });
-            ltrs.ParticleLightVertices.Add(new ParticleLightVertex {
-                XY = new Vector2(argh, -argh),
-                Corner = 1,
-                Unused = 1
-            });
-            ltrs.ParticleLightVertices.Add(new ParticleLightVertex {
-                XY = new Vector2(argh, argh),
-                Corner = 2,
-                Unused = 2
-            });
-            ltrs.ParticleLightVertices.Add(new ParticleLightVertex {
-                XY = new Vector2(-argh, argh),
-                Corner = 3,
-                Unused = 3
-            });
+            // FIXME: ???
         }
 
         private void RenderDirectionalLightSource (DirectionalLightSource lightSource, float intensityScale, LightTypeRenderState ltrs) {

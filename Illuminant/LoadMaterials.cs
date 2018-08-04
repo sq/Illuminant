@@ -239,6 +239,11 @@ namespace Squared.Illuminant.Particles {
                 content.Load<Effect>("RasterizeParticleSystem"), "AttributeColor"
             ));
 
+            Materials.ForEachMaterial<object>((m, _) => {
+                Materials.GetUniformBinding<Uniforms.Environment>(m, "Environment");
+                Materials.GetUniformBinding<Uniforms.DistanceField>(m, "DistanceField");
+            }, null);
+
             Materials.PreallocateBindings();
         }
     }

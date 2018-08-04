@@ -908,23 +908,29 @@ namespace Squared.Illuminant.Particles {
                 container, layer,
                 (dm, _) => {
                     // TODO: transform arg
-                    p["BitmapTexture"].SetValue(Configuration.Texture);
-                    p["BitmapTextureRegion"].SetValue(new Vector4(
-                        Configuration.TextureRegion.TopLeft, 
-                        Configuration.TextureRegion.BottomRight.X, 
-                        Configuration.TextureRegion.BottomRight.Y
-                    ));
-                    p["AnimationRate"].SetValue(Configuration.AnimationRate);
-                    p["Size"].SetValue(Configuration.Size / 2);
-                    p["VelocityRotation"].SetValue(Configuration.RotationFromVelocity ? 1f : 0f);
+                    var bt = p["BitmapTexture"];
+                    if (bt != null) {
+                        bt.SetValue(Configuration.Texture);
+                        p["BitmapTextureRegion"].SetValue(new Vector4(
+                            Configuration.TextureRegion.TopLeft, 
+                            Configuration.TextureRegion.BottomRight.X, 
+                            Configuration.TextureRegion.BottomRight.Y
+                        ));
+                        p["AnimationRate"].SetValue(Configuration.AnimationRate);
+                        p["Size"].SetValue(Configuration.Size / 2);
+                        p["VelocityRotation"].SetValue(Configuration.RotationFromVelocity ? 1f : 0f);
+                        p["Texel"].SetValue(new Vector2(1f / Engine.Configuration.ChunkSize, 1f / Engine.Configuration.ChunkSize));
+                    }
+
                     p["OpacityFromLife"].SetValue(Configuration.OpacityFromLife);
-                    p["Texel"].SetValue(new Vector2(1f / Engine.Configuration.ChunkSize, 1f / Engine.Configuration.ChunkSize));
                 },
                 (dm, _) => {
                     p["PositionTexture"].SetValue((Texture2D)null);
                     p["VelocityTexture"].SetValue((Texture2D)null);
                     p["AttributeTexture"].SetValue((Texture2D)null);
-                    p["BitmapTexture"].SetValue((Texture2D)null);
+                    var bt = p["BitmapTexture"];
+                    if (bt != null)
+                        bt.SetValue((Texture2D)null);
                     // ughhhhhhhhhh
                     for (var i = 0; i < 4; i++)
                         dm.Device.VertexTextures[i] = null;
