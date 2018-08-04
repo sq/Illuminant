@@ -741,14 +741,10 @@ namespace Squared.Illuminant {
             vertex.MoreLightProperties.Z = lightSource.FalloffYFactor;
             vertex.MoreLightProperties.W = lightSource.AmbientOcclusionOpacity;
 
-            vertex.Position = new Vector2(0, 0);
-            ltrs.LightVertices.Add(ref vertex);
-            vertex.Position = new Vector2(1, 0);
-            ltrs.LightVertices.Add(ref vertex);
-            vertex.Position = new Vector2(1, 1);
-            ltrs.LightVertices.Add(ref vertex);
-            vertex.Position = new Vector2(0, 1);
-            ltrs.LightVertices.Add(ref vertex);
+            for (int i = 0; i < 4; i++) {
+                vertex.Corner = vertex.Unused = (short)i;
+                ltrs.LightVertices.Add(ref vertex);
+            }
         }
 
         private void RenderParticleLightSource (ParticleLightSource particleLightSource, float intensityScale, LightTypeRenderState ltrs) {
@@ -766,14 +762,10 @@ namespace Squared.Illuminant {
             vertex.MoreLightProperties.Z = lightSource.FalloffYFactor;
             vertex.MoreLightProperties.W = lightSource.AmbientOcclusionOpacity;
 
-            vertex.Position = new Vector2(0, 0);
-            ltrs.LightVertices.Add(ref vertex);
-            vertex.Position = new Vector2(1, 0);
-            ltrs.LightVertices.Add(ref vertex);
-            vertex.Position = new Vector2(1, 1);
-            ltrs.LightVertices.Add(ref vertex);
-            vertex.Position = new Vector2(0, 1);
-            ltrs.LightVertices.Add(ref vertex);
+            for (int i = 0; i < 4; i++) {
+                vertex.Corner = vertex.Unused = (short)i;
+                ltrs.LightVertices.Add(ref vertex);
+            }
         }
 
         private void RenderDirectionalLightSource (DirectionalLightSource lightSource, float intensityScale, LightTypeRenderState ltrs) {
@@ -802,14 +794,10 @@ namespace Squared.Illuminant {
                 )
             );
 
-            vertex.Position = lightBounds.TopLeft;
-            ltrs.LightVertices.Add(ref vertex);
-            vertex.Position = lightBounds.TopRight;
-            ltrs.LightVertices.Add(ref vertex);
-            vertex.Position = lightBounds.BottomRight;
-            ltrs.LightVertices.Add(ref vertex);
-            vertex.Position = lightBounds.BottomLeft;
-            ltrs.LightVertices.Add(ref vertex);
+            for (int i = 0; i < 4; i++) {
+                vertex.Corner = vertex.Unused = (short)i;
+                ltrs.LightVertices.Add(ref vertex);
+            }
         }
 
         /// <summary>

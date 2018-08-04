@@ -3,33 +3,33 @@
 
 uniform float OpacityFromLife;
 
-static const float3 Corners[] = {
-    { -1, -1, 0 },
-    { 1, -1, 0 },
-    { 1, 1, 0 },
-    { -1, 1, 0 }
-};
-
 void ParticleLightVertexShader(
     in int2 cornerIndex              : BLENDINDICES0,
     in float2 xy                     : POSITION0,
     in float2 offset                 : POSITION1,
-    inout float3 lightCenter         : TEXCOORD0,
+    out float3 lightCenter           : TEXCOORD0,
     inout float4 lightProperties     : TEXCOORD1,
-    inout float4 moreLightProperties : TEXCOORD3,
-    inout float4 color               : TEXCOORD4,
-    out float3 worldPosition         : TEXCOORD2,
+    inout float4 moreLightProperties : TEXCOORD2,
+    inout float4 color               : TEXCOORD3,
+    out float3 worldPosition         : TEXCOORD4,
     out float4 result                : POSITION0
 ) {
-    float3 corner = Corners[cornerIndex.x];
+    float3 corner = LightCorners[cornerIndex.x];
 
     float2 actualXy = xy + offset;
+    float4 position, velocity, attributes;
     readState(actualXy, position, velocity, attributes);
 
+    // HACK
+    /*
     float life = position.w;
-    if (life <= 0)
+    if (life <= 0) {
+        color = float4(0, 0, 0, 0);
         return;
+    }
+    */
 
+    lightCenter = position.xyz;
     float  radius = lightProperties.x + lightProperties.y + 1;
     float3 radius3 = float3(radius, radius, 0);
     float3 tl = lightCenter - radius3, br = lightCenter + radius3;
@@ -40,7 +40,7 @@ void ParticleLightVertexShader(
     tl.y -= radius * getInvZToYMultiplier();
     tl.y -= lightCenter.z * getZToYMultiplier();
 
-    worldPosition = lerp(tl, br, float3(cornerWeight, 0));
+    worldPosition = lerp(tl, br, corner);
 
     float3 screenPosition = (worldPosition - float3(Viewport.Position.xy, 0));
     screenPosition.xy *= Viewport.Scale * Environment.RenderScale;
@@ -49,14 +49,18 @@ void ParticleLightVertexShader(
 }
 
 void ParticleLightPixelShader(
-    in  float3 worldPosition       : TEXCOORD2,
     in  float3 lightCenter         : TEXCOORD0,
     in  float4 lightProperties     : TEXCOORD1,
-    in  float4 moreLightProperties : TEXCOORD3,
-    in  float4 color               : TEXCOORD4,
+    in  float4 moreLightProperties : TEXCOORD2,
+    in  float4 color               : TEXCOORD3,
+    in  float3 worldPosition       : TEXCOORD4,
     in  float2 vpos                : VPOS,
     out float4 result              : COLOR0
 ) {
+    // HACK
+    result = float4(1, 1, 1, 1);
+    return;
+
     float3 shadedPixelPosition;
     float3 shadedPixelNormal;
     sampleGBuffer(

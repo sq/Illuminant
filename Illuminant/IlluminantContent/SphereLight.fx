@@ -1,7 +1,7 @@
 #include "SphereLightCore.fxh"
 
 void SphereLightVertexShader(
-    in float2 cornerWeight           : POSITION0,
+    in int2 cornerIndex              : BLENDINDICES0,
     inout float4 color               : TEXCOORD4,
     inout float3 lightCenter         : TEXCOORD0,
     inout float4 lightProperties     : TEXCOORD1,
@@ -9,6 +9,8 @@ void SphereLightVertexShader(
     out float3 worldPosition         : TEXCOORD2,
     out float4 result                : POSITION0
 ) {
+    float3 corner = LightCorners[cornerIndex.x];
+
     float  radius = lightProperties.x + lightProperties.y + 1;
     float3 radius3 = float3(radius, radius, 0);
     float3 tl = lightCenter - radius3, br = lightCenter + radius3;
@@ -19,7 +21,7 @@ void SphereLightVertexShader(
     tl.y -= radius * getInvZToYMultiplier();
     tl.y -= lightCenter.z * getZToYMultiplier();
 
-    worldPosition = lerp(tl, br, float3(cornerWeight, 0));
+    worldPosition = lerp(tl, br, corner);
 
     float3 screenPosition = (worldPosition - float3(Viewport.Position.xy, 0));
     screenPosition.xy *= Viewport.Scale * Environment.RenderScale;

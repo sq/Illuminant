@@ -7,6 +7,13 @@
 // The final output from the dot computation is raised to this power so
 #define DOT_EXPONENT   0.85
 
+static const float3 LightCorners[] = {
+    { 0, 0, 0 },
+    { 1, 0, 0 },
+    { 1, 1, 0 },
+    { 0, 1, 0 }
+};
+
 #include "EnvironmentCommon.fxh"
 
 uniform float  GBufferInvScaleFactor;

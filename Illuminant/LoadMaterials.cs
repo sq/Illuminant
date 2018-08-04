@@ -33,6 +33,10 @@ namespace Squared.Illuminant {
                     content.Load<Effect>("DirectionalLight"), "DirectionalLight", dBegin, dEnd
                 ));
 
+                DefineMaterial(IlluminantMaterials.ParticleSystemSphereLight = new Material(
+                    content.Load<Effect>("ParticleLight"), "ParticleLight", dBegin, dEnd
+                ));
+
                 DefineMaterial(IlluminantMaterials.SphereLightWithDistanceRamp = new Material(
                     content.Load<Effect>("SphereLight"), "SphereLightWithDistanceRamp", dBegin, dEnd
                 ));
