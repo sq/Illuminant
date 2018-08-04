@@ -4,7 +4,7 @@
 #define PI 3.14159265358979323846
 
 uniform float4 ChunkSizeAndIndices;
-uniform float4 Configuration[9];
+uniform float4 Configuration[12];
 uniform float  RandomCircularity[3];
 
 void VS_Spawn (
@@ -14,7 +14,7 @@ void VS_Spawn (
     result = float4(xy.x, xy.y, 0, 1);
 }
 
-float4 evaluateFormula (float4 constant, float4 randomOffset, float4 randomScale, float randomCircularity, float2 xy) {
+float4 evaluateFormula (float4 constant, float4 randomOffset, float4 randomScale, float4 randomScaleConstant, float randomCircularity, float2 xy) {
     float4 result = constant;
 
     float4 rs = random(xy);
@@ -33,6 +33,8 @@ float4 evaluateFormula (float4 constant, float4 randomOffset, float4 randomScale
     );
 
     result += lerp(nonCircular, circular, randomCircularity);
+    result.xyz += randomNormal * randomScaleConstant.xyz;
+
     return result;
 }
 
@@ -50,9 +52,9 @@ void PS_Spawn (
             xy * Texel, newPosition, newVelocity, newAttributes
         );
     } else {
-        newPosition   = evaluateFormula(Configuration[0], Configuration[1], Configuration[2], RandomCircularity[0], float2(index, 0));
-        newVelocity   = evaluateFormula(Configuration[3], Configuration[4], Configuration[5], RandomCircularity[1], float2(index, 1));
-        newAttributes = evaluateFormula(Configuration[6], Configuration[7], Configuration[8], RandomCircularity[2], float2(index, 2));
+        newPosition   = evaluateFormula(Configuration[0], Configuration[1], Configuration[2], Configuration[3], RandomCircularity[0], float2(index, 0));
+        newVelocity   = evaluateFormula(Configuration[4], Configuration[5], Configuration[6], Configuration[7], RandomCircularity[1], float2(index, 1));
+        newAttributes = evaluateFormula(Configuration[8], Configuration[9], Configuration[10], Configuration[11], RandomCircularity[2], float2(index, 2));
     }
 }
 

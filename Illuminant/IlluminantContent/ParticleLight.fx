@@ -12,6 +12,9 @@ void ParticleLightVertexShader(
     in float2 offset                 : POSITION1,
     out float3 lightCenter           : TEXCOORD0,
     out float3 worldPosition         : TEXCOORD1,
+    out float4 lightProperties       : TEXCOORD2,
+    out float4 moreLightProperties   : TEXCOORD3,
+    out float4 lightColor            : COLOR0,
     out float4 result                : POSITION0
 ) {
     float3 corner = LightCorners[cornerIndex.x];
@@ -21,13 +24,12 @@ void ParticleLightVertexShader(
     readState(actualXy, position, velocity, attributes);
 
     // HACK
-    /*
     float life = position.w;
     if (life <= 0) {
-        color = float4(0, 0, 0, 0);
+        result = float4(0, 0, 0, 0);
+        lightColor = float4(0, 0, 0, 0);
         return;
     }
-    */
 
     lightCenter = position.xyz;
     float  radius = LightProperties.x + LightProperties.y + 1;
@@ -46,18 +48,32 @@ void ParticleLightVertexShader(
     screenPosition.xy *= Viewport.Scale * Environment.RenderScale;
     float4 transformedPosition = mul(mul(float4(screenPosition.xyz, 1), Viewport.ModelView), Viewport.Projection);
     result = float4(transformedPosition.xy, 0, transformedPosition.w);
+
+    lightColor = attributes * LightColor;
+
+    if (OpacityFromLife > 0)
+        lightColor *= clamp(position.w / OpacityFromLife, 0, 1);
+    else if (OpacityFromLife < 0)
+        lightColor *= 1 - clamp(position.w / -OpacityFromLife, 0, 1);
+
+    lightProperties = LightProperties;
+    moreLightProperties = MoreLightProperties;
+
+    if (lightColor.a <= 0) {
+        result = float4(0, 0, 0, 0);
+        lightColor = float4(0, 0, 0, 0);
+    }
 }
 
 void ParticleLightPixelShader(
     in  float3 lightCenter         : TEXCOORD0,
     in  float3 worldPosition       : TEXCOORD1,
+    in  float4 lightProperties     : TEXCOORD2,
+    in  float4 moreLightProperties : TEXCOORD3,
+    in  float4 lightColor          : COLOR0,
     in  float2 vpos                : VPOS,
     out float4 result              : COLOR0
 ) {
-    // HACK
-    result = float4(1, 1, 1, 1);
-    return;
-
     float3 shadedPixelPosition;
     float3 shadedPixelNormal;
     sampleGBuffer(
@@ -66,10 +82,10 @@ void ParticleLightPixelShader(
     );
 
     float opacity = SphereLightPixelCore(
-        shadedPixelPosition, shadedPixelNormal, lightCenter, LightProperties, MoreLightProperties, false, false
+        shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties, false, false
     );
 
-    result = float4(LightColor.rgb * LightColor.a * opacity, 1);
+    result = float4(lightColor.rgb * lightColor.a * opacity, 1);
 }
 
 technique ParticleLight {

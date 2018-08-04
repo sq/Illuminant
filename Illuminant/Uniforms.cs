@@ -137,6 +137,7 @@ namespace Squared.Illuminant {
         public Vector4 Constant;
         public Vector4 RandomOffset;
         public Vector4 RandomScale;
+        public Vector4 RandomScaleConstant;
         public float   RandomCircularity;
     }
 }

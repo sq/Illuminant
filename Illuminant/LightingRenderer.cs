@@ -69,7 +69,6 @@ namespace Squared.Illuminant {
             public  readonly LightTypeRenderStateKey    Key;
             public  readonly object                     Lock = new object();
             public  readonly UnorderedList<LightVertex> LightVertices = null;
-            public  readonly UnorderedList<ParticleLightVertex> ParticleLightVertices = null;
             public  readonly Material                   Material, ProbeMaterial;
 
             private int                                 CurrentVertexCount = 0;
@@ -80,7 +79,7 @@ namespace Squared.Illuminant {
                 Key    = key;
 
                 if (key.Type == LightSourceTypeID.Particle)
-                    ParticleLightVertices = new UnorderedList<ParticleLightVertex>(16);
+                    ;
                 else
                     LightVertices = new UnorderedList<LightVertex>(512);
 
@@ -123,20 +122,29 @@ namespace Squared.Illuminant {
                 }
             }
 
+            private ParticleLightSource ParticleLightSource {
+                get {
+                    return Key.UniqueObject as ParticleLightSource;
+                }
+            }
+
             public int Count {
                 get {
-                    return LightVertices != null ? LightVertices.Count : ParticleLightVertices.Count;
+                    return LightVertices != null ? LightVertices.Count : ParticleLightSource.System.LiveCount;
                 }
             }
 
             public int Capacity {
                 get {
-                    return LightVertices != null ? LightVertices.Capacity : ParticleLightVertices.Capacity;
+                    return LightVertices != null ? LightVertices.Capacity : ParticleLightSource.System.LiveCount;
                 }
             }
 
             public void UpdateVertexBuffer () {
                 lock (Lock) {
+                    if (LightVertices == null)
+                        return;
+
                     var vertexCount = Count;
                     var vertexCapacity = Capacity;
 
@@ -147,16 +155,13 @@ namespace Squared.Illuminant {
 
                     if (LightVertexBuffer == null) {
                         LightVertexBuffer = new DynamicVertexBuffer(
-                            Parent.Coordinator.Device, (LightVertices != null) ? typeof(LightVertex) : typeof(ParticleLightVertex),
+                            Parent.Coordinator.Device, typeof(LightVertex),
                             vertexCapacity, BufferUsage.WriteOnly
                         );
                     }
 
                     if (vertexCount > 0) {
-                        if (LightVertices != null)
-                            LightVertexBuffer.SetData(LightVertices.GetBuffer(), 0, vertexCount, SetDataOptions.Discard);
-                        else
-                            LightVertexBuffer.SetData(ParticleLightVertices.GetBuffer(), 0, vertexCount, SetDataOptions.Discard);
+                        LightVertexBuffer.SetData(LightVertices.GetBuffer(), 0, vertexCount, SetDataOptions.Discard);
                     }
 
                     CurrentVertexCount = vertexCount;
@@ -237,7 +242,8 @@ namespace Squared.Illuminant {
         private readonly Action<DeviceManager, object>
             BeginLightPass, EndLightPass, EndLightProbePass,
             IlluminationBatchSetup, LightProbeBatchSetup,
-            GIProbeBatchSetup, EndGIProbePass;
+            GIProbeBatchSetup, EndGIProbePass,
+            ParticleLightBatchSetup;
 
         private readonly object _LightStateLock = new object();
         private readonly Dictionary<LightTypeRenderStateKey, LightTypeRenderState> LightRenderStates = 
@@ -267,13 +273,14 @@ namespace Squared.Illuminant {
 
             _GIBounces = new GIBounce[Configuration.MaximumGIBounceCount];
 
-            BeginLightPass    = _BeginLightPass;
-            EndLightPass      = _EndLightPass;
-            EndLightProbePass = _EndLightProbePass;
-            EndGIProbePass    = _EndGIProbePass;
-            IlluminationBatchSetup = _IlluminationBatchSetup;
-            LightProbeBatchSetup   = _LightProbeBatchSetup;
-            GIProbeBatchSetup      = _GIProbeBatchSetup;
+            BeginLightPass          = _BeginLightPass;
+            EndLightPass            = _EndLightPass;
+            EndLightProbePass       = _EndLightProbePass;
+            EndGIProbePass          = _EndGIProbePass;
+            IlluminationBatchSetup  = _IlluminationBatchSetup;
+            LightProbeBatchSetup    = _LightProbeBatchSetup;
+            GIProbeBatchSetup       = _GIProbeBatchSetup;
+            ParticleLightBatchSetup = _ParticleLightBatchSetup;
 
             lock (coordinator.CreateResourceLock) {
                 QuadIndexBuffer = new IndexBuffer(
@@ -492,14 +499,31 @@ namespace Squared.Illuminant {
             device.Device.BlendState = RenderStates.AdditiveBlend;
 
             SetLightShaderParameters(ltrs.Material, ltrs.Key.Quality);
-            ltrs.Material.Effect.Parameters["RampTexture"].SetValue(ltrs.Key.RampTexture);
+            var p = ltrs.Material.Effect.Parameters;
+            var rampTexture = p["RampTexture"];
+            if (rampTexture != null)
+                rampTexture.SetValue(ltrs.Key.RampTexture);
+        }
 
-            var pls = ltrs.Key.UniqueObject as ParticleLightSource;
-            if (pls != null) {
-                var system = pls.System;
-                // FIXME
-                // ltrs.Material.Effect.Parameters["SystemPositions"].SetValue()
-            }
+        private void _ParticleLightBatchSetup (DeviceManager device, object userData) {
+            var ltrs = (LightTypeRenderState)userData;
+            var pls = (ParticleLightSource)ltrs.Key.UniqueObject;
+            IlluminationBatchSetup (device, ltrs);
+            var p = ltrs.Material.Effect.Parameters;
+            var lightSource = pls.Template;
+            p["LightProperties"].SetValue(new Vector4(
+                lightSource.Radius,
+                lightSource.RampLength,
+                (int)lightSource.RampMode,
+                lightSource.CastsShadows ? 1f : 0f
+            ));
+            p["MoreLightProperties"].SetValue(new Vector4(
+                lightSource.AmbientOcclusionRadius,
+                lightSource.ShadowDistanceFalloff.GetValueOrDefault(-99999),
+                lightSource.FalloffYFactor,
+                lightSource.AmbientOcclusionOpacity
+            ));
+            p["LightColor"].SetValue(lightSource.Color);
         }
 
         private void SetLightShaderParameters (Material material, RendererQualitySettings q) {
@@ -672,8 +696,6 @@ namespace Squared.Illuminant {
                         foreach (var kvp in LightRenderStates) {
                             if (kvp.Value.LightVertices != null)
                                 kvp.Value.LightVertices.Clear();
-                            if (kvp.Value.ParticleLightVertices != null)
-                                kvp.Value.ParticleLightVertices.Clear();
                         }
 
                         using (var buffer = BufferPool<LightSource>.Allocate(Environment.Lights.Count)) {
@@ -718,10 +740,7 @@ namespace Squared.Illuminant {
                             var pls = ltrs.Key.UniqueObject as ParticleLightSource;
                             if (pls != null) {
                                 using (var bg = BatchGroup.New(
-                                    resultGroup, layerIndex++, (dm, _) => {
-                                        dm.ApplyMaterial (ltrs.Material);
-                                        IlluminationBatchSetup (dm, ltrs);
-                                    }
+                                    resultGroup, layerIndex++, ParticleLightBatchSetup, null, ltrs
                                 )) {
                                     pls.System.Render(bg, 0, ltrs.Material);
                                 }

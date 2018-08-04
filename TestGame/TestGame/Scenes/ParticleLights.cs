@@ -27,7 +27,7 @@ namespace TestGame.Scenes {
 
         const int MultisampleCount = 0;
         const int MaxStepCount = 128;
-        const float MaxLife = 300;
+        const float MaxLife = 200;
 
         Toggle ShowGBuffer,
             ShowDistanceField,
@@ -59,7 +59,7 @@ namespace TestGame.Scenes {
             EnableShadows.Value = true;
             EnableDirectionalLights.Value = true;
             EnableParticleShadows.Value = false;
-            EnableParticleLights.Value = false;
+            EnableParticleLights.Value = true;
             ParticleCollisions.Value = true;
             ShowParticles.Value = true;
             LightScaleFactor.Value = 2.5f;
@@ -220,29 +220,29 @@ namespace TestGame.Scenes {
 
             Environment.Lights.Add(new DirectionalLightSource {
                 Direction = new Vector3(-0.6f, -0.7f, -0.2f),
-                Color = new Vector4(0.3f, 0.1f, 0.8f, 0.35f),
+                Color = new Vector4(0.3f, 0.1f, 0.8f, 0.2f),
                 Quality = DirectionalQuality,
             });
 
             Environment.Lights.Add(new DirectionalLightSource {
                 Direction = new Vector3(0.5f, -0.7f, -0.3f),
-                Color = new Vector4(0.1f, 0.8f, 0.3f, 0.35f),
+                Color = new Vector4(0.1f, 0.8f, 0.3f, 0.2f),
                 Quality = DirectionalQuality,
             });
 
             Environment.Lights.Add(new DirectionalLightSource {
                 Direction = new Vector3(0.12f, 0.7f, -0.7f),
-                Color = new Vector4(0.2f, 0.2f, 0.1f, 0.35f),
+                Color = new Vector4(0.2f, 0.2f, 0.1f, 0.2f),
                 Quality = DirectionalQuality,
             });
 
             Environment.Lights.Add(new ParticleLightSource {
                 System = System,
                 Template = new SphereLightSource {
-                    Color = new Vector4(0.85f, 0.35f, 0.35f, 0.3f),
                     Radius = 4,
-                    RampLength = 32,
+                    RampLength = 160,
                     RampMode = LightSourceRampMode.Exponential,
+                    Color = Vector4.One * 0.45f
                 }
             });
 
@@ -275,30 +275,33 @@ namespace TestGame.Scenes {
                 ) {
                     Texture = fireball,
                     TextureRegion = fireballRect,
-                    Size = new Vector2(34, 21) * 0.7f,
-                    AnimationRate = new Vector2(1 / 6f, 0),
+                    Size = new Vector2(34, 21) * 1f,
+                    AnimationRate = new Vector2(1 / 3f, 0),
                     RotationFromVelocity = true,
                     EscapeVelocity = 5f,
-                    BounceVelocityMultiplier = 0.95f,
+                    BounceVelocityMultiplier = 1f,
                     MaximumVelocity = 16f,
                     CollisionDistance = 1f,
-                    CollisionLifePenalty = 4,
+                    CollisionLifePenalty = 8,
                     OpacityFromLife = 0
                 }
             ) {
                 Transforms = {
                     new Spawner {
                         IsActive = false,
-                        MinCount = 2,
-                        MaxCount = 16,
+                        MinInterval = 1,
+                        MaxInterval = 2,
+                        MinCount = 1,
+                        MaxCount = 4,
                         Position = new Formula {
                             RandomOffset = new Vector4(-0.5f, -0.5f, -0.5f, 1f),
-                            RandomScale = new Vector4(5f, 5f, 0f, MaxLife - OpacityFromLife),
+                            RandomScale = new Vector4(15f, 15f, 5f, MaxLife - OpacityFromLife),
                             RandomCircularity = 1f
                         },
                         Velocity = new Formula {
                             RandomOffset = new Vector4(-0.5f, -0.5f, 0f, 0f),
-                            RandomScale = new Vector4(3f, 3f, 0f, 0f),
+                            RandomScale = new Vector4(3f, 3f, 1f, 0f),
+                            RandomScaleConstant = new Vector4(2.2f, 2.2f, 0f, 0f),
                             RandomCircularity = 1f
                         },
                         Attributes = new Formula {
@@ -306,11 +309,9 @@ namespace TestGame.Scenes {
                             RandomScale = new Vector4(0.3f, 0.3f, 0.3f, 0f)
                         }
                     },
-                    /*
                     new MatrixMultiply {
-                        Velocity = Matrix.CreateRotationZ((float)Math.PI * 0.011f) * 1.001f,
+                        Velocity = Matrix.CreateRotationZ((float)Math.PI * 0.001f) * 1.001f,
                     }
-                    */
                 }
             };
 
@@ -429,8 +430,8 @@ namespace TestGame.Scenes {
 
                 LightZ = ((ms.ScrollWheelValue / 4096.0f) * Environment.MaximumZ);
 
-                if (LightZ < 0f)
-                    LightZ = 0f;
+                if (LightZ < 12f)
+                    LightZ = 12f;
 
                 var mousePos = new Vector3(ms.X, ms.Y, LightZ);
 

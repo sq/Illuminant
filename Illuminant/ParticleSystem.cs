@@ -795,12 +795,15 @@ namespace Squared.Illuminant.Particles {
                 }
 
                 if (Configuration.DistanceField != null) {
+                    if (Configuration.DistanceFieldMaximumZ == null)
+                        throw new InvalidOperationException("If a distance field is active, you must set DistanceFieldMaximumZ");
+
                     UpdatePass(
                         group, i++, pm.UpdateWithDistanceField,
                         source, a, b, ref passSource, ref passDest,
                         startedWhen, null,
                         (p) => {
-                            var dfu = new Uniforms.DistanceField(Configuration.DistanceField, Configuration.DistanceFieldMaximumZ);
+                            var dfu = new Uniforms.DistanceField(Configuration.DistanceField, Configuration.DistanceFieldMaximumZ.Value);
                             pm.MaterialSet.TrySetBoundUniform(pm.UpdateWithDistanceField, "DistanceField", ref dfu);
 
                             p["MaximumEncodedDistance"].SetValue(Configuration.DistanceField.MaximumEncodedDistance);
@@ -922,7 +925,10 @@ namespace Squared.Illuminant.Particles {
                         p["Texel"].SetValue(new Vector2(1f / Engine.Configuration.ChunkSize, 1f / Engine.Configuration.ChunkSize));
                     }
 
-                    p["ZToY"].SetValue(Configuration.ZToY);
+                    var zToY = p["ZToY"];
+                    if (zToY != null)
+                        zToY.SetValue(Configuration.ZToY);
+
                     p["OpacityFromLife"].SetValue(Configuration.OpacityFromLife);
                 },
                 (dm, _) => {
@@ -982,7 +988,7 @@ namespace Squared.Illuminant.Particles {
 
         // If set, particles collide with volumes in this distance field
         public DistanceField DistanceField;
-        public float         DistanceFieldMaximumZ;
+        public float?        DistanceFieldMaximumZ;
 
         // The distance at which a particle is considered colliding with the field.
         // Raise this to make particles 'larger'.

@@ -21,7 +21,7 @@ namespace Squared.Illuminant.Particles.Transforms {
         private MersenneTwister RNG = new MersenneTwister();
         private int     TotalSpawned;
 
-        private Vector4[] Temp = new Vector4[9];
+        private Vector4[] Temp = new Vector4[12];
         private float[] Temp2 = new float[3];
 
         internal void SetIndices (int first, int last) {
@@ -58,12 +58,15 @@ namespace Squared.Illuminant.Particles.Transforms {
             Temp[0] = Position.Constant;
             Temp[1] = Position.RandomOffset;
             Temp[2] = Position.RandomScale;
-            Temp[3] = Velocity.Constant;
-            Temp[4] = Velocity.RandomOffset;
-            Temp[5] = Velocity.RandomScale;
-            Temp[6] = Attributes.Constant;
-            Temp[7] = Attributes.RandomOffset;
-            Temp[8] = Attributes.RandomScale;
+            Temp[3] = Position.RandomScaleConstant;
+            Temp[4] = Velocity.Constant;
+            Temp[5] = Velocity.RandomOffset;
+            Temp[6] = Velocity.RandomScale;
+            Temp[7] = Velocity.RandomScaleConstant;
+            Temp[8] = Attributes.Constant;
+            Temp[9] = Attributes.RandomOffset;
+            Temp[10] = Attributes.RandomScale;
+            Temp[11] = Attributes.RandomScaleConstant;
 
             Temp2[0] = Position.RandomCircularity;
             Temp2[1] = Velocity.RandomCircularity;

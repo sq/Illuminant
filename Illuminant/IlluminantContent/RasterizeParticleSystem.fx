@@ -81,7 +81,7 @@ void VS_PosVelAttr (
         return;
     }
 
-    float2 absvel = abs(velocity.xy);
+    float2 absvel = abs(velocity.xy + float2(0, velocity.z * -ZToY));
     float angle;
     if ((absvel.x < 0.01) && (absvel.y < 0.01)) {
         angle = 0;
