@@ -243,7 +243,7 @@ namespace TestGame.Scenes {
                 }
             });
 
-            var floor = 3f;
+            var floor = -5f;
 
             Rect(new Vector2(330, 300), new Vector2(Width, 340), floor, 60f);
 
@@ -280,8 +280,7 @@ namespace TestGame.Scenes {
                     MaximumVelocity = 16f,
                     CollisionDistance = 1f,
                     CollisionLifePenalty = 4,
-                    OpacityFromLife = 0,
-                    ZToY = Environment.ZToYMultiplier
+                    OpacityFromLife = 0
                 }
             ) {
                 Transforms = {
@@ -291,7 +290,7 @@ namespace TestGame.Scenes {
                         MaxCount = 16,
                         Position = new Formula {
                             RandomOffset = new Vector4(-0.5f, -0.5f, -0.5f, 1f),
-                            RandomScale = new Vector4(5f, 5f, 5f, MaxLife - OpacityFromLife),
+                            RandomScale = new Vector4(5f, 5f, 0f, MaxLife - OpacityFromLife),
                             RandomCircularity = 1f
                         },
                         Velocity = new Formula {
@@ -333,6 +332,7 @@ namespace TestGame.Scenes {
             pls.Template.CastsShadows = EnableShadows;
 
             System.Configuration.DistanceField = ParticleCollisions ? DistanceField : null;
+            System.Configuration.ZToY = TwoPointFiveD ? Environment.ZToYMultiplier : 0;
             System.Update(frame, -2);
 
             using (var bg = BatchGroup.ForRenderTarget(
@@ -423,10 +423,10 @@ namespace TestGame.Scenes {
                 var ms = Mouse.GetState();
                 Game.IsMouseVisible = true;
 
-                LightZ = ((ms.ScrollWheelValue / 4096.0f) * Environment.MaximumZ) + 32;
+                LightZ = ((ms.ScrollWheelValue / 4096.0f) * Environment.MaximumZ);
 
-                if (LightZ < 0.01f)
-                    LightZ = 0.01f;
+                if (LightZ < 0f)
+                    LightZ = 0f;
 
                 var mousePos = new Vector3(ms.X, ms.Y, LightZ);
 
