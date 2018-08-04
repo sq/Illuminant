@@ -922,6 +922,7 @@ namespace Squared.Illuminant.Particles {
                         p["Texel"].SetValue(new Vector2(1f / Engine.Configuration.ChunkSize, 1f / Engine.Configuration.ChunkSize));
                     }
 
+                    p["ZToY"].SetValue(Configuration.ZToY);
                     p["OpacityFromLife"].SetValue(Configuration.OpacityFromLife);
                 },
                 (dm, _) => {
@@ -1000,6 +1001,9 @@ namespace Squared.Illuminant.Particles {
         // Particles colliding with distance field volumes will retain this much
         //  of their speed and bounce off of the volume
         public float         BounceVelocityMultiplier = 0.0f;
+
+        // Applies the particle's Z coordinate to its Y coordinate at render time for 2.5D effect
+        public float         ZToY = 0;
 
         public ParticleSystemConfiguration (
             int attributeCount = 0

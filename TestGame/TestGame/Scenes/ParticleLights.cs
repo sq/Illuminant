@@ -270,8 +270,8 @@ namespace TestGame.Scenes {
                 new ParticleSystemConfiguration(
                     attributeCount: 1
                 ) {
-                    Texture = fireball,
-                    TextureRegion = fireballRect,
+                    // Texture = fireball,
+                    // TextureRegion = fireballRect,
                     Size = new Vector2(34, 21) * 1f,
                     AnimationRate = new Vector2(1 / 6f, 0),
                     RotationFromVelocity = true,
@@ -280,6 +280,7 @@ namespace TestGame.Scenes {
                     MaximumVelocity = 16f,
                     CollisionDistance = 1f,
                     CollisionLifePenalty = 4,
+                    OpacityFromLife = 0
                 }
             ) {
                 Transforms = {
@@ -412,8 +413,8 @@ namespace TestGame.Scenes {
             if (ShowParticles)
                 System.Render(
                     frame, 10, 
-                    material: Engine.ParticleMaterials.AttributeColor,
-                    blendState: BlendState.AlphaBlend
+                    material: Engine.ParticleMaterials.White,
+                    blendState: BlendState.Additive
                 );
         }
 

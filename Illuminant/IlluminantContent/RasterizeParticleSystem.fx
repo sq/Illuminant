@@ -8,6 +8,7 @@ uniform float2 Size;
 uniform float2 AnimationRate;
 uniform float  VelocityRotation;
 uniform float  OpacityFromLife;
+uniform float  ZToY;
 
 Texture2D BitmapTexture;
 sampler BitmapSampler {
@@ -47,9 +48,12 @@ void VS_Core (
     out float4 result,
     out float2 texCoord
 ) {
+    // HACK: Discard Z
+    float3 displayXyz = float3(position.x, position.y - (position.z * ZToY), 0);
+
     // FIXME
     result = TransformPosition(
-        float4(position.xyz + corner, 1), 0
+        float4(displayXyz + corner, 1), 0
     );
 
     texCoord = (Corners[cornerIndex.x].xy / 2) + 0.5;
