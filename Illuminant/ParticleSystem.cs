@@ -418,7 +418,8 @@ namespace Squared.Illuminant.Particles {
             Slice source, Slice a, Slice b,
             ref Slice passSource, ref Slice passDest, 
             long startedWhen, Transforms.Spawner spawner,
-            Action<EffectParameterCollection> setParameters
+            Action<EffectParameterCollection> setParameters,
+            bool clearFirst
         ) {
             var _source = passSource;
             var _dest = passDest;
@@ -519,7 +520,8 @@ namespace Squared.Illuminant.Particles {
                         batch, i++,
                         chunkMaterial, sourceChunk, destChunk,
                         setParameters, 
-                        runQuery ? li : null
+                        runQuery ? li : null,
+                        clearFirst
                     );
                 }
             }
@@ -543,7 +545,7 @@ namespace Squared.Illuminant.Particles {
             IBatchContainer container, int layer, Material m,
             Slice.Chunk source, Slice.Chunk dest,
             Action<EffectParameterCollection> setParameters,
-            LivenessInfo li
+            LivenessInfo li, bool clearFirst
         ) {
             // Console.WriteLine("{0} -> {1}", passSource.Index, passDest.Index);
             var e = m.Effect;
@@ -554,11 +556,8 @@ namespace Squared.Illuminant.Particles {
                     dm.Device.SetRenderTargets(dest.Bindings);
                     dm.Device.Viewport = new Viewport(0, 0, Engine.Configuration.ChunkSize, Engine.Configuration.ChunkSize);
 
-                    /*
-                    if (query != null)
-                        // For some reason this is a measurable performance hit
+                    if (clearFirst)
                         dm.Device.Clear(Color.Transparent);
-                        */
 
                     p["Texel"].SetValue(new Vector2(1f / Engine.Configuration.ChunkSize, 1f / Engine.Configuration.ChunkSize));
 
@@ -780,7 +779,7 @@ namespace Squared.Illuminant.Particles {
                     UpdatePass(
                         group, i++, t.GetMaterial(Engine.ParticleMaterials),
                         source, a, b, ref passSource, ref passDest, 
-                        startedWhen, spawner, t.SetParameters
+                        startedWhen, spawner, t.SetParameters, false
                     );
                 }
 
@@ -813,7 +812,7 @@ namespace Squared.Illuminant.Particles {
                             p["MaximumVelocity"].SetValue(Configuration.MaximumVelocity);
                             p["CollisionDistance"].SetValue(Configuration.CollisionDistance);
                             p["CollisionLifePenalty"].SetValue(Configuration.CollisionLifePenalty);
-                        }
+                        }, true
                     );
                 } else {
                     UpdatePass(
@@ -823,7 +822,7 @@ namespace Squared.Illuminant.Particles {
                         (p) => {
                             p["LifeDecayRate"].SetValue(Configuration.GlobalLifeDecayRate);
                             p["MaximumVelocity"].SetValue(Configuration.MaximumVelocity);
-                        }
+                        }, true
                     );
                 }
 
