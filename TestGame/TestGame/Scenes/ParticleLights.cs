@@ -27,7 +27,7 @@ namespace TestGame.Scenes {
 
         const int MultisampleCount = 0;
         const int MaxStepCount = 128;
-        const float MaxLife = 600;
+        const float MaxLife = 300;
 
         Toggle ShowGBuffer,
             ShowDistanceField,
@@ -58,7 +58,7 @@ namespace TestGame.Scenes {
             EnableShadows.Value = true;
             EnableDirectionalLights.Value = true;
             EnableParticleLights.Value = false;
-            ParticleCollisions.Value = false;
+            ParticleCollisions.Value = true;
             ShowParticles.Value = true;
             LightScaleFactor.Value = 2.5f;
 
@@ -95,9 +95,9 @@ namespace TestGame.Scenes {
             OpacityFromLife.MinusKey = Keys.OemSemicolon;
             OpacityFromLife.PlusKey = Keys.OemQuotes;
             OpacityFromLife.Min = 50;
-            OpacityFromLife.Max = 500;
+            OpacityFromLife.Max = MaxLife;
             OpacityFromLife.Speed = 50f;
-            OpacityFromLife.Value = 100;
+            OpacityFromLife.Value = MaxLife / 2f;
 
             DistanceFieldResolution.Changed += (s, e) => CreateDistanceField();
         }
@@ -270,9 +270,9 @@ namespace TestGame.Scenes {
                 new ParticleSystemConfiguration(
                     attributeCount: 1
                 ) {
-                    // Texture = fireball,
-                    // TextureRegion = fireballRect,
-                    Size = new Vector2(34, 21) * 1f,
+                    Texture = fireball,
+                    TextureRegion = fireballRect,
+                    Size = new Vector2(34, 21) * 0.7f,
                     AnimationRate = new Vector2(1 / 6f, 0),
                     RotationFromVelocity = true,
                     EscapeVelocity = 5f,
@@ -280,37 +280,35 @@ namespace TestGame.Scenes {
                     MaximumVelocity = 16f,
                     CollisionDistance = 1f,
                     CollisionLifePenalty = 4,
-                    OpacityFromLife = 0
+                    OpacityFromLife = 0,
+                    ZToY = Environment.ZToYMultiplier
                 }
             ) {
                 Transforms = {
                     new Spawner {
                         IsActive = false,
-                        MinCount = 1,
-                        MaxCount = 128,
+                        MinCount = 2,
+                        MaxCount = 16,
                         Position = new Formula {
-                            RandomOffset = new Vector4(-0.5f, -0.5f, 0f, 1f),
-                            RandomScale = new Vector4(10f, 10f, 5f, MaxLife - OpacityFromLife),
-                        },
-                        /*
-                        Velocity = new Formula {
-                            RandomOffset = new Vector4(-0.5f, -0.5f, 0f, 0f),
-                            RandomScale = new Vector4(1f, 1f, 0f, 0f),
+                            RandomOffset = new Vector4(-0.5f, -0.5f, -0.5f, 1f),
+                            RandomScale = new Vector4(5f, 5f, 5f, MaxLife - OpacityFromLife),
                             RandomCircularity = 1f
                         },
-                        */
                         Velocity = new Formula {
-                            RandomOffset = Vector4.Zero,
-                            RandomScale = Vector4.Zero
+                            RandomOffset = new Vector4(-0.5f, -0.5f, 0f, 0f),
+                            RandomScale = new Vector4(3f, 3f, 0f, 0f),
+                            RandomCircularity = 1f
                         },
                         Attributes = new Formula {
                             Constant = new Vector4(0.09f, 0.09f, 0.09f, 1f),
                             RandomScale = new Vector4(0.3f, 0.3f, 0.3f, 0f)
                         }
                     },
+                    /*
                     new MatrixMultiply {
                         Velocity = Matrix.CreateRotationZ((float)Math.PI * 0.011f) * 1.001f,
                     }
+                    */
                 }
             };
 
@@ -413,7 +411,7 @@ namespace TestGame.Scenes {
             if (ShowParticles)
                 System.Render(
                     frame, 10, 
-                    material: Engine.ParticleMaterials.White,
+                    material: Engine.ParticleMaterials.AttributeColor,
                     blendState: BlendState.Additive
                 );
         }

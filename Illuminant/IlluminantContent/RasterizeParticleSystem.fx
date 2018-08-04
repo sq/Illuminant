@@ -76,13 +76,18 @@ void VS_PosVelAttr (
     readState(actualXy, position, velocity, attributes);
 
     float life = position.w;
-    if (life <= 0)
+    if (life <= 0) {
+        result = float4(0, 0, 0, 0);
         return;
+    }
 
-    float angle = (atan2(velocity.y, velocity.x) + PI) * VelocityRotation;
-    // FIXME
-    // if (isinf (angle))
+    float2 absvel = abs(velocity.xy);
+    float angle;
+    if ((absvel.x < 0.01) && (absvel.y < 0.01)) {
         angle = 0;
+    } else {
+        angle = (atan2(velocity.y, velocity.x) + PI) * VelocityRotation;
+    }
     float3 rotatedCorner = ComputeRotatedCorner(cornerIndex.x, angle);
 
     VS_Core(
@@ -105,8 +110,10 @@ void VS_PosAttr (
     attributes = tex2Dlod(AttributeSampler, float4(actualXy, 0, 0));
 
     float life = position.w;
-    if (life <= 0)
+    if (life <= 0) {
+        result = float4(0, 0, 0, 0);
         return;
+    }
 
     VS_Core(
         position, Corners[cornerIndex.x], cornerIndex,
@@ -127,6 +134,8 @@ void PS_White (
         texColor *= 1 - clamp(position.w / -OpacityFromLife, 0, 1);
 
     result = texColor;
+    if (result.a <= 0)
+        discard;
 }
 
 void PS_AttributeColor (
@@ -141,7 +150,10 @@ void PS_AttributeColor (
         texColor *= clamp(position.w / OpacityFromLife, 0, 1);
     else if (OpacityFromLife < 0)
         texColor *= 1 - clamp(position.w / -OpacityFromLife, 0, 1);
+
     result = texColor * color;
+    if (result.a <= 0)
+        discard;
 }
 
 technique AttributeColor {
