@@ -32,9 +32,9 @@ void PS_Update (
     if (length(velocity) > MaximumVelocity)
         velocity = normalize(velocity) * MaximumVelocity;
 
-    DistanceFieldConstants vars = makeDistanceFieldConstants();
+    TVARS vars = makeDistanceFieldConstants();
 
-    float oldDistance = sampleDistanceField(oldPosition.xyz, vars);
+    float oldDistance = SAMPLE(oldPosition.xyz, vars);
     float3 unitVector = normalize(velocity.xyz);
     float stepSpeed = length(velocity.xyz);
 
@@ -44,7 +44,7 @@ void PS_Update (
     for (int i = 0; i < MAX_STEPS; i++) {
         float3 stepVelocity = unitVector * stepSpeed;
         float3 stepPosition = oldPosition.xyz + stepVelocity;
-        float stepDistance = sampleDistanceField(stepPosition, vars);
+        float stepDistance = SAMPLE(stepPosition, vars);
 
         // No collision
         if (stepDistance > CollisionDistance)

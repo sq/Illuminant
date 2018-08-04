@@ -34,6 +34,7 @@ namespace TestGame.Scenes {
             TwoPointFiveD,
             EnableShadows,
             EnableDirectionalLights,
+            EnableParticleShadows,
             EnableParticleLights,
             sRGB,
             ParticleCollisions,
@@ -57,6 +58,7 @@ namespace TestGame.Scenes {
             LightmapScaleRatio.Value = 1.0f;
             EnableShadows.Value = true;
             EnableDirectionalLights.Value = true;
+            EnableParticleShadows.Value = false;
             EnableParticleLights.Value = false;
             ParticleCollisions.Value = true;
             ShowParticles.Value = true;
@@ -68,6 +70,7 @@ namespace TestGame.Scenes {
             ShowDistanceField.Key = Keys.D;
             EnableShadows.Key = Keys.S;
             EnableDirectionalLights.Key = Keys.D3;
+            EnableParticleShadows.Key = Keys.A;
             EnableParticleLights.Key = Keys.P;
             ShowParticles.Key = Keys.O;
             sRGB.Key = Keys.R;
@@ -329,9 +332,10 @@ namespace TestGame.Scenes {
 
             var pls = Renderer.Environment.Lights.OfType<ParticleLightSource>().First();
             pls.IsActive = EnableParticleLights;
-            pls.Template.CastsShadows = EnableShadows;
+            pls.Template.CastsShadows = EnableParticleShadows;
 
             System.Configuration.DistanceField = ParticleCollisions ? DistanceField : null;
+            System.Configuration.DistanceFieldMaximumZ = Environment.MaximumZ;
             System.Configuration.ZToY = TwoPointFiveD ? Environment.ZToYMultiplier : 0;
             System.Update(frame, -2);
 
