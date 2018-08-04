@@ -35,6 +35,7 @@ namespace Squared.Illuminant {
             public Texture2D               RampTexture;
             public RendererQualitySettings Quality;
             public bool                    DistanceRamp;
+            public object                  UniqueObject;
 
             public override int GetHashCode () {
                 var result = ((int)Type) ^ (DistanceRamp ? 2057 : 16593);
@@ -42,6 +43,8 @@ namespace Squared.Illuminant {
                     result ^= RampTexture.GetHashCode();
                 if (Quality != null)
                     result ^= Quality.GetHashCode();
+                if (UniqueObject != null)
+                    result ^= UniqueObject.GetHashCode();
                 return result;
             }
 
@@ -53,7 +56,8 @@ namespace Squared.Illuminant {
             }
 
             public bool Equals (LightTypeRenderStateKey ltrsk) {
-                return (Type == ltrsk.Type) &&
+                return (UniqueObject == ltrsk.UniqueObject) &&
+                    (Type == ltrsk.Type) &&
                     (DistanceRamp == ltrsk.DistanceRamp) &&
                     (RampTexture == ltrsk.RampTexture) &&
                     (Quality == ltrsk.Quality);
@@ -98,6 +102,15 @@ namespace Squared.Illuminant {
                         ProbeMaterial = (key.RampTexture == null)
                             ? parent.IlluminantMaterials.DirectionalLightProbe
                             : parent.IlluminantMaterials.DirectionalLightProbeWithRamp;
+                        break;
+                    case LightSourceTypeID.Particle:
+                        // FIXME
+                        if (key.RampTexture != null)
+                            throw new NotImplementedException("Ramp textures");
+                        Material = parent.IlluminantMaterials.ParticleSystemSphereLight;
+                        if (parent.Configuration.EnableGlobalIllumination)
+                            throw new NotImplementedException("GI");
+                        ProbeMaterial = null;
                         break;
                     default:
                         throw new NotImplementedException(key.Type.ToString());
@@ -453,6 +466,13 @@ namespace Squared.Illuminant {
 
             SetLightShaderParameters(ltrs.Material, ltrs.Key.Quality);
             ltrs.Material.Effect.Parameters["RampTexture"].SetValue(ltrs.Key.RampTexture);
+
+            var pls = ltrs.Key.UniqueObject as ParticleLightSource;
+            if (pls != null) {
+                var system = pls.System;
+                // FIXME
+                // ltrs.Material.Effect.Parameters["SystemPositions"].SetValue()
+            }
         }
 
         private void SetLightShaderParameters (Material material, RendererQualitySettings q) {
@@ -472,7 +492,8 @@ namespace Squared.Illuminant {
                 new LightTypeRenderStateKey {
                     Type = ls.TypeID,
                     RampTexture = ls.RampTexture ?? Configuration.DefaultRampTexture,
-                    Quality = ls.Quality ?? Configuration.DefaultQuality
+                    Quality = ls.Quality ?? Configuration.DefaultQuality,
+                    UniqueObject = (ls is ParticleLightSource) ? ls : null
                 };
 
             // A 1x1 ramp is treated as no ramp at all.
@@ -634,6 +655,7 @@ namespace Squared.Illuminant {
                                 var lightSource = buffer.Data[i];
                                 var pointLightSource = lightSource as SphereLightSource;
                                 var directionalLightSource = lightSource as DirectionalLightSource;
+                                var particleLightSource = lightSource as ParticleLightSource;
 
                                 var ltrs = GetLightRenderState(lightSource);
 
@@ -641,6 +663,8 @@ namespace Squared.Illuminant {
                                     RenderPointLightSource(pointLightSource, intensityScale, ltrs);
                                 else if (directionalLightSource != null)
                                     RenderDirectionalLightSource(directionalLightSource, intensityScale, ltrs);
+                                else if (particleLightSource != null)
+                                    RenderParticleLightSource(particleLightSource, intensityScale, ltrs);
                                 else
                                     throw new NotSupportedException(lightSource.GetType().Name);
                             };
@@ -705,6 +729,31 @@ namespace Squared.Illuminant {
 
         private void RenderPointLightSource (SphereLightSource lightSource, float intensityScale, LightTypeRenderState ltrs) {
             LightVertex vertex;
+            vertex.LightCenter = lightSource.Position;
+            vertex.Color = lightSource.Color;
+            vertex.Color.W *= (lightSource.Opacity * intensityScale);
+            vertex.LightProperties.X = lightSource.Radius;
+            vertex.LightProperties.Y = lightSource.RampLength;
+            vertex.LightProperties.Z = (int)lightSource.RampMode;
+            vertex.LightProperties.W = lightSource.CastsShadows ? 1f : 0f;
+            vertex.MoreLightProperties.X = lightSource.AmbientOcclusionRadius;
+            vertex.MoreLightProperties.Y = lightSource.ShadowDistanceFalloff.GetValueOrDefault(-99999);
+            vertex.MoreLightProperties.Z = lightSource.FalloffYFactor;
+            vertex.MoreLightProperties.W = lightSource.AmbientOcclusionOpacity;
+
+            vertex.Position = new Vector2(0, 0);
+            ltrs.LightVertices.Add(ref vertex);
+            vertex.Position = new Vector2(1, 0);
+            ltrs.LightVertices.Add(ref vertex);
+            vertex.Position = new Vector2(1, 1);
+            ltrs.LightVertices.Add(ref vertex);
+            vertex.Position = new Vector2(0, 1);
+            ltrs.LightVertices.Add(ref vertex);
+        }
+
+        private void RenderParticleLightSource (ParticleLightSource particleLightSource, float intensityScale, LightTypeRenderState ltrs) {
+            LightVertex vertex;
+            var lightSource = particleLightSource.Template;
             vertex.LightCenter = lightSource.Position;
             vertex.Color = lightSource.Color;
             vertex.Color.W *= (lightSource.Opacity * intensityScale);

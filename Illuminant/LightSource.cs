@@ -11,7 +11,8 @@ namespace Squared.Illuminant {
     public enum LightSourceTypeID : int {
         Unknown = 0,
         Sphere = 1,
-        Directional = 2
+        Directional = 2,
+        Particle = 3
     }
 
     public abstract class LightSource {
@@ -171,6 +172,26 @@ namespace Squared.Illuminant {
                 Quality = Quality,
                 RampTexture = RampTexture,
                 UseDistanceForRampTexture = UseDistanceForRampTexture
+            };
+            return result;
+        }
+    }
+
+    public class ParticleLightSource : LightSource {
+        public SphereLightSource Template = new SphereLightSource ();
+
+        public Particles.ParticleSystem System;
+        public bool IsActive = true;
+
+        public ParticleLightSource ()
+            : base (LightSourceTypeID.Particle) {
+        }
+
+        public ParticleLightSource Clone (bool deep) {
+            var result = new ParticleLightSource {
+                Template = deep ? Template.Clone() : Template,
+                System = System,
+                IsActive = IsActive
             };
             return result;
         }

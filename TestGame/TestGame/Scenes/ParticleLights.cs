@@ -9,86 +9,69 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Squared.Game;
 using Squared.Illuminant;
+using Squared.Illuminant.Particles;
+using Squared.Illuminant.Particles.Transforms;
 using Squared.Render;
 using Squared.Render.Convenience;
 using Squared.Util;
 
 namespace TestGame.Scenes {
-    public class GlobalIlluminationTest : Scene {
+    public class ParticleLights : Scene {
         DistanceField DistanceField;
         LightingEnvironment Environment;
         LightingRenderer Renderer;
 
         RenderTarget2D Lightmap;
 
-        public SphereLightSource MovableLight;
-
         float LightZ;
 
-        const int BounceCount = 3;
         const int MultisampleCount = 0;
         const int MaxStepCount = 128;
-        const float AORadius = 6;
-        const float AOOpacity = 0.15f;
-        const float ProbeZ = 1;
-        const float ProbeVisBrightness = 1.1f;
+        const float MaxLife = 600;
 
         Toggle ShowGBuffer,
             ShowDistanceField,
             TwoPointFiveD,
-            RenderDirectLight,
             EnableShadows,
-            ShowProbeSH,
-            EnablePointLight,
             EnableDirectionalLights,
-            AdditiveIndirectLight,
-            EdgeShadows,
+            EnableParticleLights,
             sRGB,
-            MultipleVolumes;
+            ParticleCollisions,
+            ShowParticles;
 
         Slider DistanceFieldResolution,
             LightmapScaleRatio,
-            IndirectLightBrightness,
-            BounceDistance,
-            ProbeInterval,
-            GIBounceCount,
-            LightScaleFactor;
+            LightScaleFactor,
+            OpacityFromLife;
 
         RendererQualitySettings DirectionalQuality;
 
-        public GlobalIlluminationTest (TestGame game, int width, int height)
+        ParticleEngine Engine;
+        ParticleSystem System;
+
+        public ParticleLights (TestGame game, int width, int height)
             : base(game, width, height) {
 
             TwoPointFiveD.Value = true;
             DistanceFieldResolution.Value = 0.25f;
             LightmapScaleRatio.Value = 1.0f;
-            RenderDirectLight.Value = true;
-            ShowProbeSH.Value = false;
             EnableShadows.Value = true;
-            EnablePointLight.Value = true;
             EnableDirectionalLights.Value = true;
-            IndirectLightBrightness.Value = 1.0f;
-            AdditiveIndirectLight.Value = true;
-            BounceDistance.Value = 512;
-            ProbeInterval.Value = 48;
-            GIBounceCount.Value = 1;
+            EnableParticleLights.Value = true;
+            ParticleCollisions.Value = true;
+            ShowParticles.Value = true;
             LightScaleFactor.Value = 2.5f;
-            EdgeShadows.Value = false;
-            MultipleVolumes.Value = false;
 
             ShowGBuffer.Key = Keys.G;
             TwoPointFiveD.Key = Keys.D2;
             TwoPointFiveD.Changed += (s, e) => Renderer.InvalidateFields();
             ShowDistanceField.Key = Keys.D;
-            RenderDirectLight.Key = Keys.L;
-            ShowProbeSH.Key = Keys.P;
             EnableShadows.Key = Keys.S;
             EnableDirectionalLights.Key = Keys.D3;
-            EnablePointLight.Key = Keys.D4;
-            AdditiveIndirectLight.Key = Keys.A;
-            EdgeShadows.Key = Keys.O;
+            EnableParticleLights.Key = Keys.P;
+            ShowParticles.Key = Keys.O;
             sRGB.Key = Keys.R;
-            MultipleVolumes.Key = Keys.V;
+            ParticleCollisions.Key = Keys.C;
 
             DistanceFieldResolution.MinusKey = Keys.D5;
             DistanceFieldResolution.PlusKey = Keys.D6;
@@ -103,35 +86,17 @@ namespace TestGame.Scenes {
             LightmapScaleRatio.Speed = 0.1f;
             LightmapScaleRatio.Changed += (s, e) => Renderer.InvalidateFields();
 
-            IndirectLightBrightness.MinusKey = Keys.D9;
-            IndirectLightBrightness.PlusKey = Keys.D0;
-            IndirectLightBrightness.Min = 0f;
-            IndirectLightBrightness.Max = 4.0f;
-            IndirectLightBrightness.Speed = 0.333333f;
-
-            BounceDistance.MinusKey = Keys.OemMinus;
-            BounceDistance.PlusKey = Keys.OemPlus;
-            BounceDistance.Min = 128f;
-            BounceDistance.Max = 1024f;
-            BounceDistance.Speed = 128f;
-
-            ProbeInterval.MinusKey = Keys.OemComma;
-            ProbeInterval.PlusKey = Keys.OemPeriod;
-            ProbeInterval.Min = 32f;
-            ProbeInterval.Max = 128f;
-            ProbeInterval.Speed = 8f;
-
-            GIBounceCount.MinusKey = Keys.OemSemicolon;
-            GIBounceCount.PlusKey = Keys.OemQuotes;
-            GIBounceCount.Min = 0f;
-            GIBounceCount.Max = BounceCount;
-            GIBounceCount.Speed = 1f;
-
             LightScaleFactor.MinusKey = Keys.Q;
             LightScaleFactor.PlusKey = Keys.W;
             LightScaleFactor.Min = 0.5f;
             LightScaleFactor.Max = 6.0f;
             LightScaleFactor.Speed = 0.5f;
+
+            OpacityFromLife.MinusKey = Keys.OemOpenBrackets;
+            OpacityFromLife.PlusKey = Keys.OemCloseBrackets;
+            OpacityFromLife.Min = 50;
+            OpacityFromLife.Max = 500;
+            OpacityFromLife.Speed = 50f;
 
             DistanceFieldResolution.Changed += (s, e) => CreateDistanceField();
         }
@@ -220,13 +185,9 @@ namespace TestGame.Scenes {
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(
                     Width, Height, true,
-                    enableBrightnessEstimation: false, 
-                    enableGlobalIllumination: true,
-                    maximumGIProbeCount: 2048, giProbeQualityLevel: GIProbeSampleCounts.High,
-                    maximumGIBounceCount: BounceCount
+                    enableBrightnessEstimation: false
                 ) {
                     MaximumFieldUpdatesPerFrame = 3,
-                    MaximumGIUpdatesPerFrame = 1,
                     DefaultQuality = {
                         MinStepSize = 1f,
                         LongStepFactor = 0.5f,
@@ -239,43 +200,46 @@ namespace TestGame.Scenes {
 
             CreateDistanceField();
 
-            MovableLight = new SphereLightSource {
-                Position = new Vector3(64, 64, 0.7f),
-                Color = new Vector4(0.85f, 0.35f, 0.35f, 0.6f),
-                Radius = 290,
-                RampLength = 64,
-                RampMode = LightSourceRampMode.Exponential,
-                AmbientOcclusionOpacity = AOOpacity
-            };
+            Engine = new ParticleEngine(
+                Game.Content, Game.RenderCoordinator, Game.Materials, 
+                new ParticleEngineConfiguration ()
+            );
 
-            Environment.Lights.Add(MovableLight);
+            SetupParticleSystem();
 
             DirectionalQuality = new RendererQualitySettings {
                 MinStepSize = 2f,
                 LongStepFactor = 0.95f,
                 MaxConeRadius = 24,
-                OcclusionToOpacityPower = 0.7f                
+                OcclusionToOpacityPower = 0.7f
             };
 
             Environment.Lights.Add(new DirectionalLightSource {
                 Direction = new Vector3(-0.6f, -0.7f, -0.2f),
                 Color = new Vector4(0.3f, 0.1f, 0.8f, 0.35f),
                 Quality = DirectionalQuality,
-                AmbientOcclusionOpacity = AOOpacity
             });
 
             Environment.Lights.Add(new DirectionalLightSource {
                 Direction = new Vector3(0.5f, -0.7f, -0.3f),
                 Color = new Vector4(0.1f, 0.8f, 0.3f, 0.35f),
                 Quality = DirectionalQuality,
-                AmbientOcclusionOpacity = AOOpacity
             });
 
             Environment.Lights.Add(new DirectionalLightSource {
                 Direction = new Vector3(0.12f, 0.7f, -0.7f),
                 Color = new Vector4(0.2f, 0.2f, 0.1f, 0.35f),
                 Quality = DirectionalQuality,
-                AmbientOcclusionOpacity = AOOpacity
+            });
+
+            Environment.Lights.Add(new ParticleLightSource {
+                System = System,
+                Template = new SphereLightSource {
+                    Color = new Vector4(0.85f, 0.35f, 0.35f, 0.3f),
+                    Radius = 4,
+                    RampLength = 32,
+                    RampMode = LightSourceRampMode.Exponential,
+                }
             });
 
             var floor = 3f;
@@ -294,35 +258,59 @@ namespace TestGame.Scenes {
             Rect(new Vector2(630, 930), new Vector2(900, 970), floor, 40f);
             Rect(new Vector2(1000, 930), new Vector2(Width - 100, 970), floor, 40f);
         }
+
+        void SetupParticleSystem () {
+            var sz = new Vector3(Width, Height, 0);
+            var fireball = Game.Content.Load<Texture2D>("fireball");
+            var fireballRect = fireball.BoundsFromRectangle(new Rectangle(0, 0, 34, 21));
+
+            System = new ParticleSystem(
+                Engine,
+                new ParticleSystemConfiguration(
+                    attributeCount: 1
+                ) {
+                    Texture = fireball,
+                    TextureRegion = fireballRect,
+                    Size = new Vector2(34, 21) * 0.2f,
+                    AnimationRate = new Vector2(1 / 6f, 0),
+                    RotationFromVelocity = true,
+                    EscapeVelocity = 5f,
+                    BounceVelocityMultiplier = 0.95f,
+                    MaximumVelocity = 16f,
+                    CollisionDistance = 1f,
+                    CollisionLifePenalty = 4
+                }
+            ) {
+                Transforms = {
+                    new Spawner {
+                        IsActive = false,
+                        MinCount = 32,
+                        MaxCount = 1024,
+                        Position = new Formula {
+                            RandomOffset = new Vector4(-0.5f, -0.5f, 0f, 0f),
+                            RandomScale = new Vector4(100f, 100f, 50f, MaxLife - OpacityFromLife),
+                        },
+                        Velocity = new Formula {
+                            RandomOffset = new Vector4(-0.5f, -0.5f, 0f, 0f),
+                            RandomScale = new Vector4(3f, 3f, 0f, 0f),
+                            RandomCircularity = 1f
+                        },
+                        Attributes = new Formula {
+                            Constant = new Vector4(0.09f, 0.09f, 0.09f, 1f),
+                            RandomScale = new Vector4(0.3f, 0.3f, 0.3f, 0f)
+                        }
+                    },
+                    new MatrixMultiply {
+                        Velocity = Matrix.CreateRotationZ((float)Math.PI * 0.011f) * 1.001f,
+                    }
+                }
+            };
+
+            System.OnDeviceReset += (_) => System.Clear();
+        }
         
         public override void Draw (Squared.Render.Frame frame) {
             CreateRenderTargets();
-
-            if (MultipleVolumes) {
-                int w = Width, h = Height;
-                float w2 = Width * 0.4f, h2 = Height * 0.4f;
-                Environment.GIVolumes[0].Bounds = Bounds.FromPositionAndSize(new Vector2(w * 0, h * 0), new Vector2(w2, h2));
-                Environment.GIVolumes[1].Bounds = Bounds.FromPositionAndSize(new Vector2(w * 0.6f, h * 0), new Vector2(w2, h2));
-                Environment.GIVolumes[2].Bounds = Bounds.FromPositionAndSize(new Vector2(w * 0, h * 0.6f), new Vector2(w2, h2));
-                Environment.GIVolumes[3].Bounds = Bounds.FromPositionAndSize(new Vector2(w * 0.6f, h * 0.6f), new Vector2(w2, h2));
-
-                for (int i = 0; i < 4; i++)
-                    Environment.GIVolumes[i].Visible = true;
-            } else {
-                Environment.GIVolumes[0].Bounds = Bounds.FromPositionAndSize(Vector2.Zero, new Vector2(Width, Height));
-                Environment.GIVolumes[0].Visible = true;
-
-                for (int i = 1; i < 4; i++) {
-                    Environment.GIVolumes[i].Bounds = default(Bounds);
-                    Environment.GIVolumes[i].Visible = false;
-                }
-            }
-
-            foreach (var v in Environment.GIVolumes) {
-                // FIXME: The 2nd one will have its offset slightly wrong
-                v.ProbeOffset = new Vector3(ProbeInterval / 2f, ProbeInterval / 2f, 35);
-                v.ProbeInterval = new Vector2(ProbeInterval, ProbeInterval);
-            }
 
             Renderer.Configuration.TwoPointFiveD = TwoPointFiveD;
             Renderer.Configuration.RenderScale = Vector2.One * LightmapScaleRatio;
@@ -330,14 +318,16 @@ namespace TestGame.Scenes {
                 (int)(Renderer.Configuration.MaximumRenderSize.First * LightmapScaleRatio),
                 (int)(Renderer.Configuration.MaximumRenderSize.Second * LightmapScaleRatio)
             );
-            Renderer.Configuration.GIBlendMode = AdditiveIndirectLight ? RenderStates.AdditiveBlend : RenderStates.MaxBlend;
-            Renderer.Configuration.GIBounceSearchDistance = BounceDistance.Value;
-
-            foreach (var ls in Environment.Lights)
-                ls.AmbientOcclusionRadius = EdgeShadows ? AORadius : 0.0f;
 
             // Renderer.InvalidateFields();
-            Renderer.UpdateFields(frame, -2);
+            Renderer.UpdateFields(frame, -3);
+
+            var pls = Renderer.Environment.Lights.OfType<ParticleLightSource>().First();
+            pls.IsActive = EnableParticleLights;
+            pls.Template.CastsShadows = EnableShadows;
+
+            System.Configuration.DistanceField = ParticleCollisions ? DistanceField : null;
+            System.Update(frame, -2);
 
             using (var bg = BatchGroup.ForRenderTarget(
                 frame, -1, Lightmap,
@@ -352,17 +342,8 @@ namespace TestGame.Scenes {
             )) {
                 ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black);
 
-                var girs = new GIRenderSettings {
-                    BounceIndex = (int)GIBounceCount.Value - 1,
-                    Brightness = IndirectLightBrightness
-                };
-                if (GIBounceCount.Value == 0)
-                    girs = null;
-
                 var lighting = Renderer.RenderLighting(
-                    bg, 1, 1.0f / LightScaleFactor, 
-                    RenderDirectLight,
-                    girs
+                    bg, 1, 1.0f / LightScaleFactor, true
                 );
                 lighting.Resolve(
                     bg, 2, Width, Height,
@@ -387,11 +368,11 @@ namespace TestGame.Scenes {
                 ))
                     bb.Add(new BitmapDrawCall(Lightmap, Vector2.Zero));
 
-                if (ShowProbeSH && (GIBounceCount.Value > 0))
-                    Renderer.VisualizeGIProbes(
-                        group, 2, ProbeInterval.Value * 0.4f, 
-                        bounceIndex: (int)GIBounceCount.Value - 1, 
-                        brightness: ProbeVisBrightness
+                if (ShowParticles)
+                    System.Render(
+                        group, 2, 
+                        material: Engine.ParticleMaterials.AttributeColor,
+                        blendState: BlendState.AlphaBlend
                     );
 
                 if (ShowDistanceField) {
@@ -431,8 +412,6 @@ namespace TestGame.Scenes {
 
         public override void Update (GameTime gameTime) {
             if (Game.IsActive) {
-                const float step = 0.1f;
-                
                 var time = (float)Time.Seconds;
 
                 var ms = Mouse.GetState();
@@ -445,15 +424,15 @@ namespace TestGame.Scenes {
 
                 var mousePos = new Vector3(ms.X, ms.Y, LightZ);
 
-                MovableLight.Position = mousePos;
-                MovableLight.Opacity = EnablePointLight ? 1 : 0;
-                MovableLight.Color.W = Arithmetic.Pulse((float)Time.Seconds / 4f, 0.7f, 0.9f);
-                MovableLight.CastsShadows = EnableShadows;
-
                 foreach (var d in Environment.Lights.OfType<DirectionalLightSource>()) {
                     d.Opacity = EnableDirectionalLights ? 1 : 0;
                     d.CastsShadows = EnableShadows;
                 }
+
+                var s = System.Transforms.OfType<Spawner>().First();
+                s.Position.RandomOffset = new Vector4(mousePos, 0);
+                System.Configuration.OpacityFromLife = OpacityFromLife.Value;
+                s.IsActive = ms.LeftButton == ButtonState.Pressed;
             }
         }
     }

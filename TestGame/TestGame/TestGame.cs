@@ -33,7 +33,7 @@ namespace TestGame {
         public Texture2D RampTexture;
 
         public readonly Scene[] Scenes;
-        public int ActiveSceneIndex = 7;
+        public int ActiveSceneIndex;
 
         private int LastPerformanceStatPrimCount = 0;
 
@@ -68,8 +68,12 @@ namespace TestGame {
                 new ScrollingGeo(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new SimpleParticles(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new LightProbeTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new GlobalIlluminationTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
+                new GlobalIlluminationTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
+                new DungeonGI(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
+                new ParticleLights(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
             };
+
+            ActiveSceneIndex = Scenes.Length - 1;
         }
 
         protected override void LoadContent () {
