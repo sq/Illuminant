@@ -710,17 +710,15 @@ namespace Squared.Illuminant {
                                 var directionalLightSource = lightSource as DirectionalLightSource;
                                 var particleLightSource = lightSource as ParticleLightSource;
 
-                                if ((particleLightSource != null) && (!particleLightSource.IsActive))
-                                    continue;
-
                                 var ltrs = GetLightRenderState(lightSource);
+
+                                if (particleLightSource != null)
+                                    continue;
 
                                 if (pointLightSource != null)
                                     RenderPointLightSource(pointLightSource, intensityScale, ltrs);
                                 else if (directionalLightSource != null)
                                     RenderDirectionalLightSource(directionalLightSource, intensityScale, ltrs);
-                                else if (particleLightSource != null)
-                                    RenderParticleLightSource(particleLightSource, intensityScale, ltrs);
                                 else
                                     throw new NotSupportedException(lightSource.GetType().Name);
                             };
@@ -739,6 +737,9 @@ namespace Squared.Illuminant {
 
                             var pls = ltrs.Key.UniqueObject as ParticleLightSource;
                             if (pls != null) {
+                                if (!pls.IsActive)
+                                    continue;
+
                                 using (var bg = BatchGroup.New(
                                     resultGroup, layerIndex++, ParticleLightBatchSetup, null, ltrs
                                 )) {
@@ -811,10 +812,6 @@ namespace Squared.Illuminant {
                 vertex.Corner = vertex.Unused = (short)i;
                 ltrs.LightVertices.Add(ref vertex);
             }
-        }
-
-        private void RenderParticleLightSource (ParticleLightSource particleLightSource, float intensityScale, LightTypeRenderState ltrs) {
-            // FIXME: ???
         }
 
         private void RenderDirectionalLightSource (DirectionalLightSource lightSource, float intensityScale, LightTypeRenderState ltrs) {
