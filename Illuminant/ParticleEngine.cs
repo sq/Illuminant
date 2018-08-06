@@ -23,8 +23,8 @@ namespace Squared.Illuminant.Particles {
 
         internal int ResetCount = 0;
 
-        internal readonly IndexBuffer   QuadIndexBuffer;
-        internal readonly VertexBuffer  QuadVertexBuffer;
+        internal readonly IndexBuffer   TriIndexBuffer;
+        internal readonly VertexBuffer  TriVertexBuffer;
         internal          IndexBuffer   RasterizeIndexBuffer;
         internal          VertexBuffer  RasterizeVertexBuffer;
         internal          VertexBuffer  RasterizeOffsetBuffer;
@@ -36,8 +36,8 @@ namespace Squared.Illuminant.Particles {
         internal readonly List<Chunk> FreeList = 
             new List<Chunk>();
 
-        private static readonly short[] QuadIndices = new short[] {
-            0, 1, 3, 1, 2, 3
+        private static readonly short[] TriIndices = new short[] {
+            0, 1, 2
         };
 
         public ParticleEngine (
@@ -53,19 +53,18 @@ namespace Squared.Illuminant.Particles {
             LoadMaterials(content);
 
             lock (coordinator.CreateResourceLock) {
-                QuadIndexBuffer = new IndexBuffer(coordinator.Device, IndexElementSize.SixteenBits, 6, BufferUsage.WriteOnly);
-                QuadIndexBuffer.SetData(QuadIndices);
+                TriIndexBuffer = new IndexBuffer(coordinator.Device, IndexElementSize.SixteenBits, 3, BufferUsage.WriteOnly);
+                TriIndexBuffer.SetData(TriIndices);
 
-                const float argh = 1;
+                const float argh = 99999999;
 
-                QuadVertexBuffer = new VertexBuffer(coordinator.Device, typeof(ParticleSystemVertex), 4, BufferUsage.WriteOnly);
-                QuadVertexBuffer.SetData(new [] {
+                TriVertexBuffer = new VertexBuffer(coordinator.Device, typeof(ParticleSystemVertex), 3, BufferUsage.WriteOnly);
+                TriVertexBuffer.SetData(new [] {
                     // HACK: Workaround for Intel's terrible video drivers.
                     // No, I don't know why.
-                    new ParticleSystemVertex(-argh, -argh, 0),
-                    new ParticleSystemVertex(argh, -argh, 1),
-                    new ParticleSystemVertex(argh, argh, 2),
-                    new ParticleSystemVertex(-argh, argh, 3)
+                    new ParticleSystemVertex(-2, -2, 0),
+                    new ParticleSystemVertex(argh, -2, 1),
+                    new ParticleSystemVertex(-2, argh, 2),
                 });
             }
 
@@ -162,8 +161,8 @@ namespace Squared.Illuminant.Particles {
                 FreeList.Clear();
             }
 
-            Coordinator.DisposeResource(QuadIndexBuffer);
-            Coordinator.DisposeResource(QuadVertexBuffer);
+            Coordinator.DisposeResource(TriIndexBuffer);
+            Coordinator.DisposeResource(TriVertexBuffer);
             Coordinator.DisposeResource(RasterizeIndexBuffer);
             Coordinator.DisposeResource(RasterizeVertexBuffer);
             Coordinator.DisposeResource(RasterizeOffsetBuffer);

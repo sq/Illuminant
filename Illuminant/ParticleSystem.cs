@@ -624,8 +624,8 @@ namespace Squared.Illuminant.Particles {
                 }
             )) {
                 batch.Add(new NativeDrawCall(
-                    PrimitiveType.TriangleList, Engine.QuadVertexBuffer, 0,
-                    Engine.QuadIndexBuffer, 0, 0, Engine.QuadVertexBuffer.VertexCount, 0, Engine.QuadVertexBuffer.VertexCount / 2
+                    PrimitiveType.TriangleList, Engine.TriVertexBuffer, 0,
+                    Engine.TriIndexBuffer, 0, 0, Engine.TriVertexBuffer.VertexCount, 0, Engine.TriVertexBuffer.VertexCount / 2
                 ));
             }
         }
