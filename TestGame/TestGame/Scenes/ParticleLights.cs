@@ -58,7 +58,7 @@ namespace TestGame.Scenes {
             LightmapScaleRatio.Value = 1.0f;
             EnableShadows.Value = true;
             EnableDirectionalLights.Value = true;
-            EnableParticleShadows.Value = false;
+            EnableParticleShadows.Value = true;
             EnableParticleLights.Value = true;
             ParticleCollisions.Value = true;
             ShowParticles.Value = true;
@@ -206,7 +206,7 @@ namespace TestGame.Scenes {
 
             Engine = new ParticleEngine(
                 Game.Content, Game.RenderCoordinator, Game.Materials,
-                new ParticleEngineConfiguration (64)
+                new ParticleEngineConfiguration (256)
             );
 
             SetupParticleSystem();
@@ -239,10 +239,10 @@ namespace TestGame.Scenes {
             Environment.Lights.Add(new ParticleLightSource {
                 System = System,
                 Template = new SphereLightSource {
-                    Radius = 4,
-                    RampLength = 160,
+                    Radius = 8,
+                    RampLength = 32,
                     RampMode = LightSourceRampMode.Exponential,
-                    Color = Vector4.One * 0.45f
+                    Color = Vector4.One * 0.23f
                 }
             });
 
@@ -275,7 +275,7 @@ namespace TestGame.Scenes {
                 ) {
                     Texture = fireball,
                     TextureRegion = fireballRect,
-                    Size = new Vector2(34, 21) * 1f,
+                    Size = new Vector2(34, 21) * 0.35f,
                     AnimationRate = new Vector2(1 / 3f, 0),
                     RotationFromVelocity = true,
                     EscapeVelocity = 5f,
@@ -290,18 +290,18 @@ namespace TestGame.Scenes {
                     new Spawner {
                         IsActive = false,
                         MinInterval = 1,
-                        MaxInterval = 2,
-                        MinCount = 1,
-                        MaxCount = 4,
+                        MaxInterval = 1,
+                        MinCount = 128,
+                        MaxCount = 256,
                         Position = new Formula {
                             RandomOffset = new Vector4(-0.5f, -0.5f, -0.5f, 1f),
                             RandomScale = new Vector4(15f, 15f, 5f, MaxLife - OpacityFromLife),
                             RandomCircularity = 1f
                         },
                         Velocity = new Formula {
-                            RandomOffset = new Vector4(-0.5f, -0.5f, 0f, 0f),
-                            RandomScale = new Vector4(3f, 3f, 1f, 0f),
-                            RandomScaleConstant = new Vector4(2.2f, 2.2f, 0f, 0f),
+                            RandomOffset = new Vector4(-0.5f, -0.5f, -0.5f, 0f),
+                            RandomScale = new Vector4(4f, 4f, 2f, 0f),
+                            RandomScaleConstant = new Vector4(3f, 3f, 0f, 0f),
                             RandomCircularity = 1f
                         },
                         Attributes = new Formula {
@@ -419,6 +419,18 @@ namespace TestGame.Scenes {
                     material: Engine.ParticleMaterials.AttributeColor,
                     blendState: BlendState.Additive
                 );
+
+            var ir = new ImperativeRenderer(
+                frame, Game.Materials, 11,
+                blendState: BlendState.Opaque,
+                samplerState: SamplerState.LinearClamp
+            );
+            ir.DrawString(
+                Game.Font, string.Format(
+                    @"{0:000000} / {1:000000} alive",
+                    System.LiveCount, System.Capacity
+                ), new Vector2(6, 6)
+            );
         }
 
         public override void Update (GameTime gameTime) {
