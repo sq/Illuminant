@@ -481,13 +481,25 @@ namespace Squared.Illuminant.Particles {
                 RenderTrace.Marker(batch, -9999, "Particle transform {0}", m.Effect.CurrentTechnique.Name);
 
                 int i = 0;
+
+                // HACK: XNA defers framebuffer clears, which means a clear can get pushed from outside the occlusion query into the query.
+                // We fix this by forcing a clear to happen before we perform any chunk passes (by doing a separate set of clear-only passes).
+                if (clearFirst) {
+                    foreach (var sourceChunk in _source) {
+                        var destChunk = _dest.GetByID(sourceChunk.ID);
+
+                        using (var group = BatchGroup.ForRenderTarget(batch, i++, destChunk.PositionAndLife))
+                            ClearBatch.AddNew(group, 0, Engine.Materials.Clear, Color.Transparent);
+                    }
+                }
+
                 foreach (var sourceChunk in _source) {
                     var destChunk = _dest.GetByID(sourceChunk.ID);
 
                     var li = GetLivenessInfo(sourceChunk.ID);
                     UpdateChunkLivenessQuery(li);
 
-                    var runQuery = (li.PendingQuery == null) && (spawner == null);
+                    var runQuery = (li.PendingQuery == null) && (spawner == null) && clearFirst;
 
                     if (runQuery) {
                         li.LastQueryStart = Time.Ticks;
@@ -555,9 +567,6 @@ namespace Squared.Illuminant.Particles {
                 (dm, _) => {
                     dm.Device.SetRenderTargets(dest.Bindings);
                     dm.Device.Viewport = new Viewport(0, 0, Engine.Configuration.ChunkSize, Engine.Configuration.ChunkSize);
-
-                    if (clearFirst)
-                        dm.Device.Clear(Color.Transparent);
 
                     p["Texel"].SetValue(new Vector2(1f / Engine.Configuration.ChunkSize, 1f / Engine.Configuration.ChunkSize));
 

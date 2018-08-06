@@ -56,7 +56,7 @@ namespace Squared.Illuminant.Particles {
                 QuadIndexBuffer = new IndexBuffer(coordinator.Device, IndexElementSize.SixteenBits, 6, BufferUsage.WriteOnly);
                 QuadIndexBuffer.SetData(QuadIndices);
 
-                const float argh = 102400;
+                const float argh = 1;
 
                 QuadVertexBuffer = new VertexBuffer(coordinator.Device, typeof(ParticleSystemVertex), 4, BufferUsage.WriteOnly);
                 QuadVertexBuffer.SetData(new [] {
