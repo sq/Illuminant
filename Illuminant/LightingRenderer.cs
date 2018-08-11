@@ -743,7 +743,7 @@ namespace Squared.Illuminant {
                                 using (var bg = BatchGroup.New(
                                     resultGroup, layerIndex++, ParticleLightBatchSetup, null, ltrs
                                 )) {
-                                    pls.System.Render(bg, 0, ltrs.Material);
+                                    pls.System.Render(bg, 0, ltrs.Material, null, null, pls.StippleFactor);
                                 }
                             } else {
                                 if (count <= 0)

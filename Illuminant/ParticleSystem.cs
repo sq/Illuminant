@@ -891,7 +891,8 @@ namespace Squared.Illuminant.Particles {
             IBatchContainer container, int layer,
             Material material = null,
             Matrix? transform = null, 
-            BlendState blendState = null
+            BlendState blendState = null,
+            float? overrideStippleFactor = null
         ) {
             Slice source;
 
@@ -938,6 +939,7 @@ namespace Squared.Illuminant.Particles {
                         zToY.SetValue(Configuration.ZToY);
 
                     p["OpacityFromLife"].SetValue(Configuration.OpacityFromLife);
+                    p["StippleFactor"].SetValue(overrideStippleFactor.GetValueOrDefault(Configuration.StippleFactor));
                 },
                 (dm, _) => {
                     p["PositionTexture"].SetValue((Texture2D)null);
@@ -1018,6 +1020,9 @@ namespace Squared.Illuminant.Particles {
 
         // Applies the particle's Z coordinate to its Y coordinate at render time for 2.5D effect
         public float         ZToY = 0;
+
+        // Coarse-grained control over the number of particles actually rendered
+        public float         StippleFactor = 1.0f;
 
         public ParticleSystemConfiguration (
             int attributeCount = 0

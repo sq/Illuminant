@@ -1,4 +1,5 @@
 uniform float2 Texel;
+uniform float StippleFactor;
 
 Texture2D PositionTexture;
 sampler PositionSampler {
@@ -28,6 +29,13 @@ sampler AttributeSampler {
     MipFilter = POINT;
     MinFilter = POINT;
     MagFilter = POINT;
+};
+
+static const float thresholdMatrix[] = {
+    1.0 / 17.0,  9.0 / 17.0,  3.0 / 17.0, 11.0 / 17.0,
+    13.0 / 17.0,  5.0 / 17.0, 15.0 / 17.0,  7.0 / 17.0,
+    4.0 / 17.0, 12.0 / 17.0,  2.0 / 17.0, 10.0 / 17.0,
+    16.0 / 17.0,  8.0 / 17.0, 14.0 / 17.0,  6.0 / 17.0
 };
 
 void VS_Update (
@@ -62,4 +70,9 @@ void readStateOrDiscard (
 
     velocity = tex2Dlod(VelocitySampler, float4(xy, 0, 0));
     attributes = tex2Dlod(AttributeSampler, float4(xy, 0, 0));
+}
+
+bool stippleReject (float vertexIndex) {
+    float stippleThreshold = thresholdMatrix[vertexIndex % 16];
+    return (StippleFactor - stippleThreshold) <= 0;
 }

@@ -64,7 +64,7 @@ void VS_Core (
 
 void VS_PosVelAttr (
     in  float2 xy          : POSITION0,
-    in  float2 offset      : POSITION1,
+    in  float3 offsetAndIndex : POSITION1,
     in  int2   cornerIndex : BLENDINDICES0, // 0-3
     out float4 result      : POSITION0,
     out float2 texCoord    : TEXCOORD0,
@@ -72,11 +72,11 @@ void VS_PosVelAttr (
     out float4 velocity    : TEXCOORD2,
     out float4 attributes  : COLOR0
 ) {
-    float2 actualXy = xy + offset;
+    float2 actualXy = xy + offsetAndIndex.xy;
     readState(actualXy, position, velocity, attributes);
 
     float life = position.w;
-    if (life <= 0) {
+    if ((life <= 0) || stippleReject(offsetAndIndex.z)) {
         result = float4(0, 0, 0, 0);
         return;
     }
@@ -98,19 +98,19 @@ void VS_PosVelAttr (
 
 void VS_PosAttr (
     in  float2 xy          : POSITION0,
-    in  float2 offset      : POSITION1,
+    in  float3 offsetAndIndex : POSITION1,
     in  int2   cornerIndex : BLENDINDICES0, // 0-3
     out float4 result      : POSITION0,
     out float2 texCoord    : TEXCOORD0,
     out float4 position    : TEXCOORD1,
     out float4 attributes  : COLOR0
 ) {
-    float2 actualXy = xy + offset;
+    float2 actualXy = xy + offsetAndIndex.xy;
     position = tex2Dlod(PositionSampler, float4(actualXy, 0, 0));
     attributes = tex2Dlod(AttributeSampler, float4(actualXy, 0, 0));
 
     float life = position.w;
-    if (life <= 0) {
+    if ((life <= 0) || stippleReject(offsetAndIndex.z)) {
         result = float4(0, 0, 0, 0);
         return;
     }

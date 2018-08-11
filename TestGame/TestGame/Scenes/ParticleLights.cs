@@ -42,7 +42,7 @@ namespace TestGame.Scenes {
 
         Slider DistanceFieldResolution,
             LightmapScaleRatio,
-            LightScaleFactor,
+            StippleFactor,
             OpacityFromLife;
 
         RendererQualitySettings DirectionalQuality;
@@ -62,7 +62,7 @@ namespace TestGame.Scenes {
             EnableParticleLights.Value = true;
             ParticleCollisions.Value = true;
             ShowParticles.Value = true;
-            LightScaleFactor.Value = 2.5f;
+            StippleFactor.Value = 1.0f;
 
             ShowGBuffer.Key = Keys.G;
             TwoPointFiveD.Key = Keys.D2;
@@ -89,11 +89,11 @@ namespace TestGame.Scenes {
             LightmapScaleRatio.Speed = 0.1f;
             LightmapScaleRatio.Changed += (s, e) => Renderer.InvalidateFields();
 
-            LightScaleFactor.MinusKey = Keys.Q;
-            LightScaleFactor.PlusKey = Keys.W;
-            LightScaleFactor.Min = 0.5f;
-            LightScaleFactor.Max = 6.0f;
-            LightScaleFactor.Speed = 0.5f;
+            StippleFactor.MinusKey = Keys.Q;
+            StippleFactor.PlusKey = Keys.W;
+            StippleFactor.Min = 0.1f;
+            StippleFactor.Max = 1.0f;
+            StippleFactor.Speed = 0.1f;
 
             OpacityFromLife.MinusKey = Keys.OemSemicolon;
             OpacityFromLife.PlusKey = Keys.OemQuotes;
@@ -239,10 +239,10 @@ namespace TestGame.Scenes {
             Environment.Lights.Add(new ParticleLightSource {
                 System = System,
                 Template = new SphereLightSource {
-                    Radius = 8,
-                    RampLength = 32,
+                    Radius = 12,
+                    RampLength = 28,
                     RampMode = LightSourceRampMode.Exponential,
-                    Color = Vector4.One * 0.23f
+                    Color = Vector4.One * 0.25f
                 }
             });
 
@@ -292,7 +292,7 @@ namespace TestGame.Scenes {
                         MinInterval = 1,
                         MaxInterval = 1,
                         MinCount = 128,
-                        MaxCount = 256,
+                        MaxCount = 768,
                         Position = new Formula {
                             RandomOffset = new Vector4(-0.5f, -0.5f, -0.5f, 1f),
                             RandomScale = new Vector4(15f, 15f, 5f, MaxLife - OpacityFromLife),
@@ -305,8 +305,8 @@ namespace TestGame.Scenes {
                             RandomCircularity = 1f
                         },
                         Attributes = new Formula {
-                            Constant = new Vector4(0.09f, 0.09f, 0.09f, 1f),
-                            RandomScale = new Vector4(0.3f, 0.3f, 0.3f, 0f)
+                            Constant = new Vector4(0.09f, 0.09f, 0.09f, 0.3f),
+                            RandomScale = new Vector4(0.2f, 0.2f, 0.2f, 0.1f)
                         }
                     },
                     new MatrixMultiply {
@@ -334,6 +334,7 @@ namespace TestGame.Scenes {
             var pls = Renderer.Environment.Lights.OfType<ParticleLightSource>().First();
             pls.IsActive = EnableParticleLights;
             pls.Template.CastsShadows = EnableParticleShadows;
+            System.Configuration.StippleFactor = StippleFactor.Value;
 
             System.Configuration.DistanceField = ParticleCollisions ? DistanceField : null;
             System.Configuration.DistanceFieldMaximumZ = Environment.MaximumZ;
@@ -354,12 +355,12 @@ namespace TestGame.Scenes {
                 ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black);
 
                 var lighting = Renderer.RenderLighting(
-                    bg, 1, 1.0f / LightScaleFactor, true
+                    bg, 1, 1.0f / 4, true
                 );
                 lighting.Resolve(
                     bg, 2, Width, Height,
                     hdr: new HDRConfiguration {
-                        InverseScaleFactor = LightScaleFactor,
+                        InverseScaleFactor = 4,
                         Gamma = sRGB ? 1.8f : 1.0f
                     }, 
                     resolveToSRGB: sRGB

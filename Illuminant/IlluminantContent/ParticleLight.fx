@@ -9,7 +9,7 @@ uniform float4 LightColor;
 void ParticleLightVertexShader(
     in int2 cornerIndex              : BLENDINDICES0,
     in float2 xy                     : POSITION0,
-    in float2 offset                 : POSITION1,
+    in float3 offsetAndIndex         : POSITION1,
     out float3 lightCenter           : TEXCOORD0,
     out float3 worldPosition         : TEXCOORD1,
     out float4 lightProperties       : TEXCOORD2,
@@ -17,9 +17,15 @@ void ParticleLightVertexShader(
     out float4 lightColor            : COLOR0,
     out float4 result                : POSITION0
 ) {
+    if (stippleReject (offsetAndIndex.z)) {
+        result = float4(0, 0, 0, 0);
+        lightColor = float4(0, 0, 0, 0);
+        return;
+    }
+
     float3 corner = LightCorners[cornerIndex.x];
 
-    float2 actualXy = xy + offset;
+    float2 actualXy = xy + offsetAndIndex.xy;
     float4 position, velocity, attributes;
     readState(actualXy, position, velocity, attributes);
 

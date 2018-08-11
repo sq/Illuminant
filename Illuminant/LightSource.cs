@@ -182,6 +182,9 @@ namespace Squared.Illuminant {
 
         public Particles.ParticleSystem System;
         public bool IsActive = true;
+        // Coarse-grained control over the number of particles that produce light. 
+        // Defaults to the particle system's stipple factor.
+        public float? StippleFactor = null;
 
         public ParticleLightSource ()
             : base (LightSourceTypeID.Particle) {
@@ -191,7 +194,8 @@ namespace Squared.Illuminant {
             var result = new ParticleLightSource {
                 Template = deep ? Template.Clone() : Template,
                 System = System,
-                IsActive = IsActive
+                IsActive = IsActive,
+                StippleFactor = StippleFactor
             };
             return result;
         }

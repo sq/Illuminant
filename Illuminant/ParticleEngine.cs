@@ -117,7 +117,7 @@ namespace Squared.Illuminant.Particles {
                 for (var y = 0; y < Configuration.ChunkSize; y++) {
                     for (var x = 0; x < Configuration.ChunkSize; x++) {
                         var i = (y * Configuration.ChunkSize) + x;
-                        buf[i].Offset = new Vector2(x / fsize, y / fsize);
+                        buf[i].OffsetAndIndex = new Vector3(x / fsize, y / fsize, i);
                     }
                 }
 
