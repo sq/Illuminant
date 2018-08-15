@@ -199,26 +199,40 @@ namespace Squared.Illuminant {
         }
 
         public override void Invalidate () {
-            Invalidate(true, true);
+            Invalidate(true);
         }
 
-        public void Invalidate (bool invalidateStatic, bool invalidateDynamic) {
+        public void Invalidate (bool invalidateStatic) {
             for (var i = 0; i < SliceCount; i++) {
-                if (invalidateDynamic && !SliceInfo.InvalidSlices.Contains(i))
+                if (!SliceInfo.InvalidSlices.Contains(i))
                     SliceInfo.InvalidSlices.Add(i);
                 if (invalidateStatic && !StaticSliceInfo.InvalidSlices.Contains(i))
                     StaticSliceInfo.InvalidSlices.Add(i);
             }
         }
 
+        public void ValidateSlice (int index, bool dynamic) {
+            if (dynamic && !StaticSliceInfo.InvalidSlices.Contains(index))
+                SliceInfo.InvalidSlices.Remove(index);
+            else
+                StaticSliceInfo.InvalidSlices.Remove(index);
+        }
+
+        public void MarkValidSlice (int index, bool dynamic) {
+            if (dynamic)
+                SliceInfo.ValidSliceCount = Math.Min(Math.Max(SliceInfo.ValidSliceCount, index), StaticSliceInfo.ValidSliceCount);
+            else
+                StaticSliceInfo.ValidSliceCount = Math.Max(StaticSliceInfo.ValidSliceCount, index);
+        }
+
         public override void ValidateSlice (int index) {
-            SliceInfo.InvalidSlices.Remove(index);
-            StaticSliceInfo.InvalidSlices.Remove(index);
+            ValidateSlice(index, false);
+            ValidateSlice(index, true);
         }
 
         public override void MarkValidSlice (int index) {
-            SliceInfo.ValidSliceCount = Math.Max(SliceInfo.ValidSliceCount, index);
-            StaticSliceInfo.ValidSliceCount = Math.Max(StaticSliceInfo.ValidSliceCount, index);
+            MarkValidSlice(index, false);
+            MarkValidSlice(index, true);
         }
 
         public override void Load (Stream input) {

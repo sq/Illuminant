@@ -30,7 +30,8 @@ namespace TestGame.Scenes {
 
         Toggle ShowLightmap,
             ShowDistanceField,
-            Deterministic;
+            Deterministic,
+            EfficientUpdates;
 
         Slider DistanceFieldResolution;
 
@@ -42,10 +43,12 @@ namespace TestGame.Scenes {
 
             Deterministic.Value = false;
             DistanceFieldResolution.Value = 0.25f;
+            EfficientUpdates.Value = true;
 
             ShowLightmap.Key = Keys.L;
             ShowDistanceField.Key = Keys.D;
             Deterministic.Key = Keys.R;
+            EfficientUpdates.Key = Keys.E;
 
             DistanceFieldResolution.MinusKey = Keys.D5;
             DistanceFieldResolution.PlusKey = Keys.D6;
@@ -179,7 +182,7 @@ namespace TestGame.Scenes {
             foreach (var o in Environment.Obstructions)
                 o.IsDynamic = false;
 
-            var count = 64;
+            var count = 2;
             var size = 16;
             Centers = new Vector3[count];
             var rng = new MersenneTwister();
@@ -286,7 +289,10 @@ namespace TestGame.Scenes {
                         obs.Center = Centers[i] + new Vector3(x * 24, y * 24, 0);
                     }
 
-                    DistanceField.Invalidate(false, true);
+                    if (EfficientUpdates)
+                        DistanceField.Invalidate(false);
+                    else
+                        DistanceField.Invalidate();
                 }
 
                 var ms = Mouse.GetState();

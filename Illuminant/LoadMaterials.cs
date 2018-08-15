@@ -104,7 +104,10 @@ namespace Squared.Illuminant {
                 );
 
                 DefineMaterial(IlluminantMaterials.ClearDistanceFieldSlice =
-                    Materials.GetGeometryMaterial(true, blendState: BlendState.Opaque).Clone()
+                    new Material(
+                        content.Load<Effect>("ClearDistanceField"), "Clear",
+                        new[] { MaterialUtil.MakeDelegate(BlendState.Opaque) }
+                    )
                 );
 
                 IlluminantMaterials.DistanceFunctionTypes = new Render.Material[(int)LightObstructionType.MAX + 1];

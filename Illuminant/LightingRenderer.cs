@@ -1260,6 +1260,7 @@ namespace Squared.Illuminant {
 
             if (_DistanceField is DynamicDistanceField) {
                 RenderDistanceFieldPartition(ref layerIndex, resultGroup, false);
+                // FIXME: Don't allow a dynamic slice to be flagged as valid unless the static slice is also valid
                 RenderDistanceFieldPartition(ref layerIndex, resultGroup, true);
             } else {
                 RenderDistanceFieldPartition(ref layerIndex, resultGroup, null);
@@ -1276,6 +1277,7 @@ namespace Squared.Illuminant {
             ref int layer, bool? dynamicFlagFilter
         ) {
             var df = _DistanceField;
+            var ddf = _DistanceField as DynamicDistanceField;
 
             var interior = IlluminantMaterials.DistanceFieldInterior;
             var exterior = IlluminantMaterials.DistanceFieldExterior;
@@ -1321,17 +1323,24 @@ namespace Squared.Illuminant {
                     RenderTrace.Marker(group, -2, "LightingRenderer {0} : Begin Distance Field Slices [{1}-{2}]", this.ToObjectID(), firstVirtualSliceIndex, lastVirtualSliceIndex);
 
                 ClearDistanceFieldSlice(
-                    QuadIndices, group, -1, firstVirtualSliceIndex
+                    QuadIndices, group, -1, firstVirtualSliceIndex, dynamicFlagFilter == true ? ddf.StaticTexture : null
                 );
 
                 RenderDistanceFieldDistanceFunctions(firstVirtualSliceIndex, group, dynamicFlagFilter);
                 RenderDistanceFieldHeightVolumes(firstVirtualSliceIndex, group, dynamicFlagFilter);
 
                 // FIXME: Slow
-                for (var i = firstVirtualSliceIndex; i <= lastVirtualSliceIndex; i++)
-                    df.ValidateSlice(i);
+                for (var i = firstVirtualSliceIndex; i <= lastVirtualSliceIndex; i++) {
+                    if (ddf != null)
+                        ddf.ValidateSlice(i, dynamicFlagFilter.Value);
+                    else
+                        df.ValidateSlice(i);
+                }
 
-                df.MarkValidSlice(lastVirtualSliceIndex + 1);
+                if (ddf != null)
+                    ddf.MarkValidSlice(lastVirtualSliceIndex + 1, dynamicFlagFilter.Value);
+                else
+                    df.MarkValidSlice(lastVirtualSliceIndex + 1);
 
                 if (RenderTrace.EnableTracing)
                     RenderTrace.Marker(group, 9999, "LightingRenderer {0} : End Distance Field Slices [{1}-{2}]", this.ToObjectID(), firstVirtualSliceIndex, lastVirtualSliceIndex);
@@ -1354,12 +1363,12 @@ namespace Squared.Illuminant {
 
             // Rasterize the height volumes in sequential order.
             // FIXME: Depth buffer/stencil buffer tricks should work for generating this SDF, but don't?
-            using (var interiorGroup = BatchGroup.New(group, 1, (dm, _) => {
+            using (var interiorGroup = BatchGroup.New(group, 2, (dm, _) => {
                 dm.Device.RasterizerState = RenderStates.ScissorOnly;
                 dm.Device.DepthStencilState = DepthStencilState.None;
                 SetDistanceFieldParameters(interior, false, Configuration.DefaultQuality);
             }))
-            using (var exteriorGroup = BatchGroup.New(group, 2, (dm, _) => {
+            using (var exteriorGroup = BatchGroup.New(group, 3, (dm, _) => {
                 dm.Device.RasterizerState = RenderStates.ScissorOnly;
                 dm.Device.DepthStencilState = DepthStencilState.None;
                 SetDistanceFieldParameters(exterior, false, Configuration.DefaultQuality);
@@ -1437,7 +1446,7 @@ namespace Squared.Illuminant {
         }
 
         private void ClearDistanceFieldSlice (
-            short[] indices, IBatchContainer container, int layer, int firstSliceIndex
+            short[] indices, IBatchContainer container, int layer, int firstSliceIndex, Texture2D clearTexture
         ) {
             // var color = new Color((firstSliceIndex * 16) % 255, 0, 0, 0);
             var color = Color.Transparent;
@@ -1449,8 +1458,17 @@ namespace Squared.Illuminant {
                 new VertexPositionColor(new Vector3(0, _DistanceField.VirtualHeight, 0), color)
             };
 
+            var material = IlluminantMaterials.ClearDistanceFieldSlice;
             using (var batch = PrimitiveBatch<VertexPositionColor>.New(
-                container, layer, IlluminantMaterials.ClearDistanceFieldSlice
+                container, layer, material,
+                (dm, _) => {
+                    material.Effect.Parameters["ClearTexture"].SetValue(clearTexture);
+                    material.Effect.Parameters["ClearMultiplier"].SetValue(clearTexture != null ? Vector4.One : Vector4.Zero);
+                    material.Effect.Parameters["ClearInverseScale"].SetValue(new Vector2(
+                        1.0f / (_DistanceField.SliceWidth * _DistanceField.ColumnCount), 
+                        1.0f / (_DistanceField.SliceHeight * _DistanceField.RowCount)
+                    ));
+                }
             ))
                 batch.Add(new PrimitiveDrawCall<VertexPositionColor>(
                     PrimitiveType.TriangleList,
