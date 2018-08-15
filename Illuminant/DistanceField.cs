@@ -93,14 +93,18 @@ namespace Squared.Illuminant {
             );
         }
 
-        private void Coordinator_DeviceReset (object sender, EventArgs e) {
-            if (IsDisposed)
-                return;
-
+        protected void DeviceResetImpl (SliceInfo sliceInfo) {
             SliceInfo.ValidSliceCount = 0;
             SliceInfo.InvalidSlices.Clear();
             for (var i = 0; i < SliceCount; i++)
                 SliceInfo.InvalidSlices.Add(i);
+        }
+
+        protected virtual void Coordinator_DeviceReset (object sender, EventArgs e) {
+            if (IsDisposed)
+                return;
+
+            DeviceResetImpl(SliceInfo);
         }
 
         public string Name {
@@ -241,6 +245,11 @@ namespace Squared.Illuminant {
 
         public override void Save (Stream output) {
             throw new NotImplementedException();
+        }
+
+        protected override void Coordinator_DeviceReset (object sender, EventArgs e) {
+            base.Coordinator_DeviceReset(sender, e);
+            DeviceResetImpl(StaticSliceInfo);
         }
     }
 }

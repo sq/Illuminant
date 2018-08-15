@@ -18,6 +18,15 @@ using Squared.Util;
 
 namespace Squared.Illuminant {
     public sealed partial class LightingRenderer : IDisposable, INameableGraphicsObject {
+        private class HeightVolumeCacheData : IDisposable {
+            public Texture2D VertexDataTexture;
+            public readonly HeightVolumeVertex[] BoundingBoxVertices = new HeightVolumeVertex[4];
+
+            public void Dispose () {
+                VertexDataTexture.Dispose();
+            }
+        }
+
         private class LightTypeRenderStateKeyComparer : IEqualityComparer<LightTypeRenderStateKey> {
             public static readonly LightTypeRenderStateKeyComparer Instance = new LightTypeRenderStateKeyComparer();
 
@@ -227,8 +236,8 @@ namespace Squared.Illuminant {
         private readonly DistanceFunctionVertex[] DistanceFunctionVertices = 
             new DistanceFunctionVertex[MaximumDistanceFunctionCount * 4];
 
-        private readonly Dictionary<Polygon, Texture2D> HeightVolumeVertexData = 
-            new Dictionary<Polygon, Texture2D>(new ReferenceComparer<Polygon>());
+        private readonly Dictionary<Polygon, HeightVolumeCacheData> HeightVolumeCache = 
+            new Dictionary<Polygon, HeightVolumeCacheData>(new ReferenceComparer<Polygon>());
 
         private readonly BufferRing _Lightmaps;
 
@@ -435,7 +444,7 @@ namespace Squared.Illuminant {
 
             ReleaseGIProbeResources();
 
-            foreach (var kvp in HeightVolumeVertexData)
+            foreach (var kvp in HeightVolumeCache)
                 Coordinator.DisposeResource(kvp.Value);
 
             /*
@@ -1382,21 +1391,17 @@ namespace Squared.Illuminant {
                 var b = hv.Bounds.Expand(DistanceLimit, DistanceLimit);
                 var zRange = new Vector2(hv.ZBase, hv.ZBase + hv.Height);
 
-                var boundingBoxVertices = new HeightVolumeVertex[] {
-                    new HeightVolumeVertex(new Vector3(b.TopLeft, 0), Vector3.Up, zRange),
-                    new HeightVolumeVertex(new Vector3(b.TopRight, 0), Vector3.Up, zRange),
-                    new HeightVolumeVertex(new Vector3(b.BottomRight, 0), Vector3.Up, zRange),
-                    new HeightVolumeVertex(new Vector3(b.BottomLeft, 0), Vector3.Up, zRange)
-                };
-
-                Texture2D vertexDataTexture;
+                HeightVolumeCacheData cacheData;
 
                 // FIXME: Handle position/zrange updates
-                if (!HeightVolumeVertexData.TryGetValue(p, out vertexDataTexture)) {
-                    lock (Coordinator.CreateResourceLock) {
-                        vertexDataTexture = new Texture2D(Coordinator.Device, p.Count, 1, false, SurfaceFormat.HalfVector4);
-                        HeightVolumeVertexData[p] = vertexDataTexture;
-                    }
+                lock (HeightVolumeCache)
+                    HeightVolumeCache.TryGetValue(p, out cacheData);
+
+                if (cacheData == null) {
+                    cacheData = new HeightVolumeCacheData();
+                    
+                    lock (Coordinator.CreateResourceLock)
+                        cacheData.VertexDataTexture = new Texture2D(Coordinator.Device, p.Count, 1, false, SurfaceFormat.HalfVector4);
 
                     lock (Coordinator.UseResourceLock)
                     using (var vertices = BufferPool<HalfVector4>.Allocate(p.Count)) {
@@ -1408,9 +1413,17 @@ namespace Squared.Illuminant {
                             );
                         }
 
-                        vertexDataTexture.SetData(vertices.Data, 0, p.Count);
+                        cacheData.VertexDataTexture.SetData(vertices.Data, 0, p.Count);
                     }
+
+                    lock (HeightVolumeCache)
+                        HeightVolumeCache[p] = cacheData;
                 }
+
+                cacheData.BoundingBoxVertices[0] = new HeightVolumeVertex(new Vector3(b.TopLeft, 0), Vector3.Up, zRange);
+                cacheData.BoundingBoxVertices[1] = new HeightVolumeVertex(new Vector3(b.TopRight, 0), Vector3.Up, zRange);
+                cacheData.BoundingBoxVertices[2] = new HeightVolumeVertex(new Vector3(b.BottomRight, 0), Vector3.Up, zRange);
+                cacheData.BoundingBoxVertices[3] = new HeightVolumeVertex(new Vector3(b.BottomLeft, 0), Vector3.Up, zRange);
 
                 // FIXME: Hoist these out and use BeforeDraw
                 using (var batch = PrimitiveBatch<HeightVolumeVertex>.New(
@@ -1418,7 +1431,7 @@ namespace Squared.Illuminant {
                     (dm, _) => {
                         var ep = interior.Effect.Parameters;
                         ep["NumVertices"].SetValue(p.Count);
-                        ep["VertexDataTexture"].SetValue(vertexDataTexture);
+                        ep["VertexDataTexture"].SetValue(cacheData.VertexDataTexture);
                         ep["SliceZ"].SetValue(sliceZ);
                     }
                 ))
@@ -1432,13 +1445,13 @@ namespace Squared.Illuminant {
                     (dm, _) => {
                         var ep = exterior.Effect.Parameters;
                         ep["NumVertices"].SetValue(p.Count);
-                        ep["VertexDataTexture"].SetValue(vertexDataTexture);
+                        ep["VertexDataTexture"].SetValue(cacheData.VertexDataTexture);
                         ep["SliceZ"].SetValue(sliceZ);
                     }
                 ))
                     batch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
                         PrimitiveType.TriangleList,
-                        boundingBoxVertices, 0, boundingBoxVertices.Length, QuadIndices, 0, 2
+                        cacheData.BoundingBoxVertices, 0, cacheData.BoundingBoxVertices.Length, QuadIndices, 0, 2
                     ));
 
                 i++;

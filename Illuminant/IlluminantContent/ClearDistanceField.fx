@@ -26,11 +26,14 @@ void ClearPixelShader (
     out float4 color : COLOR0,
     in  float2 vpos : VPOS
 ) {
-    vpos *= ClearInverseScale;
-
-    float4 tex = tex2Dlod(ClearSampler, float4(vpos.x, vpos.y, 0, 0));
-
-    color = tex * ClearMultiplier;
+    [branch]
+    if (ClearMultiplier.a > 0) {
+        vpos *= ClearInverseScale;
+        float4 tex = tex2Dlod(ClearSampler, float4(vpos.x, vpos.y, 0, 0));
+        color = tex * ClearMultiplier;
+    } else {
+        color = float4(0, 0, 0, 0);
+    }
 }
 
 technique Clear

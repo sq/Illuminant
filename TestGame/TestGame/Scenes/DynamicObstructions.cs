@@ -182,7 +182,7 @@ namespace TestGame.Scenes {
             foreach (var o in Environment.Obstructions)
                 o.IsDynamic = false;
 
-            var count = 2;
+            var count = 1024;
             var size = 16;
             Centers = new Vector3[count];
             var rng = new MersenneTwister();
