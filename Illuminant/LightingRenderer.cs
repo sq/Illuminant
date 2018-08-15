@@ -1213,22 +1213,23 @@ namespace Squared.Illuminant {
             }
         }
 
-        private void RenderDistanceField (ref int layerIndex, IBatchContainer resultGroup) {
-            if (_DistanceField == null)
-                return;
+        private void RenderDistanceFieldPartition (ref int layerIndex, IBatchContainer resultGroup, bool? dynamicFlagFilter) {
+            var ddf = _DistanceField as DynamicDistanceField;
+            var sliceInfo = ((ddf != null) && (dynamicFlagFilter == false)) ? ddf.StaticSliceInfo : _DistanceField.SliceInfo;
+            var renderTarget = ((ddf != null) && (dynamicFlagFilter == false)) ? ddf.StaticTexture : _DistanceField.Texture;
 
             int sliceCount = _DistanceField.SliceCount;
             int slicesToUpdate =
                 Math.Min(
                     Configuration.MaximumFieldUpdatesPerFrame,
                     // FIXME
-                    _DistanceField.SliceInfo.InvalidSlices.Count
+                    sliceInfo.InvalidSlices.Count
                 );
             if (slicesToUpdate <= 0)
                 return;
 
             using (var rtGroup = BatchGroup.ForRenderTarget(
-                resultGroup, layerIndex++, _DistanceField.Texture,
+                resultGroup, layerIndex++, renderTarget,
                 // HACK: Since we're mucking with view transforms, do a save and restore
                 (dm, _) => {
                     Materials.PushViewTransform(Materials.ViewTransform);
@@ -1241,15 +1242,27 @@ namespace Squared.Illuminant {
                 int layer = 0;
                 while (slicesToUpdate > 0) {
                     // FIXME
-                    var slice = _DistanceField.SliceInfo.InvalidSlices[0];
+                    var slice = sliceInfo.InvalidSlices[0];
                     var physicalSlice = slice / PackedSliceCount;
 
                     RenderDistanceFieldSliceTriplet(
-                        rtGroup, physicalSlice, slice, ref layer
+                        rtGroup, physicalSlice, slice, ref layer, dynamicFlagFilter
                     );
 
                     slicesToUpdate -= 3;
                 }
+            }
+        }
+
+        private void RenderDistanceField (ref int layerIndex, IBatchContainer resultGroup) {
+            if (_DistanceField == null)
+                return;
+
+            if (_DistanceField is DynamicDistanceField) {
+                RenderDistanceFieldPartition(ref layerIndex, resultGroup, false);
+                RenderDistanceFieldPartition(ref layerIndex, resultGroup, true);
+            } else {
+                RenderDistanceFieldPartition(ref layerIndex, resultGroup, null);
             }
         }
 
@@ -1259,7 +1272,8 @@ namespace Squared.Illuminant {
         }
 
         private void RenderDistanceFieldSliceTriplet (
-            BatchGroup rtGroup, int physicalSliceIndex, int firstVirtualSliceIndex, ref int layer
+            BatchGroup rtGroup, int physicalSliceIndex, int firstVirtualSliceIndex, 
+            ref int layer, bool? dynamicFlagFilter
         ) {
             var df = _DistanceField;
 
@@ -1310,8 +1324,8 @@ namespace Squared.Illuminant {
                     QuadIndices, group, -1, firstVirtualSliceIndex
                 );
 
-                RenderDistanceFieldDistanceFunctions(firstVirtualSliceIndex, group);
-                RenderDistanceFieldHeightVolumes(firstVirtualSliceIndex, group);
+                RenderDistanceFieldDistanceFunctions(firstVirtualSliceIndex, group, dynamicFlagFilter);
+                RenderDistanceFieldHeightVolumes(firstVirtualSliceIndex, group, dynamicFlagFilter);
 
                 // FIXME: Slow
                 for (var i = firstVirtualSliceIndex; i <= lastVirtualSliceIndex; i++)
@@ -1325,7 +1339,7 @@ namespace Squared.Illuminant {
         }
 
         private void RenderDistanceFieldHeightVolumes (
-            int firstVirtualIndex, BatchGroup group
+            int firstVirtualIndex, BatchGroup group, bool? dynamicFlagFilter
         ) {
             int i = 1;
 
@@ -1351,6 +1365,9 @@ namespace Squared.Illuminant {
                 SetDistanceFieldParameters(exterior, false, Configuration.DefaultQuality);
             }))
             foreach (var hv in Environment.HeightVolumes) {
+                if ((dynamicFlagFilter != null) && (hv.IsDynamic != dynamicFlagFilter.Value))
+                    continue;
+
                 var p = hv.Polygon;
                 var m = hv.Mesh3D;
                 var b = hv.Bounds.Expand(DistanceLimit, DistanceLimit);
@@ -1445,7 +1462,7 @@ namespace Squared.Illuminant {
         bool DidUploadDistanceFieldBuffer = false;
 
         private void RenderDistanceFieldDistanceFunctions (
-            int firstVirtualIndex, BatchGroup group
+            int firstVirtualIndex, BatchGroup group, bool? dynamicFlagFilter
         ) {
             var items = Environment.Obstructions;
             if (items.Count <= 0)
@@ -1512,6 +1529,9 @@ namespace Squared.Illuminant {
                     for (int i = 0; i < items.Count; i++) {
                         var item = buffer.Data[i];
                         var type = (int)item.Type;
+
+                        if ((dynamicFlagFilter != null) && (item.IsDynamic != dynamicFlagFilter.Value))
+                            continue;
 
                         if (firstOffset[type] == -1)
                             firstOffset[type] = j;

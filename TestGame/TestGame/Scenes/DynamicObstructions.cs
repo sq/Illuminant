@@ -16,7 +16,7 @@ using Squared.Util;
 
 namespace TestGame.Scenes {
     public class DynamicObstructions : Scene {
-        DistanceField DistanceField;
+        DynamicDistanceField DistanceField;
         LightingEnvironment Environment;
         LightingRenderer Renderer;
 
@@ -72,7 +72,7 @@ namespace TestGame.Scenes {
         HeightVolumeBase Rect (Vector2 a, Vector2 b, float z1, float height) {
             var result = new SimpleHeightVolume(
                 Polygon.FromBounds(new Bounds(a, b)), z1, height 
-            );
+            ) { IsDynamic = false };
             Environment.HeightVolumes.Add(result);
             return result;
         }
@@ -93,7 +93,7 @@ namespace TestGame.Scenes {
             var result = new SimpleHeightVolume(
                 new Polygon(pts),
                 z1, height
-            );
+            ) { IsDynamic = false };
             Environment.HeightVolumes.Add(result);
         }
 
@@ -286,7 +286,7 @@ namespace TestGame.Scenes {
                         obs.Center = Centers[i] + new Vector3(x * 24, y * 24, 0);
                     }
 
-                    Renderer.InvalidateFields();
+                    DistanceField.Invalidate(false, true);
                 }
 
                 var ms = Mouse.GetState();

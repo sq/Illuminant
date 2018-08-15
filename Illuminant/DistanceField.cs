@@ -28,7 +28,7 @@ namespace Squared.Illuminant {
 
         private readonly object UseLock;
 
-        internal SliceInfo SliceInfo = new SliceInfo();
+        internal readonly SliceInfo SliceInfo = new SliceInfo();
 
         public DistanceField (
             RenderCoordinator coordinator,
@@ -179,8 +179,7 @@ namespace Squared.Illuminant {
     }
 
     public class DynamicDistanceField : DistanceField {
-        SliceInfo StaticSliceInfo = new SliceInfo();
-
+        internal readonly SliceInfo StaticSliceInfo = new SliceInfo();
         public readonly RenderTarget2D StaticTexture;
 
         public DynamicDistanceField (

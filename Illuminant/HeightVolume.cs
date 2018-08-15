@@ -14,6 +14,9 @@ namespace Squared.Illuminant {
     public abstract class HeightVolumeBase : IHasBounds {
         public bool IsObstruction = true;
 
+        // If false, this height volume will be rendered into the static distance field (if any) instead of the dynamic distance field
+        public bool IsDynamic = true;
+
         public readonly Polygon Polygon;
         private float _ZBase;
         private float _Height;
