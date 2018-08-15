@@ -119,6 +119,7 @@
     <Compile Include="Scenes\DistanceFieldEditor.cs" />
     <Compile Include="Scenes\DungeonGI.cs" />
     <Compile Include="Scenes\ParticleLights.cs" />
+    <Compile Include="Scenes\DynamicObstructions.cs" />
     <Compile Include="Scenes\SimpleParticles.cs" />
     <Compile Include="Scenes\SC3.cs" />
     <Compile Include="Scenes\ScrollingGeo.cs" />
