@@ -283,7 +283,8 @@ namespace TestGame.Scenes {
                     MaximumVelocity = 16f,
                     CollisionDistance = 1f,
                     CollisionLifePenalty = 8,
-                    OpacityFromLife = 0
+                    OpacityFromLife = 0,
+                    HighPrecision = false
                 }
             ) {
                 Transforms = {

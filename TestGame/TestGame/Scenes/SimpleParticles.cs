@@ -246,6 +246,7 @@ namespace TestGame.Scenes {
         }
 
         private void InitializeSystem (ParticleSystem system) {
+            system.Configuration.DistanceFieldMaximumZ = 256;
             system.Clear();
         }
         

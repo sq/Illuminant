@@ -31,16 +31,17 @@ namespace Squared.Illuminant.Particles {
             public bool           SpawnedParticlesThisFrame;
         }
 
-        internal class ChunkInitializer {
+        internal class ChunkInitializer<TElement>
+            where TElement : struct {
             public ParticleSystem System;
             public int Remaining;
-            public BufferInitializer Position, Velocity, Attributes;
+            public BufferInitializer<TElement> Position, Velocity, Attributes;
             public Slice.Chunk Chunk;
             public bool HasFailed;
 
             public void Run (ThreadGroup g) {
                 if (g != null) {
-                    var q = g.GetQueueForType<BufferInitializer>();
+                    var q = g.GetQueueForType<BufferInitializer<TElement>>();
                     Position.Parent = Velocity.Parent = Attributes.Parent = this;
 
                     q.Enqueue(ref Position);
@@ -68,18 +69,20 @@ namespace Squared.Illuminant.Particles {
             }
         }
 
-        internal struct BufferInitializer : IWorkItem {
-            static ThreadLocal<Vector4[]> Scratch = new ThreadLocal<Vector4[]>();
+        internal struct BufferInitializer<TElement> : IWorkItem
+            where TElement : struct
+        {
+            static ThreadLocal<TElement[]> Scratch = new ThreadLocal<TElement[]>();
 
-            public Action<Vector4[], int> Initializer;
+            public Action<TElement[], int> Initializer;
             public int Offset;
             public RenderTarget2D Buffer;
-            public ChunkInitializer Parent;
+            public ChunkInitializer<TElement> Parent;
 
             public void Execute () {
                 var scratch = Scratch.Value;
                 if (scratch == null)
-                    Scratch.Value = scratch = new Vector4[Parent.System.ChunkMaximumCount];
+                    Scratch.Value = scratch = new TElement[Parent.System.ChunkMaximumCount];
 
                 Initializer(scratch, Offset);
 
@@ -117,26 +120,26 @@ namespace Squared.Illuminant.Particles {
                 private bool _IsDisposed = false;
 
                 public Chunk (
-                    int id, int size, int attributeCount, GraphicsDevice device
+                    int id, int size, ParticleSystemConfiguration configuration, GraphicsDevice device
                 ) {
                     ID = id;
                     Size = size;
                     MaximumCount = size * size;
 
-                    Bindings = new RenderTargetBinding[2 + attributeCount];
-                    Bindings[0] = PositionAndLife = CreateRenderTarget(device);
-                    Bindings[1] = Velocity = CreateRenderTarget(device);
+                    Bindings = new RenderTargetBinding[2 + configuration.AttributeCount];
+                    Bindings[0] = PositionAndLife = CreateRenderTarget(configuration, device);
+                    Bindings[1] = Velocity = CreateRenderTarget(configuration, device);
                     Query = new OcclusionQuery(device);
 
-                    if (attributeCount == 1)
-                        Bindings[2] = Attributes = CreateRenderTarget(device);
+                    if (configuration.AttributeCount == 1)
+                        Bindings[2] = Attributes = CreateRenderTarget(configuration, device);
                 }
 
-                private RenderTarget2D CreateRenderTarget (GraphicsDevice device) {
+                private RenderTarget2D CreateRenderTarget (ParticleSystemConfiguration configuration, GraphicsDevice device) {
                     return new RenderTarget2D(
                         device, 
                         Size, Size, false, 
-                        SurfaceFormat.Vector4, DepthFormat.None, 
+                        configuration.HighPrecision ? SurfaceFormat.Vector4 : SurfaceFormat.HalfVector4, DepthFormat.None, 
                         0, RenderTargetUsage.PreserveContents
                     );
                 }
@@ -355,18 +358,18 @@ namespace Squared.Illuminant.Particles {
             }
 
             lock (Engine.Coordinator.CreateResourceLock)
-                return new Slice.Chunk(id, Engine.Configuration.ChunkSize, Configuration.AttributeCount, device);
+                return new Slice.Chunk(id, Engine.Configuration.ChunkSize, Configuration, device);
         }
 
         // Make sure to lock the slice first.
-        public int InitializeNewChunks (
+        public int InitializeNewChunks<TElement> (
             int particleCount,
             GraphicsDevice device,
             bool parallel,
-            Action<Vector4[], int> positionInitializer,
-            Action<Vector4[], int> velocityInitializer,
-            Action<Vector4[], int> attributeInitializer
-        ) {
+            Action<TElement[], int> positionInitializer,
+            Action<TElement[], int> velocityInitializer,
+            Action<TElement[], int> attributeInitializer
+        ) where TElement : struct {
             var mc = ChunkMaximumCount;
             int numToSpawn = (int)Math.Ceiling((double)particleCount / mc);
 
@@ -375,10 +378,10 @@ namespace Squared.Illuminant.Particles {
             for (int i = 0; i < numToSpawn; i++) {
                 var c = CreateChunk(device, Interlocked.Increment(ref NextChunkId));
                 var offset = i * mc;
-                var pos = new BufferInitializer { Buffer = c.PositionAndLife, Initializer = positionInitializer, Offset = offset };
-                var vel = new BufferInitializer { Buffer = c.Velocity, Initializer = velocityInitializer, Offset = offset };
-                var attr = new BufferInitializer { Buffer = c.Attributes, Initializer = attributeInitializer, Offset = offset };
-                var job = new ChunkInitializer {
+                var pos = new BufferInitializer<TElement> { Buffer = c.PositionAndLife, Initializer = positionInitializer, Offset = offset };
+                var vel = new BufferInitializer<TElement> { Buffer = c.Velocity, Initializer = velocityInitializer, Offset = offset };
+                var attr = new BufferInitializer<TElement> { Buffer = c.Attributes, Initializer = attributeInitializer, Offset = offset };
+                var job = new ChunkInitializer<TElement> {
                     System = this,
                     Position = pos,
                     Velocity = vel,
@@ -1023,6 +1026,9 @@ namespace Squared.Illuminant.Particles {
 
         // Coarse-grained control over the number of particles actually rendered
         public float         StippleFactor = 1.0f;
+
+        // Store system state as 32-bit float instead of 16-bit float
+        public bool          HighPrecision = true;
 
         public ParticleSystemConfiguration (
             int attributeCount = 0
