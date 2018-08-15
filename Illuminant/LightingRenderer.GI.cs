@@ -261,8 +261,7 @@ namespace Squared.Illuminant {
                     // If the distance field is invalidated too frequently this will result in the GI
                     //  probes always staying dirty, which may not be what you want.
                     if (
-                        (_DistanceField.ValidSliceCount >= _DistanceField.SliceCount) &&
-                        (_DistanceField.InvalidSlices.Count == 0) &&
+                        _DistanceField.IsFullyGenerated &&
                         Configuration.GICaching
                     )
                         Environment.GIVolumes.IsDirty = false;

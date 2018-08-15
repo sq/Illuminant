@@ -1199,7 +1199,7 @@ namespace Squared.Illuminant {
                     _GBuffer.IsValid = true;
             }
 
-            if ((_DistanceField != null) && (_DistanceField.InvalidSlices.Count > 0)) {
+            if ((_DistanceField != null) && _DistanceField.NeedsRasterize) {
                 RenderDistanceField(ref layer, container);
             }
         }
@@ -1221,7 +1221,8 @@ namespace Squared.Illuminant {
             int slicesToUpdate =
                 Math.Min(
                     Configuration.MaximumFieldUpdatesPerFrame,
-                    _DistanceField.InvalidSlices.Count
+                    // FIXME
+                    _DistanceField.SliceInfo.InvalidSlices.Count
                 );
             if (slicesToUpdate <= 0)
                 return;
@@ -1239,7 +1240,8 @@ namespace Squared.Illuminant {
                 // We incrementally do a partial update of the distance field.
                 int layer = 0;
                 while (slicesToUpdate > 0) {
-                    var slice = _DistanceField.InvalidSlices[0];
+                    // FIXME
+                    var slice = _DistanceField.SliceInfo.InvalidSlices[0];
                     var physicalSlice = slice / PackedSliceCount;
 
                     RenderDistanceFieldSliceTriplet(
@@ -1313,9 +1315,9 @@ namespace Squared.Illuminant {
 
                 // FIXME: Slow
                 for (var i = firstVirtualSliceIndex; i <= lastVirtualSliceIndex; i++)
-                    df.InvalidSlices.Remove(i);
+                    df.ValidateSlice(i);
 
-                df.ValidSliceCount = Math.Max(df.ValidSliceCount, lastVirtualSliceIndex + 1);
+                df.MarkValidSlice(lastVirtualSliceIndex + 1);
 
                 if (RenderTrace.EnableTracing)
                     RenderTrace.Marker(group, 9999, "LightingRenderer {0} : End Distance Field Slices [{1}-{2}]", this.ToObjectID(), firstVirtualSliceIndex, lastVirtualSliceIndex);

@@ -116,7 +116,7 @@ namespace TestGame.Scenes {
                 DistanceField = null;
             }
 
-            DistanceField = new DistanceField(
+            DistanceField = new DynamicDistanceField(
                 Game.RenderCoordinator, 1024, 1024, Environment.MaximumZ,
                 64, DistanceFieldResolution.Value
             );
@@ -175,6 +175,9 @@ namespace TestGame.Scenes {
 
             for (int x = 0; x < Width; x += 30)
                 Pillar(new Vector2(x, 523));
+
+            foreach (var o in Environment.Obstructions)
+                o.IsDynamic = false;
 
             var count = 64;
             var size = 16;

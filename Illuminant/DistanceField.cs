@@ -9,6 +9,11 @@ using Microsoft.Xna.Framework.Graphics;
 using Squared.Render;
 
 namespace Squared.Illuminant {
+    public class SliceInfo {
+        public int ValidSliceCount { get; internal set; }
+        internal readonly List<int> InvalidSlices = new List<int>();
+    }
+
     public class DistanceField : IDisposable {
         public bool IsDisposed { get; private set; }
 
@@ -21,11 +26,9 @@ namespace Squared.Illuminant {
         public readonly int PhysicalSliceCount;
         public readonly int ColumnCount, RowCount;
 
-        public int ValidSliceCount { get; internal set; }
-
         private readonly object UseLock;
 
-        internal readonly List<int> InvalidSlices = new List<int>();
+        internal SliceInfo SliceInfo = new SliceInfo();
 
         public DistanceField (
             RenderCoordinator coordinator,
@@ -69,6 +72,19 @@ namespace Squared.Illuminant {
             Invalidate();
         }
 
+        public virtual bool IsFullyGenerated {
+            get {
+                return (SliceInfo.ValidSliceCount >= SliceCount) &&
+                    (SliceInfo.InvalidSlices.Count == 0);
+            }
+        }
+
+        public virtual bool NeedsRasterize {
+            get {
+                return SliceInfo.InvalidSlices.Count > 0;
+            }
+        }
+
         internal Vector3 GetExtent3 (float maximumZ) {
             return new Vector3(
                 VirtualWidth,
@@ -81,10 +97,10 @@ namespace Squared.Illuminant {
             if (IsDisposed)
                 return;
 
-            ValidSliceCount = 0;
-            InvalidSlices.Clear();
+            SliceInfo.ValidSliceCount = 0;
+            SliceInfo.InvalidSlices.Clear();
             for (var i = 0; i < SliceCount; i++)
-                InvalidSlices.Add(i);
+                SliceInfo.InvalidSlices.Add(i);
         }
 
         public string Name {
@@ -101,8 +117,8 @@ namespace Squared.Illuminant {
                 Save(stream);
         }
 
-        public void Save (Stream output) {
-            if (ValidSliceCount < SliceCount)
+        public virtual void Save (Stream output) {
+            if (SliceInfo.ValidSliceCount < SliceCount)
                 throw new InvalidOperationException("The distance field must be fully valid");
 
             var size = 8 * Texture.Width * Texture.Height;
@@ -119,7 +135,7 @@ namespace Squared.Illuminant {
                 Load(stream);
         }
 
-        public void Load (Stream input) {
+        public virtual void Load (Stream input) {
             var size = 8 * Texture.Width * Texture.Height;
             var data = new byte[size];
             var bytesRead = input.Read(data, 0, size);
@@ -129,18 +145,26 @@ namespace Squared.Illuminant {
             lock (UseLock)
                 Texture.SetData(data);
 
-            InvalidSlices.Clear();
+            SliceInfo.InvalidSlices.Clear();
             // FIXME: Is this right?
-            ValidSliceCount = ((SliceCount + 2) / 3) * 3;
+            SliceInfo.ValidSliceCount = ((SliceCount + 2) / 3) * 3;
         }
 
-        public void Invalidate () {
+        public virtual void Invalidate () {
             for (var i = 0; i < SliceCount; i++) {
-                if (InvalidSlices.Contains(i))
+                if (SliceInfo.InvalidSlices.Contains(i))
                     continue;
 
-                InvalidSlices.Add(i);
+                SliceInfo.InvalidSlices.Add(i);
             }
+        }
+
+        public virtual void ValidateSlice (int index) {
+            SliceInfo.InvalidSlices.Remove(index);
+        }
+
+        public virtual void MarkValidSlice (int index) {
+            SliceInfo.ValidSliceCount = Math.Max(SliceInfo.ValidSliceCount, index);
         }
 
         public void Dispose () {
@@ -151,6 +175,59 @@ namespace Squared.Illuminant {
 
             IsDisposed = true;
             Texture.Dispose();
+        }
+    }
+
+    public class DynamicDistanceField : DistanceField {
+        SliceInfo StaticSliceInfo = new SliceInfo();
+
+        public readonly RenderTarget2D StaticTexture;
+
+        public DynamicDistanceField (
+            RenderCoordinator coordinator,
+            float virtualWidth, float virtualHeight, float virtualDepth,
+            int sliceCount, float resolution = 1f, float maximumEncodedDistance = 256f
+        ) : base (coordinator, virtualWidth, virtualHeight, virtualDepth, sliceCount, resolution, maximumEncodedDistance) {
+            lock (coordinator.CreateResourceLock)
+                StaticTexture = new RenderTarget2D(
+                    coordinator.Device,
+                    SliceWidth * ColumnCount, 
+                    SliceHeight * RowCount,
+                    false, SurfaceFormat.Rgba64,
+                    DepthFormat.None, 0, 
+                    RenderTargetUsage.PreserveContents
+                );
+        }
+
+        public override void Invalidate () {
+            Invalidate(true, true);
+        }
+
+        public void Invalidate (bool invalidateStatic, bool invalidateDynamic) {
+            for (var i = 0; i < SliceCount; i++) {
+                if (invalidateDynamic && !SliceInfo.InvalidSlices.Contains(i))
+                    SliceInfo.InvalidSlices.Add(i);
+                if (invalidateStatic && !StaticSliceInfo.InvalidSlices.Contains(i))
+                    StaticSliceInfo.InvalidSlices.Add(i);
+            }
+        }
+
+        public override void ValidateSlice (int index) {
+            SliceInfo.InvalidSlices.Remove(index);
+            StaticSliceInfo.InvalidSlices.Remove(index);
+        }
+
+        public override void MarkValidSlice (int index) {
+            SliceInfo.ValidSliceCount = Math.Max(SliceInfo.ValidSliceCount, index);
+            StaticSliceInfo.ValidSliceCount = Math.Max(StaticSliceInfo.ValidSliceCount, index);
+        }
+
+        public override void Load (Stream input) {
+            throw new NotImplementedException();
+        }
+
+        public override void Save (Stream output) {
+            throw new NotImplementedException();
         }
     }
 }

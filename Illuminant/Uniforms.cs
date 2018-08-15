@@ -55,7 +55,8 @@ namespace Squared.Illuminant.Uniforms {
         // This does not initialize every member.
         public DistanceField (Squared.Illuminant.DistanceField df, float maximumZ) {
             Extent = df.GetExtent3(maximumZ);
-            TextureSliceCount = new Vector3(df.ColumnCount, df.RowCount, df.ValidSliceCount);
+            // FIXME
+            TextureSliceCount = new Vector3(df.ColumnCount, df.RowCount, df.SliceInfo.ValidSliceCount);
             _TextureSliceAndTexelSize = new Vector4(
                 1f / df.ColumnCount, 1f / df.RowCount,
                 1f / (df.VirtualWidth * df.ColumnCount),

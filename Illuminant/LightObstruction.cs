@@ -17,6 +17,9 @@ namespace Squared.Illuminant {
     public class LightObstruction {
         public readonly LightObstructionType Type;
 
+        // If false, this obstruction will be rendered into the static distance field (if any) instead of the dynamic distance field
+        public bool IsDynamic = true;
+
         public Vector3 Center;
         public Vector3 Size;
 
