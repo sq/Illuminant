@@ -79,10 +79,10 @@ namespace Squared.Illuminant {
                     // HACK: Fill in the gbuffer values for the ground plane
                     {
                         var zRange = new Vector2(Environment.GroundZ, Environment.GroundZ);
-                        var tl = new Vector3(0, 0, Environment.GroundZ);
-                        var tr = new Vector3(renderWidth, 0, Environment.GroundZ);
-                        var br = new Vector3(renderWidth, renderHeight, Environment.GroundZ);
-                        var bl = new Vector3(0, renderHeight, Environment.GroundZ);
+                        var tl = new Vector3(-999999, -999999, Environment.GroundZ);
+                        var tr = new Vector3(999999, -999999, Environment.GroundZ);
+                        var br = new Vector3(999999, 999999, Environment.GroundZ);
+                        var bl = new Vector3(-999999, 999999, Environment.GroundZ);
 
                         if (Configuration.RenderGroundPlane == false) {
                             var huge = new Vector3(0, 0, -99999);
