@@ -475,7 +475,7 @@ namespace Squared.Illuminant {
                     ? Environment.ZToYMultiplier
                     : 0.0f,
                 InvZToYMultiplier = Configuration.TwoPointFiveD
-                    ? 1f / Environment.ZToYMultiplier
+                    ? (Environment.ZToYMultiplier > 0) ? (1f / Environment.ZToYMultiplier) : 0
                     : 0.0f,
                 RenderScale = Configuration.RenderScale
             };
