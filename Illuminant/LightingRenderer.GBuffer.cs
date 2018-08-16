@@ -228,6 +228,7 @@ namespace Squared.Illuminant {
                 var normal2 = normal1;
                 var bl = tl + new Vector3(0, size.Y, 0);
                 var tr = tl + new Vector3(size.X, 0, 0);
+                var dataScale = billboard.DataScale.GetValueOrDefault(1);
 
                 // FIXME: Linear filtering = not a cylinder?
                 if (Math.Abs(billboard.CylinderFactor) >= 0.001f) {
@@ -241,28 +242,28 @@ namespace Squared.Illuminant {
                     Normal = normal1,
                     WorldPosition = bl + new Vector3(0, 0, size.Z),
                     TexCoord = textureBounds.TopLeft,
-                    DataScale = billboard.DataScale,
+                    DataScale = dataScale,
                 };
                 verts[j++] = new BillboardVertex {
                     Position = tr,
                     Normal = normal2,
                     WorldPosition = bl + new Vector3(size.X, 0, size.Z),
                     TexCoord = textureBounds.TopRight,
-                    DataScale = billboard.DataScale,
+                    DataScale = dataScale,
                 };
                 verts[j++] = new BillboardVertex {
                     Position = tl + size,
                     Normal = normal2,
                     WorldPosition = bl + new Vector3(size.X, 0, 0),
                     TexCoord = textureBounds.BottomRight,
-                    DataScale = billboard.DataScale,
+                    DataScale = dataScale,
                 };
                 verts[j++] = new BillboardVertex {
                     Position = bl,
                     Normal = normal1,
                     WorldPosition = bl,
                     TexCoord = textureBounds.BottomLeft,
-                    DataScale = billboard.DataScale,
+                    DataScale = dataScale,
                 };
 
                 var batch = billboard.Type == BillboardType.GBufferData

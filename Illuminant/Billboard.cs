@@ -28,10 +28,9 @@ namespace Squared.Illuminant {
         public float CylinderFactor;
         /// <summary>
         /// For GBufferData billboards, all the texture data is scaled by this amount
-        /// For Mask billboards, multiplies the intensity of the vertical gradient applied over the body of the billboard
-        /// Set this to 0 for a solid color flat billboard and 1 for the default behavior.
+        /// For Mask billboards, controls the adjustment of Y coordinates. Set to 0 for no adjustment or 1/null for all pixels to be anchored at the bottom.
         /// </summary>
-        public float DataScale;
+        public float? DataScale;
 
         private BillboardType? _Type;
         public BillboardType Type {
