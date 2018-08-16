@@ -81,8 +81,7 @@ namespace TestGame.Scenes {
                     },
                     EnableGBuffer = true,
                     RenderGroundPlane = true,
-                    TwoPointFiveD = true,
-                    GBufferCaching = false
+                    TwoPointFiveD = true
                 }
             ) {
                 DistanceField = DistanceField
@@ -113,7 +112,7 @@ namespace TestGame.Scenes {
                 const int numTiles = 4096 / tileSize;
 
                 var rng = new Random(123456);
-                for (var i = 0; i < 3024; i++) {
+                for (var i = 0; i < 2048; i++) {
                     int x = rng.Next(0, numTiles), y = rng.Next(0, numTiles);
                     var obs = new LightObstruction(
                         LightObstructionType.Box,
@@ -121,7 +120,11 @@ namespace TestGame.Scenes {
                         new Vector3(20f, 20f, rng.Next(32, 200))
                     );
                     Environment.Obstructions.Add(obs);
-                    // Environment.HeightVolumes.Add(new SimpleHeightVolume(Polygon.FromBounds(obs.Bounds3.XY), 0, obs.Size.Z + 1f));
+                    var hvBounds = obs.Bounds3;
+                    hvBounds = hvBounds.Expand(0.25f, 0.25f, 0);
+                    var hv = new SimpleHeightVolume(Polygon.FromBounds(hvBounds.XY), 0, hvBounds.Size.Z + 0.5f);
+                    hv.IsObstruction = false;
+                    Environment.HeightVolumes.Add(hv);
                 }
             }
 

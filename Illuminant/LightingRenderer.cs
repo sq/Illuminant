@@ -1229,10 +1229,12 @@ namespace Squared.Illuminant {
 
             ComputeUniforms();
 
+            var viewportChanged = (PendingDrawViewportPosition != viewportPosition) || (PendingDrawViewportScale != viewportScale);
+
             PendingFieldViewportPosition = viewportPosition;
             PendingFieldViewportScale = viewportScale;
 
-            if ((_GBuffer != null) && !_GBuffer.IsValid) {
+            if ((_GBuffer != null) && (!_GBuffer.IsValid || viewportChanged)) {
                 var renderWidth = (int)(Configuration.MaximumRenderSize.First / Configuration.RenderScale.X);
                 var renderHeight = (int)(Configuration.MaximumRenderSize.Second / Configuration.RenderScale.Y);
 

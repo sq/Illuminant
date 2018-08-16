@@ -46,7 +46,7 @@ void HeightVolumePixelShader (
         );
     } else {
         float wp = worldPosition.y;
-        float relativeY = getZToYMultiplier() * worldPosition.z;
+        float relativeY = (getZToYMultiplier() * worldPosition.z) * Viewport.Scale.y;
 
         if (worldPosition.z < getGroundZ()) {
             discard;
