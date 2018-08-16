@@ -93,7 +93,7 @@ namespace TestGame.Scenes {
                     */
                     RotationFromVelocity = true,
                     OpacityFromLife = opacityFromLife,
-                    EscapeVelocity = 5f,
+                    EscapeVelocity = 16f,
                     BounceVelocityMultiplier = 0.95f,
                     MaximumVelocity = 16f,
                     CollisionDistance = 1f,
@@ -158,6 +158,7 @@ namespace TestGame.Scenes {
                     */
                     new MatrixMultiply {
                         Velocity = Matrix.CreateRotationZ((float)Math.PI * 0.011f) * 1.001f,
+                        Position = Matrix.CreateScale(1, 1, 0)
                     }
                 }
             };

@@ -176,21 +176,26 @@ namespace Squared.Illuminant {
             }
         }
 
+        private void _SetTextureForGBufferBillboard (DeviceManager dm, ref PrimitiveDrawCall<BillboardVertex> drawCall, int index) {
+            var material = dm.CurrentMaterial;
+            material.Effect.Parameters["Mask"].SetValue((Texture)drawCall.UserData);
+            material.Flush();
+        }
+
         private void RenderGBufferBillboards (IBatchContainer container, int layerIndex) {
-            int i = 0;
+            if (Environment.Billboards == null)
+                return;
 
-            // FIXME: GC pressure
-            var verts = new BillboardVertex[4 * Environment.Billboards.Count];
+            // FIXME: This suuuuuuuuuuucks
+            BillboardScratch.Clear();
+            BillboardScratch.AddRange(Environment.Billboards);
 
-            Action<DeviceManager, object> setTexture = (dm, _) => {
-                var billboard = (Billboard)_;
-                var material =
-                    billboard.Type == BillboardType.Mask
-                        ? IlluminantMaterials.MaskBillboard
-                        : IlluminantMaterials.GDataBillboard;
-                material.Effect.Parameters["Mask"].SetValue(billboard.Texture);
-                material.Flush();
-            };
+            BillboardVertexScratch.EnsureCapacity(BillboardScratch.Count * 4);
+            BillboardVertexScratch.Clear();
+
+            var verts = BillboardVertexScratch.GetBuffer();
+
+            int i = 0, j = 0;
 
             using (var maskBatch = PrimitiveBatch<BillboardVertex>.New(
                 container, layerIndex++, Materials.Get(
@@ -220,7 +225,7 @@ namespace Squared.Illuminant {
                 var tl   = billboard.Position;
                 var size = billboard.Size;
                 var normal1 = billboard.Normal;
-                var normal2 = billboard.Normal;
+                var normal2 = normal1;
                 var bl = tl + new Vector3(0, size.Y, 0);
                 var tr = tl + new Vector3(size.X, 0, 0);
 
@@ -230,46 +235,45 @@ namespace Squared.Illuminant {
                     normal2.X = 1;
                 }
 
-                var j = i * 4;
-                verts[j + 0] = new BillboardVertex {
+                var textureBounds = billboard.TextureBounds;
+                verts[j++] = new BillboardVertex {
                     Position = tl,
                     Normal = normal1,
                     WorldPosition = bl + new Vector3(0, 0, size.Z),
-                    TexCoord = Vector2.Zero,
+                    TexCoord = textureBounds.TopLeft,
                     DataScale = billboard.DataScale,
                 };
-                verts[j + 1] = new BillboardVertex {
+                verts[j++] = new BillboardVertex {
                     Position = tr,
                     Normal = normal2,
                     WorldPosition = bl + new Vector3(size.X, 0, size.Z),
-                    TexCoord = new Vector2(1, 0),
+                    TexCoord = textureBounds.TopRight,
                     DataScale = billboard.DataScale,
                 };
-                verts[j + 2] = new BillboardVertex {
+                verts[j++] = new BillboardVertex {
                     Position = tl + size,
                     Normal = normal2,
                     WorldPosition = bl + new Vector3(size.X, 0, 0),
-                    TexCoord = Vector2.One,
+                    TexCoord = textureBounds.BottomRight,
                     DataScale = billboard.DataScale,
                 };
-                verts[j + 3] = new BillboardVertex {
+                verts[j++] = new BillboardVertex {
                     Position = bl,
                     Normal = normal1,
                     WorldPosition = bl,
-                    TexCoord = new Vector2(0, 1),
+                    TexCoord = textureBounds.BottomLeft,
                     DataScale = billboard.DataScale,
                 };
 
-                var batch =
-                    billboard.Type == BillboardType.GBufferData
-                        ? gDataBatch
-                        : maskBatch;
-
+                var batch = billboard.Type == BillboardType.GBufferData
+                    ? gDataBatch
+                    : maskBatch;
+                
                 batch.Add(new PrimitiveDrawCall<BillboardVertex>(
-                    PrimitiveType.TriangleList, verts, j, 4, 
+                    PrimitiveType.TriangleList, verts, i * 4, 4, 
                     QuadIndices, 0, 2, 
                     new DrawCallSortKey(order: i),
-                    setTexture, billboard
+                    SetTextureForGBufferBillboard, billboard.Texture
                 ));
 
                 i++;

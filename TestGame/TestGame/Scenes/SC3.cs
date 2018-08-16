@@ -146,6 +146,9 @@ namespace TestGame.Scenes {
         Histogram Histogram = null;
         List<Histogram> UnusedHistograms = new List<Histogram>();
 
+        List<Billboard> BackgroundBillboards = new List<Billboard>();
+        List<Billboard> ForegroundBillboards = new List<Billboard>();
+
         public SC3 (TestGame game, int width, int height)
             : base(game, 1396, 768) {
         }
@@ -281,8 +284,11 @@ namespace TestGame.Scenes {
                 Type = BillboardType.GBufferData
             };
 
-            Environment.Billboards.Add(terrainBillboard);
-            ForegroundEnvironment.Billboards.Add(terrainBillboard);
+            BackgroundBillboards.Add(terrainBillboard);
+            ForegroundBillboards.Add(terrainBillboard);
+
+            Environment.Billboards = BackgroundBillboards;
+            ForegroundEnvironment.Billboards = ForegroundBillboards;
 
             for (int i = 0; i < Math.Min(4, ExposureSampleCount / 2); i++)
                 ExposureSamples.Enqueue(1.0f);
@@ -302,7 +308,7 @@ namespace TestGame.Scenes {
             Environment.Obstructions.Add(obs);
             ForegroundEnvironment.Obstructions.Add(obs);
 
-            ForegroundEnvironment.Billboards.Add(new Billboard {
+            ForegroundBillboards.Add(new Billboard {
                 Position = new Vector3(x - (tex.Width * 0.5f), y - tex.Height + 12, 0),
                 Normal = Vector3.UnitZ,
                 Size = new Vector3(tex.Width, tex.Height, 0),
@@ -321,7 +327,7 @@ namespace TestGame.Scenes {
             ForegroundEnvironment.Obstructions.Add(obs);
 
             var tex = Trees[textureIndex];
-            ForegroundEnvironment.Billboards.Add(new Billboard {
+            ForegroundBillboards.Add(new Billboard {
                 Position = new Vector3(x - (tex.Width * 0.5f) - 14, y - tex.Height + 20, 0),
                 Normal = Vector3.UnitZ,
                 Size = new Vector3(tex.Width, tex.Height, 0),

@@ -15,7 +15,10 @@ namespace Squared.Illuminant {
         // Polygonal meshes that define 3D volumes that are rendered into the distance field
         // In 2.5d mode the volumes' top and front faces are also rendered directly into the scene
         public readonly List<HeightVolumeBase> HeightVolumes = new List<HeightVolumeBase>();
-        public readonly List<Billboard> Billboards = new List<Billboard>();
+        // A set of g-buffer billboards to paint into the distance field and g-buffer.
+        // This is an enumerable so that you can map it to existing objects in your game world
+        //  instead of maintaining a separate list.
+        public IEnumerable<Billboard> Billboards = null;
 
         public readonly GIVolumeCollection GIVolumes = new GIVolumeCollection();
 
@@ -32,7 +35,7 @@ namespace Squared.Illuminant {
             Lights.Clear();
             Obstructions.Clear();
             HeightVolumes.Clear();
-            Billboards.Clear();
+            // FIXME: Set billboards to null?
         }
     }
 }

@@ -3,18 +3,50 @@ using System.Collections.Generic;
 using System.Text;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Squared.Game;
 
 namespace Squared.Illuminant {
-    public class Billboard {
-        public Texture2D     Texture;
-        public Vector3       Position;
-        public Vector3       Normal = Vector3.UnitZ;
-        public Vector3       Size;
-        public bool          CylinderNormals;
+    public struct Billboard {
+        public Texture2D Texture;
+        public Vector3   Position;
+
+        private Vector3? _Normal;
+        public Vector3 Normal {
+            get {
+                return _Normal.GetValueOrDefault(Vector3.UnitZ);
+            }
+            set {
+                _Normal = value;
+            }
+        }
+
+        public Vector3 Size;
+        public bool    CylinderNormals;
         // Manipulates GBufferData billboards
-        public float         DataScale;
-        public BillboardType Type = BillboardType.Mask;
-        // TODO: Texcoords?
+        public float   DataScale;
+
+        private BillboardType? _Type;
+        public BillboardType Type {
+            get {
+                return _Type.GetValueOrDefault(BillboardType.Mask);
+            }
+            set {
+                _Type = value;
+            }
+        }
+
+        private Bounds? _TextureBounds;
+        public Bounds TextureBounds {
+            get {
+                if (_TextureBounds.HasValue)
+                    return _TextureBounds.Value;
+
+                return Bounds.Unit;
+            }
+            set {
+                _TextureBounds = value;
+            }
+        }
     }
 
     public enum BillboardType {

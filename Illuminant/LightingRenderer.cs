@@ -239,6 +239,9 @@ namespace Squared.Illuminant {
         private readonly Dictionary<Polygon, HeightVolumeCacheData> HeightVolumeCache = 
             new Dictionary<Polygon, HeightVolumeCacheData>(new ReferenceComparer<Polygon>());
 
+        private readonly UnorderedList<Billboard> BillboardScratch = new UnorderedList<Billboard>();
+        private readonly UnorderedList<BillboardVertex> BillboardVertexScratch = new UnorderedList<BillboardVertex>();
+
         private readonly BufferRing _Lightmaps;
 
         private DistanceField _DistanceField;
@@ -253,6 +256,8 @@ namespace Squared.Illuminant {
             IlluminationBatchSetup, LightProbeBatchSetup,
             GIProbeBatchSetup, EndGIProbePass,
             ParticleLightBatchSetup;
+
+        private readonly PrimitiveBeforeDraw<BillboardVertex> SetTextureForGBufferBillboard;
 
         private readonly object _LightStateLock = new object();
         private readonly Dictionary<LightTypeRenderStateKey, LightTypeRenderState> LightRenderStates = 
@@ -282,14 +287,15 @@ namespace Squared.Illuminant {
 
             _GIBounces = new GIBounce[Configuration.MaximumGIBounceCount];
 
-            BeginLightPass          = _BeginLightPass;
-            EndLightPass            = _EndLightPass;
-            EndLightProbePass       = _EndLightProbePass;
-            EndGIProbePass          = _EndGIProbePass;
-            IlluminationBatchSetup  = _IlluminationBatchSetup;
-            LightProbeBatchSetup    = _LightProbeBatchSetup;
-            GIProbeBatchSetup       = _GIProbeBatchSetup;
-            ParticleLightBatchSetup = _ParticleLightBatchSetup;
+            BeginLightPass                = _BeginLightPass;
+            EndLightPass                  = _EndLightPass;
+            EndLightProbePass             = _EndLightProbePass;
+            EndGIProbePass                = _EndGIProbePass;
+            IlluminationBatchSetup        = _IlluminationBatchSetup;
+            LightProbeBatchSetup          = _LightProbeBatchSetup;
+            GIProbeBatchSetup             = _GIProbeBatchSetup;
+            ParticleLightBatchSetup       = _ParticleLightBatchSetup;
+            SetTextureForGBufferBillboard = _SetTextureForGBufferBillboard;
 
             lock (coordinator.CreateResourceLock) {
                 QuadIndexBuffer = new IndexBuffer(
@@ -1179,14 +1185,20 @@ namespace Squared.Illuminant {
         }
 
         public void InvalidateFields (
+            bool invalidateGBuffer = true,
+            bool invalidateDistanceField = true,
             bool rebuildGI = true
         ) {
-            EnsureGBuffer();
-            if (_GBuffer != null)
-                _GBuffer.Invalidate();
-            if (_DistanceField != null)
+            if (invalidateGBuffer) {
+                EnsureGBuffer();
+                if (_GBuffer != null)
+                    _GBuffer.Invalidate();
+            }
+
+            if ((_DistanceField != null) && invalidateDistanceField)
                 _DistanceField.Invalidate();
 
+            // FIXME: rebuildGI only?
             Environment.GIVolumes.IsDirty = true;
 
             if (rebuildGI)
