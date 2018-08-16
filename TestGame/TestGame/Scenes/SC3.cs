@@ -111,7 +111,7 @@ namespace TestGame.Scenes {
         public readonly Queue<float> ExposureSamples = new Queue<float>(ExposureSampleCount);
         public readonly Queue<float> WhitePointSamples = new Queue<float>(WhitePointSampleCount);
 
-        Texture2D Background, Foreground, BackgroundMask;
+        Texture2D Background, Foreground, BackgroundData;
         Texture2D[] Trees;
         Texture2D[] Pillars;
         Texture2D Spark;
@@ -186,7 +186,7 @@ namespace TestGame.Scenes {
             Environment.ZToYMultiplier = ForegroundEnvironment.ZToYMultiplier = 2.5f;
 
             Background = Game.Content.Load<Texture2D>("bg_noshadows");
-            BackgroundMask = Game.Content.Load<Texture2D>("bg_mask");
+            BackgroundData = Game.Content.Load<Texture2D>("bg_data");
             Foreground = Game.Content.Load<Texture2D>("fg");
 
             Trees = new[] {
@@ -278,8 +278,7 @@ namespace TestGame.Scenes {
             var terrainBillboard = new Billboard {
                 Position = Vector3.Zero,
                 Size = new Vector3(Width, Height, 0),
-                Normal = Vector3.UnitY,
-                Texture = BackgroundMask,
+                Texture = BackgroundData,
                 DataScale = 60,
                 Type = BillboardType.GBufferData
             };
@@ -313,7 +312,7 @@ namespace TestGame.Scenes {
                 Normal = Vector3.UnitZ,
                 Size = new Vector3(tex.Width, tex.Height, 0),
                 Texture = tex,
-                CylinderNormals = true
+                CylinderFactor = 1.0f
             });
         }
 
@@ -332,7 +331,7 @@ namespace TestGame.Scenes {
                 Normal = Vector3.UnitZ,
                 Size = new Vector3(tex.Width, tex.Height, 0),
                 Texture = tex,
-                CylinderNormals = false
+                CylinderFactor = 0.0f
             });
         }
 

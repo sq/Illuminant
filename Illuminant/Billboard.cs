@@ -13,7 +13,7 @@ namespace Squared.Illuminant {
         private Vector3? _Normal;
         public Vector3 Normal {
             get {
-                return _Normal.GetValueOrDefault(Vector3.UnitZ);
+                return _Normal.GetValueOrDefault(Vector3.One);
             }
             set {
                 _Normal = value;
@@ -21,9 +21,17 @@ namespace Squared.Illuminant {
         }
 
         public Vector3 Size;
-        public bool    CylinderNormals;
-        // Manipulates GBufferData billboards
-        public float   DataScale;
+        /// <summary>
+        /// Adjusts how strongly the horizontal normals of the billboard will resemble a cylinder.
+        /// Set to 0 for a flat billboard and 1 for an approximation of a perfect cylinder.
+        /// </summary>
+        public float CylinderFactor;
+        /// <summary>
+        /// For GBufferData billboards, all the texture data is scaled by this amount
+        /// For Mask billboards, multiplies the intensity of the vertical gradient applied over the body of the billboard
+        /// Set this to 0 for a solid color flat billboard and 1 for the default behavior.
+        /// </summary>
+        public float DataScale;
 
         private BillboardType? _Type;
         public BillboardType Type {
@@ -36,6 +44,9 @@ namespace Squared.Illuminant {
         }
 
         private Bounds? _TextureBounds;
+        /// <summary>
+        /// Please note that unlike BitmapDrawCall, this has no influence on the displayed size of the billboard.
+        /// </summary>
         public Bounds TextureBounds {
             get {
                 if (_TextureBounds.HasValue)
@@ -54,6 +65,8 @@ namespace Squared.Illuminant {
         /// The texture's alpha channel is used as a mask.
         /// Any non-transparent pixels overwrite the g-buffer.
         /// G-buffer values are determined by the billboard's properties.
+        /// If no texture is provided the mask is an opaque rectangle.
+        /// The Normal property controls the normals generated.
         /// </summary>
         Mask,
         /// <summary>
@@ -73,7 +86,8 @@ namespace Squared.Illuminant {
         /// The new z value for each pixel is determined by a combination of the
         ///  billboard's z position and the y offset of the pixel, as follows:
         ///  Position.Z + ((Blue * DataScale) / ZToYMultiplier)
+        /// The Normal property has no effect in this mode.
         /// </summary>
-        GBufferData
+        GBufferData,
     }
 }

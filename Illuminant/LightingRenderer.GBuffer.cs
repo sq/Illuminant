@@ -229,10 +229,10 @@ namespace Squared.Illuminant {
                 var bl = tl + new Vector3(0, size.Y, 0);
                 var tr = tl + new Vector3(size.X, 0, 0);
 
-                if (billboard.CylinderNormals) {
-                    // FIXME: Linear filtering = not a cylinder?
-                    normal1.X = 0;
-                    normal2.X = 1;
+                // FIXME: Linear filtering = not a cylinder?
+                if (Math.Abs(billboard.CylinderFactor) >= 0.001f) {
+                    normal1.X = 0.5f - (0.5f * billboard.CylinderFactor);
+                    normal2.X = 0.5f + (0.5f * billboard.CylinderFactor);
                 }
 
                 var textureBounds = billboard.TextureBounds;

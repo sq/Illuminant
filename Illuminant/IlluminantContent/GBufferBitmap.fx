@@ -34,6 +34,7 @@ void MaskBillboardPixelShader(
     in float3 worldPosition  : TEXCOORD1,
     in float3 screenPosition : TEXCOORD2,
     in float3 normal         : NORMAL0,
+    in float  dataScale      : NORMAL1,
     out float4 result        : COLOR0
 ) {
     float alpha = tex2D(MaskSampler, texCoord).a;
@@ -43,7 +44,7 @@ void MaskBillboardPixelShader(
 
     float wp = worldPosition.y;
     float sp = screenPosition.y;
-    float relativeY = wp - sp;
+    float relativeY = (wp - sp) * dataScale;
 
     // HACK: We drop the world x axis and the normal y axis,
     //  and reconstruct those two values when sampling the g-buffer
