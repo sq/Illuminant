@@ -57,10 +57,9 @@ void sampleGBuffer (
         screenPositionPx /= Environment.RenderScale;
 
         worldPosition = float3(
-            screenPositionPx.xy / Viewport.Scale.xy + Viewport.Position.xy,
+            (screenPositionPx.xy + float2(0, relativeY)) / Viewport.Scale.xy + Viewport.Position.xy,
             worldZ
         );
-        worldPosition.y += relativeY;
 
         // HACK: Reconstruct the y normal from the z normal
         float normalZ = (sample.y - 0.5) * 2;

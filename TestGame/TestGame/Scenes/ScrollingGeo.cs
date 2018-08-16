@@ -26,7 +26,7 @@ namespace TestGame.Scenes {
         float LightZ;
 
         const int MultisampleCount = 0;
-        const int LightmapScaleRatio = 4;
+        const int LightmapScaleRatio = 1;
         const int MaxStepCount = 128;
 
         bool ShowGBuffer       = false;
@@ -59,7 +59,7 @@ namespace TestGame.Scenes {
 
             Environment.GroundZ = 0;
             Environment.MaximumZ = 256;
-            Environment.ZToYMultiplier = 1f;
+            Environment.ZToYMultiplier = 0.33f;
 
             DistanceField = new DistanceField(
                 Game.RenderCoordinator, 4096, 4096, Environment.MaximumZ,
@@ -121,7 +121,7 @@ namespace TestGame.Scenes {
                         new Vector3(20f, 20f, rng.Next(32, 200))
                     );
                     Environment.Obstructions.Add(obs);
-                    Environment.HeightVolumes.Add(new SimpleHeightVolume(Polygon.FromBounds(obs.Bounds3.XY), 0, 64f));
+                    // Environment.HeightVolumes.Add(new SimpleHeightVolume(Polygon.FromBounds(obs.Bounds3.XY), 0, obs.Size.Z + 1f));
                 }
             }
 
