@@ -10,7 +10,7 @@ void HeightVolumeVertexShader (
     out   float4   result        : POSITION0
 ) {
     worldPosition = position;
-    result = TransformPosition(float4(position.xy - Viewport.Position, 0, 1), 0);
+    result = TransformPosition(float4((position.xy - Viewport.Position) * Viewport.Scale, 0, 1), 0);
     result.z = 0;
     dead = worldPosition.z < -9999;
 }
@@ -26,7 +26,7 @@ void HeightVolumeFaceVertexShader(
     worldPosition = position + (SELF_OCCLUSION_HACK * normal);
 
     position.y -= getZToYMultiplier() * position.z;
-    result = TransformPosition(float4(position.xy - Viewport.Position, 0, 1), 0);
+    result = TransformPosition(float4((position.xy - Viewport.Position) * Viewport.Scale, 0, 1), 0);
     result.z = position.z / DistanceFieldExtent.z;
     dead = false;
 }

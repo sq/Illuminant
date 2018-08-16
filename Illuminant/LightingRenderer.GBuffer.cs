@@ -40,13 +40,16 @@ namespace Squared.Illuminant {
             int renderWidth, int renderHeight,
             bool enableHeightVolumes = true, bool enableBillboards = true
         ) {
+            var vt = ViewTransform.CreateOrthographic(_GBuffer.Width, _GBuffer.Height);
+            vt.Scale = Configuration.RenderScale;
+
             // FIXME: Is this right?
             using (var group = BatchGroup.ForRenderTarget(
                 resultGroup, layerIndex, _GBuffer.Texture,
                 // FIXME: Optimize this
                 (dm, _) => {
                     dm.PushStates();
-                    PushLightingViewTransform(_GBuffer.Texture);
+                    Materials.PushViewTransform(ref vt);
                 },
                 (dm, _) => {
                     Materials.PopViewTransform();
@@ -67,16 +70,8 @@ namespace Squared.Illuminant {
                         var p = IlluminantMaterials.HeightVolumeFace.Effect.Parameters;
                         p["DistanceFieldExtent"].SetValue(Extent3);
 
-                        /*
-                        Materials.TrySetBoundUniform(IlluminantMaterials.HeightVolumeFace, "Viewport", ref viewTransform);
-                        Materials.TrySetBoundUniform(IlluminantMaterials.HeightVolume, "Viewport", ref viewTransform);
-                        */
-
-                        var ub = Materials.GetUniformBinding<Uniforms.Environment>(IlluminantMaterials.HeightVolumeFace, "Environment");
-                        ub.Value.Current = EnvironmentUniforms;
-
-                        ub = Materials.GetUniformBinding<Uniforms.Environment>(IlluminantMaterials.HeightVolume, "Environment");
-                        ub.Value.Current = EnvironmentUniforms;
+                        Materials.TrySetBoundUniform(IlluminantMaterials.HeightVolumeFace, "Environment", ref EnvironmentUniforms);
+                        Materials.TrySetBoundUniform(IlluminantMaterials.HeightVolume, "Environment", ref EnvironmentUniforms);
                     }
                 )) {
 
@@ -183,8 +178,6 @@ namespace Squared.Illuminant {
             var material = dm.CurrentMaterial;
             material.Effect.Parameters["Mask"].SetValue((Texture)drawCall.UserData);
             material.Flush();
-            var ub = Materials.GetUniformBinding<Uniforms.Environment>(material, "Environment");
-            ub.Value.Current = EnvironmentUniforms;
         }
 
         private void RenderGBufferBillboards (IBatchContainer container, int layerIndex) {
