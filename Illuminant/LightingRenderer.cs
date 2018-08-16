@@ -257,6 +257,9 @@ namespace Squared.Illuminant {
             GIProbeBatchSetup, EndGIProbePass,
             ParticleLightBatchSetup;
 
+        // FIXME: Thread sync issue?
+        private Vector2? PendingDrawViewportPosition, PendingDrawViewportScale;
+
         private readonly PrimitiveBeforeDraw<BillboardVertex> SetTextureForGBufferBillboard;
 
         private readonly object _LightStateLock = new object();
@@ -477,25 +480,29 @@ namespace Squared.Illuminant {
             };
         }
 
+        private void PushLightingViewTransform (RenderTarget2D renderTarget) {
+            var vt = ViewTransform.CreateOrthographic(
+                renderTarget.Width, renderTarget.Height
+            );
+
+            var coordOffset = new Vector2(1.0f / Configuration.RenderScale.X, 1.0f / Configuration.RenderScale.Y) * 0.5f;
+
+            vt.Position = PendingDrawViewportPosition.GetValueOrDefault(Materials.ViewportPosition);
+            vt.Scale = PendingDrawViewportScale.GetValueOrDefault(Materials.ViewportScale);
+
+            if (Configuration.ScaleCompensation)
+                vt.Position += coordOffset;
+
+            Materials.PushViewTransform(ref vt);
+        }
+
         private void _BeginLightPass (DeviceManager device, object userData) {
             var buffer = (RenderTarget2D)userData;
 
             device.Device.Viewport = new Viewport(0, 0, buffer.Width, buffer.Height);
 
-            var vt = ViewTransform.CreateOrthographic(
-                buffer.Width, buffer.Height
-            );
-
-            var coordOffset = new Vector2(1.0f / Configuration.RenderScale.X, 1.0f / Configuration.RenderScale.Y) * 0.5f;
-
-            vt.Position = Materials.ViewportPosition;
-            vt.Scale = Materials.ViewportScale;
-
-            if (Configuration.ScaleCompensation)
-                vt.Position += coordOffset;
-
             device.PushStates();
-            Materials.PushViewTransform(ref vt);
+            PushLightingViewTransform(buffer);
         }
 
         private void _EndLightPass (DeviceManager device, object userData) {
@@ -640,7 +647,9 @@ namespace Squared.Illuminant {
             IBatchContainer container, int layer, 
             float intensityScale = 1.0f, 
             bool paintDirectIllumination = true,
-            GIRenderSettings indirectIlluminationSettings = null
+            GIRenderSettings indirectIlluminationSettings = null,
+            Vector2? viewportPosition = null,
+            Vector2? viewportScale = null
         ) {
             var lightmap = _Lightmaps.BeginDraw(true);
             var lightProbe = default(BufferRing.InProgressRender);
@@ -680,6 +689,9 @@ namespace Squared.Illuminant {
             int layerIndex = 0;
 
             ComputeUniforms();
+
+            PendingDrawViewportPosition = viewportPosition;
+            PendingDrawViewportScale = viewportScale;
 
             using (var outerGroup = BatchGroup.New(container, layer)) {
                 if (RenderTrace.EnableTracing)
@@ -1214,7 +1226,10 @@ namespace Squared.Illuminant {
             ComputeUniforms();
 
             if ((_GBuffer != null) && !_GBuffer.IsValid) {
-                RenderGBuffer(ref layer, container);
+                var renderWidth = (int)(Configuration.MaximumRenderSize.First / Configuration.RenderScale.X);
+                var renderHeight = (int)(Configuration.MaximumRenderSize.Second / Configuration.RenderScale.Y);
+
+                RenderGBuffer(ref layer, container, renderWidth, renderHeight);
 
                 if (Configuration.GBufferCaching)
                     _GBuffer.IsValid = true;
@@ -1538,12 +1553,14 @@ namespace Squared.Illuminant {
                     setup = (dm, _) => {
                         m.Effect.Parameters["SliceZ"].SetValue(sliceZ);
 
+                        var count = items.Count;
+
                         lock (DistanceFunctionVertices) {
                             if (DidUploadDistanceFieldBuffer)
                                 return;
 
-                            if (items.Count > 0)
-                                DistanceFunctionVertexBuffer.SetData(DistanceFunctionVertices, 0, items.Count * 4, SetDataOptions.Discard);
+                            if (count > 0)
+                                DistanceFunctionVertexBuffer.SetData(DistanceFunctionVertices, 0, count * 4, SetDataOptions.Discard);
 
                             DidUploadDistanceFieldBuffer = true;
                         }

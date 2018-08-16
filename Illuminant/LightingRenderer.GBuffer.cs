@@ -37,22 +37,20 @@ namespace Squared.Illuminant {
 
         private void RenderGBuffer (
             ref int layerIndex, IBatchContainer resultGroup,
+            int renderWidth, int renderHeight,
             bool enableHeightVolumes = true, bool enableBillboards = true
         ) {
             // FIXME: Is this right?
-            var renderWidth = (int)(Configuration.MaximumRenderSize.First / Configuration.RenderScale.X);
-            var renderHeight = (int)(Configuration.MaximumRenderSize.Second / Configuration.RenderScale.Y);
-
             using (var group = BatchGroup.ForRenderTarget(
                 resultGroup, layerIndex, _GBuffer.Texture,
                 // FIXME: Optimize this
                 (dm, _) => {
-                    Materials.PushViewTransform(ViewTransform.CreateOrthographic(
-                        renderWidth, renderHeight
-                    ));
+                    dm.PushStates();
+                    PushLightingViewTransform(_GBuffer.Texture);
                 },
                 (dm, _) => {
                     Materials.PopViewTransform();
+                    dm.PopStates();
                 }
             )) {
                 if (RenderTrace.EnableTracing)
@@ -68,6 +66,11 @@ namespace Squared.Illuminant {
                     (dm, _) => {
                         var p = IlluminantMaterials.HeightVolumeFace.Effect.Parameters;
                         p["DistanceFieldExtent"].SetValue(Extent3);
+
+                        /*
+                        Materials.TrySetBoundUniform(IlluminantMaterials.HeightVolumeFace, "Viewport", ref viewTransform);
+                        Materials.TrySetBoundUniform(IlluminantMaterials.HeightVolume, "Viewport", ref viewTransform);
+                        */
 
                         var ub = Materials.GetUniformBinding<Uniforms.Environment>(IlluminantMaterials.HeightVolumeFace, "Environment");
                         ub.Value.Current = EnvironmentUniforms;
@@ -180,6 +183,8 @@ namespace Squared.Illuminant {
             var material = dm.CurrentMaterial;
             material.Effect.Parameters["Mask"].SetValue((Texture)drawCall.UserData);
             material.Flush();
+            var ub = Materials.GetUniformBinding<Uniforms.Environment>(material, "Environment");
+            ub.Value.Current = EnvironmentUniforms;
         }
 
         private void RenderGBufferBillboards (IBatchContainer container, int layerIndex) {
@@ -205,6 +210,7 @@ namespace Squared.Illuminant {
                     blendState: BlendState.Opaque
                 ), (dm, _) => {
                     var material = IlluminantMaterials.MaskBillboard;
+                    // Materials.TrySetBoundUniform(material, "Viewport", ref viewTransform);
                     Materials.TrySetBoundUniform(material, "Environment", ref EnvironmentUniforms);
                     material.Effect.Parameters["DistanceFieldExtent"].SetValue(Extent3);
                 }
@@ -217,6 +223,7 @@ namespace Squared.Illuminant {
                     blendState: BlendState.Opaque
                 ), (dm, _) => {
                     var material = IlluminantMaterials.GDataBillboard;
+                    // Materials.TrySetBoundUniform(material, "Viewport", ref viewTransform);
                     Materials.TrySetBoundUniform(material, "Environment", ref EnvironmentUniforms);
                     material.Effect.Parameters["DistanceFieldExtent"].SetValue(Extent3);
                 }
