@@ -259,6 +259,7 @@ namespace Squared.Illuminant {
 
         // FIXME: Thread sync issue?
         private Vector2? PendingDrawViewportPosition, PendingDrawViewportScale;
+        private Vector2? PendingFieldViewportPosition, PendingFieldViewportScale;
 
         private readonly PrimitiveBeforeDraw<BillboardVertex> SetTextureForGBufferBillboard;
 
@@ -1220,10 +1221,16 @@ namespace Squared.Illuminant {
             }
         }
 
-        public void UpdateFields (IBatchContainer container, int layer) {
+        public void UpdateFields (
+            IBatchContainer container, int layer, 
+            Vector2? viewportPosition = null, Vector2? viewportScale = null
+        ) {
             EnsureGBuffer();
 
             ComputeUniforms();
+
+            PendingFieldViewportPosition = viewportPosition;
+            PendingFieldViewportScale = viewportScale;
 
             if ((_GBuffer != null) && !_GBuffer.IsValid) {
                 var renderWidth = (int)(Configuration.MaximumRenderSize.First / Configuration.RenderScale.X);

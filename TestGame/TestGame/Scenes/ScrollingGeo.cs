@@ -59,6 +59,7 @@ namespace TestGame.Scenes {
 
             Environment.GroundZ = 0;
             Environment.MaximumZ = 256;
+            Environment.ZToYMultiplier = 1f;
 
             DistanceField = new DistanceField(
                 Game.RenderCoordinator, 4096, 4096, Environment.MaximumZ,
@@ -77,7 +78,11 @@ namespace TestGame.Scenes {
                         LongStepFactor = 0.5f,
                         OcclusionToOpacityPower = 0.7f,
                         MaxConeRadius = 24,
-                    }
+                    },
+                    EnableGBuffer = true,
+                    RenderGroundPlane = true,
+                    TwoPointFiveD = true,
+                    GBufferCaching = false
                 }
             ) {
                 DistanceField = DistanceField
@@ -110,11 +115,13 @@ namespace TestGame.Scenes {
                 var rng = new Random(123456);
                 for (var i = 0; i < 3024; i++) {
                     int x = rng.Next(0, numTiles), y = rng.Next(0, numTiles);
-                    Environment.Obstructions.Add(new LightObstruction(
+                    var obs = new LightObstruction(
                         LightObstructionType.Box,
                         new Vector3(x * tileSize, y * tileSize, 0),
                         new Vector3(20f, 20f, rng.Next(32, 200))
-                    ));
+                    );
+                    Environment.Obstructions.Add(obs);
+                    Environment.HeightVolumes.Add(new SimpleHeightVolume(Polygon.FromBounds(obs.Bounds3.XY), 0, 64f));
                 }
             }
 
@@ -141,7 +148,7 @@ namespace TestGame.Scenes {
 
             // Renderer.InvalidateFields();
 
-            Renderer.UpdateFields(frame, -2);
+            Renderer.UpdateFields(frame, -2, viewportPosition: cvp, viewportScale: cz);
 
             var setLightingTransform = (Action<DeviceManager, object>)((dm, _) => {
                 var vt = ViewTransform.CreateOrthographic(

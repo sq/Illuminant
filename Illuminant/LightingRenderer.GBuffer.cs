@@ -41,7 +41,8 @@ namespace Squared.Illuminant {
             bool enableHeightVolumes = true, bool enableBillboards = true
         ) {
             var vt = ViewTransform.CreateOrthographic(_GBuffer.Width, _GBuffer.Height);
-            vt.Scale = Configuration.RenderScale;
+            vt.Position = PendingFieldViewportPosition.GetValueOrDefault(Vector2.Zero);
+            vt.Scale = PendingFieldViewportScale.GetValueOrDefault(Vector2.One) * Configuration.RenderScale;
 
             // FIXME: Is this right?
             using (var group = BatchGroup.ForRenderTarget(
