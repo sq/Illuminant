@@ -1587,7 +1587,8 @@ namespace Squared.Illuminant {
             //  then issue a single draw for each
             using (var buffer = BufferPool<LightObstruction>.Allocate(items.Count))
             lock (result) {
-                Array.Clear(result.FirstOffset, 0, result.FirstOffset.Length);
+                for (int i = 0; i < result.FirstOffset.Length; i++)
+                    result.FirstOffset[i] = -1;
                 Array.Clear(result.PrimCount, 0, result.PrimCount.Length);
 
                 Array.Clear(buffer.Data, 0, buffer.Data.Length);
