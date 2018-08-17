@@ -215,7 +215,7 @@ namespace Squared.Illuminant {
 
         public const int MaximumLightCount = 4096;
         public const int PackedSliceCount = 3;
-        public const int MaximumDistanceFunctionCount = 8192;
+        public const int DistanceFunctionBufferInitialSize = 256;
 
         const int        DistanceLimit = 520;
         
@@ -232,9 +232,57 @@ namespace Squared.Illuminant {
 
         private readonly IndexBuffer         QuadIndexBuffer;
 
-        private readonly DynamicVertexBuffer      DistanceFunctionVertexBuffer;
-        private readonly DistanceFunctionVertex[] DistanceFunctionVertices = 
-            new DistanceFunctionVertex[MaximumDistanceFunctionCount * 4];
+        class DistanceFunctionBuffer {
+            public readonly LightingRenderer Renderer;
+            public DynamicVertexBuffer VertexBuffer;
+            public DistanceFunctionVertex[] Vertices;
+            public int[] FirstOffset, PrimCount;
+            public bool IsDirty;
+
+            public DistanceFunctionBuffer (LightingRenderer renderer, int initialSize) {
+                Renderer = renderer;
+                Vertices = new DistanceFunctionVertex[initialSize];
+                IsDirty = true;
+                var numTypes = (int)LightObstructionType.MAX + 1;
+                FirstOffset = new int[numTypes];
+                PrimCount   = new int[numTypes];
+            }
+
+            public void EnsureSize (int size) {
+                if (Vertices.Length > size)
+                    return;
+
+                var actualSize = ((size + 127) / 128) * 128;
+
+                Vertices = new DistanceFunctionVertex[actualSize];
+                IsDirty = true;
+            }
+
+            public void EnsureVertexBuffer () {
+                if ((VertexBuffer != null) && (VertexBuffer.VertexCount < Vertices.Length)) {
+                    Renderer.Coordinator.DisposeResource(VertexBuffer);
+                    VertexBuffer = null;
+                }
+
+                if (VertexBuffer == null) {
+                    lock (Renderer.Coordinator.CreateResourceLock)
+                        VertexBuffer = new DynamicVertexBuffer(Renderer.Coordinator.Device, typeof(DistanceFunctionVertex), Vertices.Length, BufferUsage.WriteOnly);
+
+                    IsDirty = true;
+                }
+            }
+
+            public void Flush () {
+                if (!IsDirty)
+                    return;
+
+                VertexBuffer.SetData(Vertices, 0, Vertices.Length, SetDataOptions.Discard);
+
+                IsDirty = false;
+            }
+        }
+
+        private readonly DistanceFunctionBuffer StaticDistanceFunctions, DynamicDistanceFunctions;
 
         private readonly Dictionary<Polygon, HeightVolumeCacheData> HeightVolumeCache = 
             new Dictionary<Polygon, HeightVolumeCacheData>(new ReferenceComparer<Polygon>());
@@ -305,13 +353,11 @@ namespace Squared.Illuminant {
                 QuadIndexBuffer = new IndexBuffer(
                     coordinator.Device, IndexElementSize.SixteenBits, MaximumLightCount * 6, BufferUsage.WriteOnly
                 );
-                DistanceFunctionVertexBuffer = new DynamicVertexBuffer(
-                    coordinator.Device, typeof(DistanceFunctionVertex),
-                    DistanceFunctionVertices.Length, BufferUsage.WriteOnly
-                );
-
                 FillIndexBuffer();
-            }            
+            }
+
+            DynamicDistanceFunctions = new DistanceFunctionBuffer(this, DistanceFunctionBufferInitialSize);
+            StaticDistanceFunctions  = new DistanceFunctionBuffer(this, DistanceFunctionBufferInitialSize);
 
             _Lightmaps = new BufferRing(
                 coordinator,
@@ -1285,6 +1331,10 @@ namespace Squared.Illuminant {
             )) {
                 // We incrementally do a partial update of the distance field.
                 int layer = 0;
+
+                BuildDistanceFieldDistanceFunctionBuffer(StaticDistanceFunctions, false);
+                BuildDistanceFieldDistanceFunctionBuffer(DynamicDistanceFunctions, true);
+
                 while (slicesToUpdate > 0) {
                     // FIXME
                     var slice = sliceInfo.InvalidSlices[0];
@@ -1525,8 +1575,66 @@ namespace Squared.Illuminant {
                 ));
         }
 
-        // HACK
-        bool DidUploadDistanceFieldBuffer = false;
+        private void BuildDistanceFieldDistanceFunctionBuffer (DistanceFunctionBuffer result, bool? dynamicFlagFilter) {
+            var items = Environment.Obstructions;
+
+            var tl = new Vector3(0, 0, 0);
+            var tr = new Vector3(_DistanceField.VirtualWidth, 0, 0);
+            var br = new Vector3(_DistanceField.VirtualWidth, _DistanceField.VirtualHeight, 0);
+            var bl = new Vector3(0, _DistanceField.VirtualHeight, 0);
+
+            // HACK: Sort all the functions by type, fill the VB with each group,
+            //  then issue a single draw for each
+            using (var buffer = BufferPool<LightObstruction>.Allocate(items.Count))
+            lock (result) {
+                Array.Clear(result.FirstOffset, 0, result.FirstOffset.Length);
+                Array.Clear(result.PrimCount, 0, result.PrimCount.Length);
+
+                Array.Clear(buffer.Data, 0, buffer.Data.Length);
+                items.CopyTo(buffer.Data);
+                Array.Sort(buffer.Data, 0, items.Count, LightObstructionTypeComparer.Instance);
+
+                result.IsDirty = true;
+                result.EnsureSize(items.Count * 4);
+
+                int j = 0;
+                for (int i = 0; i < items.Count; i++) {
+                    var item = buffer.Data[i];
+                    var type = (int)item.Type;
+
+                    if ((dynamicFlagFilter != null) && (item.IsDynamic != dynamicFlagFilter.Value))
+                        continue;
+
+                    if (result.FirstOffset[type] == -1)
+                        result.FirstOffset[type] = j;
+
+                    result.PrimCount[type] += 2;
+
+                    // See definition of DISTANCE_MAX in DistanceFieldCommon.fxh
+                    float offset = _DistanceField.MaximumEncodedDistance + 1;
+
+                    tl = new Vector3(item.Center.X - item.Size.X - offset, item.Center.Y - item.Size.Y - offset, 0);
+                    br = new Vector3(item.Center.X + item.Size.X + offset, item.Center.Y + item.Size.Y + offset, 0);
+                    tr = new Vector3(br.X, tl.Y, 0);
+                    bl = new Vector3(tl.X, br.Y, 0);
+
+                    result.Vertices[j++] = new DistanceFunctionVertex(
+                        tl, item.Center, item.Size
+                    );
+                    result.Vertices[j++] = new DistanceFunctionVertex(
+                        tr, item.Center, item.Size
+                    );
+                    result.Vertices[j++] = new DistanceFunctionVertex(
+                        br, item.Center, item.Size
+                    );
+                    result.Vertices[j++] = new DistanceFunctionVertex(
+                        bl, item.Center, item.Size
+                    );
+                }
+
+                result.EnsureVertexBuffer();
+            }
+        }
 
         private void RenderDistanceFieldDistanceFunctions (
             int firstVirtualIndex, BatchGroup group, bool? dynamicFlagFilter
@@ -1535,6 +1643,8 @@ namespace Squared.Illuminant {
             if (items.Count <= 0)
                 return;
 
+            int count = items.Count;
+
             var sliceZ = new Vector4(
                 SliceIndexToZ(firstVirtualIndex),
                 SliceIndexToZ(firstVirtualIndex + 1),
@@ -1542,108 +1652,44 @@ namespace Squared.Illuminant {
                 SliceIndexToZ(firstVirtualIndex + 3)
             );
 
-            // todo: shrink these per-instance?
-            var tl = new Vector3(0, 0, 0);
-            var tr = new Vector3(_DistanceField.VirtualWidth, 0, 0);
-            var br = new Vector3(_DistanceField.VirtualWidth, _DistanceField.VirtualHeight, 0);
-            var bl = new Vector3(0, _DistanceField.VirtualHeight, 0);
+            var numTypes = (int)LightObstructionType.MAX + 1;
+            var batches  = new NativeBatch[numTypes];
 
-            var numTypes    = (int)LightObstructionType.MAX + 1;
-            var batches     = new NativeBatch[numTypes];
-            var firstOffset = new int[numTypes];
-            var primCount   = new int[numTypes];
+            Action<DeviceManager, object> setup = null;
 
-            try {
+            for (int k = 0; k < 2; k++) {
+                var dynamicFlag = (k != 0);
+                if (dynamicFlagFilter.HasValue && dynamicFlagFilter.Value != dynamicFlag)
+                    continue;
+
+                var buffer = dynamicFlag ? StaticDistanceFunctions : DynamicDistanceFunctions;
+                lock (buffer)
                 for (int i = 0; i < numTypes; i++) {
-                    var m = IlluminantMaterials.DistanceFunctionTypes[i];
+                    if (buffer.PrimCount[i] <= 0)
+                        continue;
 
-                    Action<DeviceManager, object> setup = null;
+                    var m = IlluminantMaterials.DistanceFunctionTypes[i];
+                    if (RenderTrace.EnableTracing)
+                        RenderTrace.Marker(group, (i * 2) + 3, "LightingRenderer {0} : Render {1}(s)", this.ToObjectID(), (LightObstructionType)i);
 
                     setup = (dm, _) => {
                         m.Effect.Parameters["SliceZ"].SetValue(sliceZ);
 
-                        var count = items.Count;
-
-                        lock (DistanceFunctionVertices) {
-                            if (DidUploadDistanceFieldBuffer)
-                                return;
-
-                            if (count > 0)
-                                DistanceFunctionVertexBuffer.SetData(DistanceFunctionVertices, 0, count * 4, SetDataOptions.Discard);
-
-                            DidUploadDistanceFieldBuffer = true;
-                        }
+                        lock (buffer)
+                            buffer.Flush();
                     };
 
-                    if (RenderTrace.EnableTracing)
-                        RenderTrace.Marker(group, (i * 2) + 3, "LightingRenderer {0} : Render {1}(s)", this.ToObjectID(), (LightObstructionType)i);
-                    
-                    batches[i] = NativeBatch.New(
+                    using (var batch = NativeBatch.New(
                         group, (i * 2) + 4, m, setup
-                    );
-                    firstOffset[i] = -1;
-                }
-
-                // HACK: Sort all the functions by type, fill the VB with each group,
-                //  then issue a single draw for each
-                using (var buffer = BufferPool<LightObstruction>.Allocate(items.Count))
-                lock (DistanceFunctionVertices) {
-                    Array.Clear(buffer.Data, 0, buffer.Data.Length);
-                    items.CopyTo(buffer.Data);
-                    Array.Sort(buffer.Data, 0, items.Count, LightObstructionTypeComparer.Instance);
-
-                    DidUploadDistanceFieldBuffer = false;
-
-                    int j = 0;
-                    for (int i = 0; i < items.Count; i++) {
-                        var item = buffer.Data[i];
-                        var type = (int)item.Type;
-
-                        if ((dynamicFlagFilter != null) && (item.IsDynamic != dynamicFlagFilter.Value))
-                            continue;
-
-                        if (firstOffset[type] == -1)
-                            firstOffset[type] = j;
-
-                        primCount[type] += 2;
-
-                        // See definition of DISTANCE_MAX in DistanceFieldCommon.fxh
-                        float offset = _DistanceField.MaximumEncodedDistance + 1;
-
-                        tl = new Vector3(item.Center.X - item.Size.X - offset, item.Center.Y - item.Size.Y - offset, 0);
-                        br = new Vector3(item.Center.X + item.Size.X + offset, item.Center.Y + item.Size.Y + offset, 0);
-                        tr = new Vector3(br.X, tl.Y, 0);
-                        bl = new Vector3(tl.X, br.Y, 0);
-
-                        DistanceFunctionVertices[j++] = new DistanceFunctionVertex(
-                            tl, item.Center, item.Size
-                        );
-                        DistanceFunctionVertices[j++] = new DistanceFunctionVertex(
-                            tr, item.Center, item.Size
-                        );
-                        DistanceFunctionVertices[j++] = new DistanceFunctionVertex(
-                            br, item.Center, item.Size
-                        );
-                        DistanceFunctionVertices[j++] = new DistanceFunctionVertex(
-                            bl, item.Center, item.Size
-                        );
-                    }
-
-                    for (int i = 0; i < numTypes; i++) {
-                        if (primCount[i] <= 0)
-                            continue;
-
-                        batches[i].Add(new NativeDrawCall(
+                    )) {
+                        batch.Add(new NativeDrawCall(
                             PrimitiveType.TriangleList,
-                            DistanceFunctionVertexBuffer, 0, 
-                            QuadIndexBuffer, firstOffset[i], 0, primCount[i] * 2,
-                            0, primCount[i]
+                            buffer.VertexBuffer, 0,
+                            QuadIndexBuffer, buffer.FirstOffset[i], 0, buffer.PrimCount[i] * 2,
+                            0, buffer.PrimCount[i]
                         ));
                     }
                 }
-            } finally {
-                foreach (var batch in batches)
-                    batch.Dispose();
             }
         }
         
