@@ -49,5 +49,9 @@ namespace Squared.Illuminant {
         public static LightObstruction Ellipsoid (Vector3 center, Vector3 size) {
             return new LightObstruction(LightObstructionType.Ellipsoid, center, size);
         }
+
+        public override string ToString () {
+            return string.Format("{3}{0}@{1} size={2}", Type, Center, Size, IsDynamic ? "dynamic " : "");
+        }
     }
 }
