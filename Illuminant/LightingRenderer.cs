@@ -1332,8 +1332,7 @@ namespace Squared.Illuminant {
                 // We incrementally do a partial update of the distance field.
                 int layer = 0;
 
-                BuildDistanceFieldDistanceFunctionBuffer(StaticDistanceFunctions, false);
-                BuildDistanceFieldDistanceFunctionBuffer(DynamicDistanceFunctions, true);
+                BuildDistanceFieldDistanceFunctionBuffer(dynamicFlagFilter);
 
                 while (slicesToUpdate > 0) {
                     // FIXME
@@ -1575,7 +1574,15 @@ namespace Squared.Illuminant {
                 ));
         }
 
-        private void BuildDistanceFieldDistanceFunctionBuffer (DistanceFunctionBuffer result, bool? dynamicFlagFilter) {
+        private DistanceFunctionBuffer PickDistanceFunctionBuffer (bool? dynamicFlagFilter) {
+            if (dynamicFlagFilter == false)
+                return StaticDistanceFunctions;
+            else
+                return DynamicDistanceFunctions;
+        }
+
+        private void BuildDistanceFieldDistanceFunctionBuffer (bool? dynamicFlagFilter) {
+            var result = PickDistanceFunctionBuffer(dynamicFlagFilter);
             var items = Environment.Obstructions;
 
             var tl = new Vector3(0, 0, 0);
@@ -1663,7 +1670,7 @@ namespace Squared.Illuminant {
                 if (dynamicFlagFilter.HasValue && dynamicFlagFilter.Value != dynamicFlag)
                     continue;
 
-                var buffer = dynamicFlag ? StaticDistanceFunctions : DynamicDistanceFunctions;
+                var buffer = PickDistanceFunctionBuffer(dynamicFlag);
                 lock (buffer)
                 for (int i = 0; i < numTypes; i++) {
                     if (buffer.PrimCount[i] <= 0)
@@ -1671,7 +1678,7 @@ namespace Squared.Illuminant {
 
                     var m = IlluminantMaterials.DistanceFunctionTypes[i];
                     if (RenderTrace.EnableTracing)
-                        RenderTrace.Marker(group, (i * 2) + 3, "LightingRenderer {0} : Render {1}(s)", this.ToObjectID(), (LightObstructionType)i);
+                        RenderTrace.Marker(group, (i * 2) + 3, "LightingRenderer {0} : Render {1}(s) to {2} buffer", this.ToObjectID(), (LightObstructionType)i, (buffer == DynamicDistanceFunctions) ? "dynamic" : "static");
 
                     setup = (dm, _) => {
                         m.Effect.Parameters["SliceZ"].SetValue(sliceZ);
