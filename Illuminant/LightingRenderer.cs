@@ -1306,8 +1306,12 @@ namespace Squared.Illuminant {
 
         private void RenderDistanceFieldPartition (ref int layerIndex, IBatchContainer resultGroup, bool? dynamicFlagFilter) {
             var ddf = _DistanceField as DynamicDistanceField;
-            var sliceInfo = ((ddf != null) && (dynamicFlagFilter == false)) ? ddf.StaticSliceInfo : _DistanceField.SliceInfo;
-            var renderTarget = ((ddf != null) && (dynamicFlagFilter == false)) ? ddf.StaticTexture : _DistanceField.Texture;
+            if (ddf == null)
+                dynamicFlagFilter = null;
+
+            var isRenderingStatic = ((ddf != null) && (dynamicFlagFilter == false));
+            var sliceInfo = isRenderingStatic ? ddf.StaticSliceInfo : _DistanceField.SliceInfo;
+            var renderTarget = isRenderingStatic ? ddf.StaticTexture : _DistanceField.Texture;
 
             int sliceCount = _DistanceField.SliceCount;
             int slicesToUpdate =
