@@ -126,12 +126,13 @@ namespace TestGame.Scenes {
         //  have additional values past 1.0 to use for HDR calculations
         const float HDRRangeFactor = 4;
 
-        bool VisualizeForeground = false;
-        bool ShowGBuffer         = false;
-        bool ShowLightmap        = false;
-        bool ShowDistanceField   = false;
-        bool ShowHistogram       = true;
-        bool Deterministic       = true;
+        Toggle ShowGBuffer, 
+            ShowDistanceField, 
+            ShowLightmap, 
+            ShowHistogram,
+            VisualizeForeground;
+
+        Toggle Deterministic;
 
         const float TargetLowLuminance = 0.10f;
         const float TargetHighLuminance = 0.53f;
@@ -151,6 +152,15 @@ namespace TestGame.Scenes {
 
         public SC3 (TestGame game, int width, int height)
             : base(game, 1396, 768) {
+            ShowLightmap.Key = Keys.L;
+            ShowGBuffer.Key = Keys.G;
+            ShowDistanceField.Key = Keys.D;
+            ShowHistogram.Key = Keys.H;
+            Deterministic.Key = Keys.R;
+            VisualizeForeground.Key = Keys.F;
+
+            ShowHistogram.Value = true;
+            Deterministic.Value = true;
         }
 
         private void CreateRenderTargets () {
@@ -646,24 +656,6 @@ White Point {1:00.000}
         public override void Update (GameTime gameTime) {
             if (Game.IsActive) {
                 const float step = 0.1f;
-
-                if (KeyWasPressed(Keys.L))
-                    ShowLightmap = !ShowLightmap;
-
-                if (KeyWasPressed(Keys.G))
-                    ShowGBuffer = !ShowGBuffer;
-
-                if (KeyWasPressed(Keys.F))
-                    VisualizeForeground = !VisualizeForeground;
-
-                if (KeyWasPressed(Keys.D))
-                    ShowDistanceField = !ShowDistanceField;
-
-                if (KeyWasPressed(Keys.H))
-                    ShowHistogram = !ShowHistogram;
-
-                if (KeyWasPressed(Keys.R))
-                    Deterministic = !Deterministic;
 
                 if (KeyWasPressed(Keys.S))
                     DistanceField.Save(Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyDocuments), "df.bin"));

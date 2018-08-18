@@ -133,6 +133,8 @@ namespace TestGame {
                         foreach (var s in g)
                             RenderSetting(s);
                         Nuke.nk_tree_state_pop(ctx);
+                        // Padding
+                        Nuke.nk_layout_row_dynamic(ctx, 3, 1);
                         g.Visible = (state == NuklearDotNet.nk_collapse_states.NK_MAXIMIZED);
                     }
                     i++;
