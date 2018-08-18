@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework.Input;
@@ -9,7 +10,16 @@ namespace TestGame {
     public interface ISetting {
         void Update (Scene s);
         string Name { get; set; }
+        string Group { get; set; }
         UTF8String GetLabelUTF8 ();
+    }
+
+    public class GroupAttribute : Attribute {
+        public string Name;
+
+        public GroupAttribute (string name) {
+            Name = name;
+        }
     }
 
     public unsafe struct UTF8String : IDisposable {
@@ -40,6 +50,7 @@ namespace TestGame {
     {
         public event EventHandler<T> Changed;
         public string Name { get; set; }
+        public string Group { get; set; }
         protected T _Value;
 
         private UTF8String LabelUTF8;
@@ -127,6 +138,63 @@ namespace TestGame {
                 formattedValue = string.Format("{0:00000}", Value);
             }
             return string.Format("{0,-2} {1:0} {2} {3,2}", MinusKey, formattedValue, Name, PlusKey);
+        }
+    }
+
+    public class SettingCollection : List<ISetting> {
+        public class Group : List<ISetting> {
+            public readonly string Name;
+            private UTF8String NameUTF8;
+
+            public Group (string name) {
+                Name = name;
+            }
+
+            public UTF8String GetNameUTF8 () {
+                if (NameUTF8.Length == 0)
+                    NameUTF8 = new UTF8String(Name);
+
+                return NameUTF8;
+            }
+        }
+
+        public Dictionary<string, Group> Groups = new Dictionary<string, Group>();
+
+        public SettingCollection (object obj) {
+            var tSetting = typeof(ISetting);
+            foreach (var f in obj.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)) {
+                if (!tSetting.IsAssignableFrom(f.FieldType))
+                    continue;
+
+                var setting = (ISetting)Activator.CreateInstance(f.FieldType);
+                setting.Name = f.Name;
+
+                var ca = f.GetCustomAttribute<GroupAttribute>();
+                if (ca != null)
+                    setting.Group = ca.Name;
+
+                if (setting.Group != null) {
+                    Group group;
+                    if (!Groups.TryGetValue(setting.Group, out group)) {
+                        Groups[setting.Group] = group = new Group(setting.Group);
+                    }
+
+                    group.Add(setting);
+                } else {
+                    Add(setting);
+                }
+
+                f.SetValue(obj, setting);
+            }
+        }
+
+        public void Update (Scene scene) {
+            foreach (var g in Groups.Values)
+                foreach (var s in g)
+                    s.Update(scene);
+
+            foreach (var s in this)
+                s.Update(scene);
         }
     }
 }

@@ -224,12 +224,6 @@ namespace TestGame.Scenes {
 
                 ir.DrawString(Game.Font, rightText, pos + Vector2.One, Color.Black, scale: 0.6f, layer: 4);
                 ir.DrawString(Game.Font, rightText, pos, Color.White, scale: 0.6f, layer: 5);
-
-                var upText = DirectionToText(-visInfo.Up);
-                pos = rect.TopRight - new Vector2(Game.Font.MeasureString(upText).X * 0.6f, -2);
-
-                ir.DrawString(Game.Font, upText, pos + Vector2.One, Color.Black, scale: 0.6f, layer: 4);
-                ir.DrawString(Game.Font, upText, pos, Color.White, scale: 0.6f, layer: 5);
             }
         }
         

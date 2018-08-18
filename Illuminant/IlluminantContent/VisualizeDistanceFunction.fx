@@ -15,8 +15,6 @@ uniform float3 AmbientColor;
 uniform float3 LightDirection;
 uniform float3 LightColor;
 
-uniform float Time;
-
 uniform int    FunctionType;
 uniform float3 FunctionCenter;
 uniform float3 FunctionSize;

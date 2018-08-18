@@ -7,8 +7,6 @@
 
 #define SELF_OCCLUSION_HACK 1.1
 
-uniform float Time;
-
 float SphereLightPixelCore(
     in float3 shadedPixelPosition,
     in float3 shadedPixelNormal,

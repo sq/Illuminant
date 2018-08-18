@@ -32,7 +32,7 @@ namespace TestGame {
         public KeyboardState PreviousKeyboardState, KeyboardState;
         public MouseState PreviousMouseState, MouseState;
 
-        public SpriteFont Font;
+        public FreeTypeFont Font;
         public Texture2D RampTexture;
 
         public readonly Scene[] Scenes;
@@ -80,34 +80,48 @@ namespace TestGame {
             ActiveSceneIndex = Scenes.Length - 1;
         }
 
+        protected unsafe void RenderSetting (ISetting s) {
+            var ctx = Nuklear.Context;
+
+            Nuke.nk_layout_row_dynamic(ctx, 26, 1);
+            var name = s.GetLabelUTF8();
+            var toggle = s as Toggle;
+            var slider = s as Slider;
+            if (toggle != null) {
+                // FIXME: Why is this backwards?
+                int result = Nuke.nk_check_text(ctx, name.pText, name.Length, toggle.Value ? 0 : 1);
+                toggle.Value = result == 0;
+            } else if (slider != null) {
+                Nuke.nk_label(ctx, name.pText, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
+                var bounds = Nuke.nk_widget_bounds(ctx);
+                slider.Value = Nuke.nk_slide_float(ctx, slider.Min.GetValueOrDefault(0), slider.Value, slider.Max.GetValueOrDefault(1), slider.Speed);
+                if (Nuke.nk_input_is_mouse_hovering_rect(&ctx->input, bounds) != 0) {
+                    using (var utf8 = new UTF8String(string.Format("   {0:####0.00}", slider.Value)))
+                        Nuke.nk_tooltip(ctx, utf8.pText);
+                }
+            }
+        }
+
         protected unsafe void UIScene () {
             var ctx = Nuklear.Context;
 
             var scene = Scenes[ActiveSceneIndex];
             var settings = scene.Settings;
             if (Nuke.nk_begin(
-                ctx, "Settings", new NuklearDotNet.NkRect(Graphics.PreferredBackBufferWidth - 504, Graphics.PreferredBackBufferHeight - 404, 500, 400), 
+                ctx, "Settings", new NuklearDotNet.NkRect(Graphics.PreferredBackBufferWidth - 504, Graphics.PreferredBackBufferHeight - 354, 500, 350), 
                 (uint)(NuklearDotNet.NkPanelFlags.Title | NuklearDotNet.NkPanelFlags.Border | NuklearDotNet.NkPanelFlags.Movable | NuklearDotNet.NkPanelFlags.Minimizable)
             ) != 0) {
-                foreach (var s in settings) {
-                    Nuke.nk_layout_row_dynamic(ctx, 0, 1);
-                    var name = s.GetLabelUTF8();
-                    var toggle = s as Toggle;
-                    var slider = s as Slider;
-                    if (toggle != null) {
-                        // FIXME: Why is this backwards?
-                        int result = Nuke.nk_check_text(ctx, name.pText, name.Length, toggle.Value ? 0 : 1);
-                        toggle.Value = result == 0;
-                    } else if (slider != null) {
-                        Nuke.nk_label(ctx, name.pText, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
-                        var bounds = Nuke.nk_widget_bounds(ctx);
-                        slider.Value = Nuke.nk_slide_float(ctx, slider.Min.GetValueOrDefault(0), slider.Value, slider.Max.GetValueOrDefault(1), slider.Speed);
-                        if (Nuke.nk_input_is_mouse_hovering_rect(&ctx->input, bounds) != 0) {
-                            using (var utf8 = new UTF8String(string.Format("   {0:####0.00}", slider.Value)))
-                                Nuke.nk_tooltip(ctx, utf8.pText);
-                        }
+                foreach (var g in settings.Groups.Values) {
+                    var nameUtf = g.GetNameUTF8();
+                    if (Nuke.nk_group_begin_titled(ctx, nameUtf.pText, nameUtf.pText, (uint)(NuklearDotNet.NkPanelFlags.Title | NuklearDotNet.NkPanelFlags.Border | NuklearDotNet.NkPanelFlags.NoScrollbar)) != 0) {
+                        foreach (var s in g)
+                            RenderSetting(s);
+                        Nuke.nk_group_end(ctx);
                     }
                 }
+
+                foreach (var s in settings)
+                    RenderSetting(s);
             }
 
             Nuke.nk_end(ctx);
@@ -126,12 +140,14 @@ namespace TestGame {
         protected override void LoadContent () {
             base.LoadContent();
 
-            Font = Content.Load<SpriteFont>("Font");
+            Font = new FreeTypeFont(RenderCoordinator, "FiraSans-Medium.otf") {
+                SizePoints = 22f
+            };
             Materials = new DefaultMaterialSet(Services);
             RampTexture = Content.Load<Texture2D>("light_ramp");
 
             Nuklear = new NuklearService(this) {
-                Font = new SpriteFontGlyphSource(Font),
+                Font = Font,
                 FontScale = 0.75f,
                 Scene = UIScene
             };
@@ -170,14 +186,15 @@ namespace TestGame {
                 }
             }
 
-            Scenes[ActiveSceneIndex].UpdateSettings();
-            Scenes[ActiveSceneIndex].Update(gameTime);
+            var scene = Scenes[ActiveSceneIndex];
+            scene.Settings.Update(scene);
+            scene.Update(gameTime);
 
             UpdateNuklearInput();
 
             PerformanceStats.Record(this);
 
-            Window.Title = String.Format("Scene {0}: {1}", ActiveSceneIndex, Scenes[ActiveSceneIndex].GetType().Name);
+            Window.Title = String.Format("Scene {0}: {1}", ActiveSceneIndex, scene.GetType().Name);
 
             base.Update(gameTime);
         }
@@ -210,7 +227,7 @@ namespace TestGame {
             using (var buffer = BufferPool<BitmapDrawCall>.Allocate(text.Length)) {
                 var layout = Font.LayoutString(text, buffer, scale: scale);
                 var layoutSize = layout.Size;
-                var position = new Vector2(Graphics.PreferredBackBufferWidth - (232 * scale), 30f).Floor();
+                var position = new Vector2(Graphics.PreferredBackBufferWidth - (300 * scale), 30f).Floor();
                 var dc = layout.DrawCalls;
 
                 // fill quad + text quads
@@ -227,7 +244,7 @@ namespace TestGame {
     }
 
     public abstract class Scene {
-        internal List<ISetting> Settings = new List<ISetting>();
+        internal SettingCollection Settings;
 
         public readonly TestGame Game;
         public readonly int Width, Height;
@@ -237,26 +254,12 @@ namespace TestGame {
             Width = width;
             Height = height;
 
-            var tSetting = typeof(ISetting);
-            foreach (var f in GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)) {
-                if (!tSetting.IsAssignableFrom(f.FieldType))
-                    continue;
-
-                var setting = (ISetting)Activator.CreateInstance(f.FieldType);
-                setting.Name = f.Name;
-                Settings.Add(setting);
-                f.SetValue(this, setting);
-            }
+            Settings = new SettingCollection(this);
         }
 
         public abstract void LoadContent ();
         public abstract void Draw (Frame frame);
         public abstract void Update (GameTime gameTime);
-
-        public void UpdateSettings () {
-            foreach (var s in Settings)
-                s.Update(this);
-        }
 
         internal bool KeyWasPressed (Keys key) {
             return Game.KeyboardState.IsKeyDown(key) && Game.PreviousKeyboardState.IsKeyUp(key);

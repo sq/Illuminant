@@ -23,8 +23,6 @@ uniform float NormalCount;
 static const float NormalSliceCount = 3;
 static const float SliceIndexToZ = 2.5;
 
-uniform float Time;
-
 uniform float BounceSearchDistance;
 uniform float InverseScaleFactor;
 uniform float Brightness;

@@ -31,25 +31,12 @@ namespace TestGame {
         public readonly TestGame Game;
         public Bounds Bounds;
 
-        private byte[] TextScratch = new byte[20480];
-        private GCHandle TextScratchPin;
-        private Encoder UTF8Encoder = Encoding.UTF8.GetEncoder();
-
-        public byte* GetTempUTF8 (string text) {
-            int bytesUsed, temp;
-            bool temp2;
-            var pResult = (byte*)TextScratchPin.AddrOfPinnedObject();
-            fixed (char* pText = text)
-                UTF8Encoder.Convert(pText, text.Length, pResult, TextScratch.Length, true, out temp, out bytesUsed, out temp2);
-            TextScratch[bytesUsed] = 0;
-            return pResult;
-        }
+        private readonly Dictionary<string, float> TextWidthCache = new Dictionary<string, float>(StringComparer.Ordinal);
 
         public NuklearService (TestGame game) {
             Game = game;
             QueryFontGlyphF = _QueryFontGlyphF;
             TextWidthF = _TextWidthF;
-            TextScratchPin = GCHandle.Alloc(TextScratch, GCHandleType.Pinned);
             Context = (nk_context*)NuklearAPI.Malloc((IntPtr)sizeof(nk_context));
             Nuklear.nk_init(Context, NuklearAPI.MakeAllocator(), null);
         }
@@ -96,8 +83,10 @@ namespace TestGame {
 
         private float _TextWidthF (NkHandle handle, float h, byte* s, int len) {
             var textUtf8 = Encoding.UTF8.GetString(s, len);
-            var layout = _Font.LayoutString(textUtf8, scale: FontScale);
-            return layout.Size.X;
+            float result;
+            if (!TextWidthCache.TryGetValue(textUtf8, out result))
+                TextWidthCache[textUtf8] = result = _Font.LayoutString(textUtf8, scale: FontScale).Size.X;
+            return result;
         }
 
         private void SetNewFont (IGlyphSource newFont) {

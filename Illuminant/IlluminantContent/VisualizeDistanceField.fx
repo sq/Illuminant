@@ -12,8 +12,6 @@ uniform float3 AmbientColor;
 uniform float3 LightDirection;
 uniform float3 LightColor;
 
-uniform float Time;
-
 float4 ApplyTransform (float3 position) {
     float3 localPosition = ((position - float3(Viewport.Position.xy, 0)) * float3(Viewport.Scale, 1));
     return mul(mul(float4(localPosition.xyz, 1), Viewport.ModelView), Viewport.Projection);

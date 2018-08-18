@@ -7,8 +7,6 @@
 
 #define SELF_OCCLUSION_HACK 1.1
 
-uniform float Time;
-
 float4 ApplyTransform (float3 position) {
     return mul(mul(float4(position.xyz, 1), Viewport.ModelView), Viewport.Projection);
 }

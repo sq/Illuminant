@@ -29,7 +29,8 @@ namespace TestGame.Scenes {
         const int MaxStepCount = 128;
         const float MaxLife = 200;
 
-        Toggle ShowGBuffer,
+        Toggle 
+            ShowGBuffer,
             ShowDistanceField,
             TwoPointFiveD,
             EnableShadows,
@@ -40,10 +41,11 @@ namespace TestGame.Scenes {
             ParticleCollisions,
             ShowParticles;
 
-        Slider DistanceFieldResolution,
-            LightmapScaleRatio,
-            StippleFactor,
-            OpacityFromLife;
+        [Group("Resolution")]
+        Slider DistanceFieldResolution, LightmapScaleRatio;
+
+        [Group("Particles")]
+        Slider StippleFactor, OpacityFromLife;
 
         RendererQualitySettings DirectionalQuality;
 

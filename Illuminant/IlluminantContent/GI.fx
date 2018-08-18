@@ -16,8 +16,6 @@
 
 #include "SphericalHarmonics.fxh"
 
-uniform float Time;
-
 uniform float Brightness;
 
 uniform float2 SphericalHarmonicsTexelSize;

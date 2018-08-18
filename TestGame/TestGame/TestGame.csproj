@@ -1,5 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\..\Illuminant\packages\SharpFont.4.0.1\build\SharpFont.props" Condition="Exists('..\..\Illuminant\packages\SharpFont.4.0.1\build\SharpFont.props')" />
+  <Import Project="..\..\Illuminant\packages\SharpFont.Dependencies.2.6\build\SharpFont.Dependencies.props" Condition="Exists('..\..\Illuminant\packages\SharpFont.Dependencies.2.6\build\SharpFont.Dependencies.props')" />
   <PropertyGroup>
     <ProjectGuid>{B689A415-A94D-4B41-9DAE-8A542EFB76B4}</ProjectGuid>
     <ProjectTypeGuids>{6D335F3A-9D43-41b4-9D22-F6F17C4BE596};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
@@ -15,6 +17,8 @@
     <XnaProfile>HiDef</XnaProfile>
     <XnaCrossPlatformGroupID>3107e376-0097-4e26-ab25-48a6d9eb659d</XnaCrossPlatformGroupID>
     <XnaOutputType>Game</XnaOutputType>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
     <DebugSymbols>true</DebugSymbols>
@@ -59,6 +63,10 @@
     <Reference Include="mscorlib">
       <Private>False</Private>
     </Reference>
+    <Reference Include="SharpFont, Version=4.0.1.200, Culture=neutral, PublicKeyToken=48add4c483071cdf, processorArchitecture=MSIL">
+      <HintPath>..\..\Illuminant\packages\SharpFont.4.0.1\lib\net45\SharpFont.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System">
       <Private>False</Private>
     </Reference>
@@ -89,6 +97,10 @@
     <Compile Include="TestGame.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Fracture\Squared\Render.Freetype\Squared.Render.Freetype.csproj">
+      <Project>{cfb603c1-8371-460d-ba60-91e697eae1b3}</Project>
+      <Name>Squared.Render.Freetype</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\Illuminant\Illuminant.csproj">
       <Project>{E86544AD-5974-4FEE-B96F-71331EFAB054}</Project>
       <Name>Illuminant</Name>
@@ -140,6 +152,19 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\TestGameContent\FiraSans-Light.otf">
+      <Link>FiraSans-Light.otf</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="..\TestGameContent\FiraSans-Medium.otf">
+      <Link>FiraSans-Medium.otf</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="..\TestGameContent\FiraSans-Regular.otf">
+      <Link>FiraSans-Regular.otf</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="packages.config" />
     <None Include="Properties\app.manifest" />
   </ItemGroup>
   <ItemGroup>
@@ -150,6 +175,13 @@
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\XNA Game Studio\Microsoft.Xna.GameStudio.targets" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\..\Illuminant\packages\SharpFont.Dependencies.2.6\build\SharpFont.Dependencies.props')" Text="$([System.String]::Format('$(ErrorText)', '..\..\Illuminant\packages\SharpFont.Dependencies.2.6\build\SharpFont.Dependencies.props'))" />
+    <Error Condition="!Exists('..\..\Illuminant\packages\SharpFont.4.0.1\build\SharpFont.props')" Text="$([System.String]::Format('$(ErrorText)', '..\..\Illuminant\packages\SharpFont.4.0.1\build\SharpFont.props'))" />
+  </Target>
   <!--
       To modify your build process, add your task inside one of the targets below and uncomment it. 
       Other similar extension points exist, see Microsoft.Common.targets.

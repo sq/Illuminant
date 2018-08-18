@@ -42,12 +42,10 @@ namespace ThreefoldTrials.Framework {
             var totalAverage = drawAverage + beginAverage + endAverage + waitAverage;
             var fpsAverage = 1000.0 / totalAverage;
 
-            StringBuilder.AppendFormat("wait  {0,7:0.00}\r\n", waitAverage);
-            StringBuilder.AppendFormat("bp    {0,7:0.00}\r\n", bpAverage);
-            StringBuilder.AppendFormat("ms/f  {0,7:0.00}\r\n", totalAverage);
-            StringBuilder.AppendFormat("FPS  ~{0,7:0.00}\r\n", fpsAverage);
-            StringBuilder.AppendFormat("batch {0,7}\r\n", game.PreviousFrameTiming.BatchCount);
-            StringBuilder.AppendFormat("prim ~{0,7}\r\n", game.PreviousFrameTiming.PrimitiveCount + primCountOffset);
+            StringBuilder.AppendFormat("ms/f {0,7:000.00}\r\n", totalAverage);
+            StringBuilder.AppendFormat("FPS ~{0,7:000.00}\r\n", fpsAverage);
+            StringBuilder.AppendFormat("batch {0,7:0000}\r\n", game.PreviousFrameTiming.BatchCount);
+            StringBuilder.AppendFormat("prim ~{0,7:0000000}\r\n", game.PreviousFrameTiming.PrimitiveCount + primCountOffset);
 
             return StringBuilder.ToString();
         }
