@@ -27,19 +27,24 @@ namespace TestGame.Scenes {
         LightingEnvironment Environment;
         LightingRenderer Renderer;
 
-        bool ShowOutlines      = false;
-        bool ShowSurfaces      = true;
-        bool ShowDistanceField = false;
+        [Group("Visualization")]
+        Toggle ShowSurfaces, ShowOutlines, ShowDistanceField;
 
-        int  SelectedObject = 0;
+        [Group("Edit")]
+        Slider SelectedObject;
 
-        MouseState PreviousMouseState;
         int?       ActiveViewportIndex = null;
 
         Viewport[] Viewports;
 
         public DistanceFieldEditor (TestGame game, int width, int height)
             : base(game, 256, 256) {
+
+            ShowSurfaces.Key = Keys.D1;
+            ShowSurfaces.Value = true;
+
+            ShowOutlines.Key = Keys.D2;
+            ShowDistanceField.Key = Keys.D3;
         }
 
         public override void LoadContent () {
@@ -173,6 +178,9 @@ namespace TestGame.Scenes {
                     }
                 }
             }
+
+            SelectedObject.Max = Environment.Obstructions.Count - 1;
+            SelectedObject.Speed = 1;
         }
 
         private string DirectionToText (Vector3 dir) {
@@ -201,7 +209,7 @@ namespace TestGame.Scenes {
                     rect, gaze, frame, 3, mode: VisualizationMode.Outlines
                 );
 
-            var obj = Environment.Obstructions[SelectedObject];
+            var obj = Environment.Obstructions[(int)SelectedObject.Value];
             Renderer.VisualizeDistanceField(
                 rect, gaze, frame, 4, obj, 
                 VisualizationMode.Outlines, BlendState.AlphaBlend,
@@ -295,18 +303,18 @@ namespace TestGame.Scenes {
                     ActiveViewportIndex = null;
                 } else if (ActiveViewportIndex.HasValue) {
                     var viewport = Viewports[ActiveViewportIndex.Value];
-                    var delta = new Vector2(ms.X - PreviousMouseState.X, ms.Y - PreviousMouseState.Y);
+                    var delta = new Vector2(ms.X - Game.PreviousMouseState.X, ms.Y - Game.PreviousMouseState.Y);
                     delta.X *= (Renderer.Configuration.MaximumRenderSize.First / viewport.Rectangle.Size.X);
                     delta.Y *= (Renderer.Configuration.MaximumRenderSize.Second / viewport.Rectangle.Size.Y);
 
                     var posChange = (viewport.Right * delta.X) + (viewport.Up * -delta.Y);
 
                     if (posChange.LengthSquared() > 0) {
-                        var obs = Environment.Obstructions[SelectedObject];
+                        var obs = Environment.Obstructions[(int)SelectedObject.Value];
 
-                        if (ms.LeftButton == ButtonState.Pressed)
+                        if (Game.LeftMouse)
                             obs.Center += posChange;
-                        if (ms.RightButton == ButtonState.Pressed) {
+                        if (Game.RightMouse) {
                             obs.Size += posChange;
                             if (obs.Size.X < 2)
                                 obs.Size.X = 2;
@@ -329,16 +337,7 @@ namespace TestGame.Scenes {
                     }
                 }
 
-                SelectedObject = Arithmetic.Wrap((int)(ms.ScrollWheelValue / 160.0f), 0, Environment.Obstructions.Count - 1);
-
-                if (KeyWasPressed(Keys.D1))
-                    ShowSurfaces = !ShowSurfaces;
-
-                if (KeyWasPressed(Keys.D2))
-                    ShowOutlines = !ShowOutlines;
-
-                if (KeyWasPressed(Keys.D3))
-                    ShowDistanceField = !ShowDistanceField;
+                // SelectedObject.Value = Arithmetic.Wrap((int)(ms.ScrollWheelValue / 160.0f), 0, Environment.Obstructions.Count - 1);
 
                 const float speed = 1;
                 var translation = DeltaFromKeys(
@@ -355,7 +354,7 @@ namespace TestGame.Scenes {
                 );
 
                 if ((translation.LengthSquared() > 0) || (growth.LengthSquared() > 0)) {
-                    var obs = Environment.Obstructions[SelectedObject];
+                    var obs = Environment.Obstructions[(int)SelectedObject.Value];
                     obs.Center += translation;
                     obs.Size = new Vector3(
                         Math.Max(2, obs.Size.X + growth.X),
@@ -372,8 +371,6 @@ namespace TestGame.Scenes {
                 var magicAngle = Vector3.Transform(-Vector3.UnitY, m2);
                 Viewports[Viewports.Length - 1].ViewAngle = magicAngle;
                 */
-
-                PreviousMouseState = ms;
             }
         }
     }

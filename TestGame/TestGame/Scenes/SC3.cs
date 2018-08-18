@@ -684,7 +684,7 @@ White Point {1:00.000}
                 var mousePos = new Vector3(ms.X, ms.Y, LightZ);
 
                 Projectile proj;
-                if (ms.LeftButton == ButtonState.Pressed) {
+                if (Game.LeftMouse) {
                     var projectileTarget = new Vector3(636, 275, 80f);
                     proj = new Projectile(mousePos, projectileTarget);
                     Environment.Lights.Add(proj.Light);

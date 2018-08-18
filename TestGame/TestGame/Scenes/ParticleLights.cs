@@ -29,23 +29,23 @@ namespace TestGame.Scenes {
         const int MaxStepCount = 128;
         const float MaxLife = 200;
 
-        Toggle 
-            ShowGBuffer,
-            ShowDistanceField,
-            TwoPointFiveD,
+        [Group("Visualization")]
+        Toggle ShowGBuffer, ShowDistanceField;
+
+        [Group("Lighting")]
+        Toggle TwoPointFiveD,
             EnableShadows,
             EnableDirectionalLights,
             EnableParticleShadows,
-            EnableParticleLights,
-            sRGB,
-            ParticleCollisions,
-            ShowParticles;
+            EnableParticleLights;
 
         [Group("Resolution")]
         Slider DistanceFieldResolution, LightmapScaleRatio;
 
         [Group("Particles")]
         Slider StippleFactor, OpacityFromLife;
+        [Group("Particles")]
+        Toggle ParticleCollisions, ShowParticles;
 
         RendererQualitySettings DirectionalQuality;
 
@@ -75,7 +75,6 @@ namespace TestGame.Scenes {
             EnableParticleShadows.Key = Keys.A;
             EnableParticleLights.Key = Keys.P;
             ShowParticles.Key = Keys.O;
-            sRGB.Key = Keys.R;
             ParticleCollisions.Key = Keys.C;
 
             DistanceFieldResolution.MinusKey = Keys.D5;
@@ -101,7 +100,7 @@ namespace TestGame.Scenes {
             OpacityFromLife.PlusKey = Keys.OemQuotes;
             OpacityFromLife.Min = 50;
             OpacityFromLife.Max = MaxLife;
-            OpacityFromLife.Speed = 50f;
+            OpacityFromLife.Speed = 10f;
             OpacityFromLife.Value = MaxLife / 2f;
 
             DistanceFieldResolution.Changed += (s, e) => CreateDistanceField();
@@ -364,9 +363,8 @@ namespace TestGame.Scenes {
                     bg, 2, Width, Height,
                     hdr: new HDRConfiguration {
                         InverseScaleFactor = 4,
-                        Gamma = sRGB ? 1.8f : 1.0f
-                    }, 
-                    resolveToSRGB: sRGB
+                        Gamma = 1.0f
+                    }
                 );
             };
 
@@ -459,7 +457,7 @@ namespace TestGame.Scenes {
                 var s = System.Transforms.OfType<Spawner>().First();
                 s.Position.Constant = new Vector4(mousePos, 0);
                 System.Configuration.OpacityFromLife = OpacityFromLife.Value;
-                s.IsActive = ms.LeftButton == ButtonState.Pressed;
+                s.IsActive = Game.LeftMouse;
             }
         }
     }

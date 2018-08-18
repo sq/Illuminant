@@ -273,7 +273,7 @@ namespace TestGame.Scenes {
                 Game.IsMouseVisible = true;
 
                 var mousePos = new Vector3(ms.X, ms.Y, 1);
-                if (ms.LeftButton == ButtonState.Pressed) {
+                if (Game.LeftMouse) {
                     var d = mousePos - Renderer.Probes.Last().Position;
                     d.Z = 0;
                     if (d.Length() >= 1) {

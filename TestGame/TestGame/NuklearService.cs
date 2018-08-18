@@ -167,6 +167,19 @@ namespace TestGame {
             gb.AddFilledRing(bounds.Center, radius - (Vector2.One * 1.4f), radius + softEdge, color, Color.Transparent);
         }
 
+        private void RenderCommand (nk_command_triangle_filled* c) {
+            var gb = PendingIR.GetGeometryBatch(null, false, BlendState.AlphaBlend);
+            var color = ConvertColor(c->color);
+            var v1 = new Vector2(c->a.x, c->a.y);
+            var v2 = new Vector2(c->a.x, c->a.y);
+            var v3 = new Vector2(c->a.x, c->a.y);
+            // FIXME: Fill the triangle
+            // FIXME: Why are these lines invisible?
+            gb.AddLine(v1, v2, color);
+            gb.AddLine(v2, v3, color);
+            gb.AddLine(v3, v1, color);
+        }
+
         private HashSet<string> WarnedCommands = new HashSet<string>();
 
         private void HighLevelRenderCommand (nk_command* c) {
@@ -185,6 +198,9 @@ namespace TestGame {
                     break;
                 case nk_command_type.NK_COMMAND_CIRCLE_FILLED:
                     RenderCommand((nk_command_circle_filled*)c);
+                    break;
+                case nk_command_type.NK_COMMAND_TRIANGLE_FILLED:
+                    RenderCommand((nk_command_triangle_filled*)c);
                     break;
                 default:
                     var name = c->ctype.ToString();

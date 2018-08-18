@@ -72,7 +72,8 @@ namespace TestGame {
                 new SimpleParticles(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new LightProbeTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new GlobalIlluminationTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new DungeonGI(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
+                // FIXME: Busted
+                // new DungeonGI(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new ParticleLights(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new DynamicObstructions(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
             };
@@ -137,21 +138,23 @@ namespace TestGame {
 
                 i++;
 
-                var showRest = true;
-                if (settings.Groups.Count > 0) {
-                    if (Other.Length == 0)
-                        Other = new UTF8String("Misc");
-                    showRest = Nuke.nk_tree_push_hashed(
-                        ctx, NuklearDotNet.nk_tree_type.NK_TREE_TAB, Other.pText, NuklearDotNet.nk_collapse_states.NK_MAXIMIZED, Other.pText, Other.Length, i
-                    ) != 0;
-                }
+                if (settings.Count > 0) {
+                    var showRest = true;
+                    if (settings.Groups.Count > 0) {
+                        if (Other.Length == 0)
+                            Other = new UTF8String("Misc");
+                        showRest = Nuke.nk_tree_push_hashed(
+                            ctx, NuklearDotNet.nk_tree_type.NK_TREE_TAB, Other.pText, NuklearDotNet.nk_collapse_states.NK_MAXIMIZED, Other.pText, Other.Length, i
+                        ) != 0;
+                    }
 
-                if (showRest) {
-                    foreach (var s in settings)
-                        RenderSetting(s);
+                    if (showRest) {
+                        foreach (var s in settings)
+                            RenderSetting(s);
 
-                    if (settings.Groups.Count > 0)
-                        Nuke.nk_tree_state_pop(ctx);
+                        if (settings.Groups.Count > 0)
+                            Nuke.nk_tree_state_pop(ctx);
+                    }
                 }
             }
 
@@ -165,7 +168,22 @@ namespace TestGame {
                 Nuke.nk_input_motion(ctx, MouseState.X, MouseState.Y);
             if (MouseState.LeftButton != PreviousMouseState.LeftButton)
                 Nuke.nk_input_button(ctx, NuklearDotNet.nk_buttons.NK_BUTTON_LEFT, MouseState.X, MouseState.Y, MouseState.LeftButton == ButtonState.Pressed ? 1 : 0);
+            var scrollDelta = (MouseState.ScrollWheelValue - PreviousMouseState.ScrollWheelValue) / 110f;
+            if (scrollDelta != 0)
+                Nuke.nk_input_scroll(ctx, new NuklearDotNet.nk_vec2 { x = 0, y = scrollDelta });
             Nuke.nk_input_end(ctx);
+        }
+
+        public bool LeftMouse {
+            get {
+                return MouseState.LeftButton == ButtonState.Pressed;
+            }
+        }
+
+        public bool RightMouse {
+            get {
+                return MouseState.RightButton == ButtonState.Pressed;
+            }
         }
 
         protected override void LoadContent () {
