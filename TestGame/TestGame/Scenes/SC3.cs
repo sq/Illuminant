@@ -130,9 +130,11 @@ namespace TestGame.Scenes {
             ShowDistanceField, 
             ShowLightmap, 
             ShowHistogram,
-            VisualizeForeground;
+            VisualizeForeground,
+            EnableGBuffer,
+            Deterministic;
 
-        Toggle Deterministic;
+        Slider ZToYMultiplier;
 
         const float TargetLowLuminance = 0.10f;
         const float TargetHighLuminance = 0.53f;
@@ -158,9 +160,16 @@ namespace TestGame.Scenes {
             ShowHistogram.Key = Keys.H;
             Deterministic.Key = Keys.R;
             VisualizeForeground.Key = Keys.F;
+            EnableGBuffer.Key = Keys.E;
 
             ShowHistogram.Value = true;
             Deterministic.Value = true;
+            EnableGBuffer.Value = true;
+
+            ZToYMultiplier.Min = 0.0f;
+            ZToYMultiplier.Max = 4.0f;
+            ZToYMultiplier.Speed = 0.1f;
+            ZToYMultiplier.Value = 2.5f;
         }
 
         private void CreateRenderTargets () {
@@ -193,7 +202,6 @@ namespace TestGame.Scenes {
 
             Environment.GroundZ = ForegroundEnvironment.GroundZ = 64;
             Environment.MaximumZ = ForegroundEnvironment.MaximumZ = 200;
-            Environment.ZToYMultiplier = ForegroundEnvironment.ZToYMultiplier = 2.5f;
 
             Background = Game.Content.Load<Texture2D>("bg_noshadows");
             BackgroundData = Game.Content.Load<Texture2D>("bg_data");
@@ -248,7 +256,7 @@ namespace TestGame.Scenes {
                         LongStepFactor = 0.7f,
                         OcclusionToOpacityPower = 1.35f,
                         MaxConeRadius = 30,
-                    },
+                    }
                 }
             ) {
                 DistanceField = DistanceField
@@ -404,6 +412,11 @@ namespace TestGame.Scenes {
 
             // DistanceField.Invalidate();
 
+            Renderer.Configuration.EnableGBuffer = 
+                ForegroundRenderer.Configuration.EnableGBuffer = EnableGBuffer.Value;
+
+            Environment.ZToYMultiplier = ForegroundEnvironment.ZToYMultiplier = ZToYMultiplier.Value;
+
             Renderer.UpdateFields(frame, -16);
             ForegroundRenderer.UpdateFields(frame, -15);
 
@@ -422,7 +435,7 @@ namespace TestGame.Scenes {
                 }
             };
 
-            int layer = 2;
+            int layer = -14;
             var lighting = Renderer.RenderLighting(frame, layer, 1.0f / HDRRangeFactor);
             var foregroundLighting = ForegroundRenderer.RenderLighting(frame, layer++, 1.0f / HDRRangeFactor);
 
@@ -495,6 +508,8 @@ namespace TestGame.Scenes {
                     hdrConfiguration
                 );
             };
+
+            layer = 1;
 
             using (var group = BatchGroup.New(frame, layer++)) {
                 if (ShowLightmap) {

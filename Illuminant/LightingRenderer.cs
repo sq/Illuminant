@@ -308,6 +308,7 @@ namespace Squared.Illuminant {
         // FIXME: Thread sync issue?
         private Vector2? PendingDrawViewportPosition, PendingDrawViewportScale;
         private Vector2? PendingFieldViewportPosition, PendingFieldViewportScale;
+        private float    PreviousZToYMultiplier;
 
         private readonly PrimitiveBeforeDraw<BillboardVertex> SetTextureForGBufferBillboard;
 
@@ -1276,11 +1277,13 @@ namespace Squared.Illuminant {
             ComputeUniforms();
 
             var viewportChanged = (PendingFieldViewportPosition != viewportPosition) || (PendingFieldViewportScale != viewportScale);
+            var paramsChanged = (Environment.ZToYMultiplier != PreviousZToYMultiplier);
 
             PendingFieldViewportPosition = viewportPosition;
             PendingFieldViewportScale = viewportScale;
+            PreviousZToYMultiplier = Environment.ZToYMultiplier;
 
-            if ((_GBuffer != null) && (!_GBuffer.IsValid || viewportChanged)) {
+            if ((_GBuffer != null) && (!_GBuffer.IsValid || viewportChanged || paramsChanged)) {
                 var renderWidth = (int)(Configuration.MaximumRenderSize.First / Configuration.RenderScale.X);
                 var renderHeight = (int)(Configuration.MaximumRenderSize.Second / Configuration.RenderScale.Y);
 
