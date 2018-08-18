@@ -101,7 +101,7 @@ namespace TestGame {
                 var bounds = Nuke.nk_widget_bounds(ctx);
                 slider.Value = Nuke.nk_slide_float(ctx, slider.Min.GetValueOrDefault(0), slider.Value, slider.Max.GetValueOrDefault(1), slider.Speed);
                 if (Nuke.nk_input_is_mouse_hovering_rect(&ctx->input, bounds) != 0) {
-                    using (var utf8 = new UTF8String(string.Format("   {0:####0.00}", slider.Value)))
+                    using (var utf8 = new UTF8String("    " + slider.GetFormattedValue()))
                         Nuke.nk_tooltip(ctx, utf8.pText);
                 }
             }

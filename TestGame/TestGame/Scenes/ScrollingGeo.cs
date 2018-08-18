@@ -29,16 +29,32 @@ namespace TestGame.Scenes {
         const int LightmapScaleRatio = 1;
         const int MaxStepCount = 128;
 
-        bool ShowGBuffer       = false;
-        bool ShowLightmap      = false;
-        bool ShowDistanceField = false;
-        bool Deterministic     = false;
-        float CameraX, CameraY;
-        float CameraZoom = 1.0f;
-        int CameraZoomIndex = 100;
+        [Group("Visualization")]
+        Toggle ShowGBuffer,
+            ShowDistanceField;
+
+        Toggle Deterministic;
+
+        Slider CameraDistance, CameraX, CameraY;
 
         public ScrollingGeo (TestGame game, int width, int height)
             : base(game, 1024, 1024) {
+
+            Deterministic.Value = true;
+            CameraDistance.Value = 100;
+
+            ShowGBuffer.Key = Keys.G;
+            ShowDistanceField.Key = Keys.D;
+            Deterministic.Key = Keys.R;
+            CameraDistance.MinusKey = Keys.OemMinus;
+            CameraDistance.PlusKey = Keys.OemPlus;
+
+            CameraDistance.Min = 10;
+            CameraDistance.Max = 300;
+            CameraDistance.Speed = 10;
+
+            CameraX.Max = CameraY.Max = 4096;
+            CameraX.Speed = CameraY.Speed = 1;
         }
 
         private void CreateRenderTargets () {
@@ -139,7 +155,7 @@ namespace TestGame.Scenes {
         public override void Draw (Squared.Render.Frame frame) {
             CreateRenderTargets();
 
-            var cz = new Vector2(CameraZoom);
+            var cz = new Vector2(100f / CameraDistance.Value);
             var cp = new Vector2(CameraX, CameraY);
             Vector2 cvp, uvo;
             Renderer.ComputeViewPositionAndUVOffset(
@@ -178,33 +194,12 @@ namespace TestGame.Scenes {
             using (var group = BatchGroup.New(frame, 0)) {
                 ClearBatch.AddNew(group, 0, Game.Materials.Clear, clearColor: Color.Blue);
 
-                if (ShowLightmap || true) {
-                    using (var bb = BitmapBatch.New(
-                        group, 1,
-                        Game.Materials.Get(Game.Materials.ScreenSpaceBitmap, blendState: BlendState.Opaque),
-                        samplerState: SamplerState.LinearClamp
-                    ))
-                        bb.Add(new BitmapDrawCall(Lightmap, Vector2.Zero, new Bounds(uvo, Vector2.One + uvo)));
-                } else {
-                    /*
-                    using (var bb = BitmapBatch.New(
-                        group, 1,
-                        Game.Materials.Get(
-                            ShowGBuffer
-                                ? Game.Materials.ScreenSpaceBitmap
-                                : Game.Materials.ScreenSpaceLightmappedBitmap,
-                            blendState: BlendState.Opaque
-                        ),
-                        samplerState: SamplerState.PointClamp
-                    )) {
-                        var dc = new BitmapDrawCall(
-                            Background, Vector2.Zero, Color.White * (ShowGBuffer ? 0.7f : 1.0f)
-                        );
-                        dc.Textures = new TextureSet(dc.Textures.Texture1, Lightmap);
-                        bb.Add(dc);
-                    }
-                    */
-                }
+                using (var bb = BitmapBatch.New(
+                    group, 1,
+                    Game.Materials.Get(Game.Materials.ScreenSpaceBitmap, blendState: BlendState.Opaque),
+                    samplerState: SamplerState.LinearClamp
+                ))
+                    bb.Add(new BitmapDrawCall(Lightmap, Vector2.Zero, new Bounds(uvo, Vector2.One + uvo)));
 
                 if (ShowDistanceField) {
                     float dfScale = Math.Min(
@@ -263,36 +258,19 @@ namespace TestGame.Scenes {
             if (Game.IsActive) {
                 const float step = 0.1f;
 
-                if (KeyWasPressed(Keys.L))
-                    ShowLightmap = !ShowLightmap;
+                var cameraZoom = 100f / CameraDistance.Value;
 
-                if (KeyWasPressed(Keys.G))
-                    ShowGBuffer = !ShowGBuffer;
-
-                if (KeyWasPressed(Keys.D))
-                    ShowDistanceField = !ShowDistanceField;
-
-                if (KeyWasPressed(Keys.R))
-                    Deterministic = !Deterministic;
-
-                if (Game.KeyboardState.IsKeyDown(Keys.OemMinus))
-                    CameraZoomIndex = Math.Min(300, CameraZoomIndex + 1);
-                else if (Game.KeyboardState.IsKeyDown(Keys.OemPlus))
-                    CameraZoomIndex = Math.Max(10, CameraZoomIndex - 1);
-
-                CameraZoom = 100f / CameraZoomIndex;
-
-                var scrollSpeed = 3 / CameraZoom;
+                var scrollSpeed = 3 / cameraZoom;
 
                 if (Game.KeyboardState.IsKeyDown(Keys.Right))
-                    CameraX += scrollSpeed;
+                    CameraX.Value += scrollSpeed;
                 else if (Game.KeyboardState.IsKeyDown(Keys.Left))
-                    CameraX -= scrollSpeed;
+                    CameraX.Value -= scrollSpeed;
 
                 if (Game.KeyboardState.IsKeyDown(Keys.Up))
-                    CameraY -= scrollSpeed;
+                    CameraY.Value -= scrollSpeed;
                 else if (Game.KeyboardState.IsKeyDown(Keys.Down))
-                    CameraY += scrollSpeed;
+                    CameraY.Value += scrollSpeed;
 
                 var time = (float)Time.Seconds;
 
@@ -305,14 +283,14 @@ namespace TestGame.Scenes {
                     LightZ = 0.01f;
 
                 // FIXME: Zoom
-                var mousePos = new Vector3((ms.X / CameraZoom) + CameraX, (ms.Y / CameraZoom) + CameraY, LightZ);                
+                var mousePos = new Vector3((ms.X / cameraZoom) + CameraX, (ms.Y / cameraZoom) + CameraY, LightZ);                
 
                 if (Deterministic) {
                     MovableLight.Position = new Vector3(671, 394, 97.5f);
                     MovableLight.Radius = 24;
                 } else {
                     MovableLight.Position = mousePos;
-                    MovableLight.Radius = 24 / CameraZoom;
+                    MovableLight.Radius = 24 / cameraZoom;
                 }
             }
         }

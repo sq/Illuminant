@@ -12,6 +12,7 @@ namespace TestGame {
         string Name { get; set; }
         string Group { get; set; }
         UTF8String GetLabelUTF8 ();
+        string GetFormattedValue ();
     }
 
     public class GroupAttribute : Attribute {
@@ -75,10 +76,44 @@ namespace TestGame {
 
         protected abstract string GetLabelText ();
 
+        public abstract string GetFormattedValue ();
+
         public abstract void Update (Scene s);
 
         public static implicit operator T (Setting<T> setting) {
             return setting.Value;
+        }
+
+        public static string KeyToString (Keys key) {
+            switch (key) {
+                case Keys.None:
+                    return "";
+                case Keys.OemMinus:
+                    return "-";
+                case Keys.OemPlus:
+                    return "+";
+                case Keys.OemSemicolon:
+                    return ";";
+                case Keys.OemQuotes:
+                    return "\"";
+                case Keys.OemComma:
+                    return ",";
+                case Keys.OemPeriod:
+                    return ".";
+                case Keys.D0:
+                case Keys.D1:
+                case Keys.D2:
+                case Keys.D3:
+                case Keys.D4:
+                case Keys.D5:
+                case Keys.D6:
+                case Keys.D7:
+                case Keys.D8:
+                case Keys.D9:
+                    return key.ToString().Substring(1);
+                default:
+                    return key.ToString();
+            }
         }
     }
 
@@ -91,7 +126,11 @@ namespace TestGame {
         }
 
         protected override string GetLabelText () {
-            return string.Format("({1}) {0}", Name, Key);
+            return string.Format("{1} {0}", Name, KeyToString(Key)).Trim();
+        }
+
+        public override string GetFormattedValue () {
+            return Value.ToString();
         }
 
         public override string ToString () {
@@ -127,16 +166,22 @@ namespace TestGame {
         }
 
         protected override string GetLabelText () {
-            return string.Format("({0}) {1} ({2})", MinusKey, Name, PlusKey);
+            if ((MinusKey != Keys.None) || (PlusKey != Keys.None))
+                return string.Format("{0} {1} / {2}", Name, KeyToString(MinusKey), KeyToString(PlusKey)).Trim();
+            else
+                return Name;
+        }
+
+        public override string GetFormattedValue () {
+            if (Speed < 1) {
+                return string.Format("{0:0.000}", Value);
+            } else {
+                return string.Format("{0:0}", Value);
+            }
         }
 
         public override string ToString () {
-            string formattedValue;
-            if (Speed < 1) {
-                formattedValue = string.Format("{0:00.000}", Value);
-            } else {
-                formattedValue = string.Format("{0:00000}", Value);
-            }
+            var formattedValue = GetFormattedValue();
             return string.Format("{0,-2} {1:0} {2} {3,2}", MinusKey, formattedValue, Name, PlusKey);
         }
     }
