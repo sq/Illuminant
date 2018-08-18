@@ -85,21 +85,27 @@ namespace TestGame {
 
             var scene = Scenes[ActiveSceneIndex];
             var settings = scene.Settings;
-            if (Nuke.nk_begin_titled(
-                ctx, "Settings", scene.GetType().Name + " settings", new NuklearDotNet.NkRect(4, 4, 640, 480), 
-                (uint)(NuklearDotNet.NkPanelFlags.Title | NuklearDotNet.NkPanelFlags.Border | NuklearDotNet.NkPanelFlags.Movable)
+            if (Nuke.nk_begin(
+                ctx, "Settings", new NuklearDotNet.NkRect(Graphics.PreferredBackBufferWidth - 504, Graphics.PreferredBackBufferHeight - 404, 500, 400), 
+                (uint)(NuklearDotNet.NkPanelFlags.Title | NuklearDotNet.NkPanelFlags.Border | NuklearDotNet.NkPanelFlags.Movable | NuklearDotNet.NkPanelFlags.Minimizable)
             ) != 0) {
-                Nuke.nk_layout_row_dynamic(ctx, 0, 1);
                 foreach (var s in settings) {
+                    Nuke.nk_layout_row_dynamic(ctx, 0, 1);
+                    var name = s.GetLabelUTF8();
                     var toggle = s as Toggle;
                     var slider = s as Slider;
                     if (toggle != null) {
                         // FIXME: Why is this backwards?
-                        int result = Nuke.nk_check_text(ctx, Nuklear.GetTempUTF8(toggle.Name), toggle.Name.Length, toggle.Value ? 0 : 1);
+                        int result = Nuke.nk_check_text(ctx, name.pText, name.Length, toggle.Value ? 0 : 1);
                         toggle.Value = result == 0;
                     } else if (slider != null) {
-                        Nuke.nk_label(ctx, slider.Name, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
+                        Nuke.nk_label(ctx, name.pText, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
+                        var bounds = Nuke.nk_widget_bounds(ctx);
                         slider.Value = Nuke.nk_slide_float(ctx, slider.Min.GetValueOrDefault(0), slider.Value, slider.Max.GetValueOrDefault(1), slider.Speed);
+                        if (Nuke.nk_input_is_mouse_hovering_rect(&ctx->input, bounds) != 0) {
+                            using (var utf8 = new UTF8String(string.Format("   {0:####0.00}", slider.Value)))
+                                Nuke.nk_tooltip(ctx, utf8.pText);
+                        }
                     }
                 }
             }
@@ -193,8 +199,6 @@ namespace TestGame {
 
             Nuklear.Render(gameTime.ElapsedGameTime.Seconds, frame, 9997);
 
-            Scenes[ActiveSceneIndex].DrawSettings(frame, 9998);
-
             DrawPerformanceStats(ref ir);
         }
 
@@ -254,127 +258,8 @@ namespace TestGame {
                 s.Update(this);
         }
 
-        public void DrawSettings (IBatchContainer container, int layer) {
-            float scale = 0.75f;
-
-            var count = Settings.Count;
-            var lineHeight = Game.Font.LineSpacing * scale;
-
-            using (var buffer = BufferPool<BitmapDrawCall>.Allocate(4096)) {
-                var ir = new ImperativeRenderer(
-                    container, Game.Materials,
-                    blendState: BlendState.AlphaBlend,
-                    depthStencilState: DepthStencilState.None,
-                    rasterizerState: RasterizerState.CullNone,
-                    samplerState: SamplerState.LinearClamp,
-                    worldSpace: false,
-                    layer: layer
-                );
-
-                float y = Game.Graphics.PreferredBackBufferHeight - (count * lineHeight) - 10;
-                var sle = new StringLayoutEngine {
-                    position = new Vector2(10, y),
-                    scale = scale,
-                    color = Color.White,
-                    buffer = new ArraySegment<BitmapDrawCall>(buffer.Data)
-                };
-
-                sle.Initialize();
-
-                var gs = new SpriteFontGlyphSource(Game.Font);
-                foreach (var s in Settings) {
-                    sle.AppendText(gs, s.ToString());
-                    sle.AppendText(gs, Environment.NewLine);
-                }
-
-                var sl = sle.Finish();
-                ir.DrawMultiple(sl.DrawCalls);
-            }
-        }
-
         internal bool KeyWasPressed (Keys key) {
             return Game.KeyboardState.IsKeyDown(key) && Game.PreviousKeyboardState.IsKeyUp(key);
-        }
-    }
-
-    public interface ISetting {
-        void Update (Scene s);
-        string Name { get; set; }
-    }
-
-    public abstract class Setting<T> : ISetting
-        where T : IEquatable<T>
-    {
-        public event EventHandler<T> Changed;
-        public string Name { get; set; }
-        protected T _Value;
-
-        public virtual T Value { 
-            get { return _Value; }
-            set {
-                if (!_Value.Equals(value)) {
-                    _Value = value;
-                    if (Changed != null)
-                        Changed(this, value);
-                }
-            }
-        }
-
-        public abstract void Update (Scene s);
-
-        public static implicit operator T (Setting<T> setting) {
-            return setting.Value;
-        }
-    }
-
-    public class Toggle : Setting<bool> {
-        public Keys Key;
-
-        public override void Update (Scene s) {
-            if (s.KeyWasPressed(Key))
-                Value = !Value;
-        }
-
-        public override string ToString () {
-            return string.Format("{0,-2} {1} {2}", Key, Value ? "+" : "-", Name);
-        }
-    }
-
-    public class Slider : Setting<float> {
-        public Keys MinusKey, PlusKey;
-        public float? Min, Max;
-        public float Speed = 1;        
-
-        public override void Update (Scene s) {
-            float delta = 0;
-
-            if (s.KeyWasPressed(MinusKey))
-                delta = -Speed;
-            else if (s.KeyWasPressed(PlusKey))
-                delta = Speed;
-            else
-                return;
-
-            var newValue = Value + delta;
-            if (Min.HasValue)
-                newValue = Math.Max(newValue, Min.Value);
-            if (Max.HasValue)
-                newValue = Math.Min(newValue, Max.Value);
-
-            if (Value == newValue)
-                return;
-
-            Value = newValue;
-        }
-
-        public override string ToString () {
-            string formattedValue;
-            if (Speed < 1) {
-                formattedValue = string.Format("{0:00.000}", Value);
-            } else {
-                formattedValue = string.Format("{0:00000}", Value);
-            }
-            return string.Format("{0,-2} {1:0} {2} {3,2}", MinusKey, formattedValue, Name, PlusKey);
         }
     }
 }

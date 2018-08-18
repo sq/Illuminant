@@ -156,10 +156,12 @@ namespace TestGame {
                 rect.X = 0;
             if (rect.Y < 0)
                 rect.Y = 0;
-            if (rect.Width > Game.Graphics.PreferredBackBufferWidth)
-                rect.Width = Game.Graphics.PreferredBackBufferWidth;
-            if (rect.Height > Game.Graphics.PreferredBackBufferHeight)
-                rect.Height = Game.Graphics.PreferredBackBufferHeight;
+            var x2 = rect.Width + rect.X;
+            var y2 = rect.Height + rect.Y;
+            if (x2 > Game.Graphics.PreferredBackBufferWidth)
+                rect.Width = Game.Graphics.PreferredBackBufferWidth - rect.X;
+            if (y2 > Game.Graphics.PreferredBackBufferHeight)
+                rect.Height = Game.Graphics.PreferredBackBufferHeight - rect.Y;
             PendingIR.SetScissor(rect);
         }
 

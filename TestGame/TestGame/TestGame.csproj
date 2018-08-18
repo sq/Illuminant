@@ -85,6 +85,7 @@
     <Compile Include="Scenes\GI.cs" />
     <Compile Include="Scenes\TwoPointFiveD.cs" />
     <Compile Include="Scenes\HeightVolumeTest.cs" />
+    <Compile Include="Settings.cs" />
     <Compile Include="TestGame.cs" />
   </ItemGroup>
   <ItemGroup>
