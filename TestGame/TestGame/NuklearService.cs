@@ -107,6 +107,8 @@ namespace TestGame {
         private nk_query_font_glyph_f QueryFontGlyphF;
         private nk_text_width_f TextWidthF;
 
+        public Action Scene = null;
+
         public readonly TestGame Game;
         public Bounds Bounds;
 
@@ -118,6 +120,12 @@ namespace TestGame {
             TextWidthF = _TextWidthF;
             Instance = new Device(this);
             NuklearAPI.Init(Instance);
+        }
+
+        public nk_context* Context {
+            get {
+                return NuklearAPI.Ctx;
+            }
         }
 
         public IGlyphSource Font {
@@ -183,10 +191,6 @@ namespace TestGame {
             Nuklear.nk_style_set_font(NuklearAPI.Ctx, userFont);
         }
 
-        public void Update (float deltaTime) {
-            // FIXME: Why?
-        }
-
         private Color ConvertColor (NkColor c) {
             return new Color(c.R, c.G, c.B, c.A);
         }
@@ -195,7 +199,15 @@ namespace TestGame {
             return Bounds.FromPositionAndSize(new Vector2(x, y), new Vector2(w, h));
         }
 
-        private void RenderFilledRect (nk_command_rect_filled* c) {
+        private void RenderCommand (nk_command_rect* c) {
+            PendingIR.OutlineRectangle(
+                ConvertBounds(c->x, c->y, c->w, c->h), 
+                ConvertColor(c->color),
+                blendState: BlendState.NonPremultiplied
+            );
+        }
+
+        private void RenderCommand (nk_command_rect_filled* c) {
             PendingIR.FillRectangle(
                 ConvertBounds(c->x, c->y, c->w, c->h), 
                 ConvertColor(c->color),
@@ -203,7 +215,7 @@ namespace TestGame {
             );
         }
 
-        private void RenderText (nk_command_text* c) {
+        private void RenderCommand (nk_command_text* c) {
             var pTextUtf8 = &c->stringFirstByte;
             var text = Encoding.UTF8.GetString(pTextUtf8, c->length);
             PendingIR.DrawString(
@@ -211,32 +223,40 @@ namespace TestGame {
             );
         }
 
+        private HashSet<string> WarnedCommands = new HashSet<string>();
+
         private void HighLevelRenderCommand (nk_command* c) {
             switch (c->ctype) {
+                case nk_command_type.NK_COMMAND_RECT:
+                    RenderCommand((nk_command_rect*)c);
+                    break;
                 case nk_command_type.NK_COMMAND_RECT_FILLED:
-                    RenderFilledRect((nk_command_rect_filled*)c);
+                    RenderCommand((nk_command_rect_filled*)c);
                     break;
                 case nk_command_type.NK_COMMAND_TEXT:
-                    RenderText((nk_command_text*)c);
+                    RenderCommand((nk_command_text*)c);
                     break;
                 default:
+                    var name = c->ctype.ToString();
+                    if (!WarnedCommands.Contains(name)) {
+                        Console.WriteLine("Not implemented: {0}", name);
+                        WarnedCommands.Add(name);
+                    }
                     break;
             }
         }
 
         public void Render (float deltaTime, IBatchContainer container, int layer) {
+            if (Scene == null)
+                return;
             NuklearAPI.SetDeltaTime(deltaTime);
             // FIXME: Gross
 
             using (var group = BatchGroup.New(container, layer)) {
                 PendingGroup = group;
                 PendingIR = new ImperativeRenderer(group, Game.Materials, 0);
-                NuklearAPI.Frame(
-                    () => {
-                        NuklearAPI.Window("Test", 4, 4, 320, 240, NkPanelFlags.Border | NkPanelFlags.Title, () => {; });
-                    }, 
-                    HighLevelRenderCommand
-                );
+
+                NuklearAPI.Frame(Scene, HighLevelRenderCommand);
             }
         }
 

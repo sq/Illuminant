@@ -21,6 +21,8 @@ using Squared.Render.Text;
 using Squared.Util;
 using TestGame.Scenes;
 using ThreefoldTrials.Framework;
+using Nuke = NuklearDotNet.NuklearAPI;
+using NukeNative = NuklearDotNet.Nuklear;
 
 namespace TestGame {
     public class TestGame : MultithreadedGame {
@@ -78,6 +80,27 @@ namespace TestGame {
             ActiveSceneIndex = Scenes.Length - 1;
         }
 
+        protected unsafe void UIScene () {
+            Nuke.Window(
+                "Settings", 0, 0, 640, 480, NuklearDotNet.NkPanelFlags.Title | NuklearDotNet.NkPanelFlags.Border | NuklearDotNet.NkPanelFlags.Movable, () => {
+                    Nuke.LayoutRowDynamic();
+                    var settings = Scenes[ActiveSceneIndex].Settings;
+                    foreach (var s in settings) {
+                        var toggle = s as Toggle;
+                        var slider = s as Slider;
+                        if (toggle != null) {
+                            Nuke.ButtonText(toggle.Name);
+                        } else if (slider != null) {
+                            Nuke.Label(slider.Name);
+                            var temp = slider.Value;
+                            NukeNative.nk_slider_float(Nuklear.Context, slider.Min.GetValueOrDefault(0), &temp, slider.Max.GetValueOrDefault(1), slider.Speed);
+                            slider.Value = temp;
+                        }
+                    }
+                }
+            );
+        }
+
         protected override void LoadContent () {
             base.LoadContent();
 
@@ -87,7 +110,8 @@ namespace TestGame {
 
             Nuklear = new NuklearService(this) {
                 Font = new SpriteFontGlyphSource(Font),
-                FontScale = 0.75f
+                FontScale = 0.75f,
+                Scene = UIScene
             };
 
             foreach (var scene in Scenes)
