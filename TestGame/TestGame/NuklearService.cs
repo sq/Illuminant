@@ -114,10 +114,25 @@ namespace TestGame {
 
         Device Instance;
 
+        private byte[] TextScratch = new byte[20480];
+        private GCHandle TextScratchPin;
+        private Encoder UTF8Encoder = Encoding.UTF8.GetEncoder();
+
+        public byte* GetTempUTF8 (string text) {
+            int bytesUsed, temp;
+            bool temp2;
+            var pResult = (byte*)TextScratchPin.AddrOfPinnedObject();
+            fixed (char* pText = text)
+                UTF8Encoder.Convert(pText, text.Length, pResult, TextScratch.Length, true, out temp, out bytesUsed, out temp2);
+            TextScratch[bytesUsed] = 0;
+            return pResult;
+        }
+
         public NuklearService (TestGame game) {
             Game = game;
             QueryFontGlyphF = _QueryFontGlyphF;
             TextWidthF = _TextWidthF;
+            TextScratchPin = GCHandle.Alloc(TextScratch, GCHandleType.Pinned);
             Instance = new Device(this);
             NuklearAPI.Init(Instance);
         }

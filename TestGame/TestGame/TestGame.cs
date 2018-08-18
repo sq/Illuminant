@@ -21,8 +21,7 @@ using Squared.Render.Text;
 using Squared.Util;
 using TestGame.Scenes;
 using ThreefoldTrials.Framework;
-using Nuke = NuklearDotNet.NuklearAPI;
-using NukeNative = NuklearDotNet.Nuklear;
+using Nuke = NuklearDotNet.Nuklear;
 
 namespace TestGame {
     public class TestGame : MultithreadedGame {
@@ -81,24 +80,33 @@ namespace TestGame {
         }
 
         protected unsafe void UIScene () {
-            Nuke.Window(
-                "Settings", 0, 0, 640, 480, NuklearDotNet.NkPanelFlags.Title | NuklearDotNet.NkPanelFlags.Border | NuklearDotNet.NkPanelFlags.Movable, () => {
-                    Nuke.LayoutRowDynamic();
-                    var settings = Scenes[ActiveSceneIndex].Settings;
-                    foreach (var s in settings) {
-                        var toggle = s as Toggle;
-                        var slider = s as Slider;
-                        if (toggle != null) {
-                            Nuke.ButtonText(toggle.Name);
-                        } else if (slider != null) {
-                            Nuke.Label(slider.Name);
-                            var temp = slider.Value;
-                            NukeNative.nk_slider_float(Nuklear.Context, slider.Min.GetValueOrDefault(0), &temp, slider.Max.GetValueOrDefault(1), slider.Speed);
-                            slider.Value = temp;
-                        }
+            var ctx = Nuklear.Context;
+            var textBuf = stackalloc byte[2048];
+            var utf8 = Encoding.UTF8.GetEncoder();
+
+            if (Nuke.nk_begin(
+                ctx, "Settings", new NuklearDotNet.NkRect(0, 0, 640, 480), 
+                (uint)(NuklearDotNet.NkPanelFlags.Title | NuklearDotNet.NkPanelFlags.Border | NuklearDotNet.NkPanelFlags.Movable)
+            ) != 0) {
+                Nuke.nk_layout_row_dynamic(ctx, 0, 1);
+                var settings = Scenes[ActiveSceneIndex].Settings;
+                foreach (var s in settings) {
+                    var toggle = s as Toggle;
+                    var slider = s as Slider;
+                    if (toggle != null) {
+                        int active = toggle.Value ? 1 : 0;
+                        Nuke.nk_checkbox_label(ctx, Nuklear.GetTempUTF8(toggle.Name), &active);
+                        toggle.Value = active != 0;
+                    } else if (slider != null) {
+                        Nuke.nk_label(ctx, slider.Name, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
+                        var temp = slider.Value;
+                        Nuke.nk_slider_float(ctx, slider.Min.GetValueOrDefault(0), &temp, slider.Max.GetValueOrDefault(1), slider.Speed);
+                        slider.Value = temp;
                     }
                 }
-            );
+            }
+
+            Nuke.nk_end(ctx);
         }
 
         protected override void LoadContent () {
