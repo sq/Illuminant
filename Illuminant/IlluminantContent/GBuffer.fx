@@ -26,7 +26,8 @@ void HeightVolumeFaceVertexShader(
     worldPosition = position + (SELF_OCCLUSION_HACK * normal);
 
     position.y -= getZToYMultiplier() * position.z;
-    result = TransformPosition(float4((position.xy - Viewport.Position) * Viewport.Scale, 0, 1), 0);
+    float4 midTransform = float4((position.xy - Viewport.Position) * Viewport.Scale, 0, 1);
+    result = TransformPosition(midTransform, 0);
     result.z = position.z / DistanceFieldExtent.z;
     dead = false;
 }
@@ -45,7 +46,8 @@ void HeightVolumePixelShader (
             -99999
         );
     } else {
-        float relativeY = (getZToYMultiplier() * worldPosition.z);
+        float screenY = (vpos.y / Viewport.Scale.y) + Viewport.Position.y;
+        float relativeY = worldPosition.y - screenY;
 
         if (worldPosition.z < getGroundZ()) {
             discard;
@@ -57,7 +59,7 @@ void HeightVolumePixelShader (
         result = float4(
             (normal.x / 2) + 0.5,
             (normal.z / 2) + 0.5,
-            (relativeY / 512),
+            (relativeY / RELATIVEY_SCALE),
             (worldPosition.z / 512)
         );
     }

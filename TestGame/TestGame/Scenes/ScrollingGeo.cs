@@ -33,14 +33,18 @@ namespace TestGame.Scenes {
         Toggle ShowGBuffer,
             ShowDistanceField;
 
-        Toggle Deterministic;
-
+        [Group("Camera")]
         Slider CameraDistance, CameraX, CameraY;
+
+        [Group("Lighting")]
+        Toggle Deterministic, DirectionalLight1, DirectionalLight2;
 
         public ScrollingGeo (TestGame game, int width, int height)
             : base(game, 1024, 1024) {
 
             Deterministic.Value = true;
+            DirectionalLight1.Value = true;
+            DirectionalLight2.Value = true;
             CameraDistance.Value = 100;
 
             ShowGBuffer.Key = Keys.G;
@@ -164,6 +168,9 @@ namespace TestGame.Scenes {
                 Lightmap.Width, Lightmap.Height,
                 out cvp, out uvo
             );
+
+            Environment.Lights[1].Opacity = DirectionalLight1.Value ? 1 : 0;
+            Environment.Lights[2].Opacity = DirectionalLight2.Value ? 1 : 0;
 
             // Renderer.InvalidateFields();
 

@@ -7,6 +7,8 @@
 // The final output from the dot computation is raised to this power so
 #define DOT_EXPONENT   0.85
 
+#define RELATIVEY_SCALE 128
+
 static const float3 LightCorners[] = {
     { 0, 0, 0 },
     { 1, 0, 0 },
@@ -51,7 +53,7 @@ void sampleGBuffer (
         float2 uv     = (screenPositionPx + 0.5) * GBufferTexelSize;
         float4 sample = tex2Dlod(GBufferSampler, float4(uv, 0, 0));
 
-        float relativeY = sample.z * 512;
+        float relativeY = sample.z * RELATIVEY_SCALE;
         float worldZ    = sample.w * 512;
 
         screenPositionPx /= Environment.RenderScale;
