@@ -40,6 +40,8 @@ namespace TestGame {
 
         private int LastPerformanceStatPrimCount = 0;
 
+        public bool IsMouseOverUI = false;
+
         public TestGame () {
             // UniformBinding.ForceCompatibilityMode = true;
 
@@ -158,6 +160,9 @@ namespace TestGame {
                 }
             }
 
+            var windowBounds = Nuke.nk_window_get_bounds(ctx);
+            IsMouseOverUI = Nuke.nk_input_is_mouse_hovering_rect(&ctx->input, windowBounds) != 0;
+
             Nuke.nk_end(ctx);
         }
 
@@ -168,21 +173,21 @@ namespace TestGame {
                 Nuke.nk_input_motion(ctx, MouseState.X, MouseState.Y);
             if (MouseState.LeftButton != PreviousMouseState.LeftButton)
                 Nuke.nk_input_button(ctx, NuklearDotNet.nk_buttons.NK_BUTTON_LEFT, MouseState.X, MouseState.Y, MouseState.LeftButton == ButtonState.Pressed ? 1 : 0);
-            var scrollDelta = (MouseState.ScrollWheelValue - PreviousMouseState.ScrollWheelValue) / 110f;
-            if (scrollDelta != 0)
+            var scrollDelta = (MouseState.ScrollWheelValue - PreviousMouseState.ScrollWheelValue) / 106f;
+            if ((scrollDelta != 0) && IsMouseOverUI)
                 Nuke.nk_input_scroll(ctx, new NuklearDotNet.nk_vec2 { x = 0, y = scrollDelta });
             Nuke.nk_input_end(ctx);
         }
 
         public bool LeftMouse {
             get {
-                return MouseState.LeftButton == ButtonState.Pressed;
+                return (MouseState.LeftButton == ButtonState.Pressed) && !IsMouseOverUI;
             }
         }
 
         public bool RightMouse {
             get {
-                return MouseState.RightButton == ButtonState.Pressed;
+                return (MouseState.RightButton == ButtonState.Pressed) && !IsMouseOverUI;
             }
         }
 
@@ -239,8 +244,6 @@ namespace TestGame {
             scene.Settings.Update(scene);
             scene.Update(gameTime);
 
-            UpdateNuklearInput();
-
             PerformanceStats.Record(this);
 
             Window.Title = String.Format("Scene {0}: {1}", ActiveSceneIndex, scene.GetType().Name);
@@ -263,6 +266,7 @@ namespace TestGame {
                 layer: 9999
             );
 
+            UpdateNuklearInput();
             Nuklear.Render(gameTime.ElapsedGameTime.Seconds, frame, 9997);
 
             DrawPerformanceStats(ref ir);

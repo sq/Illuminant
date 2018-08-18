@@ -33,26 +33,31 @@ namespace TestGame.Scenes {
         const float ProbeZ = 1;
         const float ProbeVisBrightness = 1.1f;
 
-        Toggle ShowGBuffer,
-            ShowDistanceField,
-            TwoPointFiveD,
-            RenderDirectLight,
+        [Group("Visualization")]
+        Toggle ShowGBuffer, ShowDistanceField, ShowProbeSH;
+
+        [Group("Lighting")]
+        Toggle TwoPointFiveD,
             EnableShadows,
-            ShowProbeSH,
             EnablePointLight,
             EnableDirectionalLights,
-            AdditiveIndirectLight,
-            EdgeShadows,
-            sRGB,
-            MultipleVolumes;
+            EdgeShadows;
 
+        [Group("Resolution")]
         Slider DistanceFieldResolution,
-            LightmapScaleRatio,
-            IndirectLightBrightness,
-            BounceDistance,
+            LightmapScaleRatio;
+
+        [Group("Compositing")]
+        Toggle RenderDirectLight,
+            AdditiveIndirectLight,
+            sRGB;
+        [Group("Compositing")]
+        Slider LightScaleFactor, IndirectLightBrightness;
+
+        [Group("Global Illumination")]
+        Slider BounceDistance,
             ProbeInterval,
-            GIBounceCount,
-            LightScaleFactor;
+            GIBounceCount;
 
         RendererQualitySettings DirectionalQuality;
 
@@ -74,7 +79,6 @@ namespace TestGame.Scenes {
             GIBounceCount.Value = 1;
             LightScaleFactor.Value = 2.5f;
             EdgeShadows.Value = false;
-            MultipleVolumes.Value = false;
 
             ShowGBuffer.Key = Keys.G;
             TwoPointFiveD.Key = Keys.D2;
@@ -88,7 +92,6 @@ namespace TestGame.Scenes {
             AdditiveIndirectLight.Key = Keys.A;
             EdgeShadows.Key = Keys.O;
             sRGB.Key = Keys.R;
-            MultipleVolumes.Key = Keys.V;
 
             DistanceFieldResolution.MinusKey = Keys.D5;
             DistanceFieldResolution.PlusKey = Keys.D6;
@@ -298,24 +301,12 @@ namespace TestGame.Scenes {
         public override void Draw (Squared.Render.Frame frame) {
             CreateRenderTargets();
 
-            if (MultipleVolumes) {
-                int w = Width, h = Height;
-                float w2 = Width * 0.4f, h2 = Height * 0.4f;
-                Environment.GIVolumes[0].Bounds = Bounds.FromPositionAndSize(new Vector2(w * 0, h * 0), new Vector2(w2, h2));
-                Environment.GIVolumes[1].Bounds = Bounds.FromPositionAndSize(new Vector2(w * 0.6f, h * 0), new Vector2(w2, h2));
-                Environment.GIVolumes[2].Bounds = Bounds.FromPositionAndSize(new Vector2(w * 0, h * 0.6f), new Vector2(w2, h2));
-                Environment.GIVolumes[3].Bounds = Bounds.FromPositionAndSize(new Vector2(w * 0.6f, h * 0.6f), new Vector2(w2, h2));
+            Environment.GIVolumes[0].Bounds = Bounds.FromPositionAndSize(Vector2.Zero, new Vector2(Width, Height));
+            Environment.GIVolumes[0].Visible = true;
 
-                for (int i = 0; i < 4; i++)
-                    Environment.GIVolumes[i].Visible = true;
-            } else {
-                Environment.GIVolumes[0].Bounds = Bounds.FromPositionAndSize(Vector2.Zero, new Vector2(Width, Height));
-                Environment.GIVolumes[0].Visible = true;
-
-                for (int i = 1; i < 4; i++) {
-                    Environment.GIVolumes[i].Bounds = default(Bounds);
-                    Environment.GIVolumes[i].Visible = false;
-                }
+            for (int i = 1; i < 4; i++) {
+                Environment.GIVolumes[i].Bounds = default(Bounds);
+                Environment.GIVolumes[i].Visible = false;
             }
 
             foreach (var v in Environment.GIVolumes) {
