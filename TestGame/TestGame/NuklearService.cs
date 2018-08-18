@@ -142,9 +142,11 @@ namespace TestGame {
                     color: ConvertColor(c->foreground),
                     scale: FontScale
                 );
+                PendingIR.Layer += 1;
                 PendingIR.DrawMultiple(
                     layout.DrawCalls, material: Game.TextMaterial
                 );
+                PendingIR.Layer += 1;
             }
         }
 
@@ -164,7 +166,9 @@ namespace TestGame {
                 rect.Width = 0;
             if (rect.Height < 0)
                 rect.Height = 0;
+            PendingIR.Layer += 1;
             PendingIR.SetScissor(rect);
+            PendingIR.Layer += 1;
         }
 
         private void RenderCommand (nk_command_circle_filled* c) {
@@ -232,7 +236,7 @@ namespace TestGame {
                 dm.Device.RasterizerState = RenderStates.ScissorOnly;
             })) {
                 PendingGroup = group;
-                PendingIR = new ImperativeRenderer(group, Game.Materials, 0, autoIncrementLayer: true);
+                PendingIR = new ImperativeRenderer(group, Game.Materials, 0, autoIncrementSortKey: true);
 
                 Scene();
                 Nuklear.nk_foreach(Context, HighLevelRenderCommand);
