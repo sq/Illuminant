@@ -45,8 +45,7 @@ void HeightVolumePixelShader (
             -99999
         );
     } else {
-        float wp = worldPosition.y;
-        float relativeY = (getZToYMultiplier() * worldPosition.z) * Viewport.Scale.y;
+        float relativeY = (getZToYMultiplier() * worldPosition.z);
 
         if (worldPosition.z < getGroundZ()) {
             discard;
@@ -64,6 +63,7 @@ void HeightVolumePixelShader (
     }
 }
 
+// Also used for the ground plane
 technique HeightVolume
 {
     pass P0

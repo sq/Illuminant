@@ -181,7 +181,8 @@ namespace TestGame.Scenes {
                 ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black);
 
                 var lighting = Renderer.RenderLighting(bg, 1, intensityScale: 1);
-                lighting.Resolve(bg, 2, Width, Height);
+                float mult = 1.0f / LightmapScaleRatio;
+                lighting.Resolve(bg, 2, Width * mult, Height * mult);
             };
 
             ClearBatch.AddNew(frame, 0, Game.Materials.Clear, clearColor: Color.Black);

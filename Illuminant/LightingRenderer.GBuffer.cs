@@ -51,6 +51,7 @@ namespace Squared.Illuminant {
                 (dm, _) => {
                     dm.PushStates();
                     Materials.PushViewTransform(ref vt);
+                    dm.Device.ScissorRectangle = new Rectangle(0, 0, renderWidth, renderHeight);
                 },
                 (dm, _) => {
                     Materials.PopViewTransform();
@@ -73,6 +74,8 @@ namespace Squared.Illuminant {
 
                         Materials.TrySetBoundUniform(IlluminantMaterials.HeightVolumeFace, "Environment", ref EnvironmentUniforms);
                         Materials.TrySetBoundUniform(IlluminantMaterials.HeightVolume, "Environment", ref EnvironmentUniforms);
+
+                        dm.Device.RasterizerState = Render.Convenience.RenderStates.ScissorOnly;
                     }
                 )) {
 
@@ -119,7 +122,7 @@ namespace Squared.Illuminant {
                             group, 3, Materials.Get(
                                 IlluminantMaterials.HeightVolumeFace,
                                 depthStencilState: TopFaceDepthStencilState,
-                                rasterizerState: RasterizerState.CullNone,
+                                rasterizerState: Render.Convenience.RenderStates.ScissorOnly,
                                 blendState: BlendState.Opaque
                             )
                         ))
@@ -127,7 +130,7 @@ namespace Squared.Illuminant {
                             group, 5, Materials.Get(
                                 IlluminantMaterials.HeightVolumeFace,
                                 depthStencilState: FrontFaceDepthStencilState,
-                                rasterizerState: RasterizerState.CullNone,
+                                rasterizerState: Render.Convenience.RenderStates.ScissorOnly,
                                 blendState: BlendState.Opaque
                             )
                         ))

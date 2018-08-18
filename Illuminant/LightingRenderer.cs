@@ -1284,8 +1284,8 @@ namespace Squared.Illuminant {
             PreviousZToYMultiplier = Environment.ZToYMultiplier;
 
             if ((_GBuffer != null) && (!_GBuffer.IsValid || viewportChanged || paramsChanged)) {
-                var renderWidth = (int)(Configuration.MaximumRenderSize.First / Configuration.RenderScale.X);
-                var renderHeight = (int)(Configuration.MaximumRenderSize.Second / Configuration.RenderScale.Y);
+                var renderWidth = (int)(Configuration.MaximumRenderSize.First * Configuration.RenderScale.X);
+                var renderHeight = (int)(Configuration.MaximumRenderSize.Second * Configuration.RenderScale.Y);
 
                 RenderGBuffer(ref layer, container, renderWidth, renderHeight);
 
