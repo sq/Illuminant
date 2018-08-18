@@ -405,7 +405,7 @@ namespace TestGame.Scenes {
             // DistanceField.Invalidate();
 
             Renderer.UpdateFields(frame, -16);
-            ForegroundRenderer.UpdateFields(frame, -16);
+            ForegroundRenderer.UpdateFields(frame, -15);
 
             float exposure, whitePoint;
             lock (ExposureSamples)
@@ -422,7 +422,7 @@ namespace TestGame.Scenes {
                 }
             };
 
-            int layer = -8;
+            int layer = 2;
             var lighting = Renderer.RenderLighting(frame, layer, 1.0f / HDRRangeFactor);
             var foregroundLighting = ForegroundRenderer.RenderLighting(frame, layer++, 1.0f / HDRRangeFactor);
 
@@ -497,8 +497,6 @@ namespace TestGame.Scenes {
             };
 
             using (var group = BatchGroup.New(frame, layer++)) {
-                ClearBatch.AddNew(group, 0, Game.Materials.Clear, clearColor: Color.Blue);
-
                 if (ShowLightmap) {
                     using (var bb = BitmapBatch.New(
                         group, 1,

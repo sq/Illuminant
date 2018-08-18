@@ -265,7 +265,7 @@ namespace TestGame {
         public override void Draw (GameTime gameTime, Frame frame) {
             UpdateNuklearInput();
 
-            using (var group = BatchGroup.ForRenderTarget(frame, -3, UIRenderTarget)) {
+            using (var group = BatchGroup.ForRenderTarget(frame, -9990, UIRenderTarget)) {
                 ClearBatch.AddNew(group, -1, Materials.Clear, clearColor: Color.Transparent);
                 Nuklear.Render(gameTime.ElapsedGameTime.Seconds, group, 1);
             }
