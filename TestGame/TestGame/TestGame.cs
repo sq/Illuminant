@@ -32,6 +32,8 @@ namespace TestGame {
         public KeyboardState PreviousKeyboardState, KeyboardState;
         public MouseState PreviousMouseState, MouseState;
 
+        public Material TextMaterial;
+
         public FreeTypeFont Font;
         public Texture2D RampTexture;
 
@@ -145,9 +147,9 @@ namespace TestGame {
                 }
 
                 i++;
-            }
 
-            scene.UIScene();
+                scene.UIScene();
+            }
 
             var windowBounds = Nuke.nk_window_get_bounds(ctx);
             IsMouseOverUI = Nuke.nk_input_is_mouse_hovering_rect(&ctx->input, windowBounds) != 0;
@@ -184,14 +186,18 @@ namespace TestGame {
             base.LoadContent();
 
             Font = new FreeTypeFont(RenderCoordinator, "FiraSans-Medium.otf") {
-                SizePoints = 22f
+                SizePoints = 17f,
+                GlyphMargin = 2
             };
             Materials = new DefaultMaterialSet(Services);
             RampTexture = Content.Load<Texture2D>("light_ramp");
 
+            TextMaterial = Materials.Get(Materials.ScreenSpaceShadowedBitmap, blendState: BlendState.AlphaBlend);
+            TextMaterial.Parameters.ShadowColor.SetValue(new Vector4(0, 0, 0, 0.5f));
+            TextMaterial.Parameters.ShadowOffset.SetValue(Vector2.One);
+
             Nuklear = new NuklearService(this) {
                 Font = Font,
-                FontScale = 0.75f,
                 Scene = UIScene
             };
 
@@ -280,7 +286,7 @@ namespace TestGame {
                     Color.Black
                 );
                 ir.Layer += 1;
-                ir.DrawMultiple(dc, position);
+                ir.DrawMultiple(dc, position, material: Materials.ScreenSpaceBitmap, blendState: BlendState.AlphaBlend);
             }
         }
     }

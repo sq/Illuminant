@@ -12,6 +12,7 @@ using Squared.Render.Evil;
 using Squared.Render.Convenience;
 using Squared.Render.Text;
 using Microsoft.Xna.Framework;
+using Squared.Util;
 
 namespace TestGame {
     public unsafe class NuklearService : IDisposable {
@@ -99,7 +100,7 @@ namespace TestGame {
                     estimatedHeight = Math.Max(estimatedHeight, glyph.BoundsInTexture.Height);
             }
             // LineSpacing includes whitespace :(
-            userFont->height = estimatedHeight * FontScale;
+            userFont->height = (estimatedHeight - 3) * FontScale;
 
             userFont->queryfun_nkQueryFontGlyphF = Marshal.GetFunctionPointerForDelegate(QueryFontGlyphF);
             userFont->widthfun_nkTextWidthF = Marshal.GetFunctionPointerForDelegate(TextWidthF);
@@ -116,7 +117,7 @@ namespace TestGame {
 
         private void RenderCommand (nk_command_rect* c) {
             PendingIR.OutlineRectangle(
-                ConvertBounds(c->x, c->y, c->w, c->h), 
+                ConvertBounds(c->x, c->y, c->w - 1, c->h - 1), 
                 ConvertColor(c->color),
                 blendState: BlendState.NonPremultiplied
             );
@@ -132,10 +133,20 @@ namespace TestGame {
 
         private void RenderCommand (nk_command_text* c) {
             var pTextUtf8 = &c->stringFirstByte;
-            var text = Encoding.UTF8.GetString(pTextUtf8, c->length);
-            PendingIR.DrawString(
-                _Font, text, new Vector2(c->x, c->y), color: ConvertColor(c->foreground), scale: FontScale, blendState: BlendState.AlphaBlend
-            );
+            int charsDecoded;
+            using (var charBuffer = BufferPool<char>.Allocate(c->length + 1)) {
+                fixed (char* pChars = charBuffer.Data)
+                    charsDecoded = Encoding.UTF8.GetChars(pTextUtf8, c->length, pChars, charBuffer.Data.Length);
+                var str = new AbstractString(new ArraySegment<char>(charBuffer.Data, 0, charsDecoded));
+                var layout = _Font.LayoutString(
+                    str, position: new Vector2(c->x, c->y),
+                    color: ConvertColor(c->foreground),
+                    scale: FontScale
+                );
+                PendingIR.DrawMultiple(
+                    layout.DrawCalls, material: Game.TextMaterial
+                );
+            }
         }
 
         private void RenderCommand (nk_command_scissor* c) {

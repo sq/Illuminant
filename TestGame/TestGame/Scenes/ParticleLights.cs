@@ -423,16 +423,15 @@ namespace TestGame.Scenes {
                 );
 
             var ir = new ImperativeRenderer(
-                frame, Game.Materials, 11,
-                blendState: BlendState.Opaque,
-                samplerState: SamplerState.LinearClamp
+                frame, Game.Materials, 11
             );
-            ir.DrawString(
-                Game.Font, string.Format(
+            var layout = Game.Font.LayoutString(
+                string.Format(
                     @"{0:000000} / {1:000000} alive",
                     System.LiveCount, System.Capacity
-                ), new Vector2(6, 6)
+                ), position: new Vector2(6, 6)
             );
+            ir.DrawMultiple(layout, material: Game.TextMaterial);
         }
 
         public override void Update (GameTime gameTime) {

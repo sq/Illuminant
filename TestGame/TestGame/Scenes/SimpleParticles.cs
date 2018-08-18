@@ -102,9 +102,9 @@ namespace TestGame.Scenes {
                     */
                     RotationFromVelocity = true,
                     OpacityFromLife = opacityFromLife,
-                    EscapeVelocity = 16f,
+                    EscapeVelocity = 64f,
                     BounceVelocityMultiplier = 0.95f,
-                    MaximumVelocity = 16f,
+                    MaximumVelocity = 64f,
                     CollisionDistance = 1f,
                     CollisionLifePenalty = 4
                 }
@@ -166,8 +166,8 @@ namespace TestGame.Scenes {
                     },
                     */
                     new MatrixMultiply {
-                        Velocity = Matrix.CreateRotationZ((float)Math.PI * 0.011f) * 1.001f,
-                        Position = Matrix.CreateScale(1, 1, 0)
+                        Velocity = Matrix.CreateRotationZ((float)Math.PI * 0.009f) * Matrix.CreateScale(1.001f, 1.001f, 0.0f),
+                        Position = Matrix.CreateScale(1f, 1f, 0f)
                     }
                 }
             };
@@ -177,11 +177,11 @@ namespace TestGame.Scenes {
             Environment = new LightingEnvironment();
 
             Environment.GroundZ = 0;
-            Environment.MaximumZ = 256;
+            Environment.MaximumZ = 64;
 
             DistanceField = new DistanceField(
                 Game.RenderCoordinator, Width, Height, Environment.MaximumZ,
-                3, 1 / 2f
+                6, 1 / 2f
             );
 
             LightingRenderer = new LightingRenderer(
@@ -293,16 +293,15 @@ namespace TestGame.Scenes {
                 );
 
                 var ir = new ImperativeRenderer(
-                    frame, Game.Materials, 4,
-                    blendState: BlendState.Opaque,
-                    samplerState: SamplerState.LinearClamp
+                    frame, Game.Materials, 4
                 );
-                ir.DrawString(
-                    Game.Font, string.Format(
-                        @"{0} / {1} alive",
+                var layout = Game.Font.LayoutString(
+                    string.Format(
+                        @"{0:000000} / {1:000000} alive",
                         System.LiveCount, System.Capacity
-                    ), new Vector2(6, 6)
+                    ), position: new Vector2(6, 6)
                 );
+                ir.DrawMultiple(layout, material: Game.TextMaterial);
         }
 
         public override void Update (GameTime gameTime) {
@@ -434,7 +433,7 @@ namespace TestGame.Scenes {
         public unsafe override void UIScene () {
             var ctx = Game.Nuklear.Context;
 
-            if (Nuke.nk_tree_push_hashed(ctx, NuklearDotNet.nk_tree_type.NK_TREE_TAB, Transforms.pText, NuklearDotNet.nk_collapse_states.NK_MAXIMIZED, Transforms.pText, Transforms.Length, 0) != 0) {
+            if (Nuke.nk_tree_push_hashed(ctx, NuklearDotNet.nk_tree_type.NK_TREE_TAB, Transforms.pText, NuklearDotNet.nk_collapse_states.NK_MAXIMIZED, Transforms.pText, Transforms.Length, 64) != 0) {
                 int i = 0;
                 foreach (var t in System.Transforms) {
                     using (var temp = new UTF8String(t.GetType().Name)) {

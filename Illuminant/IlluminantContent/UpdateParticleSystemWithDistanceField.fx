@@ -63,10 +63,10 @@ void PS_Update (
 
     [branch]
     if (collided) {
-        newPosition = float4(oldPosition + (unitVector * stepSpeed), oldPosition.w - LifeDecayRate - CollisionLifePenalty);
+        newPosition = float4(oldPosition + (unitVector * stepSpeed), oldPosition.w - LifeDecayRate);
 
         float3 normal = estimateNormal(newPosition.xyz, vars);
-        if (length(normal) < 0.1)
+        if (length(normal) < 0.33)
             // HACK to avoid getting stuck at the center of volumes
             normal = float3(0, -1, 0);
 
@@ -74,9 +74,12 @@ void PS_Update (
             // We started outside. Bounce away next step if configured to. Otherwise, we'll halt.
             float3 bounceVector = normalize(-(2 * dot(normal, unitVector) * (normal - unitVector)));
             newVelocity = float4(bounceVector * (min(MaximumVelocity, length(velocity.xyz) * BounceVelocityMultiplier)), oldVelocity.w);
+            // Deduct the collision life penalty because we just entered a collision state.
+            newPosition.w -= CollisionLifePenalty;
         } else {
             // We started inside, so flee at our escape velocity.
-            newVelocity = float4(normal * min(EscapeVelocity, abs(oldDistance) + CollisionDistance), oldVelocity.w);
+            float3 escapeVector = normalize(normal);
+            newVelocity = float4(escapeVector * EscapeVelocity, oldVelocity.w);
         }
     } else {
         newPosition = float4(oldPosition.xyz + velocity.xyz, oldPosition.w - LifeDecayRate);

@@ -638,18 +638,16 @@ namespace TestGame.Scenes {
                 }
 
                 var ir = new ImperativeRenderer(
-                    frame, Game.Materials, layer++,
-                    blendState: BlendState.Opaque,
-                    samplerState: SamplerState.LinearClamp
+                    frame, Game.Materials, layer++
                 );
-                ir.DrawString(
-                    Game.Font, string.Format(
+                var text = string.Format(
 @"Exposure {0:00.000}
 White Point {1:00.000}
 {2:0000} Projectiles",
-                        exposure, whitePoint, Projectiles.Count
-                    ), new Vector2(3, 3), scale: 0.5f
+                    exposure, whitePoint, Projectiles.Count
                 );
+                var layout = Game.Font.LayoutString(text, scale: 0.8f);
+                ir.DrawMultiple(layout, material: Game.TextMaterial);
             }
         }
 
