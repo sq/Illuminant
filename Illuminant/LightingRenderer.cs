@@ -1275,7 +1275,7 @@ namespace Squared.Illuminant {
 
             ComputeUniforms();
 
-            var viewportChanged = (PendingDrawViewportPosition != viewportPosition) || (PendingDrawViewportScale != viewportScale);
+            var viewportChanged = (PendingFieldViewportPosition != viewportPosition) || (PendingFieldViewportScale != viewportScale);
 
             PendingFieldViewportPosition = viewportPosition;
             PendingFieldViewportScale = viewportScale;
