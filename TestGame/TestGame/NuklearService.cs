@@ -15,92 +15,11 @@ using Microsoft.Xna.Framework;
 
 namespace TestGame {
     public unsafe class NuklearService : IDisposable {
-        public class Device : NuklearDeviceTex<Texture2D> {
-            public readonly NuklearService Service;
-
-            private VertexPositionColorTexture[] Scratch;
-            private VertexBuffer VertexBuffer;
-            private IndexBuffer IndexBuffer;
-
-            RenderCoordinator Coordinator {
-                get {
-                    return Service.Game.RenderCoordinator;
-                }
-            }
-
-            GraphicsDevice GraphicsDevice {
-                get {
-                    return Service.Game.GraphicsDevice;
-                }
-            }
-
-            internal Device (NuklearService service) {
-                Service = service;
-            }
-
-            public override Texture2D CreateTexture (int W, int H, IntPtr Data) {
-                // FIXME: Upload data
-                Texture2D result;
-                lock (Coordinator.CreateResourceLock)
-                    result = new Texture2D(GraphicsDevice, W, H, false, SurfaceFormat.Color);
-                lock (Coordinator.UseResourceLock) {
-                    var pSurface = TextureUtils.GetSurfaceLevel(result, 0);
-                    TextureUtils.SetData(result, pSurface, Data.ToPointer(), W, H, (uint)(W * 4), D3DFORMAT.A8B8G8R8);
-                    Marshal.Release((IntPtr)pSurface);
-                }
-                return result;
-            }
-
-            public override void Render (NkHandle Userdata, Texture2D Texture, NkRect ClipRect, uint Offset, uint Count) {
-                var group = Service.PendingGroup;
-                var materials = Service.Game.Materials;
-                using (var pb = NativeBatch.New(
-                    group, 0, materials.Get(materials.ScreenSpaceTexturedGeometry, blendState: BlendState.NonPremultiplied), (dm, _) => {
-                        dm.Device.Textures[0] = Texture;
-                    }
-                ))
-                    pb.Add(new NativeDrawCall(PrimitiveType.TriangleList, VertexBuffer, 0, IndexBuffer, 0, 0, VertexBuffer.VertexCount, (int)Offset, (int)(Count)));
-            }
-
-            public override void SetBuffer (NkVertex[] Vertices, ushort[] Indices) {
-                if ((VertexBuffer != null) && (VertexBuffer.VertexCount < Vertices.Length)) {
-                    Coordinator.DisposeResource(VertexBuffer);
-                    VertexBuffer = null;
-                }
-                if ((IndexBuffer != null) && (IndexBuffer.IndexCount < Indices.Length)) {
-                    Coordinator.DisposeResource(IndexBuffer);
-                    IndexBuffer = null;
-                }
-
-                if (VertexBuffer == null)
-                    lock (Coordinator.CreateResourceLock)
-                        VertexBuffer = new DynamicVertexBuffer(GraphicsDevice, typeof(VertexPositionColorTexture), Vertices.Length, BufferUsage.WriteOnly);
-                if (IndexBuffer == null)
-                    lock (Coordinator.CreateResourceLock)
-                        IndexBuffer = new DynamicIndexBuffer(GraphicsDevice, IndexElementSize.SixteenBits, Indices.Length, BufferUsage.WriteOnly);
-
-                // U G H
-                if ((Scratch == null) || (Scratch.Length < Vertices.Length))
-                    Scratch = new VertexPositionColorTexture[Vertices.Length];
-                for (int i = 0; i < Vertices.Length; i++) {
-                    var v = Vertices[i];
-                    var c = v.Color;
-                    Scratch[i] = new VertexPositionColorTexture {
-                        Color = new Color(c.R, c.G, c.B, c.A),
-                        Position = new Vector3(v.Position.X, v.Position.Y, 0),
-                        TextureCoordinate = new Vector2(v.UV.X, v.UV.Y)
-                    };
-                }
-
-                lock (Coordinator.UseResourceLock) {
-                    VertexBuffer.SetData(Scratch);
-                    IndexBuffer.SetData(Indices);
-                }
-            }
-        }
+        public nk_context* Context;
 
         private IBatchContainer PendingGroup;
         private ImperativeRenderer PendingIR;
+        private int NextTextLayer;
 
         private float _FontScale = 1.0f;
         private IGlyphSource _Font;
@@ -111,8 +30,6 @@ namespace TestGame {
 
         public readonly TestGame Game;
         public Bounds Bounds;
-
-        Device Instance;
 
         private byte[] TextScratch = new byte[20480];
         private GCHandle TextScratchPin;
@@ -133,14 +50,8 @@ namespace TestGame {
             QueryFontGlyphF = _QueryFontGlyphF;
             TextWidthF = _TextWidthF;
             TextScratchPin = GCHandle.Alloc(TextScratch, GCHandleType.Pinned);
-            Instance = new Device(this);
-            NuklearAPI.Init(Instance);
-        }
-
-        public nk_context* Context {
-            get {
-                return NuklearAPI.Ctx;
-            }
+            Context = (nk_context*)NuklearAPI.Malloc((IntPtr)sizeof(nk_context));
+            Nuklear.nk_init(Context, NuklearAPI.MakeAllocator(), null);
         }
 
         public IGlyphSource Font {
@@ -203,7 +114,7 @@ namespace TestGame {
 
             userFont->queryfun_nkQueryFontGlyphF = Marshal.GetFunctionPointerForDelegate(QueryFontGlyphF);
             userFont->widthfun_nkTextWidthF = Marshal.GetFunctionPointerForDelegate(TextWidthF);
-            Nuklear.nk_style_set_font(NuklearAPI.Ctx, userFont);
+            Nuklear.nk_style_set_font(Context, userFont);
         }
 
         private Color ConvertColor (NkColor c) {
@@ -234,8 +145,32 @@ namespace TestGame {
             var pTextUtf8 = &c->stringFirstByte;
             var text = Encoding.UTF8.GetString(pTextUtf8, c->length);
             PendingIR.DrawString(
-                _Font, text, new Vector2(c->x, c->y), color: ConvertColor(c->foreground), layer: 2, scale: FontScale, blendState: BlendState.AlphaBlend
+                _Font, text, new Vector2(c->x, c->y), color: ConvertColor(c->foreground), scale: FontScale, blendState: BlendState.AlphaBlend
             );
+        }
+
+        // FIXME: Implement for clipping when windows are scrolled
+        private void RenderCommand (nk_command_scissor* c) {
+            var rect = new Rectangle(c->x, c->y, c->w, c->h);
+            if (rect.X < 0)
+                rect.X = 0;
+            if (rect.Y < 0)
+                rect.Y = 0;
+            if (rect.Width > Game.Graphics.PreferredBackBufferWidth)
+                rect.Width = Game.Graphics.PreferredBackBufferWidth;
+            if (rect.Height > Game.Graphics.PreferredBackBufferHeight)
+                rect.Height = Game.Graphics.PreferredBackBufferHeight;
+            PendingIR.SetScissor(rect);
+        }
+
+        private void RenderCommand (nk_command_circle_filled* c) {
+            var gb = PendingIR.GetGeometryBatch(null, false, BlendState.AlphaBlend);
+            var bounds = ConvertBounds(c->x, c->y, c->w, c->h);
+            var radius = bounds.Size / 2f;
+            var color = ConvertColor(c->color);
+            var softEdge = Vector2.One * 2f;
+            gb.AddFilledRing(bounds.Center, Vector2.Zero, radius - Vector2.One, color, color);
+            gb.AddFilledRing(bounds.Center, radius - (Vector2.One * 1.4f), radius + softEdge, color, Color.Transparent);
         }
 
         private HashSet<string> WarnedCommands = new HashSet<string>();
@@ -250,6 +185,12 @@ namespace TestGame {
                     break;
                 case nk_command_type.NK_COMMAND_TEXT:
                     RenderCommand((nk_command_text*)c);
+                    break;
+                case nk_command_type.NK_COMMAND_SCISSOR:
+                    RenderCommand((nk_command_scissor*)c);
+                    break;
+                case nk_command_type.NK_COMMAND_CIRCLE_FILLED:
+                    RenderCommand((nk_command_circle_filled*)c);
                     break;
                 default:
                     var name = c->ctype.ToString();
@@ -267,12 +208,17 @@ namespace TestGame {
             NuklearAPI.SetDeltaTime(deltaTime);
             // FIXME: Gross
 
-            using (var group = BatchGroup.New(container, layer)) {
+            using (var group = BatchGroup.New(container, layer, (dm, _) => {
+                dm.Device.RasterizerState = RenderStates.ScissorOnly;
+            })) {
                 PendingGroup = group;
-                PendingIR = new ImperativeRenderer(group, Game.Materials, 0);
+                PendingIR = new ImperativeRenderer(group, Game.Materials, 0, autoIncrementLayer: true);
 
-                NuklearAPI.Frame(Scene, HighLevelRenderCommand);
+                Scene();
+                Nuklear.nk_foreach(Context, HighLevelRenderCommand);
             }
+
+            Nuklear.nk_clear(Context);
         }
 
         public void Dispose () {

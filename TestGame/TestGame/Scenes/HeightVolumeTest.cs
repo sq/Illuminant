@@ -203,7 +203,7 @@ namespace TestGame.Scenes {
                 if (KeyWasPressed(Keys.R))
                     Deterministic = !Deterministic;
 
-                var ms = Mouse.GetState();
+                var ms = Game.MouseState;
                 Game.IsMouseVisible = true;
 
                 // const float minZ = 0f, maxZ = 1.5f;

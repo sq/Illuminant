@@ -30,6 +30,7 @@ namespace TestGame {
         public NuklearService Nuklear;
 
         public KeyboardState PreviousKeyboardState, KeyboardState;
+        public MouseState PreviousMouseState, MouseState;
 
         public SpriteFont Font;
         public Texture2D RampTexture;
@@ -81,32 +82,39 @@ namespace TestGame {
 
         protected unsafe void UIScene () {
             var ctx = Nuklear.Context;
-            var textBuf = stackalloc byte[2048];
-            var utf8 = Encoding.UTF8.GetEncoder();
 
-            if (Nuke.nk_begin(
-                ctx, "Settings", new NuklearDotNet.NkRect(0, 0, 640, 480), 
+            var scene = Scenes[ActiveSceneIndex];
+            var settings = scene.Settings;
+            if (Nuke.nk_begin_titled(
+                ctx, "Settings", scene.GetType().Name + " settings", new NuklearDotNet.NkRect(4, 4, 640, 480), 
                 (uint)(NuklearDotNet.NkPanelFlags.Title | NuklearDotNet.NkPanelFlags.Border | NuklearDotNet.NkPanelFlags.Movable)
             ) != 0) {
                 Nuke.nk_layout_row_dynamic(ctx, 0, 1);
-                var settings = Scenes[ActiveSceneIndex].Settings;
                 foreach (var s in settings) {
                     var toggle = s as Toggle;
                     var slider = s as Slider;
                     if (toggle != null) {
-                        int active = toggle.Value ? 1 : 0;
-                        Nuke.nk_checkbox_label(ctx, Nuklear.GetTempUTF8(toggle.Name), &active);
-                        toggle.Value = active != 0;
+                        // FIXME: Why is this backwards?
+                        int result = Nuke.nk_check_text(ctx, Nuklear.GetTempUTF8(toggle.Name), toggle.Name.Length, toggle.Value ? 0 : 1);
+                        toggle.Value = result == 0;
                     } else if (slider != null) {
                         Nuke.nk_label(ctx, slider.Name, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
-                        var temp = slider.Value;
-                        Nuke.nk_slider_float(ctx, slider.Min.GetValueOrDefault(0), &temp, slider.Max.GetValueOrDefault(1), slider.Speed);
-                        slider.Value = temp;
+                        slider.Value = Nuke.nk_slide_float(ctx, slider.Min.GetValueOrDefault(0), slider.Value, slider.Max.GetValueOrDefault(1), slider.Speed);
                     }
                 }
             }
 
             Nuke.nk_end(ctx);
+        }
+
+        protected unsafe void UpdateNuklearInput () {
+            var ctx = Nuklear.Context;
+            Nuke.nk_input_begin(ctx);
+            if ((MouseState.X != PreviousMouseState.X) || (MouseState.Y != PreviousMouseState.Y))
+                Nuke.nk_input_motion(ctx, MouseState.X, MouseState.Y);
+            if (MouseState.LeftButton != PreviousMouseState.LeftButton)
+                Nuke.nk_input_button(ctx, NuklearDotNet.nk_buttons.NK_BUTTON_LEFT, MouseState.X, MouseState.Y, MouseState.LeftButton == ButtonState.Pressed ? 1 : 0);
+            Nuke.nk_input_end(ctx);
         }
 
         protected override void LoadContent () {
@@ -127,7 +135,10 @@ namespace TestGame {
         }
 
         protected override void Update (GameTime gameTime) {
+            PreviousKeyboardState = KeyboardState;
+            PreviousMouseState = MouseState;
             KeyboardState = Keyboard.GetState();
+            MouseState = Mouse.GetState();
 
             if (IsActive) {
                 var alt = KeyboardState.IsKeyDown(Keys.LeftAlt) || KeyboardState.IsKeyDown(Keys.RightAlt);
@@ -156,11 +167,11 @@ namespace TestGame {
             Scenes[ActiveSceneIndex].UpdateSettings();
             Scenes[ActiveSceneIndex].Update(gameTime);
 
+            UpdateNuklearInput();
+
             PerformanceStats.Record(this);
 
             Window.Title = String.Format("Scene {0}: {1}", ActiveSceneIndex, Scenes[ActiveSceneIndex].GetType().Name);
-
-            PreviousKeyboardState = KeyboardState;
 
             base.Update(gameTime);
         }

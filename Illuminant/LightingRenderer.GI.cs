@@ -449,11 +449,13 @@ namespace Squared.Illuminant {
                     }
                 }
 
-                var pdc = new PrimitiveDrawCall<VisualizeGIProbeVertex>(
-                    PrimitiveType.TriangleList,
-                    buf, 0, k / 3
-                );
-                pb.Add(ref pdc);
+                if (k != 0) {
+                    var pdc = new PrimitiveDrawCall<VisualizeGIProbeVertex>(
+                        PrimitiveType.TriangleList,
+                        buf, 0, k / 3
+                    );
+                    pb.Add(ref pdc);
+                }
             }
         }
 

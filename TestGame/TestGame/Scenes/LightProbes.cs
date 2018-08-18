@@ -269,7 +269,7 @@ namespace TestGame.Scenes {
                 
                 var time = (float)Time.Seconds;
 
-                var ms = Mouse.GetState();
+                var ms = Game.MouseState;
                 Game.IsMouseVisible = true;
 
                 var mousePos = new Vector3(ms.X, ms.Y, 1);

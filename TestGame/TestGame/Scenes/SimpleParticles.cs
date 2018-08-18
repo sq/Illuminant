@@ -353,7 +353,7 @@ namespace TestGame.Scenes {
                     grav.Attractors[3].Strength = Arithmetic.PulseExp(time / 8, 4f, 600f);
                 }
 
-                var ms = Mouse.GetState();
+                var ms = Game.MouseState;
                 Game.IsMouseVisible = true;
             }
 

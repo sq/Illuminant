@@ -439,7 +439,7 @@ namespace TestGame.Scenes {
             if (Game.IsActive) {
                 var time = (float)Time.Seconds;
 
-                var ms = Mouse.GetState();
+                var ms = Game.MouseState;
                 Game.IsMouseVisible = true;
 
                 LightZ = ((ms.ScrollWheelValue / 4096.0f) * Environment.MaximumZ);
