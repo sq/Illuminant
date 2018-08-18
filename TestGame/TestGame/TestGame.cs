@@ -36,6 +36,7 @@ namespace TestGame {
 
         public FreeTypeFont Font;
         public Texture2D RampTexture;
+        public RenderTarget2D UIRenderTarget;
 
         public readonly Scene[] Scenes;
         public int ActiveSceneIndex;
@@ -43,6 +44,7 @@ namespace TestGame {
         private int LastPerformanceStatPrimCount = 0;
 
         public bool IsMouseOverUI = false;
+        public long LastTimeOverUI;
 
         public TestGame () {
             // UniformBinding.ForceCompatibilityMode = true;
@@ -117,10 +119,14 @@ namespace TestGame {
             var scene = Scenes[ActiveSceneIndex];
             var settings = scene.Settings;
 
-            if (Nuke.nk_begin(
-                ctx, "Settings", new NuklearDotNet.NkRect(Graphics.PreferredBackBufferWidth - 504, Graphics.PreferredBackBufferHeight - 454, 500, 450), 
-                (uint)(NuklearDotNet.NkPanelFlags.Title | NuklearDotNet.NkPanelFlags.Border | NuklearDotNet.NkPanelFlags.Movable | NuklearDotNet.NkPanelFlags.Minimizable)
-            ) != 0) {
+            var isWindowOpen = Nuke.nk_begin(
+                ctx, "Settings", new NuklearDotNet.NkRect(Graphics.PreferredBackBufferWidth - 504, Graphics.PreferredBackBufferHeight - 454, 500, 450),
+                (uint)(NuklearDotNet.NkPanelFlags.Title | NuklearDotNet.NkPanelFlags.Border |
+                NuklearDotNet.NkPanelFlags.Movable | NuklearDotNet.NkPanelFlags.Minimizable |
+                NuklearDotNet.NkPanelFlags.Scalable)
+            ) != 0;
+
+            if (isWindowOpen) {
                 int i = 0;
 
                 foreach (var s in settings)
@@ -152,7 +158,13 @@ namespace TestGame {
             }
 
             var windowBounds = Nuke.nk_window_get_bounds(ctx);
+            // HACK
+            if (!isWindowOpen)
+                windowBounds.H = 32;
+
             IsMouseOverUI = Nuke.nk_input_is_mouse_hovering_rect(&ctx->input, windowBounds) != 0;
+            if (IsMouseOverUI)
+                LastTimeOverUI = Time.Ticks;
 
             Nuke.nk_end(ctx);
         }
@@ -196,6 +208,8 @@ namespace TestGame {
             TextMaterial.Parameters.ShadowColor.SetValue(new Vector4(0, 0, 0, 0.5f));
             TextMaterial.Parameters.ShadowOffset.SetValue(Vector2.One);
 
+            UIRenderTarget = new RenderTarget2D(GraphicsDevice, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight);
+
             Nuklear = new NuklearService(this) {
                 Font = Font,
                 Scene = UIScene
@@ -203,6 +217,8 @@ namespace TestGame {
 
             foreach (var scene in Scenes)
                 scene.LoadContent();
+
+            LastTimeOverUI = Time.Ticks;
         }
 
         protected override void Update (GameTime gameTime) {
@@ -247,22 +263,28 @@ namespace TestGame {
         }
 
         public override void Draw (GameTime gameTime, Frame frame) {
-            ClearBatch.AddNew(frame, -9999, Materials.Clear, Color.Black);
+            UpdateNuklearInput();
 
+            using (var group = BatchGroup.ForRenderTarget(frame, -3, UIRenderTarget)) {
+                ClearBatch.AddNew(group, -1, Materials.Clear, clearColor: Color.Transparent);
+                Nuklear.Render(gameTime.ElapsedGameTime.Seconds, group, 1);
+            }
+
+            ClearBatch.AddNew(frame, -1, Materials.Clear, Color.Black);
             Scenes[ActiveSceneIndex].Draw(frame);
 
             var ir = new ImperativeRenderer(
                 frame, Materials, 
-                blendState: BlendState.Opaque, 
-                depthStencilState: DepthStencilState.None, 
-                rasterizerState: RasterizerState.CullNone,
+                blendState: BlendState.AlphaBlend,
                 samplerState: SamplerState.LinearClamp,
                 worldSpace: false,
                 layer: 9999
             );
 
-            UpdateNuklearInput();
-            Nuklear.Render(gameTime.ElapsedGameTime.Seconds, frame, 9997);
+            var elapsedSeconds = TimeSpan.FromTicks(Time.Ticks - LastTimeOverUI).TotalSeconds;
+            float uiOpacity = Arithmetic.Lerp(1.0f, 0.4f, (float)((elapsedSeconds - 0.66) * 2.25f));
+
+            ir.Draw(UIRenderTarget, Vector2.Zero, multiplyColor: Color.White * uiOpacity);
 
             DrawPerformanceStats(ref ir);
         }
@@ -275,7 +297,7 @@ namespace TestGame {
             using (var buffer = BufferPool<BitmapDrawCall>.Allocate(text.Length)) {
                 var layout = Font.LayoutString(text, buffer, scale: scale);
                 var layoutSize = layout.Size;
-                var position = new Vector2(Graphics.PreferredBackBufferWidth - (300 * scale), 30f).Floor();
+                var position = new Vector2(Graphics.PreferredBackBufferWidth - (240 * scale), 30f).Floor();
                 var dc = layout.DrawCalls;
 
                 // fill quad + text quads

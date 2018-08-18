@@ -30,7 +30,6 @@ namespace TestGame {
         public Action Scene = null;
 
         public readonly TestGame Game;
-        public Bounds Bounds;
 
         private readonly Dictionary<string, float> TextWidthCache = new Dictionary<string, float>(StringComparer.Ordinal);
 
