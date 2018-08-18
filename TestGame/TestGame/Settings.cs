@@ -91,7 +91,7 @@ namespace TestGame {
         }
 
         protected override string GetLabelText () {
-            return string.Format("{0} {1}", Name, Key);
+            return string.Format("({1}) {0}", Name, Key);
         }
 
         public override string ToString () {
@@ -127,7 +127,7 @@ namespace TestGame {
         }
 
         protected override string GetLabelText () {
-            return string.Format("{0} {1} {2}", MinusKey, Name, PlusKey);
+            return string.Format("({0}) {1} ({2})", MinusKey, Name, PlusKey);
         }
 
         public override string ToString () {

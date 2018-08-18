@@ -22,19 +22,33 @@ namespace TestGame.Scenes {
 
         public readonly List<SphereLightSource> Lights = new List<SphereLightSource>();
 
-        bool ShowGBuffer   = false;
-        bool TwoPointFiveD = true;
-        bool Deterministic = true;
+        Toggle ShowGBuffer, TwoPointFiveD, Deterministic;
+        Slider LightmapScaleRatio;
 
         public const int RotatingLightCount = 1024;
 
         public const int MultisampleCount = 0;
-        public const int LightmapScaleRatio = 2;
 
         float LightZ = 0;
 
         public HeightVolumeTest (TestGame game, int width, int height)
             : base(game, width, height) {
+
+            Deterministic.Value = true;
+            TwoPointFiveD.Value = true;
+            LightmapScaleRatio.Value = 0.5f;
+
+            ShowGBuffer.Key = Keys.G;
+            TwoPointFiveD.Key = Keys.D2;
+            TwoPointFiveD.Changed += (s, e) => Renderer.InvalidateFields();
+            Deterministic.Key = Keys.R;
+
+            LightmapScaleRatio.MinusKey = Keys.D7;
+            LightmapScaleRatio.PlusKey = Keys.D8;
+            LightmapScaleRatio.Min = 0.05f;
+            LightmapScaleRatio.Max = 1.0f;
+            LightmapScaleRatio.Speed = 0.1f;
+            LightmapScaleRatio.Changed += (s, e) => Renderer.InvalidateFields();
         }
 
         private void CreateRenderTargets () {
@@ -65,9 +79,9 @@ namespace TestGame.Scenes {
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment,
                 new RendererConfiguration(
-                    Width / LightmapScaleRatio, Height / LightmapScaleRatio, true
+                    Width, Height, true
                 ) {
-                    RenderScale = Vector2.One * (1.0f / LightmapScaleRatio),
+                    RenderScale = Vector2.One * LightmapScaleRatio,
                     GBufferCaching = true,
                     DefaultQuality = {
                         LongStepFactor = 0.95f,
@@ -147,6 +161,7 @@ namespace TestGame.Scenes {
         
         public override void Draw (Squared.Render.Frame frame) {
             Renderer.Configuration.TwoPointFiveD = TwoPointFiveD;
+            Renderer.Configuration.RenderScale = Vector2.One * LightmapScaleRatio;
 
             CreateRenderTargets();
 
@@ -191,17 +206,6 @@ namespace TestGame.Scenes {
         public override void Update (GameTime gameTime) {
             if (Game.IsActive) {
                 const float step = 0.1f;
-
-                if (KeyWasPressed(Keys.G))
-                    ShowGBuffer = !ShowGBuffer;
-
-                if (KeyWasPressed(Keys.D2)) {
-                    TwoPointFiveD = !TwoPointFiveD;
-                    Renderer.InvalidateFields();
-                }
-
-                if (KeyWasPressed(Keys.R))
-                    Deterministic = !Deterministic;
 
                 var ms = Game.MouseState;
                 Game.IsMouseVisible = true;

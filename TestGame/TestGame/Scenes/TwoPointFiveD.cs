@@ -30,18 +30,23 @@ namespace TestGame.Scenes {
         const int MaxStepCount = 128;
         const float LightScaleFactor = 4;
 
-        Toggle ShowGBuffer,
-            ShowLightmap,
-            ShowDistanceField,
-            ShowHistogram,
-            UseRampTexture,
-            Timelapse,
-            TwoPointFiveD,
-            Deterministic,
-            sRGB;
+        [Group("Visualization")]
+        Toggle ShowGBuffer, 
+            ShowDistanceField, 
+            ShowLightmap, 
+            ShowHistogram;
 
+        [Group("Lighting")]
+        Toggle TwoPointFiveD,
+            UseRampTexture;
+
+        [Group("Resolution")]
         Slider DistanceFieldResolution,
             LightmapScaleRatio;
+
+        Toggle Timelapse,
+            Deterministic,
+            sRGB;
 
         RendererQualitySettings DirectionalQuality;
 
