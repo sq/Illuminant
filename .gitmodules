@@ -1,0 +1,3 @@
+[submodule "TestGame/Nuklear"]
+	path = TestGame/Nuklear
+	url = https://github.com/sbarisic/NuklearDotNet.git

@@ -26,6 +26,7 @@ namespace TestGame {
     public class TestGame : MultithreadedGame {
         public GraphicsDeviceManager Graphics;
         public DefaultMaterialSet Materials;
+        public NuklearService Nuklear;
 
         public KeyboardState PreviousKeyboardState, KeyboardState;
 
@@ -84,6 +85,11 @@ namespace TestGame {
             Materials = new DefaultMaterialSet(Services);
             RampTexture = Content.Load<Texture2D>("light_ramp");
 
+            Nuklear = new NuklearService(this) {
+                Font = new SpriteFontGlyphSource(Font),
+                FontScale = 0.75f
+            };
+
             foreach (var scene in Scenes)
                 scene.LoadContent();
         }
@@ -141,6 +147,8 @@ namespace TestGame {
                 worldSpace: false,
                 layer: 9999
             );
+
+            Nuklear.Render(gameTime.ElapsedGameTime.Seconds, frame, 9997);
 
             Scenes[ActiveSceneIndex].DrawSettings(frame, 9998);
 
