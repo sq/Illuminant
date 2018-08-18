@@ -138,7 +138,6 @@ namespace TestGame {
             );
         }
 
-        // FIXME: Implement for clipping when windows are scrolled
         private void RenderCommand (nk_command_scissor* c) {
             var rect = new Rectangle(c->x, c->y, c->w, c->h);
             if (rect.X < 0)
@@ -151,6 +150,10 @@ namespace TestGame {
                 rect.Width = Game.Graphics.PreferredBackBufferWidth - rect.X;
             if (y2 > Game.Graphics.PreferredBackBufferHeight)
                 rect.Height = Game.Graphics.PreferredBackBufferHeight - rect.Y;
+            if (rect.Width < 0)
+                rect.Width = 0;
+            if (rect.Height < 0)
+                rect.Height = 0;
             PendingIR.SetScissor(rect);
         }
 

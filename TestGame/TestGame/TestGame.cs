@@ -80,10 +80,12 @@ namespace TestGame {
             ActiveSceneIndex = Scenes.Length - 1;
         }
 
+        const float settingRowHeight = 26;
+
         protected unsafe void RenderSetting (ISetting s) {
             var ctx = Nuklear.Context;
 
-            Nuke.nk_layout_row_dynamic(ctx, 26, 1);
+            Nuke.nk_layout_row_dynamic(ctx, settingRowHeight, 1);
             var name = s.GetLabelUTF8();
             var toggle = s as Toggle;
             var slider = s as Slider;
@@ -102,26 +104,55 @@ namespace TestGame {
             }
         }
 
+        private UTF8String Other;
+
         protected unsafe void UIScene () {
             var ctx = Nuklear.Context;
 
             var scene = Scenes[ActiveSceneIndex];
             var settings = scene.Settings;
             if (Nuke.nk_begin(
-                ctx, "Settings", new NuklearDotNet.NkRect(Graphics.PreferredBackBufferWidth - 504, Graphics.PreferredBackBufferHeight - 354, 500, 350), 
+                ctx, "Settings", new NuklearDotNet.NkRect(Graphics.PreferredBackBufferWidth - 504, Graphics.PreferredBackBufferHeight - 454, 500, 450), 
                 (uint)(NuklearDotNet.NkPanelFlags.Title | NuklearDotNet.NkPanelFlags.Border | NuklearDotNet.NkPanelFlags.Movable | NuklearDotNet.NkPanelFlags.Minimizable)
             ) != 0) {
-                foreach (var g in settings.Groups.Values) {
+                int i = 0;
+
+                foreach (var kvp in settings.Groups.OrderBy(kvp => kvp.Key)) {
+                    var g = kvp.Value;
+                    var state = g.Visible
+                        ? NuklearDotNet.nk_collapse_states.NK_MAXIMIZED
+                        : NuklearDotNet.nk_collapse_states.NK_MINIMIZED;
                     var nameUtf = g.GetNameUTF8();
-                    if (Nuke.nk_group_begin_titled(ctx, nameUtf.pText, nameUtf.pText, (uint)(NuklearDotNet.NkPanelFlags.Title | NuklearDotNet.NkPanelFlags.Border | NuklearDotNet.NkPanelFlags.NoScrollbar)) != 0) {
+                    if (Nuke.nk_tree_push_hashed(
+                        ctx, NuklearDotNet.nk_tree_type.NK_TREE_TAB,
+                        nameUtf.pText, state, nameUtf.pText, nameUtf.Length, i
+                    ) != 0) {
                         foreach (var s in g)
                             RenderSetting(s);
-                        Nuke.nk_group_end(ctx);
+                        Nuke.nk_tree_state_pop(ctx);
+                        g.Visible = (state == NuklearDotNet.nk_collapse_states.NK_MAXIMIZED);
                     }
+                    i++;
                 }
 
-                foreach (var s in settings)
-                    RenderSetting(s);
+                i++;
+
+                var showRest = true;
+                if (settings.Groups.Count > 0) {
+                    if (Other.Length == 0)
+                        Other = new UTF8String("Misc");
+                    showRest = Nuke.nk_tree_push_hashed(
+                        ctx, NuklearDotNet.nk_tree_type.NK_TREE_TAB, Other.pText, NuklearDotNet.nk_collapse_states.NK_MAXIMIZED, Other.pText, Other.Length, i
+                    ) != 0;
+                }
+
+                if (showRest) {
+                    foreach (var s in settings)
+                        RenderSetting(s);
+
+                    if (settings.Groups.Count > 0)
+                        Nuke.nk_tree_state_pop(ctx);
+                }
             }
 
             Nuke.nk_end(ctx);

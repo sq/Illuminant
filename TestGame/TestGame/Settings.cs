@@ -144,6 +144,7 @@ namespace TestGame {
     public class SettingCollection : List<ISetting> {
         public class Group : List<ISetting> {
             public readonly string Name;
+            public bool Visible = true;
             private UTF8String NameUTF8;
 
             public Group (string name) {
