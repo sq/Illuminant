@@ -52,6 +52,8 @@ namespace TestGame.Scenes {
             Deterministic.Key = Keys.R;
             CameraDistance.MinusKey = Keys.OemMinus;
             CameraDistance.PlusKey = Keys.OemPlus;
+            DirectionalLight1.Key = Keys.D1;
+            DirectionalLight2.Key = Keys.D2;
 
             CameraDistance.Min = 10;
             CameraDistance.Max = 300;
