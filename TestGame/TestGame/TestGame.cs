@@ -114,11 +114,15 @@ namespace TestGame {
 
             var scene = Scenes[ActiveSceneIndex];
             var settings = scene.Settings;
+
             if (Nuke.nk_begin(
                 ctx, "Settings", new NuklearDotNet.NkRect(Graphics.PreferredBackBufferWidth - 504, Graphics.PreferredBackBufferHeight - 454, 500, 450), 
                 (uint)(NuklearDotNet.NkPanelFlags.Title | NuklearDotNet.NkPanelFlags.Border | NuklearDotNet.NkPanelFlags.Movable | NuklearDotNet.NkPanelFlags.Minimizable)
             ) != 0) {
                 int i = 0;
+
+                foreach (var s in settings)
+                    RenderSetting(s);
 
                 foreach (var kvp in settings.Groups.OrderBy(kvp => kvp.Key)) {
                     var g = kvp.Value;
@@ -141,26 +145,9 @@ namespace TestGame {
                 }
 
                 i++;
-
-                if (settings.Count > 0) {
-                    var showRest = true;
-                    if (settings.Groups.Count > 0) {
-                        if (Other.Length == 0)
-                            Other = new UTF8String("Misc");
-                        showRest = Nuke.nk_tree_push_hashed(
-                            ctx, NuklearDotNet.nk_tree_type.NK_TREE_TAB, Other.pText, NuklearDotNet.nk_collapse_states.NK_MAXIMIZED, Other.pText, Other.Length, i
-                        ) != 0;
-                    }
-
-                    if (showRest) {
-                        foreach (var s in settings)
-                            RenderSetting(s);
-
-                        if (settings.Groups.Count > 0)
-                            Nuke.nk_tree_state_pop(ctx);
-                    }
-                }
             }
+
+            scene.UIScene();
 
             var windowBounds = Nuke.nk_window_get_bounds(ctx);
             IsMouseOverUI = Nuke.nk_input_is_mouse_hovering_rect(&ctx->input, windowBounds) != 0;
@@ -315,6 +302,9 @@ namespace TestGame {
         public abstract void LoadContent ();
         public abstract void Draw (Frame frame);
         public abstract void Update (GameTime gameTime);
+
+        public virtual void UIScene () {
+        }
 
         internal bool KeyWasPressed (Keys key) {
             return Game.KeyboardState.IsKeyDown(key) && Game.PreviousKeyboardState.IsKeyUp(key);

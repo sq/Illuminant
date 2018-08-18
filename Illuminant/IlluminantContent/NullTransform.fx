@@ -13,7 +13,7 @@ void PS_Null (
     out float4 newVelocity   : COLOR1,
     out float4 newAttributes : COLOR2
 ) {
-    readStateOrDiscard(
+    readState(
         xy * Texel, newPosition, newVelocity, newAttributes
     );
 }

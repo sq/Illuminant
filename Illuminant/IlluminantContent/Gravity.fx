@@ -13,7 +13,7 @@ void PS_Gravity (
     out float4 newAttributes     : COLOR2
 ) {
     float4 oldVelocity;
-    readStateOrDiscard(
+    readState(
         xy * Texel, newPosition, oldVelocity, newAttributes
     );
 

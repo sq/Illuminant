@@ -16,6 +16,7 @@ using Squared.Illuminant.Util;
 using Squared.Render;
 using Squared.Render.Convenience;
 using Squared.Util;
+using Nuke = NuklearDotNet.Nuklear;
 
 namespace TestGame.Scenes {
     public class SimpleParticles : Scene {
@@ -26,9 +27,8 @@ namespace TestGame.Scenes {
         ParticleEngine Engine;
         ParticleSystem System;
 
-        bool Running = true;
-        bool ShowDistanceField = false;
-        bool Collisions = true;
+        Toggle Running, ShowDistanceField, Collisions, SpawnFromTemplate;
+
         int RandomSeed = 201;
 
         const float ParticlesPerPixel = 2;
@@ -44,6 +44,15 @@ namespace TestGame.Scenes {
 
         public SimpleParticles (TestGame game, int width, int height)
             : base(game, width, height) {
+            Running.Value = true;
+            ShowDistanceField.Value = false;
+            Collisions.Value = true;
+            SpawnFromTemplate.Value = true;
+
+            Running.Key = Keys.Space;
+            ShowDistanceField.Key = Keys.D;
+            Collisions.Key = Keys.C;
+            SpawnFromTemplate.Key = Keys.T;
         }
 
         private void CreateRenderTargets () {
@@ -300,14 +309,8 @@ namespace TestGame.Scenes {
             if (Game.IsActive) {
                 const float step = 0.1f;
 
-                if (KeyWasPressed(Keys.Space))
-                    Running = !Running;
                 if (KeyWasPressed(Keys.R))
                     Reset();
-                if (KeyWasPressed(Keys.D))
-                    ShowDistanceField = !ShowDistanceField;
-                if (KeyWasPressed(Keys.C))
-                    Collisions = !Collisions;
 
                 for (var i = 0; i < 9; i++) {
                     if (i >= System.Transforms.Count)
@@ -361,6 +364,9 @@ namespace TestGame.Scenes {
         }
 
         void MaybeSpawnMoreParticles () {
+            if (!SpawnFromTemplate)
+                return;
+
             if (FramesUntilNextSpawn > 0) {
                 FramesUntilNextSpawn--;
                 return;
@@ -421,6 +427,24 @@ namespace TestGame.Scenes {
             );
 
             SpawnOffset += totalSpawned;
+        }
+
+        UTF8String Transforms = new UTF8String("Transforms");
+
+        public unsafe override void UIScene () {
+            var ctx = Game.Nuklear.Context;
+
+            if (Nuke.nk_tree_push_hashed(ctx, NuklearDotNet.nk_tree_type.NK_TREE_TAB, Transforms.pText, NuklearDotNet.nk_collapse_states.NK_MAXIMIZED, Transforms.pText, Transforms.Length, 0) != 0) {
+                int i = 0;
+                foreach (var t in System.Transforms) {
+                    using (var temp = new UTF8String(t.GetType().Name)) {
+                        var newActive = Nuke.nk_check_text(ctx, temp.pText, temp.Length, t.IsActive ? 0 : 1);
+                        t.IsActive = newActive == 0;
+                    }
+                }
+
+                Nuke.nk_tree_pop(ctx);
+            }
         }
     }
 }
