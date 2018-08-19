@@ -38,14 +38,16 @@ namespace TestGame.Scenes {
 
         [Group("Lighting")]
         Toggle Deterministic, DirectionalLight1, DirectionalLight2;
+        [Group("Lighting")]
+        Slider ZToYMultiplier;
 
         public ScrollingGeo (TestGame game, int width, int height)
             : base(game, 1024, 1024) {
 
             Deterministic.Value = true;
-            DirectionalLight1.Value = true;
-            DirectionalLight2.Value = false;
-            CameraDistance.Value = 50;
+            DirectionalLight1.Value = false;
+            DirectionalLight2.Value = true;
+            CameraDistance.Value = 80;
 
             ShowGBuffer.Key = Keys.G;
             ShowDistanceField.Key = Keys.D;
@@ -61,6 +63,11 @@ namespace TestGame.Scenes {
 
             CameraX.Max = CameraY.Max = 4096;
             CameraX.Speed = CameraY.Speed = 1;
+
+            ZToYMultiplier.Min = 0.0f;
+            ZToYMultiplier.Max = 1.0f;
+            ZToYMultiplier.Speed = 0.1f;
+            ZToYMultiplier.Value = 0.3f;
         }
 
         private void CreateRenderTargets () {
@@ -81,7 +88,6 @@ namespace TestGame.Scenes {
 
             Environment.GroundZ = 0;
             Environment.MaximumZ = 256;
-            Environment.ZToYMultiplier = 0.33f;
 
             DistanceField = new DistanceField(
                 Game.RenderCoordinator, 4096, 4096, Environment.MaximumZ,
@@ -125,8 +131,8 @@ namespace TestGame.Scenes {
             });
 
             Environment.Lights.Add(new DirectionalLightSource {
-                Direction = new Vector3(0.35f, -0.05f, -0.75f),
-                Color = new Vector4(0.5f, 0.3f, 0.15f, 0.3f)
+                Direction = new Vector3(0f, 0f, -1f),
+                Color = new Vector4(0.6f, 0.0f, 0.0f, 0.3f)
             });
 
             {
@@ -160,6 +166,8 @@ namespace TestGame.Scenes {
         
         public override void Draw (Squared.Render.Frame frame) {
             CreateRenderTargets();
+
+            Environment.ZToYMultiplier = ZToYMultiplier.Value;
 
             var cz = new Vector2(100f / CameraDistance.Value);
             var cp = new Vector2(CameraX, CameraY);
@@ -295,8 +303,8 @@ namespace TestGame.Scenes {
                 var mousePos = new Vector3((ms.X / cameraZoom) + CameraX, (ms.Y / cameraZoom) + CameraY, LightZ);                
 
                 if (Deterministic) {
-                    MovableLight.Position = new Vector3(671, 394, 97.5f);
-                    MovableLight.Radius = 24;
+                    MovableLight.Position = new Vector3(561, 354, 120.5f);
+                    MovableLight.Radius = 36;
                 } else {
                     MovableLight.Position = mousePos;
                     MovableLight.Radius = 24 / cameraZoom;
