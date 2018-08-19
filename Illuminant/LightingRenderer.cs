@@ -1390,8 +1390,8 @@ namespace Squared.Illuminant {
 
             var viewTransform = ViewTransform.CreateOrthographic(
                 0, 0, 
-                (int)Math.Ceiling(df.VirtualWidth * df.ColumnCount), 
-                (int)Math.Ceiling(df.VirtualHeight * df.RowCount)
+                df.VirtualWidth * df.ColumnCount, 
+                df.VirtualHeight * df.RowCount
             );
             viewTransform.Position = new Vector2(-sliceXVirtual, -sliceYVirtual);
 

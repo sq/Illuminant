@@ -47,7 +47,7 @@ struct DistanceFieldSettings {
     float4 _ConeAndMisc;
     float4 _TextureSliceAndTexelSize;
     // StepLimit, MinimumLength, LongStepFactor
-    float3 _Step;
+    float4 _StepAndMisc2;
     float3 Extent;
     float3 TextureSliceCount;
 };
@@ -56,15 +56,15 @@ uniform DistanceFieldSettings DistanceField;
 
 // FIXME: int?
 float getStepLimit () {
-    return DistanceField._Step.x;
+    return DistanceField._StepAndMisc2.x;
 }
 
 float getMinStepSize () {
-    return DistanceField._Step.y;
+    return DistanceField._StepAndMisc2.y;
 }
 
 float getLongStepFactor () {
-    return DistanceField._Step.z;
+    return DistanceField._StepAndMisc2.z;
 }
 
 float getMaxConeRadius () {
@@ -79,8 +79,16 @@ float getOcclusionToOpacityPower () {
     return DistanceField._ConeAndMisc.z;
 }
 
-float getInvScaleFactor () {
+float getInvScaleFactorX () {
     return DistanceField._ConeAndMisc.w;
+}
+
+float getInvScaleFactorY () {
+    return DistanceField._StepAndMisc2.w;
+}
+
+float2 getInvScaleFactors () {
+    return float2(DistanceField._ConeAndMisc.w, DistanceField._StepAndMisc2.w);
 }
 
 float2 getDistanceSliceSize () {

@@ -17,8 +17,9 @@ namespace Squared.Illuminant {
     public class DistanceField : IDisposable {
         public bool IsDisposed { get; private set; }
 
-        public readonly float VirtualWidth, VirtualHeight, VirtualDepth;
-        public readonly float Resolution;
+        public readonly int VirtualWidth, VirtualHeight;
+        public readonly float VirtualDepth;
+        public readonly double Resolution;
         public readonly float MaximumEncodedDistance;
 
         public readonly RenderTarget2D Texture;
@@ -32,17 +33,38 @@ namespace Squared.Illuminant {
 
         public DistanceField (
             RenderCoordinator coordinator,
-            float virtualWidth, float virtualHeight, float virtualDepth,
-            int sliceCount, float resolution = 1f, float maximumEncodedDistance = 256f
+            int virtualWidth, int virtualHeight, float virtualDepth,
+            int sliceCount, double requestedResolution = 1, float maximumEncodedDistance = 256f
         ) {
             VirtualWidth = virtualWidth;
             VirtualHeight = virtualHeight;
             VirtualDepth = virtualDepth;
-            Resolution = resolution;
             MaximumEncodedDistance = maximumEncodedDistance;
 
-            SliceWidth = (int)Math.Ceiling(virtualWidth * resolution);
-            SliceHeight = (int)Math.Ceiling(virtualHeight * resolution);
+            if (requestedResolution < 0.05)
+                requestedResolution = 0.05;
+            else if (requestedResolution > 1)
+                requestedResolution = 1;
+
+            var candidateSliceWidth = (int)Math.Round(VirtualWidth * requestedResolution);
+            var candidateSliceHeight = (int)Math.Round(VirtualHeight * requestedResolution);
+
+            var fracX = (double)VirtualWidth / candidateSliceWidth;
+            var fracY = (double)VirtualHeight / candidateSliceHeight;
+            var frac = (fracX + fracY) / 2;
+
+            var resolution = Math.Round(1.0 / frac, 3);
+            if (resolution < 0.05)
+                resolution = 0.05;
+            else if (resolution > 1)
+                resolution = 1;
+
+            Resolution = resolution;
+
+            SliceWidth = (int)Math.Round(VirtualWidth * Resolution);
+            SliceHeight = (int)Math.Round(VirtualHeight * Resolution);
+
+
             int maxSlicesX = 4096 / SliceWidth;
             int maxSlicesY = 4096 / SliceHeight;
             int maxSlices = maxSlicesX * maxSlicesY * LightingRenderer.PackedSliceCount;
@@ -188,9 +210,9 @@ namespace Squared.Illuminant {
 
         public DynamicDistanceField (
             RenderCoordinator coordinator,
-            float virtualWidth, float virtualHeight, float virtualDepth,
-            int sliceCount, float resolution = 1f, float maximumEncodedDistance = 256f
-        ) : base (coordinator, virtualWidth, virtualHeight, virtualDepth, sliceCount, resolution, maximumEncodedDistance) {
+            int virtualWidth, int virtualHeight, float virtualDepth,
+            int sliceCount, double requestedResolution = 1, float maximumEncodedDistance = 256f
+        ) : base (coordinator, virtualWidth, virtualHeight, virtualDepth, sliceCount, requestedResolution, maximumEncodedDistance) {
             lock (coordinator.CreateResourceLock)
                 StaticTexture = new RenderTarget2D(
                     coordinator.Device,

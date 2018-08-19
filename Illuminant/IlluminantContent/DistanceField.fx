@@ -104,7 +104,7 @@ void InteriorPixelShader (
     in  float2 zRange : TEXCOORD0,
     in  float2 vpos : VPOS
 ) {
-    vpos *= getInvScaleFactor();
+    vpos *= getInvScaleFactors();
     vpos += Viewport.Position;
     
     float squaredDistanceXy = computeSquaredDistanceXy(vpos);
@@ -122,7 +122,7 @@ void ExteriorPixelShader (
     in  float2 zRange : TEXCOORD0,
     in  float2 vpos  : VPOS
 ) {
-    vpos *= getInvScaleFactor();
+    vpos *= getInvScaleFactors();
     vpos += Viewport.Position;
 
     float squaredDistanceXy = computeSquaredDistanceXy(vpos);

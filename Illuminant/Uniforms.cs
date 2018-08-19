@@ -43,11 +43,11 @@ namespace Squared.Illuminant.Uniforms {
 
     [StructLayout(LayoutKind.Sequential)]
     public struct DistanceField {
-        // MaxConeRadius, ConeGrowthFactor, OcclusionToOpacityPower, InvScaleFactor
+        // MaxConeRadius, ConeGrowthFactor, OcclusionToOpacityPower, InvScaleFactorX
         private Vector4 _ConeAndMisc;
         private Vector4 _TextureSliceAndTexelSize;
-        // StepLimit, MinimumLength, LongStepFactor
-        private Vector3 _Step;
+        // StepLimit, MinimumLength, LongStepFactor, InvScaleFactorY
+        private Vector4 _StepAndMisc2;
         public Vector3 Extent;
         // X, Y, Total
         public Vector3 TextureSliceCount;
@@ -63,34 +63,34 @@ namespace Squared.Illuminant.Uniforms {
                 1f / (df.VirtualHeight * df.RowCount)
             );
 
-            _Step = new Vector3(0, 0, 1);
-            _ConeAndMisc = new Vector4(0, 0, 0, 1f / df.Resolution);
+            _ConeAndMisc = new Vector4(0, 0, 0, (float)((double)df.VirtualWidth / df.SliceWidth));
+            _StepAndMisc2 = new Vector4(0, 0, 1, (float)((double)df.VirtualHeight / df.SliceHeight));
         }
 
         public int StepLimit {
             get {
-                return (int)_Step.X;
+                return (int)_StepAndMisc2.X;
             }
             set {
-                _Step.X = value;
+                _StepAndMisc2.X = value;
             }
         }
 
         public float MinimumLength {
             get {
-                return _Step.Y;
+                return _StepAndMisc2.Y;
             }
             set {
-                _Step.Y = value;
+                _StepAndMisc2.Y = value;
             }
         }
 
         public float LongStepFactor {
             get {
-                return _Step.Z;
+                return _StepAndMisc2.Z;
             }
             set {
-                _Step.Z = value;
+                _StepAndMisc2.Z = value;
             }
         }
 
@@ -121,12 +121,21 @@ namespace Squared.Illuminant.Uniforms {
             }
         }
 
-        public float InvScaleFactor {
+        public float InvScaleFactorX {
             get {
                 return _ConeAndMisc.W;
             }
             set {
                 _ConeAndMisc.W = value;
+            }
+        }
+
+        public float InvScaleFactorY {
+            get {
+                return _StepAndMisc2.W;
+            }
+            set {
+                _StepAndMisc2.W = value;
             }
         }
     }
