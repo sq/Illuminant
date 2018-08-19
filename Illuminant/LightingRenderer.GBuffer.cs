@@ -36,10 +36,14 @@ namespace Squared.Illuminant {
         }
 
         private float ComputeSelfOcclusionHack () {
-            var ratioBias = Math.Max((1.0 / DistanceField.Resolution) - 1, 0);
-            var scaledRatioBias = Math.Pow(ratioBias, 1.5);
-            var result = (float)(0.5 + (scaledRatioBias * 0.151));
-            return result;
+            if (_DistanceField == null) {
+                return 0;
+            } else {
+                var ratioBias = Math.Max((1.0 / _DistanceField.Resolution) - 1, 0);
+                var scaledRatioBias = Math.Pow(ratioBias, 1.5);
+                var result = (float)(0.5 + (scaledRatioBias * 0.151));
+                return result;
+            }
         }
 
         private void RenderGBuffer (
