@@ -38,8 +38,7 @@ namespace TestGame {
             Game = game;
             QueryFontGlyphF = _QueryFontGlyphF;
             TextWidthF = _TextWidthF;
-            Context = (nk_context*)NuklearAPI.Malloc((IntPtr)sizeof(nk_context));
-            Nuklear.nk_init(Context, NuklearAPI.MakeAllocator(), null);
+            Context = NuklearAPI.Init();
         }
 
         public IGlyphSource Font {
@@ -77,8 +76,8 @@ namespace TestGame {
 
             var texBounds = result.Texture.BoundsFromRectangle(ref result.BoundsInTexture);
 
-            glyph->uv0 = new nk_vec2 { x = texBounds.TopLeft.X, y = texBounds.TopLeft.Y };
-            glyph->uv1 = new nk_vec2 { x = texBounds.BottomRight.X, y = texBounds.BottomRight.Y };
+            glyph->uv0 = (nk_vec2)texBounds.TopLeft;
+            glyph->uv1 = (nk_vec2)texBounds.BottomRight;
             glyph->width = result.BoundsInTexture.Width * FontScale;
             glyph->height = result.BoundsInTexture.Height * FontScale;
             glyph->xadvance = result.Width * FontScale;
@@ -234,7 +233,6 @@ namespace TestGame {
         public void Render (float deltaTime, IBatchContainer container, int layer) {
             if (Scene == null)
                 return;
-            NuklearAPI.SetDeltaTime(deltaTime);
             // FIXME: Gross
 
             using (var group = BatchGroup.New(container, layer, (dm, _) => {
@@ -244,11 +242,8 @@ namespace TestGame {
                 PendingIR = new ImperativeRenderer(group, Game.Materials, 0, autoIncrementSortKey: true, worldSpace: false, blendState: BlendState.AlphaBlend);
 
                 Scene();
-                Nuklear.nk_foreach(Context, HighLevelRenderCommand);
-                ;
+                NuklearAPI.Render(Context, HighLevelRenderCommand);
             }
-
-            Nuklear.nk_clear(Context);
         }
 
         public unsafe void UpdateInput (
@@ -261,10 +256,10 @@ namespace TestGame {
             if ((mouseState.X != previousMouseState.X) || (mouseState.Y != previousMouseState.Y))
                 Nuklear.nk_input_motion(ctx, mouseState.X, mouseState.Y);
             if (mouseState.LeftButton != previousMouseState.LeftButton)
-                Nuklear.nk_input_button(ctx, NuklearDotNet.nk_buttons.NK_BUTTON_LEFT, mouseState.X, mouseState.Y, mouseState.LeftButton == ButtonState.Pressed ? 1 : 0);
+                Nuklear.nk_input_button(ctx, nk_buttons.NK_BUTTON_LEFT, mouseState.X, mouseState.Y, mouseState.LeftButton == ButtonState.Pressed ? 1 : 0);
             var scrollDelta = (mouseState.ScrollWheelValue - previousMouseState.ScrollWheelValue) / 106f;
             if ((scrollDelta != 0) && processMousewheel)
-                Nuklear.nk_input_scroll(ctx, new NuklearDotNet.nk_vec2 { x = 0, y = scrollDelta });
+                Nuklear.nk_input_scroll(ctx, new nk_vec2(0, scrollDelta));
             Nuklear.nk_input_end(ctx);
         }
 
