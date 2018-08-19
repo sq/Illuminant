@@ -22,8 +22,39 @@ sampler PointSampler : register(s7) {
 
 uniform bool  ResolveToSRGB;
 uniform float InverseScaleFactor;
+// uniform float OrderedDitherStrength;
 
-float4 ResolveCommon(
+/*
+static const float thresholdMatrix[16] = {
+    1.0 / 17.0,  9.0 / 17.0,  3.0 / 17.0, 11.0 / 17.0,
+    13.0 / 17.0,  5.0 / 17.0, 15.0 / 17.0,  7.0 / 17.0,
+    4.0 / 17.0, 12.0 / 17.0,  2.0 / 17.0, 10.0 / 17.0,
+    16.0 / 17.0,  8.0 / 17.0, 14.0 / 17.0,  6.0 / 17.0
+};
+
+float getThreshold (float2 vpos) {
+    int x = fmod(vpos.x, 4);
+    int y = fmod(vpos.y, 4);
+    return thresholdMatrix[(x + y * 4)] / 16.0;
+}
+
+float3 ApplyOrderedDither (float3 rgb, float2 vpos) {
+    float3 rgb8 = rgb * 255;
+    float3 a = floor(rgb8);
+    float3 b = ceil(rgb8);
+    float3 distanceToNext = (b - rgb8);
+    float threshold = getThreshold(vpos);
+    float3 mask = float3(distanceToNext.x <= threshold, distanceToNext.y <= threshold, distanceToNext.z <= threshold);
+    float3 result = lerp(a, b, mask);
+    return lerp(rgb, result / 255.0, OrderedDitherStrength);
+}
+*/
+
+float3 ApplyOrderedDither (float3 rgb, float2 vpos) {
+    return rgb;
+}
+
+float4 ResolveCommon (
     in float4 multiplyColor : COLOR0,
     in float4 addColor : COLOR1,
     in float2 texCoord : TEXCOORD0,
@@ -112,12 +143,13 @@ float4 ResolveCommon(
     return result;
 }
 
-void LightingResolvePixelShader(
+void LightingResolvePixelShader (
     in float4 multiplyColor : COLOR0,
     in float4 addColor : COLOR1,
     in float2 texCoord : TEXCOORD0,
     in float2 texTL : TEXCOORD1,
     in float2 texBR : TEXCOORD2,
+    in float2 vpos : VPOS,
     out float4 result : COLOR0
 ) {
     result = ResolveCommon(
@@ -133,6 +165,7 @@ void LightingResolvePixelShader(
     result.rgb = pow(result.rgb, (GammaMinusOne + 1));
     if (ResolveToSRGB)
         result.rgb = LinearToSRGB(result.rgb);
+    result.rgb = ApplyOrderedDither(result.rgb, vpos);
 }
 
 void GammaCompressedLightingResolvePixelShader(
@@ -141,6 +174,7 @@ void GammaCompressedLightingResolvePixelShader(
     in float2 texCoord : TEXCOORD0,
     in float2 texTL : TEXCOORD1,
     in float2 texBR : TEXCOORD2,
+    in float2 vpos : VPOS,
     out float4 result : COLOR0
 ) {
     result = ResolveCommon(
@@ -154,6 +188,7 @@ void GammaCompressedLightingResolvePixelShader(
     result = GammaCompress(result);
     if (ResolveToSRGB)
         result.rgb = LinearToSRGB(result.rgb);
+    result.rgb = ApplyOrderedDither(result.rgb, vpos);
 }
 
 void ToneMappedLightingResolvePixelShader(
@@ -162,6 +197,7 @@ void ToneMappedLightingResolvePixelShader(
     in float2 texCoord : TEXCOORD0,
     in float2 texTL : TEXCOORD1,
     in float2 texBR : TEXCOORD2,
+    in float2 vpos : VPOS,
     out float4 result : COLOR0
 ) {
     result = ResolveCommon(
@@ -178,12 +214,14 @@ void ToneMappedLightingResolvePixelShader(
     result.rgb = pow(result.rgb, (GammaMinusOne + 1));
     if (ResolveToSRGB)
         result.rgb = LinearToSRGB(result.rgb);
+    result.rgb = ApplyOrderedDither(result.rgb, vpos);
 }
 
 void CalculateLuminancePixelShader(
     in float2 texCoord : TEXCOORD0,
     in float2 texTL : TEXCOORD1,
     in float2 texBR : TEXCOORD2,
+    in float2 vpos : VPOS,
     out float4 result : COLOR0
 ) {
     float4 coord = float4(clamp(texCoord, texTL, texBR), 0, 0);
