@@ -140,14 +140,16 @@ namespace TestGame {
                 fixed (char* pChars = charBuffer.Data)
                     charsDecoded = Encoding.UTF8.GetChars(pTextUtf8, c->length, pChars, charBuffer.Data.Length);
                 var str = new AbstractString(new ArraySegment<char>(charBuffer.Data, 0, charsDecoded));
-                var layout = _Font.LayoutString(
-                    str, position: new Vector2(c->x, c->y),
-                    color: ConvertColor(c->foreground),
-                    scale: FontScale
-                );
-                PendingIR.DrawMultiple(
-                    layout.DrawCalls, material: Game.TextMaterial
-                );
+                using (var layoutBuffer = BufferPool<BitmapDrawCall>.Allocate(c->length + 64)) {
+                    var layout = _Font.LayoutString(
+                        str, position: new Vector2(c->x, c->y),
+                        color: ConvertColor(c->foreground),
+                        scale: FontScale, buffer: new ArraySegment<BitmapDrawCall>(layoutBuffer.Data)
+                    );
+                    PendingIR.DrawMultiple(
+                        layout.DrawCalls, material: Game.TextMaterial
+                    );
+                }
                 TextAdvancePending = true;
             }
         }
