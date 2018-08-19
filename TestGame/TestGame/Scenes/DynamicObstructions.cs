@@ -28,7 +28,7 @@ namespace TestGame.Scenes {
 
         const float LightScaleFactor = 4;
 
-        Toggle ShowLightmap,
+        Toggle ShowGBuffer,
             ShowDistanceField,
             Deterministic,
             EfficientUpdates;
@@ -45,7 +45,7 @@ namespace TestGame.Scenes {
             DistanceFieldResolution.Value = 0.25f;
             EfficientUpdates.Value = true;
 
-            ShowLightmap.Key = Keys.L;
+            ShowGBuffer.Key = Keys.G;
             ShowDistanceField.Key = Keys.D;
             Deterministic.Key = Keys.R;
             EfficientUpdates.Key = Keys.E;
@@ -234,13 +234,13 @@ namespace TestGame.Scenes {
             using (var group = BatchGroup.New(frame, 0)) {
                 ClearBatch.AddNew(group, 0, Game.Materials.Clear, clearColor: Color.Blue);
 
-                if (ShowLightmap) {
+                if (ShowGBuffer) {
                     using (var bb = BitmapBatch.New(
                         group, 1,
-                        Game.Materials.Get(Game.Materials.ScreenSpaceBitmap, blendState: BlendState.Opaque),
-                        samplerState: SamplerState.LinearClamp
+                        Game.Materials.Get(Game.Materials.ScreenSpaceBitmap, blendState: BlendState.AlphaBlend),
+                        samplerState: SamplerState.PointClamp
                     ))
-                        bb.Add(new BitmapDrawCall(Lightmap, Vector2.Zero));
+                        bb.Add(new BitmapDrawCall(Renderer.GBuffer.Texture, Vector2.Zero));
                 } else {
                     using (var bb = BitmapBatch.New(
                         group, 1,

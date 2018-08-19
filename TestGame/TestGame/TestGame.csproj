@@ -121,13 +121,13 @@
       <Project>{D7F549CF-E0A6-491C-A78C-ECAB590BB2A7}</Project>
       <Name>Squared.Util</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Nuklear\NuklearDotNet\NuklearDotNet.csproj">
-      <Project>{bdb132a4-22a1-479d-a4d0-0a2b00021f16}</Project>
-      <Name>NuklearDotNet</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Nuklear\Nuklear\Nuklear.vcxproj">
+    <ProjectReference Include="..\..\Squared.Nuklear\Nuklear\Nuklear.vcxproj">
       <Project>{6ef251c3-0cf3-4e0c-907b-11bd3deba8e6}</Project>
       <Name>Nuklear</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Squared.Nuklear\Squared.Nuklear\Squared.Nuklear.csproj">
+      <Project>{bdb132a4-22a1-479d-a4d0-0a2b00021f16}</Project>
+      <Name>Squared.Nuklear</Name>
     </ProjectReference>
     <ProjectReference Include="..\TestGameContent\TestGameContent.contentproj">
       <Name>TestGameContent</Name>
@@ -168,7 +168,7 @@
     <None Include="Properties\app.manifest" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="..\Nuklear\bin_dbg\Nuklear.dll">
+    <Content Include="..\..\Squared.Nuklear\bin_dbg\Nuklear.dll">
       <Link>Nuklear.dll</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
