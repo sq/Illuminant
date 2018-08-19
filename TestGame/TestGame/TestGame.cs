@@ -169,19 +169,6 @@ namespace TestGame {
             Nuke.nk_end(ctx);
         }
 
-        protected unsafe void UpdateNuklearInput () {
-            var ctx = Nuklear.Context;
-            Nuke.nk_input_begin(ctx);
-            if ((MouseState.X != PreviousMouseState.X) || (MouseState.Y != PreviousMouseState.Y))
-                Nuke.nk_input_motion(ctx, MouseState.X, MouseState.Y);
-            if (MouseState.LeftButton != PreviousMouseState.LeftButton)
-                Nuke.nk_input_button(ctx, NuklearDotNet.nk_buttons.NK_BUTTON_LEFT, MouseState.X, MouseState.Y, MouseState.LeftButton == ButtonState.Pressed ? 1 : 0);
-            var scrollDelta = (MouseState.ScrollWheelValue - PreviousMouseState.ScrollWheelValue) / 106f;
-            if ((scrollDelta != 0) && IsMouseOverUI)
-                Nuke.nk_input_scroll(ctx, new NuklearDotNet.nk_vec2 { x = 0, y = scrollDelta });
-            Nuke.nk_input_end(ctx);
-        }
-
         public bool LeftMouse {
             get {
                 return (MouseState.LeftButton == ButtonState.Pressed) && !IsMouseOverUI;
@@ -263,7 +250,7 @@ namespace TestGame {
         }
 
         public override void Draw (GameTime gameTime, Frame frame) {
-            UpdateNuklearInput();
+            Nuklear.UpdateInput(PreviousMouseState, MouseState, PreviousKeyboardState, KeyboardState, IsMouseOverUI);
 
             using (var group = BatchGroup.ForRenderTarget(frame, -9990, UIRenderTarget)) {
                 ClearBatch.AddNew(group, -1, Materials.Clear, clearColor: Color.Transparent);

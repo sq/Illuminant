@@ -13,6 +13,7 @@ using Squared.Render.Convenience;
 using Squared.Render.Text;
 using Microsoft.Xna.Framework;
 using Squared.Util;
+using Microsoft.Xna.Framework.Input;
 
 namespace TestGame {
     public unsafe class NuklearService : IDisposable {
@@ -248,6 +249,23 @@ namespace TestGame {
             }
 
             Nuklear.nk_clear(Context);
+        }
+
+        public unsafe void UpdateInput (
+            MouseState previousMouseState, MouseState mouseState,
+            KeyboardState previousKeyboardState, KeyboardState keyboardState,
+            bool processMousewheel
+        ) {
+            var ctx = Context;
+            Nuklear.nk_input_begin(ctx);
+            if ((mouseState.X != previousMouseState.X) || (mouseState.Y != previousMouseState.Y))
+                Nuklear.nk_input_motion(ctx, mouseState.X, mouseState.Y);
+            if (mouseState.LeftButton != previousMouseState.LeftButton)
+                Nuklear.nk_input_button(ctx, NuklearDotNet.nk_buttons.NK_BUTTON_LEFT, mouseState.X, mouseState.Y, mouseState.LeftButton == ButtonState.Pressed ? 1 : 0);
+            var scrollDelta = (mouseState.ScrollWheelValue - previousMouseState.ScrollWheelValue) / 106f;
+            if ((scrollDelta != 0) && processMousewheel)
+                Nuklear.nk_input_scroll(ctx, new NuklearDotNet.nk_vec2 { x = 0, y = scrollDelta });
+            Nuklear.nk_input_end(ctx);
         }
 
         public void Dispose () {
