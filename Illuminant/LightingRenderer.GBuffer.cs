@@ -35,6 +35,12 @@ namespace Squared.Illuminant {
             }
         }
 
+        private float ComputeSelfOcclusionHack () {
+            var ratioBias = Math.Max((1.0 / DistanceField.Resolution) - 1, 0);
+            var result = (float)(0.5 + (ratioBias * 0.225));
+            return result;
+        }
+
         private void RenderGBuffer (
             ref int layerIndex, IBatchContainer resultGroup,
             int renderWidth, int renderHeight,
@@ -71,6 +77,7 @@ namespace Squared.Illuminant {
                     (dm, _) => {
                         var p = IlluminantMaterials.HeightVolumeFace.Effect.Parameters;
                         p["DistanceFieldExtent"].SetValue(Extent3);
+                        p["SelfOcclusionHack"].SetValue(ComputeSelfOcclusionHack());
 
                         Materials.TrySetBoundUniform(IlluminantMaterials.HeightVolumeFace, "Environment", ref EnvironmentUniforms);
                         Materials.TrySetBoundUniform(IlluminantMaterials.HeightVolume, "Environment", ref EnvironmentUniforms);
@@ -210,6 +217,7 @@ namespace Squared.Illuminant {
                     // Materials.TrySetBoundUniform(material, "Viewport", ref viewTransform);
                     Materials.TrySetBoundUniform(material, "Environment", ref EnvironmentUniforms);
                     material.Effect.Parameters["DistanceFieldExtent"].SetValue(Extent3);
+                    material.Effect.Parameters["SelfOcclusionHack"].SetValue(ComputeSelfOcclusionHack());
                 }
             )) 
             using (var gDataBatch = PrimitiveBatch<BillboardVertex>.New(
@@ -223,6 +231,7 @@ namespace Squared.Illuminant {
                     // Materials.TrySetBoundUniform(material, "Viewport", ref viewTransform);
                     Materials.TrySetBoundUniform(material, "Environment", ref EnvironmentUniforms);
                     material.Effect.Parameters["DistanceFieldExtent"].SetValue(Extent3);
+                    material.Effect.Parameters["SelfOcclusionHack"].SetValue(ComputeSelfOcclusionHack());
                 }
             )) 
             foreach (var billboard in Environment.Billboards) {

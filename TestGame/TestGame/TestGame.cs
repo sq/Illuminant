@@ -78,13 +78,12 @@ namespace TestGame {
                 new SimpleParticles(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new LightProbeTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new GlobalIlluminationTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                // FIXME: Busted
-                // new DungeonGI(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new ParticleLights(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new DynamicObstructions(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
             };
 
             ActiveSceneIndex = Scenes.Length - 1;
+            ActiveSceneIndex = 4;
         }
 
         const float settingRowHeight = 26;

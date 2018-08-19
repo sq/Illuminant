@@ -83,7 +83,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Scenes\DistanceFieldEditor.cs" />
-    <Compile Include="Scenes\DungeonGI.cs" />
     <Compile Include="Scenes\ParticleLights.cs" />
     <Compile Include="Scenes\DynamicObstructions.cs" />
     <Compile Include="Scenes\SimpleParticles.cs" />

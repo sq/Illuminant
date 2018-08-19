@@ -134,7 +134,8 @@ namespace TestGame.Scenes {
             EnableGBuffer,
             Deterministic;
 
-        Slider ZToYMultiplier;
+        Slider ZToYMultiplier,
+            LightFalloffYFactor;
 
         const float TargetLowLuminance = 0.10f;
         const float TargetHighLuminance = 0.53f;
@@ -170,6 +171,11 @@ namespace TestGame.Scenes {
             ZToYMultiplier.Max = 4.0f;
             ZToYMultiplier.Speed = 0.1f;
             ZToYMultiplier.Value = 2.5f;
+
+            LightFalloffYFactor.Min = 1f;
+            LightFalloffYFactor.Max = 6f;
+            LightFalloffYFactor.Speed = 0.5f;
+            LightFalloffYFactor.Value = 4;
         }
 
         private void CreateRenderTargets () {
@@ -268,8 +274,7 @@ namespace TestGame.Scenes {
                 Radius = 160,
                 RampLength = 360,
                 RampMode = LightSourceRampMode.Exponential,
-                AmbientOcclusionRadius = 8f,
-                FalloffYFactor = 4f
+                AmbientOcclusionRadius = 8f
             };
 
             Environment.Lights.Add(light);
@@ -416,6 +421,8 @@ namespace TestGame.Scenes {
                 ForegroundRenderer.Configuration.EnableGBuffer = EnableGBuffer.Value;
 
             Environment.ZToYMultiplier = ForegroundEnvironment.ZToYMultiplier = ZToYMultiplier.Value;
+
+            Environment.Lights[0].FalloffYFactor = LightFalloffYFactor.Value;
 
             Renderer.UpdateFields(frame, -16);
             ForegroundRenderer.UpdateFields(frame, -15);

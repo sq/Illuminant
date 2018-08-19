@@ -23,7 +23,7 @@ void HeightVolumeFaceVertexShader(
     out   float4 result        : POSITION0
 ) {
     // HACK: Offset away from the surface to prevent self occlusion
-    worldPosition = position + (SELF_OCCLUSION_HACK * normal);
+    worldPosition = position + (SelfOcclusionHack * normal);
 
     position.y -= getZToYMultiplier() * position.z;
     float4 midTransform = float4((position.xy - Viewport.Position) * Viewport.Scale, 0, 1);

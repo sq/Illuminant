@@ -44,8 +44,8 @@ namespace TestGame.Scenes {
 
             Deterministic.Value = true;
             DirectionalLight1.Value = true;
-            DirectionalLight2.Value = true;
-            CameraDistance.Value = 100;
+            DirectionalLight2.Value = false;
+            CameraDistance.Value = 50;
 
             ShowGBuffer.Key = Keys.G;
             ShowDistanceField.Key = Keys.D;
@@ -130,11 +130,11 @@ namespace TestGame.Scenes {
             });
 
             {
-                const int tileSize = 32;
+                const int tileSize = 64;
                 const int numTiles = 4096 / tileSize;
 
                 var rng = new Random(123456);
-                for (var i = 0; i < 2048; i++) {
+                for (var i = 0; i < 900; i++) {
                     int x = rng.Next(0, numTiles), y = rng.Next(0, numTiles);
                     var obs = new LightObstruction(
                         LightObstructionType.Box,

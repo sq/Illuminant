@@ -22,7 +22,7 @@ void BillboardVertexShader(
     out   float4 result         : POSITION0
 ) {
     // HACK: Offset away from the surface to prevent self occlusion
-    worldPosition += (SELF_OCCLUSION_HACK * normal);
+    worldPosition += (SelfOcclusionHack * normal);
     screenPosition = float3((position.xy - Viewport.Position) * Viewport.Scale, position.z);
 
     result = TransformPosition(float4((position.xy - Viewport.Position) * Viewport.Scale, 0, 1), 0);
