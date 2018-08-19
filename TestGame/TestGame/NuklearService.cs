@@ -65,6 +65,8 @@ namespace TestGame {
             }
         }
 
+        private bool TextAdvancePending = false;
+
         private void _QueryFontGlyphF (NkHandle handle, float font_height, nk_user_font_glyph* glyph, uint codepoint, uint next_codepoint) {
             *glyph = default(nk_user_font_glyph);
 
@@ -107,7 +109,7 @@ namespace TestGame {
         }
 
         private Color ConvertColor (NkColor c) {
-            return new Color(c.R, c.G, c.B, c.A);
+            return new Color(c.R * c.A / 255, c.G * c.A / 255, c.B * c.A / 255, c.A);
         }
 
         private Bounds ConvertBounds (float x, float y, float w, float h) {
@@ -117,17 +119,18 @@ namespace TestGame {
         private void RenderCommand (nk_command_rect* c) {
             PendingIR.OutlineRectangle(
                 ConvertBounds(c->x, c->y, c->w - 1, c->h - 1), 
-                ConvertColor(c->color),
-                blendState: BlendState.NonPremultiplied
+                ConvertColor(c->color)
             );
         }
 
         private void RenderCommand (nk_command_rect_filled* c) {
+            if (TextAdvancePending)
+                PendingIR.Layer += 1;
             PendingIR.FillRectangle(
                 ConvertBounds(c->x, c->y, c->w, c->h), 
-                ConvertColor(c->color),
-                blendState: BlendState.NonPremultiplied
+                ConvertColor(c->color)
             );
+            TextAdvancePending = false;
         }
 
         private void RenderCommand (nk_command_text* c) {
@@ -142,11 +145,10 @@ namespace TestGame {
                     color: ConvertColor(c->foreground),
                     scale: FontScale
                 );
-                PendingIR.Layer += 1;
                 PendingIR.DrawMultiple(
                     layout.DrawCalls, material: Game.TextMaterial
                 );
-                PendingIR.Layer += 1;
+                TextAdvancePending = true;
             }
         }
 
@@ -169,24 +171,24 @@ namespace TestGame {
             PendingIR.Layer += 1;
             PendingIR.SetScissor(rect);
             PendingIR.Layer += 1;
+            TextAdvancePending = false;
         }
 
         private void RenderCommand (nk_command_circle_filled* c) {
-            var gb = PendingIR.GetGeometryBatch(null, false, BlendState.AlphaBlend);
             var bounds = ConvertBounds(c->x, c->y, c->w, c->h);
             var radius = bounds.Size / 2f;
             var color = ConvertColor(c->color);
             var softEdge = Vector2.One * 2f;
-            gb.AddFilledRing(bounds.Center, Vector2.Zero, radius - Vector2.One, color, color);
-            gb.AddFilledRing(bounds.Center, radius - (Vector2.One * 1.4f), radius + softEdge, color, Color.Transparent);
+            PendingIR.FillRing(bounds.Center, Vector2.Zero, radius - Vector2.One, color, color);
+            PendingIR.FillRing(bounds.Center, radius - (Vector2.One * 1.4f), radius + softEdge, color, Color.Transparent);
         }
 
         private void RenderCommand (nk_command_triangle_filled* c) {
-            var gb = PendingIR.GetGeometryBatch(null, false, BlendState.AlphaBlend);
+            var gb = PendingIR.GetGeometryBatch(null, null, null);
             var color = ConvertColor(c->color);
             var v1 = new Vector2(c->a.x, c->a.y);
-            var v2 = new Vector2(c->a.x, c->a.y);
-            var v3 = new Vector2(c->a.x, c->a.y);
+            var v2 = new Vector2(c->b.x, c->b.y);
+            var v3 = new Vector2(c->c.x, c->c.y);
             // FIXME: Fill the triangle
             // FIXME: Why are these lines invisible?
             gb.AddLine(v1, v2, color);
@@ -236,10 +238,11 @@ namespace TestGame {
                 dm.Device.RasterizerState = RenderStates.ScissorOnly;
             })) {
                 PendingGroup = group;
-                PendingIR = new ImperativeRenderer(group, Game.Materials, 0, autoIncrementSortKey: true);
+                PendingIR = new ImperativeRenderer(group, Game.Materials, 0, autoIncrementSortKey: true, worldSpace: false, blendState: BlendState.AlphaBlend);
 
                 Scene();
                 Nuklear.nk_foreach(Context, HighLevelRenderCommand);
+                ;
             }
 
             Nuklear.nk_clear(Context);
