@@ -20,13 +20,14 @@ void HeightVolumeFaceVertexShader(
     inout float3 normal        : NORMAL0,
     out   float3 worldPosition : TEXCOORD1,
     out   bool   dead          : TEXCOORD2,
+    out   float4 midTransform  : TEXCOORD3,
     out   float4 result        : POSITION0
 ) {
     // HACK: Offset away from the surface to prevent self occlusion
     worldPosition = position + (SelfOcclusionHack * normal);
 
     position.y -= getZToYMultiplier() * position.z;
-    float4 midTransform = float4((position.xy - Viewport.Position) * Viewport.Scale, 0, 1);
+    midTransform = float4((position.xy - Viewport.Position) * Viewport.Scale, 0, 1);
     result = TransformPosition(midTransform, 0);
     result.z = position.z / DistanceFieldExtent.z;
     dead = false;
@@ -46,8 +47,8 @@ void HeightVolumePixelShader (
             -99999
         );
     } else {
-        float screenY = (vpos.y / Viewport.Scale.y) + Viewport.Position.y;
-        float relativeY = worldPosition.y - screenY;
+        float screenY = ((vpos.y - 0.5) / Viewport.Scale.y) + Viewport.Position.y;
+        float relativeY = (worldPosition.y - screenY);
 
         if (worldPosition.z < getGroundZ()) {
             discard;

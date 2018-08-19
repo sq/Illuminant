@@ -37,7 +37,7 @@ namespace TestGame.Scenes {
         Slider CameraDistance, CameraX, CameraY;
 
         [Group("Lighting")]
-        Toggle Deterministic, DirectionalLight1, DirectionalLight2;
+        Toggle Deterministic, DirectionalLight1, DirectionalLight2, AmbientOcclusion;
         [Group("Lighting")]
         Slider ZToYMultiplier;
 
@@ -47,6 +47,7 @@ namespace TestGame.Scenes {
             Deterministic.Value = true;
             DirectionalLight1.Value = false;
             DirectionalLight2.Value = true;
+            AmbientOcclusion.Value = true;
             CameraDistance.Value = 80;
 
             ShowGBuffer.Key = Keys.G;
@@ -56,6 +57,7 @@ namespace TestGame.Scenes {
             CameraDistance.PlusKey = Keys.OemPlus;
             DirectionalLight1.Key = Keys.D1;
             DirectionalLight2.Key = Keys.D2;
+            AmbientOcclusion.Key = Keys.A;
 
             CameraDistance.Min = 10;
             CameraDistance.Max = 300;
@@ -131,7 +133,7 @@ namespace TestGame.Scenes {
             });
 
             Environment.Lights.Add(new DirectionalLightSource {
-                Direction = new Vector3(0f, 0f, -1f),
+                Direction = new Vector3(0.1f, -0.05f, -1f),
                 Color = new Vector4(0.6f, 0.0f, 0.0f, 0.3f)
             });
 
@@ -178,6 +180,11 @@ namespace TestGame.Scenes {
                 Lightmap.Width, Lightmap.Height,
                 out cvp, out uvo
             );
+
+            foreach (var light in Environment.Lights) {
+                light.AmbientOcclusionOpacity = AmbientOcclusion ? 0.5f : 0;
+                light.AmbientOcclusionRadius = 3;
+            }
 
             Environment.Lights[1].Opacity = DirectionalLight1.Value ? 1 : 0;
             Environment.Lights[2].Opacity = DirectionalLight2.Value ? 1 : 0;

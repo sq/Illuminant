@@ -85,96 +85,12 @@ namespace Squared.Illuminant {
                         dm.Device.RasterizerState = Render.Convenience.RenderStates.ScissorOnly;
                     }
                 )) {
-
-                    // HACK: Fill in the gbuffer values for the ground plane
-                    {
-                        var zRange = new Vector2(Environment.GroundZ, Environment.GroundZ);
-                        var tl = new Vector3(-999999, -999999, Environment.GroundZ);
-                        var tr = new Vector3(999999, -999999, Environment.GroundZ);
-                        var br = new Vector3(999999, 999999, Environment.GroundZ);
-                        var bl = new Vector3(-999999, 999999, Environment.GroundZ);
-
-                        if (Configuration.RenderGroundPlane == false) {
-                            var huge = new Vector3(0, 0, -99999);
-                            tl += huge;
-                            tr += huge;
-                            br += huge;
-                            bl += huge;
-                        }
-
-                        var verts = new HeightVolumeVertex[] {
-                            new HeightVolumeVertex(tl, Vector3.UnitZ, zRange),
-                            new HeightVolumeVertex(tr, Vector3.UnitZ, zRange),
-                            new HeightVolumeVertex(br, Vector3.UnitZ, zRange),
-                            new HeightVolumeVertex(bl, Vector3.UnitZ, zRange)
-                        };
-
-                        batch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
-                            PrimitiveType.TriangleList, verts, 0, 4, QuadIndices, 0, 2
-                        ));
-                    }
+                    RenderGroundPlane(batch);
 
                     if (Configuration.TwoPointFiveD) {
-                        if (RenderTrace.EnableTracing) {
-                            if (enableHeightVolumes) {
-                                RenderTrace.Marker(group, 2, "LightingRenderer {0} : G-Buffer Top Faces", this.ToObjectID());
-                                RenderTrace.Marker(group, 4, "LightingRenderer {0} : G-Buffer Front Faces", this.ToObjectID());
-                            }
-
-                            RenderTrace.Marker(group, 6, "LightingRenderer {0} : G-Buffer Billboards", this.ToObjectID());
-                        }
-
-                        if (enableHeightVolumes)
-                        using (var topBatch = PrimitiveBatch<HeightVolumeVertex>.New(
-                            group, 3, Materials.Get(
-                                IlluminantMaterials.HeightVolumeFace,
-                                depthStencilState: TopFaceDepthStencilState,
-                                rasterizerState: Render.Convenience.RenderStates.ScissorOnly,
-                                blendState: BlendState.Opaque
-                            )
-                        ))
-                        using (var frontBatch = PrimitiveBatch<HeightVolumeVertex>.New(
-                            group, 5, Materials.Get(
-                                IlluminantMaterials.HeightVolumeFace,
-                                depthStencilState: FrontFaceDepthStencilState,
-                                rasterizerState: Render.Convenience.RenderStates.ScissorOnly,
-                                blendState: BlendState.Opaque
-                            )
-                        ))
-                        {
-                            foreach (var volume in Environment.HeightVolumes.OrderByDescending(hv => hv.ZBase + hv.Height)) {
-                                var ffm3d = volume.GetFrontFaceMesh3D();
-                                if (ffm3d.Count <= 0)
-                                    continue;
-
-                                var m3d = volume.Mesh3D;
-
-                                frontBatch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
-                                    PrimitiveType.TriangleList,
-                                    ffm3d.Array, ffm3d.Offset, ffm3d.Count / 3
-                                ));
-
-                                topBatch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
-                                    PrimitiveType.TriangleList,
-                                    m3d, 0, m3d.Length / 3
-                                ));
-                            }
-                        }
-
-                        if (enableBillboards)
-                            RenderGBufferBillboards(group, 7);
-
+                        RenderTwoPointFiveDVolumes(enableHeightVolumes, enableBillboards, group);
                     } else if (enableHeightVolumes) {
-                        // Rasterize the height volumes in order from lowest to highest.
-                        foreach (var hv in Environment.HeightVolumes.OrderBy(hv => hv.ZBase + hv.Height)) {
-                            var b = hv.Bounds;
-                            var m = hv.Mesh3D;
-
-                            batch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
-                                PrimitiveType.TriangleList,
-                                m, 0, m.Length / 3
-                            ));
-                        }
+                        RenderGBufferVolumes(batch);
                     }
                 }
 
@@ -183,6 +99,98 @@ namespace Squared.Illuminant {
                 if (RenderTrace.EnableTracing)
                     RenderTrace.Marker(group, 9999, "LightingRenderer {0} : End G-Buffer", this.ToObjectID());
             }
+        }
+
+        private void RenderGBufferVolumes (PrimitiveBatch<HeightVolumeVertex> batch) {
+            // Rasterize the height volumes in order from lowest to highest.
+            foreach (var hv in Environment.HeightVolumes.OrderBy(hv => hv.ZBase + hv.Height)) {
+                var b = hv.Bounds;
+                var m = hv.Mesh3D;
+
+                batch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
+                    PrimitiveType.TriangleList,
+                    m, 0, m.Length / 3
+                ));
+            }
+        }
+
+        private void RenderTwoPointFiveDVolumes (bool enableHeightVolumes, bool enableBillboards, BatchGroup group) {
+            if (RenderTrace.EnableTracing) {
+                if (enableHeightVolumes) {
+                    RenderTrace.Marker(group, 2, "LightingRenderer {0} : G-Buffer Top Faces", this.ToObjectID());
+                    RenderTrace.Marker(group, 4, "LightingRenderer {0} : G-Buffer Front Faces", this.ToObjectID());
+                }
+
+                RenderTrace.Marker(group, 6, "LightingRenderer {0} : G-Buffer Billboards", this.ToObjectID());
+            }
+
+            if (enableHeightVolumes)
+                using (var topBatch = PrimitiveBatch<HeightVolumeVertex>.New(
+                    group, 3, Materials.Get(
+                        IlluminantMaterials.HeightVolumeFace,
+                        depthStencilState: TopFaceDepthStencilState,
+                        rasterizerState: Render.Convenience.RenderStates.ScissorOnly,
+                        blendState: BlendState.Opaque
+                    )
+                ))
+                using (var frontBatch = PrimitiveBatch<HeightVolumeVertex>.New(
+                    group, 5, Materials.Get(
+                        IlluminantMaterials.HeightVolumeFace,
+                        depthStencilState: FrontFaceDepthStencilState,
+                        rasterizerState: Render.Convenience.RenderStates.ScissorOnly,
+                        blendState: BlendState.Opaque
+                    )
+                )) {
+                    foreach (var volume in Environment.HeightVolumes.OrderByDescending(hv => hv.ZBase + hv.Height)) {
+                        var ffm3d = volume.GetFrontFaceMesh3D();
+                        if (ffm3d.Count <= 0)
+                            continue;
+
+                        var m3d = volume.Mesh3D;
+
+                        frontBatch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
+                            PrimitiveType.TriangleList,
+                            ffm3d.Array, ffm3d.Offset, ffm3d.Count / 3
+                        ));
+
+                        topBatch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
+                            PrimitiveType.TriangleList,
+                            m3d, 0, m3d.Length / 3
+                        ));
+                    }
+                }
+
+            if (enableBillboards)
+                RenderGBufferBillboards(group, 7);
+        }
+
+        private void RenderGroundPlane (PrimitiveBatch<HeightVolumeVertex> batch) {
+            // HACK: Fill in the gbuffer values for the ground plane
+
+            var zRange = new Vector2(Environment.GroundZ, Environment.GroundZ);
+            var tl = new Vector3(-999999, -999999, Environment.GroundZ);
+            var tr = new Vector3(999999, -999999, Environment.GroundZ);
+            var br = new Vector3(999999, 999999, Environment.GroundZ);
+            var bl = new Vector3(-999999, 999999, Environment.GroundZ);
+
+            if (Configuration.RenderGroundPlane == false) {
+                var huge = new Vector3(0, 0, -99999);
+                tl += huge;
+                tr += huge;
+                br += huge;
+                bl += huge;
+            }
+
+            var verts = new HeightVolumeVertex[] {
+                new HeightVolumeVertex(tl, Vector3.UnitZ, zRange),
+                new HeightVolumeVertex(tr, Vector3.UnitZ, zRange),
+                new HeightVolumeVertex(br, Vector3.UnitZ, zRange),
+                new HeightVolumeVertex(bl, Vector3.UnitZ, zRange)
+            };
+
+            batch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
+                PrimitiveType.TriangleList, verts, 0, 4, QuadIndices, 0, 2
+            ));
         }
 
         private void _SetTextureForGBufferBillboard (DeviceManager dm, ref PrimitiveDrawCall<BillboardVertex> drawCall, int index) {
