@@ -47,13 +47,12 @@ void HeightVolumePixelShader (
             -99999
         );
     } else {
-        float screenY = ((vpos.y - 0.5) / Viewport.Scale.y) + Viewport.Position.y;
-        float relativeY = (worldPosition.y - screenY);
-
         if (worldPosition.z < getGroundZ()) {
             discard;
             return;
         }
+
+        float relativeY = (worldPosition.z * getZToYMultiplier()) * Viewport.Scale / Environment.RenderScale;
 
         // HACK: We drop the world x axis and the normal y axis,
         //  and reconstruct those two values when sampling the g-buffer
