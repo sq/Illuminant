@@ -33,9 +33,7 @@ void HeightVolumeFaceVertexShader(
     dead = false;
 }
 
-void HeightVolumePixelShader (
-    in float2  vpos          : VPOS,
-    in float3  normal        : NORMAL0,
+void GroundPlanePixelShader (
     in float3  worldPosition : TEXCOORD1,
     in bool    dead          : TEXCOORD2,
     out float4 result        : COLOR0
@@ -46,6 +44,35 @@ void HeightVolumePixelShader (
             -99999,
             -99999
         );
+    } else {
+        if (worldPosition.z < getGroundZ()) {
+            discard;
+            return;
+        }
+
+        // HACK: We drop the world x axis and the normal y axis,
+        //  and reconstruct those two values when sampling the g-buffer
+        float3 normal = float3(0, 0, 1);
+        result = float4(
+            (normal.x / 2) + 0.5,
+            (normal.z / 2) + 0.5,
+            0, (worldPosition.z / 512)
+        );
+    }
+}
+
+void HeightVolumePixelShader(
+    in float3  normal        : NORMAL0,
+    in float3  worldPosition : TEXCOORD1,
+    in bool    dead          : TEXCOORD2,
+    out float4 result        : COLOR0
+) {
+    if (dead) {
+        result = float4(
+            0, 0,
+            -99999,
+            -99999
+            );
     } else {
         if (worldPosition.z < getGroundZ()) {
             discard;
@@ -65,7 +92,15 @@ void HeightVolumePixelShader (
     }
 }
 
-// Also used for the ground plane
+technique GroundPlane
+{
+    pass P0
+    {
+        vertexShader = compile vs_3_0 HeightVolumeVertexShader();
+        pixelShader  = compile ps_3_0 GroundPlanePixelShader();
+    }
+}
+
 technique HeightVolume
 {
     pass P0
@@ -80,6 +115,6 @@ technique HeightVolumeFace
     pass P0
     {
         vertexShader = compile vs_3_0 HeightVolumeFaceVertexShader();
-        pixelShader = compile ps_3_0 HeightVolumePixelShader();
+        pixelShader  = compile ps_3_0 HeightVolumePixelShader();
     }
 }

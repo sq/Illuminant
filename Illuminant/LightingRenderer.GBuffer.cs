@@ -73,7 +73,7 @@ namespace Squared.Illuminant {
                 );
 
                 using (var batch = PrimitiveBatch<HeightVolumeVertex>.New(
-                    group, 1, IlluminantMaterials.HeightVolume,
+                    group, 1, IlluminantMaterials.GroundPlane,
                     (dm, _) => {
                         var p = IlluminantMaterials.HeightVolumeFace.Effect.Parameters;
                         p["DistanceFieldExtent"].SetValue(Extent3);
@@ -81,6 +81,7 @@ namespace Squared.Illuminant {
 
                         Materials.TrySetBoundUniform(IlluminantMaterials.HeightVolumeFace, "Environment", ref EnvironmentUniforms);
                         Materials.TrySetBoundUniform(IlluminantMaterials.HeightVolume, "Environment", ref EnvironmentUniforms);
+                        Materials.TrySetBoundUniform(IlluminantMaterials.GroundPlane, "Environment", ref EnvironmentUniforms);
 
                         dm.Device.RasterizerState = Render.Convenience.RenderStates.ScissorOnly;
                     }

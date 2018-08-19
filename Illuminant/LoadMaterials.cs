@@ -126,6 +126,9 @@ namespace Squared.Illuminant {
                     );
                 }
 
+                DefineMaterial(IlluminantMaterials.GroundPlane = 
+                    new Squared.Render.Material(content.Load<Effect>("GBuffer"), "GroundPlane"));
+
                 DefineMaterial(IlluminantMaterials.HeightVolume = 
                     new Squared.Render.Material(content.Load<Effect>("GBuffer"), "HeightVolume"));
 
