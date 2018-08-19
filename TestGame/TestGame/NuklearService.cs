@@ -156,20 +156,6 @@ namespace TestGame {
 
         private void RenderCommand (nk_command_scissor* c) {
             var rect = new Rectangle(c->x, c->y, c->w, c->h);
-            if (rect.X < 0)
-                rect.X = 0;
-            if (rect.Y < 0)
-                rect.Y = 0;
-            var x2 = rect.Width + rect.X;
-            var y2 = rect.Height + rect.Y;
-            if (x2 > Game.Graphics.PreferredBackBufferWidth)
-                rect.Width = Game.Graphics.PreferredBackBufferWidth - rect.X;
-            if (y2 > Game.Graphics.PreferredBackBufferHeight)
-                rect.Height = Game.Graphics.PreferredBackBufferHeight - rect.Y;
-            if (rect.Width < 0)
-                rect.Width = 0;
-            if (rect.Height < 0)
-                rect.Height = 0;
             PendingIR.Layer += 1;
             PendingIR.SetScissor(rect);
             PendingIR.Layer += 1;

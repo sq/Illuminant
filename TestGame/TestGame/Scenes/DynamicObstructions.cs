@@ -42,7 +42,7 @@ namespace TestGame.Scenes {
             : base(game, 1024, 1024) {
 
             Deterministic.Value = false;
-            DistanceFieldResolution.Value = 0.25f;
+            DistanceFieldResolution.Value = 0.5f;
             EfficientUpdates.Value = true;
 
             ShowGBuffer.Key = Keys.G;
@@ -101,16 +101,12 @@ namespace TestGame.Scenes {
         }
 
         void Pillar (Vector2 center) {
-            const float totalHeight = 0.69f;
-            const float baseHeight  = 0.085f;
-            const float capHeight   = 0.09f;
+            const float totalHeight = 0.5f;
 
             var scale = 0.25f;
             var baseSizeTL = new Vector2(62, 65) * scale;
             var baseSizeBR = new Vector2(64, 57) * scale;
-            Ellipse(center, 51f * scale, 45f * scale, 0, totalHeight * 128);
-            Rect(center - baseSizeTL, center + baseSizeBR, 0.0f, baseHeight * 128);
-            Rect(center - baseSizeTL, center + baseSizeBR, (totalHeight - capHeight) * 128, capHeight * 128);
+            Ellipse(center, 51f * scale, 45f * scale, 0, totalHeight * Environment.MaximumZ);
         }
 
         private void CreateDistanceField () {
@@ -134,7 +130,7 @@ namespace TestGame.Scenes {
 
             Environment.GroundZ = 0;
             Environment.MaximumZ = 128;
-            Environment.ZToYMultiplier = 2.5f;
+            Environment.ZToYMultiplier = 1.5f;
 
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
@@ -149,6 +145,7 @@ namespace TestGame.Scenes {
                         MaxConeRadius = 24,
                     },
                     EnableGBuffer = true,
+                    TwoPointFiveD = true
                 }
             );
 
@@ -174,10 +171,10 @@ namespace TestGame.Scenes {
                 Color = new Vector4(0.5f, 0.3f, 0.15f, 0.3f),
             });
 
-            Rect(new Vector2(330, 337), new Vector2(Width, 394), 0f, 55f);
+            Rect(new Vector2(330, 347), new Vector2(Width, 388), 0f, 55f);
 
-            for (int x = 0; x < Width; x += 30)
-                Pillar(new Vector2(x, 523));
+            for (int x = -1024; x < (Width + 1024); x += 37)
+                Pillar(new Vector2(x, 540 + (x / 24.0f)));
 
             foreach (var o in Environment.Obstructions)
                 o.IsDynamic = false;
@@ -306,11 +303,9 @@ namespace TestGame.Scenes {
                 var mousePos = new Vector3(ms.X, ms.Y, LightZ);
 
                 if (Deterministic) {
-                    MovableLight.Position = new Vector3(671, 394, 97.5f);
-                    MovableLight.Color.W = 0.5f;
+                    MovableLight.Position = new Vector3(671, 420, 92.5f);
                 } else {
                     MovableLight.Position = mousePos;
-                    MovableLight.Color.W = Arithmetic.Pulse((float)Time.Seconds / 3f, 0.3f, 4f);
                 }
             }
         }
