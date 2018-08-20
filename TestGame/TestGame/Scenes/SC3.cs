@@ -262,7 +262,8 @@ namespace TestGame.Scenes {
                         LongStepFactor = 0.7f,
                         OcclusionToOpacityPower = 1.35f,
                         MaxConeRadius = 30,
-                    }
+                    },
+                    RenderGroundPlane = false
                 }
             ) {
                 DistanceField = DistanceField
@@ -299,8 +300,7 @@ namespace TestGame.Scenes {
             BuildObstacles();
 
             var terrainBillboard = new Billboard {
-                Position = Vector3.Zero,
-                Size = new Vector3(Width, Height, 0),
+                ScreenBounds = Bounds.FromPositionAndSize(Vector2.Zero, new Vector2(Width, Height)),
                 Texture = BackgroundData,
                 DataScale = 60,
                 Type = BillboardType.GBufferData
@@ -330,11 +330,16 @@ namespace TestGame.Scenes {
             Environment.Obstructions.Add(obs);
             ForegroundEnvironment.Obstructions.Add(obs);
 
+            var halfWidth = (tex.Width * 0.5f);
+            var fullHeight = tex.Height + 12;
+
             ForegroundBillboards.Add(new Billboard {
-                Position = new Vector3(x - (tex.Width * 0.5f), y - tex.Height + 12, 0),
-                Normal = Vector3.UnitZ,
-                Size = new Vector3(tex.Width, tex.Height, 0),
-                Texture = tex,
+                ScreenBounds = Bounds.FromPositionAndSize(
+                    new Vector2(x - halfWidth, y - fullHeight),
+                    new Vector2(tex.Width, tex.Height)
+                ),
+                Normal = Vector3.UnitY,
+                // Texture = tex,
                 CylinderFactor = 1.0f
             });
         }
@@ -350,10 +355,12 @@ namespace TestGame.Scenes {
 
             var tex = Trees[textureIndex];
             ForegroundBillboards.Add(new Billboard {
-                Position = new Vector3(x - (tex.Width * 0.5f) - 14, y - tex.Height + 20, 0),
-                Normal = Vector3.UnitZ,
-                Size = new Vector3(tex.Width, tex.Height, 0),
-                Texture = tex,
+                ScreenBounds = Bounds.FromPositionAndSize(
+                    new Vector2(x - (tex.Width * 0.5f) - 14, y - tex.Height + 20),
+                    new Vector2(tex.Width, tex.Height)
+                ),
+                Normal = Vector3.UnitY,
+                // Texture = tex,
                 CylinderFactor = 0.0f
             });
         }

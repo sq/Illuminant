@@ -8,19 +8,19 @@ using Squared.Game;
 namespace Squared.Illuminant {
     public struct Billboard {
         public Texture2D Texture;
-        public Vector3   Position;
+        public Bounds    ScreenBounds;
+        public Bounds3?  WorldBounds;
 
         private Vector3? _Normal;
         public Vector3 Normal {
             get {
-                return _Normal.GetValueOrDefault(Vector3.One);
+                return _Normal.GetValueOrDefault(Vector3.UnitY);
             }
             set {
                 _Normal = value;
             }
         }
 
-        public Vector3 Size;
         /// <summary>
         /// Adjusts how strongly the horizontal normals of the billboard will resemble a cylinder.
         /// Set to 0 for a flat billboard and 1 for an approximation of a perfect cylinder.
@@ -51,7 +51,7 @@ namespace Squared.Illuminant {
                 if (_TextureBounds.HasValue)
                     return _TextureBounds.Value;
 
-                return Bounds.Unit;
+                return Squared.Game.Bounds.Unit;
             }
             set {
                 _TextureBounds = value;

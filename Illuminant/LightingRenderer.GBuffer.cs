@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Squared.Game;
 using Squared.Render;
 using Squared.Render.Tracing;
 
@@ -249,13 +250,22 @@ namespace Squared.Illuminant {
                 }
             )) 
             foreach (var billboard in Environment.Billboards) {
-                var tl   = billboard.Position;
-                var size = billboard.Size;
+                var sb = billboard.ScreenBounds;
                 var normal1 = billboard.Normal;
                 var normal2 = normal1;
-                var bl = tl + new Vector3(0, size.Y, 0);
-                var tr = tl + new Vector3(size.X, 0, 0);
                 var dataScale = billboard.DataScale.GetValueOrDefault(1);
+
+                Bounds3 wb;
+                if (billboard.WorldBounds.HasValue)
+                    wb = billboard.WorldBounds.Value;
+                else {
+                    float x1 = sb.TopLeft.X, x2 = sb.BottomRight.X, y = sb.BottomRight.Y, h = sb.Size.Y;
+                    float zScale = h / Environment.ZToYMultiplier;
+                    wb = new Bounds3 {
+                        Minimum = new Vector3(x1, y, zScale),
+                        Maximum = new Vector3(x2, y, 0)
+                    };
+                }
 
                 // FIXME: Linear filtering = not a cylinder?
                 if (Math.Abs(billboard.CylinderFactor) >= 0.001f) {
@@ -265,30 +275,30 @@ namespace Squared.Illuminant {
 
                 var textureBounds = billboard.TextureBounds;
                 verts[j++] = new BillboardVertex {
-                    Position = tl,
+                    ScreenPosition = sb.TopLeft,
                     Normal = normal1,
-                    WorldPosition = bl + new Vector3(0, 0, size.Z),
+                    WorldPosition = wb.Minimum,
                     TexCoord = textureBounds.TopLeft,
                     DataScale = dataScale,
                 };
                 verts[j++] = new BillboardVertex {
-                    Position = tr,
+                    ScreenPosition = sb.TopRight,
                     Normal = normal2,
-                    WorldPosition = bl + new Vector3(size.X, 0, size.Z),
+                    WorldPosition = new Vector3(wb.Maximum.X, wb.Minimum.Y, wb.Minimum.Z),
                     TexCoord = textureBounds.TopRight,
                     DataScale = dataScale,
                 };
                 verts[j++] = new BillboardVertex {
-                    Position = tl + size,
+                    ScreenPosition = sb.BottomRight,
                     Normal = normal2,
-                    WorldPosition = bl + new Vector3(size.X, 0, 0),
+                    WorldPosition = wb.Maximum,
                     TexCoord = textureBounds.BottomRight,
                     DataScale = dataScale,
                 };
                 verts[j++] = new BillboardVertex {
-                    Position = bl,
+                    ScreenPosition = sb.BottomLeft,
                     Normal = normal1,
-                    WorldPosition = bl,
+                    WorldPosition = new Vector3(wb.Minimum.X, wb.Maximum.Y, wb.Maximum.Z),
                     TexCoord = textureBounds.BottomLeft,
                     DataScale = dataScale,
                 };
