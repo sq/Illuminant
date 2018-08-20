@@ -26,7 +26,7 @@ void BillboardVertexShader(
     screenPosition = float3((position.xy - Viewport.Position) * Viewport.Scale, position.z);
 
     result = TransformPosition(float4((position.xy - Viewport.Position) * Viewport.Scale, 0, 1), 0);
-    result.z = position.z / DistanceFieldExtent.z;
+    result.z = 0;
 }
 
 void MaskBillboardPixelShader(
