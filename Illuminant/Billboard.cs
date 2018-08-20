@@ -7,9 +7,26 @@ using Squared.Game;
 
 namespace Squared.Illuminant {
     public struct Billboard {
+        /// <summary>
+        /// The texture to draw into the g-buffer. This can be null in mask mode (to produce a filled rectangle).
+        /// </summary>
         public Texture2D Texture;
+        /// <summary>
+        /// Specifies the screen-space rectangle to render the billboard into.
+        /// </summary>
         public Bounds    ScreenBounds;
+        /// <summary>
+        /// If set, specifies the world coordinates for the top left and bottom right corners of the billboard.
+        /// If not set, automatically generated. The Z-height of the billboard in world space is based on the screen-space Y height.
+        /// </summary>
         public Bounds3?  WorldBounds;
+        /// <summary>
+        /// If set, overrides the height (on the Z axis) of the billboard in world space. Only applies when auto-generating world bounds.
+        /// </summary>
+        public float?    WorldElevation;
+        /// <summary>
+        /// Translates the billboard's world coordinates by a set amount.
+        /// </summary>
         public Vector3   WorldOffset;
 
         private Vector3? _Normal;

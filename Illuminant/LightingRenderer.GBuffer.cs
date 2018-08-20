@@ -259,7 +259,7 @@ namespace Squared.Illuminant {
                 if (billboard.WorldBounds.HasValue)
                     wb = billboard.WorldBounds.Value;
                 else {
-                    float x1 = sb.TopLeft.X, x2 = sb.BottomRight.X, y = sb.BottomRight.Y, h = sb.Size.Y;
+                    float x1 = sb.TopLeft.X, x2 = sb.BottomRight.X, y = sb.BottomRight.Y, h = billboard.WorldElevation.GetValueOrDefault(sb.Size.Y);
                     float zScale = h / Environment.ZToYMultiplier;
                     wb = new Bounds3 {
                         Minimum = new Vector3(x1, y, zScale),
