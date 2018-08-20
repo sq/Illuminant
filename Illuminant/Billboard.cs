@@ -75,9 +75,11 @@ namespace Squared.Illuminant {
                 _TextureBounds = value;
             }
         }
+
+        public float SortKey;
     }
 
-    public enum BillboardType {
+    public enum BillboardType : int {
         /// <summary>
         /// The texture's alpha channel is used as a mask.
         /// Any non-transparent pixels overwrite the g-buffer.

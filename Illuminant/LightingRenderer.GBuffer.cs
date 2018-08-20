@@ -7,7 +7,9 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Squared.Game;
 using Squared.Render;
+using Squared.Render.Convenience;
 using Squared.Render.Tracing;
+using Squared.Util;
 
 namespace Squared.Illuminant {
     public sealed partial class LightingRenderer : IDisposable, INameableGraphicsObject {
@@ -206,6 +208,22 @@ namespace Squared.Illuminant {
             material.Flush();
         }
 
+        private struct GBufferBillboardSorter : IRefComparer<Billboard> {
+            public int Compare (ref Billboard lhs, ref Billboard rhs) {
+                int result = lhs.SortKey.CompareTo(rhs.SortKey);
+                if (result == 0)
+                    result = ((int)lhs.Type).CompareTo((int)rhs.Type);
+                if (result == 0) {
+                    var lhsTexId = lhs.Texture != null ? lhs.Texture.GetHashCode() : 0;
+                    var rhsTexId = rhs.Texture != null ? rhs.Texture.GetHashCode() : 0;
+                    result = lhsTexId.CompareTo(rhsTexId);
+                }
+                return result;
+            }
+        }
+
+        private short[] BillboardQuadIndices;
+
         private void RenderGBufferBillboards (IBatchContainer container, int layerIndex) {
             if (Environment.Billboards == null)
                 return;
@@ -213,19 +231,37 @@ namespace Squared.Illuminant {
             // FIXME: This suuuuuuuuuuucks
             BillboardScratch.Clear();
             BillboardScratch.AddRange(Environment.Billboards);
+            BillboardScratch.FastCLRSortRef(new GBufferBillboardSorter());
 
             BillboardVertexScratch.EnsureCapacity(BillboardScratch.Count * 4);
             BillboardVertexScratch.Clear();
 
             var verts = BillboardVertexScratch.GetBuffer();
 
-            int i = 0, j = 0;
+            Texture2D previousTexture = null;
+            BillboardType previousType = (BillboardType)(int)-99;
+            int runStartedAt = 0, runStartedAtVertex = 0;
+            int i, j;
 
+            var requiredQuadIndices = BillboardScratch.Count * 6;
+            if ((BillboardQuadIndices == null) || (BillboardQuadIndices.Length < requiredQuadIndices)) {
+                BillboardQuadIndices = new short[requiredQuadIndices];
+                int v = 0;
+                for (i = 0; i < BillboardScratch.Count; i++) {
+                    var o = i * 4;
+
+                    for (j = 0; j < QuadIndices.Length; j++)
+                        BillboardQuadIndices[v++] = (short)(QuadIndices[j] + o);
+                }
+            }
+
+            i = 0;
+            j = 0;
             using (var maskBatch = PrimitiveBatch<BillboardVertex>.New(
                 container, layerIndex++, Materials.Get(
                     IlluminantMaterials.MaskBillboard,
                     depthStencilState: DepthStencilState.None,
-                    rasterizerState: RasterizerState.CullNone,
+                    rasterizerState: RenderStates.ScissorOnly,
                     blendState: BlendState.Opaque
                 ), (dm, _) => {
                     var material = IlluminantMaterials.MaskBillboard;
@@ -239,7 +275,7 @@ namespace Squared.Illuminant {
                 container, layerIndex++, Materials.Get(
                     IlluminantMaterials.GDataBillboard,
                     depthStencilState: DepthStencilState.None,
-                    rasterizerState: RasterizerState.CullNone,
+                    rasterizerState: RenderStates.ScissorOnly,
                     blendState: BlendState.Opaque
                 ), (dm, _) => {
                     var material = IlluminantMaterials.GDataBillboard;
@@ -248,76 +284,93 @@ namespace Squared.Illuminant {
                     material.Effect.Parameters["DistanceFieldExtent"].SetValue(Extent3);
                     material.Effect.Parameters["SelfOcclusionHack"].SetValue(ComputeSelfOcclusionHack());
                 }
-            )) 
-            foreach (var billboard in Environment.Billboards) {
-                var sb = billboard.ScreenBounds;
-                var normal1 = billboard.Normal;
-                var normal2 = normal1;
-                var dataScale = billboard.DataScale.GetValueOrDefault(1);
+            )) {
+                Action flushBatch = () => {
+                    var runLength = i - runStartedAt;
+                    if (runLength <= 0)
+                        return;
 
-                Bounds3 wb;
-                if (billboard.WorldBounds.HasValue)
-                    wb = billboard.WorldBounds.Value;
-                else {
-                    float x1 = sb.TopLeft.X, x2 = sb.BottomRight.X, y = sb.BottomRight.Y, h = billboard.WorldElevation.GetValueOrDefault(sb.Size.Y);
-                    float zScale = h / Environment.ZToYMultiplier;
-                    wb = new Bounds3 {
-                        Minimum = new Vector3(x1, y, zScale),
-                        Maximum = new Vector3(x2, y, 0)
-                    };
-                }
-
-                wb.Minimum += billboard.WorldOffset;
-                wb.Maximum += billboard.WorldOffset;
-
-                // FIXME: Linear filtering = not a cylinder?
-                if (Math.Abs(billboard.CylinderFactor) >= 0.001f) {
-                    normal1.X = 0f - (0.9f * billboard.CylinderFactor);
-                    normal2.X = 0f + (0.9f * billboard.CylinderFactor);
-                }
-
-                var textureBounds = billboard.TextureBounds;
-                verts[j++] = new BillboardVertex {
-                    ScreenPosition = sb.TopLeft,
-                    Normal = normal1,
-                    WorldPosition = wb.Minimum,
-                    TexCoord = textureBounds.TopLeft,
-                    DataScale = dataScale,
-                };
-                verts[j++] = new BillboardVertex {
-                    ScreenPosition = sb.TopRight,
-                    Normal = normal2,
-                    WorldPosition = new Vector3(wb.Maximum.X, wb.Minimum.Y, wb.Minimum.Z),
-                    TexCoord = textureBounds.TopRight,
-                    DataScale = dataScale,
-                };
-                verts[j++] = new BillboardVertex {
-                    ScreenPosition = sb.BottomRight,
-                    Normal = normal2,
-                    WorldPosition = wb.Maximum,
-                    TexCoord = textureBounds.BottomRight,
-                    DataScale = dataScale,
-                };
-                verts[j++] = new BillboardVertex {
-                    ScreenPosition = sb.BottomLeft,
-                    Normal = normal1,
-                    WorldPosition = new Vector3(wb.Minimum.X, wb.Maximum.Y, wb.Maximum.Z),
-                    TexCoord = textureBounds.BottomLeft,
-                    DataScale = dataScale,
-                };
-
-                var batch = billboard.Type == BillboardType.GBufferData
-                    ? gDataBatch
-                    : maskBatch;
+                    var batch = previousType == BillboardType.GBufferData
+                        ? gDataBatch
+                        : maskBatch;
                 
-                batch.Add(new PrimitiveDrawCall<BillboardVertex>(
-                    PrimitiveType.TriangleList, verts, i * 4, 4, 
-                    QuadIndices, 0, 2, 
-                    new DrawCallSortKey(order: i),
-                    SetTextureForGBufferBillboard, billboard.Texture
-                ));
+                    batch.Add(new PrimitiveDrawCall<BillboardVertex>(
+                        PrimitiveType.TriangleList, verts, runStartedAtVertex, runLength * 4,
+                        BillboardQuadIndices, 0, runLength * 2, 
+                        new DrawCallSortKey(order: i),
+                        SetTextureForGBufferBillboard, previousTexture
+                    ));
+                };
 
-                i++;
+                foreach (var billboard in Environment.Billboards) {
+                    if ((previousTexture != billboard.Texture) || (previousType != billboard.Type)) {
+                        flushBatch();
+                        runStartedAt = i;
+                        runStartedAtVertex = j;
+                        previousTexture = billboard.Texture;
+                        previousType = billboard.Type;
+                    }
+
+                    var sb = billboard.ScreenBounds;
+                    var normal1 = billboard.Normal;
+                    var normal2 = normal1;
+                    var dataScale = billboard.DataScale.GetValueOrDefault(1);
+
+                    Bounds3 wb;
+                    if (billboard.WorldBounds.HasValue)
+                        wb = billboard.WorldBounds.Value;
+                    else {
+                        float x1 = sb.TopLeft.X, x2 = sb.BottomRight.X, y = sb.BottomRight.Y, h = billboard.WorldElevation.GetValueOrDefault(sb.Size.Y);
+                        float zScale = h / Environment.ZToYMultiplier;
+                        wb = new Bounds3 {
+                            Minimum = new Vector3(x1, y, zScale),
+                            Maximum = new Vector3(x2, y, 0)
+                        };
+                    }
+
+                    wb.Minimum += billboard.WorldOffset;
+                    wb.Maximum += billboard.WorldOffset;
+
+                    // FIXME: Linear filtering = not a cylinder?
+                    if (Math.Abs(billboard.CylinderFactor) >= 0.001f) {
+                        normal1.X = 0f - (0.9f * billboard.CylinderFactor);
+                        normal2.X = 0f + (0.9f * billboard.CylinderFactor);
+                    }
+
+                    var textureBounds = billboard.TextureBounds;
+                    verts[j++] = new BillboardVertex {
+                        ScreenPosition = sb.TopLeft,
+                        Normal = normal1,
+                        WorldPosition = wb.Minimum,
+                        TexCoord = textureBounds.TopLeft,
+                        DataScale = dataScale,
+                    };
+                    verts[j++] = new BillboardVertex {
+                        ScreenPosition = sb.TopRight,
+                        Normal = normal2,
+                        WorldPosition = new Vector3(wb.Maximum.X, wb.Minimum.Y, wb.Minimum.Z),
+                        TexCoord = textureBounds.TopRight,
+                        DataScale = dataScale,
+                    };
+                    verts[j++] = new BillboardVertex {
+                        ScreenPosition = sb.BottomRight,
+                        Normal = normal2,
+                        WorldPosition = wb.Maximum,
+                        TexCoord = textureBounds.BottomRight,
+                        DataScale = dataScale,
+                    };
+                    verts[j++] = new BillboardVertex {
+                        ScreenPosition = sb.BottomLeft,
+                        Normal = normal1,
+                        WorldPosition = new Vector3(wb.Minimum.X, wb.Maximum.Y, wb.Maximum.Z),
+                        TexCoord = textureBounds.BottomLeft,
+                        DataScale = dataScale,
+                    };
+
+                    i++;
+                }
+
+                flushBatch();
             }
         }
 
