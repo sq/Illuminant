@@ -14,8 +14,8 @@ float evaluateBox (
         min(
             max(d.x, max(d.y, d.z)),
             0.0
-            ) + length(max(d, 0.0)
-                );
+        ) + length(max(d, 0.0)
+    );
 
     return resultDistance;
 }
@@ -37,15 +37,10 @@ float evaluateEllipsoid (
 float evaluateCylinder (
     float3 worldPosition, float3 center, float3 size
 ) {
-    float3 position = worldPosition - center;
-
-    float3 p = position.xzy;
-    float2 h = size.xz;
-
-    float2 d = abs(float2(length(p.xz), p.y)) - h;
-    float resultDistance = min(max(d.x, d.y), 0.0) + length(max(d, 0.0));
-
-    return resultDistance;
+    const float bigValue = 65536.0;
+    float bigEllipsoid = evaluateEllipsoid(worldPosition, center, float3(size.x, size.y, bigValue));
+    float boxCap       = evaluateBox(worldPosition, center, float3(bigValue, bigValue, size.z));
+    return max(bigEllipsoid, boxCap);
 }
 
 float evaluateByTypeId (

@@ -10,6 +10,7 @@ namespace Squared.Illuminant {
         public Texture2D Texture;
         public Bounds    ScreenBounds;
         public Bounds3?  WorldBounds;
+        public Vector3   WorldOffset;
 
         private Vector3? _Normal;
         public Vector3 Normal {

@@ -126,9 +126,9 @@ namespace TestGame.Scenes {
         //  have additional values past 1.0 to use for HDR calculations
         const float HDRRangeFactor = 4;
 
-        Toggle ShowGBuffer, 
-            ShowDistanceField, 
-            ShowLightmap, 
+        Toggle ShowGBuffer,
+            ShowDistanceField,
+            ShowLightmap,
             ShowHistogram,
             VisualizeForeground,
             EnableGBuffer,
@@ -262,8 +262,7 @@ namespace TestGame.Scenes {
                         LongStepFactor = 0.7f,
                         OcclusionToOpacityPower = 1.35f,
                         MaxConeRadius = 30,
-                    },
-                    RenderGroundPlane = false
+                    }
                 }
             ) {
                 DistanceField = DistanceField
@@ -321,25 +320,27 @@ namespace TestGame.Scenes {
         private void Pillar (float x, float y, int textureIndex) {
             var tex = Pillars[textureIndex];
 
+            const float fudgeFactor = 1, fudgeFactor2 = 10, fudgeFactor3 = 0;
+
             var obs = new LightObstruction(
                 LightObstructionType.Cylinder,
                 // HACK: Is it right to need a fudge factor here?
-                new Vector3(x, y - 5, Environment.GroundZ),
-                new Vector3(18, 8, tex.Height)
+                new Vector3(x, y - fudgeFactor, Environment.GroundZ),
+                new Vector3(16, 9, tex.Height)
             );
             Environment.Obstructions.Add(obs);
             ForegroundEnvironment.Obstructions.Add(obs);
 
             var halfWidth = (tex.Width * 0.5f);
-            var fullHeight = tex.Height + 12;
 
             ForegroundBillboards.Add(new Billboard {
                 ScreenBounds = Bounds.FromPositionAndSize(
-                    new Vector2(x - halfWidth, y - fullHeight),
+                    new Vector2(x - halfWidth, y - tex.Height + fudgeFactor2),
                     new Vector2(tex.Width, tex.Height)
                 ),
+                WorldOffset = Vector3.UnitY * fudgeFactor3,
                 Normal = Vector3.UnitY,
-                // Texture = tex,
+                Texture = tex,
                 CylinderFactor = 1.0f
             });
         }
@@ -360,7 +361,7 @@ namespace TestGame.Scenes {
                     new Vector2(tex.Width, tex.Height)
                 ),
                 Normal = Vector3.UnitY,
-                // Texture = tex,
+                Texture = tex,
                 CylinderFactor = 0.0f
             });
         }

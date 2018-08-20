@@ -267,10 +267,13 @@ namespace Squared.Illuminant {
                     };
                 }
 
+                wb.Minimum += billboard.WorldOffset;
+                wb.Maximum += billboard.WorldOffset;
+
                 // FIXME: Linear filtering = not a cylinder?
                 if (Math.Abs(billboard.CylinderFactor) >= 0.001f) {
-                    normal1.X = 0.5f - (0.5f * billboard.CylinderFactor);
-                    normal2.X = 0.5f + (0.5f * billboard.CylinderFactor);
+                    normal1.X = 0f - (0.9f * billboard.CylinderFactor);
+                    normal2.X = 0f + (0.9f * billboard.CylinderFactor);
                 }
 
                 var textureBounds = billboard.TextureBounds;

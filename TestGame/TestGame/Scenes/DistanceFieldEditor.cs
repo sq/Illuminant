@@ -1,5 +1,4 @@
-﻿
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,6 +12,7 @@ using Squared.Illuminant;
 using Squared.Render;
 using Squared.Render.Convenience;
 using Squared.Util;
+using Nuke = NuklearDotNet.Nuklear;
 
 namespace TestGame.Scenes {
     public class DistanceFieldEditor : Scene {
@@ -371,6 +371,38 @@ namespace TestGame.Scenes {
                 var magicAngle = Vector3.Transform(-Vector3.UnitY, m2);
                 Viewports[Viewports.Length - 1].ViewAngle = magicAngle;
                 */
+            }
+        }
+
+        UTF8String sSelectedObject = new UTF8String("Selected Object");
+
+        public unsafe override void UIScene () {
+            var ctx = Game.Nuklear.Context;
+            const float min = -128f;
+            const float max = 256f + 128f;
+            const float maxSize = 1024f;
+
+            if (Nuke.nk_tree_push_hashed(ctx, NuklearDotNet.nk_tree_type.NK_TREE_TAB, sSelectedObject.pText, NuklearDotNet.nk_collapse_states.NK_MAXIMIZED, sSelectedObject.pText, sSelectedObject.Length, 64) != 0) {
+                var obs = Environment.Obstructions[(int)SelectedObject.Value];
+
+                var oldCenter = obs.Center;
+                var oldSize = obs.Size;
+
+                obs.Center.X = Nuke.nk_slide_float(ctx, min, obs.Center.X, max, 1f);
+                obs.Center.Y = Nuke.nk_slide_float(ctx, min, obs.Center.Y, max, 1f);
+                obs.Center.Z = Nuke.nk_slide_float(ctx, min, obs.Center.Z, max, 1f);
+
+                obs.Size.X = Nuke.nk_slide_float(ctx, 1f, obs.Size.X, maxSize, 1f);
+                obs.Size.Y = Nuke.nk_slide_float(ctx, 1f, obs.Size.Y, maxSize, 1f);
+                obs.Size.Z = Nuke.nk_slide_float(ctx, 1f, obs.Size.Z, maxSize, 1f);
+
+                if (
+                    ((obs.Center - oldCenter).Length() >= 0.5f) ||
+                    ((obs.Size - oldSize).Length() >= 0.5f)
+                )
+                    Renderer.InvalidateFields();
+
+                Nuke.nk_tree_pop(ctx);
             }
         }
     }
