@@ -29,6 +29,7 @@ void HeightVolumeFaceVertexShader(
     midTransform = float4((position.xy - Viewport.Position) * Viewport.Scale, 0, 1);
     result = TransformPosition(midTransform, 0);
     result.z = position.z / DistanceFieldExtent.z;
+    result.w = 1;
     dead = false;
 }
 
