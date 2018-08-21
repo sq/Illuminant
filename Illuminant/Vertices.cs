@@ -77,7 +77,7 @@ namespace Squared.Illuminant {
         public Vector2 TexCoord;
         public Vector3 WorldPosition;
         public Vector3 Normal;
-        public float DataScale;
+        public Vector2 DataScaleAndDynamicFlag;
 
         public static VertexDeclaration _VertexDeclaration;
 
@@ -89,7 +89,7 @@ namespace Squared.Illuminant {
                 new VertexElement(Marshal.OffsetOf(tThis, "TexCoord").ToInt32(), VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 0),
                 new VertexElement(Marshal.OffsetOf(tThis, "WorldPosition").ToInt32(),   VertexElementFormat.Vector3, VertexElementUsage.TextureCoordinate, 1),
                 new VertexElement(Marshal.OffsetOf(tThis, "Normal").ToInt32(),   VertexElementFormat.Vector3, VertexElementUsage.Normal, 0),
-                new VertexElement(Marshal.OffsetOf(tThis, "DataScale").ToInt32(),   VertexElementFormat.Single, VertexElementUsage.Normal, 1)
+                new VertexElement(Marshal.OffsetOf(tThis, "DataScaleAndDynamicFlag").ToInt32(),   VertexElementFormat.Vector2, VertexElementUsage.Normal, 1)
             );
         }
 

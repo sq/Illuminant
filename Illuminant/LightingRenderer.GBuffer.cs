@@ -314,17 +314,27 @@ namespace Squared.Illuminant {
                     var sb = billboard.ScreenBounds;
                     var normal1 = billboard.Normal;
                     var normal2 = normal1;
-                    var dataScale = billboard.DataScale.GetValueOrDefault(1);
+                    var dataScaleAndDynamicFlag = new Vector2(
+                        billboard.DataScale.GetValueOrDefault(1),
+                        billboard.StaticLightingOnly ? -1 : 1
+                    );
 
                     Bounds3 wb;
                     if (billboard.WorldBounds.HasValue)
                         wb = billboard.WorldBounds.Value;
                     else {
+                        float baseZ = Environment.GroundZ * 1;
                         float x1 = sb.TopLeft.X, x2 = sb.BottomRight.X, y = sb.BottomRight.Y, h = billboard.WorldElevation.GetValueOrDefault(sb.Size.Y);
-                        float zScale = h / Environment.ZToYMultiplier;
+                        float zScale = (Environment.ZToYMultiplier > 0) ? h / Environment.ZToYMultiplier : 0;
+
+                        if (billboard.Type == BillboardType.GBufferData) {
+                            baseZ = billboard.WorldElevation.GetValueOrDefault(0);
+                            zScale = 0;
+                        }
+
                         wb = new Bounds3 {
-                            Minimum = new Vector3(x1, y, zScale),
-                            Maximum = new Vector3(x2, y, 0)
+                            Minimum = new Vector3(x1, y, baseZ + zScale),
+                            Maximum = new Vector3(x2, y, baseZ)
                         };
                     }
 
@@ -343,28 +353,28 @@ namespace Squared.Illuminant {
                         Normal = normal1,
                         WorldPosition = wb.Minimum,
                         TexCoord = textureBounds.TopLeft,
-                        DataScale = dataScale,
+                        DataScaleAndDynamicFlag = dataScaleAndDynamicFlag,
                     };
                     verts[j++] = new BillboardVertex {
                         ScreenPosition = sb.TopRight,
                         Normal = normal2,
                         WorldPosition = new Vector3(wb.Maximum.X, wb.Minimum.Y, wb.Minimum.Z),
                         TexCoord = textureBounds.TopRight,
-                        DataScale = dataScale,
+                        DataScaleAndDynamicFlag = dataScaleAndDynamicFlag,
                     };
                     verts[j++] = new BillboardVertex {
                         ScreenPosition = sb.BottomRight,
                         Normal = normal2,
                         WorldPosition = wb.Maximum,
                         TexCoord = textureBounds.BottomRight,
-                        DataScale = dataScale,
+                        DataScaleAndDynamicFlag = dataScaleAndDynamicFlag,
                     };
                     verts[j++] = new BillboardVertex {
                         ScreenPosition = sb.BottomLeft,
                         Normal = normal1,
                         WorldPosition = new Vector3(wb.Minimum.X, wb.Maximum.Y, wb.Maximum.Z),
                         TexCoord = textureBounds.BottomLeft,
-                        DataScale = dataScale,
+                        DataScaleAndDynamicFlag = dataScaleAndDynamicFlag,
                     };
 
                     i++;

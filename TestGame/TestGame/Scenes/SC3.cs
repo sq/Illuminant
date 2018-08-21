@@ -135,7 +135,8 @@ namespace TestGame.Scenes {
             Deterministic;
 
         Slider ZToYMultiplier,
-            LightFalloffYFactor;
+            LightFalloffYFactor,
+            GDataScale;
 
         const float TargetLowLuminance = 0.10f;
         const float TargetHighLuminance = 0.53f;
@@ -176,6 +177,11 @@ namespace TestGame.Scenes {
             LightFalloffYFactor.Max = 6f;
             LightFalloffYFactor.Speed = 0.5f;
             LightFalloffYFactor.Value = 4;
+
+            GDataScale.Min = 0;
+            GDataScale.Max = 100;
+            GDataScale.Speed = 1;
+            GDataScale.Value = 60;
         }
 
         private void CreateRenderTargets () {
@@ -272,7 +278,7 @@ namespace TestGame.Scenes {
                 Position = new Vector3(64, 64, 0.7f),
                 Color = new Vector4(1f, 1f, 1f, 0.5f),
                 Radius = 160,
-                RampLength = 360,
+                RampLength = 32,
                 RampMode = LightSourceRampMode.Exponential,
                 AmbientOcclusionRadius = 8f
             };
@@ -301,7 +307,7 @@ namespace TestGame.Scenes {
             var terrainBillboard = new Billboard {
                 ScreenBounds = Bounds.FromPositionAndSize(Vector2.Zero, new Vector2(Width, Height)),
                 Texture = BackgroundData,
-                DataScale = 60,
+                DataScale = GDataScale.Value,
                 Type = BillboardType.GBufferData
             };
 
@@ -341,7 +347,7 @@ namespace TestGame.Scenes {
                 WorldOffset = Vector3.UnitY * fudgeFactor3,
                 Normal = Vector3.UnitY,
                 Texture = tex,
-                CylinderFactor = 1.0f
+                CylinderFactor = 0.8f
             });
         }
 
@@ -431,6 +437,14 @@ namespace TestGame.Scenes {
             Environment.ZToYMultiplier = ForegroundEnvironment.ZToYMultiplier = ZToYMultiplier.Value;
 
             Environment.Lights[0].FalloffYFactor = LightFalloffYFactor.Value;
+
+            var bbill = BackgroundBillboards[0];
+            if (bbill.DataScale != GDataScale.Value) {
+                bbill.DataScale = GDataScale.Value;
+                BackgroundBillboards[0] = bbill;
+                Renderer.InvalidateFields();
+                ForegroundRenderer.InvalidateFields();
+            }
 
             Renderer.UpdateFields(frame, -16);
             ForegroundRenderer.UpdateFields(frame, -15);
@@ -713,7 +727,7 @@ White Point {1:00.000}
                 if (Deterministic)
                     ((SphereLightSource)Environment.Lights[0]).Position = 
                         ((SphereLightSource)ForegroundEnvironment.Lights[0]).Position = 
-                        new Vector3(Width / 2f, Height / 2f, 200f);
+                        new Vector3(Width / 2f, Height / 2f, 100f);
                 else
                     ((SphereLightSource)Environment.Lights[0]).Position = 
                         ((SphereLightSource)ForegroundEnvironment.Lights[0]).Position = 

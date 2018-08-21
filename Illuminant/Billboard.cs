@@ -49,6 +49,11 @@ namespace Squared.Illuminant {
         /// For Mask billboards, controls the adjustment of Y coordinates. Set to 0 for no adjustment or 1/null for all pixels to be anchored at the bottom.
         /// </summary>
         public float? DataScale;
+        /// <summary>
+        /// If true, the billboard's pixels will only be shadowed by static obstructions and not dynamic obstructions
+        /// This feature requires the use of a dynamic distance field and allows you to avoid creatures shadowing themselves
+        /// </summary>
+        public bool StaticLightingOnly;
 
         private BillboardType? _Type;
         public BillboardType Type {
