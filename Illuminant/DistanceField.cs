@@ -77,6 +77,17 @@ namespace Squared.Illuminant {
             ColumnCount = Math.Min(maxSlicesX, PhysicalSliceCount);
             RowCount = Math.Max((int)Math.Ceiling(PhysicalSliceCount / (float)maxSlicesX), 1);
 
+            // HACK: If the DF is going to be extremely wide but not tall, rebalance it
+            // so that it is easier to examine instead of being 4096x128 or whatever
+            while ((RowCount < ColumnCount) && (RowCount < maxSlicesY)) {
+                var newRowCount = RowCount + 1;
+                var newColumnCount = (int)Math.Ceiling(PhysicalSliceCount / (float)newRowCount);
+                if ((newRowCount * newColumnCount) < PhysicalSliceCount)
+                    break;
+                RowCount = newRowCount;
+                ColumnCount = newColumnCount;
+            }
+
             UseLock = coordinator.UseResourceLock;
 
             lock (coordinator.CreateResourceLock)
