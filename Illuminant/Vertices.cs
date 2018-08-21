@@ -44,7 +44,7 @@ namespace Squared.Illuminant {
     public struct HeightVolumeVertex : IVertexType {
         public Vector3 Position;
         public Vector3 Normal;
-        public Vector2 ZRange;
+        public Vector3 ZRangeAndDynamicFlag;
 
         public static VertexDeclaration _VertexDeclaration;
 
@@ -54,14 +54,14 @@ namespace Squared.Illuminant {
             _VertexDeclaration = new VertexDeclaration(
                 new VertexElement(Marshal.OffsetOf(tThis, "Position").ToInt32(), VertexElementFormat.Vector3, VertexElementUsage.Position, 0),
                 new VertexElement(Marshal.OffsetOf(tThis, "Normal").ToInt32(),   VertexElementFormat.Vector3, VertexElementUsage.Normal, 0),
-                new VertexElement(Marshal.OffsetOf(tThis, "ZRange").ToInt32(),   VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 0)
+                new VertexElement(Marshal.OffsetOf(tThis, "ZRangeAndDynamicFlag").ToInt32(),   VertexElementFormat.Vector3, VertexElementUsage.TextureCoordinate, 0)
             );
         }
 
-        public HeightVolumeVertex (Vector3 position, Vector3 normal, Vector2 zRange) {
+        public HeightVolumeVertex (Vector3 position, Vector3 normal, Vector3 zRangeAndDynamicFlag) {
             Position = position;
             Normal = normal;
-            ZRange = zRange;
+            ZRangeAndDynamicFlag = zRangeAndDynamicFlag;
         }
 
         public VertexDeclaration VertexDeclaration {

@@ -5,6 +5,7 @@
 void HeightVolumeVertexShader (
     in    float3   position      : POSITION0, // x, y, z
     inout float3   normal        : NORMAL0, 
+    inout float3   zRange        : TEXCOORD0,
     out   bool     dead          : TEXCOORD2,
     out   float3   worldPosition : TEXCOORD1,
     out   float4   result        : POSITION0
@@ -18,6 +19,7 @@ void HeightVolumeVertexShader (
 void HeightVolumeFaceVertexShader(
     in    float3 position      : POSITION0, // x, y, z
     inout float3 normal        : NORMAL0,
+    inout float3 zRange        : TEXCOORD0,
     out   float3 worldPosition : TEXCOORD1,
     out   bool   dead          : TEXCOORD2,
     out   float4 midTransform  : TEXCOORD3,
@@ -34,7 +36,7 @@ void HeightVolumeFaceVertexShader(
 }
 
 float4 encodeSample (
-    float3 normal, float relativeY, float z, bool dead
+    float3 normal, float relativeY, float z, float dynamicFlag, bool dead
 ) {
     if (dead) {
         return float4(
@@ -48,13 +50,14 @@ float4 encodeSample (
         return float4(
             (normal.x / 2) + 0.5,
             (normal.z / 2) + 0.5,
-            (relativeY / RELATIVEY_SCALE),
+            (relativeY / RELATIVEY_SCALE) * dynamicFlag,
             (z / 512)
         );
     }
 }
 
 void GroundPlanePixelShader (
+    in float3  zRange        : TEXCOORD0,
     in float3  worldPosition : TEXCOORD1,
     in bool    dead          : TEXCOORD2,
     out float4 result        : COLOR0
@@ -65,11 +68,12 @@ void GroundPlanePixelShader (
     }
 
     float3 normal = float3(0, 0, 1);
-    result = encodeSample(normal, 0, worldPosition.z, dead); 
+    result = encodeSample(normal, 0, worldPosition.z, zRange.z, dead); 
 }
 
 void HeightVolumePixelShader(
     in float3  normal        : NORMAL0,
+    in float3  zRange        : TEXCOORD0,
     in float3  worldPosition : TEXCOORD1,
     in bool    dead          : TEXCOORD2,
     out float4 result        : COLOR0
@@ -80,13 +84,14 @@ void HeightVolumePixelShader(
     }
 
     float relativeY = (worldPosition.z * getZToYMultiplier()) * Viewport.Scale / Environment.RenderScale;
-    result = encodeSample(normal, relativeY, worldPosition.z, dead);
+    result = encodeSample(normal, relativeY, worldPosition.z, zRange.z, dead);
 }
 
 void HeightVolumeFacePixelShader(
     in float3  normal        : NORMAL0,
+    in float3  zRange        : TEXCOORD0,
     in float3  worldPosition : TEXCOORD1,
-    in bool    dead : TEXCOORD2,
+    in bool    dead          : TEXCOORD2,
     out float4 result : COLOR0
 ) {
     if (worldPosition.z < getGroundZ()) {
@@ -98,7 +103,7 @@ void HeightVolumeFacePixelShader(
     float selfOcclusionBias = SelfOcclusionHack * normal.y;
 
     float relativeY = ((worldPosition.z * getZToYMultiplier()) * Viewport.Scale / Environment.RenderScale) + selfOcclusionBias;
-    result = encodeSample(normal, relativeY, worldPosition.z, dead);
+    result = encodeSample(normal, relativeY, worldPosition.z, zRange.z, dead);
 }
 
 technique GroundPlane

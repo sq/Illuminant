@@ -1219,8 +1219,10 @@ namespace Squared.Illuminant {
                 dfu = new Uniforms.DistanceField();
                 dfu.Extent.Z = Environment.MaximumZ;
                 Materials.TrySetBoundUniform(m, "DistanceField", ref dfu);
-                if (setDistanceTexture)
+                if (setDistanceTexture) {
                     p["DistanceFieldTexture"].SetValue((Texture2D)null);
+                    p["StaticDistanceFieldTexture"].SetValue((Texture2D)null);
+                }
                 return;
             }
 
@@ -1238,8 +1240,11 @@ namespace Squared.Illuminant {
 
             Materials.TrySetBoundUniform(m, "DistanceField", ref dfu);
 
-            if (setDistanceTexture)
+            if (setDistanceTexture) {
                 p["DistanceFieldTexture"].SetValue(_DistanceField.Texture);
+                var ddf = _DistanceField as DynamicDistanceField;
+                p["StaticDistanceFieldTexture"].SetValue((ddf != null) ? ddf.StaticTexture : _DistanceField.Texture);
+            }
 
             p["MaximumEncodedDistance"].SetValue(_DistanceField.MaximumEncodedDistance);
         }
@@ -1481,7 +1486,7 @@ namespace Squared.Illuminant {
                 var p = hv.Polygon;
                 var m = hv.Mesh3D;
                 var b = hv.Bounds.Expand(DistanceLimit, DistanceLimit);
-                var zRange = new Vector2(hv.ZBase, hv.ZBase + hv.Height);
+                var zRange = new Vector3(hv.ZBase, hv.ZBase + hv.Height, 1);
 
                 HeightVolumeCacheData cacheData;
 

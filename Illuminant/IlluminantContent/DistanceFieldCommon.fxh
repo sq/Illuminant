@@ -110,17 +110,40 @@ sampler   DistanceFieldTextureSampler {
     MagFilter = DISTANCE_FIELD_FILTER;
 };
 
+Texture2D StaticDistanceFieldTexture;
+sampler   StaticDistanceFieldTextureSampler {
+    Texture = (StaticDistanceFieldTexture);
+    AddressU  = CLAMP;
+    AddressV  = CLAMP;
+    MipFilter = POINT;
+    MinFilter = DISTANCE_FIELD_FILTER;
+    MagFilter = DISTANCE_FIELD_FILTER;
+};
+
 struct DistanceFieldConstants {
     float sliceCountZMinus1;
     float invSliceCountXTimesOneThird;
     float zToSliceIndex;
+    bool  useStaticDistanceField;
 };
 
 DistanceFieldConstants makeDistanceFieldConstants() {
     DistanceFieldConstants result = {
         DistanceField.TextureSliceCount.z - 1,
         (1.0 / DistanceField.TextureSliceCount.x) * (1.0 / 3.0),
-        (1.0 / DistanceField.Extent.z) * DistanceField.TextureSliceCount.z
+        (1.0 / DistanceField.Extent.z) * DistanceField.TextureSliceCount.z,
+        false
+    };
+
+    return result;
+}
+
+DistanceFieldConstants makeDistanceFieldConstantsEx(bool staticShadowsFlag) {
+    DistanceFieldConstants result = {
+        DistanceField.TextureSliceCount.z - 1,
+        (1.0 / DistanceField.TextureSliceCount.x) * (1.0 / 3.0),
+        (1.0 / DistanceField.Extent.z) * DistanceField.TextureSliceCount.z,
+        staticShadowsFlag
     };
 
     return result;
@@ -158,7 +181,13 @@ float sampleDistanceField (
         0, 0
     );
 
-    float4 packedSample = tex2Dlod(DistanceFieldTextureSampler, uv);
+    float4 packedSample;
+    [branch]
+    if (vars.useStaticDistanceField) {
+        packedSample = tex2Dlod(StaticDistanceFieldTextureSampler, uv);
+    } else {
+        packedSample = tex2Dlod(DistanceFieldTextureSampler, uv);
+    }
 
     float maskPatternIndex = virtualSliceIndex % 3;
     float subslice = slicePosition - virtualSliceIndex;

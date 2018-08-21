@@ -19,7 +19,7 @@ sampler   VertexDataSampler : register(s0) {
 
 void DistanceVertexShader (
     in    float3 position : POSITION0, // x, y, z
-    inout float2 zRange   : TEXCOORD0,
+    inout float3 zRange   : TEXCOORD0,
     out   float4 result   : POSITION0
 ) {
     result = TransformPosition(float4(position.xy - Viewport.Position, 0, 1), 0);
@@ -101,7 +101,7 @@ float computeExteriorDistance (
 
 void InteriorPixelShader (
     out float4 color : COLOR0,
-    in  float2 zRange : TEXCOORD0,
+    in  float3 zRange : TEXCOORD0,
     in  float2 vpos : VPOS
 ) {
     vpos *= getInvScaleFactors();
@@ -110,16 +110,16 @@ void InteriorPixelShader (
     float squaredDistanceXy = computeSquaredDistanceXy(vpos);
 
     color = float4(
-        encodeDistance(computeInteriorDistance(zRange, squaredDistanceXy, SliceZ.x)),
-        encodeDistance(computeInteriorDistance(zRange, squaredDistanceXy, SliceZ.y)),
-        encodeDistance(computeInteriorDistance(zRange, squaredDistanceXy, SliceZ.z)),
-        encodeDistance(computeInteriorDistance(zRange, squaredDistanceXy, SliceZ.w))
+        encodeDistance(computeInteriorDistance(zRange.xy, squaredDistanceXy, SliceZ.x)),
+        encodeDistance(computeInteriorDistance(zRange.xy, squaredDistanceXy, SliceZ.y)),
+        encodeDistance(computeInteriorDistance(zRange.xy, squaredDistanceXy, SliceZ.z)),
+        encodeDistance(computeInteriorDistance(zRange.xy, squaredDistanceXy, SliceZ.w))
     );
 }
 
 void ExteriorPixelShader (
     out float4 color : COLOR0,
-    in  float2 zRange : TEXCOORD0,
+    in  float3 zRange : TEXCOORD0,
     in  float2 vpos  : VPOS
 ) {
     vpos *= getInvScaleFactors();
@@ -128,10 +128,10 @@ void ExteriorPixelShader (
     float squaredDistanceXy = computeSquaredDistanceXy(vpos);
 
     color = float4(
-        encodeDistance(computeExteriorDistance(zRange, squaredDistanceXy, SliceZ.x)),
-        encodeDistance(computeExteriorDistance(zRange, squaredDistanceXy, SliceZ.y)),
-        encodeDistance(computeExteriorDistance(zRange, squaredDistanceXy, SliceZ.z)),
-        encodeDistance(computeExteriorDistance(zRange, squaredDistanceXy, SliceZ.w))
+        encodeDistance(computeExteriorDistance(zRange.xy, squaredDistanceXy, SliceZ.x)),
+        encodeDistance(computeExteriorDistance(zRange.xy, squaredDistanceXy, SliceZ.y)),
+        encodeDistance(computeExteriorDistance(zRange.xy, squaredDistanceXy, SliceZ.z)),
+        encodeDistance(computeExteriorDistance(zRange.xy, squaredDistanceXy, SliceZ.w))
     );
 }
 

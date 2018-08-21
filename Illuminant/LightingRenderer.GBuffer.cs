@@ -176,7 +176,7 @@ namespace Squared.Illuminant {
         private void RenderGroundPlane (PrimitiveBatch<HeightVolumeVertex> batch) {
             // HACK: Fill in the gbuffer values for the ground plane
 
-            var zRange = new Vector2(Environment.GroundZ, Environment.GroundZ);
+            var zRange = new Vector3(Environment.GroundZ, Environment.GroundZ, 1);
             var tl = new Vector3(-999999, -999999, Environment.GroundZ);
             var tr = new Vector3(999999, -999999, Environment.GroundZ);
             var br = new Vector3(999999, 999999, Environment.GroundZ);

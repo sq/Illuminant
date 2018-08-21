@@ -82,13 +82,15 @@ void ParticleLightPixelShader(
 ) {
     float3 shadedPixelPosition;
     float3 shadedPixelNormal;
-    sampleGBuffer(
+    bool staticShadowsFlag;
+    sampleGBufferEx(
         vpos,
-        shadedPixelPosition, shadedPixelNormal
+        shadedPixelPosition, shadedPixelNormal,
+        staticShadowsFlag
     );
 
     float opacity = SphereLightPixelCore(
-        shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties, false, false
+        shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties, false, false, staticShadowsFlag
     );
 
     result = float4(lightColor.rgb * lightColor.a * opacity, 1);

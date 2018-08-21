@@ -31,7 +31,8 @@ namespace TestGame.Scenes {
         Toggle ShowGBuffer,
             ShowDistanceField,
             Deterministic,
-            EfficientUpdates;
+            EfficientUpdates,
+            StaticLightingOnly;
 
         Slider DistanceFieldResolution;
 
@@ -49,6 +50,7 @@ namespace TestGame.Scenes {
             ShowDistanceField.Key = Keys.D;
             Deterministic.Key = Keys.R;
             EfficientUpdates.Key = Keys.E;
+            StaticLightingOnly.Key = Keys.S;
 
             DistanceFieldResolution.MinusKey = Keys.D5;
             DistanceFieldResolution.PlusKey = Keys.D6;
@@ -180,11 +182,11 @@ namespace TestGame.Scenes {
                 o.IsDynamic = false;
 
             var count = 1024;
-            var size = 16;
+            var size = 12;
             Centers = new Vector3[count];
             var rng = new MersenneTwister();
             for (int i = 0; i < count; i++) {
-                Centers[i] = new Vector3(rng.NextFloat(0, Width), rng.NextFloat(0, Height), 0);
+                Centers[i] = new Vector3(rng.NextFloat(0, Width), rng.NextFloat(0, Height), rng.NextFloat(0, 32));
                 var obs = new LightObstruction(
                     LightObstructionType.Ellipsoid, Centers[i], new Vector3(size)
                 );
@@ -203,6 +205,17 @@ namespace TestGame.Scenes {
                 (int)(Renderer.Configuration.MaximumRenderSize.First * scaleRatio),
                 (int)(Renderer.Configuration.MaximumRenderSize.Second * scaleRatio)
             );
+
+            var shouldInvalidate = false;
+            foreach (var hv in Environment.HeightVolumes) {
+                if (hv.StaticLightingOnly != StaticLightingOnly) {
+                    hv.StaticLightingOnly = StaticLightingOnly;
+                    shouldInvalidate = true;
+                }
+            }
+
+            if (shouldInvalidate)
+                Renderer.InvalidateFields(true, false);
 
             Renderer.UpdateFields(frame, -2);
 

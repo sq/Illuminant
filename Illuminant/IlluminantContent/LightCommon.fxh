@@ -42,10 +42,11 @@ sampler LightProbeNormalSampler : register(s4) {
 };
 
 // returns world position data from the gbuffer at the specified screen position
-void sampleGBuffer (
+void sampleGBufferEx (
     float2 screenPositionPx,
     out float3 worldPosition,
-    out float3 normal
+    out float3 normal,
+    out bool   staticShadowsFlag
 ) {
     [branch]
     if (any(GBufferTexelSize)) {
@@ -54,6 +55,9 @@ void sampleGBuffer (
         float4 sample = tex2Dlod(GBufferSampler, float4(uv, 0, 0));
 
         float relativeY = sample.z * RELATIVEY_SCALE;
+        staticShadowsFlag = (relativeY < 0);
+        if (staticShadowsFlag)
+            relativeY = -relativeY;
         float worldZ    = sample.w * 512;
 
         screenPositionPx /= Environment.RenderScale;
@@ -76,7 +80,17 @@ void sampleGBuffer (
             getGroundZ()
         );
         normal = float3(0, 0, 1);
+        staticShadowsFlag = 0;
     }
+}
+
+void sampleGBuffer (
+    float2 screenPositionPx,
+    out float3 worldPosition,
+    out float3 normal
+) {
+    int temp;
+    sampleGBufferEx(screenPositionPx, worldPosition, normal, temp);
 }
 
 float computeNormalFactor (

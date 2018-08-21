@@ -48,12 +48,13 @@ float DirectionalLightPixelCore(
     in float4 lightProperties     : TEXCOORD1,
     // aoRadius, shadowDistanceFalloff, shadowRampLength, aoOpacity
     in float4 moreLightProperties : TEXCOORD3,
-    in bool   useOpacityRamp
+    in bool   useOpacityRamp,
+    in bool   staticShadowsFlag
 ) {
     float lightOpacity = computeDirectionalLightOpacity(lightDirection, shadedPixelNormal);
     bool visible = (shadedPixelPosition.x > -9999);
 
-    DistanceFieldConstants vars = makeDistanceFieldConstants();
+    DistanceFieldConstants vars = makeDistanceFieldConstantsEx(staticShadowsFlag);
 
     // HACK: AO is only on upward-facing surfaces
     moreLightProperties.x *= max(0, shadedPixelNormal.z);
@@ -101,13 +102,15 @@ void DirectionalLightPixelShader(
 ) {
     float3 shadedPixelPosition;
     float3 shadedPixelNormal;
-    sampleGBuffer(
+    bool staticShadowsFlag;
+    sampleGBufferEx(
         vpos,
-        shadedPixelPosition, shadedPixelNormal
+        shadedPixelPosition, shadedPixelNormal,
+        staticShadowsFlag
     );
 
     float opacity = DirectionalLightPixelCore(
-        shadedPixelPosition, shadedPixelNormal, lightDirection, lightProperties, moreLightProperties, false
+        shadedPixelPosition, shadedPixelNormal, lightDirection, lightProperties, moreLightProperties, false, staticShadowsFlag
     );
 
     float4 lightColorActual = float4(color.rgb * color.a * opacity, 1);
@@ -125,13 +128,15 @@ void DirectionalLightWithRampPixelShader(
 ) {
     float3 shadedPixelPosition;
     float3 shadedPixelNormal;
-    sampleGBuffer(
+    bool staticShadowsFlag;
+    sampleGBufferEx(
         vpos,
-        shadedPixelPosition, shadedPixelNormal
+        shadedPixelPosition, shadedPixelNormal,
+        staticShadowsFlag
     );
 
     float opacity = DirectionalLightPixelCore(
-        shadedPixelPosition, shadedPixelNormal, lightDirection, lightProperties, moreLightProperties, true
+        shadedPixelPosition, shadedPixelNormal, lightDirection, lightProperties, moreLightProperties, true, staticShadowsFlag
     );
 
     float4 lightColorActual = float4(color.rgb * color.a * opacity, 1);
@@ -159,7 +164,7 @@ void DirectionalLightProbePixelShader(
     moreLightProperties.x = moreLightProperties.w = 0;
 
     opacity *= DirectionalLightPixelCore(
-        shadedPixelPosition, shadedPixelNormal.xyz, lightDirection, lightProperties, moreLightProperties, false
+        shadedPixelPosition, shadedPixelNormal.xyz, lightDirection, lightProperties, moreLightProperties, false, false
     );
 
     result = float4(color.rgb * color.a * opacity, 1);
@@ -186,7 +191,7 @@ void DirectionalLightProbeWithRampPixelShader(
     moreLightProperties.x = moreLightProperties.w = 0;
 
     opacity *= DirectionalLightPixelCore(
-        shadedPixelPosition, shadedPixelNormal.xyz, lightDirection, lightProperties, moreLightProperties, true
+        shadedPixelPosition, shadedPixelNormal.xyz, lightDirection, lightProperties, moreLightProperties, true, false
     );
 
     result = float4(color.rgb * color.a * opacity, 1);

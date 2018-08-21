@@ -251,9 +251,11 @@ void SHRendererPixelShader(
 ) {
     float3 shadedPixelPosition;
     float3 shadedPixelNormal;
-    sampleGBuffer(
+    bool staticShadowsFlag;
+    sampleGBufferEx(
         vpos,
-        shadedPixelPosition, shadedPixelNormal
+        shadedPixelPosition, shadedPixelNormal,
+        staticShadowsFlag
     );
 
     float4 irradiance = SHRendererPixelShaderCore(

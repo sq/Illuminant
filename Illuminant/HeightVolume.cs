@@ -12,10 +12,21 @@ using Squared.Util;
 
 namespace Squared.Illuminant {
     public abstract class HeightVolumeBase : IHasBounds {
+        /// <summary>
+        /// If true, this height volume will produce obstruction data in the distance field.
+        /// </summary>
         public bool IsObstruction = true;
 
+        /// <summary>
         // If false, this height volume will be rendered into the static distance field (if any) instead of the dynamic distance field
+        /// </summary>
         public bool IsDynamic = true;
+
+        /// <summary>
+        /// If true, the height volume's pixels will only be shadowed by static obstructions and not dynamic obstructions
+        /// This feature requires the use of a dynamic distance field
+        /// </summary>
+        public bool StaticLightingOnly;
 
         public readonly Polygon Polygon;
         private float _ZBase;
@@ -102,7 +113,7 @@ namespace Squared.Illuminant {
             get {
                 var h1 = ZBase;
                 var h2 = ZBase + Height;
-                var range = new Vector2(h1, h2);
+                var range = new Vector3(h1, h2, StaticLightingOnly ? -1 : 1);
 
                 if (_Mesh3D == null) {
                     _Mesh3D = (
@@ -115,7 +126,7 @@ namespace Squared.Illuminant {
                 } else {
                     for (var i = 0; i < _Mesh3D.Length; i++) {
                         _Mesh3D[i].Position.Z = h2;
-                        _Mesh3D[i].ZRange = range;
+                        _Mesh3D[i].ZRangeAndDynamicFlag = range;
                     }
                 }
 
@@ -126,21 +137,19 @@ namespace Squared.Illuminant {
         public override ArraySegment<HeightVolumeVertex> GetFrontFaceMesh3D () {
             var h1 = ZBase;
             var h2 = ZBase + Height;
-            var zRange = new Vector2(h1, h2);
+            var zRange = new Vector3(h1, h2, StaticLightingOnly ? -1 : 1);
 
             if (_FrontFaceMesh3D != null) {
                 if (
-                    (_FrontFaceMesh3D[0].ZRange != zRange) ||
-                    (_FrontFaceMesh3D[1].ZRange != zRange)
+                    (_FrontFaceMesh3D[0].ZRangeAndDynamicFlag == zRange) ||
+                    (_FrontFaceMesh3D[1].ZRangeAndDynamicFlag == zRange)
                 )
-                    throw new InvalidDataException();
-
-                // FIXME
-                return _FrontFaceMesh3DSegment;
+                    return _FrontFaceMesh3DSegment;
             }
 
             var count = (Polygon.Count * 6);
-            _FrontFaceMesh3D = new HeightVolumeVertex[count];
+            if (_FrontFaceMesh3D == null)
+                _FrontFaceMesh3D = new HeightVolumeVertex[count];
 
             var actualCount = 0;
 

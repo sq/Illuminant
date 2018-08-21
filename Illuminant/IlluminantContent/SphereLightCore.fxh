@@ -16,7 +16,8 @@ float SphereLightPixelCore(
     // ao radius, distance falloff, y falloff factor, ao opacity
     in float4 moreLightProperties : TEXCOORD3,
     in bool   useDistanceRamp,
-    in bool   useOpacityRamp
+    in bool   useOpacityRamp,
+    in bool   staticShadowsFlag
 ) {
     bool  distanceCull = false;
     float lightOpacity = computeSphereLightOpacity(
@@ -28,7 +29,7 @@ float SphereLightPixelCore(
     bool visible = (!distanceCull) && 
         (shadedPixelPosition.x > -9999);
 
-    DistanceFieldConstants vars = makeDistanceFieldConstants();
+    DistanceFieldConstants vars = makeDistanceFieldConstantsEx(staticShadowsFlag);
 
     // HACK: AO is only on upward-facing surfaces
     moreLightProperties.x *= max(0, shadedPixelNormal.z);
