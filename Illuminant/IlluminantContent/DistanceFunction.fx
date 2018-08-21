@@ -7,14 +7,23 @@
 uniform float2 PixelSize;
 uniform float4 SliceZ;
 
+static const float2 FunctionCorners[] = {
+    { -1, -1 },
+    { 1, -1 },
+    { 1, 1 },
+    { -1, 1 }
+};
+
 void DistanceFunctionVertexShader(
-    in    float3 position : POSITION0, // x, y, z
+    in int2 cornerIndex   : BLENDINDICES0,
     inout float3 center   : TEXCOORD0,
     inout float3 size     : TEXCOORD1,
     out   float4 result   : POSITION0
 ) {
-    result = TransformPosition(float4(position.xy - Viewport.Position, 0, 1), 0);
-    result.z = position.z;
+    float2 position = (FunctionCorners[cornerIndex.x] * (size.xy + DISTANCE_MAX + 0.6)) + center.xy;
+    result = TransformPosition(float4(position - Viewport.Position, 0, 1), 0);
+    result.z = 0;
+    result.w = 1;
 }
 
 float2 getPositionXy (in float2 vpos) {

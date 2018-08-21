@@ -156,7 +156,7 @@ namespace TestGame.Scenes {
             offset.Y += 8;
 
             Environment.Obstructions.Add(new LightObstruction(
-                LightObstructionType.Ellipsoid,
+                LightObstructionType.Box,
                 offset, new Vector3(12, 12, 36)
             ));
 

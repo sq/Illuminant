@@ -73,7 +73,7 @@ namespace Squared.Illuminant {
                             QuadIndexBuffer, 0, 0, ltrs.Count, 0, ltrs.Count / 2
                         ));
                     }
-                }                    
+                }
             }
         }
 

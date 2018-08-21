@@ -102,7 +102,6 @@ namespace Squared.Illuminant {
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct DistanceFunctionVertex : IVertexType {
-        public Vector3 Position;
         public Vector3 Center;
         public Vector3 Size;
 
@@ -112,14 +111,12 @@ namespace Squared.Illuminant {
             var tThis = typeof(DistanceFunctionVertex);
 
             _VertexDeclaration = new VertexDeclaration(
-                new VertexElement(Marshal.OffsetOf(tThis, "Position").ToInt32(), VertexElementFormat.Vector3, VertexElementUsage.Position, 0),
                 new VertexElement(Marshal.OffsetOf(tThis, "Center").ToInt32(),   VertexElementFormat.Vector3, VertexElementUsage.TextureCoordinate, 0),
                 new VertexElement(Marshal.OffsetOf(tThis, "Size").ToInt32(),     VertexElementFormat.Vector3, VertexElementUsage.TextureCoordinate, 1)
             );
         }
 
-        public DistanceFunctionVertex (Vector3 position, Vector3 center, Vector3 size) {
-            Position = position;
+        public DistanceFunctionVertex (Vector3 center, Vector3 size) {
             Center = center;
             Size = size;
         }

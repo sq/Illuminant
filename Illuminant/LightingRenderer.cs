@@ -231,6 +231,7 @@ namespace Squared.Illuminant {
         public  readonly DepthStencilState NeutralDepthStencilState;
 
         private readonly IndexBuffer         QuadIndexBuffer;
+        private readonly VertexBuffer        CornerBuffer;
 
         class DistanceFunctionBuffer {
             public readonly LightingRenderer Renderer;
@@ -355,6 +356,10 @@ namespace Squared.Illuminant {
                     coordinator.Device, IndexElementSize.SixteenBits, MaximumLightCount * 6, BufferUsage.WriteOnly
                 );
                 FillIndexBuffer();
+                CornerBuffer = new VertexBuffer(
+                    coordinator.Device, typeof(CornerVertex), 4, BufferUsage.WriteOnly
+                );
+                FillCornerBuffer();
             }
 
             DynamicDistanceFunctions = new DistanceFunctionBuffer(this, DistanceFunctionBufferInitialSize);
@@ -484,6 +489,14 @@ namespace Squared.Illuminant {
             }
 
             QuadIndexBuffer.SetData(buf);
+        }
+
+        private void FillCornerBuffer () {
+            var buf = new CornerVertex[CornerBuffer.VertexCount];
+            for (int i = 0; i < buf.Length; i++)
+                buf[i] = new CornerVertex { Corner = (short)i, Unused = (short)i };
+
+            CornerBuffer.SetData(buf);
         }
 
         public void Dispose () {
@@ -1592,11 +1605,6 @@ namespace Squared.Illuminant {
             var result = PickDistanceFunctionBuffer(dynamicFlagFilter);
             var items = Environment.Obstructions;
 
-            var tl = new Vector3(0, 0, 0);
-            var tr = new Vector3(_DistanceField.VirtualWidth, 0, 0);
-            var br = new Vector3(_DistanceField.VirtualWidth, _DistanceField.VirtualHeight, 0);
-            var bl = new Vector3(0, _DistanceField.VirtualHeight, 0);
-
             // HACK: Sort all the functions by type, fill the VB with each group,
             //  then issue a single draw for each
             using (var buffer = BufferPool<LightObstruction>.Allocate(items.Count))
@@ -1605,12 +1613,11 @@ namespace Squared.Illuminant {
                     result.FirstOffset[i] = -1;
                 Array.Clear(result.PrimCount, 0, result.PrimCount.Length);
 
-                Array.Clear(buffer.Data, 0, buffer.Data.Length);
                 items.CopyTo(buffer.Data);
-                Array.Sort(buffer.Data, 0, items.Count, LightObstructionTypeComparer.Instance);
-
+                Sort.FastCLRSort(buffer.Data, LightObstructionTypeComparer.Instance, 0, items.Count);
+                
                 result.IsDirty = true;
-                result.EnsureSize(items.Count * 4);
+                result.EnsureSize(items.Count);
 
                 int j = 0;
                 for (int i = 0; i < items.Count; i++) {
@@ -1623,28 +1630,9 @@ namespace Squared.Illuminant {
                     if (result.FirstOffset[type] == -1)
                         result.FirstOffset[type] = j;
 
-                    result.PrimCount[type] += 2;
+                    result.PrimCount[type]++;
 
-                    // See definition of DISTANCE_MAX in DistanceFieldCommon.fxh
-                    float offset = _DistanceField.MaximumEncodedDistance + 1;
-
-                    tl = new Vector3(item.Center.X - item.Size.X - offset, item.Center.Y - item.Size.Y - offset, 0);
-                    br = new Vector3(item.Center.X + item.Size.X + offset, item.Center.Y + item.Size.Y + offset, 0);
-                    tr = new Vector3(br.X, tl.Y, 0);
-                    bl = new Vector3(tl.X, br.Y, 0);
-
-                    result.Vertices[j++] = new DistanceFunctionVertex(
-                        tl, item.Center, item.Size
-                    );
-                    result.Vertices[j++] = new DistanceFunctionVertex(
-                        tr, item.Center, item.Size
-                    );
-                    result.Vertices[j++] = new DistanceFunctionVertex(
-                        br, item.Center, item.Size
-                    );
-                    result.Vertices[j++] = new DistanceFunctionVertex(
-                        bl, item.Center, item.Size
-                    );
+                    result.Vertices[j++] = new DistanceFunctionVertex(item.Center, item.Size);
                 }
 
                 result.EnsureVertexBuffer();
@@ -1699,9 +1687,12 @@ namespace Squared.Illuminant {
                     )) {
                         batch.Add(new NativeDrawCall(
                             PrimitiveType.TriangleList,
-                            buffer.VertexBuffer, 0,
-                            QuadIndexBuffer, buffer.FirstOffset[i], 0, buffer.PrimCount[i] * 2,
-                            0, buffer.PrimCount[i]
+                            CornerBuffer, 0, 
+                            buffer.VertexBuffer, buffer.FirstOffset[i], 
+                            null, 0,
+                            QuadIndexBuffer, 0, 0, 
+                            4, 0, 
+                            2, buffer.PrimCount[i]
                         ));
                     }
                 }
