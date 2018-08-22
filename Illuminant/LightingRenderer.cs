@@ -301,7 +301,7 @@ namespace Squared.Illuminant {
         private          float[]    _LuminanceReadbackArray;
 
         private readonly Action<DeviceManager, object>
-            BeginLightPass, EndLightPass, EndLightProbePass,
+            BeginLightPass, EndLightPass, BeginLightProbePass, EndLightProbePass,
             IlluminationBatchSetup, LightProbeBatchSetup,
             GIProbeBatchSetup, EndGIProbePass,
             ParticleLightBatchSetup;
@@ -343,6 +343,7 @@ namespace Squared.Illuminant {
 
             BeginLightPass                = _BeginLightPass;
             EndLightPass                  = _EndLightPass;
+            BeginLightProbePass           = _BeginLightProbePass;
             EndLightProbePass             = _EndLightProbePass;
             EndGIProbePass                = _EndGIProbePass;
             IlluminationBatchSetup        = _IlluminationBatchSetup;
@@ -558,6 +559,15 @@ namespace Squared.Illuminant {
         }
 
         private void _BeginLightPass (DeviceManager device, object userData) {
+            var buffer = (RenderTarget2D)userData;
+
+            device.Device.Viewport = new Viewport(0, 0, buffer.Width, buffer.Height);
+
+            device.PushStates();
+            PushLightingViewTransform(buffer);
+        }
+
+        private void _BeginLightProbePass (DeviceManager device, object userData) {
             var buffer = (RenderTarget2D)userData;
 
             device.Device.Viewport = new Viewport(0, 0, buffer.Width, buffer.Height);
@@ -864,15 +874,18 @@ namespace Squared.Illuminant {
                 }
 
                 lock (_LightStateLock) {
+                    // FIXME: If this is 1 as it was before, lighting breaks in lazy viewtransform mode
+                    int baseLayer = 1;
+
                     if (Probes.Count > 0) {
                         if (Probes.IsDirty) {
                             UpdateLightProbeTexture();
                             Probes.IsDirty = false;
                         }
-                        UpdateLightProbes(outerGroup, 3, lightProbe.Buffer, false, intensityScale);
+                        UpdateLightProbes(outerGroup, baseLayer, lightProbe.Buffer, false, intensityScale);
                     }
 
-                    UpdateGIProbes(outerGroup, 4, intensityScale);
+                    UpdateGIProbes(outerGroup, baseLayer + 1, intensityScale);
                 }
 
                 if (RenderTrace.EnableTracing)

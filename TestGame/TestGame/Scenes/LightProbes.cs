@@ -25,9 +25,7 @@ namespace TestGame.Scenes {
         const int MaxStepCount = 128;
         const float LightScaleFactor = 2;
 
-        Toggle ShowGBuffer,
-            ShowLightmap,
-            ShowDistanceField,
+        Toggle ShowDistanceField,
             UseRampTexture;
 
         Slider DistanceFieldResolution,
@@ -40,8 +38,6 @@ namespace TestGame.Scenes {
             LightmapScaleRatio.Value = 1.0f;
             UseRampTexture.Value = true;
 
-            ShowLightmap.Key = Keys.L;
-            ShowGBuffer.Key = Keys.G;
             ShowDistanceField.Key = Keys.D;
             UseRampTexture.Key = Keys.P;
 
@@ -217,7 +213,7 @@ namespace TestGame.Scenes {
                 )) {
                     foreach (var p in Renderer.Probes) {
                         var c = new Color(p.Value.X, p.Value.Y, p.Value.Z, 1);
-                        var center = new Vector2(p.Position.X, p.Position.Y);
+                        var center = new Vector2(p.Position.X, p.Position.Y - (p.Position.Z * 0.5f));
                         var size = new Vector2(8, 8);
                         gb.AddFilledQuad(center - size, center + size, c);
                         gb.AddOutlinedQuad(center - size, center + size, Color.Silver);
@@ -246,20 +242,6 @@ namespace TestGame.Scenes {
                             new Color(255, 255, 255, 255), dfScale
                         ));
                 }
-
-                if (ShowGBuffer && Renderer.Configuration.EnableGBuffer) {
-                    using (var bb = BitmapBatch.New(
-                        group, 4, Game.Materials.Get(
-                            Game.Materials.ScreenSpaceBitmap,
-                            blendState: BlendState.Opaque
-                        ),
-                        samplerState: SamplerState.PointClamp
-                    ))
-                        bb.Add(new BitmapDrawCall(
-                            Renderer.GBuffer.Texture, Vector2.Zero, new Bounds(Vector2.Zero, Vector2.One), 
-                            Color.White, LightmapScaleRatio
-                        ));
-                }                
             }
         }
 

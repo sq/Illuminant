@@ -191,6 +191,10 @@ namespace TestGame {
                     }
                 }
 
+                using (var temp = new UTF8String("Lazy Transform Changes")) {
+                    Materials.LazyViewTransformChanges = Nuke.nk_check_text(ctx, temp.pText, temp.Length, Materials.LazyViewTransformChanges ? 0 : 1) == 0;
+                }
+
                 Nuke.nk_tree_pop(ctx);
             }
         }

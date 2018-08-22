@@ -44,7 +44,7 @@ namespace Squared.Illuminant {
         private void UpdateLightProbes (IBatchContainer container, int layer, RenderTarget2D renderTarget, bool isForGi, float intensityScale) {
             using (var lightProbeGroup = BatchGroup.ForRenderTarget(
                 container, layer, renderTarget, 
-                before: BeginLightPass, after: isForGi ? EndGIProbePass : EndLightProbePass,
+                before: BeginLightProbePass, after: isForGi ? EndGIProbePass : EndLightProbePass,
                 userData: renderTarget
             )) {
                 if (RenderTrace.EnableTracing)
