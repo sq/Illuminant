@@ -243,7 +243,7 @@ namespace Squared.Illuminant {
             int runStartedAt = 0, runStartedAtVertex = 0;
             int i, j;
 
-            var requiredQuadIndices = BillboardScratch.Count * 6;
+            var requiredQuadIndices = ((BillboardScratch.Count * 6) + 63) / 64 * 64;
             if ((BillboardQuadIndices == null) || (BillboardQuadIndices.Length < requiredQuadIndices)) {
                 BillboardQuadIndices = new short[requiredQuadIndices];
                 int v = 0;
@@ -296,13 +296,13 @@ namespace Squared.Illuminant {
                 
                     batch.Add(new PrimitiveDrawCall<BillboardVertex>(
                         PrimitiveType.TriangleList, verts, runStartedAtVertex, runLength * 4,
-                        BillboardQuadIndices, 0, runLength * 2, 
-                        new DrawCallSortKey(order: i),
-                        SetTextureForGBufferBillboard, previousTexture
+                        BillboardQuadIndices, 0, runLength * 2,
+                        sortKey: new DrawCallSortKey(order: i),
+                        beforeDraw: SetTextureForGBufferBillboard, userData: previousTexture
                     ));
                 };
 
-                foreach (var billboard in Environment.Billboards) {
+                foreach (var billboard in BillboardScratch) {
                     if ((previousTexture != billboard.Texture) || (previousType != billboard.Type)) {
                         flushBatch();
                         runStartedAt = i;
