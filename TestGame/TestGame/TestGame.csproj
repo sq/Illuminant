@@ -91,6 +91,7 @@
     <Compile Include="Scenes\ScrollingGeo.cs" />
     <Compile Include="Scenes\LightProbes.cs" />
     <Compile Include="Scenes\GI.cs" />
+    <Compile Include="Scenes\Dithering.cs" />
     <Compile Include="Scenes\TwoPointFiveD.cs" />
     <Compile Include="Scenes\HeightVolumeTest.cs" />
     <Compile Include="Settings.cs" />

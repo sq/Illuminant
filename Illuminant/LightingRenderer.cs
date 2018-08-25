@@ -956,8 +956,7 @@ namespace Squared.Illuminant {
             IBatchContainer container, int layer,
             RenderTarget2D lightmap,
             float? width, float? height, 
-            HDRConfiguration? hdr,
-            bool resolveToSRGB
+            HDRConfiguration? hdr
         ) {
             Material m;
             if (hdr.HasValue && hdr.Value.Mode == HDRMode.GammaCompress)
@@ -979,7 +978,22 @@ namespace Squared.Illuminant {
                         ? ((hdr.Value.InverseScaleFactor != 0) ? hdr.Value.InverseScaleFactor : 1.0f)
                         : 1.0f
                 );
-                p["ResolveToSRGB"].SetValue(resolveToSRGB);
+                p["ResolveToSRGB"].SetValue(
+                    hdr.HasValue
+                        ? hdr.Value.ResolveToSRGB
+                        : false
+                );
+
+                var ds = (hdr.HasValue && hdr.Value.Dithering.HasValue)
+                    ? hdr.Value.Dithering.Value
+                    : new DitheringSettings {
+                        Unit = 255f,
+                        Strength = 0f
+                    };
+                ds.FrameIndex = dm.FrameIndex;
+
+                var ubd = Materials.GetUniformBinding<Render.DitheringSettings>(m, "Dithering");
+                ubd.Value.Current = ds;
 
                 var ub = Materials.GetUniformBinding<Uniforms.Environment>(m, "Environment");
                 ub.Value.Current = EnvironmentUniforms;
@@ -1267,7 +1281,7 @@ namespace Squared.Illuminant {
             if (setDistanceTexture)
                 p["DistanceFieldTexture"].SetValue(_DistanceField.Texture);
 
-            p["MaximumEncodedDistance"].SetValue(_DistanceField.MaximumEncodedDistance);
+            p["MaximumEncodedDistance"].SetValue((float)_DistanceField.MaximumEncodedDistance);
         }
 
         public void InvalidateFields (

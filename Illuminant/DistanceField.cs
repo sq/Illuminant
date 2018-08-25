@@ -20,7 +20,7 @@ namespace Squared.Illuminant {
         public readonly int VirtualWidth, VirtualHeight;
         public readonly float VirtualDepth;
         public readonly double Resolution;
-        public readonly float MaximumEncodedDistance;
+        public readonly int MaximumEncodedDistance;
 
         public readonly RenderTarget2D Texture;
         public readonly int SliceWidth, SliceHeight, SliceCount;
@@ -34,7 +34,7 @@ namespace Squared.Illuminant {
         public DistanceField (
             RenderCoordinator coordinator,
             int virtualWidth, int virtualHeight, float virtualDepth,
-            int sliceCount, double requestedResolution = 1, float maximumEncodedDistance = 256f
+            int sliceCount, double requestedResolution = 1, int maximumEncodedDistance = 256
         ) {
             VirtualWidth = virtualWidth;
             VirtualHeight = virtualHeight;
@@ -68,7 +68,7 @@ namespace Squared.Illuminant {
             int maxSlicesX = 4096 / SliceWidth;
             int maxSlicesY = 4096 / SliceHeight;
             int maxSlices = maxSlicesX * maxSlicesY * LightingRenderer.PackedSliceCount;
-                
+            
             // HACK: If they ask for too many slices we give them as many as we can.
             SliceCount = Math.Min(sliceCount, maxSlices);
 
@@ -222,7 +222,7 @@ namespace Squared.Illuminant {
         public DynamicDistanceField (
             RenderCoordinator coordinator,
             int virtualWidth, int virtualHeight, float virtualDepth,
-            int sliceCount, double requestedResolution = 1, float maximumEncodedDistance = 256f
+            int sliceCount, double requestedResolution = 1, int maximumEncodedDistance = 256
         ) : base (coordinator, virtualWidth, virtualHeight, virtualDepth, sliceCount, requestedResolution, maximumEncodedDistance) {
             lock (coordinator.CreateResourceLock)
                 StaticTexture = new RenderTarget2D(

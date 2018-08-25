@@ -80,6 +80,7 @@ namespace TestGame {
                 new GlobalIlluminationTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new ParticleLights(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new DynamicObstructions(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
+                new DitheringTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
             };
 
             ActiveSceneIndex = Scenes.Length - 1;
@@ -192,7 +193,7 @@ namespace TestGame {
                 }
 
                 using (var temp = new UTF8String("Lazy Transform Changes")) {
-                    Materials.LazyViewTransformChanges = Nuke.nk_check_text(ctx, temp.pText, temp.Length, Materials.LazyViewTransformChanges ? 0 : 1) == 0;
+                    // Materials.LazyViewTransformChanges = Nuke.nk_check_text(ctx, temp.pText, temp.Length, Materials.LazyViewTransformChanges ? 0 : 1) == 0;
                 }
 
                 Nuke.nk_tree_pop(ctx);

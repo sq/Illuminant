@@ -38,11 +38,17 @@ namespace TestGame.Scenes {
 
         [Group("Lighting")]
         Toggle TwoPointFiveD,
-            UseRampTexture;
+            UseRampTexture,
+            PostDither;
+        [Group("Lighting")]
+        Slider MaximumLightStrength,
+            DitheringStrength,
+            DitheringPower;
 
         [Group("Resolution")]
         Slider DistanceFieldResolution,
-            LightmapScaleRatio;
+            LightmapScaleRatio,
+            MaximumEncodedDistance;
 
         Toggle Timelapse,
             Deterministic,
@@ -61,8 +67,13 @@ namespace TestGame.Scenes {
             ShowHistogram.Value = true;
             UseRampTexture.Value = true;
             TwoPointFiveD.Value = true;
+            PostDither.Value = true;
             DistanceFieldResolution.Value = 0.25f;
             LightmapScaleRatio.Value = 1.0f;
+            MaximumLightStrength.Value = 4f;
+            MaximumEncodedDistance.Value = 256;
+            DitheringStrength.Value = 1f;
+            DitheringPower.Value = 8;
 
             ShowLightmap.Key = Keys.L;
             ShowGBuffer.Key = Keys.G;
@@ -87,6 +98,23 @@ namespace TestGame.Scenes {
             LightmapScaleRatio.Max = 1.0f;
             LightmapScaleRatio.Speed = 0.1f;
             LightmapScaleRatio.Changed += (s, e) => Renderer.InvalidateFields();
+
+            MaximumLightStrength.Min = 1.0f;
+            MaximumLightStrength.Max = 6.0f;
+            MaximumLightStrength.Speed = 0.1f;
+
+            MaximumEncodedDistance.Min = 32;
+            MaximumEncodedDistance.Max = 512;
+            MaximumEncodedDistance.Speed = 16;
+            MaximumEncodedDistance.Changed += (s, e) => CreateDistanceField();
+
+            DitheringStrength.Max = 1;
+            DitheringStrength.Min = 0;
+            DitheringStrength.Speed = 0.1f;
+
+            DitheringPower.Max = 12;
+            DitheringPower.Min = 1;
+            DitheringPower.Speed = 1;
 
             DistanceFieldResolution.Changed += (s, e) => CreateDistanceField();
         }
@@ -152,7 +180,7 @@ namespace TestGame.Scenes {
 
             DistanceField = new DistanceField(
                 Game.RenderCoordinator, 1024, 1024, Environment.MaximumZ,
-                64, DistanceFieldResolution.Value
+                64, DistanceFieldResolution.Value, (int)MaximumEncodedDistance.Value
             );
             if (Renderer != null) {
                 Renderer.DistanceField = DistanceField;
@@ -240,6 +268,9 @@ namespace TestGame.Scenes {
         public override void Draw (Squared.Render.Frame frame) {
             CreateRenderTargets();
 
+            Game.Materials.LightmapDitheringSettings.Power = (int)DitheringPower.Value;
+            Game.Materials.LightmapDitheringSettings.Strength = PostDither ? DitheringStrength : 0f;
+
             Renderer.Configuration.TwoPointFiveD = TwoPointFiveD;
             Renderer.Configuration.RenderScale = Vector2.One * LightmapScaleRatio;
             Renderer.Configuration.RenderSize = new Pair<int>(
@@ -265,12 +296,16 @@ namespace TestGame.Scenes {
 
                 var lighting = Renderer.RenderLighting(bg, 1, 1.0f / LightScaleFactor);
                 lighting.Resolve(
-                    bg, 2, Width, Height, 
+                    bg, 2, Width, Height,
                     hdr: new HDRConfiguration {
                         InverseScaleFactor = LightScaleFactor,
-                        Gamma = sRGB ? 2.3f : 1.0f
-                    }, 
-                    resolveToSRGB: sRGB
+                        Gamma = sRGB ? 2.3f : 1.0f,
+                        ResolveToSRGB = sRGB,
+                        Dithering = new DitheringSettings {
+                            Strength = PostDither ? 0f : DitheringStrength,
+                            Power = (int)DitheringPower
+                        }
+                    }
                 );
 
                 lighting.TryComputeHistogram(
@@ -392,7 +427,7 @@ namespace TestGame.Scenes {
                     MovableLight.Color.W = 0.5f;
                 } else {
                     MovableLight.Position = mousePos;
-                    MovableLight.Color.W = Arithmetic.Pulse((float)Time.Seconds / 3f, 0.3f, 4f);
+                    MovableLight.Color.W = Arithmetic.Pulse((float)Time.Seconds / 3f, 0.3f, MaximumLightStrength);
                 }
             }
         }

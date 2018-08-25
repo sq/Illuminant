@@ -94,15 +94,14 @@ namespace Squared.Illuminant {
             public void Resolve (
                 IBatchContainer container, int layer,
                 float? width = null, float? height = null,
-                HDRConfiguration? hdr = null, bool resolveToSRGB = false
+                HDRConfiguration? hdr = null
             ) {
                 if (!IsValid)
                     throw new InvalidOperationException("Invalid");
 
                 Renderer.ResolveLighting(
                     container, layer,
-                    Lightmap, width, height, hdr,
-                    resolveToSRGB
+                    Lightmap, width, height, hdr
                 );
             }
 
@@ -154,8 +153,19 @@ namespace Squared.Illuminant {
         public float Offset;
         public GammaCompressionConfiguration GammaCompression;
         public ToneMappingConfiguration ToneMapping;
+        public DitheringSettings? Dithering;
+        private bool? _ResolveToSRGB;
 
         private float ExposureMinusOne, GammaMinusOne;
+
+        public bool ResolveToSRGB {
+            get {
+                return _ResolveToSRGB.GetValueOrDefault(false);
+            }
+            set {
+                _ResolveToSRGB = value;
+            }
+        }
 
         public float Exposure {
             get {

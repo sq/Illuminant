@@ -359,9 +359,9 @@ namespace TestGame.Scenes {
                     bg, 2, Width, Height,
                     hdr: new HDRConfiguration {
                         InverseScaleFactor = LightScaleFactor,
-                        Gamma = sRGB ? 1.8f : 1.0f
-                    }, 
-                    resolveToSRGB: sRGB
+                        Gamma = sRGB ? 1.8f : 1.0f,
+                        ResolveToSRGB = sRGB
+                    }
                 );
             };
 
