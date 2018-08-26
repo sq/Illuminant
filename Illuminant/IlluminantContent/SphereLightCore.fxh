@@ -19,7 +19,7 @@ float SphereLightPixelCore(
     in bool   useOpacityRamp
 ) {
     bool  distanceCull = false;
-    float lightOpacity = computeSphereLightOpacity(
+    float distanceOpacity = computeSphereLightOpacity(
         shadedPixelPosition, shadedPixelNormal,
         lightCenter, lightProperties, moreLightProperties.z,
         distanceCull
@@ -33,17 +33,16 @@ float SphereLightPixelCore(
     // HACK: AO is only on upward-facing surfaces
     moreLightProperties.x *= max(0, shadedPixelNormal.z);
 
-    [branch]
-    if (useDistanceRamp)
-        lightOpacity = SampleFromRamp(lightOpacity);
+    float aoOpacity = computeAO(shadedPixelPosition, shadedPixelNormal, moreLightProperties, vars, visible);
 
-    computeAO(lightOpacity, shadedPixelPosition, shadedPixelNormal, moreLightProperties, vars, visible);
+    float preTraceOpacity = distanceOpacity * aoOpacity;
 
-    bool traceShadows = visible && lightProperties.w && (lightOpacity >= 1 / 256.0);
+    bool traceShadows = visible && lightProperties.w && (preTraceOpacity >= 1 / 256.0);
+    float coneOpacity = 1;
 
     [branch]
     if (traceShadows) {
-        lightOpacity *= coneTrace(
+        coneOpacity = coneTrace(
             lightCenter, lightProperties.xy, 
             float2(getConeGrowthFactor(), moreLightProperties.y),
             shadedPixelPosition + (SELF_OCCLUSION_HACK * shadedPixelNormal),
@@ -51,17 +50,23 @@ float SphereLightPixelCore(
         );
     }
 
-    [branch]
-    if (useOpacityRamp)
-        lightOpacity = SampleFromRamp(lightOpacity);
+    float lightOpacity;
 
     [branch]
+    if (useOpacityRamp || useDistanceRamp) {
+        float rampInput = useOpacityRamp 
+            ? preTraceOpacity * coneOpacity
+            : preTraceOpacity;
+        float rampResult = SampleFromRamp(rampInput);
+        lightOpacity = useOpacityRamp
+            ? rampResult
+            : rampResult * coneOpacity;
+    } else {
+        lightOpacity = preTraceOpacity * coneOpacity;
+    }
+
     // HACK: Don't cull pixels unless they were killed by distance falloff.
     // This ensures that billboards are always lit.
-    if (visible) {
-        return lightOpacity;
-    } else {
-        discard;
-        return 0;
-    }
+    clip(visible ? 1 : -1);
+    return visible ? lightOpacity : 0;
 }

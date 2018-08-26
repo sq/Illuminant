@@ -39,11 +39,18 @@ namespace TestGame.Scenes {
         [Group("Lighting")]
         Toggle TwoPointFiveD,
             UseRampTexture,
+            UseDistanceRamp,
+            PreDither,
             PostDither;
         [Group("Lighting")]
-        Slider MaximumLightStrength,
-            DitheringStrength,
-            DitheringPower;
+        Slider MaximumLightStrength;
+        [Group("Dithering")]
+        Slider
+            DitherStrength,
+            DitherPower,
+            DitherBandSize,
+            DitherRangeMin,
+            DitherRangeMax;
 
         [Group("Resolution")]
         Slider DistanceFieldResolution,
@@ -68,12 +75,16 @@ namespace TestGame.Scenes {
             UseRampTexture.Value = true;
             TwoPointFiveD.Value = true;
             PostDither.Value = true;
+            PreDither.Value = true;
             DistanceFieldResolution.Value = 0.25f;
             LightmapScaleRatio.Value = 1.0f;
             MaximumLightStrength.Value = 4f;
             MaximumEncodedDistance.Value = 256;
-            DitheringStrength.Value = 1f;
-            DitheringPower.Value = 8;
+            DitherStrength.Value = 1f;
+            DitherPower.Value = 8;
+            DitherBandSize.Value = 1f;
+            DitherRangeMin.Value = 0f;
+            DitherRangeMax.Value = 1f;
 
             ShowLightmap.Key = Keys.L;
             ShowGBuffer.Key = Keys.G;
@@ -108,15 +119,24 @@ namespace TestGame.Scenes {
             MaximumEncodedDistance.Speed = 16;
             MaximumEncodedDistance.Changed += (s, e) => CreateDistanceField();
 
-            DitheringStrength.Max = 1;
-            DitheringStrength.Min = 0;
-            DitheringStrength.Speed = 0.1f;
+            InitUnitSlider(DitherStrength, DitherBandSize, DitherRangeMax, DitherRangeMin);
 
-            DitheringPower.Max = 12;
-            DitheringPower.Min = 1;
-            DitheringPower.Speed = 1;
+            DitherPower.Max = 12;
+            DitherPower.Min = 1;
+            DitherPower.Speed = 1;
+
+            DitherRangeMin.Max =
+                DitherRangeMax.Max = 2.0f;
 
             DistanceFieldResolution.Changed += (s, e) => CreateDistanceField();
+        }
+
+        private void InitUnitSlider (params Slider[] sliders) {
+            foreach (var s in sliders) {
+                s.Max = 1.0f;
+                s.Min = 0.0f;
+                s.Speed = 0.05f;
+            }
         }
 
         private void CreateRenderTargets () {
@@ -268,8 +288,12 @@ namespace TestGame.Scenes {
         public override void Draw (Squared.Render.Frame frame) {
             CreateRenderTargets();
 
-            Game.Materials.LightmapDitheringSettings.Power = (int)DitheringPower.Value;
-            Game.Materials.LightmapDitheringSettings.Strength = PostDither ? DitheringStrength : 0f;
+            var m = Game.Materials;
+            m.LightmapDitheringSettings.Power = (int)DitherPower.Value;
+            m.LightmapDitheringSettings.Strength = PostDither ? DitherStrength : 0f;
+            m.LightmapDitheringSettings.BandSize = DitherBandSize;
+            m.LightmapDitheringSettings.RangeMin = DitherRangeMin;
+            m.LightmapDitheringSettings.RangeMax = DitherRangeMax;
 
             Renderer.Configuration.TwoPointFiveD = TwoPointFiveD;
             Renderer.Configuration.RenderScale = Vector2.One * LightmapScaleRatio;
@@ -302,8 +326,11 @@ namespace TestGame.Scenes {
                         Gamma = sRGB ? 2.3f : 1.0f,
                         ResolveToSRGB = sRGB,
                         Dithering = new DitheringSettings {
-                            Strength = PostDither ? 0f : DitheringStrength,
-                            Power = (int)DitheringPower
+                            Strength = PreDither ? DitherStrength : 0f,
+                            Power = (int)DitherPower,
+                            BandSize = DitherBandSize,
+                            RangeMin = DitherRangeMin,
+                            RangeMax = DitherRangeMax
                         }
                     }
                 );
@@ -421,6 +448,7 @@ namespace TestGame.Scenes {
                 var mousePos = new Vector3(ms.X, ms.Y, LightZ);
 
                 MovableLight.RampTexture = UseRampTexture ? Game.RampTexture : null;
+                MovableLight.UseDistanceForRampTexture = UseDistanceRamp;
 
                 if (Deterministic) {
                     MovableLight.Position = new Vector3(671, 394, 97.5f);

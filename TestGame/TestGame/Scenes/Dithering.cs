@@ -21,23 +21,36 @@ namespace TestGame.Scenes {
         RenderTarget2D Lightmap;
 
         Toggle sRGB, ExponentialRamp;
-        Slider DitheringStrength, DitheringPower;
+        Slider
+            Strength,
+            Power,
+            BandSize,
+            RangeMin,
+            RangeMax;
 
         public DitheringTest (TestGame game, int width, int height)
             : base(game, width, height) {
 
-            DitheringStrength.Value = 1f;
-            DitheringPower.Value = 8;
+            Strength.Value = 1;
+            Power.Value = 1;
+            BandSize.Value = 1;
+            RangeMax.Value = 1;
 
             sRGB.Key = Keys.S;
 
-            DitheringStrength.Max = 1;
-            DitheringStrength.Min = 0;
-            DitheringStrength.Speed = 0.1f;
+            Power.Max = 12;
+            Power.Min = 1;
+            Power.Speed = 1;
 
-            DitheringPower.Max = 12;
-            DitheringPower.Min = 1;
-            DitheringPower.Speed = 1;
+            InitUnitSlider(Strength, BandSize, RangeMax, RangeMin);
+        }
+
+        private void InitUnitSlider (params Slider[] sliders) {
+            foreach (var s in sliders) {
+                s.Max = 1.0f;
+                s.Min = 0.0f;
+                s.Speed = 0.05f;
+            }
         }
 
         private void CreateRenderTargets () {
@@ -78,8 +91,8 @@ namespace TestGame.Scenes {
             Environment.Lights.Add(new SphereLightSource {
                 Position = new Vector3(0, Height / 2f, 0),
                 Radius = 4,
-                RampLength = Width * 0.9f,
-                Color = Vector4.One
+                RampLength = Width * 0.95f,
+                Color = Vector4.One * 1f
             });
         }
         
@@ -113,8 +126,11 @@ namespace TestGame.Scenes {
                         Gamma = sRGB ? 2.3f : 1.0f,
                         ResolveToSRGB = sRGB,
                         Dithering = new DitheringSettings {
-                            Strength = DitheringStrength,
-                            Power = (int)DitheringPower.Value
+                            Strength = Strength,
+                            Power = (int)Power.Value,
+                            BandSize = BandSize,
+                            RangeMin = RangeMin,
+                            RangeMax = RangeMax
                         },
                     }
                 );

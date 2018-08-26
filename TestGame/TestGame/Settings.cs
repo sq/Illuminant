@@ -141,7 +141,7 @@ namespace TestGame {
     public class Slider : Setting<float> {
         public Keys MinusKey, PlusKey;
         public float? Min, Max;
-        public float Speed = 1;        
+        public float Speed = 1;
 
         public override void Update (Scene s) {
             float delta = 0;

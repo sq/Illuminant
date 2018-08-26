@@ -58,7 +58,8 @@ float DirectionalLightPixelCore(
     // HACK: AO is only on upward-facing surfaces
     moreLightProperties.x *= max(0, shadedPixelNormal.z);
 
-    computeAO(lightOpacity, shadedPixelPosition, shadedPixelNormal, moreLightProperties, vars, visible);
+    float aoOpacity = computeAO(shadedPixelPosition, shadedPixelNormal, moreLightProperties, vars, visible);
+    lightOpacity *= aoOpacity;
 
     bool traceShadows = visible && lightProperties.x && (lightOpacity >= 1 / 256.0);
 
@@ -79,15 +80,10 @@ float DirectionalLightPixelCore(
     if (useOpacityRamp)
         lightOpacity = SampleFromRamp(lightOpacity);
 
-    [branch]
     // HACK: Don't cull pixels unless they were killed by distance falloff.
     // This ensures that billboards are always lit.
-    if (visible) {
-        return lightOpacity;
-    } else {
-        discard;
-        return 0;
-    }
+    clip(visible ? 1 : -1);
+    return visible ? lightOpacity : 0;
 }
 
 void DirectionalLightPixelShader(
