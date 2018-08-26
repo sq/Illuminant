@@ -16,11 +16,11 @@
 #define TRACE_INITIAL_OFFSET_PX 1
 
 // We threshold shadow values from cone tracing to eliminate 'almost obstructed' and 'almost unobstructed' artifacts
-#define FULLY_SHADOWED_THRESHOLD 0.1
+#define FULLY_SHADOWED_THRESHOLD 0.075
 #define UNSHADOWED_THRESHOLD 0.95
 
 // We manually increase distance samples in order to avoid tiny shadow artifact specks at the edges of surfaces
-#define HACK_DISTANCE_OFFSET 2
+#define HACK_DISTANCE_OFFSET 1.5
 
 struct TraceParameters {
     float3 start;
@@ -38,8 +38,7 @@ float coneTraceStep(
         (config.y * offset) + MIN_CONE_RADIUS, config.x
     );
 
-    float localVisibility = clamp(((distanceToObstacle + HACK_DISTANCE_OFFSET) / localSphereRadius), 0, 1);
-    visibility = min(visibility, localVisibility);
+    visibility = min(visibility, ((distanceToObstacle + HACK_DISTANCE_OFFSET) / localSphereRadius));
 
     return max(
         // the abs() actually makes this faster somehow, but
@@ -85,7 +84,7 @@ float coneTrace(
     b = traceLength;
 
     bool abort = DistanceField.Extent.x <= 0;
-    float stepCount = 0;
+    float stepsRemaining = getStepLimit();
     float visibility = 1.0;
 
     float aSample, bSample;
@@ -98,16 +97,15 @@ float coneTrace(
         a += coneTraceStep(config, aSample, a, visibility);
         b -= coneTraceStep(config, bSample, b, visibility);
 
-        stepCount += 1;
+        stepsRemaining--;
         abort =
-            (stepCount >= getStepLimit()) ||
+            (stepsRemaining <= 0) ||
             (visibility < FULLY_SHADOWED_THRESHOLD) ||
             (a >= b);
     }
 
     // HACK: Force visibility down to 0 if we are going to terminate the trace because we took too many steps.
-    float windowStart = max(getStepLimit() - MAX_STEP_RAMP_WINDOW, 0);
-    float stepWindowVisibility = (1.0 - (stepCount - windowStart) / MAX_STEP_RAMP_WINDOW);
+    float stepWindowVisibility = stepsRemaining / MAX_STEP_RAMP_WINDOW;
     visibility = min(visibility, stepWindowVisibility);
 
     return pow(
