@@ -7,7 +7,7 @@
 
 #define SELF_OCCLUSION_HACK 1.1
 
-float SphereLightPixelCore(
+half SphereLightPixelCore(
     in float3 shadedPixelPosition,
     in float3 shadedPixelNormal,
     in float3 lightCenter         : TEXCOORD0,
@@ -19,7 +19,7 @@ float SphereLightPixelCore(
     in bool   useOpacityRamp
 ) {
     bool  distanceCull = false;
-    float distanceOpacity = computeSphereLightOpacity(
+    half distanceOpacity = computeSphereLightOpacity(
         shadedPixelPosition, shadedPixelNormal,
         lightCenter, lightProperties, moreLightProperties.z,
         distanceCull
@@ -33,12 +33,12 @@ float SphereLightPixelCore(
     // HACK: AO is only on upward-facing surfaces
     moreLightProperties.x *= max(0, shadedPixelNormal.z);
 
-    float aoOpacity = computeAO(shadedPixelPosition, shadedPixelNormal, moreLightProperties, vars, visible);
+    half aoOpacity = computeAO(shadedPixelPosition, shadedPixelNormal, moreLightProperties, vars, visible);
 
-    float preTraceOpacity = distanceOpacity * aoOpacity;
+    half preTraceOpacity = distanceOpacity * aoOpacity;
 
     bool traceShadows = visible && lightProperties.w && (preTraceOpacity >= 1 / 256.0);
-    float coneOpacity = 1;
+    half coneOpacity = 1;
 
     [branch]
     if (traceShadows) {
@@ -50,14 +50,14 @@ float SphereLightPixelCore(
         );
     }
 
-    float lightOpacity;
+    half lightOpacity;
 
     [branch]
     if (useOpacityRamp || useDistanceRamp) {
-        float rampInput = useOpacityRamp 
+        half rampInput = useOpacityRamp 
             ? preTraceOpacity * coneOpacity
             : preTraceOpacity;
-        float rampResult = SampleFromRamp(rampInput);
+        half rampResult = SampleFromRamp(rampInput);
         lightOpacity = useOpacityRamp
             ? rampResult
             : rampResult * coneOpacity;

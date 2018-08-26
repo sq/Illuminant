@@ -33,11 +33,11 @@ float2 closestPointOnEdge (
     return edgeStart + ((edgeEnd - edgeStart) * clamp(u, 0, 1));
 }
 
-float encodeDistance (float distance) {
+half encodeDistance (half distance) {
     return DISTANCE_ZERO - (distance / DISTANCE_MAX);
 }
 
-float decodeDistance (float encodedDistance) {
+half decodeDistance (half encodedDistance) {
     return (DISTANCE_ZERO - encodedDistance) * DISTANCE_MAX;
 }
 
@@ -126,18 +126,18 @@ DistanceFieldConstants makeDistanceFieldConstants() {
     return result;
 }
 
-float2 computeDistanceFieldSliceUv (
-    float virtualSliceIndex,
-    float invSliceCountXTimesOneThird
+half2 computeDistanceFieldSliceUv (
+    half virtualSliceIndex,
+    half invSliceCountXTimesOneThird
 ) {
-    float rowIndexF   = virtualSliceIndex * invSliceCountXTimesOneThird;
-    float rowIndex    = floor(rowIndexF);
-    float columnIndex = floor((rowIndexF - rowIndex) * DistanceField.TextureSliceCount.x);
-    return float2(columnIndex, rowIndex) * getDistanceSliceSize();
+    half rowIndexF   = virtualSliceIndex * invSliceCountXTimesOneThird;
+    half rowIndex    = floor(rowIndexF);
+    half columnIndex = floor((rowIndexF - rowIndex) * DistanceField.TextureSliceCount.x);
+    return half2(columnIndex, rowIndex) * getDistanceSliceSize();
 }
 
-float sampleDistanceField (
-    float3 position, 
+half sampleDistanceField (
+    half3 position, 
     DistanceFieldConstants vars
 ) {
     if (DistanceField.Extent.x <= 0)
@@ -145,25 +145,25 @@ float sampleDistanceField (
 
     // Interpolate between two Z samples. The xy interpolation is done by the GPU for us.
     // linear [0-1] -> [0-NumZSlices)
-    float slicePosition = clamp(position.z * vars.zToSliceIndex, 0, vars.sliceCountZMinus1);
-    float virtualSliceIndex = floor(slicePosition);
+    half slicePosition = clamp(position.z * vars.zToSliceIndex, 0, vars.sliceCountZMinus1);
+    half virtualSliceIndex = floor(slicePosition);
     
-    float3 offsetPosition = position + float3(1, 1, 0);
-    float3 clampedPosition = clamp(offsetPosition, 1, DistanceField.Extent - 1);
-    float distanceToVolume = length(clampedPosition - offsetPosition);
+    half3 offsetPosition = position + float3(1, 1, 0);
+    half3 clampedPosition = clamp(offsetPosition, 1, DistanceField.Extent - 1);
+    half distanceToVolume = length(clampedPosition - offsetPosition);
 
-    float4 uv = float4(
+    half4 uv = half4(
         computeDistanceFieldSliceUv(virtualSliceIndex, vars.invSliceCountXTimesOneThird) +
             (clampedPosition.xy * getDistanceTexelSize()),
         0, 0
     );
 
-    float4 packedSample = tex2Dlod(DistanceFieldTextureSampler, uv);
+    half4 packedSample = tex2Dlod(DistanceFieldTextureSampler, uv);
 
-    float maskPatternIndex = virtualSliceIndex % 3;
-    float subslice = slicePosition - virtualSliceIndex;
+    half maskPatternIndex = virtualSliceIndex % 3;
+    half subslice = slicePosition - virtualSliceIndex;
 
-    float2 samples;
+    half2 samples;
     if (maskPatternIndex >= 2)
         samples = packedSample.ba;
     else if (maskPatternIndex >= 1)
@@ -171,11 +171,11 @@ float sampleDistanceField (
     else
         samples = packedSample.rg;
 
-    float blendedSample = lerp(
+    half blendedSample = lerp(
         samples.x, samples.y, subslice
     );
 
-    float decodedDistance = decodeDistance(blendedSample);
+    half decodedDistance = decodeDistance(blendedSample);
 
     // HACK: Samples outside the distance field will be wrong if they just
     //  read the closest distance in the field.

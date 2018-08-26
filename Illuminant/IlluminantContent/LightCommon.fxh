@@ -9,7 +9,7 @@
 
 #define RELATIVEY_SCALE 128
 
-static const float3 LightCorners[] = {
+static const half3 LightCorners[] = {
     { 0, 0, 0 },
     { 1, 0, 0 },
     { 1, 1, 0 },
@@ -43,49 +43,49 @@ sampler LightProbeNormalSampler : register(s4) {
 
 // returns world position data from the gbuffer at the specified screen position
 void sampleGBuffer (
-    float2 screenPositionPx,
-    out float3 worldPosition,
-    out float3 normal
+    half2 screenPositionPx,
+    out half3 worldPosition,
+    out half3 normal
 ) {
     [branch]
     if (any(GBufferTexelSize)) {
         // FIXME: Should we be offsetting distance field samples too?
-        float2 uv     = (screenPositionPx + 0.5) * GBufferTexelSize;
-        float4 sample = tex2Dlod(GBufferSampler, float4(uv, 0, 0));
+        half2 uv     = (screenPositionPx + 0.5) * GBufferTexelSize;
+        half4 sample = tex2Dlod(GBufferSampler, float4(uv, 0, 0));
 
-        float relativeY = sample.z * RELATIVEY_SCALE;
-        float worldZ    = sample.w * 512;
+        half relativeY = sample.z * RELATIVEY_SCALE;
+        half worldZ    = sample.w * 512;
 
         screenPositionPx /= Environment.RenderScale;
 
-        worldPosition = float3(
+        worldPosition = half3(
             (screenPositionPx.xy + float2(0, relativeY)) / Viewport.Scale.xy + Viewport.Position.xy,
             worldZ
         );
 
         // HACK: Reconstruct the y normal from the z normal
-        float normalZ = (sample.y - 0.5) * 2;
-        normal = normalize(float3(
+        half normalZ = (sample.y - 0.5) * 2;
+        normal = normalize(half3(
             (sample.x - 0.5) * 2, 1 - abs(normalZ), normalZ
         ));
     } else {
         screenPositionPx /= Environment.RenderScale;
 
-        worldPosition = float3(
+        worldPosition = half3(
             screenPositionPx.xy / Viewport.Scale.xy + Viewport.Position.xy,
             getGroundZ()
         );
-        normal = float3(0, 0, 1);
+        normal = half3(0, 0, 1);
     }
 }
 
 float computeNormalFactor (
-    float3 lightNormal, float3 shadedPixelNormal
+    half3 lightNormal, half3 shadedPixelNormal
 ) {
     if (!any(shadedPixelNormal))
         return 1;
 
-    float d = dot(-lightNormal, shadedPixelNormal);
+    half d = dot(-lightNormal, shadedPixelNormal);
 
     // HACK: We allow the light to be somewhat behind the surface without occluding it,
     //  and we want a smooth ramp between occluded and not-occluded
@@ -93,21 +93,21 @@ float computeNormalFactor (
 }
 
 float computeSphereLightOpacity (
-    float3 shadedPixelPosition, float3 shadedPixelNormal,
+    half3 shadedPixelPosition, half3 shadedPixelNormal,
     float3 lightCenter, float4 lightProperties, 
-    float yDistanceFactor, out bool distanceFalloff 
+    half yDistanceFactor, out bool distanceFalloff 
 ) {
-    float  lightRadius     = lightProperties.x;
-    float  lightRampLength = lightProperties.y;
-    float  falloffMode     = lightProperties.z;
+    half  lightRadius     = lightProperties.x;
+    half  lightRampLength = lightProperties.y;
+    half  falloffMode     = lightProperties.z;
 
-    float3 distance3      = shadedPixelPosition - lightCenter;
+    half3 distance3      = shadedPixelPosition - lightCenter;
     distance3.y *= yDistanceFactor;
-    float  distance       = length(distance3);
-    float  distanceFactor = 1 - clamp((distance - lightRadius) / lightRampLength, 0, 1);
+    half  distance       = length(distance3);
+    half  distanceFactor = 1 - clamp((distance - lightRadius) / lightRampLength, 0, 1);
 
-    float3 lightNormal = distance3 / distance;
-    float normalFactor = computeNormalFactor(lightNormal, shadedPixelNormal);
+    half3 lightNormal = distance3 / distance;
+    half normalFactor = computeNormalFactor(lightNormal, shadedPixelNormal);
 
     [flatten]
     if (falloffMode >= 2) {
@@ -122,21 +122,21 @@ float computeSphereLightOpacity (
     return normalFactor * distanceFactor;
 }
 
-float computeDirectionalLightOpacity (
-    float3 lightDirection, float3 shadedPixelNormal
+half computeDirectionalLightOpacity (
+    half3 lightDirection, half3 shadedPixelNormal
 ) {
-    float  normalFactor = computeNormalFactor(lightDirection, shadedPixelNormal);
+    half  normalFactor = computeNormalFactor(lightDirection, shadedPixelNormal);
     return normalFactor;
 }
 
 void sampleLightProbeBuffer (
     float2 screenPositionPx,
-    out float3 worldPosition,
-    out float4 normal,
-    out float  opacity
+    out half3 worldPosition,
+    out half4 normal,
+    out half  opacity
 ) {
-    float2 uv = screenPositionPx * GBufferTexelSize;
-    float4 positionSample = tex2Dlod(GBufferSampler, float4(uv, 0, 0));
+    half2 uv = screenPositionPx * GBufferTexelSize;
+    half4 positionSample = tex2Dlod(GBufferSampler, half4(uv, 0, 0));
 
     opacity = positionSample.w;
     [branch]
@@ -146,5 +146,5 @@ void sampleLightProbeBuffer (
     }
 
     worldPosition = positionSample.xyz;
-    normal = tex2Dlod(LightProbeNormalSampler, float4(uv, 0, 0));
+    normal = tex2Dlod(LightProbeNormalSampler, half4(uv, 0, 0));
 }

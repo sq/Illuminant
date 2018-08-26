@@ -23,7 +23,7 @@ void ParticleLightVertexShader(
         return;
     }
 
-    float3 corner = LightCorners[cornerIndex.x];
+    half3 corner = LightCorners[cornerIndex.x];
 
     float2 actualXy = xy + offsetAndIndex.xy;
     float4 position, velocity, attributes;

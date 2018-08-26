@@ -23,22 +23,22 @@
 #define HACK_DISTANCE_OFFSET 2
 
 struct TraceParameters {
-    float3 start;
-    float3 direction;
+    half3 start;
+    half3 direction;
 };
 
-float coneTraceStep(
+half coneTraceStep(
     // maxRadius, lightTangentAngle, minStepSize, distanceFalloff
-    in    float4 config,
-    in    float  distanceToObstacle,
-    in    float  offset,
-    inout float  visibility
+    in    half4 config,
+    in    half  distanceToObstacle,
+    in    half  offset,
+    inout half  visibility
 ) {
-    float localSphereRadius = min(
+    half localSphereRadius = min(
         (config.y * offset) + MIN_CONE_RADIUS, config.x
     );
 
-    float localVisibility = clamp(((distanceToObstacle + HACK_DISTANCE_OFFSET) / localSphereRadius), 0, 1);
+    half localVisibility = clamp(((distanceToObstacle + HACK_DISTANCE_OFFSET) / localSphereRadius), 0, 1);
     visibility = min(visibility, localVisibility);
 
     return max(
@@ -49,46 +49,46 @@ float coneTraceStep(
     );
 }
 
-float coneTrace(
-    in float3 lightCenter,
-    in float2 lightRamp,
-    in float2 coneGrowthFactorAndDistanceFalloff,
-    in float3 shadedPixelPosition,
+half coneTrace(
+    in half3 lightCenter,
+    in half2 lightRamp,
+    in half2 coneGrowthFactorAndDistanceFalloff,
+    in half3 shadedPixelPosition,
     in DistanceFieldConstants vars
 ) {
-    float  traceLength;
-    float3 traceDirection;
-    float4 config;
+    half  traceLength;
+    half3 traceDirection;
+    half4 config;
 
     {
-        float3 traceVector = (lightCenter - shadedPixelPosition);
+        half3 traceVector = (lightCenter - shadedPixelPosition);
         traceLength = length(traceVector);
         traceDirection = traceVector / traceLength;
 
-        float maxRadius = clamp(
+        half maxRadius = clamp(
             lightRamp.x, MIN_CONE_RADIUS, getMaxConeRadius()
         );
-        float rampLength           = max(lightRamp.y, 16);
-        float radiusGrowthPerPixel = maxRadius / rampLength * 
+        half rampLength           = max(lightRamp.y, 16);
+        half radiusGrowthPerPixel = maxRadius / rampLength * 
             coneGrowthFactorAndDistanceFalloff.x;
 
         // maxRadius, lightTangentAngle, minStepSize, distanceFalloff
-        config = float4(
+        config = half4(
             maxRadius, radiusGrowthPerPixel, 
             max(1, getMinStepSize()), 
             coneGrowthFactorAndDistanceFalloff.y
         );
     }
 
-    float a, b;
+    half a, b;
     a = TRACE_INITIAL_OFFSET_PX;
     b = traceLength;
 
     bool abort = DistanceField.Extent.x <= 0;
-    float stepCount = 0;
-    float visibility = 1.0;
+    half stepCount = 0;
+    half visibility = 1.0;
 
-    float aSample, bSample;
+    half aSample, bSample;
 
     [loop]
     while (!abort) {
@@ -106,8 +106,8 @@ float coneTrace(
     }
 
     // HACK: Force visibility down to 0 if we are going to terminate the trace because we took too many steps.
-    float windowStart = max(getStepLimit() - MAX_STEP_RAMP_WINDOW, 0);
-    float stepWindowVisibility = (1.0 - (stepCount - windowStart) / MAX_STEP_RAMP_WINDOW);
+    half windowStart = max(getStepLimit() - MAX_STEP_RAMP_WINDOW, 0);
+    half stepWindowVisibility = (1.0 - (stepCount - windowStart) / MAX_STEP_RAMP_WINDOW);
     visibility = min(visibility, stepWindowVisibility);
 
     return pow(

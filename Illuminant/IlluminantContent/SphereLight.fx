@@ -48,21 +48,21 @@ void SphereLightPixelShader(
     in  float4 lightProperties     : TEXCOORD1,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : TEXCOORD4,
-    in  float2 vpos                : VPOS,
-    out float4 result              : COLOR0
+    in  half2 vpos                : VPOS,
+    out half4  result              : COLOR0
 ) {
-    float3 shadedPixelPosition;
-    float3 shadedPixelNormal;
+    half3 shadedPixelPosition;
+    half3 shadedPixelNormal;
     sampleGBuffer(
         vpos,
         shadedPixelPosition, shadedPixelNormal
     );
 
-    float opacity = SphereLightPixelCore(
+    half opacity = SphereLightPixelCore(
         shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties, false, false
     );
 
-    result = float4(color.rgb * color.a * opacity, 1);
+    result = half4(color.rgb * color.a * opacity, 1);
 }
 
 void SphereLightWithDistanceRampPixelShader(
@@ -71,21 +71,21 @@ void SphereLightWithDistanceRampPixelShader(
     in  float4 lightProperties     : TEXCOORD1,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : TEXCOORD4,
-    in  float2 vpos                : VPOS,
-    out float4 result              : COLOR0
+    in  half2 vpos                : VPOS,
+    out half4 result               : COLOR0
 ) {
-    float3 shadedPixelPosition;
-    float3 shadedPixelNormal;
+    half3 shadedPixelPosition;
+    half3 shadedPixelNormal;
     sampleGBuffer(
         vpos,
         shadedPixelPosition, shadedPixelNormal
     );
 
-    float opacity = SphereLightPixelCore(
+    half opacity = SphereLightPixelCore(
         shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties, true, false
     );
 
-    result = float4(color.rgb * color.a * opacity, 1);
+    result = half4(color.rgb * color.a * opacity, 1);
 }
 
 void SphereLightWithOpacityRampPixelShader(
@@ -94,21 +94,21 @@ void SphereLightWithOpacityRampPixelShader(
     in  float4 lightProperties     : TEXCOORD1,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : TEXCOORD4,
-    in  float2 vpos                : VPOS,
-    out float4 result              : COLOR0
+    in  half2 vpos                : VPOS,
+    out half4 result              : COLOR0
 ) {
-    float3 shadedPixelPosition;
-    float3 shadedPixelNormal;
+    half3 shadedPixelPosition;
+    half3 shadedPixelNormal;
     sampleGBuffer(
         vpos,
         shadedPixelPosition, shadedPixelNormal
     );
 
-    float opacity = SphereLightPixelCore(
+    half opacity = SphereLightPixelCore(
         shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties, false, true
     );
 
-    result = float4(color.rgb * color.a * opacity, 1);
+    result = half4(color.rgb * color.a * opacity, 1);
 }
 
 void SphereLightProbePixelShader(
@@ -116,12 +116,12 @@ void SphereLightProbePixelShader(
     in  float4 lightProperties     : TEXCOORD1,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : TEXCOORD4,
-    in  float2 vpos                : VPOS,
-    out float4 result              : COLOR0
+    in  half2 vpos                : VPOS,
+    out half4 result              : COLOR0
 ) {
-    float3 shadedPixelPosition;
-    float4 shadedPixelNormal;
-    float opacity;
+    half3 shadedPixelPosition;
+    half4 shadedPixelNormal;
+    half opacity;
 
     sampleLightProbeBuffer(
         vpos,
@@ -134,7 +134,7 @@ void SphereLightProbePixelShader(
         shadedPixelPosition, shadedPixelNormal.xyz, lightCenter, lightProperties, moreLightProperties, false, false
     );
 
-    result = float4(color.rgb * color.a * opacity, 1);
+    result = half4(color.rgb * color.a * opacity, 1);
 }
 
 void SphereLightProbeWithDistanceRampPixelShader(
@@ -142,12 +142,12 @@ void SphereLightProbeWithDistanceRampPixelShader(
     in  float4 lightProperties     : TEXCOORD1,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : TEXCOORD4,
-    in  float2 vpos                : VPOS,
-    out float4 result              : COLOR0
+    in  half2 vpos                : VPOS,
+    out half4 result              : COLOR0
 ) {
-    float3 shadedPixelPosition;
-    float4 shadedPixelNormal;
-    float opacity;
+    half3 shadedPixelPosition;
+    half4 shadedPixelNormal;
+    half opacity;
 
     sampleLightProbeBuffer(
         vpos,
@@ -160,7 +160,7 @@ void SphereLightProbeWithDistanceRampPixelShader(
         shadedPixelPosition, shadedPixelNormal.xyz, lightCenter, lightProperties, moreLightProperties, true, false
     );
 
-    result = float4(color.rgb * color.a * opacity, 1);
+    result = half4(color.rgb * color.a * opacity, 1);
 }
 
 void SphereLightProbeWithOpacityRampPixelShader(
@@ -168,12 +168,12 @@ void SphereLightProbeWithOpacityRampPixelShader(
     in  float4 lightProperties     : TEXCOORD1,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : TEXCOORD4,
-    in  float2 vpos                : VPOS,
-    out float4 result              : COLOR0
+    in  half2 vpos                : VPOS,
+    out half4 result              : COLOR0
 ) {
-    float3 shadedPixelPosition;
-    float4 shadedPixelNormal;
-    float opacity;
+    half3 shadedPixelPosition;
+    half4 shadedPixelNormal;
+    half opacity;
 
     sampleLightProbeBuffer(
         vpos,
@@ -186,7 +186,7 @@ void SphereLightProbeWithOpacityRampPixelShader(
         shadedPixelPosition, shadedPixelNormal.xyz, lightCenter, lightProperties, moreLightProperties, false, true
     );
 
-    result = float4(color.rgb * color.a * opacity, 1);
+    result = half4(color.rgb * color.a * opacity, 1);
 }
 
 technique SphereLight {
