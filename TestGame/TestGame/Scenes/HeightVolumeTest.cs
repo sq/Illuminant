@@ -23,7 +23,7 @@ namespace TestGame.Scenes {
         public readonly List<SphereLightSource> Lights = new List<SphereLightSource>();
 
         Toggle ShowGBuffer, TwoPointFiveD, Deterministic;
-        Slider LightmapScaleRatio;
+        Slider LightmapScaleRatio, MaxStepCount, MinStepSize, DistanceFieldResolution, DistanceSliceCount;
 
         public const int RotatingLightCount = 1024;
 
@@ -37,11 +37,25 @@ namespace TestGame.Scenes {
             Deterministic.Value = true;
             TwoPointFiveD.Value = true;
             LightmapScaleRatio.Value = 0.5f;
+            MaxStepCount.Value = 64;
+            MinStepSize.Value = 2f;
+            DistanceFieldResolution.Value = 0.5f;
+            DistanceSliceCount.Value = 7;
 
             ShowGBuffer.Key = Keys.G;
             TwoPointFiveD.Key = Keys.D2;
             TwoPointFiveD.Changed += (s, e) => Renderer.InvalidateFields();
             Deterministic.Key = Keys.R;
+
+            DistanceFieldResolution.Min = 0.1f;
+            DistanceFieldResolution.Max = 1.0f;
+            DistanceFieldResolution.Speed = 0.05f;
+            DistanceFieldResolution.Changed += (s, e) => CreateDistanceField();
+
+            DistanceSliceCount.Min = 3;
+            DistanceSliceCount.Max = 24;
+            DistanceSliceCount.Speed = 1;
+            DistanceSliceCount.Changed += (s, e) => CreateDistanceField();
 
             LightmapScaleRatio.MinusKey = Keys.D7;
             LightmapScaleRatio.PlusKey = Keys.D8;
@@ -49,6 +63,14 @@ namespace TestGame.Scenes {
             LightmapScaleRatio.Max = 1.0f;
             LightmapScaleRatio.Speed = 0.1f;
             LightmapScaleRatio.Changed += (s, e) => Renderer.InvalidateFields();
+
+            MaxStepCount.Max = 128;
+            MaxStepCount.Min = 32;
+            MaxStepCount.Speed = 1;
+
+            MinStepSize.Min = 0.5f;
+            MinStepSize.Max = 5f;
+            MinStepSize.Speed = 0.1f;
         }
 
         private void CreateRenderTargets () {
@@ -64,6 +86,22 @@ namespace TestGame.Scenes {
             }
         }
 
+        private void CreateDistanceField () {
+            if (DistanceField != null) {
+                Game.RenderCoordinator.DisposeResource(DistanceField);
+                DistanceField = null;
+            }
+
+            DistanceField = new DistanceField(
+                Game.RenderCoordinator, Width, Height, Environment.MaximumZ,
+                (int)DistanceSliceCount.Value, DistanceFieldResolution.Value
+            );
+            if (Renderer != null) {
+                Renderer.DistanceField = DistanceField;
+                Renderer.InvalidateFields();
+            }
+        }
+
         public override void LoadContent () {
             Environment = new LightingEnvironment();
 
@@ -71,10 +109,7 @@ namespace TestGame.Scenes {
             Environment.MaximumZ = 128;
             Environment.ZToYMultiplier = 1.25f;
 
-            DistanceField = new DistanceField(
-                Game.RenderCoordinator, Width, Height, Environment.MaximumZ,
-                16, 0.5f
-            );
+            CreateDistanceField();
 
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment,
@@ -84,9 +119,7 @@ namespace TestGame.Scenes {
                     RenderScale = Vector2.One * LightmapScaleRatio,
                     GBufferCaching = true,
                     DefaultQuality = {
-                        LongStepFactor = 0.95f,
-                        MinStepSize = 1.5f,
-                        MaxStepCount = 72,
+                        LongStepFactor = 0.95f
                     }
                 }
             ) {
@@ -162,6 +195,8 @@ namespace TestGame.Scenes {
         public override void Draw (Squared.Render.Frame frame) {
             Renderer.Configuration.TwoPointFiveD = TwoPointFiveD;
             Renderer.Configuration.RenderScale = Vector2.One * LightmapScaleRatio;
+            Renderer.Configuration.DefaultQuality.MinStepSize = MinStepSize;
+            Renderer.Configuration.DefaultQuality.MaxStepCount = (int)MaxStepCount;
 
             CreateRenderTargets();
 
