@@ -91,8 +91,8 @@ float coneTrace(
 
     [loop]
     while (!abort) {
-        aSample = sampleDistanceField(shadedPixelPosition + (traceDirection * a), vars);
-        bSample = sampleDistanceField(shadedPixelPosition + (traceDirection * b), vars);
+        aSample = sampleDistanceFieldEx(shadedPixelPosition + (traceDirection * a), vars);
+        bSample = sampleDistanceFieldEx(shadedPixelPosition + (traceDirection * b), vars);
 
         a += coneTraceStep(config, aSample, a, visibility);
         b -= coneTraceStep(config, bSample, b, visibility);

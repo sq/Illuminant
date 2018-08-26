@@ -1,7 +1,7 @@
 #include "..\..\..\Fracture\Squared\RenderLib\Content\ViewTransformCommon.fxh"
 #include "DistanceFieldCommon.fxh"
 
-#define SAMPLE sampleDistanceField
+#define SAMPLE sampleDistanceFieldEx
 #define TVARS  DistanceFieldConstants
 #define TRACE_MIN_STEP_SIZE 2
 #define TRACE_FINAL_MIN_STEP_SIZE 12

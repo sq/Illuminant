@@ -6,10 +6,6 @@ uniform float                 MaximumEncodedDistance;
 // Moving this value up/down allocates more precision to positive or negative distances
 #define DISTANCE_ZERO (192.0 / 255.0)
 
-// Maximum distance
-// Smaller values increase the precision of distance values but slow down traces
-#define DISTANCE_MAX MaximumEncodedDistance
-
 // Filtering dramatically increases the precision of the distance field,
 //  *and* it's mathematically correct!
 #define DISTANCE_FIELD_FILTER LINEAR
@@ -34,11 +30,11 @@ float2 closestPointOnEdge (
 }
 
 float encodeDistance (float distance) {
-    return DISTANCE_ZERO - (distance / DISTANCE_MAX);
+    return DISTANCE_ZERO - (distance / MaximumEncodedDistance);
 }
 
 float decodeDistance (float encodedDistance) {
-    return (DISTANCE_ZERO - encodedDistance) * DISTANCE_MAX;
+    return (DISTANCE_ZERO - encodedDistance) * MaximumEncodedDistance;
 }
 
 
@@ -136,13 +132,10 @@ float2 computeDistanceFieldSliceUv (
     return float2(columnIndex, rowIndex) * getDistanceSliceSize();
 }
 
-float sampleDistanceField (
+float sampleDistanceFieldEx (
     float3 position, 
     DistanceFieldConstants vars
 ) {
-    if (DistanceField.Extent.x <= 0)
-        return DISTANCE_MAX;
-
     // Interpolate between two Z samples. The xy interpolation is done by the GPU for us.
     // linear [0-1] -> [0-NumZSlices)
     float slicePosition = clamp(position.z * vars.zToSliceIndex, 0, vars.sliceCountZMinus1);
@@ -160,7 +153,7 @@ float sampleDistanceField (
 
     float4 packedSample = tex2Dlod(DistanceFieldTextureSampler, uv);
 
-    float maskPatternIndex = virtualSliceIndex % 3;
+    float maskPatternIndex = fmod(virtualSliceIndex, 3);
     float subslice = slicePosition - virtualSliceIndex;
 
     float2 samples;
@@ -180,4 +173,15 @@ float sampleDistanceField (
     // HACK: Samples outside the distance field will be wrong if they just
     //  read the closest distance in the field.
     return decodedDistance + distanceToVolume;
+}
+
+float sampleDistanceField (
+    float3 position,
+    DistanceFieldConstants vars
+) {
+    // This generates a shader branch :(
+    if (DistanceField.Extent.x <= 0)
+        return MaximumEncodedDistance;
+
+    return sampleDistanceFieldEx(position, vars);
 }
