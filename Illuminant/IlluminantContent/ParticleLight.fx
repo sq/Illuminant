@@ -58,9 +58,9 @@ void ParticleLightVertexShader(
     lightColor = attributes * LightColor;
 
     if (OpacityFromLife > 0)
-        lightColor *= clamp(position.w / OpacityFromLife, 0, 1);
+        lightColor *= saturate(position.w / OpacityFromLife);
     else if (OpacityFromLife < 0)
-        lightColor *= 1 - clamp(position.w / -OpacityFromLife, 0, 1);
+        lightColor *= 1 - saturate(position.w / -OpacityFromLife);
 
     lightProperties = LightProperties;
     moreLightProperties = MoreLightProperties;

@@ -89,7 +89,7 @@ float computeNormalFactor (
 
     // HACK: We allow the light to be somewhat behind the surface without occluding it,
     //  and we want a smooth ramp between occluded and not-occluded
-    return pow(clamp((d + DOT_OFFSET) / DOT_RAMP_RANGE, 0, 1), DOT_EXPONENT);
+    return pow(saturate((d + DOT_OFFSET) / DOT_RAMP_RANGE), DOT_EXPONENT);
 }
 
 float computeSphereLightOpacity (
@@ -104,14 +104,14 @@ float computeSphereLightOpacity (
     float3 distance3      = shadedPixelPosition - lightCenter;
     distance3.y *= yDistanceFactor;
     float  distance       = length(distance3);
-    float  distanceFactor = 1 - clamp((distance - lightRadius) / lightRampLength, 0, 1);
+    float  distanceFactor = 1 - saturate((distance - lightRadius) / lightRampLength);
 
     float3 lightNormal = distance3 / distance;
     float normalFactor = computeNormalFactor(lightNormal, shadedPixelNormal);
 
     [flatten]
     if (falloffMode >= 2) {
-        distanceFactor = 1 - clamp(distance - lightRadius, 0, 1);
+        distanceFactor = 1 - saturate(distance - lightRadius);
         normalFactor = 1;
     } else if (falloffMode >= 1) {
         distanceFactor *= distanceFactor;

@@ -14,7 +14,7 @@ float computeWeight (float3 worldPosition) {
     float distance = evaluateByTypeId(
         AreaType, worldPosition, AreaCenter, AreaSize
     );
-    return (1 - clamp(distance / AreaFalloff, 0, 1)) * Strength;
+    return (1 - saturate(distance / AreaFalloff)) * Strength;
 }
 
 float4 computeFMA (

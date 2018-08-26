@@ -98,9 +98,9 @@ float coneTrace(
         b -= coneTraceStep(config, bSample, b, visibility);
 
         stepsRemaining--;
+        float liveness = stepsRemaining * saturate(visibility - FULLY_SHADOWED_THRESHOLD);
         abort =
-            (stepsRemaining <= 0) ||
-            (visibility < FULLY_SHADOWED_THRESHOLD) ||
+            (liveness <= 0) ||
             (a >= b);
     }
 
@@ -109,10 +109,9 @@ float coneTrace(
     visibility = min(visibility, stepWindowVisibility);
 
     return pow(
-        clamp(
-            clamp((visibility - FULLY_SHADOWED_THRESHOLD), 0, 1) /
-            (UNSHADOWED_THRESHOLD - FULLY_SHADOWED_THRESHOLD),
-            0, 1
+        saturate(
+            saturate((visibility - FULLY_SHADOWED_THRESHOLD)) /
+            (UNSHADOWED_THRESHOLD - FULLY_SHADOWED_THRESHOLD)
         ),
         getOcclusionToOpacityPower()
     );

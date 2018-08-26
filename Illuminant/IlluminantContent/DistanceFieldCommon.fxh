@@ -26,7 +26,7 @@ float2 closestPointOnEdge (
     float2 pt, float2 edgeStart, float2 edgeEnd
 ) {
     float u = closestPointOnEdgeAsFactor(pt, edgeStart, edgeEnd);
-    return edgeStart + ((edgeEnd - edgeStart) * clamp(u, 0, 1));
+    return edgeStart + ((edgeEnd - edgeStart) * saturate(u));
 }
 
 float encodeDistance (float distance) {
