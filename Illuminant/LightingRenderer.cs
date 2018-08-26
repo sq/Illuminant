@@ -1332,8 +1332,8 @@ namespace Squared.Illuminant {
             // FIXME: GC pressure
             var verts = new BillboardVertex[4 * Environment.Billboards.Count];
 
-            Action<DeviceManager, object> setTexture = (dm, _) => {
-                var billboard = (Billboard)_;
+            PrimitiveBeforeDraw<BillboardVertex> setTexture = delegate (DeviceManager dm, ref PrimitiveDrawCall<BillboardVertex> x, int index) {
+                var billboard = Environment.Billboards[index / 4];
                 var material =
                     billboard.Type == BillboardType.Mask
                         ? IlluminantMaterials.MaskBillboard
