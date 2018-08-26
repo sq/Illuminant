@@ -22,7 +22,7 @@ namespace TestGame.Scenes {
 
         public readonly List<SphereLightSource> Lights = new List<SphereLightSource>();
 
-        Toggle ShowGBuffer, TwoPointFiveD, Deterministic;
+        Toggle ShowGBuffer, TwoPointFiveD, Deterministic, Shadows;
         Slider LightmapScaleRatio, MaxStepCount, MinStepSize, DistanceFieldResolution, DistanceSliceCount;
 
         public const int RotatingLightCount = 1024;
@@ -41,6 +41,7 @@ namespace TestGame.Scenes {
             MinStepSize.Value = 2f;
             DistanceFieldResolution.Value = 0.5f;
             DistanceSliceCount.Value = 7;
+            Shadows.Value = true;
 
             ShowGBuffer.Key = Keys.G;
             TwoPointFiveD.Key = Keys.D2;
@@ -271,6 +272,7 @@ namespace TestGame.Scenes {
                     Lights[0].Position = new Vector3(350, 900, 170);
                 else
                     Lights[0].Position = new Vector3(mousePos, LightZ);
+                Lights[0].CastsShadows = Shadows;
                 // Lights[0].RampEnd = 250f * (((1 - LightZ) * 0.25f) + 0.75f);
 
                 int count = Environment.Lights.Count - 1;
@@ -279,6 +281,8 @@ namespace TestGame.Scenes {
                 float timeValue = (float)(time / 14 % 4);
                 float offset = timeValue;
                 for (int i = 1; i < Environment.Lights.Count; i++, offset += stepOffset) {
+                    Lights[i].CastsShadows = Shadows;
+
                     float radiusFactor = (float)Math.Abs(Math.Sin(
                         (i / (float)count * 8.7f) + timeValue
                     ));
