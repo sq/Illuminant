@@ -162,13 +162,12 @@ float4 computeProbeRadiance(
 
     float coneWeight = 1;
 
-    if (ProbeLightCastsShadows)
-        coneWeight = coneTrace(
-            probePosition, float2(ConeShadowRadius, ConeShadowRamp),
-            float2(getConeGrowthFactor(), 1),
-            shadedPixelPosition + (SELF_OCCLUSION_HACK * normalToProbe),
-            vars
-        );
+    coneWeight = coneTrace(
+        probePosition, float2(ConeShadowRadius, ConeShadowRamp),
+        float2(getConeGrowthFactor(), 1),
+        shadedPixelPosition + (SELF_OCCLUSION_HACK * normalToProbe),
+        vars, ProbeLightCastsShadows
+    );
 
     if (ProbeDistanceFalloff) {
         float intervalFalloff = max(probeIntervalAndCount.x, probeIntervalAndCount.y);

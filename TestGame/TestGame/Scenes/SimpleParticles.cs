@@ -28,6 +28,7 @@ namespace TestGame.Scenes {
         ParticleSystem System;
 
         Toggle Running, ShowDistanceField, Collisions, SpawnFromTemplate;
+        Slider EscapeVelocity, Friction, BounceVelocity;
 
         int RandomSeed = 201;
 
@@ -53,6 +54,18 @@ namespace TestGame.Scenes {
             ShowDistanceField.Key = Keys.D;
             Collisions.Key = Keys.C;
             SpawnFromTemplate.Key = Keys.T;
+
+            EscapeVelocity.Max = 2048;
+            EscapeVelocity.Value = 16 * 60f;
+            EscapeVelocity.Speed = 16;
+
+            Friction.Max = 3.0f;
+            Friction.Value = 0.1f;
+            Friction.Speed = 0.05f;
+
+            BounceVelocity.Max = 2.0f;
+            BounceVelocity.Value = 0.95f;
+            BounceVelocity.Speed = 0.05f;
         }
 
         private void CreateRenderTargets () {
@@ -102,18 +115,17 @@ namespace TestGame.Scenes {
                     */
                     RotationFromVelocity = true,
                     OpacityFromLife = opacityFromLife,
-                    EscapeVelocity = 64f,
-                    BounceVelocityMultiplier = 0.95f,
-                    MaximumVelocity = 64f,
+                    MaximumVelocity = 2048,
                     CollisionDistance = 1f,
-                    CollisionLifePenalty = 4
+                    CollisionLifePenalty = 4,
                 }
             ) {
                 Transforms = {
                     new Spawner {
                         IsActive = false,
-                        MinCount = 32,
-                        MaxCount = 1024,
+                        MinInterval = 0f,
+                        MinCount = 1024,
+                        MaxCount = 8192,
                         Position = new Formula {
                             Constant = new Vector4(Pattern.Width / 2f, Pattern.Height / 2f, 0, opacityFromLife),
                             RandomOffset = new Vector4(-0.5f, -0.5f, 0f, 0f),
@@ -121,7 +133,7 @@ namespace TestGame.Scenes {
                         },
                         Velocity = new Formula {
                             RandomOffset = new Vector4(-0.5f, -0.5f, 0f, 0f),
-                            RandomScale = new Vector4(3f, 3f, 0f, 0f),
+                            RandomScale = new Vector4(60f, 60f, 0f, 0f),
                             RandomCircularity = 1f
                         },
                         Attributes = new Formula {
@@ -166,7 +178,7 @@ namespace TestGame.Scenes {
                     },
                     */
                     new MatrixMultiply {
-                        Velocity = Matrix.CreateRotationZ((float)Math.PI * 0.009f) * Matrix.CreateScale(1.001f, 1.001f, 0.0f),
+                        Velocity = Matrix.CreateRotationZ((float)Math.PI * 0.002f) * Matrix.CreateScale(1f, 1f, 0f),
                         Position = Matrix.CreateScale(1f, 1f, 0f)
                     }
                 }
@@ -267,6 +279,9 @@ namespace TestGame.Scenes {
             LightingRenderer.UpdateFields(frame, -3);
 
             System.Configuration.DistanceField = Collisions ? LightingRenderer.DistanceField : null;
+            System.Configuration.Friction = Friction;
+            System.Configuration.EscapeVelocity = EscapeVelocity;
+            System.Configuration.BounceVelocityMultiplier = BounceVelocity;
 
             if (Running)
                 System.Update(frame, -2);
@@ -331,28 +346,28 @@ namespace TestGame.Scenes {
                         (float)((Math.Cos(time / 6) * 500) + (sz.Y / 2)),
                         0
                     );
-                    grav.Attractors[0].Strength = Arithmetic.PulseExp(time / 4, -240f, -20f);
+                    grav.Attractors[0].Strength = Arithmetic.PulseExp(time / 4, -240f, -20f) * 60f;
 
                     grav.Attractors[1].Position = new Vector3(
                         (float)((Math.Sin((time / 2) + 0.7) * 400) + (sz.X * 0.55f)),
                         (float)((Math.Cos((time / 2) + 0.8) * 220) + (sz.Y * 0.43f)),
                         0
                     );
-                    grav.Attractors[1].Strength = Arithmetic.PulseExp(time / 3, -90f, 250f);
+                    grav.Attractors[1].Strength = Arithmetic.PulseExp(time / 3, -90f, 250f) * 60f;
 
                     grav.Attractors[2].Position = new Vector3(
                         (float)((Math.Sin((time / 13) + 1.2) * 700) + (sz.X / 2)),
                         (float)((Math.Cos((time / 13) + 3.6) * 550) + (sz.Y * 0.55f)),
                         0
                     );
-                    grav.Attractors[2].Strength = Arithmetic.PulseExp(time / 6, 2f, 320f);
+                    grav.Attractors[2].Strength = Arithmetic.PulseExp(time / 6, 2f, 320f) * 60f;
 
                     grav.Attractors[3].Position = new Vector3(
                         (float)((Math.Sin((time / 16) + 1.2) * 200) + (sz.X / 2)),
                         (float)((Math.Cos((time / 8) + 3.6) * 550) + (sz.Y / 2)),
                         0
                     );
-                    grav.Attractors[3].Strength = Arithmetic.PulseExp(time / 8, 4f, 600f);
+                    grav.Attractors[3].Strength = Arithmetic.PulseExp(time / 8, 4f, 600f) * 60f;
                 }
 
                 var ms = Game.MouseState;
@@ -405,7 +420,7 @@ namespace TestGame.Scenes {
                     var rng = new MersenneTwister(Interlocked.Increment(ref seed));
                     for (var i = 0; i < buf.Length; i++) {
                         var angle = rng.NextFloat(0, MathHelper.TwoPi);
-                        var vel = rng.NextFloat(0, 0.66f);
+                        var vel = rng.NextFloat(0, 0.66f) * 60f;
                         buf[i] = new Vector4(
                             (float)Math.Cos(angle) * vel,
                             (float)Math.Sin(angle) * vel,

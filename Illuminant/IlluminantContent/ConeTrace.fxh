@@ -22,6 +22,10 @@
 // We manually increase distance samples in order to avoid tiny shadow artifact specks at the edges of surfaces
 #define HACK_DISTANCE_OFFSET 1.5
 
+// The distance between the A and B points during a bidirectional cone trace is multiplied by this amount
+//  and if that exceeds 1 then the trace is terminated.
+#define TRACE_MEET_THRESHOLD 500
+
 struct TraceParameters {
     float3 start;
     float3 direction;
@@ -53,7 +57,8 @@ float coneTrace(
     in float2 lightRamp,
     in float2 coneGrowthFactorAndDistanceFalloff,
     in float3 shadedPixelPosition,
-    in DistanceFieldConstants vars
+    in DistanceFieldConstants vars,
+    in bool   enable
 ) {
     float  traceLength;
     float3 traceDirection;
@@ -83,14 +88,14 @@ float coneTrace(
     a = TRACE_INITIAL_OFFSET_PX;
     b = traceLength;
 
-    bool abort = DistanceField.Extent.x <= 0;
+    float liveness = (DistanceField.Extent.x > 0) && enable;
     float stepsRemaining = getStepLimit();
     float visibility = 1.0;
 
     float aSample, bSample;
 
     [loop]
-    while (!abort) {
+    while (liveness > 0) {
         aSample = sampleDistanceFieldEx(shadedPixelPosition + (traceDirection * a), vars);
         bSample = sampleDistanceFieldEx(shadedPixelPosition + (traceDirection * b), vars);
 
@@ -98,21 +103,22 @@ float coneTrace(
         b -= coneTraceStep(config, bSample, b, visibility);
 
         stepsRemaining--;
-        float liveness = stepsRemaining * saturate(visibility - FULLY_SHADOWED_THRESHOLD);
-        abort =
-            (liveness <= 0) ||
-            (a >= b);
+        liveness = stepsRemaining * 
+            saturate(visibility - FULLY_SHADOWED_THRESHOLD) *
+            saturate((b - a) * TRACE_MEET_THRESHOLD);
     }
 
     // HACK: Force visibility down to 0 if we are going to terminate the trace because we took too many steps.
     float stepWindowVisibility = stepsRemaining / MAX_STEP_RAMP_WINDOW;
     visibility = min(visibility, stepWindowVisibility);
 
-    return pow(
+    float finalResult = pow(
         saturate(
             saturate((visibility - FULLY_SHADOWED_THRESHOLD)) /
             (UNSHADOWED_THRESHOLD - FULLY_SHADOWED_THRESHOLD)
         ),
         getOcclusionToOpacityPower()
     );
+
+    return enable ? finalResult : 1.0;
 }

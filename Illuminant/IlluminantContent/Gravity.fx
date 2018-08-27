@@ -5,6 +5,7 @@
 uniform int    AttractorCount;
 uniform float3 AttractorPositions[MAX_ATTRACTORS];
 uniform float2 AttractorRadiusesAndStrengths[MAX_ATTRACTORS];
+uniform float3 MaximumVelocity;
 
 void PS_Gravity (
     in  float2 xy                : VPOS,
@@ -20,16 +21,16 @@ void PS_Gravity (
     float3 acceleration = 0;
 
     for (int i = 0; i < AttractorCount; i++) {
-        float3 toCenter = (AttractorPositions[i] - newPosition.xyz);
-        float  distanceSquared = max(dot(toCenter, toCenter), AttractorRadiusesAndStrengths[i].x);
-        float  attraction = abs(AttractorRadiusesAndStrengths[i].y) / distanceSquared;
-        if (AttractorRadiusesAndStrengths[i].y < 0)
-            attraction = -attraction;
-        acceleration += normalize(toCenter) * attraction;
+        float3 apos = AttractorPositions[i];
+        float2 ars = AttractorRadiusesAndStrengths[i];
+        float3 toCenter = (apos - newPosition.xyz);
+        float  distanceSquared = max(dot(toCenter, toCenter), ars.x);
+        float  attraction = 1 / distanceSquared;
+        acceleration += normalize(toCenter) * attraction * ars.y;
     }
 
     newVelocity = float4(
-        oldVelocity + acceleration, oldVelocity.w
+        min(MaximumVelocity, oldVelocity + acceleration), oldVelocity.w
     );
 }
 

@@ -270,6 +270,8 @@ namespace Squared.Illuminant.Particles {
         private int LastResetCount = 0;
         public event Action<ParticleSystem> OnDeviceReset;
 
+        private double? LastUpdateTimeSeconds = null;
+
         public ParticleSystem (
             ParticleEngine engine, ParticleSystemConfiguration configuration
         ) {
@@ -282,6 +284,12 @@ namespace Squared.Illuminant.Particles {
 
                 Slices[0].Timestamp = Time.Ticks;
                 Slices[0].IsValid = true;
+            }
+        }
+
+        public ITimeProvider TimeProvider {
+            get {
+                return Configuration.TimeProvider ?? Time.DefaultTimeProvider;
             }
         }
 
@@ -422,7 +430,7 @@ namespace Squared.Illuminant.Particles {
             ref Slice passSource, ref Slice passDest, 
             long startedWhen, Transforms.Spawner spawner,
             Action<EffectParameterCollection> setParameters,
-            bool clearFirst
+            bool clearFirst, float deltaTimeSeconds
         ) {
             var _source = passSource;
             var _dest = passDest;
@@ -442,7 +450,7 @@ namespace Squared.Illuminant.Particles {
             int spawnCount = 0;
 
             if (spawner != null) {
-                spawner.Tick(out spawnCount);
+                spawner.Tick(deltaTimeSeconds, out spawnCount);
 
                 if (spawnCount <= 0)
                     return;
@@ -536,7 +544,7 @@ namespace Squared.Illuminant.Particles {
                         chunkMaterial, sourceChunk, destChunk,
                         setParameters, 
                         runQuery ? li : null,
-                        clearFirst
+                        clearFirst, deltaTimeSeconds
                     );
                 }
             }
@@ -560,7 +568,7 @@ namespace Squared.Illuminant.Particles {
             IBatchContainer container, int layer, Material m,
             Slice.Chunk source, Slice.Chunk dest,
             Action<EffectParameterCollection> setParameters,
-            LivenessInfo li, bool clearFirst
+            LivenessInfo li, bool clearFirst, float deltaTimeSeconds
         ) {
             // Console.WriteLine("{0} -> {1}", passSource.Index, passDest.Index);
             var e = m.Effect;
@@ -584,6 +592,14 @@ namespace Squared.Illuminant.Particles {
                         if (at != null)
                             at.SetValue(source.Attributes);
                     }
+
+                    var mv = p["MaximumVelocity"];
+                    if (mv != null)
+                        mv.SetValue(Configuration.MaximumVelocity);
+
+                    var dts = p["DeltaTimeSeconds"];
+                    if (dts != null)
+                        dts.SetValue(deltaTimeSeconds);
 
                     var dft = p["DistanceFieldTexture"];
                     if (dft != null)
@@ -738,7 +754,16 @@ namespace Squared.Illuminant.Particles {
             }
         }
 
-        public void Update (IBatchContainer container, int layer) {
+        public void Update (IBatchContainer container, int layer, float? deltaTimeSeconds = null) {
+            var lastUpdateTimeSeconds = LastUpdateTimeSeconds;
+            LastUpdateTimeSeconds = TimeProvider.Seconds;
+
+            float actualDeltaTimeSeconds = 1 / 60f;
+            if (deltaTimeSeconds.HasValue)
+                actualDeltaTimeSeconds = deltaTimeSeconds.Value;
+            else if (lastUpdateTimeSeconds.HasValue)
+                actualDeltaTimeSeconds = (float)Math.Min(LastUpdateTimeSeconds.Value - lastUpdateTimeSeconds.Value, Configuration.MaximumUpdateDeltaTimeSeconds);
+
             var startedWhen = Time.Ticks;
 
             Slice source, a, b;
@@ -791,7 +816,7 @@ namespace Squared.Illuminant.Particles {
                     UpdatePass(
                         group, i++, t.GetMaterial(Engine.ParticleMaterials),
                         source, a, b, ref passSource, ref passDest, 
-                        startedWhen, spawner, t.SetParameters, false
+                        startedWhen, spawner, t.SetParameters, false, actualDeltaTimeSeconds
                     );
                 }
 
@@ -821,10 +846,10 @@ namespace Squared.Illuminant.Particles {
                             p["EscapeVelocity"].SetValue(Configuration.EscapeVelocity);
                             p["BounceVelocityMultiplier"].SetValue(Configuration.BounceVelocityMultiplier);
                             p["LifeDecayRate"].SetValue(Configuration.GlobalLifeDecayRate);
-                            p["MaximumVelocity"].SetValue(Configuration.MaximumVelocity);
                             p["CollisionDistance"].SetValue(Configuration.CollisionDistance);
                             p["CollisionLifePenalty"].SetValue(Configuration.CollisionLifePenalty);
-                        }, true
+                            p["Friction"].SetValue(Configuration.Friction);
+                        }, true, actualDeltaTimeSeconds
                     );
                 } else {
                     UpdatePass(
@@ -833,8 +858,8 @@ namespace Squared.Illuminant.Particles {
                         startedWhen, null,
                         (p) => {
                             p["LifeDecayRate"].SetValue(Configuration.GlobalLifeDecayRate);
-                            p["MaximumVelocity"].SetValue(Configuration.MaximumVelocity);
-                        }, true
+                            p["Friction"].SetValue(Configuration.Friction);
+                        }, true, actualDeltaTimeSeconds
                     );
                 }
 
@@ -986,49 +1011,91 @@ namespace Squared.Illuminant.Particles {
         public Bounds        TextureRegion = new Bounds(Vector2.Zero, Vector2.One);
         public Vector2       Size = Vector2.One;
 
-        // Animates through the sprite texture based on the particle's life value, if set
-        // Smaller values will result in slower animation. Zero turns off animation.
+        /// <summary>
+        /// Animates through the sprite texture based on the particle's life value, if set
+        /// Smaller values will result in slower animation. Zero turns off animation.
+        /// </summary>
         public Vector2       AnimationRate;
 
-        // If set, particles will rotate based on their direction of movement
+        /// <summary>
+        /// If set, particles will rotate based on their direction of movement
+        /// </summary>
         public bool          RotationFromVelocity;
 
-        // If != 0, a particle's opacity is equal to its life divided by this value
+        /// <summary>
+        /// If != 0, a particle's opacity is equal to its life divided by this value
+        /// </summary>
         public float         OpacityFromLife = 0;
 
-        // Life of all particles decreases by this much every update
+        /// <summary>
+        /// Life of all particles decreases by this much every update
+        /// </summary>
         public float         GlobalLifeDecayRate = 1;
 
-        // If set, particles collide with volumes in this distance field
+        /// <summary>
+        /// If set, particles collide with volumes in this distance field
+        /// </summary>
         public DistanceField DistanceField;
         public float?        DistanceFieldMaximumZ;
 
-        // The distance at which a particle is considered colliding with the field.
-        // Raise this to make particles 'larger'.
+        /// <summary>
+        /// The distance at which a particle is considered colliding with the field.
+        /// Raise this to make particles 'larger'.
+        /// </summary>
         public float         CollisionDistance = 0.5f;
 
-        // Life of a particle decreases by this much every frame if it collides
-        //  with or is inside of a volume
+        /// <summary>
+        /// Life of a particle decreases by this much every frame if it collides
+        ///  with or is inside of a volume
+        /// </summary>
         public float         CollisionLifePenalty = 0;
 
-        // Particles will not be allowed to exceed this velocity
+        /// <summary>
+        /// Particles will not be allowed to exceed this velocity
+        /// </summary>
         public float         MaximumVelocity = 9999f;
 
-        // Particles trapped inside distance field volumes will attempt to escape
-        //  at this velocity multiplied by their distance from the outside
-        public float         EscapeVelocity = 1.0f;
-        // Particles colliding with distance field volumes will retain this much
-        //  of their speed and bounce off of the volume
+        /// <summary>
+        /// All particles will have their velocity reduced to roughly Velocity * (1.0 - Friction) every second
+        /// </summary>
+        public float         Friction = 0f;
+
+        /// <summary>
+        /// Particles trapped inside distance field volumes will attempt to escape
+        ///  at this velocity multiplied by their distance from the outside
+        /// </summary>
+        public float         EscapeVelocity = 128.0f;
+
+        /// <summary>
+        /// Particles colliding with distance field volumes will retain this much
+        ///  of their speed and bounce off of the volume
+        /// </summary>
         public float         BounceVelocityMultiplier = 0.0f;
 
-        // Applies the particle's Z coordinate to its Y coordinate at render time for 2.5D effect
+        /// <summary>
+        /// Applies the particle's Z coordinate to its Y coordinate at render time for 2.5D effect
+        /// </summary>
         public float         ZToY = 0;
 
-        // Coarse-grained control over the number of particles actually rendered
+        /// <summary>
+        /// Coarse-grained control over the number of particles actually rendered
+        /// </summary>
         public float         StippleFactor = 1.0f;
 
-        // Store system state as 32-bit float instead of 16-bit float
+        /// <summary>
+        /// Store system state as 32-bit float instead of 16-bit float
+        /// </summary>
         public bool          HighPrecision = true;
+
+        /// <summary>
+        /// Used to measure elapsed time automatically for updates
+        /// </summary>
+        public ITimeProvider TimeProvider = null;
+
+        /// <summary>
+        /// Any update's elapsed time will be limited to at most this long
+        /// </summary>
+        public float         MaximumUpdateDeltaTimeSeconds = 1 / 20f;
 
         public ParticleSystemConfiguration (
             int attributeCount = 0

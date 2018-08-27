@@ -1,7 +1,7 @@
 #include "ParticleCommon.fxh"
+#include "UpdateCommon.fxh"
 
 uniform float LifeDecayRate;
-uniform float MaximumVelocity;
 
 void PS_Update (
     in  float2 xy            : VPOS,
@@ -14,16 +14,16 @@ void PS_Update (
         xy * Texel, oldPosition, oldVelocity, newAttributes
     );
 
-    float3 velocity = oldVelocity.xyz;
-    if (length(velocity) > MaximumVelocity)
-        velocity = normalize(velocity) * MaximumVelocity;
+    float3 velocity = applyFrictionAndMaximum(oldVelocity.xyz);
+
+    float3 scaledVelocity = velocity * DeltaTimeSeconds;
 
     float newLife = oldPosition.w - LifeDecayRate;
     if (newLife <= 0) {
         newPosition = 0;
         newVelocity = 0;
     } else {
-        newPosition = float4(oldPosition.xyz + velocity, newLife);
+        newPosition = float4(oldPosition.xyz + scaledVelocity, newLife);
         newVelocity = float4(velocity, oldVelocity.w);
     }
 }

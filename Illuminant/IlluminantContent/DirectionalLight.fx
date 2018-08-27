@@ -64,17 +64,14 @@ float DirectionalLightPixelCore(
     bool traceShadows = visible && lightProperties.x && (lightOpacity >= 1 / 256.0);
 
     // FIXME: Cone trace for directional shadows?
-    [branch]
-    if (traceShadows) {
-        float3 fakeLightCenter = shadedPixelPosition - (lightDirection * lightProperties.y);
-        float2 fakeRamp = float2(lightProperties.z, moreLightProperties.y);
-        lightOpacity *= coneTrace(
-            fakeLightCenter, fakeRamp, 
-            float2(lightProperties.w, moreLightProperties.y),
-            shadedPixelPosition + (SELF_OCCLUSION_HACK * shadedPixelNormal), 
-            vars
-        );
-    }
+    float3 fakeLightCenter = shadedPixelPosition - (lightDirection * lightProperties.y);
+    float2 fakeRamp = float2(lightProperties.z, moreLightProperties.y);
+    lightOpacity *= coneTrace(
+        fakeLightCenter, fakeRamp, 
+        float2(lightProperties.w, moreLightProperties.y),
+        shadedPixelPosition + (SELF_OCCLUSION_HACK * shadedPixelNormal), 
+        vars, traceShadows
+    );
 
     [branch]
     if (useOpacityRamp)

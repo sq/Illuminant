@@ -40,15 +40,12 @@ float SphereLightPixelCore(
     bool traceShadows = visible && lightProperties.w && (preTraceOpacity >= 1 / 256.0);
     float coneOpacity = 1;
 
-    [branch]
-    if (traceShadows) {
-        coneOpacity = coneTrace(
-            lightCenter, lightProperties.xy, 
-            float2(getConeGrowthFactor(), moreLightProperties.y),
-            shadedPixelPosition + (SELF_OCCLUSION_HACK * shadedPixelNormal),
-            vars
-        );
-    }
+    coneOpacity = coneTrace(
+        lightCenter, lightProperties.xy, 
+        float2(getConeGrowthFactor(), moreLightProperties.y),
+        shadedPixelPosition + (SELF_OCCLUSION_HACK * shadedPixelNormal),
+        vars, traceShadows
+    );
 
     float lightOpacity;
 

@@ -156,13 +156,12 @@ float sampleDistanceFieldEx (
     float maskPatternIndex = fmod(virtualSliceIndex, 3);
     float subslice = slicePosition - virtualSliceIndex;
 
-    float2 samples;
-    if (maskPatternIndex >= 2)
-        samples = packedSample.ba;
-    else if (maskPatternIndex >= 1)
-        samples = packedSample.gb;
-    else
-        samples = packedSample.rg;
+    float2 samples =
+        (maskPatternIndex >= 2)
+            ? packedSample.ba
+            : (maskPatternIndex >= 1)
+                ? packedSample.gb
+                : packedSample.rg;
 
     float blendedSample = lerp(
         samples.x, samples.y, subslice

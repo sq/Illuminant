@@ -1,10 +1,13 @@
 #include "ParticleCommon.fxh"
 #include "DistanceFieldCommon.fxh"
+#include "UpdateCommon.fxh"
 
 #define SAMPLE sampleDistanceFieldEx
 #define TVARS  DistanceFieldConstants
 #define TRACE_MIN_STEP_SIZE 2
 #define TRACE_FINAL_MIN_STEP_SIZE 12
+#define FALSE_BOUNCE_HACK 0.5
+#define NO_NORMAL_THRESHOLD 0.33
 
 #include "VisualizeCommon.fxh"
 
@@ -13,7 +16,6 @@
 uniform float EscapeVelocity;
 uniform float BounceVelocityMultiplier;
 uniform float LifeDecayRate;
-uniform float MaximumVelocity;
 uniform float CollisionDistance;
 uniform float CollisionLifePenalty;
 
@@ -28,15 +30,15 @@ void PS_Update (
         xy * Texel, oldPosition, oldVelocity, newAttributes
     );
 
-    float3 velocity = oldVelocity.xyz;
-    if (length(velocity) > MaximumVelocity)
-        velocity = normalize(velocity) * MaximumVelocity;
+    float3 velocity = applyFrictionAndMaximum(oldVelocity.xyz);
 
     TVARS vars = makeDistanceFieldConstants();
 
+    float3 scaledVelocity = velocity * DeltaTimeSeconds;
+
     float oldDistance = SAMPLE(oldPosition.xyz, vars);
-    float3 unitVector = normalize(velocity.xyz);
-    float stepSpeed = length(velocity.xyz);
+    float3 unitVector = normalize(scaledVelocity);
+    float stepSpeed = length(scaledVelocity);
 
     bool collided = false;
 
@@ -63,14 +65,14 @@ void PS_Update (
 
     [branch]
     if (collided) {
-        newPosition = float4(oldPosition + (unitVector * stepSpeed), oldPosition.w - LifeDecayRate);
-
-        float3 normal = estimateNormal(newPosition.xyz, vars);
-        if (length(normal) < 0.33)
+        float3 normal = estimateNormal(oldPosition.xyz, vars);
+        if (length(normal) < NO_NORMAL_THRESHOLD)
             // HACK to avoid getting stuck at the center of volumes
             normal = float3(0, -1, 0);
 
-        if (oldDistance > CollisionDistance) {
+        if (oldDistance >= (CollisionDistance - FALSE_BOUNCE_HACK)) {
+            scaledVelocity = (unitVector * stepSpeed);
+            newPosition = float4(oldPosition + scaledVelocity, oldPosition.w - LifeDecayRate);
             // We started outside. Bounce away next step if configured to. Otherwise, we'll halt.
             float3 bounceVector = normalize(-(2 * dot(normal, unitVector) * (normal - unitVector)));
             newVelocity = float4(bounceVector * (min(MaximumVelocity, length(velocity.xyz) * BounceVelocityMultiplier)), oldVelocity.w);
@@ -79,10 +81,13 @@ void PS_Update (
         } else {
             // We started inside, so flee at our escape velocity.
             float3 escapeVector = normalize(normal);
+
             newVelocity = float4(escapeVector * EscapeVelocity, oldVelocity.w);
+            scaledVelocity = newVelocity.xyz * DeltaTimeSeconds;
+            newPosition = float4(oldPosition + scaledVelocity, oldPosition.w - LifeDecayRate);
         }
     } else {
-        newPosition = float4(oldPosition.xyz + velocity.xyz, oldPosition.w - LifeDecayRate);
+        newPosition = float4(oldPosition.xyz + scaledVelocity, oldPosition.w - LifeDecayRate);
         newVelocity = float4(velocity, oldVelocity.w);
     }
 }

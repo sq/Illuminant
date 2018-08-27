@@ -16,7 +16,7 @@ namespace Squared.Illuminant.Particles.Transforms {
 
         public Formula  Position, Velocity, Attributes;
 
-        private int     Delay;
+        private float   DelaySecs;
         private Vector2 Indices;
         private MersenneTwister RNG = new MersenneTwister();
         private int     TotalSpawned;
@@ -28,14 +28,14 @@ namespace Squared.Illuminant.Particles.Transforms {
             Indices = new Vector2(first, last);
         }
 
-        internal void Tick (out int spawnCount) {
-            if (Delay <= 0) {
+        internal void Tick (float deltaTimeSeconds, out int spawnCount) {
+            DelaySecs -= deltaTimeSeconds;
+            if (DelaySecs <= 0) {
                 spawnCount = (int)(MinCount + (RNG.NextSingle() * (MaxCount - MinCount)));
-                Delay = (int)(MinInterval + (RNG.NextSingle() * (MaxInterval - MinInterval)));
+                DelaySecs = (MinInterval + (RNG.NextSingle() * (MaxInterval - MinInterval)));
                 TotalSpawned += spawnCount;
             } else {
                 spawnCount = 0;
-                Delay--;
             }
         }
 
