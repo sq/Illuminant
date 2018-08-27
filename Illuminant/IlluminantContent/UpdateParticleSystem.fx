@@ -18,7 +18,7 @@ void PS_Update (
 
     float3 scaledVelocity = velocity * DeltaTimeSeconds;
 
-    float newLife = oldPosition.w - LifeDecayRate;
+    float newLife = oldPosition.w - (LifeDecayRate * DeltaTimeSeconds);
     if (newLife <= 0) {
         newPosition = 0;
         newVelocity = 0;

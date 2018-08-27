@@ -114,7 +114,7 @@ namespace TestGame.Scenes {
                     AnimationRate = new Vector2(1 / 6f, 0),
                     */
                     RotationFromVelocity = true,
-                    OpacityFromLife = opacityFromLife,
+                    OpacityFromLife = opacityFromLife / 60f,
                     MaximumVelocity = 2048,
                     CollisionDistance = 1f,
                     CollisionLifePenalty = 4,
@@ -127,9 +127,9 @@ namespace TestGame.Scenes {
                         MinCount = 1024,
                         MaxCount = 8192,
                         Position = new Formula {
-                            Constant = new Vector4(Pattern.Width / 2f, Pattern.Height / 2f, 0, opacityFromLife),
+                            Constant = new Vector4(Pattern.Width / 2f, Pattern.Height / 2f, 0, (opacityFromLife) / 60f),
                             RandomOffset = new Vector4(-0.5f, -0.5f, 0f, 0f),
-                            RandomScale = new Vector4(900f * 2f, 450f * 2f, 0f, MaxLife - opacityFromLife),
+                            RandomScale = new Vector4(900f * 2f, 450f * 2f, 0f, (MaxLife - opacityFromLife) / 60f),
                         },
                         Velocity = new Formula {
                             RandomOffset = new Vector4(-0.5f, -0.5f, 0f, 0f),
@@ -412,7 +412,7 @@ namespace TestGame.Scenes {
                             rng.NextFloat(
                                 200, 
                                 MaxLife
-                            )
+                            ) / 60f
                         );
                     }
                 },

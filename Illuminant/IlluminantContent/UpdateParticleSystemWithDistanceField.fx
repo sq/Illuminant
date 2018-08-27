@@ -66,9 +66,12 @@ void PS_Update (
     [branch]
     if (collided) {
         float3 normal = estimateNormal(oldPosition.xyz, vars);
-        if (length(normal) < NO_NORMAL_THRESHOLD)
+        if (length(normal) < NO_NORMAL_THRESHOLD) {
             // HACK to avoid getting stuck at the center of volumes
-            normal = float3(0, -1, 0);
+            float s, c;
+            sincos((xy.x / 97) + (xy.y / 17), s, c);
+            normal = float3(s, c, 0);
+        }
 
         if (oldDistance >= (CollisionDistance - FALSE_BOUNCE_HACK)) {
             scaledVelocity = (unitVector * stepSpeed);
@@ -84,10 +87,10 @@ void PS_Update (
 
             newVelocity = float4(escapeVector * EscapeVelocity, oldVelocity.w);
             scaledVelocity = newVelocity.xyz * DeltaTimeSeconds;
-            newPosition = float4(oldPosition + scaledVelocity, oldPosition.w - LifeDecayRate);
+            newPosition = float4(oldPosition + scaledVelocity, oldPosition.w - (LifeDecayRate * DeltaTimeSeconds));
         }
     } else {
-        newPosition = float4(oldPosition.xyz + scaledVelocity, oldPosition.w - LifeDecayRate);
+        newPosition = float4(oldPosition.xyz + scaledVelocity, oldPosition.w - (LifeDecayRate * DeltaTimeSeconds));
         newVelocity = float4(velocity, oldVelocity.w);
     }
 }

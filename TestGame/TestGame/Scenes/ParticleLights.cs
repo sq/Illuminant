@@ -291,18 +291,16 @@ namespace TestGame.Scenes {
                 Transforms = {
                     new Spawner {
                         IsActive = false,
-                        MinInterval = 1,
-                        MaxInterval = 1,
-                        MinCount = 128,
-                        MaxCount = 768,
+                        MinCount = 64,
+                        MaxCount = 512,
                         Position = new Formula {
                             RandomOffset = new Vector4(-0.5f, -0.5f, -0.5f, 1f),
-                            RandomScale = new Vector4(15f, 15f, 5f, MaxLife - OpacityFromLife),
+                            RandomScale = new Vector4(15f, 15f, 5f, (MaxLife - OpacityFromLife) / 60f),
                             RandomCircularity = 1f
                         },
                         Velocity = new Formula {
                             RandomOffset = new Vector4(-0.5f, -0.5f, -0.5f, 0f),
-                            RandomScale = new Vector4(4f, 4f, 2f, 0f),
+                            RandomScale = new Vector4(4f, 4f, 2f, 0f) * 60,
                             RandomScaleConstant = new Vector4(3f, 3f, 0f, 0f),
                             RandomCircularity = 1f
                         },
@@ -312,7 +310,7 @@ namespace TestGame.Scenes {
                         }
                     },
                     new MatrixMultiply {
-                        Velocity = Matrix.CreateRotationZ((float)Math.PI * 0.001f) * 1.001f,
+                        Velocity = Matrix.CreateRotationZ((float)Math.PI * 0.002f),
                     }
                 }
             };
@@ -455,7 +453,7 @@ namespace TestGame.Scenes {
 
                 var s = System.Transforms.OfType<Spawner>().First();
                 s.Position.Constant = new Vector4(mousePos, 0);
-                System.Configuration.OpacityFromLife = OpacityFromLife.Value;
+                System.Configuration.OpacityFromLife = OpacityFromLife.Value / 60f;
                 s.IsActive = Game.LeftMouse;
             }
         }
