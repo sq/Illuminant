@@ -1,27 +1,39 @@
 #include "SphereLightCore.fxh"
 
 void SphereLightVertexShader(
-    in int2 cornerIndex              : BLENDINDICES0,
+    in int2 vertexIndex              : BLENDINDICES0,
     inout float4 color               : TEXCOORD4,
     inout float3 lightCenter         : TEXCOORD0,
+    // radius, ramp length, ramp mode, enable shadows
     inout float4 lightProperties     : TEXCOORD1,
+    // ao radius, distance falloff, y falloff factor, ao opacity
     inout float4 moreLightProperties : TEXCOORD3,
     out float3 worldPosition         : TEXCOORD2,
     out float4 result                : POSITION0
 ) {
-    float3 corner = LightCorners[cornerIndex.x];
+    float3 vertex = ClippedLightVertices[vertexIndex.x];
 
     float  radius = lightProperties.x + lightProperties.y + 1;
-    float3 radius3 = float3(radius, radius, 0);
+    float  deltaY = (radius) - (radius / moreLightProperties.z);
+    float3 radius3;
+
+    if (1)
+        // HACK: Scale the y axis some to clip off dead pixels caused by the y falloff factor
+        radius3 = float3(radius, radius - (deltaY / 2.0), 0);
+    else
+        radius3 = float3(radius, radius, 0);
+
     float3 tl = lightCenter - radius3, br = lightCenter + radius3;
 
     // Unfortunately we need to adjust both by the light's radius (to account for pixels above/below the center point
     //  being lit in 2.5d projection), along with adjusting by the z of the light's centerpoint (to deal with pixels
     //  at high elevation)
-    tl.y -= radius * getInvZToYMultiplier();
-    tl.y -= lightCenter.z * getZToYMultiplier();
+    float radiusOffset = radius * getInvZToYMultiplier();
+    float zOffset = lightCenter.z * getZToYMultiplier();
+    tl.y -= radiusOffset;
+    tl.y -= zOffset;
 
-    worldPosition = lerp(tl, br, corner);
+    worldPosition = lerp(tl, br, vertex);
 
     float3 screenPosition = (worldPosition - float3(Viewport.Position.xy, 0));
     screenPosition.xy *= Viewport.Scale * Environment.RenderScale;

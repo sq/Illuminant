@@ -277,8 +277,8 @@ namespace TestGame.Scenes {
             var light = new SphereLightSource {
                 Position = new Vector3(64, 64, 0.7f),
                 Color = new Vector4(1f, 1f, 1f, 0.5f),
-                Radius = 160,
-                RampLength = 32,
+                Radius = 300,
+                RampLength = 64,
                 RampMode = LightSourceRampMode.Exponential,
                 AmbientOcclusionRadius = 8f
             };
@@ -437,6 +437,7 @@ namespace TestGame.Scenes {
             Environment.ZToYMultiplier = ForegroundEnvironment.ZToYMultiplier = ZToYMultiplier.Value;
 
             Environment.Lights[0].FalloffYFactor = LightFalloffYFactor.Value;
+            ForegroundEnvironment.Lights[0].FalloffYFactor = LightFalloffYFactor.Value;
 
             var bbill = BackgroundBillboards[0];
             if (bbill.DataScale != GDataScale.Value) {

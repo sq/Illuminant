@@ -6,6 +6,7 @@
 #include "AOCommon.fxh"
 
 #define SELF_OCCLUSION_HACK 1.1
+#define SHADOW_OPACITY_THRESHOLD (4 / 255.0)
 
 float SphereLightPixelCore(
     in float3 shadedPixelPosition,
@@ -37,7 +38,7 @@ float SphereLightPixelCore(
 
     float preTraceOpacity = distanceOpacity * aoOpacity;
 
-    bool traceShadows = visible && lightProperties.w && (preTraceOpacity >= 1 / 256.0);
+    bool traceShadows = visible && lightProperties.w && (preTraceOpacity >= SHADOW_OPACITY_THRESHOLD);
     float coneOpacity = 1;
 
     coneOpacity = coneTrace(

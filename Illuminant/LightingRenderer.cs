@@ -915,7 +915,7 @@ namespace Squared.Illuminant {
             vertex.MoreLightProperties.Z = lightSource.FalloffYFactor;
             vertex.MoreLightProperties.W = lightSource.AmbientOcclusionOpacity;
 
-            for (int i = 0; i < 4; i++) {
+            for (int i = 0; i < 16; i++) {
                 vertex.Corner = vertex.Unused = (short)i;
                 ltrs.LightVertices.Add(ref vertex);
             }

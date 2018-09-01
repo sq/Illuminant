@@ -16,6 +16,21 @@ static const float3 LightCorners[] = {
     { 0, 1, 0 }
 };
 
+static const float3 ClippedLightVertices[] = {
+    { 1/8.0, 0/8.0, 0 },
+    { 7/8.0, 0/8.0, 0 },
+    { 7/8.0, 8/8.0, 0 },
+    { 1/8.0, 8/8.0, 0 },
+    { 7/8.0, 1/8.0, 0 },
+    { 8/8.0, 1/8.0, 0 },
+    { 8/8.0, 7/8.0, 0 },
+    { 7/8.0, 7/8.0, 0 },
+    { 0/8.0, 1/8.0, 0 },
+    { 1/8.0, 1/8.0, 0 },
+    { 1/8.0, 7/8.0, 0 },
+    { 0/8.0, 7/8.0, 0 },
+};
+
 #include "EnvironmentCommon.fxh"
 
 uniform float  GBufferInvScaleFactor;

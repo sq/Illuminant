@@ -26,7 +26,8 @@ namespace TestGame.Scenes {
             Power,
             BandSize,
             RangeMin,
-            RangeMax;
+            RangeMax,
+            LightSize;
 
         public DitheringTest (TestGame game, int width, int height)
             : base(game, width, height) {
@@ -35,12 +36,16 @@ namespace TestGame.Scenes {
             Power.Value = 1;
             BandSize.Value = 1;
             RangeMax.Value = 1;
+            LightSize.Value = 0.95f;
 
             sRGB.Key = Keys.S;
 
             Power.Max = 12;
             Power.Min = 1;
             Power.Speed = 1;
+
+            LightSize.Speed = 0.05f;
+            LightSize.Max = 2.0f;
 
             InitUnitSlider(Strength, BandSize, RangeMax, RangeMin);
         }
@@ -89,15 +94,18 @@ namespace TestGame.Scenes {
             );
 
             Environment.Lights.Add(new SphereLightSource {
-                Position = new Vector3(0, Height / 2f, 0),
+                Position = new Vector3(Width / 2f, Height / 2f, 0),
                 Radius = 4,
-                RampLength = Width * 0.95f,
                 Color = Vector4.One * 1f
             });
         }
         
         public override void Draw (Squared.Render.Frame frame) {
             CreateRenderTargets();
+
+            var l = Environment.Lights.OfType<SphereLightSource>().First();
+            l.RampLength = Width * LightSize;
+            l.Position.X = Width * (1 - LightSize);
 
             Renderer.UpdateFields(frame, -2);
             Environment.Lights.OfType<SphereLightSource>().First().RampMode =
