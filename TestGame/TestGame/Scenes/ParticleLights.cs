@@ -390,7 +390,7 @@ namespace TestGame.Scenes {
                             Game.Materials.ScreenSpaceBitmap,
                             blendState: BlendState.Opaque
                         ),
-                        samplerState: SamplerState.PointClamp
+                        samplerState: SamplerState.LinearClamp
                     ))
                         bb.Add(new BitmapDrawCall(
                             Renderer.DistanceField.Texture, Vector2.Zero, new Bounds(Vector2.Zero, Vector2.One), 

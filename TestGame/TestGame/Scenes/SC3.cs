@@ -233,7 +233,7 @@ namespace TestGame.Scenes {
 
             DistanceField = new DistanceField(
                 Game.RenderCoordinator, Width, Height, Environment.MaximumZ,
-                16, 0.5f
+                9, 0.5f
             );
 
             Renderer = new LightingRenderer(
@@ -244,12 +244,14 @@ namespace TestGame.Scenes {
                     RenderScale = new Vector2(1.0f / BackgroundScaleRatio),
                     TwoPointFiveD = true,
                     MaximumFieldUpdatesPerFrame = 1,
+                    /*
                     DefaultQuality = {
                         MinStepSize = 1.5f,
                         LongStepFactor = 0.7f,
                         OcclusionToOpacityPower = 1.35f,
                         MaxConeRadius = 30,
                     }
+                    */
                 }
             ) {
                 DistanceField = DistanceField
@@ -263,12 +265,14 @@ namespace TestGame.Scenes {
                     RenderScale = new Vector2(1.0f / ForegroundScaleRatio),
                     MaximumFieldUpdatesPerFrame = 0,
                     TwoPointFiveD = true,
+                    /*
                     DefaultQuality = {
                         MinStepSize = 1.5f,
                         LongStepFactor = 0.7f,
                         OcclusionToOpacityPower = 1.35f,
                         MaxConeRadius = 30,
                     }
+                    */
                 }
             ) {
                 DistanceField = DistanceField
@@ -280,7 +284,7 @@ namespace TestGame.Scenes {
                 Radius = 300,
                 RampLength = 64,
                 RampMode = LightSourceRampMode.Exponential,
-                AmbientOcclusionRadius = 8f
+                // AmbientOcclusionRadius = 8f
             };
 
             Environment.Lights.Add(light);
@@ -627,7 +631,7 @@ namespace TestGame.Scenes {
                             Game.Materials.ScreenSpaceBitmap,
                             blendState: BlendState.Opaque
                         ),
-                        samplerState: SamplerState.PointClamp
+                        samplerState: SamplerState.LinearClamp
                     ))
                         bb.Add(new BitmapDrawCall(
                             VisualizeForeground 

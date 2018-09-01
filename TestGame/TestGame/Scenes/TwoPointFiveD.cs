@@ -79,7 +79,7 @@ namespace TestGame.Scenes {
             DistanceFieldResolution.Value = 0.25f;
             LightmapScaleRatio.Value = 1.0f;
             MaximumLightStrength.Value = 4f;
-            MaximumEncodedDistance.Value = 256;
+            MaximumEncodedDistance.Value = 128;
             DitherStrength.Value = 1f;
             DitherPower.Value = 8;
             DitherBandSize.Value = 1f;
@@ -383,7 +383,7 @@ namespace TestGame.Scenes {
                             Game.Materials.ScreenSpaceBitmap,
                             blendState: BlendState.Opaque
                         ),
-                        samplerState: SamplerState.PointClamp
+                        samplerState: SamplerState.LinearClamp
                     ))
                         bb.Add(new BitmapDrawCall(
                             Renderer.DistanceField.Texture, Vector2.Zero, new Bounds(Vector2.Zero, Vector2.One), 

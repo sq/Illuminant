@@ -16,19 +16,22 @@ static const float3 LightCorners[] = {
     { 0, 1, 0 }
 };
 
+static const float cOne = 1 / 7.0;
+static const float mOne = 6 / 7.0;
+
 static const float3 ClippedLightVertices[] = {
-    { 1/8.0, 0/8.0, 0 },
-    { 7/8.0, 0/8.0, 0 },
-    { 7/8.0, 8/8.0, 0 },
-    { 1/8.0, 8/8.0, 0 },
-    { 7/8.0, 1/8.0, 0 },
-    { 8/8.0, 1/8.0, 0 },
-    { 8/8.0, 7/8.0, 0 },
-    { 7/8.0, 7/8.0, 0 },
-    { 0/8.0, 1/8.0, 0 },
-    { 1/8.0, 1/8.0, 0 },
-    { 1/8.0, 7/8.0, 0 },
-    { 0/8.0, 7/8.0, 0 },
+    { cOne, 0, 0 },
+    { mOne, 0, 0 },
+    { mOne, 1, 0 },
+    { cOne, 1, 0 },
+    { mOne, cOne, 0 },
+    { 1, cOne, 0 },
+    { 1, mOne, 0 },
+    { mOne, mOne, 0 },
+    { 0, cOne, 0 },
+    { cOne, cOne, 0 },
+    { cOne, mOne, 0 },
+    { 0, mOne, 0 },
 };
 
 #include "EnvironmentCommon.fxh"

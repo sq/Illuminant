@@ -15,6 +15,8 @@ namespace Squared.Illuminant {
     }
 
     public class DistanceField : IDisposable {
+        public const int DefaultMaximumEncodedDistance = 128;
+
         public bool IsDisposed { get; private set; }
 
         public readonly int VirtualWidth, VirtualHeight;
@@ -34,7 +36,7 @@ namespace Squared.Illuminant {
         public DistanceField (
             RenderCoordinator coordinator,
             int virtualWidth, int virtualHeight, float virtualDepth,
-            int sliceCount, double requestedResolution = 1, int maximumEncodedDistance = 256
+            int sliceCount, double requestedResolution = 1, int maximumEncodedDistance = DefaultMaximumEncodedDistance
         ) {
             VirtualWidth = virtualWidth;
             VirtualHeight = virtualHeight;
@@ -222,7 +224,7 @@ namespace Squared.Illuminant {
         public DynamicDistanceField (
             RenderCoordinator coordinator,
             int virtualWidth, int virtualHeight, float virtualDepth,
-            int sliceCount, double requestedResolution = 1, int maximumEncodedDistance = 256
+            int sliceCount, double requestedResolution = 1, int maximumEncodedDistance = DefaultMaximumEncodedDistance
         ) : base (coordinator, virtualWidth, virtualHeight, virtualDepth, sliceCount, requestedResolution, maximumEncodedDistance) {
             lock (coordinator.CreateResourceLock)
                 StaticTexture = new RenderTarget2D(
