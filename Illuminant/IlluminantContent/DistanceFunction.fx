@@ -20,7 +20,8 @@ void DistanceFunctionVertexShader(
     inout float3 size     : TEXCOORD1,
     out   float4 result   : POSITION0
 ) {
-    float2 position = (FunctionCorners[cornerIndex.x] * (size.xy + MaximumEncodedDistance + 0.6)) + center.xy;
+    float msize = max(max(abs(size.x), abs(size.y)), abs(size.z)) + MaximumEncodedDistance;
+    float2 position = (FunctionCorners[cornerIndex.x] * (msize * 1.5)) + center.xy;
     result = TransformPosition(float4(position - Viewport.Position, 0, 1), 0);
     result.z = 0;
     result.w = 1;

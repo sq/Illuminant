@@ -56,7 +56,7 @@ namespace TestGame.Scenes {
 
             DistanceField = new DistanceField(
                 Game.RenderCoordinator, Width, Height, Environment.MaximumZ,
-                128, 0.5f
+                16, 0.5f
             );
 
             Renderer = new LightingRenderer(
@@ -254,7 +254,7 @@ namespace TestGame.Scenes {
                         Game.Materials.ScreenSpaceBitmap,
                         blendState: BlendState.Opaque
                     ),
-                    samplerState: SamplerState.PointClamp
+                    samplerState: SamplerState.LinearClamp
                 ))
                     bb.Add(new BitmapDrawCall(
                         Renderer.DistanceField.Texture, 

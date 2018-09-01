@@ -30,10 +30,13 @@ void SphereLightVertexShader(
     //  at high elevation)
     float radiusOffset = radius * getInvZToYMultiplier();
     float zOffset = lightCenter.z * getZToYMultiplier();
-    tl.y -= radiusOffset;
-    tl.y -= zOffset;
 
     worldPosition = lerp(tl, br, vertex);
+
+    if (vertex.y < 0.5) {
+        worldPosition.y -= radiusOffset;
+        worldPosition.y -= zOffset;
+    }
 
     float3 screenPosition = (worldPosition - float3(Viewport.Position.xy, 0));
     screenPosition.xy *= Viewport.Scale * Environment.RenderScale;

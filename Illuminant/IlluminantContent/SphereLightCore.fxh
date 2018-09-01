@@ -6,7 +6,7 @@
 #include "AOCommon.fxh"
 
 #define SELF_OCCLUSION_HACK 1.1
-#define SHADOW_OPACITY_THRESHOLD (4 / 255.0)
+#define SHADOW_OPACITY_THRESHOLD (0.75 / 255.0)
 
 float SphereLightPixelCore(
     in float3 shadedPixelPosition,
