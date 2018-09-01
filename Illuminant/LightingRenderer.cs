@@ -1106,7 +1106,8 @@ namespace Squared.Illuminant {
             Vector4? color = null,
             Vector3? ambientColor = null,
             Vector3? lightColor = null,
-            Vector3? lightDirection = null
+            Vector3? lightDirection = null,
+            float? slicePosition = null
         ) {
             if (_DistanceField == null)
                 return new VisualizationInfo();
@@ -1138,6 +1139,9 @@ namespace Squared.Illuminant {
                 if (!planeCenter.HasValue)
                     throw new Exception("Ray didn't intersect the box... what?");
                 rayOrigin = planeCenter.Value;
+
+                if (slicePosition.HasValue)
+                    rayOrigin += viewDirection * slicePosition.Value;
             }
 
             Vector3 worldTL, worldTR, worldBL, worldBR;
@@ -1202,13 +1206,29 @@ namespace Squared.Illuminant {
             Render.Material material = null;
 
             if (singleObject != null) {
-                material = mode == VisualizationMode.Outlines
-                    ? IlluminantMaterials.FunctionOutline
-                    : IlluminantMaterials.FunctionSurface;
+                switch (mode) {
+                    case VisualizationMode.Outlines:
+                        material = IlluminantMaterials.FunctionOutline;
+                        break;
+                    case VisualizationMode.Surfaces:
+                        material = IlluminantMaterials.FunctionSurface;
+                        break;
+                    case VisualizationMode.Slice:
+                        material = IlluminantMaterials.FunctionSlice;
+                        break;
+                }
             } else {
-                material = mode == VisualizationMode.Outlines
-                    ? IlluminantMaterials.ObjectOutlines
-                    : IlluminantMaterials.ObjectSurfaces;
+                switch (mode) {
+                    case VisualizationMode.Outlines:
+                        material = IlluminantMaterials.ObjectOutlines;
+                        break;
+                    case VisualizationMode.Surfaces:
+                        material = IlluminantMaterials.ObjectSurfaces;
+                        break;
+                    case VisualizationMode.Slice:
+                        material = IlluminantMaterials.FieldSlice;
+                        break;
+                }
             }
 
             material = Materials.Get(
@@ -1763,7 +1783,8 @@ namespace Squared.Illuminant {
 
     public enum VisualizationMode {
         Surfaces,
-        Outlines
+        Outlines,
+        Slice
     }
 
     public struct VisualizationInfo {

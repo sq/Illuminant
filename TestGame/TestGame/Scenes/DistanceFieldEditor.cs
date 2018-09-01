@@ -28,10 +28,10 @@ namespace TestGame.Scenes {
         LightingRenderer Renderer;
 
         [Group("Visualization")]
-        Toggle ShowSurfaces, ShowOutlines, ShowDistanceField;
+        Toggle ShowSurfaces, ShowOutlines, ShowDistanceField, ShowSlice;
 
         [Group("Edit")]
-        Slider SelectedObject;
+        Slider SelectedObject, SlicePosition;
 
         int?       ActiveViewportIndex = null;
 
@@ -47,6 +47,10 @@ namespace TestGame.Scenes {
             ShowOutlines.Value = true;
 
             ShowDistanceField.Key = Keys.D3;
+
+            SlicePosition.Min = -1;
+            SlicePosition.Max = 257;
+            SlicePosition.Speed = 0.5f;
         }
 
         public override void LoadContent () {
@@ -216,6 +220,11 @@ namespace TestGame.Scenes {
             if (ShowOutlines)
                 visInfo = Renderer.VisualizeDistanceField(
                     rect, gaze, frame, 3, mode: VisualizationMode.Outlines
+                );
+
+            if (ShowSlice)
+                visInfo = Renderer.VisualizeDistanceField(
+                    rect, gaze, frame, 1, mode: VisualizationMode.Slice, slicePosition: SlicePosition.Value
                 );
 
             var obj = Environment.Obstructions[(int)SelectedObject.Value];

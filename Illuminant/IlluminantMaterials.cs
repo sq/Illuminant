@@ -20,8 +20,8 @@ namespace Squared.Illuminant {
             GammaCompressedLightingResolve, ToneMappedLightingResolve;
         public Material ScreenSpaceGammaCompressedBitmap, WorldSpaceGammaCompressedBitmap;
         public Material ScreenSpaceToneMappedBitmap, WorldSpaceToneMappedBitmap;
-        public Material ObjectSurfaces, ObjectOutlines;
-        public Material FunctionSurface, FunctionOutline;
+        public Material ObjectSurfaces, ObjectOutlines, FieldSlice;
+        public Material FunctionSurface, FunctionOutline, FunctionSlice;
         public Material CalculateLuminance;
         public Material GIProbeSelector, GIProbeSHGenerator;
         public Material VisualizeGI;

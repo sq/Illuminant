@@ -92,6 +92,18 @@ void FunctionOutlinePixelShader(
         discard;
 }
 
+void FunctionSlicePixelShader(
+    in  float2 worldPosition : TEXCOORD2,
+    in  float3 rayStart : TEXCOORD0,
+    in  float4 color : COLOR0,
+    in  float2 vpos : VPOS,
+    out float4 result : COLOR0
+) {
+    float vars = 0;
+    float distance = -(SAMPLE(rayStart, vars) / 64) + 0.5;
+    result = float4(distance, distance, distance, 1) * color;
+}
+
 technique FunctionSurface {
     pass P0
     {
@@ -105,5 +117,13 @@ technique FunctionOutline {
     {
         vertexShader = compile vs_3_0 VisualizeVertexShader();
         pixelShader = compile ps_3_0 FunctionOutlinePixelShader();
+    }
+}
+
+technique FunctionSlice {
+    pass P0
+    {
+        vertexShader = compile vs_3_0 VisualizeVertexShader();
+        pixelShader = compile ps_3_0 FunctionSlicePixelShader();
     }
 }

@@ -76,6 +76,18 @@ void ObjectOutlinesPixelShader(
         discard;
 }
 
+void FieldSlicePixelShader(
+    in  float2 worldPosition : TEXCOORD2,
+    in  float3 rayStart : TEXCOORD0,
+    in  float4 color : COLOR0,
+    in  float2 vpos : VPOS,
+    out float4 result : COLOR0
+) {
+    DistanceFieldConstants vars = makeDistanceFieldConstants();
+    float distance = -(SAMPLE(rayStart, vars) / 64) + 0.5;
+    result = float4(distance, distance, distance, 1) * color;
+}
+
 technique ObjectSurfaces {
     pass P0
     {
@@ -89,5 +101,13 @@ technique ObjectOutlines {
     {
         vertexShader = compile vs_3_0 VisualizeVertexShader();
         pixelShader = compile ps_3_0 ObjectOutlinesPixelShader();
+    }
+}
+
+technique FieldSlice {
+    pass P0
+    {
+        vertexShader = compile vs_3_0 VisualizeVertexShader();
+        pixelShader = compile ps_3_0 FieldSlicePixelShader();
     }
 }

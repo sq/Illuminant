@@ -158,11 +158,17 @@ namespace Squared.Illuminant {
                 DefineMaterial(IlluminantMaterials.ObjectOutlines = 
                     new Squared.Render.Material(content.Load<Effect>("VisualizeDistanceField"), "ObjectOutlines"));
 
+                DefineMaterial(IlluminantMaterials.FieldSlice = 
+                    new Squared.Render.Material(content.Load<Effect>("VisualizeDistanceField"), "FieldSlice"));
+
                 DefineMaterial(IlluminantMaterials.FunctionSurface = 
                     new Squared.Render.Material(content.Load<Effect>("VisualizeDistanceFunction"), "FunctionSurface"));
 
                 DefineMaterial(IlluminantMaterials.FunctionOutline = 
                     new Squared.Render.Material(content.Load<Effect>("VisualizeDistanceFunction"), "FunctionOutline"));
+
+                DefineMaterial(IlluminantMaterials.FunctionSlice = 
+                    new Squared.Render.Material(content.Load<Effect>("VisualizeDistanceFunction"), "FunctionSlice"));
             }
 
             DefineMaterial(IlluminantMaterials.ScreenSpaceGammaCompressedBitmap = new Squared.Render.Material(
