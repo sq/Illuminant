@@ -23,7 +23,7 @@ namespace TestGame.Scenes {
         public readonly List<SphereLightSource> Lights = new List<SphereLightSource>();
 
         Toggle ShowGBuffer, TwoPointFiveD, Deterministic, Shadows;
-        Slider LightmapScaleRatio, MaxStepCount, MinStepSize, DistanceFieldResolution, DistanceSliceCount;
+        Slider LightmapScaleRatio, MaxStepCount, MinStepSize, DistanceFieldResolution, DistanceSliceCount, MaximumEncodedDistance;
 
         public const int RotatingLightCount = 1024;
 
@@ -41,6 +41,7 @@ namespace TestGame.Scenes {
             MinStepSize.Value = 2f;
             DistanceFieldResolution.Value = 0.5f;
             DistanceSliceCount.Value = 7;
+            MaximumEncodedDistance.Value = DistanceField.DefaultMaximumEncodedDistance;
             Shadows.Value = true;
 
             ShowGBuffer.Key = Keys.G;
@@ -57,6 +58,11 @@ namespace TestGame.Scenes {
             DistanceSliceCount.Max = 24;
             DistanceSliceCount.Speed = 1;
             DistanceSliceCount.Changed += (s, e) => CreateDistanceField();
+
+            MaximumEncodedDistance.Min = 16;
+            MaximumEncodedDistance.Max = 256;
+            MaximumEncodedDistance.Speed = 16;
+            MaximumEncodedDistance.Changed += (s, e) => CreateDistanceField();
 
             LightmapScaleRatio.MinusKey = Keys.D7;
             LightmapScaleRatio.PlusKey = Keys.D8;
@@ -95,7 +101,7 @@ namespace TestGame.Scenes {
 
             DistanceField = new DistanceField(
                 Game.RenderCoordinator, Width, Height, Environment.MaximumZ,
-                (int)DistanceSliceCount.Value, DistanceFieldResolution.Value
+                (int)DistanceSliceCount.Value, DistanceFieldResolution.Value, (int)MaximumEncodedDistance.Value
             );
             if (Renderer != null) {
                 Renderer.DistanceField = DistanceField;

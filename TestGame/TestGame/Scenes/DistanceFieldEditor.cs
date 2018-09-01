@@ -41,9 +41,11 @@ namespace TestGame.Scenes {
             : base(game, 256, 256) {
 
             ShowSurfaces.Key = Keys.D1;
-            ShowSurfaces.Value = true;
+            ShowSurfaces.Value = false;
 
             ShowOutlines.Key = Keys.D2;
+            ShowOutlines.Value = true;
+
             ShowDistanceField.Key = Keys.D3;
         }
 
@@ -56,7 +58,7 @@ namespace TestGame.Scenes {
 
             DistanceField = new DistanceField(
                 Game.RenderCoordinator, Width, Height, Environment.MaximumZ,
-                16, 0.5f
+                16, 1f, 64
             );
 
             Renderer = new LightingRenderer(
@@ -122,6 +124,7 @@ namespace TestGame.Scenes {
         }
 
         private void BuildObstructions () {
+            /*
             var offset = new Vector3(32, 32, 32);
             var size = new Vector3(24, 24, 24);
 
@@ -178,6 +181,12 @@ namespace TestGame.Scenes {
                     }
                 }
             }
+            */
+
+            Environment.Obstructions.Add(new LightObstruction(
+                LightObstructionType.Box,
+                new Vector3(128, 128, 64), new Vector3(24, 24, 36)
+            ));
 
             SelectedObject.Max = Environment.Obstructions.Count - 1;
             SelectedObject.Speed = 1;
@@ -380,7 +389,7 @@ namespace TestGame.Scenes {
             var ctx = Game.Nuklear.Context;
             const float min = -128f;
             const float max = 256f + 128f;
-            const float maxSize = 1024f;
+            const float maxSize = 256f;
 
             if (Nuke.nk_tree_push_hashed(ctx, NuklearDotNet.nk_tree_type.NK_TREE_TAB, sSelectedObject.pText, NuklearDotNet.nk_collapse_states.NK_MAXIMIZED, sSelectedObject.pText, sSelectedObject.Length, 64) != 0) {
                 var obs = Environment.Obstructions[(int)SelectedObject.Value];

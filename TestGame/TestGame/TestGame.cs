@@ -84,7 +84,6 @@ namespace TestGame {
             };
 
             ActiveSceneIndex = Scenes.Length - 1;
-            ActiveSceneIndex = 3;
         }
 
         const float settingRowHeight = 26;
