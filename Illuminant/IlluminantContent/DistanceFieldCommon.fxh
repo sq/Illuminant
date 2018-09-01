@@ -44,8 +44,8 @@ struct DistanceFieldSettings {
     float4 _TextureSliceAndTexelSize;
     // StepLimit, MinimumLength, LongStepFactor
     float4 _StepAndMisc2;
+    float4 TextureSliceCount;
     float3 Extent;
-    float3 TextureSliceCount;
 };
 
 uniform DistanceFieldSettings DistanceField;
@@ -107,16 +107,16 @@ sampler   DistanceFieldTextureSampler {
 };
 
 struct DistanceFieldConstants {
-    float sliceCountZMinus1;
+    float maximumValidZ;
     float invSliceCountXTimesOneThird;
     float zToSliceIndex;
 };
 
 DistanceFieldConstants makeDistanceFieldConstants() {
     DistanceFieldConstants result = {
-        DistanceField.TextureSliceCount.z - 1,
+        DistanceField.TextureSliceCount.z,
         (1.0 / DistanceField.TextureSliceCount.x) * (1.0 / 3.0),
-        (1.0 / DistanceField.Extent.z) * DistanceField.TextureSliceCount.z
+        (1.0 / DistanceField.Extent.z) * DistanceField.TextureSliceCount.w
     };
 
     return result;
@@ -136,15 +136,16 @@ float sampleDistanceFieldEx (
     float3 position, 
     DistanceFieldConstants vars
 ) {
+    float3 extent = DistanceField.Extent;
+    extent.z = vars.maximumValidZ;
+    float3 clampedPosition = clamp(position, 0, extent);
+    float distanceToVolume = length(clampedPosition - position);
+
     // Interpolate between two Z samples. The xy interpolation is done by the GPU for us.
     // linear [0-1] -> [0-NumZSlices)
-    float slicePosition = clamp(position.z * vars.zToSliceIndex, 0, vars.sliceCountZMinus1);
+    float slicePosition = clampedPosition.z * vars.zToSliceIndex;
     float virtualSliceIndex = floor(slicePosition);
     
-    float3 offsetPosition = position + float3(1, 1, 0);
-    float3 clampedPosition = clamp(offsetPosition, 1, DistanceField.Extent - 1);
-    float distanceToVolume = length(clampedPosition - offsetPosition);
-
     float4 uv = float4(
         computeDistanceFieldSliceUv(virtualSliceIndex, vars.invSliceCountXTimesOneThird) +
             (clampedPosition.xy * getDistanceTexelSize()),

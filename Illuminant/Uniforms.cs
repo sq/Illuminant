@@ -48,15 +48,20 @@ namespace Squared.Illuminant.Uniforms {
         private Vector4 _TextureSliceAndTexelSize;
         // StepLimit, MinimumLength, LongStepFactor, InvScaleFactorY
         private Vector4 _StepAndMisc2;
+        // X, Y, MaximumZ, SliceCount
+        public Vector4 TextureSliceCount;
         public Vector3 Extent;
-        // X, Y, Total
-        public Vector3 TextureSliceCount;
 
         // This does not initialize every member.
         public DistanceField (Squared.Illuminant.DistanceField df, float maximumZ) {
             Extent = df.GetExtent3(maximumZ);
             // FIXME
-            TextureSliceCount = new Vector3(df.ColumnCount, df.RowCount, df.SliceInfo.ValidSliceCount);
+            float sliceZSize = maximumZ / df.SliceCount;
+            TextureSliceCount = new Vector4(
+                df.ColumnCount, df.RowCount, 
+                Math.Min(df.SliceInfo.ValidSliceCount, df.SliceCount) * sliceZSize,
+                df.SliceCount
+            );
             _TextureSliceAndTexelSize = new Vector4(
                 1f / df.ColumnCount, 1f / df.RowCount,
                 1f / (df.VirtualWidth * df.ColumnCount),

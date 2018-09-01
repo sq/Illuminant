@@ -1435,7 +1435,7 @@ namespace Squared.Illuminant {
         }
 
         private float SliceIndexToZ (int slice) {
-            float sliceZ = (slice / Math.Max(1, (float)(_DistanceField.SliceCount - 1)));
+            float sliceZ = (slice / Math.Max(1, (float)(_DistanceField.SliceCount)));
             return sliceZ * Environment.MaximumZ;
         }
 
