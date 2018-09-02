@@ -1,5 +1,8 @@
+#define ENABLE_DITHERING
+
 #include "..\..\..\Fracture\Squared\RenderLib\Content\ViewTransformCommon.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Content\BitmapCommon.fxh"
+#include "..\..\..\Fracture\Squared\RenderLib\Content\DitherCommon.fxh"
 #include "LightCommon.fxh"
 #include "DistanceFieldCommon.fxh"
 #include "HDR.fxh"

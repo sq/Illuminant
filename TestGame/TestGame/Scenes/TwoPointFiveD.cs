@@ -289,11 +289,11 @@ namespace TestGame.Scenes {
             CreateRenderTargets();
 
             var m = Game.Materials;
-            m.LightmapDitheringSettings.Power = (int)DitherPower.Value;
-            m.LightmapDitheringSettings.Strength = PostDither ? DitherStrength : 0f;
-            m.LightmapDitheringSettings.BandSize = DitherBandSize;
-            m.LightmapDitheringSettings.RangeMin = DitherRangeMin;
-            m.LightmapDitheringSettings.RangeMax = DitherRangeMax;
+            m.DefaultDitheringSettings.Power = (int)DitherPower.Value;
+            m.DefaultDitheringSettings.Strength = PostDither ? DitherStrength : 0f;
+            m.DefaultDitheringSettings.BandSize = DitherBandSize;
+            m.DefaultDitheringSettings.RangeMin = DitherRangeMin;
+            m.DefaultDitheringSettings.RangeMax = DitherRangeMax;
 
             Renderer.Configuration.TwoPointFiveD = TwoPointFiveD;
             Renderer.Configuration.RenderScale = Vector2.One * LightmapScaleRatio;
