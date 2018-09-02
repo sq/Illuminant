@@ -14,7 +14,7 @@ float3 estimateNormal(
     float4 texel = float4(
         getInvScaleFactorX(),
         getInvScaleFactorY(),
-        1,
+        DistanceField.Extent.z / DistanceField.TextureSliceCount.w,
         0
     );
 

@@ -57,9 +57,10 @@ namespace Squared.Illuminant.Uniforms {
             Extent = df.GetExtent3(maximumZ);
             // FIXME
             float sliceZSize = maximumZ / df.SliceCount;
+            var lastSliceIndex = Math.Min(df.SliceInfo.ValidSliceCount, df.SliceCount);
             TextureSliceCount = new Vector4(
                 df.ColumnCount, df.RowCount, 
-                Math.Min(df.SliceInfo.ValidSliceCount, df.SliceCount) * sliceZSize,
+                lastSliceIndex * sliceZSize,
                 df.SliceCount
             );
             _TextureSliceAndTexelSize = new Vector4(

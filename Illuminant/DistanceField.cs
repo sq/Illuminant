@@ -29,6 +29,8 @@ namespace Squared.Illuminant {
         public readonly int PhysicalSliceCount;
         public readonly int ColumnCount, RowCount;
 
+        internal bool NeedClear;
+
         private readonly object UseLock;
 
         internal readonly SliceInfo SliceInfo = new SliceInfo();
@@ -36,7 +38,7 @@ namespace Squared.Illuminant {
         public DistanceField (
             RenderCoordinator coordinator,
             int virtualWidth, int virtualHeight, float virtualDepth,
-            int sliceCount, double requestedResolution = 1, int maximumEncodedDistance = DefaultMaximumEncodedDistance
+            int requestedSliceCount, double requestedResolution = 1, int maximumEncodedDistance = DefaultMaximumEncodedDistance
         ) {
             VirtualWidth = virtualWidth;
             VirtualHeight = virtualHeight;
@@ -66,27 +68,32 @@ namespace Squared.Illuminant {
             SliceWidth = (int)Math.Round(VirtualWidth * Resolution);
             SliceHeight = (int)Math.Round(VirtualHeight * Resolution);
 
-
             int maxSlicesX = 4096 / SliceWidth;
             int maxSlicesY = 4096 / SliceHeight;
-            int maxSlices = (maxSlicesX * maxSlicesY * LightingRenderer.PackedSliceCount) + 1;
+            int maxSlices = (maxSlicesX * maxSlicesY * LightingRenderer.PackedSliceCount);
 
-            var targetSliceCount = Math.Max(3, sliceCount - 1);
-            targetSliceCount = (((targetSliceCount + 2) / 3) * 3) + 1;
+            var sliceCount = Math.Max(3, requestedSliceCount);
+            sliceCount = (((sliceCount + 2) / 3) * 3);
 
-            SliceCount = Math.Min(targetSliceCount, maxSlices);
-            PhysicalSliceCount = (int)Math.Ceiling((SliceCount - 1) / (float)LightingRenderer.PackedSliceCount);
+            SliceCount = Math.Min(sliceCount, maxSlices);
+            PhysicalSliceCount = (int)Math.Ceiling(SliceCount / (float)LightingRenderer.PackedSliceCount);
 
-            Console.WriteLine("{0} -> {1} -> {2}", sliceCount, targetSliceCount, PhysicalSliceCount);
+            Console.WriteLine("{0} -> {1} -> {2}", requestedSliceCount, sliceCount, PhysicalSliceCount);
 
             ColumnCount = Math.Min(maxSlicesX, PhysicalSliceCount);
-            RowCount = Math.Max((int)Math.Ceiling(PhysicalSliceCount / (float)maxSlicesX), 1);
+            RowCount = Math.Min(maxSlicesY, Math.Max((int)Math.Ceiling(PhysicalSliceCount / (float)maxSlicesX), 1));
 
             // HACK: If the DF is going to be extremely wide but not tall, rebalance it
             // so that it is easier to examine instead of being 4096x128 or whatever
             while ((RowCount < ColumnCount) && (RowCount < maxSlicesY)) {
                 var newRowCount = RowCount + 1;
                 var newColumnCount = (int)Math.Ceiling(PhysicalSliceCount / (float)newRowCount);
+
+                if (newRowCount > maxSlicesX)
+                    newRowCount = maxSlicesX;
+                if (newColumnCount > maxSlicesY)
+                    newColumnCount = maxSlicesY;
+
                 if ((newRowCount * newColumnCount) < PhysicalSliceCount)
                     break;
                 RowCount = newRowCount;
@@ -106,6 +113,7 @@ namespace Squared.Illuminant {
                 );
 
             coordinator.DeviceReset += Coordinator_DeviceReset;
+            NeedClear = true;
 
             Invalidate();
         }
@@ -132,6 +140,7 @@ namespace Squared.Illuminant {
         }
 
         protected void DeviceResetImpl (SliceInfo sliceInfo) {
+            NeedClear = true;
             SliceInfo.ValidSliceCount = 0;
             SliceInfo.InvalidSlices.Clear();
             for (var i = 0; i < SliceCount; i++)

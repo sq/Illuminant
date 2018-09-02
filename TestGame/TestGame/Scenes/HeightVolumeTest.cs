@@ -22,7 +22,7 @@ namespace TestGame.Scenes {
 
         public readonly List<SphereLightSource> Lights = new List<SphereLightSource>();
 
-        Toggle ShowGBuffer, TwoPointFiveD, Deterministic, Shadows, GBufferCaching;
+        Toggle ShowGBuffer, ShowDistanceField, TwoPointFiveD, Deterministic, Shadows, GBufferCaching;
         Slider LightmapScaleRatio, MaxStepCount, MinStepSize, DistanceFieldResolution, DistanceSliceCount, MaximumEncodedDistance;
 
         public const int RotatingLightCount = 1024;
@@ -242,6 +242,23 @@ namespace TestGame.Scenes {
                     Vector2.Zero,
                     Color.White
                 );
+
+                bb.Add(ref dc);
+            }
+
+            if (ShowDistanceField)
+            using (var bb = BitmapBatch.New(
+                frame, 2,
+                Game.Materials.Get(Game.Materials.ScreenSpaceBitmap, blendState: BlendState.Opaque),
+                samplerState: SamplerState.LinearClamp
+            )) {
+                var dc = new BitmapDrawCall(
+                    Renderer.DistanceField.Texture,
+                    Vector2.Zero,
+                    Color.White
+                ) {
+                    ScaleF = 0.33f
+                };
 
                 bb.Add(ref dc);
             }

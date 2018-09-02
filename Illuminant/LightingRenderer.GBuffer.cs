@@ -42,7 +42,9 @@ namespace Squared.Illuminant {
             if (_DistanceField == null) {
                 return 0;
             } else {
-                return 1.25f;
+                var sliceSize = (Environment.MaximumZ / _DistanceField.SliceCount);
+                var result = 0.5f + (sliceSize / 2);
+                return result;
             }
         }
 

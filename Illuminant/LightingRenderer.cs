@@ -1414,8 +1414,6 @@ namespace Squared.Illuminant {
 
                     var slice = sliceInfo.InvalidSlices[0];
                     var physicalSlice = slice / PackedSliceCount;
-                    if (physicalSlice == DistanceField.PhysicalSliceCount)
-                        physicalSlice--;
 
                     RenderDistanceFieldSliceTriplet(
                         rtGroup, physicalSlice, slice, ref layer, dynamicFlagFilter
@@ -1451,6 +1449,9 @@ namespace Squared.Illuminant {
             var df = _DistanceField;
             var ddf = _DistanceField as DynamicDistanceField;
 
+            if (physicalSliceIndex >= df.PhysicalSliceCount)
+                throw new ArgumentException("physicalSliceIndex");
+
             var interior = IlluminantMaterials.DistanceFieldInterior;
             var exterior = IlluminantMaterials.DistanceFieldExterior;
 
@@ -1468,6 +1469,18 @@ namespace Squared.Illuminant {
 
             Action<DeviceManager, object> beginSliceBatch =
                 (dm, _) => {
+                    var x = physicalSliceIndex;
+                    var y = firstVirtualSliceIndex;
+
+                    // FIXME: Dynamic/static
+                    if (df.NeedClear) {
+                        dm.Device.Clear(Color.Transparent);
+                        df.NeedClear = false;
+                    }
+
+                    x += 0;
+                    y -= 0;
+
                     // TODO: Optimize this
                     dm.Device.ScissorRectangle = new Rectangle(
                         sliceX, sliceY, df.SliceWidth, df.SliceHeight
