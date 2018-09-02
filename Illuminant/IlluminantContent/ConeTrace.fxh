@@ -60,7 +60,7 @@ float coneTrace(
     in float2 coneGrowthFactorAndDistanceFalloff,
     in float3 shadedPixelPosition,
     in DistanceFieldConstants vars,
-    in bool   insideShadedObject,
+    in bool   possiblyBeginsInside,
     in bool   enable
 ) {
     float  traceLength;
@@ -96,12 +96,19 @@ float coneTrace(
     float visibility = 1.0;
 
     float aSample, bSample;
-    bool temp = false;
+    bool insideShadedObject = false;
 
     [loop]
     while (liveness > 0) {
         aSample = sampleDistanceFieldEx(shadedPixelPosition + (traceDirection * a), vars);
         bSample = sampleDistanceFieldEx(shadedPixelPosition + (traceDirection * b), vars);
+
+        if (possiblyBeginsInside) {
+            possiblyBeginsInside = false;
+            insideShadedObject = (aSample <= 0.1);
+        } else {
+            insideShadedObject = insideShadedObject && (aSample <= 0);
+        }
 
         a += coneTraceStep(config, aSample, a, visibility, insideShadedObject);
         b -= coneTraceStep(config, bSample, b, visibility, false);

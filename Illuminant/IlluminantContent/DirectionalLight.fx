@@ -5,7 +5,7 @@
 #include "RampCommon.fxh"
 #include "AOCommon.fxh"
 
-#define SELF_OCCLUSION_HACK 0
+#define SELF_OCCLUSION_HACK 1.5
 
 float4 ApplyTransform (float3 position) {
     return mul(mul(float4(position.xyz, 1), Viewport.ModelView), Viewport.Projection);

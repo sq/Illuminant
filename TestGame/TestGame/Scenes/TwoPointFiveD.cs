@@ -72,7 +72,7 @@ namespace TestGame.Scenes {
 
             Deterministic.Value = true;
             ShowHistogram.Value = true;
-            UseRampTexture.Value = true;
+            UseRampTexture.Value = false;
             TwoPointFiveD.Value = true;
             PostDither.Value = true;
             PreDither.Value = true;
