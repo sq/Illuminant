@@ -40,7 +40,7 @@ namespace TestGame.Scenes {
             MaxStepCount.Value = 64;
             MinStepSize.Value = 2f;
             DistanceFieldResolution.Value = 0.5f;
-            DistanceSliceCount.Value = 7;
+            DistanceSliceCount.Value = 16;
             MaximumEncodedDistance.Value = DistanceField.DefaultMaximumEncodedDistance;
             Shadows.Value = true;
 

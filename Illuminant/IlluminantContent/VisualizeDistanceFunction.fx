@@ -101,6 +101,7 @@ void FunctionSlicePixelShader(
 ) {
     float vars = 0;
     float distance = -(SAMPLE(rayStart, vars) / 64) + 0.5;
+    distance = ApplyDither(distance, vpos).r;
     result = float4(distance, distance, distance, 1) * color;
 }
 

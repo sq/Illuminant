@@ -1,5 +1,6 @@
 #include "..\..\..\Fracture\Squared\RenderLib\Content\ViewTransformCommon.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Content\BitmapCommon.fxh"
+#include "..\..\..\Fracture\Squared\RenderLib\Content\DitherCommon.fxh"
 #include "HDR.fxh"
 
 uniform float InverseScaleFactor;

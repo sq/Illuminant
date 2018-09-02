@@ -2,6 +2,9 @@
 #define EPSILON 0.5
 #define OUTLINE_SIZE 1.8
 
+#define ENABLE_DITHERING
+#include "..\..\..\Fracture\Squared\RenderLib\Content\DitherCommon.fxh"
+
 float3 estimateNormal(
     float3   position,
     in TVARS vars

@@ -62,7 +62,7 @@ namespace TestGame.Scenes {
 
             DistanceField = new DistanceField(
                 Game.RenderCoordinator, Width, Height, Environment.MaximumZ,
-                16, 0.25f, 64
+                16, 0.125f, 32
             );
 
             Renderer = new LightingRenderer(
