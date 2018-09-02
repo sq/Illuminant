@@ -22,7 +22,7 @@ namespace TestGame.Scenes {
 
         public readonly List<SphereLightSource> Lights = new List<SphereLightSource>();
 
-        Toggle ShowGBuffer, TwoPointFiveD, Deterministic, Shadows;
+        Toggle ShowGBuffer, TwoPointFiveD, Deterministic, Shadows, GBufferCaching;
         Slider LightmapScaleRatio, MaxStepCount, MinStepSize, DistanceFieldResolution, DistanceSliceCount, MaximumEncodedDistance;
 
         public const int RotatingLightCount = 1024;
@@ -43,6 +43,7 @@ namespace TestGame.Scenes {
             DistanceSliceCount.Value = 16;
             MaximumEncodedDistance.Value = DistanceField.DefaultMaximumEncodedDistance;
             Shadows.Value = true;
+            GBufferCaching.Value = true;
 
             ShowGBuffer.Key = Keys.G;
             TwoPointFiveD.Key = Keys.D2;
@@ -124,7 +125,6 @@ namespace TestGame.Scenes {
                     Width, Height, true
                 ) {
                     RenderScale = Vector2.One * LightmapScaleRatio,
-                    GBufferCaching = true,
                     DefaultQuality = {
                         LongStepFactor = 0.95f
                     }
@@ -204,6 +204,7 @@ namespace TestGame.Scenes {
             Renderer.Configuration.RenderScale = Vector2.One * LightmapScaleRatio;
             Renderer.Configuration.DefaultQuality.MinStepSize = MinStepSize;
             Renderer.Configuration.DefaultQuality.MaxStepCount = (int)MaxStepCount;
+            Renderer.Configuration.GBufferCaching = GBufferCaching;
 
             CreateRenderTargets();
 

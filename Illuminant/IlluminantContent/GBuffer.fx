@@ -68,7 +68,7 @@ void GroundPlanePixelShader (
     result = encodeSample(normal, 0, worldPosition.z, dead); 
 }
 
-void HeightVolumePixelShader(
+void HeightVolumeTopFacePixelShader(
     in float3  normal        : NORMAL0,
     in float3  worldPosition : TEXCOORD1,
     in bool    dead          : TEXCOORD2,
@@ -79,11 +79,13 @@ void HeightVolumePixelShader(
         return;
     }
 
-    float relativeY = (worldPosition.z * getZToYMultiplier()) * Viewport.Scale / Environment.RenderScale;
-    result = encodeSample(normal, relativeY, worldPosition.z, dead);
+    float selfOcclusionBias = SelfOcclusionHack * normal.y;
+
+    float relativeY = ((worldPosition.z * getZToYMultiplier()) * Viewport.Scale / Environment.RenderScale) + selfOcclusionBias;
+    result = encodeSample(normal, relativeY, worldPosition.z + (SelfOcclusionHack * normal.z), dead);
 }
 
-void HeightVolumeFacePixelShader(
+void HeightVolumeFrontFacePixelShader(
     in float3  normal        : NORMAL0,
     in float3  worldPosition : TEXCOORD1,
     in bool    dead : TEXCOORD2,
@@ -110,20 +112,20 @@ technique GroundPlane
     }
 }
 
-technique HeightVolume
-{
-    pass P0
-    {
-        vertexShader = compile vs_3_0 HeightVolumeVertexShader();
-        pixelShader  = compile ps_3_0 HeightVolumePixelShader();
-    }
-}
-
-technique HeightVolumeFace
+technique HeightVolumeTopFace
 {
     pass P0
     {
         vertexShader = compile vs_3_0 HeightVolumeFaceVertexShader();
-        pixelShader  = compile ps_3_0 HeightVolumeFacePixelShader();
+        pixelShader  = compile ps_3_0 HeightVolumeTopFacePixelShader();
+    }
+}
+
+technique HeightVolumeFrontFace
+{
+    pass P0
+    {
+        vertexShader = compile vs_3_0 HeightVolumeFaceVertexShader();
+        pixelShader  = compile ps_3_0 HeightVolumeFrontFacePixelShader();
     }
 }

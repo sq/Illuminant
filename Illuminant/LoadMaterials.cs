@@ -128,11 +128,11 @@ namespace Squared.Illuminant {
                 DefineMaterial(IlluminantMaterials.GroundPlane = 
                     new Squared.Render.Material(content.Load<Effect>("GBuffer"), "GroundPlane"));
 
-                DefineMaterial(IlluminantMaterials.HeightVolume = 
-                    new Squared.Render.Material(content.Load<Effect>("GBuffer"), "HeightVolume"));
+                DefineMaterial(IlluminantMaterials.HeightVolumeTopFace = 
+                    new Squared.Render.Material(content.Load<Effect>("GBuffer"), "HeightVolumeTopFace"));
 
-                DefineMaterial(IlluminantMaterials.HeightVolumeFace = 
-                    new Squared.Render.Material(content.Load<Effect>("GBuffer"), "HeightVolumeFace"));
+                DefineMaterial(IlluminantMaterials.HeightVolumeFrontFace = 
+                    new Squared.Render.Material(content.Load<Effect>("GBuffer"), "HeightVolumeFrontFace"));
 
                 DefineMaterial(IlluminantMaterials.MaskBillboard = 
                     new Squared.Render.Material(content.Load<Effect>("GBufferBitmap"), "MaskBillboard"));

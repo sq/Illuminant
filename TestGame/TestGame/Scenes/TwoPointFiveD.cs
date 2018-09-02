@@ -54,12 +54,13 @@ namespace TestGame.Scenes {
 
         [Group("Resolution")]
         Slider DistanceFieldResolution,
+            DistanceSliceCount,
             LightmapScaleRatio,
             MaximumEncodedDistance;
 
         Toggle Timelapse,
             Deterministic,
-            sRGB;
+            sRGB, GBufferCaching;
 
         RendererQualitySettings DirectionalQuality;
 
@@ -85,6 +86,8 @@ namespace TestGame.Scenes {
             DitherBandSize.Value = 1f;
             DitherRangeMin.Value = 0f;
             DitherRangeMax.Value = 1f;
+            DistanceSliceCount.Value = 32;
+            GBufferCaching.Value = true;
 
             ShowLightmap.Key = Keys.L;
             ShowGBuffer.Key = Keys.G;
@@ -102,6 +105,11 @@ namespace TestGame.Scenes {
             DistanceFieldResolution.Min = 0.1f;
             DistanceFieldResolution.Max = 1.0f;
             DistanceFieldResolution.Speed = 0.05f;
+
+            DistanceSliceCount.Min = 3;
+            DistanceSliceCount.Max = 128;
+            DistanceSliceCount.Speed = 1;
+            DistanceSliceCount.Changed += (s, e) => CreateDistanceField();
 
             LightmapScaleRatio.MinusKey = Keys.D7;
             LightmapScaleRatio.PlusKey = Keys.D8;
@@ -200,7 +208,7 @@ namespace TestGame.Scenes {
 
             DistanceField = new DistanceField(
                 Game.RenderCoordinator, 1024, 1024, Environment.MaximumZ,
-                64, DistanceFieldResolution.Value, (int)MaximumEncodedDistance.Value
+                (int)DistanceSliceCount.Value, DistanceFieldResolution.Value, (int)MaximumEncodedDistance.Value
             );
             if (Renderer != null) {
                 Renderer.DistanceField = DistanceField;
@@ -295,6 +303,7 @@ namespace TestGame.Scenes {
             m.DefaultDitheringSettings.RangeMin = DitherRangeMin;
             m.DefaultDitheringSettings.RangeMax = DitherRangeMax;
 
+            Renderer.Configuration.GBufferCaching = GBufferCaching;
             Renderer.Configuration.TwoPointFiveD = TwoPointFiveD;
             Renderer.Configuration.RenderScale = Vector2.One * LightmapScaleRatio;
             Renderer.Configuration.RenderSize = new Pair<int>(

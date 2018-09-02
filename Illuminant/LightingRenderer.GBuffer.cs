@@ -38,7 +38,15 @@ namespace Squared.Illuminant {
             }
         }
 
-        private float ComputeSelfOcclusionHack () {
+        private float ComputeTopSelfOcclusionHack () {
+            if (_DistanceField == null) {
+                return 0;
+            } else {
+                return 1.25f;
+            }
+        }
+
+        private float ComputeFrontSelfOcclusionHack () {
             if (_DistanceField == null) {
                 return 0;
             } else {
@@ -83,12 +91,15 @@ namespace Squared.Illuminant {
                 using (var batch = PrimitiveBatch<HeightVolumeVertex>.New(
                     group, 1, IlluminantMaterials.GroundPlane,
                     (dm, _) => {
-                        var p = IlluminantMaterials.HeightVolumeFace.Effect.Parameters;
+                        var p = IlluminantMaterials.HeightVolumeFrontFace.Effect.Parameters;
                         p["DistanceFieldExtent"].SetValue(Extent3);
-                        p["SelfOcclusionHack"].SetValue(ComputeSelfOcclusionHack());
+                        p["SelfOcclusionHack"].SetValue(ComputeFrontSelfOcclusionHack());
+                        p = IlluminantMaterials.HeightVolumeTopFace.Effect.Parameters;
+                        p["DistanceFieldExtent"].SetValue(Extent3);
+                        p["SelfOcclusionHack"].SetValue(ComputeTopSelfOcclusionHack());
 
-                        Materials.TrySetBoundUniform(IlluminantMaterials.HeightVolumeFace, "Environment", ref EnvironmentUniforms);
-                        Materials.TrySetBoundUniform(IlluminantMaterials.HeightVolume, "Environment", ref EnvironmentUniforms);
+                        Materials.TrySetBoundUniform(IlluminantMaterials.HeightVolumeFrontFace, "Environment", ref EnvironmentUniforms);
+                        Materials.TrySetBoundUniform(IlluminantMaterials.HeightVolumeTopFace, "Environment", ref EnvironmentUniforms);
                         Materials.TrySetBoundUniform(IlluminantMaterials.GroundPlane, "Environment", ref EnvironmentUniforms);
 
                         dm.Device.RasterizerState = Render.Convenience.RenderStates.ScissorOnly;
@@ -99,7 +110,10 @@ namespace Squared.Illuminant {
                     if (Configuration.TwoPointFiveD) {
                         RenderTwoPointFiveDVolumes(enableHeightVolumes, enableBillboards, group);
                     } else if (enableHeightVolumes) {
-                        RenderGBufferVolumes(batch);
+                        using (var batch2 = PrimitiveBatch<HeightVolumeVertex>.New(
+                            group, 2, IlluminantMaterials.HeightVolumeTopFace
+                        ))
+                            RenderGBufferVolumes(batch2);
                     }
                 }
 
@@ -136,7 +150,7 @@ namespace Squared.Illuminant {
             if (enableHeightVolumes)
                 using (var topBatch = PrimitiveBatch<HeightVolumeVertex>.New(
                     group, 3, Materials.Get(
-                        IlluminantMaterials.HeightVolumeFace,
+                        IlluminantMaterials.HeightVolumeTopFace,
                         depthStencilState: TopFaceDepthStencilState,
                         rasterizerState: Render.Convenience.RenderStates.ScissorOnly,
                         blendState: BlendState.Opaque
@@ -144,7 +158,7 @@ namespace Squared.Illuminant {
                 ))
                 using (var frontBatch = PrimitiveBatch<HeightVolumeVertex>.New(
                     group, 5, Materials.Get(
-                        IlluminantMaterials.HeightVolumeFace,
+                        IlluminantMaterials.HeightVolumeFrontFace,
                         depthStencilState: FrontFaceDepthStencilState,
                         rasterizerState: Render.Convenience.RenderStates.ScissorOnly,
                         blendState: BlendState.Opaque
@@ -268,7 +282,7 @@ namespace Squared.Illuminant {
                     // Materials.TrySetBoundUniform(material, "Viewport", ref viewTransform);
                     Materials.TrySetBoundUniform(material, "Environment", ref EnvironmentUniforms);
                     material.Effect.Parameters["DistanceFieldExtent"].SetValue(Extent3);
-                    material.Effect.Parameters["SelfOcclusionHack"].SetValue(ComputeSelfOcclusionHack());
+                    material.Effect.Parameters["SelfOcclusionHack"].SetValue(ComputeFrontSelfOcclusionHack());
                 }
             )) 
             using (var gDataBatch = PrimitiveBatch<BillboardVertex>.New(
@@ -282,7 +296,7 @@ namespace Squared.Illuminant {
                     // Materials.TrySetBoundUniform(material, "Viewport", ref viewTransform);
                     Materials.TrySetBoundUniform(material, "Environment", ref EnvironmentUniforms);
                     material.Effect.Parameters["DistanceFieldExtent"].SetValue(Extent3);
-                    material.Effect.Parameters["SelfOcclusionHack"].SetValue(ComputeSelfOcclusionHack());
+                    material.Effect.Parameters["SelfOcclusionHack"].SetValue(ComputeFrontSelfOcclusionHack());
                 }
             )) {
                 Action flushBatch = () => {

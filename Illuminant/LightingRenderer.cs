@@ -1409,8 +1409,13 @@ namespace Squared.Illuminant {
 
                 while (slicesToUpdate > 0) {
                     // FIXME
+                    if (sliceInfo.InvalidSlices.Count == 0)
+                        break;
+
                     var slice = sliceInfo.InvalidSlices[0];
                     var physicalSlice = slice / PackedSliceCount;
+                    if (physicalSlice == DistanceField.PhysicalSliceCount)
+                        physicalSlice--;
 
                     RenderDistanceFieldSliceTriplet(
                         rtGroup, physicalSlice, slice, ref layer, dynamicFlagFilter
@@ -1435,7 +1440,7 @@ namespace Squared.Illuminant {
         }
 
         private float SliceIndexToZ (int slice) {
-            float sliceZ = (slice / Math.Max(1, (float)(_DistanceField.SliceCount)));
+            float sliceZ = (slice / Math.Max(1, (float)_DistanceField.SliceCount));
             return sliceZ * Environment.MaximumZ;
         }
 
@@ -1482,6 +1487,8 @@ namespace Squared.Illuminant {
                 };
 
             var lastVirtualSliceIndex = firstVirtualSliceIndex + 2;
+            if (physicalSliceIndex == (DistanceField.PhysicalSliceCount - 1))
+                lastVirtualSliceIndex++;
 
             using (var group = BatchGroup.New(rtGroup, layer++,
                 beginSliceBatch, null

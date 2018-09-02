@@ -14,7 +14,7 @@ namespace Squared.Illuminant {
         public Material DistanceFieldExterior, DistanceFieldInterior;
         public Material[] DistanceFunctionTypes;
         public Material ClearDistanceFieldSlice;
-        public Material HeightVolume, HeightVolumeFace, GroundPlane;
+        public Material HeightVolumeTopFace, HeightVolumeFrontFace, GroundPlane;
         public Material MaskBillboard, GDataBillboard;
         public Material LightingResolve, 
             GammaCompressedLightingResolve, ToneMappedLightingResolve;

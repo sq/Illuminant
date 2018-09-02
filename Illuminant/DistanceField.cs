@@ -69,12 +69,15 @@ namespace Squared.Illuminant {
 
             int maxSlicesX = 4096 / SliceWidth;
             int maxSlicesY = 4096 / SliceHeight;
-            int maxSlices = maxSlicesX * maxSlicesY * LightingRenderer.PackedSliceCount;
-            
-            // HACK: If they ask for too many slices we give them as many as we can.
-            SliceCount = Math.Min(sliceCount, maxSlices);
+            int maxSlices = (maxSlicesX * maxSlicesY * LightingRenderer.PackedSliceCount) + 1;
 
-            PhysicalSliceCount = (int)Math.Ceiling(SliceCount / (float)LightingRenderer.PackedSliceCount);
+            var targetSliceCount = Math.Max(3, sliceCount - 1);
+            targetSliceCount = (((targetSliceCount + 2) / 3) * 3) + 1;
+
+            SliceCount = Math.Min(targetSliceCount, maxSlices);
+            PhysicalSliceCount = (int)Math.Ceiling((SliceCount - 1) / (float)LightingRenderer.PackedSliceCount);
+
+            Console.WriteLine("{0} -> {1} -> {2}", sliceCount, targetSliceCount, PhysicalSliceCount);
 
             ColumnCount = Math.Min(maxSlicesX, PhysicalSliceCount);
             RowCount = Math.Max((int)Math.Ceiling(PhysicalSliceCount / (float)maxSlicesX), 1);
