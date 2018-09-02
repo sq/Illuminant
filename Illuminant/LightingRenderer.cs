@@ -1443,6 +1443,12 @@ namespace Squared.Illuminant {
 
             Action<DeviceManager, object> beginSliceBatch =
                 (dm, _) => {
+                    // FIXME: dynamic/static split
+                    if (df.NeedClear) {
+                        df.NeedClear = false;
+                        dm.Device.Clear(Color.Transparent);
+                    }
+
                     // TODO: Optimize this
                     dm.Device.ScissorRectangle = new Rectangle(
                         sliceX, sliceY, df.SliceWidth, df.SliceHeight
