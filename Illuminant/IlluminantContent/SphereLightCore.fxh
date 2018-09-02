@@ -5,7 +5,7 @@
 #include "RampCommon.fxh"
 #include "AOCommon.fxh"
 
-#define SELF_OCCLUSION_HACK 1.1
+#define SELF_OCCLUSION_HACK 0
 #define SHADOW_OPACITY_THRESHOLD (0.75 / 255.0)
 
 float SphereLightPixelCore(
@@ -45,7 +45,7 @@ float SphereLightPixelCore(
         lightCenter, lightProperties.xy, 
         float2(getConeGrowthFactor(), moreLightProperties.y),
         shadedPixelPosition + (SELF_OCCLUSION_HACK * shadedPixelNormal),
-        vars, traceShadows
+        vars, true, traceShadows
     );
 
     float lightOpacity;

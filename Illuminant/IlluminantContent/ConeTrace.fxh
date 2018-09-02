@@ -13,7 +13,7 @@
 // HACK: Start the trace a certain number of pixels (along the trace) away from the shaded point.
 // This mitigates erroneous self-occlusion
 // This works better if you offset the shaded point forwards along the surface normal.
-#define TRACE_INITIAL_OFFSET_PX 1
+#define TRACE_INITIAL_OFFSET_PX 0
 
 // We threshold shadow values from cone tracing to eliminate 'almost obstructed' and 'almost unobstructed' artifacts
 #define FULLY_SHADOWED_THRESHOLD 0.075
@@ -36,13 +36,15 @@ float coneTraceStep(
     in    float4 config,
     in    float  distanceToObstacle,
     in    float  offset,
-    inout float  visibility
+    inout float  visibility,
+    in    bool   insideShadedObject
 ) {
     float localSphereRadius = min(
         (config.y * offset) + MIN_CONE_RADIUS, config.x
     );
 
-    visibility = min(visibility, ((distanceToObstacle + HACK_DISTANCE_OFFSET) / localSphereRadius));
+    float localVisibility = ((distanceToObstacle + HACK_DISTANCE_OFFSET) / localSphereRadius);
+    visibility = min(visibility, insideShadedObject ? visibility : localVisibility);
 
     return max(
         // the abs() actually makes this faster somehow, but
@@ -58,6 +60,7 @@ float coneTrace(
     in float2 coneGrowthFactorAndDistanceFalloff,
     in float3 shadedPixelPosition,
     in DistanceFieldConstants vars,
+    in bool   insideShadedObject,
     in bool   enable
 ) {
     float  traceLength;
@@ -93,14 +96,15 @@ float coneTrace(
     float visibility = 1.0;
 
     float aSample, bSample;
+    bool temp = false;
 
     [loop]
     while (liveness > 0) {
         aSample = sampleDistanceFieldEx(shadedPixelPosition + (traceDirection * a), vars);
         bSample = sampleDistanceFieldEx(shadedPixelPosition + (traceDirection * b), vars);
 
-        a += coneTraceStep(config, aSample, a, visibility);
-        b -= coneTraceStep(config, bSample, b, visibility);
+        a += coneTraceStep(config, aSample, a, visibility, insideShadedObject);
+        b -= coneTraceStep(config, bSample, b, visibility, false);
 
         stepsRemaining--;
         liveness = stepsRemaining * 

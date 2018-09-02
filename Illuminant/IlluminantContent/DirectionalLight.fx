@@ -5,7 +5,7 @@
 #include "RampCommon.fxh"
 #include "AOCommon.fxh"
 
-#define SELF_OCCLUSION_HACK 1.1
+#define SELF_OCCLUSION_HACK 0
 
 float4 ApplyTransform (float3 position) {
     return mul(mul(float4(position.xyz, 1), Viewport.ModelView), Viewport.Projection);
@@ -70,7 +70,7 @@ float DirectionalLightPixelCore(
         fakeLightCenter, fakeRamp, 
         float2(lightProperties.w, moreLightProperties.y),
         shadedPixelPosition + (SELF_OCCLUSION_HACK * shadedPixelNormal), 
-        vars, traceShadows
+        vars, true, traceShadows
     );
 
     [branch]
