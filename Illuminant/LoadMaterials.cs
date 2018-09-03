@@ -88,16 +88,9 @@ namespace Squared.Illuminant {
                     content.Load<Effect>("GI"), "RenderLightProbesFromGI", dBegin, dEnd
                 ));
 
-                DefineMaterial(IlluminantMaterials.DistanceFieldExterior = 
+                DefineMaterial(IlluminantMaterials.DistanceToPolygon = 
                     new Material(
-                        content.Load<Effect>("DistanceField"), "Exterior",
-                        new[] { MaterialUtil.MakeDelegate(RenderStates.MaxBlendValue) }
-                    )
-                );
-
-                DefineMaterial(IlluminantMaterials.DistanceFieldInterior = 
-                    new Material(
-                        content.Load<Effect>("DistanceField"), "Interior", 
+                        content.Load<Effect>("DistanceField"), "DistanceToPolygon",
                         new[] { MaterialUtil.MakeDelegate(RenderStates.MaxBlendValue) }
                     )
                 );

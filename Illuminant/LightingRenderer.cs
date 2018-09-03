@@ -227,7 +227,7 @@ namespace Squared.Illuminant {
         public  readonly LightProbeCollection Probes;
 
         public  readonly DepthStencilState TopFaceDepthStencilState, FrontFaceDepthStencilState;
-        public  readonly DepthStencilState DistanceInteriorStencilState, DistanceExteriorStencilState;
+        public  readonly DepthStencilState DistanceStencilState;
         public  readonly DepthStencilState NeutralDepthStencilState;
 
         private readonly IndexBuffer         QuadIndexBuffer;
@@ -1426,8 +1426,7 @@ namespace Squared.Illuminant {
             var df = _DistanceField;
             var ddf = _DistanceField as DynamicDistanceField;
 
-            var interior = IlluminantMaterials.DistanceFieldInterior;
-            var exterior = IlluminantMaterials.DistanceFieldExterior;
+            var m = IlluminantMaterials.DistanceToPolygon;
 
             var sliceX = (physicalSliceIndex % df.ColumnCount) * df.SliceWidth;
             var sliceY = (physicalSliceIndex / df.ColumnCount) * df.SliceHeight;
@@ -1455,15 +1454,12 @@ namespace Squared.Illuminant {
                     );
 
                     Materials.ApplyViewTransformToMaterial(IlluminantMaterials.ClearDistanceFieldSlice, ref viewTransform);
-                    Materials.ApplyViewTransformToMaterial(interior, ref viewTransform);
-                    Materials.ApplyViewTransformToMaterial(exterior, ref viewTransform);
+                    Materials.ApplyViewTransformToMaterial(m, ref viewTransform);
+                    SetDistanceFieldParameters(m, false, Configuration.DefaultQuality);
 
-                    SetDistanceFieldParameters(interior, false, Configuration.DefaultQuality);
-                    SetDistanceFieldParameters(exterior, false, Configuration.DefaultQuality);
-
-                    foreach (var m in IlluminantMaterials.DistanceFunctionTypes) {
-                        Materials.ApplyViewTransformToMaterial(m, ref viewTransform);
-                        SetDistanceFieldParameters(m, false, Configuration.DefaultQuality);
+                    foreach (var m2 in IlluminantMaterials.DistanceFunctionTypes) {
+                        Materials.ApplyViewTransformToMaterial(m2, ref viewTransform);
+                        SetDistanceFieldParameters(m2, false, Configuration.DefaultQuality);
                     }
                 };
 
@@ -1505,8 +1501,7 @@ namespace Squared.Illuminant {
         ) {
             int i = 1;
 
-            var interior = IlluminantMaterials.DistanceFieldInterior;
-            var exterior = IlluminantMaterials.DistanceFieldExterior;
+            var mat = IlluminantMaterials.DistanceToPolygon;
             var sliceZ = new Vector4(
                 SliceIndexToZ(firstVirtualIndex),
                 SliceIndexToZ(firstVirtualIndex + 1),
@@ -1516,15 +1511,10 @@ namespace Squared.Illuminant {
 
             // Rasterize the height volumes in sequential order.
             // FIXME: Depth buffer/stencil buffer tricks should work for generating this SDF, but don't?
-            using (var interiorGroup = BatchGroup.New(group, 2, (dm, _) => {
+            using (var innerGroup = BatchGroup.New(group, 2, (dm, _) => {
                 dm.Device.RasterizerState = RenderStates.ScissorOnly;
                 dm.Device.DepthStencilState = DepthStencilState.None;
-                SetDistanceFieldParameters(interior, false, Configuration.DefaultQuality);
-            }))
-            using (var exteriorGroup = BatchGroup.New(group, 3, (dm, _) => {
-                dm.Device.RasterizerState = RenderStates.ScissorOnly;
-                dm.Device.DepthStencilState = DepthStencilState.None;
-                SetDistanceFieldParameters(exterior, false, Configuration.DefaultQuality);
+                SetDistanceFieldParameters(mat, false, Configuration.DefaultQuality);
             }))
             foreach (var hv in Environment.HeightVolumes) {
                 if ((dynamicFlagFilter != null) && (hv.IsDynamic != dynamicFlagFilter.Value))
@@ -1545,14 +1535,14 @@ namespace Squared.Illuminant {
                     cacheData = new HeightVolumeCacheData();
                     
                     lock (Coordinator.CreateResourceLock)
-                        cacheData.VertexDataTexture = new Texture2D(Coordinator.Device, p.Count, 1, false, SurfaceFormat.Vector4);
+                        cacheData.VertexDataTexture = new Texture2D(Coordinator.Device, p.Count, 1, false, SurfaceFormat.HalfVector4);
 
                     lock (Coordinator.UseResourceLock)
-                    using (var vertices = BufferPool<Vector4>.Allocate(p.Count)) {
+                    using (var vertices = BufferPool<HalfVector4>.Allocate(p.Count)) {
                         for (var j = 0; j < p.Count; j++) {
                             var edgeA = p[j];
                             var edgeB = p[Arithmetic.Wrap(j + 1, 0, p.Count - 1)];
-                            vertices.Data[j] = new Vector4(
+                            vertices.Data[j] = new HalfVector4(
                                 edgeA.X, edgeA.Y, edgeB.X, edgeB.Y
                             );
                         }
@@ -1569,27 +1559,10 @@ namespace Squared.Illuminant {
                 cacheData.BoundingBoxVertices[2] = new HeightVolumeVertex(new Vector3(b.BottomRight, 0), Vector3.Up, zRange);
                 cacheData.BoundingBoxVertices[3] = new HeightVolumeVertex(new Vector3(b.BottomLeft, 0), Vector3.Up, zRange);
 
-                /*
-                // FIXME: Hoist these out and use BeforeDraw
                 using (var batch = PrimitiveBatch<HeightVolumeVertex>.New(
-                    interiorGroup, i, IlluminantMaterials.DistanceFieldInterior,
+                    innerGroup, i, mat,
                     (dm, _) => {
-                        var ep = interior.Effect.Parameters;
-                        ep["NumVertices"].SetValue(p.Count);
-                        ep["VertexDataTexture"].SetValue(cacheData.VertexDataTexture);
-                        ep["SliceZ"].SetValue(sliceZ);
-                    }
-                ))
-                    batch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
-                        PrimitiveType.TriangleList,
-                        m, 0, m.Length / 3
-                    ));
-                */
-
-                using (var batch = PrimitiveBatch<HeightVolumeVertex>.New(
-                    exteriorGroup, i, IlluminantMaterials.DistanceFieldExterior,
-                    (dm, _) => {
-                        var ep = exterior.Effect.Parameters;
+                        var ep = mat.Effect.Parameters;
                         ep["NumVertices"].SetValue(p.Count);
                         ep["VertexDataTexture"].SetValue(cacheData.VertexDataTexture);
                         ep["SliceZ"].SetValue(sliceZ);

@@ -94,97 +94,7 @@ float4 computeSliceDistances (float2 xy, float2 zRange, float4 SliceZ) {
     return result;
 }
 
-/*
-
-float computeDistanceToEdge (
-    float2 vpos, float u
-) {
-    float2 edge = edgeB - edgeA;
-
-    float2 edgeLeft = float2(edge.y, -edge.x);
-
-    float2 closest = closestPointOnEdge(vpos, edgeA, edgeB);
-    float2 closestDeltaXy = (vpos - closest);
-    float inside = dot(closestDeltaXy, normalize(edgeLeft));
-
-    return length(closestDeltaXy) * sign(inside);
-}
-
-float computeDistanceXy (
-    float2 vpos
-) {
-    float resultDistance = 99999999;
-    float indexMultiplier = 1.0 / NumVertices;
-    float u = 0;
-
-    [loop]
-    for (int i = 0; i < NumVertices; i += 6) {
-        // fxc can't handle unrolling loops without spending 30 minutes, yaaaaaaaaaay
-        resultDistance = min(resultDistance, computeDistanceToEdge(vpos, u));
-        u += indexMultiplier;
-        resultDistance = min(resultDistance, computeDistanceToEdge(vpos, u));
-        u += indexMultiplier;
-        resultDistance = min(resultDistance, computeDistanceToEdge(vpos, u));
-        u += indexMultiplier;
-        resultDistance = min(resultDistance, computeDistanceToEdge(vpos, u));
-        u += indexMultiplier;
-        resultDistance = min(resultDistance, computeDistanceToEdge(vpos, u));
-        u += indexMultiplier;
-        resultDistance = min(resultDistance, computeDistanceToEdge(vpos, u));
-        u += indexMultiplier;
-    }
-
-    return resultDistance;
-}
-
-float computeInteriorDistance (
-    float2 zRange,
-    float squaredDistanceXy,
-    float sliceZ
-) {
-    return squaredDistanceXy;
-    if ((sliceZ >= zRange.x) && (sliceZ <= zRange.y)) {
-        float squaredDistanceZ = computeSquaredDistanceZ(sliceZ, zRange);
-        return -sqrt(squaredDistanceXy + squaredDistanceZ);
-    } else {
-        return min(abs(sliceZ - zRange.x), abs(sliceZ - zRange.y));
-    }
-}
-
-float computeExteriorDistance (
-    float2 zRange,
-    float squaredDistanceXy,
-    float sliceZ
-) {
-    return squaredDistanceXy;
-    float squaredDistanceZ = computeSquaredDistanceZ(sliceZ, zRange);
-    return sqrt(squaredDistanceXy + squaredDistanceZ);
-}
-
-*/
-
-void InteriorPixelShader (
-    out float4 color : COLOR0,
-    in  float2 zRange : TEXCOORD0,
-    in  float2 vpos : VPOS
-) {
-    vpos *= getInvScaleFactors();
-    vpos += Viewport.Position;
-    color = 0;
-    
-    /*
-    float squaredDistanceXy = computeDistanceXy(vpos);
-
-    color = float4(
-        encodeDistance(computeInteriorDistance(zRange, squaredDistanceXy, SliceZ.x)),
-        encodeDistance(computeInteriorDistance(zRange, squaredDistanceXy, SliceZ.y)),
-        encodeDistance(computeInteriorDistance(zRange, squaredDistanceXy, SliceZ.z)),
-        encodeDistance(computeInteriorDistance(zRange, squaredDistanceXy, SliceZ.w))
-    );
-    */
-}
-
-void ExteriorPixelShader (
+void DistanceToPolygonPixelShader (
     out float4 color : COLOR0,
     in  float2 zRange : TEXCOORD0,
     in  float2 vpos  : VPOS
@@ -201,20 +111,11 @@ void ExteriorPixelShader (
     );
 }
 
-technique Exterior
+technique DistanceToPolygon
 {
     pass P0
     {
         vertexShader = compile vs_3_0 DistanceVertexShader();
-        pixelShader  = compile ps_3_0 ExteriorPixelShader();
-    }
-}
-
-technique Interior
-{
-    pass P0
-    {
-        vertexShader = compile vs_3_0 DistanceVertexShader();
-        pixelShader = compile ps_3_0 InteriorPixelShader();
+        pixelShader  = compile ps_3_0 DistanceToPolygonPixelShader();
     }
 }

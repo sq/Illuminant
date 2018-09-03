@@ -11,7 +11,7 @@ namespace Squared.Illuminant {
         public Material SphereLightWithDistanceRamp, SphereLightWithOpacityRamp, DirectionalLightWithRamp;
         public Material SphereLightProbe, DirectionalLightProbe;
         public Material SphereLightProbeWithDistanceRamp, SphereLightProbeWithOpacityRamp, DirectionalLightProbeWithRamp;
-        public Material DistanceFieldExterior, DistanceFieldInterior;
+        public Material DistanceToPolygon;
         public Material[] DistanceFunctionTypes;
         public Material ClearDistanceFieldSlice;
         public Material HeightVolume, HeightVolumeFace, GroundPlane;

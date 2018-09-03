@@ -10,16 +10,20 @@ uniform float                 MaximumEncodedDistance;
 //  *and* it's mathematically correct!
 #define DISTANCE_FIELD_FILTER LINEAR
 
+float cross2d (float2 a, float2 b) {
+    return a.x*b.y - a.y*b.x;
+}
+
 bool doesRayIntersectLine (float2 rayOrigin, float2 rayDirection, float2 a1, float2 a2, out float2 position) {
     float2 v1 = rayOrigin - a1,
         v2 = a2 - a1,
-        v3 = float2(-rayDirection.y, rayDirection.x);
-    float divisor = dot(v2, v3);
+        v3 = float2(-rayDirection.y, rayDirection.x);    
     float t1, t2;
+    float divisor = dot(v2, v3);
     if (divisor == 0) {
         t1 = t2 = 0;
     } else {
-        t1 = cross(float3(v2, 0), float3(v1, 0)).z / divisor;
+        t1 = cross2d(v2, v1) / divisor;
         t2 = dot(v1, v3) / divisor;
     }
     if ((t1 >= 0) && (t2 >= 0) && (t2 <= 1)) {
@@ -40,7 +44,7 @@ bool doesRightRayIntersectLine (float2 rayOrigin, float2 a1, float2 a2) {
     if (divisor == 0) {
         t1 = t2 = 0;
     } else {
-        t1 = cross(float3(v2, 0), float3(v1, 0)).z / divisor;
+        t1 = cross2d(v2, v1) / divisor;
         t2 = dot(v1, v3) / divisor;
     }
     return (t1 >= 0) && (t2 >= 0) && (t2 <= 1);
@@ -79,9 +83,13 @@ float closestPointOnEdgeAsFactor (
     float2 edgeDelta = edgeEnd - edgeStart;
     float  edgeLength = length(edgeDelta);
     edgeLength *= edgeLength;
-
-    float2 pointDelta = (pt - edgeStart) * edgeDelta;
-    return (pointDelta.x + pointDelta.y) / edgeLength;
+    
+    if (edgeLength == 0) {
+        return 0;
+    } else {
+        float2 pointDelta = (pt - edgeStart) * edgeDelta;
+        return (pointDelta.x + pointDelta.y) / edgeLength;
+    }
 }
 
 float2 closestPointOnEdge (
