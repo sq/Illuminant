@@ -45,42 +45,53 @@ float computeSquaredDistanceZ (float sliceZ, float2 zRange) {
     }
 }
 
-float computeDistance (float3 xyz, float2 zRange) {
+void computeDistanceStep (float2 xy, inout float resultDistanceSq, inout int intersectionCount, in float u) {
+    float2 a, b, temp;
+    loadEdge(u, a, b);
+    intersectionCount += doesRightRayIntersectLine(xy, a, b) ? 1 : 0;
+    float2 closest = closestPointOnEdge(xy, a, b);
+    float2 closestDeltaXy = (xy - closest);
+    closestDeltaXy *= closestDeltaXy;
+    resultDistanceSq = min(resultDistanceSq, (closestDeltaXy.x + closestDeltaXy.y));
+}
+
+float finalEval (float2 z, float2 zRange, float resultDistanceSq, int intersectionCount) {
+    float distanceZSq = computeSquaredDistanceZ(z, zRange);
+    float sqrtDistance = sqrt(resultDistanceSq + distanceZSq);
+    float aboveBelow = min(abs(z - zRange.x), abs(z - zRange.y));
+
+    bool isInsideZ = (z >= zRange.x) && (z <= zRange.y);
+    bool isInsideXy = (intersectionCount % 2) == 1;
+
+    if (isInsideXy) {
+        if (isInsideZ)
+            return -sqrtDistance;
+        else
+            return aboveBelow;
+    } else {
+        return sqrtDistance;
+    }
+}
+
+float4 computeSliceDistances (float2 xy, float2 zRange, float4 SliceZ) {
     float resultDistanceSq = 99999999;
     float indexMultiplier = 1.0 / NumVertices;
     float u = 0;
     int intersectionCount = 0;
-    float2 ray = float2(1, 0);
 
     [loop]
     for (int i = 0; i < NumVertices; i += 1) {
-        float2 a, b, temp;
-        loadEdge(u, a, b);
-            
-        if (doesRayIntersectLine(xyz.xy, ray, a, b, temp))
-            intersectionCount += 1;
-
-        float2 closest = closestPointOnEdge(xyz.xy, a, b);
-        float2 closestDeltaXy = (xyz.xy - closest);
-        closestDeltaXy *= closestDeltaXy;
-        resultDistanceSq = min(resultDistanceSq, (closestDeltaXy.x + closestDeltaXy.y));
-
+        computeDistanceStep(xy, resultDistanceSq, intersectionCount, u);
         u += indexMultiplier;
     }
 
-    float distanceZSq = computeSquaredDistanceZ(xyz.z, zRange);
-
-    bool isInsideZ = (xyz.z >= zRange.x) && (xyz.z <= zRange.y);
-    bool isInsideXy = (intersectionCount % 2) == 1;
-    if (isInsideXy) {
-        if (isInsideZ) {
-            return -sqrt(resultDistanceSq + distanceZSq);
-        } else {
-            return min(abs(xyz.z - zRange.x), abs(xyz.z - zRange.y));
-        }
-    } else {
-        return sqrt(resultDistanceSq + distanceZSq);
-    }
+    float4 result = float4(
+        finalEval(SliceZ.x, zRange, resultDistanceSq, intersectionCount),
+        finalEval(SliceZ.y, zRange, resultDistanceSq, intersectionCount),
+        finalEval(SliceZ.z, zRange, resultDistanceSq, intersectionCount),
+        finalEval(SliceZ.w, zRange, resultDistanceSq, intersectionCount)
+    );
+    return result;
 }
 
 /*
@@ -173,11 +184,6 @@ void InteriorPixelShader (
     */
 }
 
-float computeEncodedSliceDistance (float2 vpos, float2 zRange, float sliceZ) {
-    float distance = computeDistance(float3(vpos, sliceZ), zRange);
-    return encodeDistance(distance);
-}
-
 void ExteriorPixelShader (
     out float4 color : COLOR0,
     in  float2 zRange : TEXCOORD0,
@@ -186,11 +192,12 @@ void ExteriorPixelShader (
     vpos *= getInvScaleFactors();
     vpos += Viewport.Position;
 
+    float4 sliceDistances = computeSliceDistances(vpos, zRange, SliceZ);
     color = float4(
-        computeEncodedSliceDistance(vpos, zRange, SliceZ.x),
-        computeEncodedSliceDistance(vpos, zRange, SliceZ.y),
-        computeEncodedSliceDistance(vpos, zRange, SliceZ.z),
-        computeEncodedSliceDistance(vpos, zRange, SliceZ.w)
+        encodeDistance(sliceDistances.x),
+        encodeDistance(sliceDistances.y),
+        encodeDistance(sliceDistances.z),
+        encodeDistance(sliceDistances.w)
     );
 }
 
