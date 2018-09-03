@@ -5,7 +5,7 @@
 
 uniform float2 PixelSize;
 uniform float4 SliceZ;
-uniform int    NumVertices;
+uniform float2 UvStep;
 
 Texture2D VertexDataTexture : register(t0);
 sampler   VertexDataSampler : register(s0) {
@@ -26,8 +26,8 @@ void DistanceVertexShader (
     result.z = 0;
 }
 
-void loadEdge (float u, out float2 a, out float2 b) {
-    float4 packedEdge = tex2Dlod(VertexDataSampler, float4(u, 0, 0, 0));
+void loadEdge (float4 uv, out float2 a, out float2 b) {
+    float4 packedEdge = tex2Dlod(VertexDataSampler, uv);
     a = packedEdge.xy;
     b = packedEdge.zw;
 }
@@ -45,9 +45,9 @@ float computeSquaredDistanceZ (float sliceZ, float2 zRange) {
     }
 }
 
-void computeDistanceStep (float2 xy, inout float resultDistanceSq, inout int intersectionCount, in float u) {
+void computeDistanceStep (float2 xy, inout float resultDistanceSq, inout int intersectionCount, in float4 uv) {
     float2 a, b, temp;
-    loadEdge(u, a, b);
+    loadEdge(uv, a, b);
     intersectionCount += doesRightRayIntersectLine(xy, a, b) ? 1 : 0;
     float2 closest = closestPointOnEdge(xy, a, b);
     float2 closestDeltaXy = (xy - closest);
@@ -75,14 +75,13 @@ float finalEval (float2 z, float2 zRange, float resultDistanceSq, int intersecti
 
 float4 computeSliceDistances (float2 xy, float2 zRange, float4 SliceZ) {
     float resultDistanceSq = 99999999;
-    float indexMultiplier = 1.0 / NumVertices;
-    float u = 0;
+    float4 uv = 0;
     int intersectionCount = 0;
 
     [loop]
-    for (int i = 0; i < NumVertices; i += 1) {
-        computeDistanceStep(xy, resultDistanceSq, intersectionCount, u);
-        u += indexMultiplier;
+    while (uv.x < 1) {
+        computeDistanceStep(xy, resultDistanceSq, intersectionCount, uv);
+        uv.xy += UvStep;
     }
 
     float4 result = float4(
