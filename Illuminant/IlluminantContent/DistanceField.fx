@@ -32,8 +32,8 @@ void loadEdge (float u, out float2 a, out float2 b) {
     b = packedEdge.zw;
 }
 
-float computeDistance (float2 xy) {
-    float resultDistance = 99999999;
+float computeDistance (float3 xyz, float2 zRange) {
+    float resultDistance = 9999999;
     float indexMultiplier = 1.0 / NumVertices;
     float u = 0;
     int intersectionCount = 0;
@@ -44,17 +44,17 @@ float computeDistance (float2 xy) {
         float2 a, b, temp;
         loadEdge(u, a, b);
             
-        if (doesRayIntersectLine(xy, ray, a, b, temp))
+        if (doesRayIntersectLine(xyz.xy, ray, a, b, temp))
             intersectionCount += 1;
 
-        float2 closest = closestPointOnEdge(xy, a, b);
-        float2 closestDeltaXy = (xy - closest);
+        float2 closest = closestPointOnEdge(xyz.xy, a, b);
+        float2 closestDeltaXy = (xyz.xy - closest);
         resultDistance = min(resultDistance, length(closestDeltaXy));
 
         u += indexMultiplier;
     }
 
-    bool isInside = (intersectionCount % 2) == 1;
+    bool isInside = (xyz.z >= zRange.x) && (xyz.z <= zRange.y) && ((intersectionCount % 2) == 1);
     return isInside ? -resultDistance : resultDistance;
 }
 
@@ -161,6 +161,11 @@ void InteriorPixelShader (
     */
 }
 
+float computeEncodedSliceDistance (float2 vpos, float2 zRange, float sliceZ) {
+    float distance = computeDistance(float3(vpos, sliceZ), zRange);
+    return encodeDistance(distance);
+}
+
 void ExteriorPixelShader (
     out float4 color : COLOR0,
     in  float2 zRange : TEXCOORD0,
@@ -169,21 +174,12 @@ void ExteriorPixelShader (
     vpos *= getInvScaleFactors();
     vpos += Viewport.Position;
 
-    float distance = computeDistance(vpos);
-    float encoded = encodeDistance(distance);
-
-    color = float4(encoded, encoded, encoded, encoded);
-
-    /*
-    float squaredDistanceXy = computeDistanceXy(vpos);
-
     color = float4(
-        encodeDistance(computeExteriorDistance(zRange, squaredDistanceXy, SliceZ.x)),
-        encodeDistance(computeExteriorDistance(zRange, squaredDistanceXy, SliceZ.y)),
-        encodeDistance(computeExteriorDistance(zRange, squaredDistanceXy, SliceZ.z)),
-        encodeDistance(computeExteriorDistance(zRange, squaredDistanceXy, SliceZ.w))
+        computeEncodedSliceDistance(vpos, zRange, SliceZ.x),
+        computeEncodedSliceDistance(vpos, zRange, SliceZ.y),
+        computeEncodedSliceDistance(vpos, zRange, SliceZ.z),
+        computeEncodedSliceDistance(vpos, zRange, SliceZ.w)
     );
-    */
 }
 
 technique Exterior
