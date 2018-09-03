@@ -32,8 +32,21 @@ void loadEdge (float u, out float2 a, out float2 b) {
     b = packedEdge.zw;
 }
 
+float computeSquaredDistanceZ (float sliceZ, float2 zRange) {
+    float deltaMinZ = sliceZ - zRange.x;
+    float deltaMaxZ = sliceZ - zRange.y;
+
+    if ((sliceZ >= zRange.x) && (sliceZ <= zRange.y)) {
+        return 0;
+    } else if (abs(deltaMinZ) > abs(deltaMaxZ)) {
+        return deltaMaxZ * deltaMaxZ;
+    } else {
+        return deltaMinZ * deltaMinZ;
+    }
+}
+
 float computeDistance (float3 xyz, float2 zRange) {
-    float resultDistance = 9999999;
+    float resultDistanceSq = 99999999;
     float indexMultiplier = 1.0 / NumVertices;
     float u = 0;
     int intersectionCount = 0;
@@ -49,13 +62,25 @@ float computeDistance (float3 xyz, float2 zRange) {
 
         float2 closest = closestPointOnEdge(xyz.xy, a, b);
         float2 closestDeltaXy = (xyz.xy - closest);
-        resultDistance = min(resultDistance, length(closestDeltaXy));
+        closestDeltaXy *= closestDeltaXy;
+        resultDistanceSq = min(resultDistanceSq, (closestDeltaXy.x + closestDeltaXy.y));
 
         u += indexMultiplier;
     }
 
-    bool isInside = (xyz.z >= zRange.x) && (xyz.z <= zRange.y) && ((intersectionCount % 2) == 1);
-    return isInside ? -resultDistance : resultDistance;
+    float distanceZSq = computeSquaredDistanceZ(xyz.z, zRange);
+
+    bool isInsideZ = (xyz.z >= zRange.x) && (xyz.z <= zRange.y);
+    bool isInsideXy = (intersectionCount % 2) == 1;
+    if (isInsideXy) {
+        if (isInsideZ) {
+            return -sqrt(resultDistanceSq + distanceZSq);
+        } else {
+            return min(abs(xyz.z - zRange.x), abs(xyz.z - zRange.y));
+        }
+    } else {
+        return sqrt(resultDistanceSq + distanceZSq);
+    }
 }
 
 /*
@@ -99,19 +124,6 @@ float computeDistanceXy (
     }
 
     return resultDistance;
-}
-
-float computeSquaredDistanceZ (float sliceZ, float2 zRange) {
-    float deltaMinZ = sliceZ - zRange.x;
-    float deltaMaxZ = sliceZ - zRange.y;
-
-    if ((sliceZ >= zRange.x) && (sliceZ <= zRange.y)) {
-        return 0;
-    } else if (abs(deltaMinZ) > abs(deltaMaxZ)) {
-        return deltaMaxZ * deltaMaxZ;
-    } else {
-        return deltaMinZ * deltaMinZ;
-    }
 }
 
 float computeInteriorDistance (

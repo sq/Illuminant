@@ -14,8 +14,14 @@ bool doesRayIntersectLine (float2 rayOrigin, float2 rayDirection, float2 a1, flo
     float2 v1 = rayOrigin - a1,
         v2 = a2 - a1,
         v3 = float2(-rayDirection.y, rayDirection.x);
-    float t1 = cross(float3(v2, 0), float3(v1, 0)).z / dot(v2, v3);
-    float t2 = dot(v1, v3) / dot(v2, v3);
+    float divisor = dot(v2, v3);
+    float t1, t2;
+    if (divisor == 0) {
+        t1 = t2 = 0;
+    } else {
+        t1 = cross(float3(v2, 0), float3(v1, 0)).z / divisor;
+        t2 = dot(v1, v3) / divisor;
+    }
     if ((t1 >= 0) && (t2 >= 0) && (t2 <= 1)) {
         position = rayOrigin + (t1 * rayDirection);
         return true;

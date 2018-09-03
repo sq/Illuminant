@@ -13,7 +13,7 @@
 // HACK: Start the trace a certain number of pixels (along the trace) away from the shaded point.
 // This mitigates erroneous self-occlusion
 // This works better if you offset the shaded point forwards along the surface normal.
-#define TRACE_INITIAL_OFFSET_PX 0
+#define TRACE_INITIAL_OFFSET_PX 0.5
 
 // We threshold shadow values from cone tracing to eliminate 'almost obstructed' and 'almost unobstructed' artifacts
 #define FULLY_SHADOWED_THRESHOLD 0.075
@@ -103,12 +103,14 @@ float coneTrace(
         aSample = sampleDistanceFieldEx(shadedPixelPosition + (traceDirection * a), vars);
         bSample = sampleDistanceFieldEx(shadedPixelPosition + (traceDirection * b), vars);
 
+        /*
         if (possiblyBeginsInside) {
             possiblyBeginsInside = false;
             insideShadedObject = (aSample <= 0.1);
         } else {
             insideShadedObject = insideShadedObject && (aSample <= 0);
         }
+        */
 
         a += coneTraceStep(config, aSample, a, visibility, insideShadedObject);
         b -= coneTraceStep(config, bSample, b, visibility, false);
