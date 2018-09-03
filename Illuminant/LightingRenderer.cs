@@ -1563,7 +1563,7 @@ namespace Squared.Illuminant {
                     innerGroup, i, mat,
                     (dm, _) => {
                         var ep = mat.Effect.Parameters;
-                        ep["UvStep"].SetValue(new Vector2(1.0f / p.Count, 0));
+                        ep["Uv"].SetValue(new Vector4(0, 0, 1.0f / p.Count, 0));
                         ep["VertexDataTexture"].SetValue(cacheData.VertexDataTexture);
                         ep["SliceZ"].SetValue(sliceZ);
                     }

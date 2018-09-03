@@ -35,6 +35,7 @@ bool doesRayIntersectLine (float2 rayOrigin, float2 rayDirection, float2 a1, flo
     }
 }
 
+/*
 bool doesRightRayIntersectLine (float2 rayOrigin, float2 a1, float2 a2) {
     float2 v1 = rayOrigin - a1,
         v2 = a2 - a1,
@@ -48,6 +49,15 @@ bool doesRightRayIntersectLine (float2 rayOrigin, float2 a1, float2 a2) {
         t2 = dot(v1, v3) / divisor;
     }
     return (t1 >= 0) && (t2 >= 0) && (t2 <= 1);
+}
+*/
+
+bool doesRightRayIntersectLine (float2 p, float2 a1, float2 a2) {
+    float divisor = (a1.y-a2.y);
+    bool inside = ((a2.y>p.y) != (a1.y>p.y)) &&
+        (p.x < (a1.x-a2.x) * (p.y-a2.y) / divisor + a2.x);
+
+    return (divisor != 0) && inside;
 }
 
 bool doLinesIntersect (float2 a1, float2 a2, float2 b1, float2 b2, out float distanceAlongA) {

@@ -5,7 +5,8 @@
 
 uniform float2 PixelSize;
 uniform float4 SliceZ;
-uniform float2 UvStep;
+// Start, Step
+uniform float4 Uv;
 
 Texture2D VertexDataTexture : register(t0);
 sampler   VertexDataSampler : register(s0) {
@@ -75,13 +76,13 @@ float finalEval (float2 z, float2 zRange, float resultDistanceSq, int intersecti
 
 float4 computeSliceDistances (float2 xy, float2 zRange, float4 SliceZ) {
     float resultDistanceSq = 99999999;
-    float4 uv = 0;
+    float4 uv = float4(Uv.x, Uv.y, 0, 0);
     int intersectionCount = 0;
 
     [loop]
     while (uv.x < 1) {
         computeDistanceStep(xy, resultDistanceSq, intersectionCount, uv);
-        uv.xy += UvStep;
+        uv.xy += Uv.zw;
     }
 
     float4 result = float4(
