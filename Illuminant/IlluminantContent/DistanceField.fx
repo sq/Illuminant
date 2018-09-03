@@ -32,6 +32,32 @@ void loadEdge (float u, out float2 a, out float2 b) {
     b = packedEdge.zw;
 }
 
+float computeDistance (float2 xy) {
+    float resultDistance = 99999999;
+    float indexMultiplier = 1.0 / NumVertices;
+    float u = 0;
+    int intersectionCount = 0;
+    float2 ray = float2(1, 0);
+
+    [loop]
+    for (int i = 0; i < NumVertices; i += 1) {
+        float2 a, b, temp;
+        loadEdge(u, a, b);
+            
+        if (doesRayIntersectLine(xy, ray, a, b, temp))
+            intersectionCount += 1;
+
+        float2 closest = closestPointOnEdge(xy, a, b);
+        float2 closestDeltaXy = (xy - closest);
+        resultDistance = min(resultDistance, length(closestDeltaXy));
+
+        u += indexMultiplier;
+    }
+
+    bool isInside = (intersectionCount % 2) == 1;
+    return isInside ? -resultDistance : resultDistance;
+}
+
 /*
 
 float computeDistanceToEdge (
@@ -142,7 +168,11 @@ void ExteriorPixelShader (
 ) {
     vpos *= getInvScaleFactors();
     vpos += Viewport.Position;
-    color = 0;
+
+    float distance = computeDistance(vpos);
+    float encoded = encodeDistance(distance);
+
+    color = float4(encoded, encoded, encoded, encoded);
 
     /*
     float squaredDistanceXy = computeDistanceXy(vpos);
