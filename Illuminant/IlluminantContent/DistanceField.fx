@@ -26,41 +26,53 @@ void DistanceVertexShader (
     result.z = 0;
 }
 
-float computeSquaredDistanceToEdge (
+void loadEdge (float u, out float2 a, out float2 b) {
+    float4 packedEdge = tex2Dlod(VertexDataSampler, float4(u, 0, 0, 0));
+    a = packedEdge.xy;
+    b = packedEdge.zw;
+}
+
+/*
+
+float computeDistanceToEdge (
     float2 vpos, float u
 ) {
-    float4 packedEdge = tex2Dlod(VertexDataSampler, float4(u, 0, 0, 0));
-    float2 edgeA = packedEdge.xy;
-    float2 edgeB = packedEdge.zw;
+    float2 edge = edgeB - edgeA;
+
+    float2 edgeLeft = float2(edge.y, -edge.x);
 
     float2 closest = closestPointOnEdge(vpos, edgeA, edgeB);
     float2 closestDeltaXy = (vpos - closest);
-    closestDeltaXy *= closestDeltaXy;
+    float inside = dot(closestDeltaXy, normalize(edgeLeft));
 
-    return closestDeltaXy.x + closestDeltaXy.y;
+    return length(closestDeltaXy) * sign(inside);
 }
 
-float computeSquaredDistanceXy (
+float computeDistanceXy (
     float2 vpos
 ) {
-    float resultSquaredDistance = 99999999;
+    float resultDistance = 99999999;
     float indexMultiplier = 1.0 / NumVertices;
     float u = 0;
 
     [loop]
-    for (int i = 0; i < NumVertices; i += 4) {
+    for (int i = 0; i < NumVertices; i += 6) {
         // fxc can't handle unrolling loops without spending 30 minutes, yaaaaaaaaaay
-        resultSquaredDistance = min(resultSquaredDistance, computeSquaredDistanceToEdge(vpos, u));
+        resultDistance = min(resultDistance, computeDistanceToEdge(vpos, u));
         u += indexMultiplier;
-        resultSquaredDistance = min(resultSquaredDistance, computeSquaredDistanceToEdge(vpos, u));
+        resultDistance = min(resultDistance, computeDistanceToEdge(vpos, u));
         u += indexMultiplier;
-        resultSquaredDistance = min(resultSquaredDistance, computeSquaredDistanceToEdge(vpos, u));
+        resultDistance = min(resultDistance, computeDistanceToEdge(vpos, u));
         u += indexMultiplier;
-        resultSquaredDistance = min(resultSquaredDistance, computeSquaredDistanceToEdge(vpos, u));
+        resultDistance = min(resultDistance, computeDistanceToEdge(vpos, u));
+        u += indexMultiplier;
+        resultDistance = min(resultDistance, computeDistanceToEdge(vpos, u));
+        u += indexMultiplier;
+        resultDistance = min(resultDistance, computeDistanceToEdge(vpos, u));
         u += indexMultiplier;
     }
 
-    return resultSquaredDistance;
+    return resultDistance;
 }
 
 float computeSquaredDistanceZ (float sliceZ, float2 zRange) {
@@ -68,7 +80,6 @@ float computeSquaredDistanceZ (float sliceZ, float2 zRange) {
     float deltaMaxZ = sliceZ - zRange.y;
 
     if ((sliceZ >= zRange.x) && (sliceZ <= zRange.y)) {
-        // FIXME: Should this actually be zero?
         return 0;
     } else if (abs(deltaMinZ) > abs(deltaMaxZ)) {
         return deltaMaxZ * deltaMaxZ;
@@ -82,6 +93,7 @@ float computeInteriorDistance (
     float squaredDistanceXy,
     float sliceZ
 ) {
+    return squaredDistanceXy;
     if ((sliceZ >= zRange.x) && (sliceZ <= zRange.y)) {
         float squaredDistanceZ = computeSquaredDistanceZ(sliceZ, zRange);
         return -sqrt(squaredDistanceXy + squaredDistanceZ);
@@ -95,9 +107,12 @@ float computeExteriorDistance (
     float squaredDistanceXy,
     float sliceZ
 ) {
+    return squaredDistanceXy;
     float squaredDistanceZ = computeSquaredDistanceZ(sliceZ, zRange);
     return sqrt(squaredDistanceXy + squaredDistanceZ);
 }
+
+*/
 
 void InteriorPixelShader (
     out float4 color : COLOR0,
@@ -106,8 +121,10 @@ void InteriorPixelShader (
 ) {
     vpos *= getInvScaleFactors();
     vpos += Viewport.Position;
+    color = 0;
     
-    float squaredDistanceXy = computeSquaredDistanceXy(vpos);
+    /*
+    float squaredDistanceXy = computeDistanceXy(vpos);
 
     color = float4(
         encodeDistance(computeInteriorDistance(zRange, squaredDistanceXy, SliceZ.x)),
@@ -115,6 +132,7 @@ void InteriorPixelShader (
         encodeDistance(computeInteriorDistance(zRange, squaredDistanceXy, SliceZ.z)),
         encodeDistance(computeInteriorDistance(zRange, squaredDistanceXy, SliceZ.w))
     );
+    */
 }
 
 void ExteriorPixelShader (
@@ -124,8 +142,10 @@ void ExteriorPixelShader (
 ) {
     vpos *= getInvScaleFactors();
     vpos += Viewport.Position;
+    color = 0;
 
-    float squaredDistanceXy = computeSquaredDistanceXy(vpos);
+    /*
+    float squaredDistanceXy = computeDistanceXy(vpos);
 
     color = float4(
         encodeDistance(computeExteriorDistance(zRange, squaredDistanceXy, SliceZ.x)),
@@ -133,6 +153,7 @@ void ExteriorPixelShader (
         encodeDistance(computeExteriorDistance(zRange, squaredDistanceXy, SliceZ.z)),
         encodeDistance(computeExteriorDistance(zRange, squaredDistanceXy, SliceZ.w))
     );
+    */
 }
 
 technique Exterior

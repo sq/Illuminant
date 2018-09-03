@@ -10,6 +10,42 @@ uniform float                 MaximumEncodedDistance;
 //  *and* it's mathematically correct!
 #define DISTANCE_FIELD_FILTER LINEAR
 
+bool doesRayIntersectLine (float2 rayOrigin, float2 rayDirection, float2 a1, float2 a2, out float2 position) {
+    float2 v1 = rayOrigin - a1,
+        v2 = a2 - a1,
+        v3 = float2(-rayDirection.y, rayDirection.x);
+    float t1 = cross(float3(v2, 0), float3(v1, 0)).z / dot(v2, v3);
+    float t2 = dot(v1, v3) / dot(v2, v3);
+    if ((t1 >= 0) && (t2 >= 0) && (t2 <= 1))
+        return rayOrigin + (t1 * rayDirection);
+}
+
+bool doLinesIntersect (float2 a1, float2 a2, float2 b1, float2 b2, out float distanceAlongA) {
+    distanceAlongA = 0;
+
+    float2 lengthA = a2 - a1, lengthB = b2 - b1;
+    float2 delta = b1 - b2;
+    float q = (delta.y * lengthB.x) - (delta.x * lengthB.y);
+    float d = lengthA.x * lengthB.y - lengthA.y * lengthB.x;
+
+    if (d == 0)
+        return false;
+
+    d = 1 / d;
+    float r = q * d;
+
+    if (r < 0 || r > 1)
+        return false;
+
+    float q2 = delta.y * lengthA.x - delta.y * lengthA.y;
+    float s = q2 * d;
+
+    if (s < 0 || s > 1)
+        return false;
+
+    distanceAlongA = r;
+    return true;
+}
 
 float closestPointOnEdgeAsFactor (
     float2 pt, float2 edgeStart, float2 edgeEnd

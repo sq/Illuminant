@@ -1569,6 +1569,7 @@ namespace Squared.Illuminant {
                 cacheData.BoundingBoxVertices[2] = new HeightVolumeVertex(new Vector3(b.BottomRight, 0), Vector3.Up, zRange);
                 cacheData.BoundingBoxVertices[3] = new HeightVolumeVertex(new Vector3(b.BottomLeft, 0), Vector3.Up, zRange);
 
+                /*
                 // FIXME: Hoist these out and use BeforeDraw
                 using (var batch = PrimitiveBatch<HeightVolumeVertex>.New(
                     interiorGroup, i, IlluminantMaterials.DistanceFieldInterior,
@@ -1583,6 +1584,7 @@ namespace Squared.Illuminant {
                         PrimitiveType.TriangleList,
                         m, 0, m.Length / 3
                     ));
+                */
 
                 using (var batch = PrimitiveBatch<HeightVolumeVertex>.New(
                     exteriorGroup, i, IlluminantMaterials.DistanceFieldExterior,
