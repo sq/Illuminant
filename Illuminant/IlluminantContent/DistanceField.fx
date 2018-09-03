@@ -5,6 +5,7 @@
 
 uniform float2 PixelSize;
 uniform float4 SliceZ;
+uniform float4 Bounds;
 // Start, Step
 uniform float4 Uv;
 
@@ -82,6 +83,14 @@ float4 computeSliceDistances (float2 xy, float2 zRange, float4 SliceZ) {
         computeDistanceStep(xy, resultDistanceSq, intersectionCount, uv);
         uv.xy += Uv.zw;
     }
+
+    if (
+        (xy.x < Bounds.x) ||
+        (xy.y < Bounds.y) ||
+        (xy.x > Bounds.z) ||
+        (xy.y > Bounds.w)
+    )
+        intersectionCount = 0;
 
     float4 result = float4(
         finalEval(SliceZ.x, zRange, resultDistanceSq, intersectionCount),
