@@ -50,10 +50,8 @@ void computeDistanceStep (float2 xy, inout float resultDistanceSq, inout int int
     float2 a, b, temp;
     loadEdge(uv, a, b);
     intersectionCount += doesRightRayIntersectLine(xy, a, b) ? 1 : 0;
-    float2 closest = closestPointOnEdge(xy, a, b);
-    float2 closestDeltaXy = (xy - closest);
-    closestDeltaXy *= closestDeltaXy;
-    resultDistanceSq = min(resultDistanceSq, (closestDeltaXy.x + closestDeltaXy.y));
+    float distanceSq = distanceSquaredToEdge(xy, a, b);
+    resultDistanceSq = min(resultDistanceSq, distanceSq);
 }
 
 float finalEval (float2 z, float2 zRange, float resultDistanceSq, int intersectionCount) {

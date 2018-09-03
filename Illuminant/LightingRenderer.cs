@@ -1535,14 +1535,14 @@ namespace Squared.Illuminant {
                     cacheData = new HeightVolumeCacheData();
                     
                     lock (Coordinator.CreateResourceLock)
-                        cacheData.VertexDataTexture = new Texture2D(Coordinator.Device, p.Count, 1, false, SurfaceFormat.HalfVector4);
+                        cacheData.VertexDataTexture = new Texture2D(Coordinator.Device, p.Count, 1, false, SurfaceFormat.Vector4);
 
                     lock (Coordinator.UseResourceLock)
-                    using (var vertices = BufferPool<HalfVector4>.Allocate(p.Count)) {
+                    using (var vertices = BufferPool<Vector4>.Allocate(p.Count)) {
                         for (var j = 0; j < p.Count; j++) {
                             var edgeA = p[j];
                             var edgeB = p[Arithmetic.Wrap(j + 1, 0, p.Count - 1)];
-                            vertices.Data[j] = new HalfVector4(
+                            vertices.Data[j] = new Vector4(
                                 edgeA.X, edgeA.Y, edgeB.X, edgeB.Y
                             );
                         }

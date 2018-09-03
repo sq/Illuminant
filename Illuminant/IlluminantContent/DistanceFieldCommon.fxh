@@ -87,26 +87,43 @@ bool doLinesIntersect (float2 a1, float2 a2, float2 b1, float2 b2, out float dis
     return true;
 }
 
-float closestPointOnEdgeAsFactor (
+float2 closestPointOnEdge (
     float2 pt, float2 edgeStart, float2 edgeEnd
 ) {
     float2 edgeDelta = edgeEnd - edgeStart;
     float  edgeLength = length(edgeDelta);
     edgeLength *= edgeLength;
     
+    float u;
     if (edgeLength == 0) {
-        return 0;
+        u = 0;
     } else {
         float2 pointDelta = (pt - edgeStart) * edgeDelta;
-        return (pointDelta.x + pointDelta.y) / edgeLength;
+        u = (pointDelta.x + pointDelta.y) / edgeLength;
     }
+
+    return edgeStart + ((edgeEnd - edgeStart) * saturate(u));
 }
 
-float2 closestPointOnEdge (
-    float2 pt, float2 edgeStart, float2 edgeEnd
+float _dist2 (float2 a, float2 b) {
+    float2 d = (a - b);
+    d *= d;
+    return d.x + d.y;
+}
+
+float distanceSquaredToEdge (
+    float2 p, float2 v, float2 w
 ) {
-    float u = closestPointOnEdgeAsFactor(pt, edgeStart, edgeEnd);
-    return edgeStart + ((edgeEnd - edgeStart) * saturate(u));
+    float l2 = _dist2(v, w);
+    if (l2 == 0) 
+        return _dist2(p, v);
+    float2 wv = w - v;
+    float t = ((p.x - v.x) * wv.x + (p.y - v.y) * wv.y) / l2;
+    t = saturate(t);
+    return _dist2(
+        p, 
+        float2(v.x + t * wv.x, v.y + t * wv.y)
+    );
 }
 
 float encodeDistance (float distance) {
