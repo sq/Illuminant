@@ -79,7 +79,7 @@ float4 computeSliceDistances (float2 xy, float2 zRange, float4 SliceZ) {
     int intersectionCount = 0;
 
     [loop]
-    while (uv.x < 1) {
+    while (uv.x <= 1) {
         computeDistanceStep(xy, resultDistanceSq, intersectionCount, uv);
         uv.xy += Uv.zw;
     }

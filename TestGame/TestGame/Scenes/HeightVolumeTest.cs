@@ -22,8 +22,8 @@ namespace TestGame.Scenes {
 
         public readonly List<SphereLightSource> Lights = new List<SphereLightSource>();
 
-        Toggle ShowGBuffer, TwoPointFiveD, Deterministic, Shadows;
-        Slider LightmapScaleRatio, MaxStepCount, MinStepSize, DistanceFieldResolution, DistanceSliceCount;
+        Toggle ShowGBuffer, ShowDistanceField, TwoPointFiveD, Deterministic, Shadows;
+        Slider LightmapScaleRatio, MaxStepCount, MinStepSize, DistanceFieldResolution, DistanceSliceCount, MaximumEncodedDistance;
 
         public const int RotatingLightCount = 1024;
 
@@ -41,6 +41,7 @@ namespace TestGame.Scenes {
             MinStepSize.Value = 2f;
             DistanceFieldResolution.Value = 0.5f;
             DistanceSliceCount.Value = 7;
+            MaximumEncodedDistance.Value = 128;
             Shadows.Value = true;
 
             ShowGBuffer.Key = Keys.G;
@@ -64,6 +65,11 @@ namespace TestGame.Scenes {
             LightmapScaleRatio.Max = 1.0f;
             LightmapScaleRatio.Speed = 0.1f;
             LightmapScaleRatio.Changed += (s, e) => Renderer.InvalidateFields();
+
+            MaximumEncodedDistance.Min = 16;
+            MaximumEncodedDistance.Max = 320;
+            MaximumEncodedDistance.Speed = 8;
+            MaximumEncodedDistance.Changed += (s, e) => CreateDistanceField();
 
             MaxStepCount.Max = 128;
             MaxStepCount.Min = 32;
@@ -95,7 +101,7 @@ namespace TestGame.Scenes {
 
             DistanceField = new DistanceField(
                 Game.RenderCoordinator, Width, Height, Environment.MaximumZ,
-                (int)DistanceSliceCount.Value, DistanceFieldResolution.Value
+                (int)DistanceSliceCount.Value, DistanceFieldResolution.Value, (int)MaximumEncodedDistance.Value
             );
             if (Renderer != null) {
                 Renderer.DistanceField = DistanceField;
@@ -160,7 +166,7 @@ namespace TestGame.Scenes {
             const float angleStep = (float)(Math.PI / 128);
             const int   heightTiers = 8;
             const float minHeight = 0f;
-            const float maxHeight = 127f;
+            const float maxHeight = 120f;
 
             var points = new List<Vector2>();
 
@@ -172,7 +178,7 @@ namespace TestGame.Scenes {
                 for (float a = 0, p2 = (float)(Math.PI * 2); a < p2; a += angleStep) {
                     points.Add(new Vector2(
                         ((float)Math.Cos(a) * rX) + (Width / 2f),
-                        ((float)Math.Sin(a) * rY) + (Height / 2f)                    
+                        ((float)Math.Sin(a) * rY) + (Height / 2f)
                     ));
                 }
 
@@ -235,6 +241,23 @@ namespace TestGame.Scenes {
                     Vector2.Zero,
                     Color.White
                 );
+
+                bb.Add(ref dc);
+            }
+
+            if (ShowDistanceField)
+            using (var bb = BitmapBatch.New(
+                frame, 2,
+                Game.Materials.Get(Game.Materials.ScreenSpaceBitmap, blendState: BlendState.Opaque),
+                samplerState: SamplerState.LinearClamp
+            )) {
+                var dc = new BitmapDrawCall(
+                    DistanceField.Texture,
+                    Vector2.Zero,
+                    Color.White
+                ) {
+                    ScaleF = Width / (float)DistanceField.Texture.Width
+                };
 
                 bb.Add(ref dc);
             }
