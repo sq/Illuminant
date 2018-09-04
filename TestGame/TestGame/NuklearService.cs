@@ -166,9 +166,12 @@ namespace TestGame {
             var bounds = ConvertBounds(c->x, c->y, c->w - 1, c->h - 1);
             var radius = bounds.Size / 2f;
             var color = ConvertColor(c->color);
+            /*
             var softEdge = Vector2.One * 1f;
             PendingIR.FillRing(bounds.Center, Vector2.Zero, radius - Vector2.One, color, color, quality: 2);
             PendingIR.FillRing(bounds.Center, radius - (Vector2.One * 1.4f), radius + softEdge, color, Color.Transparent, quality: 2);
+            */
+            PendingIR.Ellipse(bounds.Center, radius, color);
         }
 
         private void RenderCommand (nk_command_triangle_filled* c) {

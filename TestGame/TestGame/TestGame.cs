@@ -84,7 +84,7 @@ namespace TestGame {
             };
 
             ActiveSceneIndex = Scenes.Length - 1;
-            ActiveSceneIndex = 0;
+            ActiveSceneIndex = 1;
         }
 
         const float settingRowHeight = 26;
@@ -227,7 +227,10 @@ namespace TestGame {
             TextMaterial.Parameters.ShadowColor.SetValue(new Vector4(0, 0, 0, 0.5f));
             TextMaterial.Parameters.ShadowOffset.SetValue(Vector2.One);
 
-            UIRenderTarget = new RenderTarget2D(GraphicsDevice, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight, false, SurfaceFormat.Color, DepthFormat.None, 4, RenderTargetUsage.PlatformContents);
+            UIRenderTarget = new RenderTarget2D(
+                GraphicsDevice, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight, 
+                false, SurfaceFormat.Color, DepthFormat.None, 1, RenderTargetUsage.PlatformContents
+            );
 
             Nuklear = new NuklearService(this) {
                 Font = Font,
