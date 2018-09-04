@@ -74,7 +74,7 @@ float finalEval (float2 z, float2 zRange, float resultDistanceSq, int intersecti
 }
 
 float4 computeSliceDistances (float2 xy, float2 zRange, float4 SliceZ) {
-    float resultDistanceSq = 99999999;
+    float resultDistanceSq = 999999;
     float4 uv = float4(Uv.x, Uv.y, 0, 0);
     int intersectionCount = 0;
 

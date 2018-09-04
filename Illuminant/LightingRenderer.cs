@@ -1522,6 +1522,7 @@ namespace Squared.Illuminant {
 
                 var p = hv.Polygon;
                 var m = hv.Mesh3D;
+                var pb = p.Bounds;
                 var b = hv.Bounds.Expand(DistanceLimit, DistanceLimit);
                 var zRange = new Vector2(hv.ZBase, hv.ZBase + hv.Height);
 
@@ -1563,8 +1564,9 @@ namespace Squared.Illuminant {
                     innerGroup, i, mat,
                     (dm, _) => {
                         var ep = mat.Effect.Parameters;
-                        var pb = p.Bounds;
-                        ep["Bounds"].SetValue(new Vector4(pb.TopLeft.X, pb.TopLeft.Y, pb.BottomRight.X, pb.BottomRight.Y));
+                        var tl = pb.TopLeft;
+                        var br = pb.BottomRight;
+                        ep["Bounds"].SetValue(new Vector4(tl.X, tl.Y, br.X, br.Y));
                         ep["Uv"].SetValue(new Vector4(0, 0, 1.0f / p.Count, 0));
                         ep["VertexDataTexture"].SetValue(cacheData.VertexDataTexture);
                         ep["SliceZ"].SetValue(sliceZ);
