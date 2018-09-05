@@ -133,23 +133,41 @@ namespace Squared.Illuminant {
                 DefineMaterial(IlluminantMaterials.GDataBillboard = 
                     new Squared.Render.Material(content.Load<Effect>("GBufferBitmap"), "GDataBillboard"));
 
-                DefineMaterial(IlluminantMaterials.LightingResolve = 
-                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "LightingResolve"));
+                DefineMaterial(IlluminantMaterials.ScreenSpaceLightingResolve = 
+                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "ScreenSpaceLightingResolve"));
 
-                DefineMaterial(IlluminantMaterials.GammaCompressedLightingResolve = 
-                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "GammaCompressedLightingResolve"));
+                DefineMaterial(IlluminantMaterials.ScreenSpaceGammaCompressedLightingResolve = 
+                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "ScreenSpaceGammaCompressedLightingResolve"));
 
-                DefineMaterial(IlluminantMaterials.ToneMappedLightingResolve = 
-                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "ToneMappedLightingResolve"));
+                DefineMaterial(IlluminantMaterials.ScreenSpaceToneMappedLightingResolve = 
+                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "ScreenSpaceToneMappedLightingResolve"));
 
-                DefineMaterial(IlluminantMaterials.LightingResolveWithAlbedo = 
-                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "LightingResolveWithAlbedo"));
+                DefineMaterial(IlluminantMaterials.ScreenSpaceLightingResolveWithAlbedo = 
+                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "ScreenSpaceLightingResolveWithAlbedo"));
 
-                DefineMaterial(IlluminantMaterials.GammaCompressedLightingResolveWithAlbedo = 
-                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "GammaCompressedLightingResolveWithAlbedo"));
+                DefineMaterial(IlluminantMaterials.ScreenSpaceGammaCompressedLightingResolveWithAlbedo = 
+                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "ScreenSpaceGammaCompressedLightingResolveWithAlbedo"));
 
-                DefineMaterial(IlluminantMaterials.ToneMappedLightingResolveWithAlbedo = 
-                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "ToneMappedLightingResolveWithAlbedo"));
+                DefineMaterial(IlluminantMaterials.ScreenSpaceToneMappedLightingResolveWithAlbedo = 
+                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "ScreenSpaceToneMappedLightingResolveWithAlbedo"));
+
+                DefineMaterial(IlluminantMaterials.WorldSpaceLightingResolve = 
+                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "WorldSpaceLightingResolve"));
+
+                DefineMaterial(IlluminantMaterials.WorldSpaceGammaCompressedLightingResolve = 
+                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "WorldSpaceGammaCompressedLightingResolve"));
+
+                DefineMaterial(IlluminantMaterials.WorldSpaceToneMappedLightingResolve = 
+                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "WorldSpaceToneMappedLightingResolve"));
+
+                DefineMaterial(IlluminantMaterials.WorldSpaceLightingResolveWithAlbedo = 
+                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "WorldSpaceLightingResolveWithAlbedo"));
+
+                DefineMaterial(IlluminantMaterials.WorldSpaceGammaCompressedLightingResolveWithAlbedo = 
+                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "WorldSpaceGammaCompressedLightingResolveWithAlbedo"));
+
+                DefineMaterial(IlluminantMaterials.WorldSpaceToneMappedLightingResolveWithAlbedo = 
+                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "WorldSpaceToneMappedLightingResolveWithAlbedo"));
 
                 DefineMaterial(IlluminantMaterials.CalculateLuminance = 
                     new Squared.Render.Material(content.Load<Effect>("Resolve"), "CalculateLuminance"));

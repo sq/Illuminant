@@ -969,21 +969,44 @@ namespace Squared.Illuminant {
             Bounds? destination, Texture2D albedo,
             Bounds? albedoRegion, SamplerState albedoSamplerState,
             HDRConfiguration? hdr,
-            BlendState blendState
+            BlendState blendState, bool worldSpace
         ) {
             Material m;
-            if (hdr.HasValue && hdr.Value.Mode == HDRMode.GammaCompress)
-                m = (albedo != null) 
-                    ? IlluminantMaterials.GammaCompressedLightingResolveWithAlbedo 
-                    : IlluminantMaterials.GammaCompressedLightingResolve;
-            else if (hdr.HasValue && hdr.Value.Mode == HDRMode.ToneMap)
-                m = (albedo != null) 
-                    ? IlluminantMaterials.ToneMappedLightingResolveWithAlbedo 
-                    : IlluminantMaterials.ToneMappedLightingResolve;
-            else
-                m = (albedo != null) 
-                    ? IlluminantMaterials.LightingResolveWithAlbedo 
-                    : IlluminantMaterials.LightingResolve;
+            var gc = hdr.HasValue && hdr.Value.Mode == HDRMode.GammaCompress;
+            var tm = hdr.HasValue && hdr.Value.Mode == HDRMode.ToneMap;
+            if (worldSpace) {
+                if (albedo != null) {
+                    if (gc)
+                        m = IlluminantMaterials.WorldSpaceGammaCompressedLightingResolveWithAlbedo;
+                    else if (tm)
+                        m = IlluminantMaterials.WorldSpaceToneMappedLightingResolveWithAlbedo;
+                    else
+                        m = IlluminantMaterials.WorldSpaceLightingResolveWithAlbedo;
+                } else {
+                    if (gc)
+                        m = IlluminantMaterials.WorldSpaceGammaCompressedLightingResolve;
+                    else if (tm)
+                        m = IlluminantMaterials.WorldSpaceToneMappedLightingResolve;
+                    else
+                        m = IlluminantMaterials.WorldSpaceLightingResolve;
+                }
+            } else {
+                if (albedo != null) {
+                    if (gc)
+                        m = IlluminantMaterials.ScreenSpaceGammaCompressedLightingResolveWithAlbedo;
+                    else if (tm)
+                        m = IlluminantMaterials.ScreenSpaceToneMappedLightingResolveWithAlbedo;
+                    else
+                        m = IlluminantMaterials.ScreenSpaceLightingResolveWithAlbedo;
+                } else {
+                    if (gc)
+                        m = IlluminantMaterials.ScreenSpaceGammaCompressedLightingResolve;
+                    else if (tm)
+                        m = IlluminantMaterials.ScreenSpaceToneMappedLightingResolve;
+                    else
+                        m = IlluminantMaterials.ScreenSpaceLightingResolve;
+                }
+            }
 
             if (blendState != null)
                 m = Materials.Get(m, blendState: blendState);

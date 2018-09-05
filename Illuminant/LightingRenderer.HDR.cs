@@ -99,7 +99,7 @@ namespace Squared.Illuminant {
                 IBatchContainer container, int layer,
                 float width, float height, Texture2D albedo = null,
                 Bounds? albedoTextureRegion = null, SamplerState albedoSamplerState = null,
-                HDRConfiguration? hdr = null, BlendState blendState = null
+                HDRConfiguration? hdr = null, BlendState blendState = null, bool worldSpace = false
             ) {
                 if (!IsValid)
                     throw new InvalidOperationException("Invalid");
@@ -113,7 +113,7 @@ namespace Squared.Illuminant {
                     container, layer,
                     Lightmap, Bounds.FromPositionAndSize(Vector2.Zero, new Vector2(width, height)), 
                     albedo, albedoTextureRegion, albedoSamplerState,
-                    hdr, blendState
+                    hdr, blendState, worldSpace
                 );
             }
 
@@ -121,7 +121,7 @@ namespace Squared.Illuminant {
                 IBatchContainer container, int layer,
                 Bounds? destination = null, Texture2D albedo = null,
                 Bounds? albedoTextureRegion = null, SamplerState albedoSamplerState = null,
-                HDRConfiguration? hdr = null, BlendState blendState = null
+                HDRConfiguration? hdr = null, BlendState blendState = null, bool worldSpace = false
             ) {
                 if (!IsValid)
                     throw new InvalidOperationException("Invalid");
@@ -135,7 +135,7 @@ namespace Squared.Illuminant {
                     container, layer,
                     Lightmap, destination, 
                     albedo, albedoTextureRegion, albedoSamplerState,
-                    hdr, blendState
+                    hdr, blendState, worldSpace
                 );
             }
 

@@ -16,11 +16,18 @@ namespace Squared.Illuminant {
         public Material ClearDistanceFieldSlice;
         public Material HeightVolume, HeightVolumeFace, GroundPlane;
         public Material MaskBillboard, GDataBillboard;
-        public Material LightingResolve, 
-            GammaCompressedLightingResolve, ToneMappedLightingResolve;
-        public Material LightingResolveWithAlbedo, 
-            GammaCompressedLightingResolveWithAlbedo, 
-            ToneMappedLightingResolveWithAlbedo;
+        public Material ScreenSpaceLightingResolve, 
+            ScreenSpaceGammaCompressedLightingResolve, 
+            ScreenSpaceToneMappedLightingResolve;
+        public Material ScreenSpaceLightingResolveWithAlbedo, 
+            ScreenSpaceGammaCompressedLightingResolveWithAlbedo, 
+            ScreenSpaceToneMappedLightingResolveWithAlbedo;
+        public Material WorldSpaceLightingResolve, 
+            WorldSpaceGammaCompressedLightingResolve, 
+            WorldSpaceToneMappedLightingResolve;
+        public Material WorldSpaceLightingResolveWithAlbedo, 
+            WorldSpaceGammaCompressedLightingResolveWithAlbedo, 
+            WorldSpaceToneMappedLightingResolveWithAlbedo;
         public Material ScreenSpaceGammaCompressedBitmap, WorldSpaceGammaCompressedBitmap;
         public Material ScreenSpaceToneMappedBitmap, WorldSpaceToneMappedBitmap;
         public Material ObjectSurfaces, ObjectOutlines;
@@ -36,8 +43,8 @@ namespace Squared.Illuminant {
         internal IlluminantMaterials (DefaultMaterialSet materialSet) {
             MaterialSet = materialSet;
 
-            EffectsToSetGammaCompressionParametersOn = new Effect[4];
-            EffectsToSetToneMappingParametersOn = new Effect[6];
+            EffectsToSetGammaCompressionParametersOn = new Effect[6];
+            EffectsToSetToneMappingParametersOn = new Effect[10];
         }
 
         /// <summary>
@@ -57,8 +64,10 @@ namespace Squared.Illuminant {
 
             EffectsToSetGammaCompressionParametersOn[0] = ScreenSpaceGammaCompressedBitmap.Effect;
             EffectsToSetGammaCompressionParametersOn[1] = WorldSpaceGammaCompressedBitmap.Effect;
-            EffectsToSetGammaCompressionParametersOn[2] = GammaCompressedLightingResolve.Effect;
-            EffectsToSetGammaCompressionParametersOn[3] = GammaCompressedLightingResolveWithAlbedo.Effect;
+            EffectsToSetGammaCompressionParametersOn[2] = ScreenSpaceGammaCompressedLightingResolve.Effect;
+            EffectsToSetGammaCompressionParametersOn[3] = ScreenSpaceGammaCompressedLightingResolveWithAlbedo.Effect;
+            EffectsToSetGammaCompressionParametersOn[4] = WorldSpaceGammaCompressedLightingResolve.Effect;
+            EffectsToSetGammaCompressionParametersOn[5] = WorldSpaceGammaCompressedLightingResolveWithAlbedo.Effect;
 
             foreach (var effect in EffectsToSetGammaCompressionParametersOn) {
                 effect.Parameters["Offset"].SetValue(offset);
@@ -84,10 +93,14 @@ namespace Squared.Illuminant {
 
             EffectsToSetToneMappingParametersOn[0] = ScreenSpaceToneMappedBitmap.Effect;
             EffectsToSetToneMappingParametersOn[1] = WorldSpaceToneMappedBitmap.Effect;
-            EffectsToSetToneMappingParametersOn[2] = ToneMappedLightingResolve.Effect;
-            EffectsToSetToneMappingParametersOn[3] = LightingResolve.Effect;
-            EffectsToSetToneMappingParametersOn[4] = ToneMappedLightingResolveWithAlbedo.Effect;
-            EffectsToSetToneMappingParametersOn[5] = LightingResolveWithAlbedo.Effect;
+            EffectsToSetToneMappingParametersOn[2] = ScreenSpaceToneMappedLightingResolve.Effect;
+            EffectsToSetToneMappingParametersOn[3] = ScreenSpaceLightingResolve.Effect;
+            EffectsToSetToneMappingParametersOn[4] = ScreenSpaceToneMappedLightingResolveWithAlbedo.Effect;
+            EffectsToSetToneMappingParametersOn[5] = ScreenSpaceLightingResolveWithAlbedo.Effect;
+            EffectsToSetToneMappingParametersOn[6] = WorldSpaceToneMappedLightingResolve.Effect;
+            EffectsToSetToneMappingParametersOn[7] = WorldSpaceLightingResolve.Effect;
+            EffectsToSetToneMappingParametersOn[8] = WorldSpaceToneMappedLightingResolveWithAlbedo.Effect;
+            EffectsToSetToneMappingParametersOn[9] = WorldSpaceLightingResolveWithAlbedo.Effect;
 
             foreach (var effect in EffectsToSetToneMappingParametersOn) {
                 effect.Parameters["Offset"].SetValue(offset);

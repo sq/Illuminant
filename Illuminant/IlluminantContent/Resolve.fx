@@ -21,8 +21,6 @@ sampler PointSampler : register(s7) {
     MagFilter = POINT;
 };
 
-#define ResolveVertexShader ScreenSpaceVertexShader
-
 uniform bool  ResolveToSRGB;
 uniform float InverseScaleFactor;
 
@@ -190,56 +188,110 @@ void CalculateLuminancePixelShader(
     result = float4(luminance, luminance, luminance, luminance);
 }
 
-technique LightingResolve
+technique ScreenSpaceLightingResolve
 {
     pass P0
     {
-        vertexShader = compile vs_3_0 ResolveVertexShader();
+        vertexShader = compile vs_3_0 ScreenSpaceVertexShader();
         pixelShader = compile ps_3_0 LightingResolvePixelShader();
     }
 }
 
-technique GammaCompressedLightingResolve
+technique ScreenSpaceGammaCompressedLightingResolve
 {
     pass P0
     {
-        vertexShader = compile vs_3_0 ResolveVertexShader();
+        vertexShader = compile vs_3_0 ScreenSpaceVertexShader();
         pixelShader = compile ps_3_0 GammaCompressedLightingResolvePixelShader();
     }
 }
 
-technique ToneMappedLightingResolve
+technique ScreenSpaceToneMappedLightingResolve
 {
     pass P0
     {
-        vertexShader = compile vs_3_0 ResolveVertexShader();
+        vertexShader = compile vs_3_0 ScreenSpaceVertexShader();
         pixelShader = compile ps_3_0 ToneMappedLightingResolvePixelShader();
     }
 }
 
-technique LightingResolveWithAlbedo
+technique ScreenSpaceLightingResolveWithAlbedo
 {
     pass P0
     {
-        vertexShader = compile vs_3_0 ResolveVertexShader();
+        vertexShader = compile vs_3_0 ScreenSpaceVertexShader();
         pixelShader = compile ps_3_0 LightingResolveWithAlbedoPixelShader();
     }
 }
 
-technique GammaCompressedLightingResolveWithAlbedo
+technique ScreenSpaceGammaCompressedLightingResolveWithAlbedo
 {
     pass P0
     {
-        vertexShader = compile vs_3_0 ResolveVertexShader();
+        vertexShader = compile vs_3_0 ScreenSpaceVertexShader();
         pixelShader = compile ps_3_0 GammaCompressedLightingResolveWithAlbedoPixelShader();
     }
 }
 
-technique ToneMappedLightingResolveWithAlbedo
+technique ScreenSpaceToneMappedLightingResolveWithAlbedo
 {
     pass P0
     {
-        vertexShader = compile vs_3_0 ResolveVertexShader();
+        vertexShader = compile vs_3_0 ScreenSpaceVertexShader();
+        pixelShader = compile ps_3_0 ToneMappedLightingResolveWithAlbedoPixelShader();
+    }
+}
+
+technique WorldSpaceLightingResolve
+{
+    pass P0
+    {
+        vertexShader = compile vs_3_0 WorldSpaceVertexShader();
+        pixelShader = compile ps_3_0 LightingResolvePixelShader();
+    }
+}
+
+technique WorldSpaceGammaCompressedLightingResolve
+{
+    pass P0
+    {
+        vertexShader = compile vs_3_0 WorldSpaceVertexShader();
+        pixelShader = compile ps_3_0 GammaCompressedLightingResolvePixelShader();
+    }
+}
+
+technique WorldSpaceToneMappedLightingResolve
+{
+    pass P0
+    {
+        vertexShader = compile vs_3_0 WorldSpaceVertexShader();
+        pixelShader = compile ps_3_0 ToneMappedLightingResolvePixelShader();
+    }
+}
+
+technique WorldSpaceLightingResolveWithAlbedo
+{
+    pass P0
+    {
+        vertexShader = compile vs_3_0 WorldSpaceVertexShader();
+        pixelShader = compile ps_3_0 LightingResolveWithAlbedoPixelShader();
+    }
+}
+
+technique WorldSpaceGammaCompressedLightingResolveWithAlbedo
+{
+    pass P0
+    {
+        vertexShader = compile vs_3_0 WorldSpaceVertexShader();
+        pixelShader = compile ps_3_0 GammaCompressedLightingResolveWithAlbedoPixelShader();
+    }
+}
+
+technique WorldSpaceToneMappedLightingResolveWithAlbedo
+{
+    pass P0
+    {
+        vertexShader = compile vs_3_0 WorldSpaceVertexShader();
         pixelShader = compile ps_3_0 ToneMappedLightingResolveWithAlbedoPixelShader();
     }
 }
@@ -248,7 +300,7 @@ technique CalculateLuminance
 {
     pass P0
     {
-        vertexShader = compile vs_3_0 ResolveVertexShader();
+        vertexShader = compile vs_3_0 ScreenSpaceVertexShader();
         pixelShader = compile ps_3_0 CalculateLuminancePixelShader();
     }
 }
