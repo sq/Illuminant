@@ -65,13 +65,16 @@ namespace Squared.Illuminant {
             return buffer[lastZero + index];
         }
 
-        public class RenderedLighting {
+        public class RenderedLighting : IDisposable {
             public   readonly LightingRenderer Renderer;
             public   readonly float            InverseScaleFactor;
             private  readonly RenderTarget2D   Lightmap;
             private  readonly RenderTarget2D   LightProbeValues;
             internal          RenderTarget2D   LuminanceBuffer;
             private  readonly int              Width, Height;
+            internal          BatchGroup       BatchGroup;
+
+            private bool IsBatchGroupDisposed = false;
 
             internal RenderedLighting (
                 LightingRenderer renderer, RenderTarget2D lightmap, float inverseScaleFactor,
@@ -95,29 +98,44 @@ namespace Squared.Illuminant {
             public void Resolve (
                 IBatchContainer container, int layer,
                 float width, float height, Texture2D albedo = null,
-                Bounds? albedoTextureRegion = null, HDRConfiguration? hdr = null
+                Bounds? albedoTextureRegion = null, SamplerState albedoSamplerState = null,
+                HDRConfiguration? hdr = null, BlendState blendState = null
             ) {
                 if (!IsValid)
                     throw new InvalidOperationException("Invalid");
 
+                if (!IsBatchGroupDisposed) {
+                    IsBatchGroupDisposed = true;
+                    BatchGroup.Dispose();
+                }
+
                 Renderer.ResolveLighting(
                     container, layer,
                     Lightmap, Bounds.FromPositionAndSize(Vector2.Zero, new Vector2(width, height)), 
-                    albedo, albedoTextureRegion, hdr
+                    albedo, albedoTextureRegion, albedoSamplerState,
+                    hdr, blendState
                 );
             }
 
             public void Resolve (
                 IBatchContainer container, int layer,
                 Bounds? destination = null, Texture2D albedo = null,
-                Bounds? albedoTextureRegion = null, HDRConfiguration? hdr = null
+                Bounds? albedoTextureRegion = null, SamplerState albedoSamplerState = null,
+                HDRConfiguration? hdr = null, BlendState blendState = null
             ) {
                 if (!IsValid)
                     throw new InvalidOperationException("Invalid");
 
+                if (!IsBatchGroupDisposed) {
+                    IsBatchGroupDisposed = true;
+                    BatchGroup.Dispose();
+                }
+
                 Renderer.ResolveLighting(
                     container, layer,
-                    Lightmap, destination, albedo, albedoTextureRegion, hdr
+                    Lightmap, destination, 
+                    albedo, albedoTextureRegion, albedoSamplerState,
+                    hdr, blendState
                 );
             }
 
@@ -151,6 +169,17 @@ namespace Squared.Illuminant {
                 });
 
                 return true;
+            }
+
+            public IBatchContainer DangerousGetBatchContainer () {
+                return BatchGroup;
+            }
+
+            public void Dispose () {
+                if (!IsBatchGroupDisposed && (BatchGroup != null)) {
+                    IsBatchGroupDisposed = true;
+                    BatchGroup.Dispose();
+                }
             }
         }
     }

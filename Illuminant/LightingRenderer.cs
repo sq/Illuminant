@@ -770,6 +770,8 @@ namespace Squared.Illuminant {
             PendingDrawViewportPosition = viewportPosition;
             PendingDrawViewportScale = viewportScale;
 
+            BatchGroup resultGroup;
+
             using (var outerGroup = BatchGroup.New(container, layer)) {
                 if (RenderTrace.EnableTracing)
                     RenderTrace.Marker(outerGroup, -9999, "LightingRenderer {0} : Begin", this.ToObjectID());
@@ -786,11 +788,13 @@ namespace Squared.Illuminant {
                         result.LuminanceBuffer = UpdateLuminanceBuffer(outerGroup, 0, mostRecentLightmap, intensityScale).Buffer;
                 }
 
-                using (var resultGroup = BatchGroup.ForRenderTarget(
-                    outerGroup, 1, lightmap.Buffer, 
+                resultGroup = BatchGroup.ForRenderTarget(
+                    outerGroup, 1, lightmap.Buffer,
                     before: BeginLightPass, after: EndLightPass,
                     userData: lightmap.Buffer
-                )) {
+                );
+
+                {
                     ClearBatch.AddNew(
                         resultGroup, -1, Materials.Clear, new Color(0, 0, 0, Configuration.RenderGroundPlane ? 1f : 0f)
                     );
@@ -832,47 +836,47 @@ namespace Squared.Illuminant {
                             kvp.Value.UpdateVertexBuffer();
 
                         if (paintDirectIllumination)
-                        foreach (var kvp in LightRenderStates) {
-                            var ltrs = kvp.Value;
-                            var count = ltrs.Count / 4;
+                            foreach (var kvp in LightRenderStates) {
+                                var ltrs = kvp.Value;
+                                var count = ltrs.Count / 4;
 
-                            if (RenderTrace.EnableTracing)
-                                RenderTrace.Marker(resultGroup, layerIndex++, "LightingRenderer {0} : Render {1} {2} light(s)", this.ToObjectID(), count, ltrs.Key.Type);
+                                if (RenderTrace.EnableTracing)
+                                    RenderTrace.Marker(resultGroup, layerIndex++, "LightingRenderer {0} : Render {1} {2} light(s)", this.ToObjectID(), count, ltrs.Key.Type);
 
-                            var pls = ltrs.Key.UniqueObject as ParticleLightSource;
-                            if (pls != null) {
-                                if (!pls.IsActive)
-                                    continue;
+                                var pls = ltrs.Key.UniqueObject as ParticleLightSource;
+                                if (pls != null) {
+                                    if (!pls.IsActive)
+                                        continue;
 
-                                using (var bg = BatchGroup.New(
-                                    resultGroup, layerIndex++, ParticleLightBatchSetup, null, ltrs
-                                )) {
-                                    pls.System.Render(bg, 0, ltrs.Material, null, null, pls.StippleFactor);
-                                }
-                            } else {
-                                if (count <= 0)
-                                    continue;
+                                    using (var bg = BatchGroup.New(
+                                        resultGroup, layerIndex++, ParticleLightBatchSetup, null, ltrs
+                                    )) {
+                                        pls.System.Render(bg, 0, ltrs.Material, null, null, pls.StippleFactor);
+                                    }
+                                } else {
+                                    if (count <= 0)
+                                        continue;
 
-                                using (var nb = NativeBatch.New(
-                                    resultGroup, layerIndex++, ltrs.Material, IlluminationBatchSetup, userData: ltrs
-                                )) {
-                                    nb.Add(new NativeDrawCall(
-                                        PrimitiveType.TriangleList,
-                                        ltrs.GetVertexBuffer(), 0,
-                                        QuadIndexBuffer, 0, 0, ltrs.Count, 0, ltrs.Count / 2
-                                    ));
+                                    using (var nb = NativeBatch.New(
+                                        resultGroup, layerIndex++, ltrs.Material, IlluminationBatchSetup, userData: ltrs
+                                    )) {
+                                        nb.Add(new NativeDrawCall(
+                                            PrimitiveType.TriangleList,
+                                            ltrs.GetVertexBuffer(), 0,
+                                            QuadIndexBuffer, 0, 0, ltrs.Count, 0, ltrs.Count / 2
+                                        ));
+                                    }
                                 }
                             }
-                        }
 
                         if (
-                            Configuration.EnableGlobalIllumination && 
+                            Configuration.EnableGlobalIllumination &&
                             (GIProbeCount > 0) &&
                             (indirectIlluminationSettings != null) &&
                             (indirectIlluminationSettings.Brightness > 0)
                         )
                             RenderGlobalIllumination(
-                                resultGroup, layerIndex++, 
+                                resultGroup, layerIndex++,
                                 indirectIlluminationSettings.Brightness, indirectIlluminationSettings.BounceIndex,
                                 intensityScale
                             );
@@ -898,6 +902,7 @@ namespace Squared.Illuminant {
                     RenderTrace.Marker(outerGroup, 9999, "LightingRenderer {0} : End", this.ToObjectID());
             }
 
+            result.BatchGroup = resultGroup;
             return result;
         }
 
@@ -962,8 +967,9 @@ namespace Squared.Illuminant {
             IBatchContainer container, int layer,
             RenderTarget2D lightmap,
             Bounds? destination, Texture2D albedo,
-            Bounds? albedoRegion,
-            HDRConfiguration? hdr
+            Bounds? albedoRegion, SamplerState albedoSamplerState,
+            HDRConfiguration? hdr,
+            BlendState blendState
         ) {
             Material m;
             if (hdr.HasValue && hdr.Value.Mode == HDRMode.GammaCompress)
@@ -979,9 +985,21 @@ namespace Squared.Illuminant {
                     ? IlluminantMaterials.LightingResolveWithAlbedo 
                     : IlluminantMaterials.LightingResolve;
 
+            if (blendState != null)
+                m = Materials.Get(m, blendState: blendState);
+            
+            var destinationBounds = destination.GetValueOrDefault(
+                Bounds.FromPositionAndSize(Vector2.Zero, new Vector2(Configuration.RenderSize.First, Configuration.RenderSize.Second))
+            );
+            var lightmapBounds = lightmap.BoundsFromRectangle(
+                new Rectangle(0, 0, Configuration.RenderSize.First, Configuration.RenderSize.Second)
+            );
+            var albedoBounds = albedoRegion.GetValueOrDefault(Bounds.Unit);
+            var scale = Vector2.One;
+
             // HACK: This is a little gross
-            var ir = new ImperativeRenderer(container, Materials, layer);
-            var sg = ir.MakeSubgroup(before: (dm, _) => {
+            using (var group = BatchGroup.New(
+                container, layer, before: (dm, _) => {
                 // FIXME: RenderScale?
                 var p = m.Effect.Parameters;
 
@@ -1034,37 +1052,35 @@ namespace Squared.Illuminant {
                             hdr.Value.Gamma
                         );
                 }
-            });
+            })) {
+                using (var bb = BitmapBatch.New(
+                    group, 0, m, 
+                    samplerState: albedoSamplerState ?? SamplerState.LinearClamp,
+                    samplerState2: SamplerState.LinearClamp
+                )) {
+                    BitmapDrawCall dc;
+                    if (albedo != null) {
+                        dc = new BitmapDrawCall(
+                            albedo, destinationBounds.TopLeft, albedoBounds
+                        ) {
+                            TextureRegion2 = lightmapBounds,
+                            Textures = new TextureSet(albedo, lightmap)
+                            // FIXME: Scale
+                        };
+                    } else {
+                        dc = new BitmapDrawCall(
+                            lightmap, destinationBounds.TopLeft, lightmapBounds
+                        ) {
+                            Scale = new Vector2(
+                                destinationBounds.Size.X / Configuration.RenderSize.First,
+                                destinationBounds.Size.Y / Configuration.RenderSize.Second
+                            )
+                        };
+                    }
 
-            var destinationBounds = destination.GetValueOrDefault(
-                Bounds.FromPositionAndSize(Vector2.Zero, new Vector2(Configuration.RenderSize.First, Configuration.RenderSize.Second))
-            );
-            var lightmapBounds = lightmap.BoundsFromRectangle(
-                new Rectangle(0, 0, Configuration.RenderSize.First, Configuration.RenderSize.Second)
-            );
-            var albedoBounds = albedoRegion.GetValueOrDefault(Bounds.Unit);
-            var scale = Vector2.One;
-
-            BitmapDrawCall dc;
-            if (albedo != null) {
-                dc = new BitmapDrawCall(
-                    albedo, destinationBounds.TopLeft, albedoBounds
-                ) {
-                    TextureRegion2 = lightmapBounds,
-                    Textures = new TextureSet(albedo, lightmap)
-                };
-            } else {
-                dc = new BitmapDrawCall(
-                    lightmap, destinationBounds.TopLeft, lightmapBounds
-                ) {
-                    Scale = new Vector2(
-                        destinationBounds.Size.X / Configuration.RenderSize.First,
-                        destinationBounds.Size.Y / Configuration.RenderSize.Second
-                    )
-                };
+                    bb.Add(ref dc);
+                }
             }
-
-            sg.Draw(dc, material: m);
         }
 
         private Vector4 AddW (Vector3 v3) {
