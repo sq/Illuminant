@@ -39,12 +39,16 @@ namespace TestGame.Scenes {
         [Group("Lighting")]
         Toggle TwoPointFiveD,
             UseRampTexture,
-            UseDistanceRamp,
-            PreDither,
-            PostDither,
-            MergeDither;
+            UseDistanceRamp;
         [Group("Lighting")]
         Slider MaximumLightStrength;
+        [Group("Dithering")]
+        [Items("None")]
+        [Items("Pre")]
+        [Items("Post")]
+        [Items("Pre+Post")]
+        [Items("Merged")]
+        Dropdown<string> DitherMode;
         [Group("Dithering")]
         Slider
             DitherStrength,
@@ -75,8 +79,6 @@ namespace TestGame.Scenes {
             ShowHistogram.Value = true;
             UseRampTexture.Value = false;
             TwoPointFiveD.Value = true;
-            PostDither.Value = true;
-            PreDither.Value = true;
             DistanceFieldResolution.Value = 0.25f;
             LightmapScaleRatio.Value = 1.0f;
             MaximumLightStrength.Value = 4f;
@@ -86,6 +88,7 @@ namespace TestGame.Scenes {
             DitherBandSize.Value = 1f;
             DitherRangeMin.Value = 0f;
             DitherRangeMax.Value = 1f;
+            DitherMode.Value = "Pre+Post";
 
             ShowLightmap.Key = Keys.L;
             ShowGBuffer.Key = Keys.G;
@@ -289,9 +292,11 @@ namespace TestGame.Scenes {
         public override void Draw (Squared.Render.Frame frame) {
             CreateRenderTargets();
 
+            var dmode = DitherMode.Value ?? "None";
+
             var m = Game.Materials;
             m.DefaultDitheringSettings.Power = (int)DitherPower.Value;
-            m.DefaultDitheringSettings.Strength = PostDither ? DitherStrength : 0f;
+            m.DefaultDitheringSettings.Strength = dmode.Contains("Post") ? DitherStrength : 0f;
             m.DefaultDitheringSettings.BandSize = DitherBandSize;
             m.DefaultDitheringSettings.RangeMin = DitherRangeMin;
             m.DefaultDitheringSettings.RangeMax = DitherRangeMax;
@@ -327,7 +332,7 @@ namespace TestGame.Scenes {
                         Gamma = sRGB ? 2.3f : 1.0f,
                         ResolveToSRGB = sRGB,
                         Dithering = new DitheringSettings {
-                            Strength = PreDither ? DitherStrength : 0f,
+                            Strength = dmode.Contains("Pre") ? DitherStrength : 0f,
                             Power = (int)DitherPower,
                             BandSize = DitherBandSize,
                             RangeMin = DitherRangeMin,

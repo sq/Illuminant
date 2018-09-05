@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -8,6 +9,7 @@ using Microsoft.Xna.Framework.Input;
 
 namespace TestGame {
     public interface ISetting {
+        void Initialize (FieldInfo f);
         void Update (Scene s);
         string Name { get; set; }
         string Group { get; set; }
@@ -15,6 +17,18 @@ namespace TestGame {
         string GetFormattedValue ();
     }
 
+    [AttributeUsage(AttributeTargets.Field, AllowMultiple = true)]
+    public class ItemsAttribute : Attribute {
+        public object Value;
+        public string Label;
+
+        public ItemsAttribute (object value, string label = null) {
+            Value = value;
+            Label = label;
+        }
+    }
+
+    [AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
     public class GroupAttribute : Attribute {
         public string Name;
 
@@ -59,7 +73,8 @@ namespace TestGame {
         public virtual T Value { 
             get { return _Value; }
             set {
-                if (!_Value.Equals(value)) {
+                var eqc = EqualityComparer<T>.Default;
+                if (!eqc.Equals(_Value, value)) {
                     _Value = value;
                     if (Changed != null)
                         Changed(this, value);
@@ -75,6 +90,9 @@ namespace TestGame {
         }
 
         protected abstract string GetLabelText ();
+
+        public virtual void Initialize (FieldInfo f) {
+        }
 
         public abstract string GetFormattedValue ();
 
@@ -186,6 +204,101 @@ namespace TestGame {
         }
     }
 
+    public interface IDropdown : ISetting {
+        NuklearDotNet.nk_item_getter_fun Getter { get; }
+        int SelectedIndex { get; set; }
+        int Count { get; }
+    }
+
+    public class Dropdown<T> : Setting<T>, IEnumerable<Dropdown<T>.Item>, IDropdown
+        where T : IEquatable<T>
+    {
+        private NuklearDotNet.nk_item_getter_fun _Getter;
+        public readonly List<Item> Items = new List<Item>();
+
+        public class Item {
+            public T Value;
+            public string Label;
+
+            private UTF8String _LabelString;
+
+            public unsafe byte* GetLabelUTF8 () {
+                if (_LabelString.Length <= 0)
+                    _LabelString = new UTF8String(Label ?? Value.ToString());
+                return _LabelString.pText;
+            }
+        }
+
+        public int Count {
+            get {
+                return Items.Count;
+            }
+        }
+
+        public int SelectedIndex {
+            get {
+                var eqc = EqualityComparer<T>.Default;
+                return Items.FindIndex(i => eqc.Equals(Value, i.Value));
+            }
+            set {
+                Value = Items[value].Value;
+            }
+        }
+
+        NuklearDotNet.nk_item_getter_fun IDropdown.Getter {
+            get {
+                return _Getter;
+            }
+        }
+
+        public void Clear () {
+            Items.Clear();
+        }
+
+        public void Add (T value, string label = null) {
+            Items.Add(new Item {
+                Value = value,
+                Label = label ?? value.ToString()
+            });
+        }
+
+        public unsafe override void Initialize (FieldInfo f) {
+            _Getter = (user, index, result) => {
+                *result = Items[index].GetLabelUTF8();
+            };
+
+            var cas = f.GetCustomAttributes<ItemsAttribute>();
+            foreach (var ca in cas)
+                Add((T)ca.Value, ca.Label);
+
+            if (Items.Count > 0)
+                Value = Items[0].Value;
+        }
+
+        public override void Update (Scene s) {
+        }
+
+        protected override string GetLabelText () {
+            return Name;
+        }
+
+        public override string GetFormattedValue () {
+            return Value.ToString();
+        }
+
+        public override string ToString () {
+            return Value.ToString();
+        }
+
+        public IEnumerator<Item> GetEnumerator () {
+            return Items.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator () {
+            return Items.GetEnumerator();
+        }
+    }
+
     public class SettingCollection : List<ISetting> {
         public class Group : List<ISetting> {
             public readonly string Name;
@@ -218,6 +331,8 @@ namespace TestGame {
                 var ca = f.GetCustomAttribute<GroupAttribute>();
                 if (ca != null)
                     setting.Group = ca.Name;
+
+                setting.Initialize(f);
 
                 if (setting.Group != null) {
                     Group group;

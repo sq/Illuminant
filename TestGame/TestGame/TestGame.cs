@@ -94,9 +94,16 @@ namespace TestGame {
 
             Nuke.nk_layout_row_dynamic(ctx, settingRowHeight, 1);
             var name = s.GetLabelUTF8();
+            var dropdown = s as IDropdown;
             var toggle = s as Toggle;
             var slider = s as Slider;
-            if (toggle != null) {
+            if (dropdown != null) {
+                Nuke.nk_label(ctx, name.pText, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
+                int selected = dropdown.SelectedIndex;
+                var rect = Nuke.nk_layout_space_bounds(ctx);
+                Nuke.nk_combobox_callback(ctx, dropdown.Getter, IntPtr.Zero, &selected, dropdown.Count, 32, new NuklearDotNet.nk_vec2(rect.W, 8192));
+                dropdown.SelectedIndex = selected;
+            } else if (toggle != null) {
                 // FIXME: Why is this backwards?
                 int result = Nuke.nk_check_text(ctx, name.pText, name.Length, toggle.Value ? 0 : 1);
                 toggle.Value = result == 0;
@@ -158,11 +165,6 @@ namespace TestGame {
 
                 RenderGlobalSettings();
             }
-
-            var windowBounds = Nuke.nk_window_get_bounds(ctx);
-            // HACK
-            if (!isWindowOpen)
-                windowBounds.H = 32;
 
             IsMouseOverUI = Nuke.nk_item_is_any_active(ctx) != 0;
             if (IsMouseOverUI)
