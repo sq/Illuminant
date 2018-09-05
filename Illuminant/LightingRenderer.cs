@@ -1091,7 +1091,7 @@ namespace Squared.Illuminant {
                         dc = new BitmapDrawCall(
                             lightmap, position, lightmapBounds
                         ) {
-                            Scale = scale / Configuration.RenderScale
+                            Scale = scale
                         };
                     }
 

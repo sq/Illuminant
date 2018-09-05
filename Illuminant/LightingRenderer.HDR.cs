@@ -110,9 +110,9 @@ namespace Squared.Illuminant {
                     BatchGroup.Dispose();
                 }
 
-                var rw = Renderer.Configuration.RenderSize.First;
-                var rh = Renderer.Configuration.RenderSize.Second;
-                var scale = new Vector2(1.0f / rw, 1.0f / rh);
+                var rw = (albedo != null) ? albedo.Width : Renderer.Configuration.RenderSize.First;
+                var rh = (albedo != null) ? albedo.Height : Renderer.Configuration.RenderSize.Second;
+                var scale = new Vector2(width / rw, height / rh);
 
                 Renderer.ResolveLighting(
                     container, layer,
