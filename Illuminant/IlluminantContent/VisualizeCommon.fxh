@@ -2,7 +2,7 @@
 #define EPSILON 0.5
 #define OUTLINE_SIZE 1.8
 
-float3 estimateNormal(
+float3 estimateNormal3(
     float3   position,
     in TVARS vars
 ) {
@@ -29,6 +29,32 @@ float3 estimateNormal(
         float axis = SAMPLE(position + offset, vars) - SAMPLE(position - offset, vars);
 
         result += axis * mask;
+    }
+
+    return normalize(result);
+}
+
+static float2 normalK = float2(1,-1);
+static float3 normalWeights[] = {normalK.xyy, normalK.yyx, normalK.yxy, normalK.xxx};
+
+float3 estimateNormal4(
+    float3   position,
+    in TVARS vars
+) {
+    // We want to stagger the samples so that we are moving a reasonable distance towards the nearest texel
+    // FIXME: Pick better constant when sampling a distance function
+    float4 texel = float4(
+        getInvScaleFactorX(),
+        getInvScaleFactorY(),
+        DistanceField.Extent.z / DistanceField.TextureSliceCount.w,
+        0
+    );
+
+    float3 result = 0;
+    [loop]
+    for (int i = 0; i < 4; i++) {
+        float3 weight = normalWeights[i];
+        result += weight * SAMPLE(position + weight * texel, vars);
     }
 
     return normalize(result);

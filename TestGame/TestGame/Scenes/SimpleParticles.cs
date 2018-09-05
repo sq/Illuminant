@@ -116,8 +116,7 @@ namespace TestGame.Scenes {
                     RotationFromVelocity = true,
                     OpacityFromLife = opacityFromLife / 60f,
                     MaximumVelocity = 2048,
-                    CollisionDistance = 1f,
-                    CollisionLifePenalty = 4,
+                    CollisionLifePenalty = 1,
                 }
             ) {
                 Transforms = {

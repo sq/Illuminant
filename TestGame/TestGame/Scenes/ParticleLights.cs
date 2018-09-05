@@ -282,8 +282,7 @@ namespace TestGame.Scenes {
                     EscapeVelocity = 128f,
                     BounceVelocityMultiplier = 1f,
                     MaximumVelocity = 128f,
-                    CollisionDistance = 1f,
-                    CollisionLifePenalty = 8,
+                    CollisionLifePenalty = 1,
                     OpacityFromLife = 0,
                     HighPrecision = false
                 }

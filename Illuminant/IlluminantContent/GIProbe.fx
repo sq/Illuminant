@@ -108,7 +108,7 @@ void ProbeSelectorPixelShader(
             );
 
             if (ESTIMATED_NORMALS) {
-                float3 estimatedNormal = estimateNormal(estimatedIntersection, vars);
+                float3 estimatedNormal = estimateNormal4(estimatedIntersection, vars);
                 resultNormal = float4(estimatedNormal, 1);
             } else {
                 resultNormal = float4(-normal, 1);

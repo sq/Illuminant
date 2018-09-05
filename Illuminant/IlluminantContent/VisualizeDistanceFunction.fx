@@ -63,7 +63,7 @@ void FunctionSurfacePixelShader(
     if (traceSurface(rayStart, rayVector, intersectionDistance, estimatedIntersection, vars)) {
         result = float4(AmbientColor, 1.0);
 
-        float3 normal = estimateNormal(estimatedIntersection, vars);
+        float3 normal = estimateNormal4(estimatedIntersection, vars);
         float normalDotLight = dot(normal, LightDirection);
         if (normalDotLight > 0)
             result.rgb += LightColor * normalDotLight * color.rgb;

@@ -1042,7 +1042,7 @@ namespace Squared.Illuminant.Particles {
         /// The distance at which a particle is considered colliding with the field.
         /// Raise this to make particles 'larger'.
         /// </summary>
-        public float         CollisionDistance = 0.5f;
+        public float         CollisionDistance = 0.33f;
 
         /// <summary>
         /// Life of a particle decreases by this much every frame if it collides

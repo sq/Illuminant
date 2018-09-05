@@ -46,7 +46,7 @@ void ObjectSurfacesPixelShader(
     if (traceSurface(rayStart, rayVector, intersectionDistance, estimatedIntersection, vars)) {
         result = float4(AmbientColor, 1.0);
 
-        float3 normal = estimateNormal(estimatedIntersection, vars);
+        float3 normal = estimateNormal4(estimatedIntersection, vars);
 
         float normalDotLight = dot(normal, LightDirection);
         normalDotLight = clamp((normalDotLight + 0.05) * 1.1, 0, 1);
