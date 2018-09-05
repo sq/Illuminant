@@ -966,9 +966,9 @@ namespace Squared.Illuminant {
         private void ResolveLighting (
             IBatchContainer container, int layer,
             RenderTarget2D lightmap,
-            Bounds? destination, Texture2D albedo,
-            Bounds? albedoRegion, SamplerState albedoSamplerState,
-            HDRConfiguration? hdr,
+            Vector2 position, Vector2 scale, 
+            Texture2D albedo, Bounds? albedoRegion, SamplerState albedoSamplerState,
+            Vector2 uvOffset, HDRConfiguration? hdr,
             BlendState blendState, bool worldSpace
         ) {
             Material m;
@@ -1011,14 +1011,10 @@ namespace Squared.Illuminant {
             if (blendState != null)
                 m = Materials.Get(m, blendState: blendState);
             
-            var destinationBounds = destination.GetValueOrDefault(
-                Bounds.FromPositionAndSize(Vector2.Zero, new Vector2(Configuration.RenderSize.First, Configuration.RenderSize.Second))
-            );
             var lightmapBounds = lightmap.BoundsFromRectangle(
                 new Rectangle(0, 0, Configuration.RenderSize.First, Configuration.RenderSize.Second)
             );
             var albedoBounds = albedoRegion.GetValueOrDefault(Bounds.Unit);
-            var scale = Vector2.One;
 
             // HACK: This is a little gross
             using (var group = BatchGroup.New(
@@ -1037,6 +1033,7 @@ namespace Squared.Illuminant {
                         ? hdr.Value.ResolveToSRGB
                         : false
                 );
+                m.Parameters.LightmapUVOffset.SetValue(uvOffset);
 
                 var ds = (hdr.HasValue && hdr.Value.Dithering.HasValue)
                     ? hdr.Value.Dithering.Value
@@ -1084,20 +1081,17 @@ namespace Squared.Illuminant {
                     BitmapDrawCall dc;
                     if (albedo != null) {
                         dc = new BitmapDrawCall(
-                            albedo, destinationBounds.TopLeft, albedoBounds
+                            albedo, position, albedoBounds
                         ) {
                             TextureRegion2 = lightmapBounds,
-                            Textures = new TextureSet(albedo, lightmap)
-                            // FIXME: Scale
+                            Textures = new TextureSet(albedo, lightmap),
+                            Scale = scale
                         };
                     } else {
                         dc = new BitmapDrawCall(
-                            lightmap, destinationBounds.TopLeft, lightmapBounds
+                            lightmap, position, lightmapBounds
                         ) {
-                            Scale = new Vector2(
-                                destinationBounds.Size.X / Configuration.RenderSize.First,
-                                destinationBounds.Size.Y / Configuration.RenderSize.Second
-                            )
+                            Scale = scale / Configuration.RenderScale
                         };
                     }
 

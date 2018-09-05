@@ -99,7 +99,8 @@ namespace Squared.Illuminant {
                 IBatchContainer container, int layer,
                 float width, float height, Texture2D albedo = null,
                 Bounds? albedoTextureRegion = null, SamplerState albedoSamplerState = null,
-                HDRConfiguration? hdr = null, BlendState blendState = null, bool worldSpace = false
+                Vector2? uvOffset = null, HDRConfiguration? hdr = null, 
+                BlendState blendState = null, bool worldSpace = false
             ) {
                 if (!IsValid)
                     throw new InvalidOperationException("Invalid");
@@ -109,19 +110,24 @@ namespace Squared.Illuminant {
                     BatchGroup.Dispose();
                 }
 
+                var rw = Renderer.Configuration.RenderSize.First;
+                var rh = Renderer.Configuration.RenderSize.Second;
+                var scale = new Vector2(1.0f / rw, 1.0f / rh);
+
                 Renderer.ResolveLighting(
                     container, layer,
-                    Lightmap, Bounds.FromPositionAndSize(Vector2.Zero, new Vector2(width, height)), 
+                    Lightmap, Vector2.Zero, scale, 
                     albedo, albedoTextureRegion, albedoSamplerState,
-                    hdr, blendState, worldSpace
+                    uvOffset.GetValueOrDefault(Vector2.Zero), hdr, blendState, worldSpace
                 );
             }
 
             public void Resolve (
                 IBatchContainer container, int layer,
-                Bounds? destination = null, Texture2D albedo = null,
+                Vector2 position, Vector2? scale = null, Texture2D albedo = null,
                 Bounds? albedoTextureRegion = null, SamplerState albedoSamplerState = null,
-                HDRConfiguration? hdr = null, BlendState blendState = null, bool worldSpace = false
+                Vector2? uvOffset = null, HDRConfiguration? hdr = null, 
+                BlendState blendState = null, bool worldSpace = false
             ) {
                 if (!IsValid)
                     throw new InvalidOperationException("Invalid");
@@ -133,9 +139,9 @@ namespace Squared.Illuminant {
 
                 Renderer.ResolveLighting(
                     container, layer,
-                    Lightmap, destination, 
+                    Lightmap, position, scale.GetValueOrDefault(Vector2.One),
                     albedo, albedoTextureRegion, albedoSamplerState,
-                    hdr, blendState, worldSpace
+                    uvOffset.GetValueOrDefault(Vector2.Zero), hdr, blendState, worldSpace
                 );
             }
 

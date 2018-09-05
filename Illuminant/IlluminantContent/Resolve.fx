@@ -21,8 +21,9 @@ sampler PointSampler : register(s7) {
     MagFilter = POINT;
 };
 
-uniform bool  ResolveToSRGB;
-uniform float InverseScaleFactor;
+uniform float2 LightmapUVOffset;
+uniform bool   ResolveToSRGB;
+uniform float  InverseScaleFactor;
 
 float4 ResolveCommon (
     in float2 texCoord,
@@ -30,7 +31,7 @@ float4 ResolveCommon (
 ) {
     float4 result;
 
-    float4 coord = float4(clamp(texCoord, texRgn.xy, texRgn.zw), 0, 0);
+    float4 coord = float4(clamp(texCoord + LightmapUVOffset, texRgn.xy, texRgn.zw), 0, 0);
 
     float4 sampleLinear = tex2Dlod(LinearSampler, coord);
 
@@ -47,7 +48,7 @@ float4 ResolveWithAlbedoCommon (
     in float4 texRgn2
 ) {
     texCoord1 = clamp(texCoord1, texRgn1.xy, texRgn1.zw);
-    texCoord2 = clamp(texCoord2, texRgn2.xy, texRgn2.zw);
+    texCoord2 = clamp(texCoord2 + LightmapUVOffset, texRgn2.xy, texRgn2.zw);
 
     float4 light = tex2Dlod(TextureSampler2, float4(texCoord2, 0, 0));
     float4 albedo = tex2Dlod(TextureSampler, float4(texCoord1, 0, 0));
