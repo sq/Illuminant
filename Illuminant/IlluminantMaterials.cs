@@ -18,6 +18,9 @@ namespace Squared.Illuminant {
         public Material MaskBillboard, GDataBillboard;
         public Material LightingResolve, 
             GammaCompressedLightingResolve, ToneMappedLightingResolve;
+        public Material LightingResolveWithAlbedo, 
+            GammaCompressedLightingResolveWithAlbedo, 
+            ToneMappedLightingResolveWithAlbedo;
         public Material ScreenSpaceGammaCompressedBitmap, WorldSpaceGammaCompressedBitmap;
         public Material ScreenSpaceToneMappedBitmap, WorldSpaceToneMappedBitmap;
         public Material ObjectSurfaces, ObjectOutlines;
@@ -33,8 +36,8 @@ namespace Squared.Illuminant {
         internal IlluminantMaterials (DefaultMaterialSet materialSet) {
             MaterialSet = materialSet;
 
-            EffectsToSetGammaCompressionParametersOn = new Effect[3];
-            EffectsToSetToneMappingParametersOn = new Effect[4];
+            EffectsToSetGammaCompressionParametersOn = new Effect[4];
+            EffectsToSetToneMappingParametersOn = new Effect[6];
         }
 
         /// <summary>
@@ -55,6 +58,7 @@ namespace Squared.Illuminant {
             EffectsToSetGammaCompressionParametersOn[0] = ScreenSpaceGammaCompressedBitmap.Effect;
             EffectsToSetGammaCompressionParametersOn[1] = WorldSpaceGammaCompressedBitmap.Effect;
             EffectsToSetGammaCompressionParametersOn[2] = GammaCompressedLightingResolve.Effect;
+            EffectsToSetGammaCompressionParametersOn[3] = GammaCompressedLightingResolveWithAlbedo.Effect;
 
             foreach (var effect in EffectsToSetGammaCompressionParametersOn) {
                 effect.Parameters["Offset"].SetValue(offset);
@@ -82,6 +86,8 @@ namespace Squared.Illuminant {
             EffectsToSetToneMappingParametersOn[1] = WorldSpaceToneMappedBitmap.Effect;
             EffectsToSetToneMappingParametersOn[2] = ToneMappedLightingResolve.Effect;
             EffectsToSetToneMappingParametersOn[3] = LightingResolve.Effect;
+            EffectsToSetToneMappingParametersOn[4] = ToneMappedLightingResolveWithAlbedo.Effect;
+            EffectsToSetToneMappingParametersOn[5] = LightingResolveWithAlbedo.Effect;
 
             foreach (var effect in EffectsToSetToneMappingParametersOn) {
                 effect.Parameters["Offset"].SetValue(offset);

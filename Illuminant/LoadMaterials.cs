@@ -142,6 +142,15 @@ namespace Squared.Illuminant {
                 DefineMaterial(IlluminantMaterials.ToneMappedLightingResolve = 
                     new Squared.Render.Material(content.Load<Effect>("Resolve"), "ToneMappedLightingResolve"));
 
+                DefineMaterial(IlluminantMaterials.LightingResolveWithAlbedo = 
+                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "LightingResolveWithAlbedo"));
+
+                DefineMaterial(IlluminantMaterials.GammaCompressedLightingResolveWithAlbedo = 
+                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "GammaCompressedLightingResolveWithAlbedo"));
+
+                DefineMaterial(IlluminantMaterials.ToneMappedLightingResolveWithAlbedo = 
+                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "ToneMappedLightingResolveWithAlbedo"));
+
                 DefineMaterial(IlluminantMaterials.CalculateLuminance = 
                     new Squared.Render.Material(content.Load<Effect>("Resolve"), "CalculateLuminance"));
 

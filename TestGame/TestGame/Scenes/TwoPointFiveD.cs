@@ -327,6 +327,7 @@ namespace TestGame.Scenes {
                 var lighting = Renderer.RenderLighting(bg, 1, 1.0f / LightScaleFactor);
                 lighting.Resolve(
                     bg, 2, Width, Height,
+                    albedo: (dmode == "Merged") ? Background : null,
                     hdr: new HDRConfiguration {
                         InverseScaleFactor = LightScaleFactor,
                         Gamma = sRGB ? 2.3f : 1.0f,
@@ -350,7 +351,7 @@ namespace TestGame.Scenes {
             using (var group = BatchGroup.New(frame, 0)) {
                 ClearBatch.AddNew(group, 0, Game.Materials.Clear, clearColor: Color.Blue);
 
-                if (ShowLightmap) {
+                if (ShowLightmap || (dmode == "Merged")) {
                     using (var bb = BitmapBatch.New(
                         group, 1,
                         Game.Materials.Get(Game.Materials.ScreenSpaceBitmap, blendState: BlendState.Opaque),

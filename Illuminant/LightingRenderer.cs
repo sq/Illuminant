@@ -966,11 +966,17 @@ namespace Squared.Illuminant {
         ) {
             Material m;
             if (hdr.HasValue && hdr.Value.Mode == HDRMode.GammaCompress)
-                m = IlluminantMaterials.GammaCompressedLightingResolve;
+                m = (albedo != null) 
+                    ? IlluminantMaterials.GammaCompressedLightingResolveWithAlbedo 
+                    : IlluminantMaterials.GammaCompressedLightingResolve;
             else if (hdr.HasValue && hdr.Value.Mode == HDRMode.ToneMap)
-                m = IlluminantMaterials.ToneMappedLightingResolve;
+                m = (albedo != null) 
+                    ? IlluminantMaterials.ToneMappedLightingResolveWithAlbedo 
+                    : IlluminantMaterials.ToneMappedLightingResolve;
             else
-                m = IlluminantMaterials.LightingResolve;
+                m = (albedo != null) 
+                    ? IlluminantMaterials.LightingResolveWithAlbedo 
+                    : IlluminantMaterials.LightingResolve;
 
             // HACK: This is a little gross
             var ir = new ImperativeRenderer(container, Materials, layer);
@@ -1039,6 +1045,8 @@ namespace Squared.Illuminant {
             var dc = new BitmapDrawCall(
                 lightmap, destinationBounds.TopLeft, bounds
             );
+            if (albedo != null)
+                dc.Textures = new TextureSet(lightmap, albedo);
             dc.Scale = new Vector2(
                 destinationBounds.Size.X / Configuration.RenderSize.First,
                 destinationBounds.Size.Y / Configuration.RenderSize.Second

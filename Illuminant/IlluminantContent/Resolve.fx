@@ -22,21 +22,17 @@ sampler PointSampler : register(s7) {
 };
 
 #define FAST_RESOLVE
+#define ResolveVertexShader ScreenSpaceVertexShader
 
 uniform bool  ResolveToSRGB;
 uniform float InverseScaleFactor;
 
 float4 ResolveCommon (
-    in float4 multiplyColor : COLOR0,
-    in float4 addColor : COLOR1,
     in float2 texCoord : TEXCOORD0,
     in float2 texTL : TEXCOORD1,
     in float2 texBR : TEXCOORD2
 ) {
     float4 result;
-
-    addColor.rgb *= addColor.a;
-    addColor.a = 0;
 
     float4 coord = float4(clamp(texCoord, texTL, texBR), 0, 0);
     float2 coordTexels = coord.xy * BitmapTextureSize;
@@ -109,8 +105,7 @@ float4 ResolveCommon (
         return 0;
     }
 #endif
-    result *= InverseScaleFactor * multiplyColor;
-    result += (addColor * result.a);
+    result *= InverseScaleFactor;
     result.a = 1;
     return result;
 }
@@ -125,8 +120,6 @@ void LightingResolvePixelShader (
     out float4 result : COLOR0
 ) {
     result = ResolveCommon(
-        multiplyColor,
-        addColor,
         texCoord,
         texTL,
         texBR
@@ -150,8 +143,6 @@ void GammaCompressedLightingResolvePixelShader(
     out float4 result : COLOR0
 ) {
     result = ResolveCommon(
-        multiplyColor,
-        addColor,
         texCoord,
         texTL,
         texBR
@@ -173,8 +164,76 @@ void ToneMappedLightingResolvePixelShader(
     out float4 result : COLOR0
 ) {
     result = ResolveCommon(
-        multiplyColor,
-        addColor,
+        texCoord,
+        texTL,
+        texBR
+    );
+
+    float3 preToneMap = max(0, result.rgb + Offset) * (ExposureMinusOne + 1);
+
+    result = float4(Uncharted2Tonemap(preToneMap) / Uncharted2Tonemap1(WhitePoint), result.a);
+    result.rgb = pow(result.rgb, (GammaMinusOne + 1));
+    if (ResolveToSRGB)
+        result.rgb = LinearToSRGB(result.rgb);
+    result.rgb = ApplyDither(result.rgb, vpos);
+}
+
+void LightingResolveWithAlbedoPixelShader(
+    in float4 multiplyColor : COLOR0,
+    in float4 addColor : COLOR1,
+    in float2 texCoord : TEXCOORD0,
+    in float2 texTL : TEXCOORD1,
+    in float2 texBR : TEXCOORD2,
+    in float2 vpos : VPOS,
+    out float4 result : COLOR0
+) {
+    result = ResolveCommon(
+        texCoord,
+        texTL,
+        texBR
+    );
+
+    float4 albedo = tex2Dlod(TextureSampler2, float4(texCoord, 0, 0));
+
+    result.rgb = max(0, result.rgb + Offset);
+    result.rgb *= (ExposureMinusOne + 1);
+    result.rgb = pow(result.rgb, (GammaMinusOne + 1));
+    if (ResolveToSRGB)
+        result.rgb = LinearToSRGB(result.rgb);
+    result.rgb = ApplyDither(result.rgb, vpos);
+}
+
+void GammaCompressedLightingResolveWithAlbedoPixelShader(
+    in float4 multiplyColor : COLOR0,
+    in float4 addColor : COLOR1,
+    in float2 texCoord : TEXCOORD0,
+    in float2 texTL : TEXCOORD1,
+    in float2 texBR : TEXCOORD2,
+    in float2 vpos : VPOS,
+    out float4 result : COLOR0
+) {
+    result = ResolveCommon(
+        texCoord,
+        texTL,
+        texBR
+    );
+
+    result = GammaCompress(result);
+    if (ResolveToSRGB)
+        result.rgb = LinearToSRGB(result.rgb);
+    result.rgb = ApplyDither(result.rgb, vpos);
+}
+
+void ToneMappedLightingResolveWithAlbedoPixelShader(
+    in float4 multiplyColor : COLOR0,
+    in float4 addColor : COLOR1,
+    in float2 texCoord : TEXCOORD0,
+    in float2 texTL : TEXCOORD1,
+    in float2 texBR : TEXCOORD2,
+    in float2 vpos : VPOS,
+    out float4 result : COLOR0
+) {
+    result = ResolveCommon(
         texCoord,
         texTL,
         texBR
@@ -211,7 +270,7 @@ technique LightingResolve
 {
     pass P0
     {
-        vertexShader = compile vs_3_0 ScreenSpaceVertexShader();
+        vertexShader = compile vs_3_0 ResolveVertexShader();
         pixelShader = compile ps_3_0 LightingResolvePixelShader();
     }
 }
@@ -220,7 +279,7 @@ technique GammaCompressedLightingResolve
 {
     pass P0
     {
-        vertexShader = compile vs_3_0 ScreenSpaceVertexShader();
+        vertexShader = compile vs_3_0 ResolveVertexShader();
         pixelShader = compile ps_3_0 GammaCompressedLightingResolvePixelShader();
     }
 }
@@ -229,8 +288,35 @@ technique ToneMappedLightingResolve
 {
     pass P0
     {
-        vertexShader = compile vs_3_0 ScreenSpaceVertexShader();
+        vertexShader = compile vs_3_0 ResolveVertexShader();
         pixelShader = compile ps_3_0 ToneMappedLightingResolvePixelShader();
+    }
+}
+
+technique LightingResolveWithAlbedo
+{
+    pass P0
+    {
+        vertexShader = compile vs_3_0 ResolveVertexShader();
+        pixelShader = compile ps_3_0 LightingResolveWithAlbedoPixelShader();
+    }
+}
+
+technique GammaCompressedLightingResolveWithAlbedo
+{
+    pass P0
+    {
+        vertexShader = compile vs_3_0 ResolveVertexShader();
+        pixelShader = compile ps_3_0 GammaCompressedLightingResolveWithAlbedoPixelShader();
+    }
+}
+
+technique ToneMappedLightingResolveWithAlbedo
+{
+    pass P0
+    {
+        vertexShader = compile vs_3_0 ResolveVertexShader();
+        pixelShader = compile ps_3_0 ToneMappedLightingResolveWithAlbedoPixelShader();
     }
 }
 
@@ -238,7 +324,7 @@ technique CalculateLuminance
 {
     pass P0
     {
-        vertexShader = compile vs_3_0 ScreenSpaceVertexShader();
+        vertexShader = compile vs_3_0 ResolveVertexShader();
         pixelShader = compile ps_3_0 CalculateLuminancePixelShader();
     }
 }
