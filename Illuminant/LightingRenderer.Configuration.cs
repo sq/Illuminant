@@ -194,6 +194,20 @@ namespace Squared.Illuminant {
             if (MaximumGIProbeCount < 16)
                 MaximumGIProbeCount = 16;
         }
+
+        public void SetScale (float scaleRatio, int? width = null, int? height = null) {
+            var maxWidth = width.GetValueOrDefault(MaximumRenderSize.First);
+            var maxHeight = height.GetValueOrDefault(MaximumRenderSize.Second);
+            var widthPixels = (int)Math.Round(maxWidth * scaleRatio);
+            var heightPixels = (int)Math.Round(maxHeight * scaleRatio);
+            var scale = new Vector2(
+                widthPixels / (float)maxWidth,
+                heightPixels / (float)maxHeight
+            );
+            var size = new Pair<int>(widthPixels, heightPixels);
+            RenderScale = scale;
+            RenderSize = size;
+        }
     }
 
     public class RendererQualitySettings {

@@ -171,11 +171,7 @@ namespace TestGame.Scenes {
         public override void Draw (Squared.Render.Frame frame) {
             CreateRenderTargets();
 
-            Renderer.Configuration.RenderScale = Vector2.One * LightmapScaleRatio;
-            Renderer.Configuration.RenderSize = new Pair<int>(
-                (int)(Renderer.Configuration.MaximumRenderSize.First * LightmapScaleRatio),
-                (int)(Renderer.Configuration.MaximumRenderSize.Second * LightmapScaleRatio)
-            );
+            Renderer.Configuration.SetScale(LightmapScaleRatio);
 
             // Renderer.InvalidateFields();
             Renderer.UpdateFields(frame, -2);

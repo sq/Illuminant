@@ -201,7 +201,7 @@ namespace TestGame.Scenes {
         
         public override void Draw (Squared.Render.Frame frame) {
             Renderer.Configuration.TwoPointFiveD = TwoPointFiveD;
-            Renderer.Configuration.RenderScale = Vector2.One * LightmapScaleRatio;
+            Renderer.Configuration.SetScale(LightmapScaleRatio);
             Renderer.Configuration.DefaultQuality.MinStepSize = MinStepSize;
             Renderer.Configuration.DefaultQuality.MaxStepCount = (int)MaxStepCount;
 

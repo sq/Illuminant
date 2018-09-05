@@ -198,11 +198,7 @@ namespace TestGame.Scenes {
 
             var scaleRatio = 1.0f;
 
-            Renderer.Configuration.RenderScale = Vector2.One * scaleRatio;
-            Renderer.Configuration.RenderSize = new Pair<int>(
-                (int)(Renderer.Configuration.MaximumRenderSize.First * scaleRatio),
-                (int)(Renderer.Configuration.MaximumRenderSize.Second * scaleRatio)
-            );
+            Renderer.Configuration.SetScale(scaleRatio);
 
             Renderer.UpdateFields(frame, -2);
 
