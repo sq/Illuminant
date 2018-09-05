@@ -29,8 +29,8 @@ namespace Squared.Illuminant.Particles {
         internal          VertexBuffer  RasterizeVertexBuffer;
         internal          VertexBuffer  RasterizeOffsetBuffer;
 
-        internal const int              RandomnessTextureWidth = 2048,
-                                        RandomnessTextureHeight = 256;
+        internal const int              RandomnessTextureWidth = 1536,
+                                        RandomnessTextureHeight = 512;
         internal          Texture2D     RandomnessTexture;
 
         internal readonly List<Chunk> FreeList = 

@@ -290,8 +290,8 @@ namespace TestGame.Scenes {
                 Transforms = {
                     new Spawner {
                         IsActive = false,
-                        MinCount = 64,
-                        MaxCount = 512,
+                        MinRate = 4096,
+                        MaxRate = 8192,
                         Position = new Formula {
                             RandomOffset = new Vector4(-0.5f, -0.5f, -0.5f, 1f),
                             RandomScale = new Vector4(15f, 15f, 5f, (MaxLife - OpacityFromLife) / 60f),

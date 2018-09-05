@@ -54,7 +54,7 @@ namespace Squared.Illuminant.Particles.Transforms {
         public bool IsActive = true;
 
         internal abstract Material GetMaterial (ParticleMaterials materials);
-        internal abstract void SetParameters (EffectParameterCollection parameters);
+        internal abstract void SetParameters (EffectParameterCollection parameters, int frameIndex);
 
         public virtual void Dispose () {
         }
@@ -64,7 +64,7 @@ namespace Squared.Illuminant.Particles.Transforms {
         public float Strength = 1;
         public TransformArea Area = null;
 
-        internal override void SetParameters (EffectParameterCollection parameters) {
+        internal override void SetParameters (EffectParameterCollection parameters, int frameIndex) {
             if (Area != null) {
                 parameters["AreaType"].SetValue((int)Area.Type);
                 parameters["AreaCenter"].SetValue(Area.Center);
@@ -102,8 +102,8 @@ namespace Squared.Illuminant.Particles.Transforms {
             };
         }
 
-        internal override void SetParameters (EffectParameterCollection parameters) {
-            base.SetParameters(parameters);
+        internal override void SetParameters (EffectParameterCollection parameters, int frameIndex) {
+            base.SetParameters(parameters, frameIndex);
             parameters["PositionAdd"].SetValue(new Vector4(Position.Add, 0));
             parameters["PositionMultiply"].SetValue(new Vector4(Position.Multiply, 1));
             parameters["VelocityAdd"].SetValue(new Vector4(Velocity.Add, 0));
@@ -124,8 +124,8 @@ namespace Squared.Illuminant.Particles.Transforms {
             Position = Velocity = Attribute = Matrix.Identity;
         }
 
-        internal override void SetParameters (EffectParameterCollection parameters) {
-            base.SetParameters(parameters);
+        internal override void SetParameters (EffectParameterCollection parameters, int frameIndex) {
+            base.SetParameters(parameters, frameIndex);
             parameters["PositionMatrix"].SetValue(Position);
             parameters["VelocityMatrix"].SetValue(Velocity);
             parameters["AttributeMatrix"].SetValue(Attribute);
@@ -151,7 +151,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             return materials.Gravity;
         }
 
-        internal override void SetParameters (EffectParameterCollection parameters) {
+        internal override void SetParameters (EffectParameterCollection parameters, int frameIndex) {
             if (Attractors.Count > 8)
                 throw new Exception("Maximum number of attractors per instance is 8");
 

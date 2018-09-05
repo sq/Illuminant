@@ -11,31 +11,38 @@ using Squared.Render;
 
 namespace Squared.Illuminant.Particles.Transforms {
     public class Spawner : ParticleTransform {
-        public float    MinInterval, MaxInterval;
-        public float    MinCount, MaxCount;
+        private static int NextSeed = 1;
+
+        public float    MinRate, MaxRate;
+        private double  RateError;
 
         public Formula  Position, Velocity, Attributes;
 
-        private float   DelaySecs;
         private Vector2 Indices;
-        private MersenneTwister RNG = new MersenneTwister();
+        private MersenneTwister RNG;
         private int     TotalSpawned;
 
         private Vector4[] Temp = new Vector4[12];
         private float[] Temp2 = new float[3];
 
+        public Spawner (int? seed = null) {
+            RNG = new MersenneTwister(seed.GetValueOrDefault(NextSeed++));
+        }
+
         internal void SetIndices (int first, int last) {
             Indices = new Vector2(first, last);
         }
 
-        internal void Tick (float deltaTimeSeconds, out int spawnCount) {
-            DelaySecs -= deltaTimeSeconds;
-            if (DelaySecs <= 0) {
-                spawnCount = (int)(MinCount + (RNG.NextSingle() * (MaxCount - MinCount)));
-                DelaySecs = (MinInterval + (RNG.NextSingle() * (MaxInterval - MinInterval)));
-                TotalSpawned += spawnCount;
-            } else {
+        internal void Tick (double deltaTimeSeconds, out int spawnCount) {
+            var currentRate = ((RNG.NextDouble() * (MaxRate - MinRate)) + MinRate) * deltaTimeSeconds;
+            currentRate += RateError;
+            if (currentRate < 1) {
+                RateError = Math.Max(currentRate, 0);
                 spawnCount = 0;
+            } else {
+                spawnCount = (int)currentRate;
+                RateError = currentRate - spawnCount;
+                TotalSpawned += spawnCount;
             }
         }
 
@@ -43,16 +50,18 @@ namespace Squared.Illuminant.Particles.Transforms {
             return materials.Spawn;
         }
 
-        internal override void SetParameters (EffectParameterCollection parameters) {
+        internal override void SetParameters (EffectParameterCollection parameters, int frameIndex) {
             var secs = (float)Squared.Util.Time.Seconds;
 
             var ro = parameters["RandomnessOffset"];
             if (ro == null)
                 return;
 
+            double a = RNG.NextDouble(), b = RNG.NextDouble();
+
             ro.SetValue(new Vector2(
-                (TotalSpawned % ParticleEngine.RandomnessTextureWidth) + (secs * 32), 
-                (TotalSpawned / ParticleEngine.RandomnessTextureWidth) * 2 + secs
+                (float)(a * 253),
+                (float)(b * 127)
             ));
 
             Temp[0] = Position.Constant;

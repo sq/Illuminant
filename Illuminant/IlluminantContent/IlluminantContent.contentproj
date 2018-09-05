@@ -215,7 +215,7 @@
       <Name>UpdateParticleSystemWithDistanceField</Name>
       <Importer>EffectImporter</Importer>
       <Processor>EffectProcessor</Processor>
-      <ProcessorParameters_DebugMode>Debug</ProcessorParameters_DebugMode>
+      <ProcessorParameters_DebugMode>Optimize</ProcessorParameters_DebugMode>
     </Compile>
   </ItemGroup>
   <ItemGroup>

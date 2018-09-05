@@ -264,6 +264,7 @@ namespace Squared.Illuminant.Particles {
         private readonly Dictionary<int, SpawnState> SpawnStates = new Dictionary<int, SpawnState>();
 
         private readonly AutoResetEvent UnlockedEvent = new AutoResetEvent(true);
+        private int CurrentFrameIndex;
 
         internal long LastClearTimestamp;
 
@@ -429,8 +430,8 @@ namespace Squared.Illuminant.Particles {
             Slice source, Slice a, Slice b,
             ref Slice passSource, ref Slice passDest, 
             long startedWhen, Transforms.Spawner spawner,
-            Action<EffectParameterCollection> setParameters,
-            bool clearFirst, float deltaTimeSeconds
+            Action<EffectParameterCollection, int> setParameters,
+            bool clearFirst, double deltaTimeSeconds
         ) {
             var _source = passSource;
             var _dest = passDest;
@@ -460,7 +461,8 @@ namespace Squared.Illuminant.Particles {
                 // FIXME: Inefficient. Spawn across two buffers?
                 spawnId = GetSpawnTarget(spawnCount);
                 if (spawnId == null) {
-                    spawnId = GetSpawnTarget((int)spawner.MinCount);
+                    // HACK
+                    spawnId = GetSpawnTarget(spawnCount / 2);
 
                     if (spawnId.HasValue)
                         spawnCount = Math.Min(SpawnStates[spawnId.Value].Free, spawnCount);
@@ -567,8 +569,8 @@ namespace Squared.Illuminant.Particles {
         private void ChunkUpdatePass (
             IBatchContainer container, int layer, Material m,
             Slice.Chunk source, Slice.Chunk dest,
-            Action<EffectParameterCollection> setParameters,
-            LivenessInfo li, bool clearFirst, float deltaTimeSeconds
+            Action<EffectParameterCollection, int> setParameters,
+            LivenessInfo li, bool clearFirst, double deltaTimeSeconds
         ) {
             // Console.WriteLine("{0} -> {1}", passSource.Index, passDest.Index);
             var e = m.Effect;
@@ -582,7 +584,7 @@ namespace Squared.Illuminant.Particles {
                     p["Texel"].SetValue(new Vector2(1f / Engine.Configuration.ChunkSize, 1f / Engine.Configuration.ChunkSize));
 
                     if (setParameters != null)
-                        setParameters(p);
+                        setParameters(p, CurrentFrameIndex);
 
                     if (source != null) {
                         p["PositionTexture"].SetValue(source.PositionAndLife);
@@ -599,7 +601,7 @@ namespace Squared.Illuminant.Particles {
 
                     var dts = p["DeltaTimeSeconds"];
                     if (dts != null)
-                        dts.SetValue(deltaTimeSeconds);
+                        dts.SetValue((float)deltaTimeSeconds);
 
                     var dft = p["DistanceFieldTexture"];
                     if (dft != null)
@@ -757,6 +759,7 @@ namespace Squared.Illuminant.Particles {
         public void Update (IBatchContainer container, int layer, float? deltaTimeSeconds = null) {
             var lastUpdateTimeSeconds = LastUpdateTimeSeconds;
             LastUpdateTimeSeconds = TimeProvider.Seconds;
+            CurrentFrameIndex++;
 
             float actualDeltaTimeSeconds = 1 / 60f;
             if (deltaTimeSeconds.HasValue)
@@ -838,7 +841,7 @@ namespace Squared.Illuminant.Particles {
                         group, i++, pm.UpdateWithDistanceField,
                         source, a, b, ref passSource, ref passDest,
                         startedWhen, null,
-                        (p) => {
+                        (p, frameIndex) => {
                             var dfu = new Uniforms.DistanceField(Configuration.DistanceField, Configuration.DistanceFieldMaximumZ.Value);
                             pm.MaterialSet.TrySetBoundUniform(pm.UpdateWithDistanceField, "DistanceField", ref dfu);
 
@@ -856,7 +859,7 @@ namespace Squared.Illuminant.Particles {
                         group, i++, pm.UpdatePositions,
                         source, a, b, ref passSource, ref passDest,
                         startedWhen, null,
-                        (p) => {
+                        (p, frameIndex) => {
                             p["LifeDecayRate"].SetValue(Configuration.GlobalLifeDecayRate);
                             p["Friction"].SetValue(Configuration.Friction);
                         }, true, actualDeltaTimeSeconds
