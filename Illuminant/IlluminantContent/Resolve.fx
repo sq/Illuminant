@@ -28,13 +28,12 @@ uniform bool  ResolveToSRGB;
 uniform float InverseScaleFactor;
 
 float4 ResolveCommon (
-    in float2 texCoord : TEXCOORD0,
-    in float2 texTL : TEXCOORD1,
-    in float2 texBR : TEXCOORD2
+    in float2 texCoord,
+    in float4 texRgn
 ) {
     float4 result;
 
-    float4 coord = float4(clamp(texCoord, texTL, texBR), 0, 0);
+    float4 coord = float4(clamp(texCoord, texRgn.xy, texRgn.zw), 0, 0);
     float2 coordTexels = coord.xy * BitmapTextureSize;
 
     float4 sampleLinear = tex2Dlod(LinearSampler, coord);
@@ -110,20 +109,32 @@ float4 ResolveCommon (
     return result;
 }
 
+float4 ResolveWithAlbedoCommon (
+    in float2 texCoord1,
+    in float4 texRgn1,
+    in float2 texCoord2,
+    in float4 texRgn2
+) {
+    float4 light = ResolveCommon(texCoord1, texRgn1) * 2;
+
+    texCoord2 = clamp(texCoord2, texRgn2.xy, texRgn2.zw);
+    float4 albedo = tex2D(TextureSampler2, texCoord2);
+
+    float4 result = albedo;
+    result.rgb *= light.rgb;
+
+    return result;
+}
+
 void LightingResolvePixelShader (
     in float4 multiplyColor : COLOR0,
     in float4 addColor : COLOR1,
-    in float2 texCoord : TEXCOORD0,
-    in float2 texTL : TEXCOORD1,
-    in float2 texBR : TEXCOORD2,
+    in float2 texCoord1 : TEXCOORD0,
+    in float4 texRgn1 : TEXCOORD1,
     in float2 vpos : VPOS,
     out float4 result : COLOR0
 ) {
-    result = ResolveCommon(
-        texCoord,
-        texTL,
-        texBR
-    );
+    result = ResolveCommon(texCoord1, texRgn1);
 
     result.rgb = max(0, result.rgb + Offset);
     result.rgb *= (ExposureMinusOne + 1);
@@ -136,17 +147,12 @@ void LightingResolvePixelShader (
 void GammaCompressedLightingResolvePixelShader(
     in float4 multiplyColor : COLOR0,
     in float4 addColor : COLOR1,
-    in float2 texCoord : TEXCOORD0,
-    in float2 texTL : TEXCOORD1,
-    in float2 texBR : TEXCOORD2,
+    in float2 texCoord1 : TEXCOORD0,
+    in float4 texRgn1 : TEXCOORD1,
     in float2 vpos : VPOS,
     out float4 result : COLOR0
 ) {
-    result = ResolveCommon(
-        texCoord,
-        texTL,
-        texBR
-    );
+    result = ResolveCommon(texCoord1, texRgn1);
 
     result = GammaCompress(result);
     if (ResolveToSRGB)
@@ -157,17 +163,12 @@ void GammaCompressedLightingResolvePixelShader(
 void ToneMappedLightingResolvePixelShader(
     in float4 multiplyColor : COLOR0,
     in float4 addColor : COLOR1,
-    in float2 texCoord : TEXCOORD0,
-    in float2 texTL : TEXCOORD1,
-    in float2 texBR : TEXCOORD2,
+    in float2 texCoord1 : TEXCOORD0,
+    in float4 texRgn1 : TEXCOORD1,
     in float2 vpos : VPOS,
     out float4 result : COLOR0
 ) {
-    result = ResolveCommon(
-        texCoord,
-        texTL,
-        texBR
-    );
+    result = ResolveCommon(texCoord1, texRgn1);
 
     float3 preToneMap = max(0, result.rgb + Offset) * (ExposureMinusOne + 1);
 
@@ -181,19 +182,14 @@ void ToneMappedLightingResolvePixelShader(
 void LightingResolveWithAlbedoPixelShader(
     in float4 multiplyColor : COLOR0,
     in float4 addColor : COLOR1,
-    in float2 texCoord : TEXCOORD0,
-    in float2 texTL : TEXCOORD1,
-    in float2 texBR : TEXCOORD2,
+    in float2 texCoord1 : TEXCOORD0,
+    in float4 texRgn1 : TEXCOORD1,
+    in float2 texCoord2 : TEXCOORD2,
+    in float4 texRgn2 : TEXCOORD3,
     in float2 vpos : VPOS,
     out float4 result : COLOR0
 ) {
-    result = ResolveCommon(
-        texCoord,
-        texTL,
-        texBR
-    );
-
-    float4 albedo = tex2Dlod(TextureSampler2, float4(texCoord, 0, 0));
+    result = ResolveWithAlbedoCommon(texCoord1, texRgn1, texCoord2, texRgn2);
 
     result.rgb = max(0, result.rgb + Offset);
     result.rgb *= (ExposureMinusOne + 1);
@@ -206,17 +202,14 @@ void LightingResolveWithAlbedoPixelShader(
 void GammaCompressedLightingResolveWithAlbedoPixelShader(
     in float4 multiplyColor : COLOR0,
     in float4 addColor : COLOR1,
-    in float2 texCoord : TEXCOORD0,
-    in float2 texTL : TEXCOORD1,
-    in float2 texBR : TEXCOORD2,
+    in float2 texCoord1 : TEXCOORD0,
+    in float4 texRgn1 : TEXCOORD1,
+    in float2 texCoord2 : TEXCOORD2,
+    in float4 texRgn2 : TEXCOORD3,
     in float2 vpos : VPOS,
     out float4 result : COLOR0
 ) {
-    result = ResolveCommon(
-        texCoord,
-        texTL,
-        texBR
-    );
+    result = ResolveWithAlbedoCommon(texCoord1, texRgn1, texCoord2, texRgn2);
 
     result = GammaCompress(result);
     if (ResolveToSRGB)
@@ -227,17 +220,14 @@ void GammaCompressedLightingResolveWithAlbedoPixelShader(
 void ToneMappedLightingResolveWithAlbedoPixelShader(
     in float4 multiplyColor : COLOR0,
     in float4 addColor : COLOR1,
-    in float2 texCoord : TEXCOORD0,
-    in float2 texTL : TEXCOORD1,
-    in float2 texBR : TEXCOORD2,
+    in float2 texCoord1 : TEXCOORD0,
+    in float4 texRgn1 : TEXCOORD1,
+    in float2 texCoord2 : TEXCOORD2,
+    in float4 texRgn2 : TEXCOORD3,
     in float2 vpos : VPOS,
     out float4 result : COLOR0
 ) {
-    result = ResolveCommon(
-        texCoord,
-        texTL,
-        texBR
-    );
+    result = ResolveWithAlbedoCommon(texCoord1, texRgn1, texCoord2, texRgn2);
 
     float3 preToneMap = max(0, result.rgb + Offset) * (ExposureMinusOne + 1);
 
@@ -249,13 +239,12 @@ void ToneMappedLightingResolveWithAlbedoPixelShader(
 }
 
 void CalculateLuminancePixelShader(
-    in float2 texCoord : TEXCOORD0,
-    in float2 texTL : TEXCOORD1,
-    in float2 texBR : TEXCOORD2,
+    in float2 texCoord1 : TEXCOORD0,
+    in float4 texRgn1 : TEXCOORD1,
     in float2 vpos : VPOS,
     out float4 result : COLOR0
 ) {
-    float4 coord = float4(clamp(texCoord, texTL, texBR), 0, 0);
+    float4 coord = float4(clamp(texCoord1, texRgn1.xy, texRgn1.zw), 0, 0);
     float2 coordTexels = coord.xy * BitmapTextureSize;
 
     float4 samplePoint = tex2Dlod(PointSampler, coord);

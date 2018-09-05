@@ -88,7 +88,7 @@ namespace TestGame.Scenes {
             DitherBandSize.Value = 1f;
             DitherRangeMin.Value = 0f;
             DitherRangeMax.Value = 1f;
-            DitherMode.Value = "Pre+Post";
+            DitherMode.Value = "Merged";
 
             ShowLightmap.Key = Keys.L;
             ShowGBuffer.Key = Keys.G;
@@ -325,6 +325,7 @@ namespace TestGame.Scenes {
                 ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black);
 
                 var lighting = Renderer.RenderLighting(bg, 1, 1.0f / LightScaleFactor);
+                var doResolveDither = dmode.Contains("Pre") || (dmode == "Merged");
                 lighting.Resolve(
                     bg, 2, Width, Height,
                     albedo: (dmode == "Merged") ? Background : null,
@@ -333,7 +334,7 @@ namespace TestGame.Scenes {
                         Gamma = sRGB ? 2.3f : 1.0f,
                         ResolveToSRGB = sRGB,
                         Dithering = new DitheringSettings {
-                            Strength = dmode.Contains("Pre") ? DitherStrength : 0f,
+                            Strength = doResolveDither ? DitherStrength : 0f,
                             Power = (int)DitherPower,
                             BandSize = DitherBandSize,
                             RangeMin = DitherRangeMin,
