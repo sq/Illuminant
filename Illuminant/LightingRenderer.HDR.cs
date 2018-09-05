@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Graphics.PackedVector;
+using Squared.Game;
 using Squared.Render;
 using Squared.Render.Tracing;
 using Squared.Threading;
@@ -93,7 +94,7 @@ namespace Squared.Illuminant {
 
             public void Resolve (
                 IBatchContainer container, int layer,
-                float? width = null, float? height = null,
+                float width, float height, Texture2D albedo = null,
                 HDRConfiguration? hdr = null
             ) {
                 if (!IsValid)
@@ -101,7 +102,21 @@ namespace Squared.Illuminant {
 
                 Renderer.ResolveLighting(
                     container, layer,
-                    Lightmap, width, height, hdr
+                    Lightmap, Bounds.FromPositionAndSize(Vector2.Zero, new Vector2(width, height)), albedo, hdr
+                );
+            }
+
+            public void Resolve (
+                IBatchContainer container, int layer,
+                Bounds? destination = null, Texture2D albedo = null,
+                HDRConfiguration? hdr = null
+            ) {
+                if (!IsValid)
+                    throw new InvalidOperationException("Invalid");
+
+                Renderer.ResolveLighting(
+                    container, layer,
+                    Lightmap, destination, albedo, hdr
                 );
             }
 

@@ -41,7 +41,8 @@ namespace TestGame.Scenes {
             UseRampTexture,
             UseDistanceRamp,
             PreDither,
-            PostDither;
+            PostDither,
+            MergeDither;
         [Group("Lighting")]
         Slider MaximumLightStrength;
         [Group("Dithering")]

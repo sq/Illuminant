@@ -961,7 +961,7 @@ namespace Squared.Illuminant {
         private void ResolveLighting (
             IBatchContainer container, int layer,
             RenderTarget2D lightmap,
-            float? width, float? height, 
+            Bounds? destination, Texture2D albedo,
             HDRConfiguration? hdr
         ) {
             Material m;
@@ -1029,16 +1029,19 @@ namespace Squared.Illuminant {
                 }
             });
 
+            var destinationBounds = destination.GetValueOrDefault(
+                Bounds.FromPositionAndSize(Vector2.Zero, new Vector2(Configuration.RenderSize.First, Configuration.RenderSize.Second))
+            );
             var bounds = lightmap.BoundsFromRectangle(
                 new Rectangle(0, 0, Configuration.RenderSize.First, Configuration.RenderSize.Second)
             );
 
             var dc = new BitmapDrawCall(
-                lightmap, Vector2.Zero, bounds
+                lightmap, destinationBounds.TopLeft, bounds
             );
             dc.Scale = new Vector2(
-                width.GetValueOrDefault(Configuration.RenderSize.First) / Configuration.RenderSize.First,
-                height.GetValueOrDefault(Configuration.RenderSize.Second) / Configuration.RenderSize.Second
+                destinationBounds.Size.X / Configuration.RenderSize.First,
+                destinationBounds.Size.Y / Configuration.RenderSize.Second
             );
 
             sg.Draw(dc, material: m);

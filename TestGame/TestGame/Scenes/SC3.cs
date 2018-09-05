@@ -519,7 +519,7 @@ namespace TestGame.Scenes {
                 lighting.Resolve(
                     bg, 1, 
                     Width, Height,
-                    hdrConfiguration
+                    hdr: hdrConfiguration
                 );
             };
 
@@ -539,7 +539,7 @@ namespace TestGame.Scenes {
                 foregroundLighting.Resolve(
                     fg, 1, 
                     Width, Height,
-                    hdrConfiguration
+                    hdr: hdrConfiguration
                 );
             };
 

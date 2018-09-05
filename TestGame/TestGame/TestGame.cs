@@ -164,7 +164,7 @@ namespace TestGame {
             if (!isWindowOpen)
                 windowBounds.H = 32;
 
-            IsMouseOverUI = Nuke.nk_input_is_mouse_hovering_rect(&ctx->input, windowBounds) != 0;
+            IsMouseOverUI = Nuke.nk_item_is_any_active(ctx) != 0;
             if (IsMouseOverUI)
                 LastTimeOverUI = Time.Ticks;
 
