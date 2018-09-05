@@ -328,7 +328,7 @@ namespace TestGame.Scenes {
                 var doResolveDither = dmode.Contains("Pre") || (dmode == "Merged");
                 lighting.Resolve(
                     bg, 2, Width, Height,
-                    albedo: (dmode == "Merged") ? Background : null,
+                    albedo: (dmode == "Merged") && !ShowLightmap ? Background : null,
                     hdr: new HDRConfiguration {
                         InverseScaleFactor = LightScaleFactor,
                         Gamma = sRGB ? 2.3f : 1.0f,

@@ -962,6 +962,7 @@ namespace Squared.Illuminant {
             IBatchContainer container, int layer,
             RenderTarget2D lightmap,
             Bounds? destination, Texture2D albedo,
+            Bounds? albedoRegion,
             HDRConfiguration? hdr
         ) {
             Material m;
@@ -1038,19 +1039,30 @@ namespace Squared.Illuminant {
             var destinationBounds = destination.GetValueOrDefault(
                 Bounds.FromPositionAndSize(Vector2.Zero, new Vector2(Configuration.RenderSize.First, Configuration.RenderSize.Second))
             );
-            var bounds = lightmap.BoundsFromRectangle(
+            var lightmapBounds = lightmap.BoundsFromRectangle(
                 new Rectangle(0, 0, Configuration.RenderSize.First, Configuration.RenderSize.Second)
             );
+            var albedoBounds = albedoRegion.GetValueOrDefault(Bounds.Unit);
+            var scale = Vector2.One;
 
-            var dc = new BitmapDrawCall(
-                lightmap, destinationBounds.TopLeft, bounds
-            );
-            if (albedo != null)
-                dc.Textures = new TextureSet(lightmap, albedo);
-            dc.Scale = new Vector2(
-                destinationBounds.Size.X / Configuration.RenderSize.First,
-                destinationBounds.Size.Y / Configuration.RenderSize.Second
-            );
+            BitmapDrawCall dc;
+            if (albedo != null) {
+                dc = new BitmapDrawCall(
+                    albedo, destinationBounds.TopLeft, albedoBounds
+                ) {
+                    TextureRegion2 = lightmapBounds,
+                    Textures = new TextureSet(albedo, lightmap)
+                };
+            } else {
+                dc = new BitmapDrawCall(
+                    lightmap, destinationBounds.TopLeft, lightmapBounds
+                ) {
+                    Scale = new Vector2(
+                        destinationBounds.Size.X / Configuration.RenderSize.First,
+                        destinationBounds.Size.Y / Configuration.RenderSize.Second
+                    )
+                };
+            }
 
             sg.Draw(dc, material: m);
         }

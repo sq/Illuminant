@@ -95,28 +95,29 @@ namespace Squared.Illuminant {
             public void Resolve (
                 IBatchContainer container, int layer,
                 float width, float height, Texture2D albedo = null,
-                HDRConfiguration? hdr = null
+                Bounds? albedoTextureRegion = null, HDRConfiguration? hdr = null
             ) {
                 if (!IsValid)
                     throw new InvalidOperationException("Invalid");
 
                 Renderer.ResolveLighting(
                     container, layer,
-                    Lightmap, Bounds.FromPositionAndSize(Vector2.Zero, new Vector2(width, height)), albedo, hdr
+                    Lightmap, Bounds.FromPositionAndSize(Vector2.Zero, new Vector2(width, height)), 
+                    albedo, albedoTextureRegion, hdr
                 );
             }
 
             public void Resolve (
                 IBatchContainer container, int layer,
                 Bounds? destination = null, Texture2D albedo = null,
-                HDRConfiguration? hdr = null
+                Bounds? albedoTextureRegion = null, HDRConfiguration? hdr = null
             ) {
                 if (!IsValid)
                     throw new InvalidOperationException("Invalid");
 
                 Renderer.ResolveLighting(
                     container, layer,
-                    Lightmap, destination, albedo, hdr
+                    Lightmap, destination, albedo, albedoTextureRegion, hdr
                 );
             }
 
