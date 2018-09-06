@@ -67,10 +67,13 @@ namespace Squared.Illuminant {
                     using (var nb = NativeBatch.New(
                         lightProbeGroup, layerIndex++, ltrs.ProbeMaterial, isForGi ? GIProbeBatchSetup : LightProbeBatchSetup, userData: ltrs
                     )) {
+                        var cornerBuffer = ltrs.GetCornerBuffer(true);
                         nb.Add(new NativeDrawCall(
                             PrimitiveType.TriangleList,
+                            cornerBuffer, 0,
                             ltrs.GetVertexBuffer(), 0,
-                            QuadIndexBuffer, 0, 0, ltrs.VertexCount, 0, ltrs.VertexCount / 2
+                            null, 0,
+                            QuadIndexBuffer, 0, 0, cornerBuffer.VertexCount, 0, cornerBuffer.VertexCount / 2, ltrs.LightCount
                         ));
                     }
                 }

@@ -179,8 +179,8 @@ namespace Squared.Illuminant {
                 }
             }
 
-            public VertexBuffer GetCornerBuffer () {
-                return (Key.Type == LightSourceTypeID.Sphere)
+            public VertexBuffer GetCornerBuffer (bool forProbes) {
+                return (Key.Type == LightSourceTypeID.Sphere) && !forProbes
                     ? Parent.SphereBuffer
                     : Parent.CornerBuffer;
             }
@@ -882,7 +882,7 @@ namespace Squared.Illuminant {
                                     using (var nb = NativeBatch.New(
                                         resultGroup, layerIndex++, ltrs.Material, IlluminationBatchSetup, userData: ltrs
                                     )) {
-                                        var cornerBuffer = ltrs.GetCornerBuffer();
+                                        var cornerBuffer = ltrs.GetCornerBuffer(false);
                                         nb.Add(new NativeDrawCall(
                                             PrimitiveType.TriangleList,
                                             cornerBuffer, 0,
