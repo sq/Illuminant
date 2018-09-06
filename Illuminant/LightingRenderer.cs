@@ -80,7 +80,7 @@ namespace Squared.Illuminant {
             public  readonly UnorderedList<LightVertex> LightVertices = null;
             public  readonly Material                   Material, ProbeMaterial;
 
-            private int                                 CurrentVertexCount = 0;
+            internal int                                LightCount = 0;
             private DynamicVertexBuffer                 LightVertexBuffer = null;
 
             public LightTypeRenderState (LightingRenderer parent, LightTypeRenderStateKey key) {
@@ -139,7 +139,13 @@ namespace Squared.Illuminant {
 
             public int Count {
                 get {
-                    return LightVertices != null ? LightVertices.Count : ParticleLightSource.System.LiveCount;
+                    return LightVertices != null ? LightCount : ParticleLightSource.System.LiveCount;
+                }
+            }
+
+            public int VertexCount {
+                get {
+                    return LightVertices != null ? LightVertices.Count : 0;
                 }
             }
 
@@ -154,10 +160,9 @@ namespace Squared.Illuminant {
                     if (LightVertices == null)
                         return;
 
-                    var vertexCount = Count;
                     var vertexCapacity = Capacity;
 
-                    if ((LightVertexBuffer != null) && (LightVertexBuffer.VertexCount < vertexCount)) {
+                    if ((LightVertexBuffer != null) && (LightVertexBuffer.VertexCount < vertexCapacity)) {
                         Parent.Coordinator.DisposeResource(LightVertexBuffer);
                         LightVertexBuffer = null;
                     }
@@ -169,19 +174,14 @@ namespace Squared.Illuminant {
                         );
                     }
 
-                    if (vertexCount > 0) {
-                        LightVertexBuffer.SetData(LightVertices.GetBuffer(), 0, vertexCount, SetDataOptions.Discard);
-                    }
-
-                    CurrentVertexCount = vertexCount;
+                    if (vertexCapacity > 0)
+                        LightVertexBuffer.SetData(LightVertices.GetBuffer(), 0, vertexCapacity, SetDataOptions.Discard);
                 }
             }
 
             public DynamicVertexBuffer GetVertexBuffer () {
                 lock (Lock) {
-                    var vertexCount = Count;
-
-                    if ((LightVertexBuffer == null) || CurrentVertexCount != vertexCount)
+                    if (LightVertexBuffer == null)
                         throw new InvalidOperationException("Vertex buffer not up-to-date");
 
                     return LightVertexBuffer;
@@ -804,6 +804,7 @@ namespace Squared.Illuminant {
                         foreach (var kvp in LightRenderStates) {
                             if (kvp.Value.LightVertices != null)
                                 kvp.Value.LightVertices.Clear();
+                            kvp.Value.LightCount = 0;
                         }
 
                         using (var buffer = BufferPool<LightSource>.Allocate(Environment.Lights.Count)) {
@@ -838,7 +839,7 @@ namespace Squared.Illuminant {
                         if (paintDirectIllumination)
                             foreach (var kvp in LightRenderStates) {
                                 var ltrs = kvp.Value;
-                                var count = ltrs.Count / 4;
+                                var count = ltrs.LightCount;
 
                                 if (RenderTrace.EnableTracing)
                                     RenderTrace.Marker(resultGroup, layerIndex++, "LightingRenderer {0} : Render {1} {2} light(s)", this.ToObjectID(), count, ltrs.Key.Type);
@@ -863,7 +864,7 @@ namespace Squared.Illuminant {
                                         nb.Add(new NativeDrawCall(
                                             PrimitiveType.TriangleList,
                                             ltrs.GetVertexBuffer(), 0,
-                                            QuadIndexBuffer, 0, 0, ltrs.Count, 0, ltrs.Count / 2
+                                            QuadIndexBuffer, 0, 0, ltrs.VertexCount, 0, ltrs.VertexCount / 2
                                         ));
                                     }
                                 }
@@ -924,6 +925,8 @@ namespace Squared.Illuminant {
                 vertex.Corner = vertex.Unused = (short)i;
                 ltrs.LightVertices.Add(ref vertex);
             }
+
+            ltrs.LightCount++;
         }
 
         private void RenderDirectionalLightSource (DirectionalLightSource lightSource, float intensityScale, LightTypeRenderState ltrs) {
@@ -956,6 +959,8 @@ namespace Squared.Illuminant {
                 vertex.Corner = vertex.Unused = (short)i;
                 ltrs.LightVertices.Add(ref vertex);
             }
+
+            ltrs.LightCount++;
         }
 
         /// <summary>

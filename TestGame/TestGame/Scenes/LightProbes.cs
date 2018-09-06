@@ -26,7 +26,9 @@ namespace TestGame.Scenes {
         const float LightScaleFactor = 2;
 
         Toggle ShowDistanceField,
-            UseRampTexture;
+            UseRampTexture,
+            ExponentialRamp,
+            EnableProbeShadows;
 
         Slider DistanceFieldResolution,
             LightmapScaleRatio;
@@ -37,9 +39,12 @@ namespace TestGame.Scenes {
             DistanceFieldResolution.Value = 0.25f;
             LightmapScaleRatio.Value = 1.0f;
             UseRampTexture.Value = true;
+            EnableProbeShadows.Value = true;
 
             ShowDistanceField.Key = Keys.D;
             UseRampTexture.Key = Keys.P;
+            ExponentialRamp.Key = Keys.E;
+            EnableProbeShadows.Key = Keys.S;
 
             DistanceFieldResolution.MinusKey = Keys.D3;
             DistanceFieldResolution.PlusKey = Keys.D4;
@@ -116,7 +121,7 @@ namespace TestGame.Scenes {
             });
 
             Environment.Lights.Add(new SphereLightSource {
-                Position = new Vector3(500, 350, 100),
+                Position = new Vector3(500, 350, 1),
                 Color = new Vector4(1f, 0.7f, 0.15f, 1f),
                 Radius = 128,
                 RampLength = 360
@@ -264,7 +269,12 @@ namespace TestGame.Scenes {
                     Renderer.Probes.Last().Position = mousePos;
                 }
 
-                Environment.Lights.Last().RampTexture = UseRampTexture ? Game.RampTexture : null;
+                var l = Environment.Lights.Last();
+                l.RampTexture = UseRampTexture ? Game.RampTexture : null;
+                (l as SphereLightSource).RampMode = ExponentialRamp ? LightSourceRampMode.Exponential : LightSourceRampMode.Linear;
+
+                foreach (var p in Renderer.Probes)
+                    p.EnableShadows = EnableProbeShadows;
             }
         }
     }

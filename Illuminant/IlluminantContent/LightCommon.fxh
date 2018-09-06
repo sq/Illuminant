@@ -150,8 +150,9 @@ float computeDirectionalLightOpacity (
 void sampleLightProbeBuffer (
     float2 screenPositionPx,
     out float3 worldPosition,
-    out float4 normal,
-    out float  opacity
+    out float3 normal,
+    out float  opacity,
+    out float  enableShadows
 ) {
     float2 uv = screenPositionPx * GBufferTexelSize;
     float4 positionSample = tex2Dlod(GBufferSampler, float4(uv, 0, 0));
@@ -164,5 +165,7 @@ void sampleLightProbeBuffer (
     }
 
     worldPosition = positionSample.xyz;
-    normal = tex2Dlod(LightProbeNormalSampler, float4(uv, 0, 0));
+    float4 n = tex2Dlod(LightProbeNormalSampler, float4(uv, 0, 0));
+    normal = n.xyz;
+    enableShadows = n.w;
 }

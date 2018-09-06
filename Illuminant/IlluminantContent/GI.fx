@@ -272,12 +272,12 @@ void LightProbeSHRendererPixelShader(
     out float4 result : COLOR0
 ) {
     float3 shadedPixelPosition;
-    float4 shadedPixelNormal;
-    float opacity;
+    float3 shadedPixelNormal;
+    float opacity, enableShadows;
 
     sampleLightProbeBuffer(
         vpos,
-        shadedPixelPosition, shadedPixelNormal, opacity
+        shadedPixelPosition, shadedPixelNormal, opacity, enableShadows
     );
 
     float4 irradiance = SHRendererPixelShaderCore(

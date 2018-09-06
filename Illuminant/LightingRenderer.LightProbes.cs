@@ -57,7 +57,7 @@ namespace Squared.Illuminant {
                 int layerIndex = 0;
                 foreach (var kvp in LightRenderStates) {
                     var ltrs = kvp.Value;
-                    var count = ltrs.Count / 4;
+                    var count = ltrs.Count;
                     if (count <= 0)
                         continue;
 
@@ -70,7 +70,7 @@ namespace Squared.Illuminant {
                         nb.Add(new NativeDrawCall(
                             PrimitiveType.TriangleList,
                             ltrs.GetVertexBuffer(), 0,
-                            QuadIndexBuffer, 0, 0, ltrs.Count, 0, ltrs.Count / 2
+                            QuadIndexBuffer, 0, 0, ltrs.VertexCount, 0, ltrs.VertexCount / 2
                         ));
                     }
                 }
@@ -93,9 +93,9 @@ namespace Squared.Illuminant {
                 lock (Probes)
                 foreach (var probe in Probes) {
                     if (probe._Normal.HasValue)
-                        buffer.Data[x++] = new Vector4(probe._Normal.Value, 1);
+                        buffer.Data[x++] = new Vector4(probe._Normal.Value, probe._EnableShadows ? 1 : 0);
                     else
-                        buffer.Data[x++] = Vector4.Zero;
+                        buffer.Data[x++] = new Vector4(0, 0, 0, probe._EnableShadows ? 1 : 0);
                 }
 
                 lock (Coordinator.UseResourceLock)

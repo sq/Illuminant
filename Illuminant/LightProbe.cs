@@ -90,6 +90,7 @@ namespace Squared.Illuminant {
 
         internal Vector3 _Position = Vector3.Zero;
         internal Vector3? _Normal = null;
+        internal bool _EnableShadows = true;
 
         public long PreviouslyUpdatedWhen, UpdatedWhen;
         public Vector4 PreviousValue, Value;
@@ -110,6 +111,8 @@ namespace Squared.Illuminant {
                 return _Position;
             }
             set {
+                if (_Position == value)
+                    return;
                 _Position = value;
                 SetDirty();
             }
@@ -120,7 +123,21 @@ namespace Squared.Illuminant {
                 return _Normal;
             }
             set {
+                if (_Normal == value)
+                    return;
                 _Normal = value;
+                SetDirty();
+            }
+        }
+
+        public bool EnableShadows {
+            get {
+                return _EnableShadows;
+            }
+            set {
+                if (_EnableShadows == value)
+                    return;
+                _EnableShadows = value;
                 SetDirty();
             }
         }

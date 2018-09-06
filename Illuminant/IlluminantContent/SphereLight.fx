@@ -52,9 +52,12 @@ void SphereLightProbeVertexShader(
     inout float4 moreLightProperties : TEXCOORD3,
     out float4 result                : POSITION0
 ) {
-    float2 clipPosition = LightCorners[cornerIndex.x] * 99999;
-
-    result = float4(clipPosition.xy, 0, 1);
+    if (cornerIndex.x > 3) {
+        result = 0;
+    } else {
+        float2 clipPosition = (LightCorners[cornerIndex.x] * 2) - 1;
+        result = float4(clipPosition.xy, 0, 1);
+    }
 }
 
 void SphereLightPixelShader(
@@ -135,14 +138,15 @@ void SphereLightProbePixelShader(
     out float4 result              : COLOR0
 ) {
     float3 shadedPixelPosition;
-    float4 shadedPixelNormal;
-    float opacity;
+    float3 shadedPixelNormal;
+    float opacity, enableShadows;
 
     sampleLightProbeBuffer(
         vpos,
-        shadedPixelPosition, shadedPixelNormal, opacity
+        shadedPixelPosition, shadedPixelNormal, opacity, enableShadows
     );
 
+    lightProperties.x *= enableShadows;
     moreLightProperties.x = moreLightProperties.w = 0;
 
     opacity *= SphereLightPixelCore(
@@ -161,14 +165,15 @@ void SphereLightProbeWithDistanceRampPixelShader(
     out float4 result              : COLOR0
 ) {
     float3 shadedPixelPosition;
-    float4 shadedPixelNormal;
-    float opacity;
+    float3 shadedPixelNormal;
+    float opacity, enableShadows;
 
     sampleLightProbeBuffer(
         vpos,
-        shadedPixelPosition, shadedPixelNormal, opacity
+        shadedPixelPosition, shadedPixelNormal, opacity, enableShadows
     );
 
+    lightProperties.x *= enableShadows;
     moreLightProperties.x = moreLightProperties.w = 0;
 
     opacity *= SphereLightPixelCore(
@@ -187,14 +192,15 @@ void SphereLightProbeWithOpacityRampPixelShader(
     out float4 result              : COLOR0
 ) {
     float3 shadedPixelPosition;
-    float4 shadedPixelNormal;
-    float opacity;
+    float3 shadedPixelNormal;
+    float opacity, enableShadows;
 
     sampleLightProbeBuffer(
         vpos,
-        shadedPixelPosition, shadedPixelNormal, opacity
+        shadedPixelPosition, shadedPixelNormal, opacity, enableShadows
     );
 
+    lightProperties.x *= enableShadows;
     moreLightProperties.x = moreLightProperties.w = 0;
 
     opacity *= SphereLightPixelCore(
