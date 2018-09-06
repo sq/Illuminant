@@ -14,8 +14,6 @@ namespace Squared.Illuminant {
         public Vector4 LightProperties;
         public Vector4 MoreLightProperties;
         public Vector4 Color;
-        public short Corner;
-        public short Unused;
 
         public static VertexDeclaration _VertexDeclaration;
 
@@ -23,8 +21,6 @@ namespace Squared.Illuminant {
             var tThis = typeof(LightVertex);
 
             _VertexDeclaration = new VertexDeclaration(
-                new VertexElement(Marshal.OffsetOf(tThis, "Corner").ToInt32(), 
-                    VertexElementFormat.Short2, VertexElementUsage.BlendIndices, 0 ),
                 new VertexElement(Marshal.OffsetOf(tThis, "LightCenter").ToInt32(), VertexElementFormat.Vector3, VertexElementUsage.TextureCoordinate, 0),
                 new VertexElement(Marshal.OffsetOf(tThis, "LightProperties").ToInt32(), VertexElementFormat.Vector4, VertexElementUsage.TextureCoordinate, 1),
                 new VertexElement(Marshal.OffsetOf(tThis, "MoreLightProperties").ToInt32(), VertexElementFormat.Vector4, VertexElementUsage.TextureCoordinate, 3),

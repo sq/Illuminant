@@ -179,6 +179,12 @@ namespace Squared.Illuminant {
                 }
             }
 
+            public VertexBuffer GetCornerBuffer () {
+                return (Key.Type == LightSourceTypeID.Sphere)
+                    ? Parent.SphereBuffer
+                    : Parent.CornerBuffer;
+            }
+
             public DynamicVertexBuffer GetVertexBuffer () {
                 lock (Lock) {
                     if (LightVertexBuffer == null)
@@ -232,6 +238,7 @@ namespace Squared.Illuminant {
 
         private readonly IndexBuffer         QuadIndexBuffer;
         private readonly VertexBuffer        CornerBuffer;
+        private readonly VertexBuffer        SphereBuffer;
 
         class DistanceFunctionBuffer {
             public readonly LightingRenderer Renderer;
@@ -361,6 +368,10 @@ namespace Squared.Illuminant {
                     coordinator.Device, typeof(CornerVertex), 4, BufferUsage.WriteOnly
                 );
                 FillCornerBuffer();
+                SphereBuffer = new VertexBuffer(
+                    coordinator.Device, typeof(CornerVertex), 12, BufferUsage.WriteOnly
+                );
+                FillSphereBuffer();
             }
 
             DynamicDistanceFunctions = new DistanceFunctionBuffer(this, DistanceFunctionBufferInitialSize);
@@ -500,11 +511,21 @@ namespace Squared.Illuminant {
             CornerBuffer.SetData(buf);
         }
 
+        private void FillSphereBuffer () {
+            var buf = new CornerVertex[SphereBuffer.VertexCount];
+            for (int i = 0; i < buf.Length; i++)
+                buf[i] = new CornerVertex { Corner = (short)i, Unused = (short)i };
+
+            SphereBuffer.SetData(buf);
+        }
+
         public void Dispose () {
             foreach (var kvp in LightRenderStates)
                 kvp.Value.Dispose();
 
             Coordinator.DisposeResource(QuadIndexBuffer);
+            Coordinator.DisposeResource(CornerBuffer);
+            Coordinator.DisposeResource(SphereBuffer);
             Coordinator.DisposeResource(_DistanceField);
             Coordinator.DisposeResource(_GBuffer);
             Coordinator.DisposeResource(_Lightmaps);
@@ -861,10 +882,13 @@ namespace Squared.Illuminant {
                                     using (var nb = NativeBatch.New(
                                         resultGroup, layerIndex++, ltrs.Material, IlluminationBatchSetup, userData: ltrs
                                     )) {
+                                        var cornerBuffer = ltrs.GetCornerBuffer();
                                         nb.Add(new NativeDrawCall(
                                             PrimitiveType.TriangleList,
+                                            cornerBuffer, 0,
                                             ltrs.GetVertexBuffer(), 0,
-                                            QuadIndexBuffer, 0, 0, ltrs.VertexCount, 0, ltrs.VertexCount / 2
+                                            null, 0,
+                                            QuadIndexBuffer, 0, 0, cornerBuffer.VertexCount, 0, cornerBuffer.VertexCount / 2, ltrs.LightCount
                                         ));
                                     }
                                 }
@@ -920,11 +944,7 @@ namespace Squared.Illuminant {
             vertex.MoreLightProperties.Y = lightSource.ShadowDistanceFalloff.GetValueOrDefault(-99999);
             vertex.MoreLightProperties.Z = lightSource.FalloffYFactor;
             vertex.MoreLightProperties.W = lightSource.AmbientOcclusionOpacity;
-
-            for (int i = 0; i < 16; i++) {
-                vertex.Corner = vertex.Unused = (short)i;
-                ltrs.LightVertices.Add(ref vertex);
-            }
+            ltrs.LightVertices.Add(ref vertex);
 
             ltrs.LightCount++;
         }
@@ -955,11 +975,7 @@ namespace Squared.Illuminant {
                 )
             );
 
-            for (int i = 0; i < 4; i++) {
-                vertex.Corner = vertex.Unused = (short)i;
-                ltrs.LightVertices.Add(ref vertex);
-            }
-
+            ltrs.LightVertices.Add(ref vertex);
             ltrs.LightCount++;
         }
 
