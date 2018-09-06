@@ -49,15 +49,15 @@ namespace Squared.Illuminant {
                 ));
 
                 DefineMaterial(IlluminantMaterials.SphereLightProbe = new Material(
-                    content.Load<Effect>("SphereLight"), "SphereLightProbe", dBegin, dEnd
+                    content.Load<Effect>("SphereLightProbe"), "SphereLightProbe", dBegin, dEnd
                 ));
 
                 DefineMaterial(IlluminantMaterials.SphereLightProbeWithDistanceRamp = new Material(
-                    content.Load<Effect>("SphereLight"), "SphereLightProbeWithDistanceRamp", dBegin, dEnd
+                    content.Load<Effect>("SphereLightProbe"), "SphereLightProbeWithDistanceRamp", dBegin, dEnd
                 ));
 
                 DefineMaterial(IlluminantMaterials.SphereLightProbeWithOpacityRamp = new Material(
-                    content.Load<Effect>("SphereLight"), "SphereLightProbeWithOpacityRamp", dBegin, dEnd
+                    content.Load<Effect>("SphereLightProbe"), "SphereLightProbeWithOpacityRamp", dBegin, dEnd
                 ));
 
                 DefineMaterial(IlluminantMaterials.DirectionalLightProbe = new Material(

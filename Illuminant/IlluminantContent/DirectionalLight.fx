@@ -36,7 +36,7 @@ void DirectionalLightProbeVertexShader(
     out float4   result              : POSITION0
 ) {
     if (cornerIndex.x > 3) {
-        result = 0;
+        result = float4(-9999, -9999, 0, 0);
     } else {
         float2 clipPosition = (LightCorners[cornerIndex.x] * 2) - 1;
         result = float4(clipPosition.xy, 0, 1);
