@@ -969,9 +969,11 @@ namespace Squared.Illuminant {
 
             var lightBounds = new Bounds(
                 Vector2.Zero,
+                // HACK to ensure that only one of the two triangles passes the clip test
+                //  so we don't end up with wasted rasterization work along the seam
                 new Vector2(
-                    Configuration.MaximumRenderSize.First,
-                    Configuration.MaximumRenderSize.Second
+                    Configuration.MaximumRenderSize.First * 2,
+                    Configuration.MaximumRenderSize.Second * 2
                 )
             );
 
