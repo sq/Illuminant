@@ -1,4 +1,4 @@
-#include "SphereLightCore.fxh"
+#include "LineLightCore.fxh"
 
 void LineLightVertexShader(
     in int2 vertexIndex              : BLENDINDICES0,
@@ -49,18 +49,6 @@ void LineLightVertexShader(
     result = float4(transformedPosition.xy, 0, transformedPosition.w);
 }
 
-float3 computeLightCenter (float3 worldPosition, float3 startPosition, float3 endPosition, out float u, inout float4 lightProperties) {
-    float2 xy = closestPointOnLine(worldPosition.xy, startPosition.xy, endPosition.xy, u);
-    float z = lerp(startPosition.z, endPosition.z, u);
-    float3 result = float3(xy, z);
-    float distanceFromEndpoint = 1 - (abs(u - 0.5) * 2);
-    float maxOffsetDistance = min(length(endPosition - startPosition), 128);
-    float offsetDistance = maxOffsetDistance * distanceFromEndpoint;
-    // lightProperties.x = max(lightProperties.x + offsetDistance, 1);
-    // result -= offsetDistance * normalize(result - worldPosition);
-    return result;
-}
-
 void LineLightPixelShader(
     in  float3 worldPosition       : POSITION1,
     in  float3 startPosition       : TEXCOORD0,
@@ -80,13 +68,13 @@ void LineLightPixelShader(
     );
 
     float u;
-    float3 lightCenter = computeLightCenter(worldPosition, startPosition, endPosition, u, lightProperties);
-    float4 color = lerp(startColor, endColor, u);
-
-    float opacity = SphereLightPixelCore(
-        shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties, false, false
+    float opacity = LineLightPixelCore(
+        shadedPixelPosition, shadedPixelNormal,
+        startPosition, endPosition, u,
+        lightProperties, moreLightProperties, false, false
     );
 
+    float4 color = lerp(startColor, endColor, u);
     result = float4(color.rgb * color.a * opacity, 1);
 }
 
@@ -109,13 +97,13 @@ void LineLightWithDistanceRampPixelShader(
     );
 
     float u;
-    float3 lightCenter = computeLightCenter(worldPosition, startPosition, endPosition, u, lightProperties);
-    float4 color = lerp(startColor, endColor, u);
-
-    float opacity = SphereLightPixelCore(
-        shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties, true, false
+    float opacity = LineLightPixelCore(
+        shadedPixelPosition, shadedPixelNormal,
+        startPosition, endPosition, u,
+        lightProperties, moreLightProperties, true, false
     );
 
+    float4 color = lerp(startColor, endColor, u);
     result = float4(color.rgb * color.a * opacity, 1);
 }
 
@@ -138,13 +126,13 @@ void LineLightWithOpacityRampPixelShader(
     );
 
     float u;
-    float3 lightCenter = computeLightCenter(worldPosition, startPosition, endPosition, u, lightProperties);
-    float4 color = lerp(startColor, endColor, u);
-
-    float opacity = SphereLightPixelCore(
-        shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties, false, true
+    float opacity = LineLightPixelCore(
+        shadedPixelPosition, shadedPixelNormal,
+        startPosition, endPosition, u,
+        lightProperties, moreLightProperties, false, true
     );
 
+    float4 color = lerp(startColor, endColor, u);
     result = float4(color.rgb * color.a * opacity, 1);
 }
 

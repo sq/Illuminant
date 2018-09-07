@@ -137,6 +137,9 @@
       <Importer>EffectImporter</Importer>
       <Processor>EffectProcessor</Processor>
     </Compile>
+    <None Include="LineLightCore.fxh">
+      <Name>LineLightCore</Name>
+    </None>
     <None Include="VisualizeCommon.fxh">
       <Name>VisualizeCommon</Name>
       <Importer>EffectImporter</Importer>

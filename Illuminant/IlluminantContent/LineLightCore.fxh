@@ -8,11 +8,20 @@
 #define SELF_OCCLUSION_HACK 1.5
 #define SHADOW_OPACITY_THRESHOLD (0.75 / 255.0)
 
-float SphereLightPixelCore(
+float3 computeLightCenter (float3 worldPosition, float3 startPosition, float3 endPosition, out float u, inout float4 lightProperties) {
+    float2 xy = closestPointOnLine(worldPosition.xy, startPosition.xy, endPosition.xy, u);
+    float z = lerp(startPosition.z, endPosition.z, u);
+    float3 result = float3(xy, z);
+    return result;
+}
+
+float LineLightPixelCore(
     in float3 shadedPixelPosition,
     in float3 shadedPixelNormal,
-    in float3 lightCenter,
+    in float3 startPosition,
+    in float3 endPosition,
     // radius, ramp length, ramp mode, enable shadows
+    out float u,
     in float4 lightProperties,
     // ao radius, distance falloff, y falloff factor, ao opacity
     in float4 moreLightProperties,
@@ -20,6 +29,10 @@ float SphereLightPixelCore(
     in bool   useOpacityRamp
 ) {
     bool  distanceCull = false;
+
+    float4 coneLightProperties = lightProperties;
+    float3 lightCenter = computeLightCenter(shadedPixelPosition, startPosition, endPosition, u, coneLightProperties);
+
     float distanceOpacity = computeSphereLightOpacity(
         shadedPixelPosition, shadedPixelNormal,
         lightCenter, lightProperties, moreLightProperties.z,
@@ -42,7 +55,7 @@ float SphereLightPixelCore(
     float coneOpacity = 1;
 
     coneOpacity = coneTrace(
-        lightCenter, lightProperties.xy, 
+        lightCenter, coneLightProperties.xy, 
         float2(getConeGrowthFactor(), moreLightProperties.y),
         shadedPixelPosition + (SELF_OCCLUSION_HACK * shadedPixelNormal),
         vars, true, traceShadows
