@@ -145,6 +145,9 @@ namespace Squared.Illuminant {
                     default:
                         throw new NotImplementedException(key.Type.ToString());
                 }
+
+                if (Material == null)
+                    throw new Exception("No material found");
             }
 
             private ParticleLightSource ParticleLightSource {
@@ -196,9 +199,13 @@ namespace Squared.Illuminant {
             }
 
             public VertexBuffer GetCornerBuffer (bool forProbes) {
-                return (Key.Type == LightSourceTypeID.Sphere) && !forProbes
-                    ? Parent.SphereBuffer
-                    : Parent.CornerBuffer;
+                switch (Key.Type) {
+                    case LightSourceTypeID.Sphere:
+                    case LightSourceTypeID.Line:
+                        return Parent.SphereBuffer;
+                    default:
+                        return Parent.CornerBuffer;
+                }
             }
 
             public DynamicVertexBuffer GetVertexBuffer () {

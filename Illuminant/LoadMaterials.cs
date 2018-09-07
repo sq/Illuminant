@@ -36,6 +36,10 @@ namespace Squared.Illuminant {
                     content.Load<Effect>("ParticleLight"), "ParticleLight", dBegin, dEnd
                 ));
 
+                DefineMaterial(IlluminantMaterials.LineLight = new Material(
+                    content.Load<Effect>("LineLight"), "LineLight", dBegin, dEnd
+                ));
+
                 DefineMaterial(IlluminantMaterials.SphereLightWithDistanceRamp = new Material(
                     content.Load<Effect>("SphereLight"), "SphereLightWithDistanceRamp", dBegin, dEnd
                 ));
@@ -46,6 +50,14 @@ namespace Squared.Illuminant {
 
                 DefineMaterial(IlluminantMaterials.DirectionalLightWithRamp = new Material(
                     content.Load<Effect>("DirectionalLight"), "DirectionalLightWithRamp", dBegin, dEnd
+                ));
+
+                DefineMaterial(IlluminantMaterials.LineLightWithDistanceRamp = new Material(
+                    content.Load<Effect>("LineLight"), "LineLightWithDistanceRamp", dBegin, dEnd
+                ));
+
+                DefineMaterial(IlluminantMaterials.LineLightWithOpacityRamp = new Material(
+                    content.Load<Effect>("LineLight"), "LineLightWithOpacityRamp", dBegin, dEnd
                 ));
 
                 DefineMaterial(IlluminantMaterials.SphereLightProbe = new Material(
@@ -66,6 +78,18 @@ namespace Squared.Illuminant {
 
                 DefineMaterial(IlluminantMaterials.DirectionalLightProbeWithRamp = new Material(
                     content.Load<Effect>("DirectionalLight"), "DirectionalLightProbeWithRamp", dBegin, dEnd
+                ));
+
+                DefineMaterial(IlluminantMaterials.LineLightProbe = new Material(
+                    content.Load<Effect>("LineLightProbe"), "LineLightProbe", dBegin, dEnd
+                ));
+
+                DefineMaterial(IlluminantMaterials.LineLightProbeWithDistanceRamp = new Material(
+                    content.Load<Effect>("LineLightProbe"), "LineLightProbeWithDistanceRamp", dBegin, dEnd
+                ));
+
+                DefineMaterial(IlluminantMaterials.LineLightProbeWithOpacityRamp = new Material(
+                    content.Load<Effect>("LineLightProbe"), "LineLightProbeWithOpacityRamp", dBegin, dEnd
                 ));
 
                 DefineMaterial(IlluminantMaterials.GIProbeSelector = new Material(
