@@ -87,22 +87,21 @@ bool doLinesIntersect (float2 a1, float2 a2, float2 b1, float2 b2, out float dis
     return true;
 }
 
-float2 closestPointOnEdge (
-    float2 pt, float2 edgeStart, float2 edgeEnd
+float2 closestPointOnLine (
+    float2 pt, float2 lineStart, float2 lineEnd, out float u
 ) {
-    float2 edgeDelta = edgeEnd - edgeStart;
-    float  edgeLength = length(edgeDelta);
-    edgeLength *= edgeLength;
+    float2 lineDelta = lineEnd - lineStart;
+    float  lineLength = length(lineDelta);
+    lineLength *= lineLength;
     
-    float u;
-    if (edgeLength == 0) {
+    if (lineLength == 0) {
         u = 0;
     } else {
-        float2 pointDelta = (pt - edgeStart) * edgeDelta;
-        u = (pointDelta.x + pointDelta.y) / edgeLength;
+        float2 pointDelta = (pt - lineStart) * lineDelta;
+        u = saturate((pointDelta.x + pointDelta.y) / lineLength);
     }
 
-    return edgeStart + ((edgeEnd - edgeStart) * saturate(u));
+    return lineStart + ((lineEnd - lineStart) * u);
 }
 
 float _dist2 (float2 a, float2 b) {

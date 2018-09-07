@@ -201,7 +201,6 @@ namespace Squared.Illuminant {
             public VertexBuffer GetCornerBuffer (bool forProbes) {
                 switch (Key.Type) {
                     case LightSourceTypeID.Sphere:
-                    case LightSourceTypeID.Line:
                         return Parent.SphereBuffer;
                     default:
                         return Parent.CornerBuffer;

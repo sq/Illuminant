@@ -28,8 +28,7 @@ namespace TestGame.Scenes {
 
         Toggle ShowGBuffer,
             ShowDistanceField,
-            Deterministic,
-            EfficientUpdates;
+            Deterministic;
 
         Slider DistanceFieldResolution;
 
@@ -145,23 +144,23 @@ namespace TestGame.Scenes {
             CreateDistanceField();
 
             MovableLight = new LineLightSource {
-                StartColor = new Vector4(1f, 1f, 1f, 0.5f),
-                EndColor = new Vector4(1f, 1f, 1f, 0.5f),
-                Radius = 24,
+                StartColor = new Vector4(1f, 0.22f, 0.22f, 0.66f),
+                EndColor = new Vector4(0.22f, 0.22f, 1f, 0.66f),
+                Radius = 16,
                 RampLength = 350,
-                RampMode = LightSourceRampMode.Linear
+                RampMode = LightSourceRampMode.Exponential
             };
 
             Environment.Lights.Add(MovableLight);
 
             Environment.Lights.Add(new DirectionalLightSource {
                 Direction = new Vector3(-0.75f, -0.7f, -0.33f),
-                Color = new Vector4(0.2f, 0.4f, 0.6f, 0.4f),
+                Color = new Vector4(0.2f, 0.4f, 0.6f, 0.2f),
             });
 
             Environment.Lights.Add(new DirectionalLightSource {
                 Direction = new Vector3(0.35f, -0.05f, -0.75f),
-                Color = new Vector4(0.5f, 0.3f, 0.15f, 0.3f),
+                Color = new Vector4(0.5f, 0.3f, 0.15f, 0.1f),
             });
 
             Rect(new Vector2(330, 347), new Vector2(Width, 388), 0f, 55f);
