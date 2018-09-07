@@ -12,7 +12,8 @@ namespace Squared.Illuminant {
         Unknown = 0,
         Sphere = 1,
         Directional = 2,
-        Particle = 3
+        Particle = 3,
+        Line = 4,
     }
 
     public abstract class LightSource {
@@ -20,12 +21,6 @@ namespace Squared.Illuminant {
 
         public object UserData;
 
-        /// <summary>
-        /// The color of the light's illumination.
-        /// Note that this color is a Vector4 so that you can use HDR (greater than one) lighting values.
-        /// Alpha is *not* premultiplied (maybe it should be?)
-        /// </summary>
-        public Vector4   Color = Vector4.One;
         /// <summary>
         /// A separate opacity factor that you can use to easily fade lights in/out.
         /// </summary>
@@ -94,6 +89,12 @@ namespace Squared.Illuminant {
         /// Controls how quickly directional light shadows become fuzzy.
         /// </summary>
         public float   ShadowRampRate = 0.5f;
+        /// <summary>
+        /// The color of the light's illumination.
+        /// Note that this color is a Vector4 so that you can use HDR (greater than one) lighting values.
+        /// Alpha is *not* premultiplied (maybe it should be?)
+        /// </summary>
+        public Vector4   Color = Vector4.One;
 
         public DirectionalLightSource ()
             : base (LightSourceTypeID.Directional) {
@@ -143,6 +144,12 @@ namespace Squared.Illuminant {
         /// Non-linear ramps (with weird patterns or what have you) will look really weird unless you set this to true.
         /// </summary>
         public bool UseDistanceForRampTexture = false;
+        /// <summary>
+        /// The color of the light's illumination.
+        /// Note that this color is a Vector4 so that you can use HDR (greater than one) lighting values.
+        /// Alpha is *not* premultiplied (maybe it should be?)
+        /// </summary>
+        public Vector4   Color = Vector4.One;
 
         public Bounds3 Bounds {
             get {
@@ -162,6 +169,82 @@ namespace Squared.Illuminant {
                 Radius = Radius,
                 RampLength = RampLength,
                 Color = Color,
+                Opacity = Opacity,
+                CastsShadows = CastsShadows,
+                AmbientOcclusionRadius = AmbientOcclusionRadius,
+                RampMode = RampMode,
+                FalloffYFactor = FalloffYFactor,
+                ShadowDistanceFalloff = ShadowDistanceFalloff,
+                AmbientOcclusionOpacity = AmbientOcclusionOpacity,
+                Quality = Quality,
+                RampTexture = RampTexture,
+                UseDistanceForRampTexture = UseDistanceForRampTexture
+            };
+            return result;
+        }
+    }
+
+    public class LineLightSource : LightSource {
+        /// <summary>
+        /// The position of the beginning of the line.
+        /// </summary>
+        public Vector3 StartPosition;
+        /// <summary>
+        /// The position of the end of the line.
+        /// </summary>
+        public Vector3 EndPosition;
+        /// <summary>
+        /// The size of the light source.
+        /// </summary>
+        public float   Radius = 0;
+        /// <summary>
+        /// The size of the falloff around the light source.
+        /// </summary>
+        public float   RampLength = 1;
+        /// <summary>
+        /// Controls the nature of the light's distance falloff.
+        /// Exponential produces falloff that is more realistic (square of distance or whatever) but not necessarily as expected. 
+        /// </summary>
+        public LightSourceRampMode RampMode = LightSourceRampMode.Linear;
+        /// <summary>
+        /// If using a ramp texture, this selects values from the ramp based on distance from light instead of light brightness.
+        /// Non-linear ramps (with weird patterns or what have you) will look really weird unless you set this to true.
+        /// </summary>
+        public bool UseDistanceForRampTexture = false;
+        /// <summary>
+        /// The color of the light's illumination.
+        /// Note that this color is a Vector4 so that you can use HDR (greater than one) lighting values.
+        /// Alpha is *not* premultiplied (maybe it should be?)
+        /// </summary>
+        public Vector4   StartColor = Vector4.One, EndColor = Vector4.One;
+
+        public Bounds3 Bounds {
+            get {
+                var size = new Vector3(Radius + RampLength);
+                var pbounds = Bounds3.FromPoints(StartPosition, EndPosition);
+                return new Bounds3(pbounds.Minimum - size, pbounds.Maximum + size);
+            }
+        }
+
+        public Vector4 Color {
+            set {
+                StartColor = EndColor = value;
+            }
+        }
+
+        public LineLightSource ()
+            : base (LightSourceTypeID.Line) {
+        }
+
+        public LineLightSource Clone () {
+            var result = new LineLightSource {
+                UserData = UserData,
+                StartPosition = StartPosition,
+                EndPosition = EndPosition,
+                Radius = Radius,
+                RampLength = RampLength,
+                StartColor = StartColor,
+                EndColor = EndColor,
                 Opacity = Opacity,
                 CastsShadows = CastsShadows,
                 AmbientOcclusionRadius = AmbientOcclusionRadius,

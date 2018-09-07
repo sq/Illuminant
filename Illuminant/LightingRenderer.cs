@@ -126,6 +126,22 @@ namespace Squared.Illuminant {
                             throw new NotImplementedException("GI");
                         ProbeMaterial = null;
                         break;
+                    case LightSourceTypeID.Line:
+                        Material = (key.RampTexture == null)
+                            ? parent.IlluminantMaterials.LineLight
+                            : (
+                                key.DistanceRamp
+                                    ? parent.IlluminantMaterials.LineLightWithDistanceRamp
+                                    : parent.IlluminantMaterials.LineLightWithOpacityRamp
+                            );
+                        ProbeMaterial = (key.RampTexture == null)
+                            ? parent.IlluminantMaterials.LineLightProbe
+                            : (
+                                key.DistanceRamp
+                                    ? parent.IlluminantMaterials.LineLightProbeWithDistanceRamp
+                                    : parent.IlluminantMaterials.LineLightProbeWithOpacityRamp
+                            );
+                        break;
                     default:
                         throw new NotImplementedException(key.Type.ToString());
                 }
@@ -839,6 +855,7 @@ namespace Squared.Illuminant {
                                 var pointLightSource = lightSource as SphereLightSource;
                                 var directionalLightSource = lightSource as DirectionalLightSource;
                                 var particleLightSource = lightSource as ParticleLightSource;
+                                var lineLightSource = lightSource as LineLightSource;
 
                                 var ltrs = GetLightRenderState(lightSource);
 
@@ -846,9 +863,11 @@ namespace Squared.Illuminant {
                                     continue;
 
                                 if (pointLightSource != null)
-                                    RenderPointLightSource(pointLightSource, intensityScale, ltrs);
+                                    RenderSphereLightSource(pointLightSource, intensityScale, ltrs);
                                 else if (directionalLightSource != null)
                                     RenderDirectionalLightSource(directionalLightSource, intensityScale, ltrs);
+                                else if (lineLightSource != null)
+                                    RenderLineLightSource(lineLightSource, intensityScale, ltrs);
                                 else
                                     throw new NotSupportedException(lightSource.GetType().Name);
                             };
@@ -931,11 +950,12 @@ namespace Squared.Illuminant {
             return result;
         }
 
-        private void RenderPointLightSource (SphereLightSource lightSource, float intensityScale, LightTypeRenderState ltrs) {
+        private void RenderSphereLightSource (SphereLightSource lightSource, float intensityScale, LightTypeRenderState ltrs) {
             LightVertex vertex;
-            vertex.LightCenter = lightSource.Position;
-            vertex.Color = lightSource.Color;
-            vertex.Color.W *= (lightSource.Opacity * intensityScale);
+            vertex.LightPosition2 = vertex.LightPosition1 = lightSource.Position;
+            var color = lightSource.Color;
+            color.W *= (lightSource.Opacity * intensityScale);
+            vertex.Color2 = vertex.Color1 = color;
             vertex.LightProperties.X = lightSource.Radius;
             vertex.LightProperties.Y = lightSource.RampLength;
             vertex.LightProperties.Z = (int)lightSource.RampMode;
@@ -951,9 +971,10 @@ namespace Squared.Illuminant {
 
         private void RenderDirectionalLightSource (DirectionalLightSource lightSource, float intensityScale, LightTypeRenderState ltrs) {
             LightVertex vertex;
-            vertex.LightCenter = lightSource._Direction;
-            vertex.Color = lightSource.Color;
-            vertex.Color.W *= (lightSource.Opacity * intensityScale);
+            vertex.LightPosition2 = vertex.LightPosition1 = lightSource._Direction;
+            var color = lightSource.Color;
+            color.W *= (lightSource.Opacity * intensityScale);
+            vertex.Color2 = vertex.Color1 = color;
             vertex.LightProperties = new Vector4(
                 lightSource.CastsShadows ? 1f : 0f,
                 lightSource.ShadowTraceLength,
@@ -978,6 +999,28 @@ namespace Squared.Illuminant {
             );
 
             ltrs.LightVertices.Add(ref vertex);
+            ltrs.LightCount++;
+        }
+
+        private void RenderLineLightSource (LineLightSource lightSource, float intensityScale, LightTypeRenderState ltrs) {
+            LightVertex vertex;
+            vertex.LightPosition1 = lightSource.StartPosition;
+            vertex.LightPosition2 = lightSource.EndPosition;
+            Vector4 color1 = lightSource.StartColor, color2 = lightSource.EndColor;
+            color1.W *= (lightSource.Opacity * intensityScale);
+            color2.W *= (lightSource.Opacity * intensityScale);
+            vertex.Color1 = color1;
+            vertex.Color2 = color2;
+            vertex.LightProperties.X = lightSource.Radius;
+            vertex.LightProperties.Y = lightSource.RampLength;
+            vertex.LightProperties.Z = (int)lightSource.RampMode;
+            vertex.LightProperties.W = lightSource.CastsShadows ? 1f : 0f;
+            vertex.MoreLightProperties.X = lightSource.AmbientOcclusionRadius;
+            vertex.MoreLightProperties.Y = lightSource.ShadowDistanceFalloff.GetValueOrDefault(-99999);
+            vertex.MoreLightProperties.Z = lightSource.FalloffYFactor;
+            vertex.MoreLightProperties.W = lightSource.AmbientOcclusionOpacity;
+            ltrs.LightVertices.Add(ref vertex);
+
             ltrs.LightCount++;
         }
 

@@ -13,11 +13,11 @@ float4 ApplyTransform (float3 position) {
 
 void DirectionalLightVertexShader(
     in int2 cornerIndex              : BLENDINDICES0,
-    inout float4 color               : TEXCOORD4,
     inout float3 lightDirection      : TEXCOORD0,
-    inout float4 lightProperties     : TEXCOORD1,
+    inout float4 lightProperties     : TEXCOORD2,
     inout float4 moreLightProperties : TEXCOORD3,
-    out float2   worldPosition       : TEXCOORD2,
+    inout float4 color               : TEXCOORD4,
+    out float2   worldPosition       : POSITION1,
     out float4   result              : POSITION0
 ) {
     float2 position = LightCorners[cornerIndex.x] * 99999;
@@ -29,10 +29,10 @@ void DirectionalLightVertexShader(
 
 void DirectionalLightProbeVertexShader(
     in int2 cornerIndex              : BLENDINDICES0,
-    inout float4 color               : TEXCOORD4,
     inout float3 lightDirection      : TEXCOORD0,
-    inout float4 lightProperties     : TEXCOORD1,
+    inout float4 lightProperties     : TEXCOORD2,
     inout float4 moreLightProperties : TEXCOORD3,
+    inout float4 color               : TEXCOORD4,
     out float4   result              : POSITION0
 ) {
     if (cornerIndex.x > 3) {
@@ -46,11 +46,11 @@ void DirectionalLightProbeVertexShader(
 float DirectionalLightPixelCore(
     in float3 shadedPixelPosition,
     in float3 shadedPixelNormal,
-    in float3 lightDirection      : TEXCOORD0,
+    in float3 lightDirection,
     // enableShadows, shadowTraceLength, shadowSoftness, shadowRampRate
-    in float4 lightProperties     : TEXCOORD1,
+    in float4 lightProperties,
     // aoRadius, shadowDistanceFalloff, shadowRampLength, aoOpacity
-    in float4 moreLightProperties : TEXCOORD3,
+    in float4 moreLightProperties,
     in bool   useOpacityRamp
 ) {
     float lightOpacity = computeDirectionalLightOpacity(lightDirection, shadedPixelNormal);
@@ -87,9 +87,9 @@ float DirectionalLightPixelCore(
 }
 
 void DirectionalLightPixelShader(
-    in  float2 worldPosition       : TEXCOORD2,
+    in  float2 worldPosition       : POSITION1,
     in  float3 lightDirection      : TEXCOORD0,
-    in  float4 lightProperties     : TEXCOORD1,
+    in  float4 lightProperties     : TEXCOORD2,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : TEXCOORD4,
     in  float2 vpos                : VPOS,
@@ -111,9 +111,9 @@ void DirectionalLightPixelShader(
 }
 
 void DirectionalLightWithRampPixelShader(
-    in  float2 worldPosition       : TEXCOORD2,
+    in  float2 worldPosition       : POSITION1,
     in  float3 lightDirection      : TEXCOORD0,
-    in  float4 lightProperties     : TEXCOORD1,
+    in  float4 lightProperties     : TEXCOORD2,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : TEXCOORD4,
     in  float2 vpos                : VPOS,
@@ -135,9 +135,8 @@ void DirectionalLightWithRampPixelShader(
 }
 
 void DirectionalLightProbePixelShader(
-    in  float2 worldPosition       : TEXCOORD2,
     in  float3 lightDirection      : TEXCOORD0,
-    in  float4 lightProperties     : TEXCOORD1,
+    in  float4 lightProperties     : TEXCOORD2,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : TEXCOORD4,
     in  float2 vpos                : VPOS,
@@ -163,9 +162,8 @@ void DirectionalLightProbePixelShader(
 }
 
 void DirectionalLightProbeWithRampPixelShader(
-    in  float2 worldPosition       : TEXCOORD2,
     in  float3 lightDirection      : TEXCOORD0,
-    in  float4 lightProperties     : TEXCOORD1,
+    in  float4 lightProperties     : TEXCOORD2,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : TEXCOORD4,
     in  float2 vpos                : VPOS,

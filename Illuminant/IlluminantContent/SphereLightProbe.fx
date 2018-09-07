@@ -2,10 +2,12 @@
 
 void SphereLightProbeVertexShader(
     in int2 cornerIndex              : BLENDINDICES0,
-    inout float4 color               : TEXCOORD4,
     inout float3 lightCenter         : TEXCOORD0,
-    inout float4 lightProperties     : TEXCOORD1,
+    // radius, ramp length, ramp mode, enable shadows
+    inout float4 lightProperties     : TEXCOORD2,
+    // ao radius, distance falloff, y falloff factor, ao opacity
     inout float4 moreLightProperties : TEXCOORD3,
+    inout float4 color               : TEXCOORD4,
     out float4 result                : POSITION0
 ) {
     if (cornerIndex.x > 3) {
@@ -18,7 +20,7 @@ void SphereLightProbeVertexShader(
 
 void SphereLightProbePixelShader(
     in  float3 lightCenter         : TEXCOORD0,
-    in  float4 lightProperties     : TEXCOORD1,
+    in  float4 lightProperties     : TEXCOORD2,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : TEXCOORD4,
     in  float2 vpos                : VPOS,
@@ -45,7 +47,7 @@ void SphereLightProbePixelShader(
 
 void SphereLightProbeWithDistanceRampPixelShader(
     in  float3 lightCenter         : TEXCOORD0,
-    in  float4 lightProperties     : TEXCOORD1,
+    in  float4 lightProperties     : TEXCOORD2,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : TEXCOORD4,
     in  float2 vpos                : VPOS,
@@ -72,7 +74,7 @@ void SphereLightProbeWithDistanceRampPixelShader(
 
 void SphereLightProbeWithOpacityRampPixelShader(
     in  float3 lightCenter         : TEXCOORD0,
-    in  float4 lightProperties     : TEXCOORD1,
+    in  float4 lightProperties     : TEXCOORD2,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : TEXCOORD4,
     in  float2 vpos                : VPOS,

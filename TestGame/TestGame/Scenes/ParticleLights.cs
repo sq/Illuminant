@@ -130,7 +130,7 @@ namespace TestGame.Scenes {
         void Ellipse (Vector2 center, float radiusX, float radiusY, float z1, float height) {
             var numPoints = Math.Max(
                 16,
-                (int)Math.Ceiling((radiusX + radiusY) * 0.5f)
+                (int)Math.Ceiling((radiusX + radiusY) * 0.2f)
             );
 
             var pts = new Vector2[numPoints];
@@ -207,7 +207,7 @@ namespace TestGame.Scenes {
 
             Engine = new ParticleEngine(
                 Game.Content, Game.RenderCoordinator, Game.Materials,
-                new ParticleEngineConfiguration (256)
+                new ParticleEngineConfiguration (128)
             );
 
             SetupParticleSystem();

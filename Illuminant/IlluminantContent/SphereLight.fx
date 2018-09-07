@@ -2,13 +2,13 @@
 
 void SphereLightVertexShader(
     in int2 vertexIndex              : BLENDINDICES0,
-    inout float4 color               : TEXCOORD4,
     inout float3 lightCenter         : TEXCOORD0,
     // radius, ramp length, ramp mode, enable shadows
-    inout float4 lightProperties     : TEXCOORD1,
+    inout float4 lightProperties     : TEXCOORD2,
     // ao radius, distance falloff, y falloff factor, ao opacity
     inout float4 moreLightProperties : TEXCOORD3,
-    out float3 worldPosition         : TEXCOORD2,
+    inout float4 color               : TEXCOORD4,
+    out float3 worldPosition         : POSITION1,
     out float4 result                : POSITION0
 ) {
     float3 vertex = ClippedLightVertices[vertexIndex.x];
@@ -45,9 +45,9 @@ void SphereLightVertexShader(
 }
 
 void SphereLightPixelShader(
-    in  float3 worldPosition       : TEXCOORD2,
+    in  float3 worldPosition       : POSITION1,
     in  float3 lightCenter         : TEXCOORD0,
-    in  float4 lightProperties     : TEXCOORD1,
+    in  float4 lightProperties     : TEXCOORD2,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : TEXCOORD4,
     in  float2 vpos                : VPOS,
@@ -68,9 +68,9 @@ void SphereLightPixelShader(
 }
 
 void SphereLightWithDistanceRampPixelShader(
-    in  float3 worldPosition       : TEXCOORD2,
+    in  float3 worldPosition       : POSITION1,
     in  float3 lightCenter         : TEXCOORD0,
-    in  float4 lightProperties     : TEXCOORD1,
+    in  float4 lightProperties     : TEXCOORD2,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : TEXCOORD4,
     in  float2 vpos                : VPOS,
@@ -91,9 +91,9 @@ void SphereLightWithDistanceRampPixelShader(
 }
 
 void SphereLightWithOpacityRampPixelShader(
-    in  float3 worldPosition       : TEXCOORD2,
+    in  float3 worldPosition       : POSITION1,
     in  float3 lightCenter         : TEXCOORD0,
-    in  float4 lightProperties     : TEXCOORD1,
+    in  float4 lightProperties     : TEXCOORD2,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : TEXCOORD4,
     in  float2 vpos                : VPOS,
