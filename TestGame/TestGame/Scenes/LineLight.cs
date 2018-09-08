@@ -28,17 +28,20 @@ namespace TestGame.Scenes {
 
         Toggle ShowGBuffer,
             ShowDistanceField,
-            Deterministic;
+            Deterministic,
+            Shadows;
 
         Slider DistanceFieldResolution,
             LightRadius,
-            LightRampLength;
+            LightRampLength,
+            Elevation;
 
         public LineLight (TestGame game, int width, int height)
             : base(game, 1024, 1024) {
 
             Deterministic.Value = true;
             DistanceFieldResolution.Value = 0.5f;
+            Elevation.Value = 16;
 
             LightRadius.Value = 16;
             LightRampLength.Value = 350;
@@ -58,6 +61,9 @@ namespace TestGame.Scenes {
 
             LightRampLength.Min = 0;
             LightRampLength.Max = 1024;
+
+            Elevation.Min = 0;
+            Elevation.Max = 132;
 
             DistanceFieldResolution.Changed += (s, e) => CreateDistanceField();
         }
@@ -159,6 +165,8 @@ namespace TestGame.Scenes {
                 EndColor = new Vector4(0.22f, 0.22f, 1f, 0.66f),
                 RampMode = LightSourceRampMode.Exponential
             };
+            MovableLight.StartPosition = new Vector3(200, 700, Elevation);
+            MovableLight.EndPosition = new Vector3(900, 900, Elevation);
 
             Environment.Lights.Add(MovableLight);
 
@@ -205,6 +213,10 @@ namespace TestGame.Scenes {
                     bg, 2, Width, Height, 
                     hdr: new HDRConfiguration {
                         InverseScaleFactor = LightScaleFactor,
+                        Dithering = new DitheringSettings {
+                            Power = 8,
+                            Strength = 1
+                        }
                     }
                 );
             };
@@ -265,12 +277,13 @@ namespace TestGame.Scenes {
                 var ms = Game.MouseState;
                 Game.IsMouseVisible = true;
 
+                MovableLight.CastsShadows = Shadows;
                 MovableLight.RampLength = LightRampLength;
                 MovableLight.Radius = LightRadius;
+                MovableLight.StartPosition.Z = Elevation;
+                MovableLight.EndPosition.Z = Elevation;
 
                 if (Deterministic) {
-                    MovableLight.StartPosition = new Vector3(200, 700, 0.7f);
-                    MovableLight.EndPosition = new Vector3(900, 900, 1.5f);
                 } else {
                     if (ms.LeftButton == ButtonState.Pressed) {
                         MovableLight.EndPosition.X = ms.X;
