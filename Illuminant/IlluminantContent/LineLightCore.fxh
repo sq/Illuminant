@@ -8,11 +8,8 @@
 #define SELF_OCCLUSION_HACK 1.5
 #define SHADOW_OPACITY_THRESHOLD (0.75 / 255.0)
 
-float3 computeLightCenter (float3 worldPosition, float3 startPosition, float3 endPosition, out float u, inout float4 lightProperties) {
-    float2 xy = closestPointOnLine(worldPosition.xy, startPosition.xy, endPosition.xy, u);
-    float z = lerp(startPosition.z, endPosition.z, u);
-    float3 result = float3(xy, z);
-    return result;
+float3 computeLightCenter (float3 worldPosition, float3 startPosition, float3 endPosition, out float u) {
+    return closestPointOnLineSegment3(startPosition, endPosition, worldPosition, u);
 }
 
 float LineLightPixelCore(
@@ -20,8 +17,8 @@ float LineLightPixelCore(
     in float3 shadedPixelNormal,
     in float3 startPosition,
     in float3 endPosition,
-    // radius, ramp length, ramp mode, enable shadows
     out float u,
+    // radius, ramp length, ramp mode, enable shadows
     in float4 lightProperties,
     // ao radius, distance falloff, y falloff factor, ao opacity
     in float4 moreLightProperties,
@@ -31,7 +28,7 @@ float LineLightPixelCore(
     bool  distanceCull = false;
 
     float4 coneLightProperties = lightProperties;
-    float3 lightCenter = computeLightCenter(shadedPixelPosition, startPosition, endPosition, u, coneLightProperties);
+    float3 lightCenter = computeLightCenter(shadedPixelPosition, startPosition, endPosition, u);
 
     float distanceOpacity = computeSphereLightOpacity(
         shadedPixelPosition, shadedPixelNormal,

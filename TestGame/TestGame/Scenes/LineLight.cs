@@ -30,13 +30,18 @@ namespace TestGame.Scenes {
             ShowDistanceField,
             Deterministic;
 
-        Slider DistanceFieldResolution;
+        Slider DistanceFieldResolution,
+            LightRadius,
+            LightRampLength;
 
         public LineLight (TestGame game, int width, int height)
             : base(game, 1024, 1024) {
 
-            Deterministic.Value = false;
+            Deterministic.Value = true;
             DistanceFieldResolution.Value = 0.5f;
+
+            LightRadius.Value = 16;
+            LightRampLength.Value = 350;
 
             ShowGBuffer.Key = Keys.G;
             ShowDistanceField.Key = Keys.D;
@@ -47,6 +52,12 @@ namespace TestGame.Scenes {
             DistanceFieldResolution.Min = 0.1f;
             DistanceFieldResolution.Max = 1.0f;
             DistanceFieldResolution.Speed = 0.05f;
+
+            LightRadius.Min = 0.5f;
+            LightRadius.Max = 128;
+
+            LightRampLength.Min = 0;
+            LightRampLength.Max = 1024;
 
             DistanceFieldResolution.Changed += (s, e) => CreateDistanceField();
         }
@@ -146,8 +157,6 @@ namespace TestGame.Scenes {
             MovableLight = new LineLightSource {
                 StartColor = new Vector4(1f, 0.22f, 0.22f, 0.66f),
                 EndColor = new Vector4(0.22f, 0.22f, 1f, 0.66f),
-                Radius = 16,
-                RampLength = 350,
                 RampMode = LightSourceRampMode.Exponential
             };
 
@@ -256,9 +265,12 @@ namespace TestGame.Scenes {
                 var ms = Game.MouseState;
                 Game.IsMouseVisible = true;
 
+                MovableLight.RampLength = LightRampLength;
+                MovableLight.Radius = LightRadius;
+
                 if (Deterministic) {
-                    MovableLight.StartPosition = new Vector3(256, 256, 0.7f);
-                    MovableLight.EndPosition = new Vector3(400, 500, 1.5f);
+                    MovableLight.StartPosition = new Vector3(200, 700, 0.7f);
+                    MovableLight.EndPosition = new Vector3(900, 900, 1.5f);
                 } else {
                     if (ms.LeftButton == ButtonState.Pressed) {
                         MovableLight.EndPosition.X = ms.X;

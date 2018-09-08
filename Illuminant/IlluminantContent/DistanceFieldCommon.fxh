@@ -87,23 +87,39 @@ bool doLinesIntersect (float2 a1, float2 a2, float2 b1, float2 b2, out float dis
     return true;
 }
 
-float2 closestPointOnLine (
-    float2 pt, float2 lineStart, float2 lineEnd, out float u
-) {
-    float2 lineDelta = lineEnd - lineStart;
-    float  lineLength = length(lineDelta);
-    lineLength *= lineLength;
-    
-    if (lineLength == 0) {
-        u = 0;
-    } else {
-        float2 pointDelta = (pt - lineStart) * lineDelta;
-        u = saturate((pointDelta.x + pointDelta.y) / lineLength);
-    }
-
-    return lineStart + ((lineEnd - lineStart) * u);
+float2 closestPointOnLine2 (float2 a, float2 b, float2 pt, out float t) {
+    float2  ab = b - a;
+    t = dot(pt - a, ab) / dot(ab, ab);
+    return a + t * ab;
 }
 
+float2 closestPointOnLineSegment2 (float2 a, float2 b, float2 pt, out float t) {
+    float2  ab = b - a;
+    t = saturate(dot(pt - a, ab) / dot(ab, ab));
+    return a + t * ab;
+}
+
+float3 closestPointOnLine3 (float3 a, float3 b, float3 pt, out float t) {
+    float3  ab = b - a;
+    t = dot(pt - a, ab) / dot(ab, ab);
+    return a + t * ab;
+}
+
+float3 closestPointOnLineSegment3 (float3 a, float3 b, float3 pt, out float t) {
+    float3  ab = b - a;
+    t = saturate(dot(pt - a, ab) / dot(ab, ab));
+    return a + t * ab;
+}
+
+float distanceSquaredToEdge (float2 pt, float2 a, float2 b) {
+    float t;
+    float2 chosen = closestPointOnLineSegment2(a, b, pt, t);
+    float2 distanceSq = (pt - chosen);
+    distanceSq *= distanceSq;
+    return distanceSq.x + distanceSq.y;
+}
+
+/*
 float _dist2 (float2 a, float2 b) {
     float2 d = (a - b);
     d *= d;
@@ -124,6 +140,7 @@ float distanceSquaredToEdge (
         float2(v.x + t * wv.x, v.y + t * wv.y)
     );
 }
+*/
 
 float encodeDistance (float distance) {
     return DISTANCE_ZERO - (distance / MaximumEncodedDistance);
