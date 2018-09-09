@@ -102,6 +102,32 @@ float computeLineLightOpacity (
         return illuminance;
 }
 
+// A right  disk is a disk  oriented  to  always  face  the  lit  surface.
+//  Solid  angle  of a sphere  or a right  disk is 2 PI (1 - cos(subtended  angle)).
+//  Subtended  angle  sigma = arcsin(r / d) for a sphere
+// and  sigma = atan(r / d) for a right  disk
+//  sinSigmaSqr = sin(subtended  angle)^2, it is (r^2 / d^2) for a sphere
+// and (r^2 / ( r^2 + d^2)) for a disk
+//  cosTheta  is not  clamped
+float  illuminanceSphereOrDisk(float  cosTheta , float  sinSigmaSqr) {
+    float  sinTheta = sqrt (1.0f - cosTheta * cosTheta);
+    float  illuminance = 0.0f;
+    // Note: Following  test is  equivalent  to the  original  formula.
+    //  There  is 3 phase  in the  curve: cosTheta  > sqrt(sinSigmaSqr),
+    //  cosTheta  > -sqrt(sinSigmaSqr) and  else it is 0
+    // The  two  outer  case  can be  merge  into a cosTheta * cosTheta  > sinSigmaSqr
+    // and  using  saturate(cosTheta) instead.
+    if (cosTheta * cosTheta  > sinSigmaSqr) {
+        illuminance = PI * sinSigmaSqr * saturate(cosTheta);
+    } else {
+        float x = sqrt (1.0f / sinSigmaSqr  - 1.0f); // For a disk  this  simplify  to x = d / r
+        float y = -x * (cosTheta / sinTheta);
+        float  sinThetaSqrtY = sinTheta * sqrt (1.0f - y * y);
+        illuminance = (cosTheta * acos(y) - x * sinThetaSqrtY) * sinSigmaSqr + atan(sinThetaSqrtY / x);
+    }
+    return max(illuminance , 0.0f);
+}
+
 float computeSphereLightOpacityFB (
     float3 worldPos, float3 worldNormal, 
     float3 lightPos, float radius
@@ -109,21 +135,40 @@ float computeSphereLightOpacityFB (
     float3 Lunormalized = lightPos - worldPos;
     float3 L = normalize(Lunormalized);
     float sqrDist = dot(Lunormalized , Lunormalized);
-    // Tilted patch to sphere equation
-    float Beta = acos(dot(worldNormal , L));
-    float H = sqrt(sqrDist);
-    float h = H / radius;
-    float x = sqrt(h * h - 1);
-    float y = -x * (1 / tan(Beta));
 
-    float illuminance = 0;
-    if (h * cos(Beta) > 1)
-        illuminance = cos(Beta) / (h * h);
-    else {
-        illuminance = (1 / (PI * h * h)) *
-        (cos(Beta) * acos(y) - x * sin(Beta) * sqrt(1 - y * y)) +
-        (1 / PI) * atan(sin(Beta) * sqrt(1 - y * y) / x);
+    if (0) {
+        // Inigo quilez's solution that doesn't handle horizon
+        return PI * saturate(dot(L , worldNormal)) *
+        ((radius * radius) / sqrDist);
+    } else if (0) {
+        // Tilted patch to sphere equation, modified (but still broken like it was in the paper)
+        float clampedNormal = dot(worldNormal , L);
+        float Beta = acos(clampedNormal);
+        float cosBeta = clampedNormal;
+        float sinBeta = sqrt(1 - (clampedNormal * clampedNormal));
+        float H = sqrt(sqrDist);
+        float h = H / radius;
+        float x = sqrt(h * h - 1);
+        float y = -x * (1 / tan(Beta));
+
+        float illuminance = 0;
+        if (h * cosBeta > 1)
+            illuminance = cosBeta / (h * h);
+        else {
+            illuminance = (1 / (PI * h * h)) *
+            (cosBeta * acos(y) - x * sinBeta * sqrt(1 - y * y)) +
+            (1 / PI) * atan(sinBeta * sqrt(1 - y * y) / x);
+        }
+
+        return illuminance * PI;
+    } else {
+        //  Sphere  evaluation
+        float  cosTheta = clamp(dot(worldNormal , L),  -0.999,  0.999); //  Clamp  to avoid  edge  case
+        // We need to  prevent  the  object  penetrating  into  the  surface
+        // and we must  avoid  divide  by 0, thus  the  0.9999f
+        float  sqrLightRadius = radius * radius;
+        float  sinSigmaSqr = min(sqrLightRadius / sqrDist , 0.9999f);
+        float  illuminance = illuminanceSphereOrDisk(cosTheta , sinSigmaSqr);
+        return illuminance;
     }
-
-    return illuminance * PI;
 }
