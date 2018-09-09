@@ -30,7 +30,6 @@ namespace Squared.Illuminant {
         ///  creating shadows. Otherwise, any objects facing this light will be lit (if in range).
         /// </summary>
         public bool      CastsShadows = true;
-        // FIXME: Not implemented in shaders
         public float?    ShadowDistanceFalloff = null;
         /// <summary>
         /// Uniformly obscures light if it is within N pixels of any obstacle. This produces

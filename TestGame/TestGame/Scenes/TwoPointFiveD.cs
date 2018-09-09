@@ -89,6 +89,7 @@ namespace TestGame.Scenes {
             DitherRangeMin.Value = 0f;
             DitherRangeMax.Value = 1f;
             DitherMode.Value = "Merged";
+            ShowLightmap.Value = true;
 
             ShowLightmap.Key = Keys.L;
             ShowGBuffer.Key = Keys.G;
@@ -167,15 +168,15 @@ namespace TestGame.Scenes {
         void Ellipse (Vector2 center, float radiusX, float radiusY, float z1, float height) {
             var numPoints = Math.Max(
                 8,
-                (int)Math.Ceiling((radiusX + radiusY) * 0.5f)
+                (int)Math.Ceiling((radiusX + radiusY) * 0.33f)
             );
 
             var pts = new Vector2[numPoints];
-            float radiusStep = (float)((Math.PI * 2) / numPoints);
-            float r = 0;
+            double radiusStep = (float)((Math.PI * 2) / numPoints);
+            double r = 0.02;
 
             for (var i = 0; i < numPoints; i++, r += radiusStep)
-                pts[i] = new Vector2((float)Math.Cos(r) * radiusX, (float)Math.Sin(r) * radiusY) + center;
+                pts[i] = new Vector2((float)(Math.Cos(r) * radiusX), (float)(Math.Sin(r) * radiusY)) + center;
             
             var result = new SimpleHeightVolume(
                 new Polygon(pts),
@@ -455,7 +456,7 @@ namespace TestGame.Scenes {
                 MovableLight.UseDistanceForRampTexture = UseDistanceRamp;
 
                 if (Deterministic) {
-                    MovableLight.Position = new Vector3(671, 394, 97.5f);
+                    MovableLight.Position = new Vector3(740, 540, 130f);
                     MovableLight.Color.W = 0.5f;
                 } else {
                     MovableLight.Position = mousePos;
