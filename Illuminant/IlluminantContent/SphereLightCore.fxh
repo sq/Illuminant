@@ -46,7 +46,7 @@ float SphereLightPixelCore(
         lightCenter, lightProperties.xy, 
         float2(getConeGrowthFactor(), moreLightProperties.y),
         shadedPixelPosition + (SELF_OCCLUSION_HACK * shadedPixelNormal),
-        vars, true, traceShadows
+        vars, traceShadows
     );
 
     float lightOpacity;

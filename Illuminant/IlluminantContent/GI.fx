@@ -166,7 +166,7 @@ float4 computeProbeRadiance(
         probePosition, float2(ConeShadowRadius, ConeShadowRamp),
         float2(getConeGrowthFactor(), 1),
         shadedPixelPosition + (SELF_OCCLUSION_HACK * normalToProbe),
-        vars, false, ProbeLightCastsShadows
+        vars, ProbeLightCastsShadows
     );
 
     if (ProbeDistanceFalloff) {

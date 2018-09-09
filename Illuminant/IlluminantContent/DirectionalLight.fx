@@ -73,7 +73,7 @@ float DirectionalLightPixelCore(
         fakeLightCenter, fakeRamp, 
         float2(lightProperties.w, moreLightProperties.y),
         shadedPixelPosition + (SELF_OCCLUSION_HACK * shadedPixelNormal), 
-        vars, true, traceShadows
+        vars, traceShadows
     );
 
     [branch]
