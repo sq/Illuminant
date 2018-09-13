@@ -14,7 +14,7 @@ void PS_Null (
     out float4 newAttributes : COLOR2
 ) {
     readState(
-        xy * Texel, newPosition, newVelocity, newAttributes
+        xy * System.Texel, newPosition, newVelocity, newAttributes
     );
 }
 

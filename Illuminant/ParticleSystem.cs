@@ -581,8 +581,6 @@ namespace Squared.Illuminant.Particles {
                     dm.Device.SetRenderTargets(dest.Bindings);
                     dm.Device.Viewport = new Viewport(0, 0, Engine.Configuration.ChunkSize, Engine.Configuration.ChunkSize);
 
-                    p["Texel"].SetValue(new Vector2(1f / Engine.Configuration.ChunkSize, 1f / Engine.Configuration.ChunkSize));
-
                     if (setParameters != null)
                         setParameters(p, CurrentFrameIndex);
 
@@ -595,14 +593,6 @@ namespace Squared.Illuminant.Particles {
                             at.SetValue(source.Attributes);
                     }
 
-                    var mv = p["MaximumVelocity"];
-                    if (mv != null)
-                        mv.SetValue(Configuration.MaximumVelocity);
-
-                    var dts = p["DeltaTimeSeconds"];
-                    if (dts != null)
-                        dts.SetValue((float)deltaTimeSeconds);
-
                     var dft = p["DistanceFieldTexture"];
                     if (dft != null)
                         dft.SetValue(Configuration.DistanceField.Texture);
@@ -612,6 +602,8 @@ namespace Squared.Illuminant.Particles {
                         p["RandomnessTexel"].SetValue(new Vector2(1.0f / ParticleEngine.RandomnessTextureWidth, 1.0f / ParticleEngine.RandomnessTextureHeight));
                         rt.SetValue(Engine.RandomnessTexture);
                     }
+
+                    SetSystemUniform(m, deltaTimeSeconds);
 
                     m.Flush();
 
@@ -756,6 +748,11 @@ namespace Squared.Illuminant.Particles {
             }
         }
 
+        private void SetSystemUniform (Material m, double deltaTimeSeconds) {
+            var psu = new Uniforms.ParticleSystem(Engine.Configuration, Configuration, deltaTimeSeconds);
+            Engine.ParticleMaterials.MaterialSet.TrySetBoundUniform(m, "System", ref psu);
+        }
+
         public void Update (IBatchContainer container, int layer, float? deltaTimeSeconds = null) {
             var lastUpdateTimeSeconds = LastUpdateTimeSeconds;
             LastUpdateTimeSeconds = TimeProvider.Seconds;
@@ -844,13 +841,6 @@ namespace Squared.Illuminant.Particles {
                         (p, frameIndex) => {
                             var dfu = new Uniforms.DistanceField(Configuration.DistanceField, Configuration.DistanceFieldMaximumZ.Value);
                             pm.MaterialSet.TrySetBoundUniform(pm.UpdateWithDistanceField, "DistanceField", ref dfu);
-
-                            p["EscapeVelocity"].SetValue(Configuration.EscapeVelocity);
-                            p["BounceVelocityMultiplier"].SetValue(Configuration.BounceVelocityMultiplier);
-                            p["LifeDecayRate"].SetValue(Configuration.GlobalLifeDecayRate);
-                            p["CollisionDistance"].SetValue(Configuration.CollisionDistance);
-                            p["CollisionLifePenalty"].SetValue(Configuration.CollisionLifePenalty);
-                            p["Friction"].SetValue(Configuration.Friction);
                         }, true, actualDeltaTimeSeconds
                     );
                 } else {
@@ -859,8 +849,6 @@ namespace Squared.Illuminant.Particles {
                         source, a, b, ref passSource, ref passDest,
                         startedWhen, null,
                         (p, frameIndex) => {
-                            p["LifeDecayRate"].SetValue(Configuration.GlobalLifeDecayRate);
-                            p["Friction"].SetValue(Configuration.Friction);
                         }, true, actualDeltaTimeSeconds
                     );
                 }
@@ -961,7 +949,6 @@ namespace Squared.Illuminant.Particles {
                         p["AnimationRate"].SetValue(Configuration.AnimationRate);
                         p["Size"].SetValue(Configuration.Size / 2);
                         p["VelocityRotation"].SetValue(Configuration.RotationFromVelocity ? 1f : 0f);
-                        p["Texel"].SetValue(new Vector2(1f / Engine.Configuration.ChunkSize, 1f / Engine.Configuration.ChunkSize));
                     }
 
                     var zToY = p["ZToY"];

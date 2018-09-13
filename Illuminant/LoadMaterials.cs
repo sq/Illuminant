@@ -230,6 +230,7 @@ namespace Squared.Illuminant {
             Materials.ForEachMaterial<object>((m, _) => {
                 Materials.GetUniformBinding<Uniforms.Environment>(m, "Environment");
                 Materials.GetUniformBinding<Uniforms.DistanceField>(m, "DistanceField");
+                Materials.GetUniformBinding<Uniforms.ParticleSystem>(m, "System");
             }, null);
         }
     }

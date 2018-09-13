@@ -34,7 +34,7 @@ void PS_FMA (
 ) {
     float4 oldPosition, oldVelocity, oldAttributes;
     readState(
-        xy * Texel, oldPosition, oldVelocity, oldAttributes
+        xy * System.Texel, oldPosition, oldVelocity, oldAttributes
     );
 
     newPosition   = computeFMA(oldPosition, oldPosition, PositionMultiply, PositionAdd);

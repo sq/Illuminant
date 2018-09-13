@@ -49,7 +49,7 @@ void PS_Spawn (
     [branch]
     if ((index < ChunkSizeAndIndices.z) || (index > ChunkSizeAndIndices.w)) {
         readStateOrDiscard(
-            xy * Texel, newPosition, newVelocity, newAttributes
+            xy * System.Texel, newPosition, newVelocity, newAttributes
         );
     } else {
         newPosition   = evaluateFormula(Configuration[0], Configuration[1], Configuration[2], Configuration[3], RandomCircularity[0], float2(index, 0));

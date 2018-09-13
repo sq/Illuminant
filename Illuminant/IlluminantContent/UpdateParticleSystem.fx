@@ -1,8 +1,6 @@
 #include "ParticleCommon.fxh"
 #include "UpdateCommon.fxh"
 
-uniform float LifeDecayRate;
-
 void PS_Update (
     in  float2 xy            : VPOS,
     out float4 newPosition   : COLOR0,
@@ -11,14 +9,14 @@ void PS_Update (
 ) {
     float4 oldPosition, oldVelocity;
     readStateOrDiscard(
-        xy * Texel, oldPosition, oldVelocity, newAttributes
+        xy * System.Texel, oldPosition, oldVelocity, newAttributes
     );
 
     float3 velocity = applyFrictionAndMaximum(oldVelocity.xyz);
 
-    float3 scaledVelocity = velocity * DeltaTimeSeconds;
+    float3 scaledVelocity = velocity * System.DeltaTimeSeconds;
 
-    float newLife = oldPosition.w - (LifeDecayRate * DeltaTimeSeconds);
+    float newLife = oldPosition.w - (System.LifeDecayRate * System.DeltaTimeSeconds);
     if (newLife <= 0) {
         newPosition = 0;
         newVelocity = 0;

@@ -1,4 +1,16 @@
-uniform float2 Texel;
+struct ParticleSystemSettings {
+    float2 Texel;
+    float DeltaTimeSeconds;
+    float Friction;
+    float MaximumVelocity;
+    float EscapeVelocity;
+    float BounceVelocityMultiplier;
+    float LifeDecayRate;
+    float CollisionDistance;
+    float CollisionLifePenalty;
+};
+
+uniform ParticleSystemSettings System;
 uniform float StippleFactor;
 
 Texture2D PositionTexture;

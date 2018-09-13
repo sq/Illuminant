@@ -12,12 +12,6 @@
 
 #include "VisualizeCommon.fxh"
 
-uniform float EscapeVelocity;
-uniform float BounceVelocityMultiplier;
-uniform float LifeDecayRate;
-uniform float CollisionDistance;
-uniform float CollisionLifePenalty;
-
 void PS_Update (
     in  float2 xy             : VPOS,
     out float4 resultPosition : COLOR0,
@@ -26,22 +20,22 @@ void PS_Update (
 ) {
     float4 oldPosition, oldVelocity;
     readStateOrDiscard(
-        xy * Texel, oldPosition, oldVelocity, newAttributes
+        xy * System.Texel, oldPosition, oldVelocity, newAttributes
     );
 
-    float newLife = oldPosition.w - (LifeDecayRate * DeltaTimeSeconds);
+    float newLife = oldPosition.w - (System.LifeDecayRate * System.DeltaTimeSeconds);
     float3 unitVector = normalize(oldVelocity.xyz);
     float3 velocity = applyFrictionAndMaximum(oldVelocity.xyz);
 
     TVARS vars = makeDistanceFieldConstants();
 
     bool collided = false, escaping = false;
-    float3 scaledVelocity = velocity * DeltaTimeSeconds;
+    float3 scaledVelocity = velocity * System.DeltaTimeSeconds;
 
     float3 previousPosition = oldPosition.xyz, collisionPosition = 0, newPosition = previousPosition;
 
     float initialDistance = SAMPLE(oldPosition.xyz, vars);
-    bool wasColliding = initialDistance < CollisionDistance;
+    bool wasColliding = initialDistance < System.CollisionDistance;
     float travelDistance = max(0, min(initialDistance, length(scaledVelocity)));
     int stepCount = MAX_STEP_COUNT;
     if (wasColliding)
@@ -52,7 +46,7 @@ void PS_Update (
     for (int i = 0; i < stepCount; i++) {
         float3 testPosition = oldPosition.xyz + (travelDistance * unitVector);
         float stepDistance = SAMPLE(testPosition, vars);
-        if (stepDistance < CollisionDistance) {
+        if (stepDistance < System.CollisionDistance) {
             collided = true;
             collisionPosition = testPosition;
         }
@@ -60,7 +54,7 @@ void PS_Update (
 
         if (collided && !escaping) {
             collisionPosition = testPosition;
-            float offset = clamp(stepDistance + CollisionDistance, 0.05, 16);
+            float offset = clamp(stepDistance + System.CollisionDistance, 0.05, 16);
             travelDistance = max(0, travelDistance - offset);
         } else
             stepCount = 0;
@@ -87,9 +81,9 @@ void PS_Update (
             }
             // We started inside and are not escaping, so flee at our escape velocity.
             float3 escapeVector = normalize(normal);
-            float newSpeed = min(MaximumVelocity, EscapeVelocity);
+            float newSpeed = min(System.MaximumVelocity, System.EscapeVelocity);
             newVelocity = float4(escapeVector * newSpeed, BOUNCE_DELAY);
-            float3 escapeDelta = newVelocity.xyz * DeltaTimeSeconds;
+            float3 escapeDelta = newVelocity.xyz * System.DeltaTimeSeconds;
             newPosition = oldPosition.xyz + escapeDelta;
         } else if (bounce) {
             // We started outside. Bounce away next step if configured to. Otherwise, we'll halt.
@@ -100,9 +94,9 @@ void PS_Update (
             else
                 bounceVector = normalize(bounceVector);
             newPosition = collisionPosition;
-            newVelocity = float4(bounceVector * (min(MaximumVelocity, length(velocity.xyz) * BounceVelocityMultiplier)), BOUNCE_DELAY);
+            newVelocity = float4(bounceVector * (min(System.MaximumVelocity, length(velocity.xyz) * System.BounceVelocityMultiplier)), BOUNCE_DELAY);
             // Deduct the collision life penalty because we just entered a collision state.
-            newLife -= CollisionLifePenalty;
+            newLife -= System.CollisionLifePenalty;
         } else {
             // We're escaping so keep going
             newPosition = oldPosition.xyz + (travelDistance * unitVector);
