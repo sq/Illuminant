@@ -845,7 +845,6 @@ namespace Squared.Illuminant.Particles {
                             var dfu = new Uniforms.DistanceField(Configuration.DistanceField, Configuration.DistanceFieldMaximumZ.Value);
                             pm.MaterialSet.TrySetBoundUniform(pm.UpdateWithDistanceField, "DistanceField", ref dfu);
 
-                            p["MaximumEncodedDistance"].SetValue((float)Configuration.DistanceField.MaximumEncodedDistance);
                             p["EscapeVelocity"].SetValue(Configuration.EscapeVelocity);
                             p["BounceVelocityMultiplier"].SetValue(Configuration.BounceVelocityMultiplier);
                             p["LifeDecayRate"].SetValue(Configuration.GlobalLifeDecayRate);

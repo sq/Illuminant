@@ -1,5 +1,3 @@
-uniform float                 MaximumEncodedDistance;
-
 #define PI 3.14159265359
 
 // This is a distance of 0
@@ -142,14 +140,6 @@ float distanceSquaredToEdge (
 }
 */
 
-float encodeDistance (float distance) {
-    return DISTANCE_ZERO - (distance / MaximumEncodedDistance);
-}
-
-float decodeDistance (float encodedDistance) {
-    return (DISTANCE_ZERO - encodedDistance) * MaximumEncodedDistance;
-}
-
 
 struct DistanceFieldSettings {
     // MaxConeRadius, ConeGrowthFactor, OcclusionToOpacityPower, InvScaleFactor
@@ -158,10 +148,14 @@ struct DistanceFieldSettings {
     // StepLimit, MinimumLength, LongStepFactor
     float4 _StepAndMisc2;
     float4 TextureSliceCount;
-    float3 Extent;
+    float4 Extent;
 };
 
 uniform DistanceFieldSettings DistanceField;
+
+float getMaximumEncodedDistance () {
+    return DistanceField.Extent.w;
+}
 
 // FIXME: int?
 float getStepLimit () {
@@ -206,6 +200,15 @@ float2 getDistanceSliceSize () {
 
 float2 getDistanceTexelSize () {
     return DistanceField._TextureSliceAndTexelSize.zw;
+}
+
+
+float encodeDistance (float distance) {
+    return DISTANCE_ZERO - (distance / getMaximumEncodedDistance());
+}
+
+float decodeDistance (float encodedDistance) {
+    return (DISTANCE_ZERO - encodedDistance) * getMaximumEncodedDistance();
 }
 
 
@@ -264,7 +267,7 @@ float sampleDistanceFieldEx (
     float3 position, 
     DistanceFieldConstants vars
 ) {
-    float3 extent = DistanceField.Extent;
+    float3 extent = DistanceField.Extent.xyz;
     float3 clampedPosition = clamp(position, 0, extent);
     float distanceToVolume = length(clampedPosition - position);
 
@@ -311,7 +314,7 @@ float sampleDistanceField (
 ) {
     // This generates a shader branch :(
     if (DistanceField.Extent.x <= 0)
-        return MaximumEncodedDistance;
+        return getMaximumEncodedDistance();
 
     return sampleDistanceFieldEx(position, vars);
 }

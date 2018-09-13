@@ -28,6 +28,8 @@ float SphereLightPixelCore(
     bool visible = (distanceOpacity > 0) && 
         (shadedPixelPosition.x > -9999);
 
+    clip(visible ? 1 : -1);
+
     DistanceFieldConstants vars = makeDistanceFieldConstants();
 
     // HACK: AO is only on upward-facing surfaces

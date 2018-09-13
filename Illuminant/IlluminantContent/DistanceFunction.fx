@@ -4,6 +4,9 @@
 #include "DistanceFieldCommon.fxh"
 #include "DistanceFunctionCommon.fxh"
 
+// HACK: For some reason we need to expand the function boxes for things to work right?
+#define FUNCTION_SIZE_HACK 1.1
+
 uniform float2 PixelSize;
 uniform float4 SliceZ;
 
@@ -20,8 +23,8 @@ void DistanceFunctionVertexShader(
     inout float3 size     : TEXCOORD1,
     out   float4 result   : POSITION0
 ) {
-    float msize = max(max(abs(size.x), abs(size.y)), abs(size.z)) + MaximumEncodedDistance;
-    float2 position = (FunctionCorners[cornerIndex.x] * (msize * 1.5)) + center.xy;
+    float msize = max(max(abs(size.x), abs(size.y)), abs(size.z)) + getMaximumEncodedDistance() + 0.5;
+    float2 position = (FunctionCorners[cornerIndex.x] * (msize * FUNCTION_SIZE_HACK)) + center.xy;
     result = TransformPosition(float4(position - Viewport.Position, 0, 1), 0);
     result.z = 0;
     result.w = 1;

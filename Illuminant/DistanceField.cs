@@ -139,6 +139,15 @@ namespace Squared.Illuminant {
             );
         }
 
+        internal Vector4 GetExtent4 (float maximumZ) {
+            return new Vector4(
+                VirtualWidth,
+                VirtualHeight,
+                maximumZ,
+                MaximumEncodedDistance
+            );
+        }
+
         protected void DeviceResetImpl (SliceInfo sliceInfo) {
             NeedClear = true;
             SliceInfo.ValidSliceCount = 0;

@@ -1414,8 +1414,6 @@ namespace Squared.Illuminant {
 
             if (setDistanceTexture)
                 p["DistanceFieldTexture"].SetValue(_DistanceField.Texture);
-
-            p["MaximumEncodedDistance"].SetValue((float)_DistanceField.MaximumEncodedDistance);
         }
 
         public void InvalidateFields (

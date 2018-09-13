@@ -50,11 +50,11 @@ namespace Squared.Illuminant.Uniforms {
         private Vector4 _StepAndMisc2;
         // X, Y, MaximumZ, SliceCount
         public Vector4 TextureSliceCount;
-        public Vector3 Extent;
+        public Vector4 Extent;
 
         // This does not initialize every member.
         public DistanceField (Squared.Illuminant.DistanceField df, float maximumZ) {
-            Extent = df.GetExtent3(maximumZ);
+            Extent = df.GetExtent4(maximumZ);
             // FIXME
             float sliceZSize = maximumZ / df.SliceCount;
             TextureSliceCount = new Vector4(
