@@ -17,7 +17,7 @@ float cross2d (float2 a, float2 b) {
 bool doesRayIntersectLine (float2 rayOrigin, float2 rayDirection, float2 a1, float2 a2, out float2 position) {
     float2 v1 = rayOrigin - a1,
         v2 = a2 - a1,
-        v3 = float2(-rayDirection.y, rayDirection.x);    
+        v3 = float2(-rayDirection.y, rayDirection.x);
     float t1, t2;
     float divisor = dot(v2, v3);
     if (divisor == 0) {
@@ -54,10 +54,10 @@ bool doesRightRayIntersectLine (float2 rayOrigin, float2 a1, float2 a2) {
 
 bool doesRightRayIntersectLine (float2 p, float2 a1, float2 a2) {
     float divisor = (a1.y-a2.y);
-    bool inside = ((a2.y>p.y) != (a1.y>p.y)) &&
+    bool crossesY = ((a2.y>p.y) != (a1.y>p.y));
+    bool result = crossesY &&
         (p.x < (a1.x-a2.x) * (p.y-a2.y) / divisor + a2.x);
-
-    return (divisor != 0) && inside;
+    return result && (divisor != 0);
 }
 
 bool doLinesIntersect (float2 a1, float2 a2, float2 b1, float2 b2, out float distanceAlongA) {

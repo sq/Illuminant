@@ -229,8 +229,8 @@ namespace TestGame.Scenes {
                 ) {
                     MaximumFieldUpdatesPerFrame = 3,
                     DefaultQuality = {
-                        MinStepSize = 1f,
-                        LongStepFactor = 0.5f,
+                        MinStepSize = 2f,
+                        LongStepFactor = 0.8f,
                         OcclusionToOpacityPower = 0.7f,
                         MaxConeRadius = 24,
                     },

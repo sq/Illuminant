@@ -50,7 +50,8 @@ float computeSquaredDistanceZ (float sliceZ, float2 zRange) {
 void computeDistanceStep (float2 xy, inout float resultDistanceSq, inout int intersectionCount, in float4 uv) {
     float2 a, b, temp;
     loadEdge(uv, a, b);
-    intersectionCount += doesRightRayIntersectLine(xy, a, b) ? 1 : 0;
+    if (doesRightRayIntersectLine(xy, a, b))
+        intersectionCount += 1;
     float distanceSq = distanceSquaredToEdge(xy, a, b);
     resultDistanceSq = min(resultDistanceSq, distanceSq);
 }
