@@ -1,17 +1,45 @@
 struct ParticleSystemSettings {
     float2 Texel;
-    float DeltaTimeSeconds;
-    float Friction;
-    float MaximumVelocity;
-    float EscapeVelocity;
-    float BounceVelocityMultiplier;
-    float LifeDecayRate;
-    float CollisionDistance;
-    float CollisionLifePenalty;
+    // deltaTimeSeconds, friction, maximumVelocity, lifeDecayRate
+    float4 GlobalSettings;
+    // escapeVelocity, bounceVelocityMultiplier, collisionDistance, collisionLifePenalty
+    float4 CollisionSettings;
 };
 
 uniform ParticleSystemSettings System;
 uniform float StippleFactor;
+
+float getDeltaTime () {
+    return System.GlobalSettings.x;
+}
+
+float getFriction () {
+    return System.GlobalSettings.y;
+}
+
+float getMaximumVelocity () {
+    return System.GlobalSettings.z;
+}
+
+float getLifeDecayRate () {
+    return System.GlobalSettings.w;
+}
+
+float getEscapeVelocity () {
+    return System.CollisionSettings.x;
+}
+
+float getBounceVelocityMultiplier () {
+    return System.CollisionSettings.y;
+}
+
+float getCollisionDistance () {
+    return System.CollisionSettings.z;
+}
+
+float getCollisionLifePenalty () {
+    return System.CollisionSettings.w;
+}
 
 Texture2D PositionTexture;
 sampler PositionSampler {

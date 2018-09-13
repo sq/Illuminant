@@ -14,9 +14,9 @@ void PS_Update (
 
     float3 velocity = applyFrictionAndMaximum(oldVelocity.xyz);
 
-    float3 scaledVelocity = velocity * System.DeltaTimeSeconds;
+    float3 scaledVelocity = velocity * getDeltaTime();
 
-    float newLife = oldPosition.w - (System.LifeDecayRate * System.DeltaTimeSeconds);
+    float newLife = oldPosition.w - (getLifeDecayRate() * getDeltaTime());
     if (newLife <= 0) {
         newPosition = 0;
         newVelocity = 0;

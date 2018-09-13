@@ -1,12 +1,12 @@
 float3 applyFrictionAndMaximum (float3 velocity) {
     float l = length(velocity);
-    if (l > System.MaximumVelocity)
-        l = System.MaximumVelocity;
+    if (l > getMaximumVelocity())
+        l = getMaximumVelocity();
 
-    float friction = l * System.Friction;
+    float friction = l * getFriction();
 
-    l -= (friction * System.DeltaTimeSeconds);
-    l = clamp(l, 0, System.MaximumVelocity);
+    l -= (friction * getDeltaTime());
+    l = clamp(l, 0, getMaximumVelocity());
 
     return normalize(velocity) * l;
 }

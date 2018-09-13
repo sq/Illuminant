@@ -30,7 +30,7 @@ void PS_Gravity (
     }
 
     newVelocity = float4(
-        min(System.MaximumVelocity, oldVelocity + acceleration), oldVelocity.w
+        min(getMaximumVelocity(), oldVelocity + acceleration), oldVelocity.w
     );
 }
 
