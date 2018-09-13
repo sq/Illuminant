@@ -113,7 +113,7 @@ float computeNormalFactor (
 float computeSphereLightOpacity (
     float3 shadedPixelPosition, float3 shadedPixelNormal,
     float3 lightCenter, float4 lightProperties, 
-    float yDistanceFactor, out bool distanceFalloff 
+    float yDistanceFactor
 ) {
     float  lightRadius     = lightProperties.x;
     float  lightRampLength = lightProperties.y;
@@ -134,8 +134,6 @@ float computeSphereLightOpacity (
     } else if (falloffMode >= 1) {
         distanceFactor *= distanceFactor;
     }
-
-    distanceFalloff = (distanceFactor <= 0);
 
     return normalFactor * distanceFactor;
 }

@@ -20,14 +20,12 @@ float SphereLightPixelCore(
     in bool   useDistanceRamp,
     in bool   useOpacityRamp
 ) {
-    bool  distanceCull = false;
     float distanceOpacity = computeSphereLightOpacity(
         shadedPixelPosition, shadedPixelNormal,
-        lightCenter, lightProperties, moreLightProperties.z,
-        distanceCull
+        lightCenter, lightProperties, moreLightProperties.z
     );
 
-    bool visible = (!distanceCull) && 
+    bool visible = (distanceOpacity > 0) && 
         (shadedPixelPosition.x > -9999);
 
     DistanceFieldConstants vars = makeDistanceFieldConstants();
@@ -40,29 +38,26 @@ float SphereLightPixelCore(
     float preTraceOpacity = distanceOpacity * aoOpacity;
 
     bool traceShadows = visible && lightProperties.w && (preTraceOpacity >= SHADOW_OPACITY_THRESHOLD);
-    float coneOpacity = 1;
-
-    coneOpacity = coneTrace(
+    float coneOpacity = coneTrace(
         lightCenter, lightProperties.xy, 
         float2(getConeGrowthFactor(), moreLightProperties.y),
         shadedPixelPosition + (SELF_OCCLUSION_HACK * shadedPixelNormal),
         vars, traceShadows
     );
 
-    float lightOpacity;
+    bool useRamp = useOpacityRamp || useDistanceRamp;
+    float lightOpacity = preTraceOpacity;
 
     [branch]
-    if (useOpacityRamp || useDistanceRamp) {
+    if (useRamp) {
         float rampInput = useOpacityRamp 
             ? preTraceOpacity * coneOpacity
             : preTraceOpacity;
-        float rampResult = SampleFromRamp(rampInput);
-        lightOpacity = useOpacityRamp
-            ? rampResult
-            : rampResult * coneOpacity;
-    } else {
-        lightOpacity = preTraceOpacity * coneOpacity;
+        lightOpacity = SampleFromRamp(rampInput);
+        coneOpacity = useOpacityRamp ? 1 : coneOpacity;
     }
+
+    lightOpacity *= coneOpacity;
 
     // HACK: Don't cull pixels unless they were killed by distance falloff.
     // This ensures that billboards are always lit.
