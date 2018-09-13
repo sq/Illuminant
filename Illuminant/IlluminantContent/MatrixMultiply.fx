@@ -38,7 +38,7 @@ void PS_MatrixMultiply (
 ) {
     float4 oldPosition, oldVelocity, oldAttributes;
     readState(
-        xy * System.Texel, oldPosition, oldVelocity, oldAttributes
+        xy, oldPosition, oldVelocity, oldAttributes
     );
 
     newPosition = lerp(

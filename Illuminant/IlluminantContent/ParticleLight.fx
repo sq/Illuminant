@@ -25,9 +25,9 @@ void ParticleLightVertexShader(
 
     float3 corner = LightCorners[cornerIndex.x];
 
-    float2 actualXy = xy + offsetAndIndex.xy;
+    float4 actualXy = float4(xy + offsetAndIndex.xy, 0, 0);
     float4 position, velocity, attributes;
-    readState(actualXy, position, velocity, attributes);
+    readStateUv(actualXy, position, velocity, attributes);
 
     // HACK
     float life = position.w;

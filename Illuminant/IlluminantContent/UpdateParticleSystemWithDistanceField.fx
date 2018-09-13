@@ -20,7 +20,7 @@ void PS_Update (
 ) {
     float4 oldPosition, oldVelocity;
     readStateOrDiscard(
-        xy * System.Texel, oldPosition, oldVelocity, newAttributes
+        xy, oldPosition, oldVelocity, newAttributes
     );
 
     float newLife = oldPosition.w - (System.LifeDecayRate * System.DeltaTimeSeconds);

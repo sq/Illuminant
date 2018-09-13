@@ -72,8 +72,8 @@ void VS_PosVelAttr (
     out float4 velocity    : TEXCOORD2,
     out float4 attributes  : COLOR0
 ) {
-    float2 actualXy = xy + offsetAndIndex.xy;
-    readState(actualXy, position, velocity, attributes);
+    float4 actualXy = float4(xy + offsetAndIndex.xy, 0, 0);
+    readStateUv(actualXy, position, velocity, attributes);
 
     float life = position.w;
     if ((life <= 0) || stippleReject(offsetAndIndex.z)) {

@@ -57,15 +57,27 @@ void VS_Update (
     result = float4(xy.x, xy.y, 0, 1);
 }
 
+void readStateUv (
+    in float4 uv,
+    out float4 position,
+    out float4 velocity,
+    out float4 attributes
+) {
+    position = tex2Dlod(PositionSampler, uv);
+    velocity = tex2Dlod(VelocitySampler, uv);
+    attributes = tex2Dlod(AttributeSampler, uv);
+}
+
 void readState (
     in float2 xy,
     out float4 position,
     out float4 velocity,
     out float4 attributes
 ) {
-    position = tex2Dlod(PositionSampler, float4(xy, 0, 0));
-    velocity = tex2Dlod(VelocitySampler, float4(xy, 0, 0));
-    attributes = tex2Dlod(AttributeSampler, float4(xy, 0, 0));
+    float4 uv = float4(xy * System.Texel, 0, 0);
+    position = tex2Dlod(PositionSampler, uv);
+    velocity = tex2Dlod(VelocitySampler, uv);
+    attributes = tex2Dlod(AttributeSampler, uv);
 }
 
 void readStateOrDiscard (
@@ -74,14 +86,15 @@ void readStateOrDiscard (
     out float4 velocity,
     out float4 attributes
 ) {
-    position = tex2Dlod(PositionSampler, float4(xy, 0, 0));
+    float4 uv = float4(xy * System.Texel, 0, 0);
+    position = tex2Dlod(PositionSampler, uv);
 
     // To support occlusion queries and reduce bandwidth used by dead particles
     if (position.w <= 0)
         discard;
 
-    velocity = tex2Dlod(VelocitySampler, float4(xy, 0, 0));
-    attributes = tex2Dlod(AttributeSampler, float4(xy, 0, 0));
+    velocity = tex2Dlod(VelocitySampler, uv);
+    attributes = tex2Dlod(AttributeSampler, uv);
 }
 
 bool stippleReject (float vertexIndex) {

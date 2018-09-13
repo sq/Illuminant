@@ -15,7 +15,7 @@ void PS_Gravity (
 ) {
     float4 oldVelocity;
     readState(
-        xy * System.Texel, newPosition, oldVelocity, newAttributes
+        xy, newPosition, oldVelocity, newAttributes
     );
 
     float3 acceleration = 0;
