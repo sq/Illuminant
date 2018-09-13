@@ -150,13 +150,6 @@ namespace Squared.Illuminant {
         /// </summary>
         public Vector4   Color = Vector4.One;
 
-        public Bounds3 Bounds {
-            get {
-                var size = new Vector3(Radius + RampLength);
-                return new Bounds3(Position - size, Position + size);
-            }
-        }
-
         public SphereLightSource ()
             : base (LightSourceTypeID.Sphere) {
         }
@@ -197,10 +190,6 @@ namespace Squared.Illuminant {
         /// </summary>
         public float   Radius = 0;
         /// <summary>
-        /// The size of the falloff around the light source.
-        /// </summary>
-        public float   RampLength = 1;
-        /// <summary>
         /// Controls the nature of the light's distance falloff.
         /// Exponential produces falloff that is more realistic (square of distance or whatever) but not necessarily as expected. 
         /// </summary>
@@ -216,14 +205,6 @@ namespace Squared.Illuminant {
         /// Alpha is *not* premultiplied (maybe it should be?)
         /// </summary>
         public Vector4   StartColor = Vector4.One, EndColor = Vector4.One;
-
-        public Bounds3 Bounds {
-            get {
-                var size = new Vector3(Radius + RampLength);
-                var pbounds = Bounds3.FromPoints(StartPosition, EndPosition);
-                return new Bounds3(pbounds.Minimum - size, pbounds.Maximum + size);
-            }
-        }
 
         public Vector4 Color {
             set {
@@ -241,7 +222,6 @@ namespace Squared.Illuminant {
                 StartPosition = StartPosition,
                 EndPosition = EndPosition,
                 Radius = Radius,
-                RampLength = RampLength,
                 StartColor = StartColor,
                 EndColor = EndColor,
                 Opacity = Opacity,

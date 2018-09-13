@@ -33,7 +33,6 @@ namespace TestGame.Scenes {
 
         Slider DistanceFieldResolution,
             LightRadius,
-            LightRampLength,
             Elevation;
 
         public LineLight (TestGame game, int width, int height)
@@ -41,10 +40,10 @@ namespace TestGame.Scenes {
 
             Deterministic.Value = true;
             DistanceFieldResolution.Value = 0.5f;
-            Elevation.Value = 16;
+            Elevation.Value = 24;
+            Shadows.Value = true;
 
-            LightRadius.Value = 16;
-            LightRampLength.Value = 350;
+            LightRadius.Value = 20;
 
             ShowGBuffer.Key = Keys.G;
             ShowDistanceField.Key = Keys.D;
@@ -58,9 +57,6 @@ namespace TestGame.Scenes {
 
             LightRadius.Min = 0.5f;
             LightRadius.Max = 128;
-
-            LightRampLength.Min = 0;
-            LightRampLength.Max = 1024;
 
             Elevation.Min = 0;
             Elevation.Max = 132;
@@ -161,24 +157,26 @@ namespace TestGame.Scenes {
             CreateDistanceField();
 
             MovableLight = new LineLightSource {
-                StartColor = new Vector4(1f, 0.22f, 0.22f, 0.66f),
-                EndColor = new Vector4(0.22f, 0.22f, 1f, 0.66f),
+                StartColor = new Vector4(1f, 0.22f, 0.22f, 0.9f),
+                EndColor = new Vector4(0.22f, 0.22f, 1f, 0.9f),
                 RampMode = LightSourceRampMode.Exponential
             };
-            MovableLight.StartPosition = new Vector3(200, 700, Elevation);
-            MovableLight.EndPosition = new Vector3(900, 900, Elevation);
+            MovableLight.StartPosition = new Vector3(200, 650, Elevation);
+            MovableLight.EndPosition = new Vector3(900, 740, Elevation);
 
             Environment.Lights.Add(MovableLight);
 
-            Environment.Lights.Add(new DirectionalLightSource {
-                Direction = new Vector3(-0.75f, -0.7f, -0.33f),
-                Color = new Vector4(0.2f, 0.4f, 0.6f, 0.2f),
-            });
+            if (false)
+                Environment.Lights.Add(new DirectionalLightSource {
+                    Direction = new Vector3(-0.3f, -0.7f, -0.33f),
+                    Color = new Vector4(0.2f, 0.4f, 0.6f, 0.2f),
+                });
 
-            Environment.Lights.Add(new DirectionalLightSource {
-                Direction = new Vector3(0.35f, -0.05f, -0.75f),
-                Color = new Vector4(0.5f, 0.3f, 0.15f, 0.1f),
-            });
+            if (false)
+                Environment.Lights.Add(new DirectionalLightSource {
+                    Direction = new Vector3(0.35f, -0.05f, -0.75f),
+                    Color = new Vector4(0.5f, 0.3f, 0.15f, 0.1f),
+                });
 
             Rect(new Vector2(330, 347), new Vector2(Width, 388), 0f, 55f);
 
@@ -271,14 +269,10 @@ namespace TestGame.Scenes {
                 
                 var time = (float)Time.Seconds;
 
-                if (!Deterministic) {
-                }
-
                 var ms = Game.MouseState;
                 Game.IsMouseVisible = true;
 
                 MovableLight.CastsShadows = Shadows;
-                MovableLight.RampLength = LightRampLength;
                 MovableLight.Radius = LightRadius;
                 MovableLight.StartPosition.Z = Elevation;
                 MovableLight.EndPosition.Z = Elevation;

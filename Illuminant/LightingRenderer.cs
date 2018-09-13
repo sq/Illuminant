@@ -1018,7 +1018,7 @@ namespace Squared.Illuminant {
             vertex.Color1 = color1;
             vertex.Color2 = color2;
             vertex.LightProperties.X = lightSource.Radius;
-            vertex.LightProperties.Y = lightSource.RampLength;
+            vertex.LightProperties.Y = 0;
             vertex.LightProperties.Z = (int)lightSource.RampMode;
             vertex.LightProperties.W = lightSource.CastsShadows ? 1f : 0f;
             vertex.MoreLightProperties.X = lightSource.AmbientOcclusionRadius;

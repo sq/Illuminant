@@ -54,10 +54,8 @@ float computeLineLightOpacity (
     float3 worldPos, float3 worldNormal,
     float3 P0, float3 P1,
     float4 lightProperties, 
-    out bool distanceFalloff, out float3 spherePosition, out float u
+    out float3 spherePosition, out float u
 ) {
-    distanceFalloff = false;
-
     // FIXME: ????
     float3 lightLeft = normalize(P1 - P0);
     float3 lightCenter = lerp(P0, P1, 0.5);

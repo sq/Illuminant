@@ -73,6 +73,20 @@ float coneTraceAdvance (
     return saturate(state.data.z - FULLY_SHADOWED_THRESHOLD) * saturate(state.data.y - state.data.x);
 }
 
+float coneTraceAdvanceEx (
+    inout TraceState state,
+    in    float4 config,
+    in    DistanceFieldConstants vars
+) {
+    float sample = sampleDistanceFieldEx(state.origin + (state.direction * state.data.x), vars);
+
+    state.data.x = min(
+        state.data.x + coneTraceStep(config, sample, state.data.x, state.data.z),
+        state.data.y
+    );
+    return saturate(state.data.z - FULLY_SHADOWED_THRESHOLD) * saturate(state.data.y - state.data.x);
+}
+
 float coneTraceFinish (in TraceState state) {
     return state.data.z;
 }

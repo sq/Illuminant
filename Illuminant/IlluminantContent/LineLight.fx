@@ -20,6 +20,9 @@ void LineLightVertexShader(
     float3 radius3;
 
     if (1)
+        // HACK: How the hell do we compute bounds for this in the first place?
+        radius3 = float3(9999, 9999, 0);
+    else if (0)
         // HACK: Scale the y axis some to clip off dead pixels caused by the y falloff factor
         radius3 = float3(radius, radius - (deltaY / 2.0), 0);
     else
