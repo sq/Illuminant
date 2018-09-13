@@ -220,22 +220,34 @@ sampler   DistanceFieldTextureSampler {
 };
 
 struct DistanceFieldConstants {
-    float maximumValidZ;
-    float invSliceCountXTimesOneThird;
-    float zToSliceIndex;
+    float3 data;
     float2 halfDistanceTexel, distanceSliceSizeMinusHalfTexel;
 };
 
 DistanceFieldConstants makeDistanceFieldConstants() {
     float2 halfTexel = getDistanceTexelSize() * 0.5;
     DistanceFieldConstants result = {
-        DistanceField.TextureSliceCount.z,
-        (1.0 / DistanceField.TextureSliceCount.x) * (1.0 / 3.0),
-        (1.0 / DistanceField.Extent.z) * DistanceField.TextureSliceCount.w,
+        float3(
+            DistanceField.TextureSliceCount.z, 
+            (1.0 / DistanceField.TextureSliceCount.x) * (1.0 / 3.0), 
+            (1.0 / DistanceField.Extent.z) * DistanceField.TextureSliceCount.w
+        ),
         halfTexel, getDistanceSliceSize() - halfTexel
     };
 
     return result;
+}
+
+float getMaximumValidZ (in DistanceFieldConstants vars) {
+    return vars.data.x;
+}
+
+float getInvSliceCountXTimesOneThird (in DistanceFieldConstants vars) {
+    return vars.data.y;
+}
+
+float getZToSliceIndex (in DistanceFieldConstants vars) {
+    return vars.data.z;
 }
 
 float2 computeDistanceFieldSliceUv (
@@ -258,7 +270,7 @@ float sampleDistanceFieldEx (
 
     // Interpolate between two Z samples. The xy interpolation is done by the GPU for us.
     // linear [0-1] -> [0-NumZSlices)
-    float slicePosition = min(clampedPosition.z, vars.maximumValidZ) * vars.zToSliceIndex;
+    float slicePosition = min(clampedPosition.z, getMaximumValidZ(vars)) * getZToSliceIndex(vars);
     float virtualSliceIndex = floor(slicePosition);
 
     float2 texelUv = clampedPosition.xy * getDistanceTexelSize();
@@ -266,7 +278,7 @@ float sampleDistanceFieldEx (
         texelUv = clamp(texelUv, vars.halfDistanceTexel, vars.distanceSliceSizeMinusHalfTexel);
     
     float4 uv = float4(
-        computeDistanceFieldSliceUv(virtualSliceIndex, vars.invSliceCountXTimesOneThird) + texelUv,
+        computeDistanceFieldSliceUv(virtualSliceIndex, getInvSliceCountXTimesOneThird(vars)) + texelUv,
         0, 0
     );
 
