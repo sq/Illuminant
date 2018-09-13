@@ -73,6 +73,29 @@ float coneTraceAdvance (
     return saturate(state.data.z - FULLY_SHADOWED_THRESHOLD) * saturate(state.data.y - state.data.x);
 }
 
+float coneTraceFinish (in TraceState state) {
+    return state.data.z;
+}
+
+float4 createTraceConfig (
+    in float2 lightRamp, 
+    in float2 coneGrowthFactorAndDistanceFalloff
+) {
+    float maxRadius = clamp(
+        lightRamp.x, MIN_CONE_RADIUS, getMaxConeRadius()
+    );
+    float rampLength           = max(lightRamp.y, 16);
+    float radiusGrowthPerPixel = maxRadius / rampLength * 
+        coneGrowthFactorAndDistanceFalloff.x;
+
+    // maxRadius, lightTangentAngle, minStepSize, distanceFalloff
+    return float4(
+        maxRadius, radiusGrowthPerPixel, 
+        max(1, getMinStepSize()), 
+        coneGrowthFactorAndDistanceFalloff.y
+    );
+}
+
 float coneTrace (
     in float3 lightCenter,
     in float2 lightRamp,
@@ -82,27 +105,12 @@ float coneTrace (
     in bool   enable
 ) {
     TraceState state;
-    float4 config;
 
     coneTraceInitialize(
         state, shadedPixelPosition, lightCenter
     );
 
-    {
-        float maxRadius = clamp(
-            lightRamp.x, MIN_CONE_RADIUS, getMaxConeRadius()
-        );
-        float rampLength           = max(lightRamp.y, 16);
-        float radiusGrowthPerPixel = maxRadius / rampLength * 
-            coneGrowthFactorAndDistanceFalloff.x;
-
-        // maxRadius, lightTangentAngle, minStepSize, distanceFalloff
-        config = float4(
-            maxRadius, radiusGrowthPerPixel, 
-            max(1, getMinStepSize()), 
-            coneGrowthFactorAndDistanceFalloff.y
-        );
-    }
+    float4 config = createTraceConfig(lightRamp, coneGrowthFactorAndDistanceFalloff);
 
     float stepsRemaining = getStepLimit();
     float liveness = (DistanceField.Extent.x > 0) && enable;
@@ -117,7 +125,7 @@ float coneTrace (
 
     // HACK: Force visibility down to 0 if we are going to terminate the trace because we took too many steps.
     float stepWindowVisibility = stepsRemaining / MAX_STEP_RAMP_WINDOW;
-    float visibility = min(state.data.z, stepWindowVisibility);
+    float visibility = min(coneTraceFinish(state), stepWindowVisibility);
 
     float finalResult = pow(
         saturate(
