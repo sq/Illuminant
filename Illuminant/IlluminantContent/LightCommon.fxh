@@ -135,7 +135,11 @@ float computeSphereLightOpacity (
         distanceFactor *= distanceFactor;
     }
 
-    return normalFactor * distanceFactor;
+    if (0)
+        return (normalFactor * distanceFactor);
+    else
+        // HACK: If the point is inside the light's radius we ensure it is always fully lit
+        return saturate((normalFactor * distanceFactor) + saturate(lightRadius - distance));
 }
 
 float computeDirectionalLightOpacity (

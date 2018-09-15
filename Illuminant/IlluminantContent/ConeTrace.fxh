@@ -24,7 +24,9 @@
 
 // The distance between the A and B points during a bidirectional cone trace is multiplied by this amount
 //  and if that exceeds 1 then the trace is terminated.
-#define TRACE_MEET_THRESHOLD 10000
+#define TRACE_MEET_THRESHOLD 500
+
+#define TRACE_END_MULTIPLIER 100
 
 struct TraceState {
     float3 origin, direction;
@@ -90,7 +92,7 @@ float coneTraceAdvanceEx (
         state.data.x + coneTraceStep(config, sample, state.data.x, state.data.z),
         state.data.y
     );
-    return saturate(state.data.z - FULLY_SHADOWED_THRESHOLD) * saturate(state.data.y - state.data.x);
+    return saturate(state.data.z - FULLY_SHADOWED_THRESHOLD) * saturate((state.data.y - state.data.x) * TRACE_END_MULTIPLIER);
 }
 
 float coneTraceAdvance2 (
@@ -159,9 +161,12 @@ float coneTrace (
 
     [loop]
     while (liveness > 0) {
+        stepsRemaining--;
+        if (stepsRemaining == 0)
+            traceA.data.x = traceA.data.y;
+
         stepLiveness = coneTraceAdvance(traceA, config, vars);
 
-        stepsRemaining--;
         liveness = stepsRemaining * 
             stepLiveness;
     }
