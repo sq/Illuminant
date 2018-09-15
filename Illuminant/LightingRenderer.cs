@@ -241,7 +241,6 @@ namespace Squared.Illuminant {
             }
         }        
 
-        public const int MaximumLightCount = 4096;
         public const int PackedSliceCount = 3;
         public const int DistanceFunctionBufferInitialSize = 256;
 
@@ -383,7 +382,7 @@ namespace Squared.Illuminant {
 
             lock (coordinator.CreateResourceLock) {
                 QuadIndexBuffer = new IndexBuffer(
-                    coordinator.Device, IndexElementSize.SixteenBits, MaximumLightCount * 6, BufferUsage.WriteOnly
+                    coordinator.Device, IndexElementSize.SixteenBits, 6 * 6, BufferUsage.WriteOnly
                 );
                 FillIndexBuffer();
                 CornerBuffer = new VertexBuffer(
