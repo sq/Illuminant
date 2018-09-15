@@ -28,6 +28,8 @@ namespace TestGame {
         public GraphicsDeviceManager Graphics;
         public DefaultMaterialSet Materials;
         public NuklearService Nuklear;
+        public IlluminantMaterials IlluminantMaterials;
+        public ParticleMaterials ParticleMaterials;
 
         public KeyboardState PreviousKeyboardState, KeyboardState;
         public MouseState PreviousMouseState, MouseState;
@@ -85,7 +87,7 @@ namespace TestGame {
             };
 
             ActiveSceneIndex = Scenes.Length - 1;
-            // ActiveSceneIndex = 1;
+            ActiveSceneIndex = 5;
         }
 
         const float settingRowHeight = 26;
@@ -224,6 +226,8 @@ namespace TestGame {
                 GlyphMargin = 2
             };
             Materials = new DefaultMaterialSet(Services);
+            IlluminantMaterials = new IlluminantMaterials(Materials);
+            ParticleMaterials = new ParticleMaterials(Materials);
             RampTexture = Content.Load<Texture2D>("light_ramp");
 
             TextMaterial = Materials.Get(Materials.ScreenSpaceShadowedBitmap, blendState: BlendState.AlphaBlend);

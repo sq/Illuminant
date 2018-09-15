@@ -128,7 +128,7 @@ namespace TestGame.Scenes {
                     DefaultQuality = {
                         LongStepFactor = 0.95f
                     }
-                }
+                }, Game.IlluminantMaterials
             ) {
                 DistanceField = DistanceField
             };

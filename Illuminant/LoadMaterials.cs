@@ -16,7 +16,10 @@ namespace Squared.Illuminant {
         }
 
         private void LoadMaterials (ContentManager content) {
-            {
+            lock (IlluminantMaterials) {
+                if (IlluminantMaterials.IsLoaded)
+                    return;
+
                 var dBegin = new[] {
                     MaterialUtil.MakeDelegate(
                         depthStencilState: NeutralDepthStencilState
@@ -207,31 +210,32 @@ namespace Squared.Illuminant {
 
                 DefineMaterial(IlluminantMaterials.FunctionOutline = 
                     new Squared.Render.Material(content.Load<Effect>("VisualizeDistanceFunction"), "FunctionOutline"));
+
+                DefineMaterial(IlluminantMaterials.ScreenSpaceGammaCompressedBitmap = new Squared.Render.Material(
+                    content.Load<Effect>("HDRBitmap"), "ScreenSpaceGammaCompressedBitmap"
+                ));
+
+                DefineMaterial(IlluminantMaterials.WorldSpaceGammaCompressedBitmap = new Squared.Render.Material(
+                    content.Load<Effect>("HDRBitmap"), "WorldSpaceGammaCompressedBitmap"
+                ));
+
+                DefineMaterial(IlluminantMaterials.ScreenSpaceToneMappedBitmap = new Squared.Render.Material(
+                    content.Load<Effect>("HDRBitmap"), "ScreenSpaceToneMappedBitmap"
+                ));
+
+                DefineMaterial(IlluminantMaterials.WorldSpaceToneMappedBitmap = new Squared.Render.Material(
+                    content.Load<Effect>("HDRBitmap"), "WorldSpaceToneMappedBitmap"
+                ));
+
+                Materials.PreallocateBindings();
+
+                Materials.ForEachMaterial<object>((m, _) => {
+                    Materials.GetUniformBinding<Uniforms.Environment>(m, "Environment");
+                    Materials.GetUniformBinding<Uniforms.DistanceField>(m, "DistanceField");
+                }, null);
+
+                IlluminantMaterials.IsLoaded = true;
             }
-
-            DefineMaterial(IlluminantMaterials.ScreenSpaceGammaCompressedBitmap = new Squared.Render.Material(
-                content.Load<Effect>("HDRBitmap"), "ScreenSpaceGammaCompressedBitmap"
-            ));
-
-            DefineMaterial(IlluminantMaterials.WorldSpaceGammaCompressedBitmap = new Squared.Render.Material(
-                content.Load<Effect>("HDRBitmap"), "WorldSpaceGammaCompressedBitmap"
-            ));
-
-            DefineMaterial(IlluminantMaterials.ScreenSpaceToneMappedBitmap = new Squared.Render.Material(
-                content.Load<Effect>("HDRBitmap"), "ScreenSpaceToneMappedBitmap"
-            ));
-
-            DefineMaterial(IlluminantMaterials.WorldSpaceToneMappedBitmap = new Squared.Render.Material(
-                content.Load<Effect>("HDRBitmap"), "WorldSpaceToneMappedBitmap"
-            ));
-
-            Materials.PreallocateBindings();
-
-            Materials.ForEachMaterial<object>((m, _) => {
-                Materials.GetUniformBinding<Uniforms.Environment>(m, "Environment");
-                Materials.GetUniformBinding<Uniforms.DistanceField>(m, "DistanceField");
-                Materials.GetUniformBinding<Uniforms.ParticleSystem>(m, "System");
-            }, null);
         }
     }
 }
@@ -243,7 +247,10 @@ namespace Squared.Illuminant.Particles {
         }
 
         private void LoadMaterials (ContentManager content) {
-            {
+            lock (ParticleMaterials) {
+                if (ParticleMaterials.IsLoaded)
+                    return;
+
                 var dBegin = new[] {
                     MaterialUtil.MakeDelegate(
                         rasterizerState: RasterizerState.CullNone,
@@ -280,21 +287,24 @@ namespace Squared.Illuminant.Particles {
                 DefineMaterial(ParticleMaterials.NullTransform = new Material(
                     content.Load<Effect>("NullTransform"), "NullTransform", dBegin, dEnd
                 ));
+
+                DefineMaterial(ParticleMaterials.White = new Material(
+                    content.Load<Effect>("RasterizeParticleSystem"), "White"
+                ));
+                DefineMaterial(ParticleMaterials.AttributeColor = new Material(
+                    content.Load<Effect>("RasterizeParticleSystem"), "AttributeColor"
+                ));
+
+                Materials.ForEachMaterial<object>((m, _) => {
+                    Materials.GetUniformBinding<Uniforms.Environment>(m, "Environment");
+                    Materials.GetUniformBinding<Uniforms.DistanceField>(m, "DistanceField");
+                    Materials.GetUniformBinding<Uniforms.ParticleSystem>(m, "System");
+                }, null);
+
+                Materials.PreallocateBindings();
+
+                ParticleMaterials.IsLoaded = true;
             }
-
-            DefineMaterial(ParticleMaterials.White = new Material(
-                content.Load<Effect>("RasterizeParticleSystem"), "White"
-            ));
-            DefineMaterial(ParticleMaterials.AttributeColor = new Material(
-                content.Load<Effect>("RasterizeParticleSystem"), "AttributeColor"
-            ));
-
-            Materials.ForEachMaterial<object>((m, _) => {
-                Materials.GetUniformBinding<Uniforms.Environment>(m, "Environment");
-                Materials.GetUniformBinding<Uniforms.DistanceField>(m, "DistanceField");
-            }, null);
-
-            Materials.PreallocateBindings();
         }
     }
 }

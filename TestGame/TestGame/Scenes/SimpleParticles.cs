@@ -74,8 +74,7 @@ namespace TestGame.Scenes {
         public override void LoadContent () {
             Engine = new ParticleEngine(
                 Game.Content, Game.RenderCoordinator, Game.Materials, 
-                new ParticleEngineConfiguration {
-                }
+                new ParticleEngineConfiguration(), Game.ParticleMaterials
             );
 
             SetupParticleSystem();
@@ -207,7 +206,7 @@ namespace TestGame.Scenes {
                         OcclusionToOpacityPower = 0.7f,
                         MaxConeRadius = 24,
                     }
-                }
+                }, Game.IlluminantMaterials
             ) {
                 DistanceField = DistanceField
             };

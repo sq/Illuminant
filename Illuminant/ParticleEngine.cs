@@ -1,13 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Squared.Illuminant.Util;
 using Squared.Render;
+using Squared.Util;
 using Chunk = Squared.Illuminant.Particles.ParticleSystem.Slice.Chunk;
 
 namespace Squared.Illuminant.Particles {
@@ -29,8 +32,8 @@ namespace Squared.Illuminant.Particles {
         internal          VertexBuffer  RasterizeVertexBuffer;
         internal          VertexBuffer  RasterizeOffsetBuffer;
 
-        internal const int              RandomnessTextureWidth = 1536,
-                                        RandomnessTextureHeight = 512;
+        internal const int              RandomnessTextureWidth = 807,
+                                        RandomnessTextureHeight = 381;
         internal          Texture2D     RandomnessTexture;
 
         internal readonly List<Chunk> FreeList = 
@@ -42,12 +45,13 @@ namespace Squared.Illuminant.Particles {
 
         public ParticleEngine (
             ContentManager content, RenderCoordinator coordinator, 
-            DefaultMaterialSet materials, ParticleEngineConfiguration configuration
+            DefaultMaterialSet materials, ParticleEngineConfiguration configuration,
+            ParticleMaterials particleMaterials = null
         ) {
             Coordinator = coordinator;
             Materials = materials;
 
-            ParticleMaterials = new ParticleMaterials(materials);
+            ParticleMaterials = particleMaterials ?? new ParticleMaterials(materials);
             Configuration = configuration;
 
             LoadMaterials(content);
@@ -125,7 +129,8 @@ namespace Squared.Illuminant.Particles {
             }
         }
 
-        private void GenerateRandomnessTexture () {
+        private void GenerateRandomnessTexture (int? seed = null) {
+            var sw = Stopwatch.StartNew();
             lock (Coordinator.CreateResourceLock) {
                 // TODO: HalfVector4?
                 RandomnessTexture = new Texture2D(
@@ -135,13 +140,29 @@ namespace Squared.Illuminant.Particles {
                 );
 
                 var buffer = new Vector4[RandomnessTextureWidth * RandomnessTextureHeight];
-                var rng = new MersenneTwister();
+                int o;
+                unchecked {
+                    o = seed.GetValueOrDefault((int)Time.Ticks);
+                }
 
-                for (int i = 0; i < buffer.Length; i++)
-                    buffer[i] = new Vector4(rng.NextSingle(), rng.NextSingle(), rng.NextSingle(), rng.NextSingle());
+                Parallel.For(
+                    0, RandomnessTextureHeight,
+                    () => {
+                        return new MersenneTwister(Interlocked.Increment(ref o));
+                    },
+                    (y, pls, rng) => {
+                        int j = y * RandomnessTextureWidth;
+                        for (int x = 0; x < RandomnessTextureWidth; x++)
+                            buffer[j + x] = new Vector4(rng.NextSingle(), rng.NextSingle(), rng.NextSingle(), rng.NextSingle());
+                        return rng;
+                    },
+                    (rng) => { }
+                );
 
                 RandomnessTexture.SetData(buffer);
             }
+
+            // Console.WriteLine(sw.ElapsedMilliseconds);
         }
 
         private void Coordinator_DeviceReset (object sender, EventArgs e) {

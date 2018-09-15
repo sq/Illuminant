@@ -112,7 +112,7 @@ namespace TestGame.Scenes {
                     EnableGBuffer = true,
                     RenderGroundPlane = true,
                     TwoPointFiveD = true
-                }
+                }, Game.IlluminantMaterials
             ) {
                 DistanceField = DistanceField
             };

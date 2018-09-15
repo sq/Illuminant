@@ -66,7 +66,7 @@ namespace TestGame.Scenes {
                 ) {
                     RenderScale = Vector2.One,
                     MaximumFieldUpdatesPerFrame = 64
-                }
+                }, Game.IlluminantMaterials
             ) {
                 DistanceField = DistanceField
             };

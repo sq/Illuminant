@@ -146,7 +146,7 @@ namespace TestGame.Scenes {
                     },
                     EnableGBuffer = true,
                     TwoPointFiveD = true
-                }
+                }, Game.IlluminantMaterials
             );
 
             CreateDistanceField();

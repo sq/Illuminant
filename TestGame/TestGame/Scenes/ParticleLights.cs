@@ -200,14 +200,14 @@ namespace TestGame.Scenes {
                         MaxConeRadius = 24,
                     },
                     EnableGBuffer = true
-                }
+                }, Game.IlluminantMaterials
             );
 
             CreateDistanceField();
 
             Engine = new ParticleEngine(
                 Game.Content, Game.RenderCoordinator, Game.Materials,
-                new ParticleEngineConfiguration (128)
+                new ParticleEngineConfiguration (128), Game.ParticleMaterials
             );
 
             SetupParticleSystem();

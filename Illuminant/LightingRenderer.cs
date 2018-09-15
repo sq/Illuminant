@@ -360,13 +360,13 @@ namespace Squared.Illuminant {
         public LightingRenderer (
             ContentManager content, RenderCoordinator coordinator, 
             DefaultMaterialSet materials, LightingEnvironment environment,
-            RendererConfiguration configuration
+            RendererConfiguration configuration, IlluminantMaterials illuminantMaterials = null
         ) {
             Materials = materials;
             Coordinator = coordinator;
             Configuration = configuration;
 
-            IlluminantMaterials = new IlluminantMaterials(materials);
+            IlluminantMaterials = illuminantMaterials ?? new IlluminantMaterials(materials);
 
             _GIBounces = new GIBounce[Configuration.MaximumGIBounceCount];
 

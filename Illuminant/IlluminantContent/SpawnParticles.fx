@@ -52,9 +52,9 @@ void PS_Spawn (
             xy, newPosition, newVelocity, newAttributes
         );
     } else {
-        newPosition   = evaluateFormula(Configuration[0], Configuration[1], Configuration[2], Configuration[3], RandomCircularity[0], float2(index, 0));
-        newVelocity   = evaluateFormula(Configuration[4], Configuration[5], Configuration[6], Configuration[7], RandomCircularity[1], float2(index, 1));
-        newAttributes = evaluateFormula(Configuration[8], Configuration[9], Configuration[10], Configuration[11], RandomCircularity[2], float2(index, 2));
+        newPosition   = evaluateFormula(Configuration[0], Configuration[1], Configuration[2], Configuration[3], RandomCircularity[0], float2(index % 8039, 0 + (index % 57)));
+        newVelocity   = evaluateFormula(Configuration[4], Configuration[5], Configuration[6], Configuration[7], RandomCircularity[1], float2(index % 6180, 1 + (index % 4031)));
+        newAttributes = evaluateFormula(Configuration[8], Configuration[9], Configuration[10], Configuration[11], RandomCircularity[2], float2(index % 2025, 2 + (index % 65531)));
     }
 }
 

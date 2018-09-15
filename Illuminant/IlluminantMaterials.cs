@@ -39,10 +39,12 @@ namespace Squared.Illuminant {
         public Material VisualizeGI;
         public Material RenderGI, RenderLightProbesFromGI;
 
+        public bool IsLoaded { get; internal set; }
+
         internal readonly Effect[] EffectsToSetGammaCompressionParametersOn;
         internal readonly Effect[] EffectsToSetToneMappingParametersOn;
 
-        internal IlluminantMaterials (DefaultMaterialSet materialSet) {
+        public IlluminantMaterials (DefaultMaterialSet materialSet) {
             MaterialSet = materialSet;
 
             EffectsToSetGammaCompressionParametersOn = new Effect[6];

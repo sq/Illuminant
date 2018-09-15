@@ -235,7 +235,7 @@ namespace TestGame.Scenes {
                         MaxConeRadius = 24,
                     },
                     EnableGBuffer = true,
-                }
+                }, Game.IlluminantMaterials
             );
 
             CreateDistanceField();

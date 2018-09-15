@@ -13,7 +13,9 @@ namespace Squared.Illuminant {
 
         public Material White, AttributeColor;
 
-        internal ParticleMaterials (DefaultMaterialSet materialSet) {
+        public bool IsLoaded { get; internal set; }
+
+        public ParticleMaterials (DefaultMaterialSet materialSet) {
             MaterialSet = materialSet;
         }
     }

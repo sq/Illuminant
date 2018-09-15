@@ -252,7 +252,7 @@ namespace TestGame.Scenes {
                         MaxConeRadius = 30,
                     }
                     */
-                }
+                }, Game.IlluminantMaterials
             ) {
                 DistanceField = DistanceField
             };
@@ -273,7 +273,7 @@ namespace TestGame.Scenes {
                         MaxConeRadius = 30,
                     }
                     */
-                }
+                }, Game.IlluminantMaterials
             ) {
                 DistanceField = DistanceField
             };
