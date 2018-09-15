@@ -22,6 +22,10 @@
 // We manually increase distance samples in order to avoid tiny shadow artifact specks at the edges of surfaces
 #define HACK_DISTANCE_OFFSET 1.5
 
+// The distance between the A and B points during a bidirectional cone trace is multiplied by this amount
+//  and if that exceeds 1 then the trace is terminated.
+#define TRACE_MEET_THRESHOLD 10000
+
 struct TraceState {
     float3 origin, direction;
     // position, length, visibility
@@ -30,13 +34,15 @@ struct TraceState {
 
 void coneTraceInitialize (
     out TraceState state,
-    in float3 startPosition, in float3 endPosition
+    in float3 startPosition, in float3 endPosition,
+    in float startOffset, in float lightRadius, in bool startAtEnd
 ) {
     float3 traceVector = (endPosition - startPosition);
+    float traceLength = length(traceVector);
     state.origin = startPosition;
-    state.data.y = length(traceVector);
-    state.direction = traceVector / state.data.y;
-    state.data.x = TRACE_INITIAL_OFFSET_PX;
+    state.direction = traceVector / traceLength;
+    state.data.y = max(traceLength - lightRadius, 1);
+    state.data.x = startAtEnd ? traceLength - startOffset : startOffset;
     state.data.z = 1.0;
 }
 
@@ -75,8 +81,8 @@ float coneTraceAdvance (
 
 float coneTraceAdvanceEx (
     inout TraceState state,
-    in    float4 config,
-    in    DistanceFieldConstants vars
+    in float4 config,
+    in DistanceFieldConstants vars
 ) {
     float sample = sampleDistanceFieldEx(state.origin + (state.direction * state.data.x), vars);
 
@@ -85,6 +91,26 @@ float coneTraceAdvanceEx (
         state.data.y
     );
     return saturate(state.data.z - FULLY_SHADOWED_THRESHOLD) * saturate(state.data.y - state.data.x);
+}
+
+float coneTraceAdvance2 (
+    inout TraceState traceA,
+    inout TraceState traceB,
+    in    float4 config,
+    in    DistanceFieldConstants vars
+) {
+    float3 samplePos = traceA.origin + (traceA.direction * traceA.data.x);
+    float sample = sampleDistanceFieldEx(samplePos, vars);
+    float stepResult = coneTraceStep(config, sample, traceA.data.x, traceA.data.z);
+    traceA.data.x += stepResult;
+
+    samplePos = traceB.origin + (traceB.direction * traceB.data.x);
+    sample = sampleDistanceFieldEx(samplePos, vars);
+    stepResult = coneTraceStep(config, sample, traceB.data.x, traceB.data.z);
+    traceB.data.x -= stepResult;
+
+    float result = saturate(min(traceA.data.z, traceB.data.z) - FULLY_SHADOWED_THRESHOLD);
+    return result;
 }
 
 float coneTraceFinish (in TraceState state) {
@@ -112,34 +138,40 @@ float4 createTraceConfig (
 
 float coneTrace (
     in float3 lightCenter,
+    // radius, ramp length
     in float2 lightRamp,
     in float2 coneGrowthFactorAndDistanceFalloff,
     in float3 shadedPixelPosition,
     in DistanceFieldConstants vars,
     in bool   enable
 ) {
-    TraceState state;
-
+    TraceState traceA;
     coneTraceInitialize(
-        state, shadedPixelPosition, lightCenter
+        traceA, shadedPixelPosition, lightCenter,
+        TRACE_INITIAL_OFFSET_PX, lightRamp.x, false
     );
 
     float4 config = createTraceConfig(lightRamp, coneGrowthFactorAndDistanceFalloff);
 
     float stepsRemaining = getStepLimit();
     float liveness = (DistanceField.Extent.x > 0) && enable;
+    float stepLiveness;
 
     [loop]
     while (liveness > 0) {
-        float stepLiveness = coneTraceAdvance(state, config, vars);
+        stepLiveness = coneTraceAdvance(traceA, config, vars);
 
         stepsRemaining--;
-        liveness = stepsRemaining * stepLiveness;
+        liveness = stepsRemaining * 
+            stepLiveness;
     }
 
     // HACK: Force visibility down to 0 if we are going to terminate the trace because we took too many steps.
     float stepWindowVisibility = stepsRemaining / MAX_STEP_RAMP_WINDOW;
-    float visibility = min(coneTraceFinish(state), stepWindowVisibility);
+    float visibility = min(
+        coneTraceFinish(traceA), 
+        stepWindowVisibility
+    );
 
     float finalResult = pow(
         saturate(

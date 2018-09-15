@@ -40,6 +40,7 @@
       <Name>SphereLight</Name>
       <Importer>EffectImporter</Importer>
       <Processor>EffectProcessor</Processor>
+      <ProcessorParameters_DebugMode>Optimize</ProcessorParameters_DebugMode>
     </Compile>
   </ItemGroup>
   <ItemGroup>

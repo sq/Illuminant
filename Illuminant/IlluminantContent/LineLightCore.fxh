@@ -28,9 +28,9 @@ float lineConeTrace (
     float deltaLength = length(delta);
     float offset = max(saturate((lightRamp.x + 1) / deltaLength), 0.03);
 
-    coneTraceInitialize(a, shadedPixelPosition, startPosition + saturate(u - offset) * delta);
-    coneTraceInitialize(b, shadedPixelPosition, startPosition + u * delta);
-    coneTraceInitialize(c, shadedPixelPosition, startPosition + saturate(u + offset) * delta);
+    coneTraceInitialize(a, shadedPixelPosition, startPosition + saturate(u - offset) * delta, TRACE_INITIAL_OFFSET_PX, lightRamp.x, false);
+    coneTraceInitialize(b, shadedPixelPosition, startPosition + u * delta, TRACE_INITIAL_OFFSET_PX, lightRamp.x, false);
+    coneTraceInitialize(c, shadedPixelPosition, startPosition + saturate(u + offset) * delta, TRACE_INITIAL_OFFSET_PX, lightRamp.x, false);
 
     float4 config = createTraceConfig(lightRamp, coneGrowthFactorAndDistanceFalloff);
 
