@@ -48,6 +48,7 @@ namespace TestGame.Scenes {
             ShowGBuffer.Key = Keys.G;
             ShowDistanceField.Key = Keys.D;
             Deterministic.Key = Keys.R;
+            Shadows.Key = Keys.S;
 
             DistanceFieldResolution.MinusKey = Keys.D5;
             DistanceFieldResolution.PlusKey = Keys.D6;

@@ -49,6 +49,15 @@ namespace Squared.Illuminant {
             }
         }
 
+        private float ComputeZSelfOcclusionHack () {
+            if (_DistanceField == null) {
+                return 0;
+            } else {
+                float sliceSize = Environment.MaximumZ / _DistanceField.SliceCount;
+                return Math.Max(sliceSize * 0.525f, 1f);
+            }
+        }
+
         private void RenderGBuffer (
             ref int layerIndex, IBatchContainer resultGroup,
             int renderWidth, int renderHeight,
@@ -86,6 +95,15 @@ namespace Squared.Illuminant {
                         var p = IlluminantMaterials.HeightVolumeFace.Effect.Parameters;
                         p["DistanceFieldExtent"].SetValue(Extent3);
                         p["SelfOcclusionHack"].SetValue(ComputeSelfOcclusionHack());
+                        p["ZSelfOcclusionHack"].SetValue(ComputeZSelfOcclusionHack());
+                        p = IlluminantMaterials.GroundPlane.Effect.Parameters;
+                        p["DistanceFieldExtent"].SetValue(Extent3);
+                        p["SelfOcclusionHack"].SetValue(ComputeSelfOcclusionHack());
+                        p["ZSelfOcclusionHack"].SetValue(ComputeZSelfOcclusionHack());
+                        p = IlluminantMaterials.HeightVolume.Effect.Parameters;
+                        p["DistanceFieldExtent"].SetValue(Extent3);
+                        p["SelfOcclusionHack"].SetValue(ComputeSelfOcclusionHack());
+                        p["ZSelfOcclusionHack"].SetValue(ComputeZSelfOcclusionHack());
 
                         Materials.TrySetBoundUniform(IlluminantMaterials.HeightVolumeFace, "Environment", ref EnvironmentUniforms);
                         Materials.TrySetBoundUniform(IlluminantMaterials.HeightVolume, "Environment", ref EnvironmentUniforms);
@@ -99,6 +117,7 @@ namespace Squared.Illuminant {
                     if (Configuration.TwoPointFiveD) {
                         RenderTwoPointFiveDVolumes(enableHeightVolumes, enableBillboards, group);
                     } else if (enableHeightVolumes) {
+                        // fixme: needs self occlusion hack
                         RenderGBufferVolumes(batch);
                     }
                 }
@@ -136,7 +155,7 @@ namespace Squared.Illuminant {
             if (enableHeightVolumes)
                 using (var topBatch = PrimitiveBatch<HeightVolumeVertex>.New(
                     group, 3, Materials.Get(
-                        IlluminantMaterials.HeightVolumeFace,
+                        IlluminantMaterials.HeightVolume,
                         depthStencilState: TopFaceDepthStencilState,
                         rasterizerState: Render.Convenience.RenderStates.ScissorOnly,
                         blendState: BlendState.Opaque
