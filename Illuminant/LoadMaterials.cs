@@ -227,6 +227,12 @@ namespace Squared.Illuminant {
                     content.Load<Effect>("HDRBitmap"), "WorldSpaceToneMappedBitmap"
                 ));
 
+                DefineMaterial(IlluminantMaterials.ScreenSpaceVectorWarp = 
+                    new Squared.Render.Material(
+                        content.Load<Effect>("VectorWarp"), "ScreenSpaceVectorWarp", 
+                        new [] { MaterialUtil.MakeDelegate(BlendState.AlphaBlend) }
+                    ));
+
                 Materials.PreallocateBindings();
 
                 Materials.ForEachMaterial<object>((m, _) => {

@@ -213,6 +213,8 @@ namespace TestGame {
     public class Dropdown<T> : Setting<T>, IEnumerable<Dropdown<T>.Item>, IDropdown
         where T : IEquatable<T>
     {
+        public Keys Key;
+
         private NuklearDotNet.nk_item_getter_fun _Getter;
         public readonly List<Item> Items = new List<Item>();
 
@@ -276,10 +278,15 @@ namespace TestGame {
         }
 
         public override void Update (Scene s) {
+            if (s.KeyWasPressed(Key)) {
+                var index = SelectedIndex;
+                index = (index + 1) % Count;
+                SelectedIndex = index;
+            }
         }
 
         protected override string GetLabelText () {
-            return Name;
+            return string.Format("{1} {0}", Name, KeyToString(Key)).Trim();
         }
 
         public override string GetFormattedValue () {
