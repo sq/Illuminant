@@ -84,7 +84,8 @@ namespace TestGame {
                 new DynamicObstructions(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new DitheringTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new LineLight(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new VectorFieldTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
+                new VectorFieldTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
+                new LUTTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
             };
 
             ActiveSceneIndex = Scenes.Length - 1;
