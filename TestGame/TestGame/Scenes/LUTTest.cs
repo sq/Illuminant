@@ -23,6 +23,7 @@ namespace TestGame.Scenes {
         Dictionary<string, ColorLUT> LUTs = new Dictionary<string, ColorLUT>();
         Texture2D Background;
 
+        Toggle ApplyLUT;
         Slider LUT2Weight;
         [Items("Identity")]
         [Items("Darken")]
@@ -37,9 +38,12 @@ namespace TestGame.Scenes {
 
         public LUTTest (TestGame game, int width, int height)
             : base(game, width, height) {
+            ApplyLUT.Key = Keys.A;
+            ApplyLUT.Value = true;
+
             LUT2Weight.Min = 0f;
             LUT2Weight.Max = 1f;
-            LUT2Weight.Speed = 0.1f;
+            LUT2Weight.Speed = 0.05f;
             LUT2Weight.Value = 0f;
 
             LUT1.Key = Keys.L;
@@ -73,7 +77,11 @@ namespace TestGame.Scenes {
             var ir = new ImperativeRenderer(frame, Game.Materials);
             ir.Clear(layer: 0, color: Color.Black);
 
-            ir.Draw(Background, Vector2.Zero, layer: 1, material: m);
+            var mc = Color.White;
+            if (ApplyLUT)
+                ir.Draw(Background, Vector2.Zero, layer: 2, material: m, multiplyColor: mc);
+            else
+                ir.Draw(Background, Vector2.Zero, layer: 1, multiplyColor: mc);
         }
 
         public override void Update (GameTime gameTime) {
