@@ -264,6 +264,16 @@ namespace TestGame {
             });
         }
 
+        public void AddRange (T[] values, string[] labels = null) {
+            var oldCount = 0;
+
+            for (int i = 0; i < values.Length; i++)
+                Add(values[i], labels != null ? labels[i] : null);
+
+            if ((Items.Count > 0) && oldCount == 0 && (Comparer<T>.Default.Compare(Value, default(T)) == 0))
+                Value = Items[0].Value;
+        }
+
         public unsafe override void Initialize (FieldInfo f) {
             _Getter = (user, index, result) => {
                 *result = Items[index].GetLabelUTF8();

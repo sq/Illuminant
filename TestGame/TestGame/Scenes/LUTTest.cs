@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -20,21 +21,12 @@ using Nuke = NuklearDotNet.Nuklear;
 
 namespace TestGame.Scenes {
     public class LUTTest : Scene {
-        Dictionary<string, ColorLUT> LUTs = new Dictionary<string, ColorLUT>();
+        Dictionary<string, ColorLUT> LUTs = new Dictionary<string, ColorLUT>(StringComparer.OrdinalIgnoreCase);
         Texture2D Background;
 
         Toggle ApplyLUT;
         Slider LUT2Weight;
-        [Items("Identity")]
-        [Items("Darken")]
-        [Items("Invert")]
-        [Items("GammaHalf")]
-        Dropdown<string> LUT1;
-        [Items("Identity")]
-        [Items("Darken")]
-        [Items("Invert")]
-        [Items("GammaHalf")]
-        Dropdown<string> LUT2;
+        Dropdown<string> LUT1, LUT2;
 
         public LUTTest (TestGame game, int width, int height)
             : base(game, width, height) {
@@ -46,6 +38,7 @@ namespace TestGame.Scenes {
             LUT2Weight.Speed = 0.05f;
             LUT2Weight.Value = 0f;
 
+            LUT1.Value = LUT2.Value = "Identity";
             LUT1.Key = Keys.L;
             LUT2.Key = Keys.OemSemicolon;
         }
@@ -53,25 +46,44 @@ namespace TestGame.Scenes {
         public override void LoadContent () {
             Background = Game.Content.Load<Texture2D>("vector-field-background");
 
-            LoadLUT("Identity");
-            LoadLUT("Darken");
-            LoadLUT("Invert");
-            LoadLUT("GammaHalf");
+            var identity = ColorLUT.CreateIdentity(Game.RenderCoordinator, LUTPrecision.UInt8, LUTResolution.High);
+            LUTs.Add("Identity", identity);
+
+            var names = Directory.GetFiles(Game.Content.RootDirectory + "\\LUTs", "*.xnb");
+            foreach (var name in names) {
+                var shortName = Path.GetFileNameWithoutExtension(name);
+                if (LUTs.ContainsKey(shortName))
+                    continue;
+
+                var texture = Game.Content.Load<Texture2D>("LUTs\\" + shortName);
+                var lut = new ColorLUT(texture, true);
+                LUTs.Add(shortName, lut);
+            }
+
+            var keys = LUTs.Keys.OrderBy(n => n).ToArray();
+            LUT1.AddRange(keys);
+            LUT2.AddRange(keys);
         }
 
         private void LoadLUT (string name) {
             var texture = Game.Content.Load<Texture2D>("lut-" + name);
-            var lut = new ColorLUT(texture, 4, 4);
+            var lut = new ColorLUT(texture, false);
             LUTs.Add(name, lut);
         }
         
         public override void Draw (Squared.Render.Frame frame) {
             var m = Game.Materials.Get(Game.Materials.ScreenSpaceBitmapWithLUT, blendState: BlendState.Opaque);
 
+            var lut1 = LUTs[ApplyLUT ? LUT1.Value : "Identity"];
+            var lut2 = LUTs[LUT2.Value];
+            var l2w = LUT2Weight.Value;
+
             Game.RenderCoordinator.BeforePrepare(() => {
-                m.Effect.Parameters["LUT1"].SetValue(LUTs[LUT1.Value]);
-                m.Effect.Parameters["LUT2"].SetValue(LUTs[LUT2.Value]);
-                m.Effect.Parameters["LUT2Weight"].SetValue(LUT2Weight.Value);
+                m.Effect.Parameters["LUT1"].SetValue(lut1);
+                m.Effect.Parameters["LUT1Resolution"].SetValue(lut1.Resolution);
+                m.Effect.Parameters["LUT2"].SetValue(lut2);
+                m.Effect.Parameters["LUT2Resolution"].SetValue(lut2.Resolution);
+                m.Effect.Parameters["LUT2Weight"].SetValue(l2w);
             });
 
             var ir = new ImperativeRenderer(frame, Game.Materials);
@@ -79,9 +91,12 @@ namespace TestGame.Scenes {
 
             var mc = Color.White;
             if (ApplyLUT)
-                ir.Draw(Background, Vector2.Zero, layer: 2, material: m, multiplyColor: mc);
+                ir.Draw(Background, Vector2.Zero, layer: 1, material: m, multiplyColor: mc);
             else
-                ir.Draw(Background, Vector2.Zero, layer: 1, multiplyColor: mc);
+                ir.Draw(Background, Vector2.Zero, layer: 1, blendState: BlendState.Opaque, multiplyColor: mc);
+
+            ir.Draw(lut1, Vector2.Zero, layer: 3, multiplyColor: Color.White, blendState: BlendState.Opaque);
+            ir.Draw(lut2, Vector2.Zero, layer: 4, multiplyColor: Color.White * (ApplyLUT ? l2w : 0), blendState: BlendState.AlphaBlend);
         }
 
         public override void Update (GameTime gameTime) {
