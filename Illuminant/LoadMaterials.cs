@@ -178,6 +178,9 @@ namespace Squared.Illuminant {
                 DefineMaterial(IlluminantMaterials.ScreenSpaceToneMappedLightingResolveWithAlbedo = 
                     new Squared.Render.Material(content.Load<Effect>("Resolve"), "ScreenSpaceToneMappedLightingResolveWithAlbedo"));
 
+                DefineMaterial(IlluminantMaterials.ScreenSpaceLUTBlendedLightingResolveWithAlbedo = 
+                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "ScreenSpaceLUTBlendedLightingResolveWithAlbedo"));
+
                 DefineMaterial(IlluminantMaterials.WorldSpaceLightingResolve = 
                     new Squared.Render.Material(content.Load<Effect>("Resolve"), "WorldSpaceLightingResolve"));
 
@@ -195,6 +198,9 @@ namespace Squared.Illuminant {
 
                 DefineMaterial(IlluminantMaterials.WorldSpaceToneMappedLightingResolveWithAlbedo = 
                     new Squared.Render.Material(content.Load<Effect>("Resolve"), "WorldSpaceToneMappedLightingResolveWithAlbedo"));
+
+                DefineMaterial(IlluminantMaterials.WorldSpaceLUTBlendedLightingResolveWithAlbedo = 
+                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "WorldSpaceLUTBlendedLightingResolveWithAlbedo"));
 
                 DefineMaterial(IlluminantMaterials.CalculateLuminance = 
                     new Squared.Render.Material(content.Load<Effect>("Resolve"), "CalculateLuminance"));

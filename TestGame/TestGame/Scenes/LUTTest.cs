@@ -21,7 +21,6 @@ using Nuke = NuklearDotNet.Nuklear;
 
 namespace TestGame.Scenes {
     public class LUTTest : Scene {
-        Dictionary<string, ColorLUT> LUTs = new Dictionary<string, ColorLUT>(StringComparer.OrdinalIgnoreCase);
         Texture2D Background;
 
         Toggle ApplyLUT;
@@ -46,44 +45,20 @@ namespace TestGame.Scenes {
         public override void LoadContent () {
             Background = Game.Content.Load<Texture2D>("vector-field-background");
 
-            var identity = ColorLUT.CreateIdentity(Game.RenderCoordinator, LUTPrecision.UInt8, LUTResolution.High);
-            LUTs.Add("Identity", identity);
-
-            var names = Directory.GetFiles(Game.Content.RootDirectory + "\\LUTs", "*.xnb");
-            foreach (var name in names) {
-                var shortName = Path.GetFileNameWithoutExtension(name);
-                if (LUTs.ContainsKey(shortName))
-                    continue;
-
-                var texture = Game.Content.Load<Texture2D>("LUTs\\" + shortName);
-                var lut = new ColorLUT(texture, true);
-                LUTs.Add(shortName, lut);
-            }
-
-            var keys = LUTs.Keys.OrderBy(n => n).ToArray();
+            var keys = Game.LUTs.Keys.OrderBy(n => n).ToArray();
             LUT1.AddRange(keys);
             LUT2.AddRange(keys);
-        }
-
-        private void LoadLUT (string name) {
-            var texture = Game.Content.Load<Texture2D>("lut-" + name);
-            var lut = new ColorLUT(texture, false);
-            LUTs.Add(name, lut);
         }
         
         public override void Draw (Squared.Render.Frame frame) {
             var m = Game.Materials.Get(Game.Materials.ScreenSpaceBitmapWithLUT, blendState: BlendState.Opaque);
 
-            var lut1 = LUTs[ApplyLUT ? LUT1.Value : "Identity"];
-            var lut2 = LUTs[LUT2.Value];
+            var lut1 = Game.LUTs[ApplyLUT ? LUT1.Value : "Identity"];
+            var lut2 = Game.LUTs[LUT2.Value];
             var l2w = LUT2Weight.Value;
 
             Game.RenderCoordinator.BeforePrepare(() => {
-                m.Effect.Parameters["LUT1"].SetValue(lut1);
-                m.Effect.Parameters["LUT1Resolution"].SetValue(lut1.Resolution);
-                m.Effect.Parameters["LUT2"].SetValue(lut2);
-                m.Effect.Parameters["LUT2Resolution"].SetValue(lut2.Resolution);
-                m.Effect.Parameters["LUT2Weight"].SetValue(l2w);
+                Game.Materials.SetLUTs(m, lut1, lut2, l2w);
             });
 
             var ir = new ImperativeRenderer(frame, Game.Materials);

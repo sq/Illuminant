@@ -100,6 +100,7 @@ namespace Squared.Illuminant {
                 float width, float height, Texture2D albedo = null,
                 Bounds? albedoTextureRegion = null, SamplerState albedoSamplerState = null,
                 Vector2? uvOffset = null, HDRConfiguration? hdr = null, 
+                LUTBlendingConfiguration? lutBlending = null,
                 BlendState blendState = null, bool worldSpace = false
             ) {
                 if (!IsValid)
@@ -118,7 +119,8 @@ namespace Squared.Illuminant {
                     container, layer,
                     Lightmap, Vector2.Zero, scale, 
                     albedo, albedoTextureRegion, albedoSamplerState,
-                    uvOffset.GetValueOrDefault(Vector2.Zero), hdr, blendState, worldSpace
+                    uvOffset.GetValueOrDefault(Vector2.Zero), hdr, lutBlending,
+                    blendState, worldSpace
                 );
             }
 
@@ -127,6 +129,7 @@ namespace Squared.Illuminant {
                 Vector2 position, Vector2? scale = null, Texture2D albedo = null,
                 Bounds? albedoTextureRegion = null, SamplerState albedoSamplerState = null,
                 Vector2? uvOffset = null, HDRConfiguration? hdr = null, 
+                LUTBlendingConfiguration? lutBlending = null,
                 BlendState blendState = null, bool worldSpace = false
             ) {
                 if (!IsValid)
@@ -141,7 +144,8 @@ namespace Squared.Illuminant {
                     container, layer,
                     Lightmap, position, scale.GetValueOrDefault(Vector2.One),
                     albedo, albedoTextureRegion, albedoSamplerState,
-                    uvOffset.GetValueOrDefault(Vector2.Zero), hdr, blendState, worldSpace
+                    uvOffset.GetValueOrDefault(Vector2.Zero), hdr, lutBlending,
+                    blendState, worldSpace
                 );
             }
 
@@ -243,4 +247,18 @@ namespace Squared.Illuminant {
         ToneMap
     }    
 
+    public struct LUTBlendingConfiguration {
+        public ColorLUT DarkLUT, BrightLUT;
+        public bool PerChannel, LUTOnly;
+        public float DarkLevel, NeutralBandSize;
+        private float _BrightLevelMinus1;
+        public float BrightLevel {
+            get {
+                return _BrightLevelMinus1 + 1;
+            }
+            set {
+                _BrightLevelMinus1 = value - 1;
+            }
+        }
+    }
 }

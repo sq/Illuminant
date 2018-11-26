@@ -62,6 +62,13 @@ namespace TestGame.Scenes {
             LightmapScaleRatio,
             MaximumEncodedDistance;
 
+        [Group("LUTs")]
+        Dropdown<string> DarkLUT, BrightLUT;
+        [Group("LUTs")]
+        Toggle PerChannelLUT, LUTOnly;
+        [Group("LUTs")]
+        Slider DarkLevel, BrightLevel, NeutralBandSize;
+
         Toggle Timelapse,
             Deterministic,
             sRGB;
@@ -89,7 +96,7 @@ namespace TestGame.Scenes {
             DitherRangeMin.Value = 0f;
             DitherRangeMax.Value = 1f;
             DitherMode.Value = "Merged";
-            ShowLightmap.Value = true;
+            ShowLightmap.Value = false;
 
             ShowLightmap.Key = Keys.L;
             ShowGBuffer.Key = Keys.G;
@@ -133,7 +140,15 @@ namespace TestGame.Scenes {
             DitherRangeMin.Max =
                 DitherRangeMax.Max = 2.0f;
 
+            InitUnitSlider(DarkLevel, BrightLevel, NeutralBandSize);
+            DarkLevel.Max = BrightLevel.Max = 2.0f;
+            DarkLevel.Value = 0f;
+            BrightLevel.Value = 1f;
+            NeutralBandSize.Value = 0.2f;
+
             DistanceFieldResolution.Changed += (s, e) => CreateDistanceField();
+
+            DarkLUT.Value = BrightLUT.Value = "Identity";
         }
 
         private void InitUnitSlider (params Slider[] sliders) {
@@ -288,6 +303,10 @@ namespace TestGame.Scenes {
 
             if (false)
                 Environment.HeightVolumes.Clear();
+
+            var keys = Game.LUTs.Keys.OrderBy(n => n).ToArray();
+            DarkLUT.AddRange(keys);
+            BrightLUT.AddRange(keys);
         }
         
         public override void Draw (Squared.Render.Frame frame) {
@@ -307,6 +326,19 @@ namespace TestGame.Scenes {
 
             Renderer.InvalidateFields();
             Renderer.UpdateFields(frame, -2);
+
+            LUTBlendingConfiguration? lutBlending = null;
+            if ((DarkLUT != "Identity") || (BrightLUT != "Identity")) {
+                lutBlending = new LUTBlendingConfiguration {
+                    DarkLUT = Game.LUTs[DarkLUT],
+                    BrightLUT = Game.LUTs[BrightLUT],
+                    PerChannel = PerChannelLUT,
+                    LUTOnly = LUTOnly,
+                    DarkLevel = DarkLevel,
+                    BrightLevel = BrightLevel,
+                    NeutralBandSize = NeutralBandSize
+                };
+            }
 
             using (var bg = BatchGroup.ForRenderTarget(
                 frame, -1, Lightmap,
@@ -337,7 +369,8 @@ namespace TestGame.Scenes {
                             RangeMin = DitherRangeMin,
                             RangeMax = DitherRangeMax
                         }
-                    }
+                    },
+                    lutBlending: lutBlending
                 );
 
                 lighting.TryComputeHistogram(

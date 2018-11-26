@@ -1039,10 +1039,11 @@ namespace Squared.Illuminant {
             RenderTarget2D lightmap,
             Vector2 position, Vector2 scale, 
             Texture2D albedo, Bounds? albedoRegion, SamplerState albedoSamplerState,
-            Vector2 uvOffset, HDRConfiguration? hdr,
+            Vector2 uvOffset, HDRConfiguration? hdr, LUTBlendingConfiguration? lutBlending,
             BlendState blendState, bool worldSpace
         ) {
             Material m;
+            bool usedLut = false;
             var gc = hdr.HasValue && hdr.Value.Mode == HDRMode.GammaCompress;
             var tm = hdr.HasValue && hdr.Value.Mode == HDRMode.ToneMap;
             if (worldSpace) {
@@ -1051,7 +1052,10 @@ namespace Squared.Illuminant {
                         m = IlluminantMaterials.WorldSpaceGammaCompressedLightingResolveWithAlbedo;
                     else if (tm)
                         m = IlluminantMaterials.WorldSpaceToneMappedLightingResolveWithAlbedo;
-                    else
+                    else if (lutBlending.HasValue) {
+                        usedLut = true;
+                        m = IlluminantMaterials.WorldSpaceLUTBlendedLightingResolveWithAlbedo;
+                    } else
                         m = IlluminantMaterials.WorldSpaceLightingResolveWithAlbedo;
                 } else {
                     if (gc)
@@ -1067,7 +1071,10 @@ namespace Squared.Illuminant {
                         m = IlluminantMaterials.ScreenSpaceGammaCompressedLightingResolveWithAlbedo;
                     else if (tm)
                         m = IlluminantMaterials.ScreenSpaceToneMappedLightingResolveWithAlbedo;
-                    else
+                    else if (lutBlending.HasValue) {
+                        usedLut = true;
+                        m = IlluminantMaterials.ScreenSpaceLUTBlendedLightingResolveWithAlbedo;
+                    } else
                         m = IlluminantMaterials.ScreenSpaceLightingResolveWithAlbedo;
                 } else {
                     if (gc)
@@ -1078,6 +1085,9 @@ namespace Squared.Illuminant {
                         m = IlluminantMaterials.ScreenSpaceLightingResolve;
                 }
             }
+
+            if (lutBlending.HasValue && !usedLut && (albedo != null))
+                throw new ArgumentException("LUT blending is not compatible with this type of lighting resolve.");
 
             if (blendState != null)
                 m = Materials.Get(m, blendState: blendState);
@@ -1105,6 +1115,9 @@ namespace Squared.Illuminant {
                         : false
                 );
                 m.Parameters.LightmapUVOffset.SetValue(uvOffset);
+
+                if (usedLut)
+                    IlluminantMaterials.SetLUTBlending(m, lutBlending.Value);
 
                 var ds = (hdr.HasValue && hdr.Value.Dithering.HasValue)
                     ? hdr.Value.Dithering.Value

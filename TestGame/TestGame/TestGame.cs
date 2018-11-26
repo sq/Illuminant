@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -47,6 +48,9 @@ namespace TestGame {
 
         public bool IsMouseOverUI = false;
         public long LastTimeOverUI;
+
+        public readonly Dictionary<string, ColorLUT> LUTs = 
+            new Dictionary<string, ColorLUT>(StringComparer.OrdinalIgnoreCase);
 
         public TestGame () {
             // UniformBinding.ForceCompatibilityMode = true;
@@ -246,10 +250,34 @@ namespace TestGame {
                 Scene = UIScene
             };
 
+            LoadLUTs();
+
             foreach (var scene in Scenes)
                 scene.LoadContent();
 
             LastTimeOverUI = Time.Ticks;
+        }
+
+        private void LoadLUTs () {
+            var identity = ColorLUT.CreateIdentity(RenderCoordinator, LUTPrecision.UInt8, LUTResolution.High);
+            LUTs.Add("Identity", identity);
+
+            var names = Directory.GetFiles(Content.RootDirectory + "\\LUTs", "*.xnb");
+            foreach (var name in names) {
+                var shortName = Path.GetFileNameWithoutExtension(name);
+                if (LUTs.ContainsKey(shortName))
+                    continue;
+
+                var texture = Content.Load<Texture2D>("LUTs\\" + shortName);
+                var lut = new ColorLUT(texture, true);
+                LUTs.Add(shortName, lut);
+            }
+        }
+
+        private void LoadLUT (string name) {
+            var texture = Content.Load<Texture2D>("lut-" + name);
+            var lut = new ColorLUT(texture, false);
+            LUTs.Add(name, lut);
         }
 
         protected override void Update (GameTime gameTime) {

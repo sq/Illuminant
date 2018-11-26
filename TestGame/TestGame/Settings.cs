@@ -276,6 +276,9 @@ namespace TestGame {
 
         public unsafe override void Initialize (FieldInfo f) {
             _Getter = (user, index, result) => {
+                if ((index < 0) || (index >= Items.Count))
+                    *result = null;
+
                 *result = Items[index].GetLabelUTF8();
             };
 

@@ -23,13 +23,15 @@ namespace Squared.Illuminant {
             ScreenSpaceToneMappedLightingResolve;
         public Material ScreenSpaceLightingResolveWithAlbedo, 
             ScreenSpaceGammaCompressedLightingResolveWithAlbedo, 
-            ScreenSpaceToneMappedLightingResolveWithAlbedo;
+            ScreenSpaceToneMappedLightingResolveWithAlbedo,
+            ScreenSpaceLUTBlendedLightingResolveWithAlbedo;
         public Material WorldSpaceLightingResolve, 
             WorldSpaceGammaCompressedLightingResolve, 
             WorldSpaceToneMappedLightingResolve;
         public Material WorldSpaceLightingResolveWithAlbedo, 
             WorldSpaceGammaCompressedLightingResolveWithAlbedo, 
-            WorldSpaceToneMappedLightingResolveWithAlbedo;
+            WorldSpaceToneMappedLightingResolveWithAlbedo,
+            WorldSpaceLUTBlendedLightingResolveWithAlbedo;
         public Material ScreenSpaceGammaCompressedBitmap, WorldSpaceGammaCompressedBitmap;
         public Material ScreenSpaceToneMappedBitmap, WorldSpaceToneMappedBitmap;
         public Material ObjectSurfaces, ObjectOutlines;
@@ -115,6 +117,16 @@ namespace Squared.Illuminant {
                 if (wp != null)
                     wp.SetValue(whitePoint);
             }
+        }
+
+        public static void SetLUTBlending (Material m, LUTBlendingConfiguration c) {
+            var p = m.Effect.Parameters;
+            p["DarkLUT"].SetValue(c.DarkLUT.Texture);
+            p["BrightLUT"].SetValue(c.BrightLUT.Texture);
+            p["LUTResolutions"].SetValue(new Vector2(c.DarkLUT.Resolution, c.BrightLUT.Resolution));
+            p["LUTLevels"].SetValue(new Vector3(c.DarkLevel, c.NeutralBandSize, c.BrightLevel));
+            p["PerChannelLUT"].SetValue(c.PerChannel);
+            p["LUTOnly"].SetValue(c.LUTOnly);
         }
     }
 }
