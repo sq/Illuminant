@@ -34,7 +34,7 @@ namespace TestGame.Scenes {
 
             LUT2Weight.Min = 0f;
             LUT2Weight.Max = 1f;
-            LUT2Weight.Speed = 0.05f;
+            LUT2Weight.Speed = 0.02f;
             LUT2Weight.Value = 0f;
 
             LUT1.Value = LUT2.Value = "Identity";
@@ -43,7 +43,7 @@ namespace TestGame.Scenes {
         }
 
         public override void LoadContent () {
-            Background = Game.Content.Load<Texture2D>("vector-field-background");
+            Background = Game.Content.Load<Texture2D>("test pattern");
 
             var keys = Game.LUTs.Keys.OrderBy(n => n).ToArray();
             LUT1.AddRange(keys);

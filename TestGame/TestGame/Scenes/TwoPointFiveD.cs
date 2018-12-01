@@ -155,7 +155,7 @@ namespace TestGame.Scenes {
             foreach (var s in sliders) {
                 s.Max = 1.0f;
                 s.Min = 0.0f;
-                s.Speed = 0.05f;
+                s.Speed = 0.02f;
             }
         }
 

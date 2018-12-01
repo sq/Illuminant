@@ -102,7 +102,10 @@ float4 LUTBlendedResolveWithAlbedoCommon(
     light *= InverseScaleFactor * 2;
 
     float3 weight = light.rgb;
-    bool normalize = !PerChannelLUT || (LUTLevels.y > 0);
+    float bandWidth = saturate(LUTLevels.z - LUTLevels.x);
+    float neutralBandWidth = (LUTLevels.y * bandWidth);
+    bool hasNeutralBand = (neutralBandWidth >= 0.001);
+    bool normalize = !PerChannelLUT || hasNeutralBand;
     if (normalize) {
         weight *= RgbToGray;
         weight = weight.r + weight.g + weight.b;
@@ -112,20 +115,12 @@ float4 LUTBlendedResolveWithAlbedoCommon(
     float3 lutValue2 = ReadLUT(BrightLUTSampler, LUTResolutions.y, albedo.rgb);
 
     float3 blendedValue;
-    if (LUTLevels.y >= (1 / 256.0)) {
-        float bandWidth = (LUTLevels.z - LUTLevels.x);
-        float neutralWidth = bandWidth * LUTLevels.y, transitionWidth = (LUTLevels.y - neutralWidth) * 0.5;
-        float midpoint = (LUTLevels.x + LUTLevels.z) * 0.5;
-        float darkBegin = midpoint - neutralWidth, brightBegin = midpoint + neutralWidth;
+    if (hasNeutralBand) {
+        float transitionSize = (bandWidth - neutralBandWidth) * 0.5;
+        float v = weight.x - LUTLevels.x, v2 = v - transitionSize, v3 = v2 - neutralBandWidth;
 
-        // FIXME: Support perchannel or something
-        if (weight.x <= darkBegin) {
-            blendedValue = lerp(albedo.rgb, lutValue1, saturate((darkBegin - weight.x) / transitionWidth));
-        } else if (weight.x >= brightBegin) {
-            blendedValue = lerp(albedo.rgb, lutValue2, saturate((weight.x - brightBegin) / transitionWidth));
-        } else {
-            blendedValue = albedo.rgb;
-        }
+        float3 val1 = lerp(lutValue1, albedo.rgb, saturate(v / transitionSize));
+        blendedValue = lerp(val1, lutValue2, saturate(v3 / transitionSize));
     } else {
         if (LUTLevels.z > LUTLevels.x) {
             weight -= LUTLevels.x;
