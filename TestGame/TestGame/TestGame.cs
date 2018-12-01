@@ -259,7 +259,9 @@ namespace TestGame {
         }
 
         private void LoadLUTs () {
-            var identity = ColorLUT.CreateIdentity(RenderCoordinator, LUTPrecision.UInt8, LUTResolution.High);
+            var identity = ColorLUT.CreateIdentity(
+                RenderCoordinator, LUTPrecision.UInt16, LUTResolution.High, false
+            );
             LUTs.Add("Identity", identity);
 
             var names = Directory.GetFiles(Content.RootDirectory + "\\LUTs", "*.xnb");
