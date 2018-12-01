@@ -103,8 +103,8 @@ float4 LUTBlendedResolveWithAlbedoCommon(
 
     float3 weight = light.rgb;
     float bandWidth = saturate(LUTLevels.z - LUTLevels.x);
-    float neutralBandWidth = (LUTLevels.y * bandWidth);
-    bool hasNeutralBand = (neutralBandWidth >= 0.001);
+    float neutralBandWidth = min(LUTLevels.y, bandWidth - 0.01);
+    bool hasNeutralBand = (neutralBandWidth > 0);
     bool normalize = !PerChannelLUT || hasNeutralBand;
     if (normalize) {
         weight *= RgbToGray;
