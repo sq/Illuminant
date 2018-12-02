@@ -41,7 +41,8 @@ namespace TestGame.Scenes {
             EnableShadows,
             EnablePointLight,
             EnableDirectionalLights,
-            EdgeShadows;
+            EdgeShadows,
+            CacheProbes;
 
         [Group("Resolution")]
         Slider DistanceFieldResolution,
@@ -319,6 +320,7 @@ namespace TestGame.Scenes {
             Renderer.Configuration.SetScale(LightmapScaleRatio);
             Renderer.Configuration.GIBlendMode = AdditiveIndirectLight ? RenderStates.AdditiveBlend : RenderStates.MaxBlend;
             Renderer.Configuration.GIBounceSearchDistance = BounceDistance.Value;
+            Renderer.Configuration.GICaching = CacheProbes;
 
             foreach (var ls in Environment.Lights)
                 ls.AmbientOcclusionRadius = EdgeShadows ? AORadius : 0.0f;
@@ -356,7 +358,11 @@ namespace TestGame.Scenes {
                     hdr: new HDRConfiguration {
                         InverseScaleFactor = LightScaleFactor,
                         Gamma = sRGB ? 1.8f : 1.0f,
-                        ResolveToSRGB = sRGB
+                        ResolveToSRGB = sRGB,
+                        Dithering = new DitheringSettings {
+                            Power = 8,
+                            Strength = 1
+                        }
                     }
                 );
             };

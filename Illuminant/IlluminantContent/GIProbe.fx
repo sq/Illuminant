@@ -1,3 +1,4 @@
+#include "..\..\..\Fracture\Squared\RenderLib\Content\DitherCommon.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Content\ViewTransformCommon.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Content\GeometryCommon.fxh"
 #include "DistanceFieldCommon.fxh"
@@ -63,7 +64,7 @@ float3 ComputeRowNormal(float row) {
     row -= 1;
     float normalSliceSize = floor((NormalCount - 1) / NormalSliceCount);
     float sliceIndex = floor(row / normalSliceSize);
-    float radians = (row + (sliceIndex * 0.33)) / normalSliceSize * 2 * Pi;
+    float radians = (row + (sliceIndex * 0.33)) / normalSliceSize * 2 * Pi + (Dithering.FrameIndex * 0.001);
 
     float2 xy;
     sincos(radians, xy.x, xy.y);

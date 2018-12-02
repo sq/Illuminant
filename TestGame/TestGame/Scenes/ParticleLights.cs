@@ -240,9 +240,9 @@ namespace TestGame.Scenes {
             Environment.Lights.Add(new ParticleLightSource {
                 System = System,
                 Template = new SphereLightSource {
-                    Radius = 12,
-                    RampLength = 28,
-                    RampMode = LightSourceRampMode.Exponential,
+                    Radius = 2,
+                    RampLength = 32,
+                    RampMode = LightSourceRampMode.Linear,
                     Color = Vector4.One * 0.25f
                 }
             });
@@ -356,7 +356,11 @@ namespace TestGame.Scenes {
                     bg, 2, Width, Height,
                     hdr: new HDRConfiguration {
                         InverseScaleFactor = 4,
-                        Gamma = 1.0f
+                        Gamma = 1.0f,
+                        Dithering = new DitheringSettings {
+                            Power = 8,
+                            Strength = 1f
+                        }
                     }
                 );
             };
