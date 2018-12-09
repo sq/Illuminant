@@ -60,18 +60,29 @@ namespace Squared.Illuminant {
     }
 
     public class DirectionalLightSource : LightSource {
-        internal Vector3 _Direction;
+        internal Vector3? _Direction;
 
         /// <summary>
-        /// The direction light travels.
+        /// Allows restricting the directional light to a subset of the world.
+        /// You can combine this with a null Direction to create an ambient light in an area.
         /// </summary>
-        public Vector3 Direction {
+        public Bounds? Bounds;
+        /// <summary>
+        /// The direction light travels.
+        /// Because I'm lazy you can set the direction to null in order to have a nondirectional ambient light.
+        /// </summary>
+        public Vector3? Direction {
             get {
                 return _Direction;
             }
             set {
-                value.Normalize();
-                _Direction = value;
+                if (value.HasValue) {
+                    var dir = value.Value;
+                    dir.Normalize();
+                    _Direction = dir;
+                } else {
+                    _Direction = null;
+                }
             }
         }
         /// <summary>

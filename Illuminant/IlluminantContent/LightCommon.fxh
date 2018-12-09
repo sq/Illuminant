@@ -143,10 +143,12 @@ float computeSphereLightOpacity (
 }
 
 float computeDirectionalLightOpacity (
-    float3 lightDirection, float3 shadedPixelNormal
+    float4 lightDirection, float3 shadedPixelNormal
 ) {
-    float  normalFactor = computeNormalFactor(lightDirection, shadedPixelNormal);
-    return normalFactor;
+    if (lightDirection.w < 0.1)
+        return 1;
+    else
+        return computeNormalFactor(lightDirection.xyz, shadedPixelNormal);
 }
 
 void sampleLightProbeBuffer (

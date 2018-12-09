@@ -976,10 +976,21 @@ namespace Squared.Illuminant {
 
         private void RenderDirectionalLightSource (DirectionalLightSource lightSource, float intensityScale, LightTypeRenderState ltrs) {
             LightVertex vertex;
-            vertex.LightPosition2 = vertex.LightPosition1 = lightSource._Direction;
+            if (lightSource.Bounds.HasValue) {
+                // FIXME: 3D bounds?
+                vertex.LightPosition1 = new Vector3(lightSource.Bounds.Value.TopLeft, 0);
+                vertex.LightPosition2 = new Vector3(lightSource.Bounds.Value.BottomRight, 0);
+            } else {
+                vertex.LightPosition1 = new Vector3(-99999, -99999, 0);
+                vertex.LightPosition2 = new Vector3(99999, 99999, 0);
+            }
             var color = lightSource.Color;
             color.W *= (lightSource.Opacity * intensityScale);
-            vertex.Color2 = vertex.Color1 = color;
+            vertex.Color1 = color;
+            if (lightSource._Direction.HasValue)
+                vertex.Color2 = new Vector4(lightSource._Direction.Value, 1.0f);
+            else
+                vertex.Color2 = Vector4.Zero;
             vertex.LightProperties = new Vector4(
                 lightSource.CastsShadows ? 1f : 0f,
                 lightSource.ShadowTraceLength,

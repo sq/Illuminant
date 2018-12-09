@@ -287,7 +287,7 @@ namespace TestGame.Scenes {
 
             // if (Running)
                 System.Render(
-                    frame, 1, 
+                    frame, 2, 
                     material: Engine.ParticleMaterials.AttributeColor,
                     blendState: RenderStates.AdditiveBlend
                 );
@@ -299,9 +299,10 @@ namespace TestGame.Scenes {
                 LightingRenderer.VisualizeDistanceField(
                     Bounds.FromPositionAndSize(Vector2.Zero, new Vector2(Width, Height)),
                     Vector3.UnitZ,
-                    frame, 2,
-                    mode: VisualizationMode.Outlines,
-                    blendState: BlendState.AlphaBlend
+                    frame, 1,
+                    mode: VisualizationMode.Surfaces,
+                    blendState: BlendState.AlphaBlend,
+                    lightDirection: new Vector3(-0.5f, -0.5f, -0.33f)
                 );
 
                 var ir = new ImperativeRenderer(

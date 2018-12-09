@@ -13,23 +13,26 @@ float4 ApplyTransform (float3 position) {
 
 void DirectionalLightVertexShader(
     in int2 cornerIndex              : BLENDINDICES0,
-    inout float3 lightDirection      : TEXCOORD0,
+    inout float3 lightPositionMin    : TEXCOORD0,
+    inout float3 lightPositionMax    : TEXCOORD1,
     inout float4 lightProperties     : TEXCOORD2,
     inout float4 moreLightProperties : TEXCOORD3,
     inout float4 color               : TEXCOORD4,
-    out float2   worldPosition       : POSITION1,
+    inout float4 lightDirection      : TEXCOORD5,
+    out float3   worldPosition       : POSITION1,
     out float4   result              : POSITION0
 ) {
-    float2 position = LightCorners[cornerIndex.x] * 99999;
-    worldPosition = position;
     // FIXME: Z
-    float4 transformedPosition = ApplyTransform(float3(position, 0));
+    worldPosition = lerp(lightPositionMin, lightPositionMax, LightCorners[cornerIndex.x]);
+    float3 screenPosition = (worldPosition - float3(Viewport.Position.xy, 0));
+    screenPosition.xy *= Viewport.Scale * Environment.RenderScale;
+    float4 transformedPosition = mul(mul(float4(screenPosition.xyz, 1), Viewport.ModelView), Viewport.Projection);
     result = float4(transformedPosition.xy, 0, transformedPosition.w);
 }
 
 void DirectionalLightProbeVertexShader(
     in int2 cornerIndex              : BLENDINDICES0,
-    inout float3 lightDirection      : TEXCOORD0,
+    inout float4 lightDirection      : TEXCOORD5,
     inout float4 lightProperties     : TEXCOORD2,
     inout float4 moreLightProperties : TEXCOORD3,
     inout float4 color               : TEXCOORD4,
@@ -38,7 +41,7 @@ void DirectionalLightProbeVertexShader(
     if (cornerIndex.x > 3) {
         result = float4(-9999, -9999, 0, 0);
     } else {
-        float2 clipPosition = (LightCorners[cornerIndex.x] * 9999) - 1;
+        float2 clipPosition = (LightCorners[cornerIndex.x] * 99999) - 1;
         result = float4(clipPosition.xy, 0, 1);
     }
 }
@@ -46,7 +49,7 @@ void DirectionalLightProbeVertexShader(
 float DirectionalLightPixelCore(
     in float3 shadedPixelPosition,
     in float3 shadedPixelNormal,
-    in float3 lightDirection,
+    in float4 lightDirection,
     // enableShadows, shadowTraceLength, shadowSoftness, shadowRampRate
     in float4 lightProperties,
     // aoRadius, shadowDistanceFalloff, shadowRampLength, aoOpacity
@@ -64,10 +67,10 @@ float DirectionalLightPixelCore(
     float aoOpacity = computeAO(shadedPixelPosition, shadedPixelNormal, moreLightProperties, vars, visible);
     lightOpacity *= aoOpacity;
 
-    bool traceShadows = visible && lightProperties.x && (lightOpacity >= 1 / 256.0);
+    bool traceShadows = visible && lightProperties.x && (lightOpacity >= 1 / 256.0) && (lightDirection.w >= 0.1);
 
     // FIXME: Cone trace for directional shadows?
-    float3 fakeLightCenter = shadedPixelPosition - (lightDirection * lightProperties.y);
+    float3 fakeLightCenter = shadedPixelPosition - (lightDirection.xyz * lightProperties.y);
     float2 fakeRamp = float2(lightProperties.z, moreLightProperties.y);
     lightOpacity *= coneTrace(
         fakeLightCenter, fakeRamp, 
@@ -88,7 +91,7 @@ float DirectionalLightPixelCore(
 
 void DirectionalLightPixelShader(
     in  float2 worldPosition       : POSITION1,
-    in  float3 lightDirection      : TEXCOORD0,
+    in  float4 lightDirection      : TEXCOORD5,
     in  float4 lightProperties     : TEXCOORD2,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : TEXCOORD4,
@@ -112,7 +115,7 @@ void DirectionalLightPixelShader(
 
 void DirectionalLightWithRampPixelShader(
     in  float2 worldPosition       : POSITION1,
-    in  float3 lightDirection      : TEXCOORD0,
+    in  float4 lightDirection      : TEXCOORD5,
     in  float4 lightProperties     : TEXCOORD2,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : TEXCOORD4,
@@ -135,7 +138,7 @@ void DirectionalLightWithRampPixelShader(
 }
 
 void DirectionalLightProbePixelShader(
-    in  float3 lightDirection      : TEXCOORD0,
+    in  float4 lightDirection      : TEXCOORD5,
     in  float4 lightProperties     : TEXCOORD2,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : TEXCOORD4,
@@ -145,6 +148,8 @@ void DirectionalLightProbePixelShader(
     float3 shadedPixelPosition;
     float3 shadedPixelNormal;
     float opacity, enableShadows;
+
+    // FIXME: Clip to region
 
     sampleLightProbeBuffer(
         vpos,
@@ -162,7 +167,7 @@ void DirectionalLightProbePixelShader(
 }
 
 void DirectionalLightProbeWithRampPixelShader(
-    in  float3 lightDirection      : TEXCOORD0,
+    in  float4 lightDirection      : TEXCOORD5,
     in  float4 lightProperties     : TEXCOORD2,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : TEXCOORD4,
@@ -172,6 +177,8 @@ void DirectionalLightProbeWithRampPixelShader(
     float3 shadedPixelPosition;
     float3 shadedPixelNormal;
     float opacity, enableShadows;
+
+    // FIXME: Clip to region
 
     sampleLightProbeBuffer(
         vpos,
