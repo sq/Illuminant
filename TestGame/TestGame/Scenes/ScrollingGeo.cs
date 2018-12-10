@@ -129,7 +129,8 @@ namespace TestGame.Scenes {
 
             Environment.Lights.Add(new DirectionalLightSource {
                 Direction = new Vector3(-0.75f, -0.7f, -0.33f),
-                Color = new Vector4(0.2f, 0.4f, 0.6f, 0.4f)
+                Color = new Vector4(0.2f, 0.4f, 0.6f, 0.4f),
+                Bounds = Bounds.FromPositionAndSize(new Vector2(128, 128), new Vector2(512, 1024))
             });
 
             Environment.Lights.Add(new DirectionalLightSource {
