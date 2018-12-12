@@ -21,12 +21,11 @@ using Squared.Render;
 using Squared.Render.Convenience;
 using Squared.Render.Text;
 using Squared.Util;
-using TestGame.Scenes;
 using ThreefoldTrials.Framework;
 using Nuke = NuklearDotNet.Nuklear;
 
-namespace TestGame {
-    public class TestGame : MultithreadedGame, INuklearHost {
+namespace ParticleEditor {
+    public class ParticleEditor : MultithreadedGame, INuklearHost {
         public GraphicsDeviceManager Graphics;
         public DefaultMaterialSet Materials { get; private set; }
         public NuklearService Nuklear;
@@ -39,21 +38,14 @@ namespace TestGame {
         public Material TextMaterial { get; private set; }
 
         public FreeTypeFont Font;
-        public Texture2D RampTexture;
         public RenderTarget2D UIRenderTarget;
-
-        public readonly Scene[] Scenes;
-        public int ActiveSceneIndex;
 
         private int LastPerformanceStatPrimCount = 0;
 
         public bool IsMouseOverUI = false;
         public long LastTimeOverUI;
 
-        public readonly Dictionary<string, ColorLUT> LUTs = 
-            new Dictionary<string, ColorLUT>(StringComparer.OrdinalIgnoreCase);
-
-        public TestGame () {
+        public ParticleEditor () {
             // UniformBinding.ForceCompatibilityMode = true;
 
             Graphics = new GraphicsDeviceManager(this);
@@ -75,27 +67,9 @@ namespace TestGame {
             }
 
             PreviousKeyboardState = Keyboard.GetState();
-
-            Scenes = new Scene[] {
-                new HeightVolumeTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new TwoPointFiveDTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new SC3(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new DistanceFieldEditor(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new ScrollingGeo(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new SimpleParticles(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new LightProbeTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new GlobalIlluminationTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new ParticleLights(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new DynamicObstructions(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new DitheringTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new LineLight(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new VectorFieldTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new LUTTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-            };
-
-            ActiveSceneIndex = Scenes.Length - 1;
-            // ActiveSceneIndex = 1;
+            
         }
+        /*
 
         const float settingRowHeight = 26;
 
@@ -213,6 +187,11 @@ namespace TestGame {
             }
         }
 
+        */
+
+        protected unsafe void UIScene () {
+        }
+
         public bool LeftMouse {
             get {
                 return (MouseState.LeftButton == ButtonState.Pressed) && !IsMouseOverUI;
@@ -235,7 +214,6 @@ namespace TestGame {
             Materials = new DefaultMaterialSet(Services);
             IlluminantMaterials = new IlluminantMaterials(Materials);
             ParticleMaterials = new ParticleMaterials(Materials);
-            RampTexture = Content.Load<Texture2D>("light_ramp");
 
             TextMaterial = Materials.Get(Materials.ScreenSpaceShadowedBitmap, blendState: BlendState.AlphaBlend);
             TextMaterial.Parameters.ShadowColor.SetValue(new Vector4(0, 0, 0, 0.5f));
@@ -251,36 +229,7 @@ namespace TestGame {
                 Scene = UIScene
             };
 
-            LoadLUTs();
-
-            foreach (var scene in Scenes)
-                scene.LoadContent();
-
             LastTimeOverUI = Time.Ticks;
-        }
-
-        private void LoadLUTs () {
-            var identity = ColorLUT.CreateIdentity(
-                RenderCoordinator, LUTPrecision.UInt16, LUTResolution.High, false
-            );
-            LUTs.Add("Identity", identity);
-
-            var names = Directory.GetFiles(Content.RootDirectory + "\\LUTs", "*.xnb");
-            foreach (var name in names) {
-                var shortName = Path.GetFileNameWithoutExtension(name);
-                if (LUTs.ContainsKey(shortName))
-                    continue;
-
-                var texture = Content.Load<Texture2D>("LUTs\\" + shortName);
-                var lut = new ColorLUT(texture, true);
-                LUTs.Add(shortName, lut);
-            }
-        }
-
-        private void LoadLUT (string name) {
-            var texture = Content.Load<Texture2D>("lut-" + name);
-            var lut = new ColorLUT(texture, false);
-            LUTs.Add(name, lut);
         }
 
         protected override void Update (GameTime gameTime) {
@@ -292,12 +241,8 @@ namespace TestGame {
             if (IsActive) {
                 var alt = KeyboardState.IsKeyDown(Keys.LeftAlt) || KeyboardState.IsKeyDown(Keys.RightAlt);
                 var wasAlt = PreviousKeyboardState.IsKeyDown(Keys.LeftAlt) || PreviousKeyboardState.IsKeyDown(Keys.RightAlt);
-
-                if (KeyboardState.IsKeyDown(Keys.OemOpenBrackets) && !PreviousKeyboardState.IsKeyDown(Keys.OemOpenBrackets))
-                    ActiveSceneIndex = Arithmetic.Wrap(ActiveSceneIndex - 1, 0, Scenes.Length - 1);
-                else if (KeyboardState.IsKeyDown(Keys.OemCloseBrackets) && !PreviousKeyboardState.IsKeyDown(Keys.OemCloseBrackets))
-                    ActiveSceneIndex = Arithmetic.Wrap(ActiveSceneIndex + 1, 0, Scenes.Length - 1);
-                else if (KeyboardState.IsKeyDown(Keys.OemTilde) && !PreviousKeyboardState.IsKeyDown(Keys.OemTilde)) {
+                
+                if (KeyboardState.IsKeyDown(Keys.OemTilde) && !PreviousKeyboardState.IsKeyDown(Keys.OemTilde)) {
                     Graphics.SynchronizeWithVerticalRetrace = !Graphics.SynchronizeWithVerticalRetrace;
                     Graphics.ApplyChangesAfterPresent(RenderCoordinator);
                 }
@@ -312,14 +257,8 @@ namespace TestGame {
                     UniformBinding.ForceCompatibilityMode = !UniformBinding.ForceCompatibilityMode;
                 }
             }
-
-            var scene = Scenes[ActiveSceneIndex];
-            scene.Settings.Update(scene);
-            scene.Update(gameTime);
-
+            
             PerformanceStats.Record(this);
-
-            Window.Title = String.Format("Scene {0}: {1}", ActiveSceneIndex, scene.GetType().Name);
 
             base.Update(gameTime);
         }
@@ -333,7 +272,6 @@ namespace TestGame {
             }
 
             ClearBatch.AddNew(frame, -1, Materials.Clear, Color.Black);
-            Scenes[ActiveSceneIndex].Draw(frame);
 
             var ir = new ImperativeRenderer(
                 frame, Materials, 
@@ -372,32 +310,6 @@ namespace TestGame {
                 ir.Layer += 1;
                 ir.DrawMultiple(dc, position, material: Materials.ScreenSpaceBitmap, blendState: BlendState.AlphaBlend);
             }
-        }
-    }
-
-    public abstract class Scene {
-        internal SettingCollection Settings;
-
-        public readonly TestGame Game;
-        public readonly int Width, Height;
-
-        public Scene (TestGame game, int width, int height) {
-            Game = game;
-            Width = width;
-            Height = height;
-
-            Settings = new SettingCollection(this);
-        }
-
-        public abstract void LoadContent ();
-        public abstract void Draw (Frame frame);
-        public abstract void Update (GameTime gameTime);
-
-        public virtual void UIScene () {
-        }
-
-        internal bool KeyWasPressed (Keys key) {
-            return Game.KeyboardState.IsKeyDown(key) && Game.PreviousKeyboardState.IsKeyUp(key);
         }
     }
 }

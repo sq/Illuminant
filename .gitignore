@@ -18,3 +18,8 @@ TestGame/TestGameContent/bin
 /Illuminant/packages
 *.vsp
 *.VC.db
+/ParticleEditor/bin
+/ParticleEditor/obj
+*.sdf
+*.opendb
+/packages

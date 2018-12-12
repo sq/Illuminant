@@ -15,7 +15,12 @@ using Microsoft.Xna.Framework;
 using Squared.Util;
 using Microsoft.Xna.Framework.Input;
 
-namespace TestGame {
+namespace Framework {
+    public interface INuklearHost {
+        DefaultMaterialSet Materials { get; }
+        Material TextMaterial { get; }
+    }
+
     public unsafe class NuklearService : IDisposable {
         public nk_context* Context;
 
@@ -30,11 +35,11 @@ namespace TestGame {
 
         public Action Scene = null;
 
-        public readonly TestGame Game;
+        public readonly INuklearHost Game;
 
         private readonly Dictionary<string, float> TextWidthCache = new Dictionary<string, float>(StringComparer.Ordinal);
 
-        public NuklearService (TestGame game) {
+        public NuklearService (INuklearHost game) {
             Game = game;
             QueryFontGlyphF = _QueryFontGlyphF;
             TextWidthF = _TextWidthF;
