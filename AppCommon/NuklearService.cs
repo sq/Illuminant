@@ -35,6 +35,7 @@ namespace Framework {
         private nk_text_width_f TextWidthF;
 
         public Action Scene = null;
+        public UnorderedList<Func<bool>> Modals = new UnorderedList<Func<bool>>();
 
         public readonly INuklearHost Game;
 
@@ -237,6 +238,14 @@ namespace Framework {
                 PendingIR = new ImperativeRenderer(group, Game.Materials, 0, autoIncrementSortKey: true, worldSpace: false, blendState: BlendState.AlphaBlend);
 
                 Scene();
+
+                using (var e = Modals.GetEnumerator()) {
+                    while (e.MoveNext()) {
+                        if (!e.Current())
+                            e.RemoveCurrent();
+                    }
+                }
+
                 NuklearAPI.Render(Context, HighLevelRenderCommand);
             }
         }

@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using Framework;
@@ -25,7 +26,7 @@ using ThreefoldTrials.Framework;
 using Nuke = NuklearDotNet.Nuklear;
 
 namespace ParticleEditor {
-    public class ParticleEditor : MultithreadedGame, INuklearHost {
+    public partial class ParticleEditor : MultithreadedGame, INuklearHost {
         public GraphicsDeviceManager Graphics;
         public DefaultMaterialSet Materials { get; private set; }
         public NuklearService Nuklear;
@@ -42,6 +43,7 @@ namespace ParticleEditor {
 
         private int LastPerformanceStatPrimCount = 0;
 
+        public bool ShowPerformanceStats = false;
         public bool IsMouseOverUI = false;
         public long LastTimeOverUI;
 
@@ -49,6 +51,14 @@ namespace ParticleEditor {
 
         public DisplayMode DesktopDisplayMode;
         public Pair<int> WindowedResolution;
+
+        public MockTimeProvider Time = new MockTimeProvider();
+
+        public Model Model;
+        public View View;
+        public Controller Controller;
+
+        private GCHandle ControllerPin;
 
         public ParticleEditor () {
             // UniformBinding.ForceCompatibilityMode = true;
@@ -74,57 +84,6 @@ namespace ParticleEditor {
             PreviousKeyboardState = Keyboard.GetState();
             IsMouseVisible = true;
             WindowedResolution = new Pair<int>(1920, 1080);
-        }
-
-        private UTF8String Other;
-
-        protected unsafe void UIScene () {
-            var ctx = Nuklear.Context;
-            
-            var isWindowOpen = Nuke.nk_begin(
-                ctx, "Settings", new NuklearDotNet.NkRect(Graphics.PreferredBackBufferWidth - 504, Graphics.PreferredBackBufferHeight - 454, 500, 450),
-                (uint)(NuklearDotNet.NkPanelFlags.Title | NuklearDotNet.NkPanelFlags.Border |
-                NuklearDotNet.NkPanelFlags.Movable | NuklearDotNet.NkPanelFlags.Minimizable |
-                NuklearDotNet.NkPanelFlags.Scalable)
-            ) != 0;
-
-            if (isWindowOpen) {
-                RenderGlobalSettings();
-            }
-
-            IsMouseOverUI = Nuke.nk_item_is_any_active(ctx) != 0;
-            if (IsMouseOverUI)
-                LastTimeOverUI = Time.Ticks;
-
-            Nuke.nk_end(ctx);
-        }
-
-        UTF8String sSystem = new UTF8String("System");
-
-        private unsafe void RenderGlobalSettings () {
-            var ctx = Nuklear.Context;
-
-            if (Nuke.nk_tree_push_hashed(ctx, NuklearDotNet.nk_tree_type.NK_TREE_TAB, sSystem.pText, NuklearDotNet.nk_collapse_states.NK_MINIMIZED, sSystem.pText, sSystem.Length, 256) != 0) {
-                using (var temp = new UTF8String("VSync")) {
-                    var newVsync = Nuke.nk_check_text(ctx, temp.pText, temp.Length, Graphics.SynchronizeWithVerticalRetrace ? 0 : 1) == 0;
-                    if (newVsync != Graphics.SynchronizeWithVerticalRetrace) {
-                        Graphics.SynchronizeWithVerticalRetrace = newVsync;
-                        Graphics.ApplyChangesAfterPresent(RenderCoordinator);
-                    }
-                }
-
-                using (var temp = new UTF8String("Fullscreen")) {
-                    var newFS = Nuke.nk_check_text(ctx, temp.pText, temp.Length, Graphics.IsFullScreen ? 0 : 1) == 0;
-                    if (newFS != Graphics.IsFullScreen)
-                        SetFullScreen(newFS);
-                }
-
-                using (var temp = new UTF8String("Lazy Transform Changes")) {
-                    // Materials.LazyViewTransformChanges = Nuke.nk_check_text(ctx, temp.pText, temp.Length, Materials.LazyViewTransformChanges ? 0 : 1) == 0;
-                }
-
-                Nuke.nk_tree_pop(ctx);
-            }
         }
 
         public bool LeftMouse {
@@ -188,6 +147,13 @@ namespace ParticleEditor {
                 Nuklear.Font = Font;
 
             LastTimeOverUI = Time.Ticks;
+
+            Model = new Model();
+            View = new View(Model);
+            Controller = new Controller(Model);
+            ControllerPin = GCHandle.Alloc(Controller, GCHandleType.Normal);
+
+            View.Initialize(this);
         }
 
         private void Window_ClientSizeChanged (object sender, EventArgs e) {
@@ -215,6 +181,8 @@ namespace ParticleEditor {
             MouseState = Mouse.GetState();
 
             if (IsActive) {
+                Time.Advance(gameTime.ElapsedGameTime.Ticks);
+
                 var alt = KeyboardState.IsKeyDown(Keys.LeftAlt) || KeyboardState.IsKeyDown(Keys.RightAlt);
                 var wasAlt = PreviousKeyboardState.IsKeyDown(Keys.LeftAlt) || PreviousKeyboardState.IsKeyDown(Keys.RightAlt);
                 
@@ -261,6 +229,9 @@ namespace ParticleEditor {
                 Nuklear.Render(gameTime.ElapsedGameTime.Seconds, group, 1);
             }
 
+            if (IsActive)
+                View.Update(this, frame, -2, (float)gameTime.ElapsedGameTime.TotalSeconds);
+
             ClearBatch.AddNew(frame, -1, Materials.Clear, Color.Black);
 
             var ir = new ImperativeRenderer(
@@ -276,7 +247,10 @@ namespace ParticleEditor {
 
             ir.Draw(UIRenderTarget, Vector2.Zero, multiplyColor: Color.White * uiOpacity);
 
-            DrawPerformanceStats(ref ir);
+            View.Draw(this, frame, 3);
+
+            if (ShowPerformanceStats)
+                DrawPerformanceStats(ref ir);
         }
 
         private void DrawPerformanceStats (ref ImperativeRenderer ir) {

@@ -84,9 +84,12 @@
     <Compile Include="..\AppCommon\PerformanceStats.cs">
       <Link>PerformanceStats.cs</Link>
     </Compile>
+    <Compile Include="Controller.cs" />
+    <Compile Include="Model.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="ParticleEditorGame.cs" />
+    <Compile Include="UI.cs" />
     <Compile Include="View.cs" />
   </ItemGroup>
   <ItemGroup>
