@@ -15,6 +15,13 @@ namespace Squared.Illuminant.Particles.Transforms {
         Cylinder = 3
     }
 
+    internal interface IParticleTransform {
+        Material GetMaterial (ParticleMaterials materials);
+        void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, int frameIndex);
+    }
+
+    public delegate void ParameterSetter (ParticleEngine engine, EffectParameterCollection parameters, int frameIndex);
+
     public class TransformArea {
         public AreaType Type = AreaType.None;
         public Vector3  Center;
@@ -48,13 +55,20 @@ namespace Squared.Illuminant.Particles.Transforms {
         }
     }
 
-    public abstract class ParticleTransform : IDisposable {
-        public ParticleEngine Engine { get; internal set; }
-
+    
+    public abstract class ParticleTransform : IDisposable, IParticleTransform {
         public bool IsActive = true;
 
-        internal abstract Material GetMaterial (ParticleMaterials materials);
-        internal abstract void SetParameters (EffectParameterCollection parameters, int frameIndex);
+        protected abstract Material GetMaterial (ParticleMaterials materials);
+        protected abstract void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, int frameIndex);
+
+        Material IParticleTransform.GetMaterial (ParticleMaterials materials) {
+            return GetMaterial(materials);
+        }
+
+        void IParticleTransform.SetParameters (ParticleEngine engine, EffectParameterCollection parameters, int frameIndex) {
+            SetParameters(engine, parameters, frameIndex);
+        }
 
         public virtual void Dispose () {
         }
@@ -64,7 +78,7 @@ namespace Squared.Illuminant.Particles.Transforms {
         public float Strength = 1;
         public TransformArea Area = null;
 
-        internal override void SetParameters (EffectParameterCollection parameters, int frameIndex) {
+        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, int frameIndex) {
             if (Area != null) {
                 parameters["AreaType"].SetValue((int)Area.Type);
                 parameters["AreaCenter"].SetValue(Area.Center);
@@ -102,8 +116,8 @@ namespace Squared.Illuminant.Particles.Transforms {
             };
         }
 
-        internal override void SetParameters (EffectParameterCollection parameters, int frameIndex) {
-            base.SetParameters(parameters, frameIndex);
+        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, int frameIndex) {
+            base.SetParameters(engine, parameters, frameIndex);
             parameters["PositionAdd"].SetValue(new Vector4(Position.Add, 0));
             parameters["PositionMultiply"].SetValue(new Vector4(Position.Multiply, 1));
             parameters["VelocityAdd"].SetValue(new Vector4(Velocity.Add, 0));
@@ -112,7 +126,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             parameters["AttributeMultiply"].SetValue(Attribute.Multiply);
         }
 
-        internal override Material GetMaterial (ParticleMaterials materials) {
+        protected override Material GetMaterial (ParticleMaterials materials) {
             return materials.FMA;
         }
     }
@@ -124,14 +138,14 @@ namespace Squared.Illuminant.Particles.Transforms {
             Position = Velocity = Attribute = Matrix.Identity;
         }
 
-        internal override void SetParameters (EffectParameterCollection parameters, int frameIndex) {
-            base.SetParameters(parameters, frameIndex);
+        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, int frameIndex) {
+            base.SetParameters(engine, parameters, frameIndex);
             parameters["PositionMatrix"].SetValue(Position);
             parameters["VelocityMatrix"].SetValue(Velocity);
             parameters["AttributeMatrix"].SetValue(Attribute);
         }
 
-        internal override Material GetMaterial (ParticleMaterials materials) {
+        protected override Material GetMaterial (ParticleMaterials materials) {
             return materials.MatrixMultiply;
         }
     }
@@ -147,11 +161,11 @@ namespace Squared.Illuminant.Particles.Transforms {
         private Vector3[] _Positions;
         private Vector2[] _RadiusesAndStrengths;
 
-        internal override Material GetMaterial (ParticleMaterials materials) {
+        protected override Material GetMaterial (ParticleMaterials materials) {
             return materials.Gravity;
         }
 
-        internal override void SetParameters (EffectParameterCollection parameters, int frameIndex) {
+        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, int frameIndex) {
             if (Attractors.Count > 8)
                 throw new Exception("Maximum number of attractors per instance is 8");
 

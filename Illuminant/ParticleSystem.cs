@@ -430,7 +430,7 @@ namespace Squared.Illuminant.Particles {
             Slice source, Slice a, Slice b,
             ref Slice passSource, ref Slice passDest, 
             long startedWhen, Transforms.Spawner spawner,
-            Action<EffectParameterCollection, int> setParameters,
+            Transforms.ParameterSetter setParameters,
             bool clearFirst, double deltaTimeSeconds
         ) {
             var _source = passSource;
@@ -569,7 +569,7 @@ namespace Squared.Illuminant.Particles {
         private void ChunkUpdatePass (
             IBatchContainer container, int layer, Material m,
             Slice.Chunk source, Slice.Chunk dest,
-            Action<EffectParameterCollection, int> setParameters,
+            Transforms.ParameterSetter setParameters,
             LivenessInfo li, bool clearFirst, double deltaTimeSeconds
         ) {
             // Console.WriteLine("{0} -> {1}", passSource.Index, passDest.Index);
@@ -582,7 +582,7 @@ namespace Squared.Illuminant.Particles {
                     dm.Device.Viewport = new Viewport(0, 0, Engine.Configuration.ChunkSize, Engine.Configuration.ChunkSize);
 
                     if (setParameters != null)
-                        setParameters(p, CurrentFrameIndex);
+                        setParameters(Engine, p, CurrentFrameIndex);
 
                     if (source != null) {
                         p["PositionTexture"].SetValue(source.PositionAndLife);
@@ -807,16 +807,16 @@ namespace Squared.Illuminant.Particles {
                 int i = 0;
 
                 foreach (var t in Transforms) {
-                    t.Engine = Engine;
                     if (!t.IsActive)
                         continue;
 
+                    var it = (Transforms.IParticleTransform)t;
                     var spawner = t as Transforms.Spawner;
 
                     UpdatePass(
-                        group, i++, t.GetMaterial(Engine.ParticleMaterials),
+                        group, i++, it.GetMaterial(Engine.ParticleMaterials),
                         source, a, b, ref passSource, ref passDest, 
-                        startedWhen, spawner, t.SetParameters, false, actualDeltaTimeSeconds
+                        startedWhen, spawner, it.SetParameters, false, actualDeltaTimeSeconds
                     );
                 }
 
@@ -838,7 +838,7 @@ namespace Squared.Illuminant.Particles {
                         group, i++, pm.UpdateWithDistanceField,
                         source, a, b, ref passSource, ref passDest,
                         startedWhen, null,
-                        (p, frameIndex) => {
+                        (Engine, p, frameIndex) => {
                             var dfu = new Uniforms.DistanceField(Configuration.DistanceField, Configuration.DistanceFieldMaximumZ.Value);
                             pm.MaterialSet.TrySetBoundUniform(pm.UpdateWithDistanceField, "DistanceField", ref dfu);
                         }, true, actualDeltaTimeSeconds
@@ -848,8 +848,7 @@ namespace Squared.Illuminant.Particles {
                         group, i++, pm.UpdatePositions,
                         source, a, b, ref passSource, ref passDest,
                         startedWhen, null,
-                        (p, frameIndex) => {
-                        }, true, actualDeltaTimeSeconds
+                        null, true, actualDeltaTimeSeconds
                     );
                 }
 

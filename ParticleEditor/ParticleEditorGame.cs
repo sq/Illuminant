@@ -104,7 +104,7 @@ namespace ParticleEditor {
         private unsafe void RenderGlobalSettings () {
             var ctx = Nuklear.Context;
 
-            if (Nuke.nk_tree_push_hashed(ctx, NuklearDotNet.nk_tree_type.NK_TREE_TAB, sSystem.pText, NuklearDotNet.nk_collapse_states.NK_MAXIMIZED, sSystem.pText, sSystem.Length, 256) != 0) {
+            if (Nuke.nk_tree_push_hashed(ctx, NuklearDotNet.nk_tree_type.NK_TREE_TAB, sSystem.pText, NuklearDotNet.nk_collapse_states.NK_MINIMIZED, sSystem.pText, sSystem.Length, 256) != 0) {
                 using (var temp = new UTF8String("VSync")) {
                     var newVsync = Nuke.nk_check_text(ctx, temp.pText, temp.Length, Graphics.SynchronizeWithVerticalRetrace ? 0 : 1) == 0;
                     if (newVsync != Graphics.SynchronizeWithVerticalRetrace) {
@@ -143,7 +143,6 @@ namespace ParticleEditor {
             Font.Dispose();
             Materials.Dispose();
             UIRenderTarget.Dispose();
-            Nuklear.Dispose();
         }
 
         protected override void Initialize () {
@@ -180,10 +179,13 @@ namespace ParticleEditor {
                 false, SurfaceFormat.Color, DepthFormat.None, 1, RenderTargetUsage.PlatformContents
             );
 
-            Nuklear = new NuklearService(this) {
-                Font = Font,
-                Scene = UIScene
-            };
+            if (Nuklear == null)
+                Nuklear = new NuklearService(this) {
+                    Font = Font,
+                    Scene = UIScene
+                };
+            else
+                Nuklear.Font = Font;
 
             LastTimeOverUI = Time.Ticks;
         }

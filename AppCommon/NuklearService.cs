@@ -17,6 +17,7 @@ using Microsoft.Xna.Framework.Input;
 
 namespace Framework {
     public interface INuklearHost {
+        RenderCoordinator RenderCoordinator { get; }
         DefaultMaterialSet Materials { get; }
         Material TextMaterial { get; }
     }

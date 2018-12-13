@@ -46,11 +46,11 @@ namespace Squared.Illuminant.Particles.Transforms {
             }
         }
 
-        internal override Material GetMaterial (ParticleMaterials materials) {
+        protected override Material GetMaterial (ParticleMaterials materials) {
             return materials.Spawn;
         }
 
-        internal override void SetParameters (EffectParameterCollection parameters, int frameIndex) {
+        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, int frameIndex) {
             var secs = (float)Squared.Util.Time.Seconds;
 
             var ro = parameters["RandomnessOffset"];
@@ -84,7 +84,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             parameters["Configuration"].SetValue(Temp);
             parameters["RandomCircularity"].SetValue(Temp2);
             parameters["ChunkSizeAndIndices"].SetValue(new Vector4(
-                Engine.Configuration.ChunkSize, Engine.Configuration.ChunkSize,
+                engine.Configuration.ChunkSize, engine.Configuration.ChunkSize,
                 Indices.X, Indices.Y
             ));
         }
