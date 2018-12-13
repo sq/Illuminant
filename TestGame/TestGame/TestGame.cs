@@ -97,6 +97,12 @@ namespace TestGame {
             // ActiveSceneIndex = 1;
         }
 
+        protected override void Initialize () {
+            base.Initialize();
+
+            Window.AllowUserResizing = false;
+        }
+
         const float settingRowHeight = 26;
 
         protected unsafe void RenderSetting (ISetting s) {

@@ -47,6 +47,9 @@ namespace ParticleEditor {
 
         private bool DidLoadContent;
 
+        public DisplayMode DesktopDisplayMode;
+        public Pair<int> WindowedResolution;
+
         public ParticleEditor () {
             // UniformBinding.ForceCompatibilityMode = true;
 
@@ -70,6 +73,7 @@ namespace ParticleEditor {
 
             PreviousKeyboardState = Keyboard.GetState();
             IsMouseVisible = true;
+            WindowedResolution = new Pair<int>(1920, 1080);
         }
 
         private UTF8String Other;
@@ -111,10 +115,8 @@ namespace ParticleEditor {
 
                 using (var temp = new UTF8String("Fullscreen")) {
                     var newFS = Nuke.nk_check_text(ctx, temp.pText, temp.Length, Graphics.IsFullScreen ? 0 : 1) == 0;
-                    if (newFS != Graphics.IsFullScreen) {
-                        Graphics.IsFullScreen = newFS;
-                        Graphics.ApplyChangesAfterPresent(RenderCoordinator);
-                    }
+                    if (newFS != Graphics.IsFullScreen)
+                        SetFullScreen(newFS);
                 }
 
                 using (var temp = new UTF8String("Lazy Transform Changes")) {
@@ -144,13 +146,18 @@ namespace ParticleEditor {
             Nuklear.Dispose();
         }
 
+        protected override void Initialize () {
+            base.Initialize();
+
+            DesktopDisplayMode = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
+
+            Window.AllowUserResizing = true;
+            Window.ClientSizeChanged += Window_ClientSizeChanged;
+        }
+
         protected override void LoadContent () {
             if (DidLoadContent)
                 FreeContent();
-            else {
-                Window.AllowUserResizing = true;
-                Window.ClientSizeChanged += Window_ClientSizeChanged;
-            }
 
             DidLoadContent = true;
 
@@ -183,8 +190,11 @@ namespace ParticleEditor {
 
         private void Window_ClientSizeChanged (object sender, EventArgs e) {
             Console.WriteLine("ClientSizeChanged");
-            Graphics.PreferredBackBufferWidth = Window.ClientBounds.Width;
-            Graphics.PreferredBackBufferHeight = Window.ClientBounds.Height;
+            if (!Graphics.IsFullScreen) {
+                WindowedResolution = new Pair<int>(Window.ClientBounds.Width, Window.ClientBounds.Height);
+                Graphics.PreferredBackBufferWidth = Window.ClientBounds.Width;
+                Graphics.PreferredBackBufferHeight = Window.ClientBounds.Height;
+            }
             Graphics.ApplyChangesAfterPresent(RenderCoordinator);
             RenderCoordinator.AfterPresent(() => {
                 Materials.AutoSetViewTransform();
@@ -214,8 +224,7 @@ namespace ParticleEditor {
                     (KeyboardState.IsKeyDown(Keys.Enter) && alt) &&
                     (!PreviousKeyboardState.IsKeyDown(Keys.Enter) || !wasAlt)
                 ) {
-                    Graphics.IsFullScreen = !Graphics.IsFullScreen;
-                    Graphics.ApplyChangesAfterPresent(RenderCoordinator);
+                    SetFullScreen(!Graphics.IsFullScreen);
                 }
                 else if (KeyboardState.IsKeyDown(Keys.OemPipe) && !PreviousKeyboardState.IsKeyDown(Keys.OemPipe)) {
                     UniformBinding.ForceCompatibilityMode = !UniformBinding.ForceCompatibilityMode;
@@ -225,6 +234,18 @@ namespace ParticleEditor {
             PerformanceStats.Record(this);
 
             base.Update(gameTime);
+        }
+
+        public void SetFullScreen (bool state) {
+            Graphics.IsFullScreen = state;
+            if (state) {
+                Graphics.PreferredBackBufferWidth = DesktopDisplayMode.Width;
+                Graphics.PreferredBackBufferHeight = DesktopDisplayMode.Height;
+            } else {
+                Graphics.PreferredBackBufferWidth = WindowedResolution.First;
+                Graphics.PreferredBackBufferHeight = WindowedResolution.Second;
+            }
+            Graphics.ApplyChangesAfterPresent(RenderCoordinator);
         }
 
         public override void Draw (GameTime gameTime, Frame frame) {
