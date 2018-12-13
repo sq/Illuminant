@@ -45,6 +45,8 @@ namespace ParticleEditor {
         public bool IsMouseOverUI = false;
         public long LastTimeOverUI;
 
+        private bool DidLoadContent;
+
         public ParticleEditor () {
             // UniformBinding.ForceCompatibilityMode = true;
 
@@ -67,49 +69,14 @@ namespace ParticleEditor {
             }
 
             PreviousKeyboardState = Keyboard.GetState();
-            
-        }
-        /*
-
-        const float settingRowHeight = 26;
-
-        protected unsafe void RenderSetting (ISetting s) {
-            var ctx = Nuklear.Context;
-
-            Nuke.nk_layout_row_dynamic(ctx, settingRowHeight, 1);
-            var name = s.GetLabelUTF8();
-            var dropdown = s as IDropdown;
-            var toggle = s as Toggle;
-            var slider = s as Slider;
-            if (dropdown != null) {
-                Nuke.nk_label(ctx, name.pText, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
-                int selected = dropdown.SelectedIndex;
-                var rect = Nuke.nk_layout_space_bounds(ctx);
-                Nuke.nk_combobox_callback(ctx, dropdown.Getter, IntPtr.Zero, &selected, dropdown.Count, 32, new NuklearDotNet.nk_vec2(rect.W, 8192));
-                dropdown.SelectedIndex = selected;
-            } else if (toggle != null) {
-                // FIXME: Why is this backwards?
-                int result = Nuke.nk_check_text(ctx, name.pText, name.Length, toggle.Value ? 0 : 1);
-                toggle.Value = result == 0;
-            } else if (slider != null) {
-                Nuke.nk_label(ctx, name.pText, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
-                var bounds = Nuke.nk_widget_bounds(ctx);
-                slider.Value = Nuke.nk_slide_float(ctx, slider.Min.GetValueOrDefault(0), slider.Value, slider.Max.GetValueOrDefault(1), slider.Speed);
-                if (Nuke.nk_input_is_mouse_hovering_rect(&ctx->input, bounds) != 0) {
-                    using (var utf8 = new UTF8String("    " + slider.GetFormattedValue()))
-                        Nuke.nk_tooltip(ctx, utf8.pText);
-                }
-            }
+            IsMouseVisible = true;
         }
 
         private UTF8String Other;
 
         protected unsafe void UIScene () {
             var ctx = Nuklear.Context;
-
-            var scene = Scenes[ActiveSceneIndex];
-            var settings = scene.Settings;
-
+            
             var isWindowOpen = Nuke.nk_begin(
                 ctx, "Settings", new NuklearDotNet.NkRect(Graphics.PreferredBackBufferWidth - 504, Graphics.PreferredBackBufferHeight - 454, 500, 450),
                 (uint)(NuklearDotNet.NkPanelFlags.Title | NuklearDotNet.NkPanelFlags.Border |
@@ -118,35 +85,6 @@ namespace ParticleEditor {
             ) != 0;
 
             if (isWindowOpen) {
-                int i = 0;
-
-                foreach (var s in settings)
-                    RenderSetting(s);
-
-                foreach (var kvp in settings.Groups.OrderBy(kvp => kvp.Key)) {
-                    var g = kvp.Value;
-                    var state = g.Visible
-                        ? NuklearDotNet.nk_collapse_states.NK_MAXIMIZED
-                        : NuklearDotNet.nk_collapse_states.NK_MINIMIZED;
-                    var nameUtf = g.GetNameUTF8();
-                    if (Nuke.nk_tree_push_hashed(
-                        ctx, NuklearDotNet.nk_tree_type.NK_TREE_TAB,
-                        nameUtf.pText, state, nameUtf.pText, nameUtf.Length, i
-                    ) != 0) {
-                        foreach (var s in g)
-                            RenderSetting(s);
-                        Nuke.nk_tree_state_pop(ctx);
-                        // Padding
-                        Nuke.nk_layout_row_dynamic(ctx, 3, 1);
-                        g.Visible = (state == NuklearDotNet.nk_collapse_states.NK_MAXIMIZED);
-                    }
-                    i++;
-                }
-
-                i++;
-
-                scene.UIScene();
-
                 RenderGlobalSettings();
             }
 
@@ -187,11 +125,6 @@ namespace ParticleEditor {
             }
         }
 
-        */
-
-        protected unsafe void UIScene () {
-        }
-
         public bool LeftMouse {
             get {
                 return (MouseState.LeftButton == ButtonState.Pressed) && !IsMouseOverUI;
@@ -204,7 +137,23 @@ namespace ParticleEditor {
             }
         }
 
+        private void FreeContent () {
+            Font.Dispose();
+            Materials.Dispose();
+            UIRenderTarget.Dispose();
+            Nuklear.Dispose();
+        }
+
         protected override void LoadContent () {
+            if (DidLoadContent)
+                FreeContent();
+            else {
+                Window.AllowUserResizing = true;
+                Window.ClientSizeChanged += Window_ClientSizeChanged;
+            }
+
+            DidLoadContent = true;
+
             base.LoadContent();
 
             Font = new FreeTypeFont(RenderCoordinator, "FiraSans-Medium.otf") {
@@ -218,7 +167,7 @@ namespace ParticleEditor {
             TextMaterial = Materials.Get(Materials.ScreenSpaceShadowedBitmap, blendState: BlendState.AlphaBlend);
             TextMaterial.Parameters.ShadowColor.SetValue(new Vector4(0, 0, 0, 0.5f));
             TextMaterial.Parameters.ShadowOffset.SetValue(Vector2.One);
-
+            
             UIRenderTarget = new RenderTarget2D(
                 GraphicsDevice, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight, 
                 false, SurfaceFormat.Color, DepthFormat.None, 1, RenderTargetUsage.PlatformContents
@@ -230,6 +179,21 @@ namespace ParticleEditor {
             };
 
             LastTimeOverUI = Time.Ticks;
+        }
+
+        private void Window_ClientSizeChanged (object sender, EventArgs e) {
+            Console.WriteLine("ClientSizeChanged");
+            Graphics.PreferredBackBufferWidth = Window.ClientBounds.Width;
+            Graphics.PreferredBackBufferHeight = Window.ClientBounds.Height;
+            Graphics.ApplyChangesAfterPresent(RenderCoordinator);
+            RenderCoordinator.AfterPresent(() => {
+                Materials.AutoSetViewTransform();
+                RenderCoordinator.DisposeResource(UIRenderTarget);
+                UIRenderTarget = new RenderTarget2D(
+                    GraphicsDevice, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight, 
+                    false, SurfaceFormat.Color, DepthFormat.None, 1, RenderTargetUsage.PlatformContents
+                );
+            });
         }
 
         protected override void Update (GameTime gameTime) {
@@ -264,6 +228,9 @@ namespace ParticleEditor {
         }
 
         public override void Draw (GameTime gameTime, Frame frame) {
+            if ((Window.ClientBounds.Width != Graphics.PreferredBackBufferWidth) || (Window.ClientBounds.Height != Graphics.PreferredBackBufferHeight))
+                return;
+
             Nuklear.UpdateInput(PreviousMouseState, MouseState, PreviousKeyboardState, KeyboardState, IsMouseOverUI);
 
             using (var group = BatchGroup.ForRenderTarget(frame, -9990, UIRenderTarget)) {

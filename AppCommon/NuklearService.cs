@@ -261,4 +261,27 @@ namespace Framework {
             // FIXME
         }
     }
+
+    public unsafe struct UTF8String : IDisposable {
+        public byte* pText;
+        public int Length;
+
+        public UTF8String (string text) {
+            var encoder = Encoding.UTF8.GetEncoder();
+            fixed (char* pChars = text) {
+                Length = encoder.GetByteCount(pChars, text.Length, true);
+                pText = (byte*)NuklearDotNet.NuklearAPI.Malloc((IntPtr)(Length + 2)).ToPointer();
+                int temp;
+                bool temp2;
+                encoder.Convert(pChars, text.Length, pText, Length, true, out temp, out temp, out temp2);
+                pText[Length] = 0;
+            }
+        }
+
+        public void Dispose () {
+            NuklearDotNet.NuklearAPI.StdFree((IntPtr)pText);
+            pText = null;
+            Length = 0;
+        }
+    }
 }
