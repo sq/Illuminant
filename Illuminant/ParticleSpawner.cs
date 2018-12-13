@@ -11,18 +11,25 @@ using Squared.Render;
 
 namespace Squared.Illuminant.Particles.Transforms {
     public class Spawner : ParticleTransform {
+        [NonSerialized]
         private static int NextSeed = 1;
 
         public float    MinRate, MaxRate;
-        private double  RateError;
 
         public Formula  Position, Velocity, Attributes;
 
+        [NonSerialized]
+        private double  RateError;
+        [NonSerialized]
         private Vector2 Indices;
+        [NonSerialized]
         private MersenneTwister RNG;
+        [NonSerialized]
         private int     TotalSpawned;
 
+        [NonSerialized]
         private Vector4[] Temp = new Vector4[12];
+        [NonSerialized]
         private float[] Temp2 = new float[3];
 
         public Spawner (int? seed = null) {

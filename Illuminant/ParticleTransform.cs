@@ -158,7 +158,9 @@ namespace Squared.Illuminant.Particles.Transforms {
         }
 
         public readonly List<Attractor> Attractors = new List<Attractor>();
+        [NonSerialized]
         private Vector3[] _Positions;
+        [NonSerialized]
         private Vector2[] _RadiusesAndStrengths;
 
         protected override Material GetMaterial (ParticleMaterials materials) {

@@ -290,7 +290,7 @@ namespace Squared.Illuminant.Particles {
 
         public ITimeProvider TimeProvider {
             get {
-                return Configuration.TimeProvider ?? Time.DefaultTimeProvider;
+                return Engine.Configuration.TimeProvider ?? Time.DefaultTimeProvider;
             }
         }
 
@@ -762,7 +762,10 @@ namespace Squared.Illuminant.Particles {
             if (deltaTimeSeconds.HasValue)
                 actualDeltaTimeSeconds = deltaTimeSeconds.Value;
             else if (lastUpdateTimeSeconds.HasValue)
-                actualDeltaTimeSeconds = (float)Math.Min(LastUpdateTimeSeconds.Value - lastUpdateTimeSeconds.Value, Configuration.MaximumUpdateDeltaTimeSeconds);
+                actualDeltaTimeSeconds = (float)Math.Min(
+                    LastUpdateTimeSeconds.Value - lastUpdateTimeSeconds.Value, 
+                    Engine.Configuration.MaximumUpdateDeltaTimeSeconds
+                );
 
             var startedWhen = Time.Ticks;
 
@@ -915,6 +918,8 @@ namespace Squared.Illuminant.Particles {
 
             var startedWhen = Time.Ticks;
 
+            Configuration.Texture.EnsureInitialized(Engine.Configuration.TextureLoader);
+
             lock (Slices) {
                 source = (
                     from s in Slices where s.IsValid
@@ -995,7 +1000,7 @@ namespace Squared.Illuminant.Particles {
         public readonly int  AttributeCount;
 
         // Configures the sprite rendered for each particle
-        public Texture2D     Texture;
+        public LazyResource<Texture2D> Texture;
         public Bounds        TextureRegion = new Bounds(Vector2.Zero, Vector2.One);
         public Vector2       Size = Vector2.One;
 
@@ -1023,7 +1028,9 @@ namespace Squared.Illuminant.Particles {
         /// <summary>
         /// If set, particles collide with volumes in this distance field
         /// </summary>
+        [NonSerialized]
         public DistanceField DistanceField;
+        [NonSerialized]
         public float?        DistanceFieldMaximumZ;
 
         /// <summary>
@@ -1074,16 +1081,6 @@ namespace Squared.Illuminant.Particles {
         /// Store system state as 32-bit float instead of 16-bit float
         /// </summary>
         public bool          HighPrecision = true;
-
-        /// <summary>
-        /// Used to measure elapsed time automatically for updates
-        /// </summary>
-        public ITimeProvider TimeProvider = null;
-
-        /// <summary>
-        /// Any update's elapsed time will be limited to at most this long
-        /// </summary>
-        public float         MaximumUpdateDeltaTimeSeconds = 1 / 20f;
 
         public ParticleSystemConfiguration (
             int attributeCount = 0
