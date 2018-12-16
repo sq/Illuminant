@@ -1110,6 +1110,7 @@ namespace Squared.Illuminant.Particles {
         /// <summary>
         /// Store system state as 32-bit float instead of 16-bit float
         /// </summary>
+        [NonSerialized]
         public bool          HighPrecision = true;
 
         /// <summary>

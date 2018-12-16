@@ -109,6 +109,12 @@ namespace ParticleEditor {
             Window.ClientSizeChanged += Window_ClientSizeChanged;
         }
 
+        protected override void UnloadContent () {
+            base.UnloadContent();
+
+            FreeContent();
+        }
+
         protected override void LoadContent () {
             if (DidLoadContent)
                 FreeContent();
@@ -119,7 +125,7 @@ namespace ParticleEditor {
 
             Time.CurrentTime = 0;
             Font = new FreeTypeFont(RenderCoordinator, "FiraSans-Medium.otf") {
-                SizePoints = 17f,
+                SizePoints = 14.5f,
                 GlyphMargin = 2
             };
             Materials = new DefaultMaterialSet(Services);
@@ -237,7 +243,7 @@ namespace ParticleEditor {
             if (IsActive)
                 View.Update(this, frame, -2, (float)gameTime.ElapsedGameTime.TotalSeconds);
 
-            ClearBatch.AddNew(frame, -1, Materials.Clear, new Color(0.01f, 0.03f, 0.04f, 1f));
+            ClearBatch.AddNew(frame, -1, Materials.Clear, new Color(0.03f, 0.06f, 0.09f, 1f));
 
             var ir = new ImperativeRenderer(
                 frame, Materials, 

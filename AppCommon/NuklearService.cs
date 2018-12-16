@@ -23,6 +23,15 @@ namespace Framework {
     }
 
     public unsafe class NuklearService : IDisposable {
+        public struct Generic : IDisposable {
+            public nk_context* ctx;
+            public bool Visible;
+
+            public void Dispose () {
+                Nuklear.nk_end(ctx);
+            }
+        }
+
         public struct GroupScrolled : IDisposable {
             public nk_context* ctx;
 
@@ -288,6 +297,20 @@ namespace Framework {
             if ((scrollDelta != 0) && processMousewheel)
                 Nuklear.nk_input_scroll(ctx, new nk_vec2(0, scrollDelta));
             Nuklear.nk_input_end(ctx);
+        }
+
+        public Generic Window (string name, Bounds bounds, NkPanelFlags flags) {
+            var visible = Nuklear.nk_begin(
+                Context, name, new NkRect(
+                    bounds.TopLeft.X, bounds.TopLeft.Y,
+                    bounds.Size.X, bounds.Size.Y
+                ), (uint)flags
+            ) != 0;
+
+            return new Generic {
+                ctx = Context,
+                Visible = visible
+            };
         }
 
         public Tree CollapsingGroup (string caption, string name, int hash) {
