@@ -34,41 +34,57 @@ namespace ParticleEditor {
             RenderGlobalSettings();
         }
 
-        UTF8String sSystems = new UTF8String("Systems");
         UTF8String sGlobalSettings = new UTF8String("Global Settings");
-        UTF8String sSystemList = new UTF8String("System List");
 
         private unsafe void RenderSystemList () {
             var ctx = Nuklear.Context;
+            var state = Controller.CurrentState;
 
-            if (
-                Nuke.nk_tree_push_hashed(
-                    ctx, NuklearDotNet.nk_tree_type.NK_TREE_TAB, sSystems.pText, 
-                    NuklearDotNet.nk_collapse_states.NK_MAXIMIZED, sSystems.pText, sSystems.Length, 1
-                ) != 0
-            ) {
+            using (var group = Nuklear.CollapsingGroup("Systems", "Systems", 1))
+            if (group.Visible) {
                 Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 2);
-                Nuke.nk_button_label(ctx, "Add");
-                Nuke.nk_button_label(ctx, "Remove");
+                if (Nuklear.Button("Add"))
+                    Controller.AddSystem();
+                if (Nuklear.Button("Remove"))
+                    Controller.RemoveSystem(state.Systems.SelectedIndex);
 
-                Nuke.nk_layout_row(ctx, NuklearDotNet.nk_layout_format.NK_DYNAMIC, 150, 1, new[] { 1.0f });
-                Nuke.nk_group_scrolled_offset_begin(ctx, ref Controller.CurrentState.SystemListX, ref Controller.CurrentState.SystemListY, sSystemList.pText, 0);
-
-                Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing, 1);
-                var flags = (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT;
-                var items = new[] { "item 1", "item 2", "item 3", "item 4", "item 5" };
-                for (int i = 0; i < items.Length; i++) {
-                    var item = items[i];
-                    int selected = (Controller.CurrentState.SelectedSystemIndex == i) ? 1 : 0;
-                    using (var s = new UTF8String(item))
-                        Nuke.nk_selectable_text(ctx, s.pText, s.Length, flags, ref selected);
-                    if (selected != 0)
-                        Controller.CurrentState.SelectedSystemIndex = i;
+                using (var list = Nuklear.ScrollingGroup(150, "System List", ref state.Systems.ScrollX, ref state.Systems.ScrollY)) {
+                    Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing, 1);
+                    for (int i = 0; i < Model.Systems.Count; i++) {
+                        var system = Model.Systems[i];
+                        if (Nuklear.SelectableText(system.Name ?? string.Format("{0} Unnamed", i), state.Systems.SelectedIndex == i))
+                            state.Systems.SelectedIndex = i;
+                    }
                 }
+            }
 
-                Nuke.nk_group_scrolled_end(ctx);
+            using (var group = Nuklear.CollapsingGroup("System Properties", "System Properties", 2))
+            if (group.Visible && (Controller.SelectedSystem != null)) {
+            }
 
-                Nuke.nk_tree_pop(ctx);
+            using (var group = Nuklear.CollapsingGroup("Transforms", "Transforms", 3))
+            if (group.Visible && (Controller.SelectedSystem != null)) {
+                Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 2);
+                if (Nuklear.Button("Add"))
+                    Controller.AddTransform();
+                if (Nuklear.Button("Remove"))
+                    Controller.RemoveTransform(state.Transforms.SelectedIndex);
+
+                var view = Controller.View.Systems[state.Systems.SelectedIndex];
+                var model = view.Model;
+
+                using (var list = Nuklear.ScrollingGroup(150, "Transform List", ref state.Transforms.ScrollX, ref state.Transforms.ScrollY)) {
+                    Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing, 1);
+                    for (int i = 0; i < model.Transforms.Count; i++) {
+                        var xform = model.Transforms[i];
+                        if (Nuklear.SelectableText(xform.Name ?? string.Format("{0} {1}", i, xform.Type.Name), state.Transforms.SelectedIndex == i))
+                            state.Transforms.SelectedIndex = i;
+                    }
+                }
+            }
+
+            using (var group = Nuklear.CollapsingGroup("Transform Properties", "Transform Properties", 4))
+            if (group.Visible && (Controller.SelectedTransform != null)) {
             }
         }
 

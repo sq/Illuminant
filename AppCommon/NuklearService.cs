@@ -14,6 +14,7 @@ using Squared.Render.Text;
 using Microsoft.Xna.Framework;
 using Squared.Util;
 using Microsoft.Xna.Framework.Input;
+using Nuke = NuklearDotNet.Nuklear;
 
 namespace Framework {
     public interface INuklearHost {
@@ -23,6 +24,24 @@ namespace Framework {
     }
 
     public unsafe class NuklearService : IDisposable {
+        public struct GroupScrolled : IDisposable {
+            public nk_context* ctx;
+
+            public void Dispose () {
+                Nuke.nk_group_scrolled_end(ctx);
+            }
+        }
+
+        public struct Tree : IDisposable {
+            public nk_context* ctx;
+            public bool Visible;
+
+            public void Dispose () {
+                if (Visible)
+                    Nuke.nk_tree_pop(ctx);
+            }
+        }
+
         public nk_context* Context;
 
         private IBatchContainer PendingGroup;
@@ -265,6 +284,44 @@ namespace Framework {
             if ((scrollDelta != 0) && processMousewheel)
                 Nuklear.nk_input_scroll(ctx, new nk_vec2(0, scrollDelta));
             Nuklear.nk_input_end(ctx);
+        }
+
+        public Tree CollapsingGroup (string caption, string name, int hash) {
+            using (var tCaption = new UTF8String(caption))
+            using (var tName = new UTF8String(name)) {
+                var result = Nuke.nk_tree_push_hashed(
+                    Context, nk_tree_type.NK_TREE_TAB, tCaption.pText,
+                    nk_collapse_states.NK_MAXIMIZED, tName.pText, tName.Length, hash
+                );
+                return new Tree {
+                    ctx = Context,
+                    Visible = (result != 0)
+                };
+            }
+        }
+
+        public bool SelectableText (string name, bool state) {
+            var flags = (uint)NkTextAlignment.NK_TEXT_LEFT;
+            int selected = state ? 1 : 0;
+            using (var s = new UTF8String(name))
+                Nuke.nk_selectable_text(Context, s.pText, s.Length, flags, ref selected);
+            return selected != 0;
+        }
+
+        public GroupScrolled ScrollingGroup (float heightPx, string name, ref uint scrollX, ref uint scrollY) {
+            using (var tName = new UTF8String(name)) {
+                uint flags = 0;
+                Nuke.nk_layout_row(Context, nk_layout_format.NK_DYNAMIC, heightPx, 1, new[] { 1.0f });
+                Nuke.nk_group_scrolled_offset_begin(Context, ref scrollX, ref scrollY, tName.pText, flags);
+
+                return new GroupScrolled {
+                    ctx = Context
+                };
+            }
+        }
+
+        public bool Button (string text) {
+            return Nuke.nk_button_label(Context, text) != 0;
         }
 
         public void Dispose () {

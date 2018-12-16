@@ -32,7 +32,11 @@ namespace Squared.Illuminant.Particles.Transforms {
         [NonSerialized]
         private float[] Temp2 = new float[3];
 
-        public Spawner (int? seed = null) {
+        public Spawner ()
+            : this(null) {
+        }
+
+        public Spawner (int? seed) {
             RNG = new MersenneTwister(seed.GetValueOrDefault(NextSeed++));
         }
 

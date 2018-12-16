@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 
 namespace Squared.Illuminant {
     public class LazyResource<T> where T : class {
+        public bool IsNullable { get; protected set; }
+
         public string Name;
         [NonSerialized]
         public T Instance;
@@ -23,13 +25,17 @@ namespace Squared.Illuminant {
             if (Instance != null)
                 return;
 
-            if (Name == null)
-                throw new InvalidOperationException("No name for resource");
+            if (Name == null) {
+                if (IsNullable)
+                    return;
+                else
+                    throw new ResourceNotLoadedException("No name for resource");
+            }
 
             if (resourceLoader != null)
                 Instance = resourceLoader(Name);
             else
-                throw new InvalidOperationException("No resource loader for type " + typeof(T).Name);
+                throw new ResourceNotLoadedException("No resource loader for type " + typeof(T).Name);
         }
 
         public static implicit operator LazyResource<T> (T instance) {
@@ -37,9 +43,36 @@ namespace Squared.Illuminant {
         }
 
         public static implicit operator T (LazyResource<T> rsrc) {
-            if (rsrc.Instance == null)
-                throw new InvalidOperationException("Resource not loaded");
+            if (rsrc.Instance == null) {
+                if (rsrc.IsNullable)
+                    return null;
+                else
+                    throw new ResourceNotLoadedException();
+            }
             return rsrc.Instance;
+        }
+    }
+
+    public class NullableLazyResource<T> : LazyResource<T> where T : class {
+        public NullableLazyResource (string name, T existingInstance = null)
+            : base (name, existingInstance) {
+            IsNullable = true;
+        }
+
+        public NullableLazyResource (T existingInstance)
+            : base (existingInstance) {
+            IsNullable = true;
+        }
+
+        public NullableLazyResource ()
+            : base (null) {
+            IsNullable = true;
+        }
+    }
+
+    public class ResourceNotLoadedException : Exception {
+        public ResourceNotLoadedException (string message = null) 
+            : base(message ?? "Lazy resource not loaded") {
         }
     }
 }

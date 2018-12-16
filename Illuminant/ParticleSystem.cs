@@ -918,7 +918,8 @@ namespace Squared.Illuminant.Particles {
 
             var startedWhen = Time.Ticks;
 
-            Configuration.Texture.EnsureInitialized(Engine.Configuration.TextureLoader);
+            if (Configuration.Texture != null)
+                Configuration.Texture.EnsureInitialized(Engine.Configuration.TextureLoader);
 
             lock (Slices) {
                 source = (
@@ -999,9 +1000,19 @@ namespace Squared.Illuminant.Particles {
     public class ParticleSystemConfiguration {
         public readonly int  AttributeCount;
 
-        // Configures the sprite rendered for each particle
-        public LazyResource<Texture2D> Texture;
+        /// <summary>
+        /// Configures the sprite used to render each particle.
+        /// If null, the particle will be a solid-color quad
+        /// </summary>
+        public LazyResource<Texture2D> Texture = new NullableLazyResource<Texture2D>();
+        /// <summary>
+        /// Configures the region of the texture used by the particle. If you specify a subregion the region
+        ///  will scroll as the particle animates.
+        /// </summary>
         public Bounds        TextureRegion = new Bounds(Vector2.Zero, Vector2.One);
+        /// <summary>
+        /// The on-screen size of each particle, in pixels
+        /// </summary>
         public Vector2       Size = Vector2.One;
 
         /// <summary>

@@ -150,7 +150,7 @@ namespace ParticleEditor {
 
             Model = new Model();
             View = new View(Model);
-            Controller = new Controller(Model);
+            Controller = new Controller(Model, View);
             ControllerPin = GCHandle.Alloc(Controller, GCHandleType.Normal);
 
             View.Initialize(this);

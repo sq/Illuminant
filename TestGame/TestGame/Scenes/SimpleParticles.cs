@@ -107,7 +107,7 @@ namespace TestGame.Scenes {
                 new ParticleSystemConfiguration(
                     attributeCount: 1
                 ) {
-                    Texture = new LazyResource<Texture2D>("spark"),
+                    Texture = new NullableLazyResource<Texture2D>("spark"),
                     Size = Vector2.One * 2.6f,
                     /*
                     Texture = fireball,
