@@ -47,7 +47,7 @@ namespace ParticleEditor {
         protected unsafe void UIScene () {
             var ctx = Nuklear.Context;
 
-            var panelWidth = 500;
+            var panelWidth = 550;
             
             using (var wnd = Nuklear.Window(
                 "SidePanel",
@@ -99,7 +99,8 @@ namespace ParticleEditor {
                 if (Nuklear.Button("Remove"))
                     Controller.RemoveSystem(state.Systems.SelectedIndex);
 
-                using (var list = Nuklear.ScrollingGroup(80, "System List", ref state.Systems.ScrollX, ref state.Systems.ScrollY)) {
+                using (var list = Nuklear.ScrollingGroup(80, "System List", ref state.Systems.ScrollX, ref state.Systems.ScrollY))
+                if (list.Visible) {
                     Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing, 1);
                     for (int i = 0; i < Model.Systems.Count; i++) {
                         var system = Model.Systems[i];
@@ -135,7 +136,8 @@ namespace ParticleEditor {
                 var view = Controller.View.Systems[state.Systems.SelectedIndex];
                 var model = view.Model;
 
-                using (var list = Nuklear.ScrollingGroup(140, "Transform List", ref state.Transforms.ScrollX, ref state.Transforms.ScrollY)) {
+                using (var list = Nuklear.ScrollingGroup(140, "Transform List", ref state.Transforms.ScrollX, ref state.Transforms.ScrollY))
+                if (list.Visible) {
                     Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing, 1);
                     for (int i = 0; i < model.Transforms.Count; i++) {
                         var xform = model.Transforms[i];
@@ -187,7 +189,8 @@ namespace ParticleEditor {
         }
 
         private unsafe void RenderPropertyGrid (object instance, ref PropertyGridCache cache, float heightPx) {
-            using (var g = Nuklear.ScrollingGroup(heightPx, "Properties", ref cache.ScrollX, ref cache.ScrollY)) {
+            using (var g = Nuklear.ScrollingGroup(heightPx, "Properties", ref cache.ScrollX, ref cache.ScrollY))
+            if (g.Visible) {
                 foreach (var cpi in cache.Members)
                     RenderProperty(ref cache, cpi, instance);
             }
@@ -227,7 +230,7 @@ namespace ParticleEditor {
                     Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 1);
                     if (cpi.Type == typeof(float)) {
                         var v = (float)value;
-                        if (Nuklear.Property(cpi.Name, ref v, 0, 4096, 8, 1)) {
+                        if (Nuklear.Property(cpi.Name, ref v, 0, 4096, 8, 0.02f)) {
                             cpi.Setter(instance, v);
                             return true;
                         }

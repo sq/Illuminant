@@ -122,7 +122,7 @@ namespace ParticleEditor {
 
             Time.CurrentTime = 0;
             Font = new FreeTypeFont(RenderCoordinator, "FiraSans-Medium.otf") {
-                SizePoints = 14.5f,
+                SizePoints = 14f,
                 GlyphMargin = 2
             };
             Materials = new DefaultMaterialSet(Services);

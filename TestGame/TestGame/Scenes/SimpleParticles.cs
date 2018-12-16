@@ -134,7 +134,7 @@ namespace TestGame.Scenes {
                         Velocity = new Formula {
                             RandomOffset = new Vector4(-0.5f, -0.5f, 0f, 0f),
                             RandomScale = new Vector4(60f, 60f, 0f, 0f),
-                            RandomCircularity = 1f
+                            Circular = true
                         },
                         Attributes = new Formula {
                             Constant = new Vector4(0.09f, 0.09f, 0.09f, 1f),

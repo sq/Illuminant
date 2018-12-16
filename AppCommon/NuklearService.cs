@@ -32,19 +32,13 @@ namespace Framework {
             }
         }
 
-        public struct GroupNormal : IDisposable {
-            public nk_context* ctx;
-
-            public void Dispose () {
-                Nuklear.nk_group_end(ctx);
-            }
-        }
-
         public struct GroupScrolled : IDisposable {
             public nk_context* ctx;
+            public bool Visible;
 
             public void Dispose () {
-                Nuklear.nk_group_scrolled_end(ctx);
+                if (Visible)
+                    Nuklear.nk_group_scrolled_end(ctx);
             }
         }
 
@@ -365,10 +359,11 @@ namespace Framework {
             using (var tName = new NString(name)) {
                 uint flags = 0;
                 Nuklear.nk_layout_row(Context, nk_layout_format.NK_DYNAMIC, heightPx, 1, new[] { 1.0f });
-                Nuklear.nk_group_scrolled_offset_begin(Context, ref scrollX, ref scrollY, tName.pText, flags);
+                var result = Nuklear.nk_group_scrolled_offset_begin(Context, ref scrollX, ref scrollY, tName.pText, flags);
 
                 return new GroupScrolled {
-                    ctx = Context
+                    ctx = Context,
+                    Visible = result != 0
                 };
             }
         }

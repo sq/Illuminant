@@ -180,14 +180,6 @@ namespace Squared.Illuminant {
         public Vector4 RandomOffset;
         public Vector4 RandomScale;
         public Vector4 RandomScaleConstant;
-        private float  _RandomCircularity;
-        public float   RandomCircularity {
-            get {
-                return _RandomCircularity;
-            }
-            set {
-                _RandomCircularity = Arithmetic.Clamp(value, 0, 1);
-            }
-        }
+        public bool Circular;
     }
 }

@@ -88,9 +88,9 @@ namespace Squared.Illuminant.Particles.Transforms {
             Temp[10] = Attributes.RandomScale;
             Temp[11] = Attributes.RandomScaleConstant;
 
-            Temp2[0] = Position.RandomCircularity;
-            Temp2[1] = Velocity.RandomCircularity;
-            Temp2[2] = Attributes.RandomCircularity;
+            Temp2[0] = Position.Circular   ? 1 : 0;
+            Temp2[1] = Velocity.Circular   ? 1 : 0;
+            Temp2[2] = Attributes.Circular ? 1 : 0;
 
             parameters["Configuration"].SetValue(Temp);
             parameters["RandomCircularity"].SetValue(Temp2);
