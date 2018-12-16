@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Framework;
+using Microsoft.Xna.Framework;
 using Squared.Game;
 using Squared.Illuminant;
 using Squared.Illuminant.Particles;
@@ -198,6 +199,7 @@ namespace ParticleEditor {
             object instance,
             string prefix = null
         ) {
+            bool a, b, c, d;
             var ctx = Nuklear.Context;
             var actualName = cpi.Name;
             if (!string.IsNullOrEmpty(prefix))
@@ -219,6 +221,25 @@ namespace ParticleEditor {
                         }
                         return changed;
                     }
+
+                case "Int32":
+                case "Single":
+                    Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 1);
+                    if (cpi.Type == typeof(float)) {
+                        var v = (float)value;
+                        if (Nuklear.Property(cpi.Name, ref v, 0, 4096, 8, 1)) {
+                            cpi.Setter(instance, v);
+                            return true;
+                        }
+                    } else {
+                        var v = (int)value;
+                        if (Nuklear.Property(cpi.Name, ref v, 0, 4096, 8, 1)) {
+                            cpi.Setter(instance, v);
+                            return true;
+                        }
+                    }
+
+                    return false;
             }
 
             Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 2);
@@ -234,40 +255,51 @@ namespace ParticleEditor {
                     if (Nuklear.SelectableText(value.ToString(), isActive))
                         cache.SelectedPropertyName = actualName;
                     return false;
-                case "Int32":
-                case "Single":
-                    if (Nuklear.SelectableText(value.ToString(), isActive))
-                        cache.SelectedPropertyName = actualName;
 
-                    Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 1);
-                    if (cpi.Type == typeof(float)) {
-                        var v = Convert.ToSingle(value);
-                        if (v > 4096)
-                            v = 4096;
-                        var newValue = Nuke.nk_slide_float(ctx, 0, v, 4096, 8);
-                        if (newValue != v) {
-                            cpi.Setter(instance, newValue);
-                            return true;
-                        }
-                    } else {
-                        var v = Convert.ToInt32(value);
-                        if (v > 4096)
-                            v = 4096;
-                        var newValue = Nuke.nk_slide_int(ctx, 0, v, 4096, 8);
-                        if (newValue != v) {
-                            cpi.Setter(instance, newValue);
-                            return true;
-                        }
-                    }
-
-                    return false;
                 case "Boolean":
-                    var b = (bool)value;
+                    b = (bool)value;
                     if (Checkbox(null, ref b)) {
                         cpi.Setter(instance, b);
                         return true;
                     }
                     return false;
+
+                case "Vector2":
+                    Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 2);
+                    var v2 = (Vector2)value;
+                    a = Nuklear.Property("#x", ref v2.X, -1, 1, 0.1f, 0.01f);
+                    b = Nuklear.Property("#y", ref v2.Y, -1, 1, 0.1f, 0.01f);
+                    if (a || b) {
+                        cpi.Setter(instance, v2);
+                        return true;
+                    }
+                    return false;
+
+                case "Vector3":
+                    Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 3);
+                    var v3 = (Vector3)value;
+                    a = Nuklear.Property("#x", ref v3.X, -1, 1, 0.1f, 0.01f);
+                    b = Nuklear.Property("#y", ref v3.Y, -1, 1, 0.1f, 0.01f);
+                    c = Nuklear.Property("#z", ref v3.Z, -1, 1, 0.1f, 0.01f);
+                    if (a || b || c) {
+                        cpi.Setter(instance, v3);
+                        return true;
+                    }
+                    return false;
+
+                case "Vector4":
+                    Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 4);
+                    var v4 = (Vector4)value;
+                    a = Nuklear.Property("#x", ref v4.X, -1, 1, 0.1f, 0.01f);
+                    b = Nuklear.Property("#y", ref v4.Y, -1, 1, 0.1f, 0.01f);
+                    c = Nuklear.Property("#z", ref v4.Z, -1, 1, 0.1f, 0.01f);
+                    d = Nuklear.Property("#w", ref v4.W, -1, 1, 0.1f, 0.01f);
+                    if (a || b || c || d) {
+                        cpi.Setter(instance, v4);
+                        return true;
+                    }
+                    return false;
+
                 default:
                     if (Nuklear.SelectableText(value.GetType().Name, isActive))
                         cache.SelectedPropertyName = actualName;

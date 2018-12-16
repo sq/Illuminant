@@ -335,6 +335,24 @@ namespace Framework {
             }
         }
 
+        public bool Property (string name, ref int value, int min, int max, int step, int inc_per_pixel) {
+            using (var sName = new NString(name)) {
+                var newValue = Nuklear.nk_propertyi(Context, sName.pText, min, value, max, step, inc_per_pixel);
+                var result = newValue != value;
+                value = newValue;
+                return result;
+            }
+        } 
+
+        public bool Property (string name, ref float value, float min, float max, float step, float inc_per_pixel) {
+            using (var sName = new NString(name)) {
+                var newValue = Nuklear.nk_propertyf(Context, sName.pText, min, value, max, step, inc_per_pixel);
+                var result = newValue != value;
+                value = newValue;
+                return result;
+            }
+        } 
+
         public bool SelectableText (string name, bool state) {
             var flags = (uint)NkTextAlignment.NK_TEXT_LEFT;
             int selected = state ? 1 : 0;

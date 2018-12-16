@@ -243,7 +243,7 @@ namespace ParticleEditor {
             if (IsActive)
                 View.Update(this, frame, -2, (float)gameTime.ElapsedGameTime.TotalSeconds);
 
-            ClearBatch.AddNew(frame, -1, Materials.Clear, new Color(0.03f, 0.06f, 0.09f, 1f));
+            ClearBatch.AddNew(frame, -1, Materials.Clear, new Color(0.02f, 0.05f, 0.07f, 1f));
 
             var ir = new ImperativeRenderer(
                 frame, Materials, 
