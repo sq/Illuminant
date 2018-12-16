@@ -10,6 +10,13 @@ using Nuke = NuklearDotNet.Nuklear;
 
 namespace ParticleEditor {
     public partial class ParticleEditor : MultithreadedGame, INuklearHost {
+        private struct PropertyGridCache {
+            public object Instance;
+            public SortedDictionary<string, MemberInfo> Members;
+        }
+
+        private PropertyGridCache SystemProperties, TransformProperties;
+
         protected unsafe void UIScene () {
             var ctx = Nuklear.Context;
 
@@ -40,8 +47,6 @@ namespace ParticleEditor {
             RenderGlobalSettings();
         }
 
-        UTF8String sGlobalSettings = new UTF8String("Global Settings");
-
         private unsafe void RenderSystemList () {
             var ctx = Nuklear.Context;
             var state = Controller.CurrentState;
@@ -69,7 +74,8 @@ namespace ParticleEditor {
                 var s = Controller.SelectedSystem.Instance;
                 using (var tCount = new UTF8String(string.Format("{0}/{1}", s.LiveCount, s.Capacity)))
                     Nuke.nk_text(ctx, tCount.pText, tCount.Length, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
-            }            
+                RenderPropertyGrid(Controller.SelectedSystem.Model.Configuration, ref SystemProperties);
+            }
         }
 
         private unsafe void RenderTransformList () {
@@ -98,48 +104,51 @@ namespace ParticleEditor {
             }
         }
 
-        private object PreviousSelectedTransform;
-        private SortedDictionary<string, MemberInfo> TransformMembers;
-
         private unsafe void RenderTransformProperties () {
             var ctx = Nuklear.Context;
             var state = Controller.CurrentState;
             var xform = Controller.SelectedTransform;
 
             using (var group = Nuklear.CollapsingGroup("Transform Properties", "Transform Properties", 4))
-            if (group.Visible && (xform != null)) {
-                var instance = xform.Instance;
-                if (PreviousSelectedTransform != xform) {
-                    PreviousSelectedTransform = xform;
-                    TransformMembers = new SortedDictionary<string, MemberInfo>();
-                    var seq = from m in instance.GetType().GetMembers(BindingFlags.Instance | BindingFlags.Public)
-                                where (m.MemberType == MemberTypes.Field) || (m.MemberType == MemberTypes.Property)
-                                where !m.GetCustomAttributes<NonSerializedAttribute>().Any()
-                                select new KeyValuePair<string, MemberInfo>(m.Name, m);
-                    foreach (var kvp in seq)
-                        TransformMembers.Add(kvp.Key, kvp.Value);
+            if (group.Visible && (xform != null))
+                RenderPropertyGrid(xform.Instance, ref TransformProperties);
+        }
+
+        private unsafe void RenderPropertyGrid (object instance, ref PropertyGridCache cache) {
+            if (cache.Instance != instance) {
+                cache.Instance = instance;
+                cache.Members = new SortedDictionary<string, MemberInfo>();
+                var seq = from m in instance.GetType().GetMembers(BindingFlags.Instance | BindingFlags.Public)
+                            where (m.MemberType == MemberTypes.Field) || (m.MemberType == MemberTypes.Property)
+                            let f = m as FieldInfo
+                            let p = m as PropertyInfo
+                            where (f == null) || !f.IsInitOnly
+                            where (p == null) || p.CanWrite
+                            where !m.GetCustomAttributes<NonSerializedAttribute>().Any()
+                            select new KeyValuePair<string, MemberInfo>(m.Name, m);
+                foreach (var kvp in seq)
+                    cache.Members.Add(kvp.Key, kvp.Value);
+            }
+
+            foreach (var kvp in cache.Members) {
+                Type type;
+                object value = null;
+                var prop = kvp.Value as PropertyInfo;
+                var field = kvp.Value as FieldInfo;
+                Action<object, object> setter;
+                if (prop != null) {
+                    type = prop.PropertyType;
+                    value = prop.GetValue(instance);
+                    setter = prop.SetValue;
+                } else if (field != null) {
+                    type = field.FieldType;
+                    value = field.GetValue(instance);
+                    setter = field.SetValue;
+                } else {
+                    continue;
                 }
 
-                foreach (var kvp in TransformMembers) {
-                    Type type;
-                    object value = null;
-                    var prop = kvp.Value as PropertyInfo;
-                    var field = kvp.Value as FieldInfo;
-                    Action<object, object> setter;
-                    if (prop != null) {
-                        type = prop.PropertyType;
-                        value = prop.GetValue(instance);
-                        setter = prop.SetValue;
-                    } else if (field != null) {
-                        type = field.FieldType;
-                        value = field.GetValue(instance);
-                        setter = field.SetValue;
-                    } else {
-                        continue;
-                    }
-
-                    RenderProperty(instance, kvp.Key, type, value, setter);
-                }
+                RenderProperty(instance, kvp.Key, type, value, setter);
             }
         }
 
@@ -161,9 +170,27 @@ namespace ParticleEditor {
 
             switch (type.Name) {
                 case "String":
+                    Nuklear.SelectableText(value.ToString(), isActive);
+                    return;
                 case "Int32":
                 case "Single":
                     Nuklear.SelectableText(value.ToString(), isActive);
+                    Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 1);
+                    if (type == typeof(float)) {
+                        var v = Convert.ToSingle(value);
+                        if (v > 4096)
+                            v = 4096;
+                        var newValue = Nuke.nk_slide_float(ctx, 0, v, 4096, 8);
+                        if (newValue != v)
+                            setter(instance, newValue);
+                    } else {
+                        var v = Convert.ToInt32(value);
+                        if (v > 4096)
+                            v = 4096;
+                        var newValue = Nuke.nk_slide_int(ctx, 0, v, 4096, 8);
+                        if (newValue != v)
+                            setter(instance, newValue);
+                    }
                     return;
                 case "Boolean":
                     var b = (bool)value;
@@ -179,6 +206,7 @@ namespace ParticleEditor {
         private unsafe void RenderGlobalSettings () {
             var ctx = Nuklear.Context;
 
+            using (var sGlobalSettings = new UTF8String("Global Settings"))
             if (Nuke.nk_tree_push_hashed(ctx, NuklearDotNet.nk_tree_type.NK_TREE_TAB, sGlobalSettings.pText, NuklearDotNet.nk_collapse_states.NK_MINIMIZED, sGlobalSettings.pText, sGlobalSettings.Length, 256) != 0) {
                 var vsync = Graphics.SynchronizeWithVerticalRetrace;
                 if (Checkbox("VSync", ref vsync)) {

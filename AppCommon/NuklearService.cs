@@ -14,7 +14,6 @@ using Squared.Render.Text;
 using Microsoft.Xna.Framework;
 using Squared.Util;
 using Microsoft.Xna.Framework.Input;
-using Nuke = NuklearDotNet.Nuklear;
 
 namespace Framework {
     public interface INuklearHost {
@@ -28,7 +27,7 @@ namespace Framework {
             public nk_context* ctx;
 
             public void Dispose () {
-                Nuke.nk_group_scrolled_end(ctx);
+                Nuklear.nk_group_scrolled_end(ctx);
             }
         }
 
@@ -38,7 +37,7 @@ namespace Framework {
 
             public void Dispose () {
                 if (Visible)
-                    Nuke.nk_tree_pop(ctx);
+                    Nuklear.nk_tree_pop(ctx);
             }
         }
 
@@ -292,7 +291,7 @@ namespace Framework {
         public Tree CollapsingGroup (string caption, string name, int hash) {
             using (var tCaption = new UTF8String(caption))
             using (var tName = new UTF8String(name)) {
-                var result = Nuke.nk_tree_push_hashed(
+                var result = Nuklear.nk_tree_push_hashed(
                     Context, nk_tree_type.NK_TREE_TAB, tCaption.pText,
                     nk_collapse_states.NK_MAXIMIZED, tName.pText, tName.Length, hash
                 );
@@ -307,15 +306,15 @@ namespace Framework {
             var flags = (uint)NkTextAlignment.NK_TEXT_LEFT;
             int selected = state ? 1 : 0;
             using (var s = new UTF8String(name))
-                Nuke.nk_selectable_text(Context, s.pText, s.Length, flags, ref selected);
+                Nuklear.nk_selectable_text(Context, s.pText, s.Length, flags, ref selected);
             return selected != 0;
         }
 
         public GroupScrolled ScrollingGroup (float heightPx, string name, ref uint scrollX, ref uint scrollY) {
             using (var tName = new UTF8String(name)) {
                 uint flags = 0;
-                Nuke.nk_layout_row(Context, nk_layout_format.NK_DYNAMIC, heightPx, 1, new[] { 1.0f });
-                Nuke.nk_group_scrolled_offset_begin(Context, ref scrollX, ref scrollY, tName.pText, flags);
+                Nuklear.nk_layout_row(Context, nk_layout_format.NK_DYNAMIC, heightPx, 1, new[] { 1.0f });
+                Nuklear.nk_group_scrolled_offset_begin(Context, ref scrollX, ref scrollY, tName.pText, flags);
 
                 return new GroupScrolled {
                     ctx = Context
@@ -324,7 +323,7 @@ namespace Framework {
         }
 
         public bool Button (string text) {
-            return Nuke.nk_button_label(Context, text) != 0;
+            return Nuklear.nk_button_label(Context, text) != 0;
         }
 
         public void Dispose () {
@@ -359,7 +358,7 @@ namespace Framework {
             var encoder = Encoding.UTF8.GetEncoder();
             fixed (char* pChars = text) {
                 Length = encoder.GetByteCount(pChars, text.Length, true);
-                pText = (byte*)NuklearDotNet.NuklearAPI.Malloc((IntPtr)(Length + 2)).ToPointer();
+                pText = (byte*)NuklearAPI.Malloc((IntPtr)(Length + 2)).ToPointer();
                 int temp;
                 bool temp2;
                 encoder.Convert(pChars, text.Length, pText, Length, true, out temp, out temp, out temp2);
@@ -369,7 +368,7 @@ namespace Framework {
 
         public void Dispose () {
             if (OwnsPointer)
-                NuklearDotNet.NuklearAPI.StdFree((IntPtr)pText);
+                NuklearAPI.StdFree((IntPtr)pText);
             pText = null;
             Length = 0;
         }
