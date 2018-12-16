@@ -128,13 +128,13 @@ namespace TestGame {
                 var bounds = Nuke.nk_widget_bounds(ctx);
                 slider.Value = Nuke.nk_slide_float(ctx, slider.Min.GetValueOrDefault(0), slider.Value, slider.Max.GetValueOrDefault(1), slider.Speed);
                 if (Nuke.nk_input_is_mouse_hovering_rect(&ctx->input, bounds) != 0) {
-                    using (var utf8 = new UTF8String("    " + slider.GetFormattedValue()))
+                    using (var utf8 = new NString("    " + slider.GetFormattedValue()))
                         Nuke.nk_tooltip(ctx, utf8.pText);
                 }
             }
         }
 
-        private UTF8String Other;
+        private NString Other;
 
         protected unsafe void UIScene () {
             var ctx = Nuklear.Context;
@@ -189,13 +189,13 @@ namespace TestGame {
             Nuke.nk_end(ctx);
         }
 
-        UTF8String sSystem = new UTF8String("System");
+        NString sSystem = new NString("System");
 
         private unsafe void RenderGlobalSettings () {
             var ctx = Nuklear.Context;
 
             if (Nuke.nk_tree_push_hashed(ctx, NuklearDotNet.nk_tree_type.NK_TREE_TAB, sSystem.pText, NuklearDotNet.nk_collapse_states.NK_MAXIMIZED, sSystem.pText, sSystem.Length, 256) != 0) {
-                using (var temp = new UTF8String("VSync")) {
+                using (var temp = new NString("VSync")) {
                     var newVsync = Nuke.nk_check_text(ctx, temp.pText, temp.Length, Graphics.SynchronizeWithVerticalRetrace ? 0 : 1) == 0;
                     if (newVsync != Graphics.SynchronizeWithVerticalRetrace) {
                         Graphics.SynchronizeWithVerticalRetrace = newVsync;
@@ -203,7 +203,7 @@ namespace TestGame {
                     }
                 }
 
-                using (var temp = new UTF8String("Fullscreen")) {
+                using (var temp = new NString("Fullscreen")) {
                     var newFS = Nuke.nk_check_text(ctx, temp.pText, temp.Length, Graphics.IsFullScreen ? 0 : 1) == 0;
                     if (newFS != Graphics.IsFullScreen) {
                         Graphics.IsFullScreen = newFS;
@@ -211,7 +211,7 @@ namespace TestGame {
                     }
                 }
 
-                using (var temp = new UTF8String("Lazy Transform Changes")) {
+                using (var temp = new NString("Lazy Transform Changes")) {
                     // Materials.LazyViewTransformChanges = Nuke.nk_check_text(ctx, temp.pText, temp.Length, Materials.LazyViewTransformChanges ? 0 : 1) == 0;
                 }
 

@@ -375,7 +375,7 @@ namespace TestGame.Scenes {
             }
         }
 
-        UTF8String sSelectedObject = new UTF8String("Selected Object");
+        NString sSelectedObject = new NString("Selected Object");
 
         public unsafe override void UIScene () {
             var ctx = Game.Nuklear.Context;

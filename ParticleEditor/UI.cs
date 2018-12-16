@@ -13,6 +13,7 @@ namespace ParticleEditor {
         private struct PropertyGridCache {
             public object Instance;
             public SortedDictionary<string, MemberInfo> Members;
+            public uint ScrollX, ScrollY;
         }
 
         private PropertyGridCache SystemProperties, TransformProperties;
@@ -59,7 +60,7 @@ namespace ParticleEditor {
                 if (Nuklear.Button("Remove"))
                     Controller.RemoveSystem(state.Systems.SelectedIndex);
 
-                using (var list = Nuklear.ScrollingGroup(150, "System List", ref state.Systems.ScrollX, ref state.Systems.ScrollY)) {
+                using (var list = Nuklear.ScrollingGroup(80, "System List", ref state.Systems.ScrollX, ref state.Systems.ScrollY)) {
                     Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing, 1);
                     for (int i = 0; i < Model.Systems.Count; i++) {
                         var system = Model.Systems[i];
@@ -72,9 +73,9 @@ namespace ParticleEditor {
             using (var group = Nuklear.CollapsingGroup("System Properties", "System Properties", 2))
             if (group.Visible && (Controller.SelectedSystem != null)) {
                 var s = Controller.SelectedSystem.Instance;
-                using (var tCount = new UTF8String(string.Format("{0}/{1}", s.LiveCount, s.Capacity)))
+                using (var tCount = new NString(string.Format("{0}/{1}", s.LiveCount, s.Capacity)))
                     Nuke.nk_text(ctx, tCount.pText, tCount.Length, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
-                RenderPropertyGrid(Controller.SelectedSystem.Model.Configuration, ref SystemProperties);
+                RenderPropertyGrid(Controller.SelectedSystem.Model.Configuration, ref SystemProperties, 250);
             }
         }
 
@@ -93,7 +94,7 @@ namespace ParticleEditor {
                 var view = Controller.View.Systems[state.Systems.SelectedIndex];
                 var model = view.Model;
 
-                using (var list = Nuklear.ScrollingGroup(150, "Transform List", ref state.Transforms.ScrollX, ref state.Transforms.ScrollY)) {
+                using (var list = Nuklear.ScrollingGroup(140, "Transform List", ref state.Transforms.ScrollX, ref state.Transforms.ScrollY)) {
                     Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing, 1);
                     for (int i = 0; i < model.Transforms.Count; i++) {
                         var xform = model.Transforms[i];
@@ -111,10 +112,10 @@ namespace ParticleEditor {
 
             using (var group = Nuklear.CollapsingGroup("Transform Properties", "Transform Properties", 4))
             if (group.Visible && (xform != null))
-                RenderPropertyGrid(xform.Instance, ref TransformProperties);
+                RenderPropertyGrid(xform.Instance, ref TransformProperties, 250);
         }
 
-        private unsafe void RenderPropertyGrid (object instance, ref PropertyGridCache cache) {
+        private unsafe void RenderPropertyGrid (object instance, ref PropertyGridCache cache, float heightPx) {
             if (cache.Instance != instance) {
                 cache.Instance = instance;
                 cache.Members = new SortedDictionary<string, MemberInfo>();
@@ -130,25 +131,27 @@ namespace ParticleEditor {
                     cache.Members.Add(kvp.Key, kvp.Value);
             }
 
-            foreach (var kvp in cache.Members) {
-                Type type;
-                object value = null;
-                var prop = kvp.Value as PropertyInfo;
-                var field = kvp.Value as FieldInfo;
-                Action<object, object> setter;
-                if (prop != null) {
-                    type = prop.PropertyType;
-                    value = prop.GetValue(instance);
-                    setter = prop.SetValue;
-                } else if (field != null) {
-                    type = field.FieldType;
-                    value = field.GetValue(instance);
-                    setter = field.SetValue;
-                } else {
-                    continue;
-                }
+            using (var g = Nuklear.ScrollingGroup(heightPx, "", ref cache.ScrollX, ref cache.ScrollY)) {
+                foreach (var kvp in cache.Members) {
+                    Type type;
+                    object value = null;
+                    var prop = kvp.Value as PropertyInfo;
+                    var field = kvp.Value as FieldInfo;
+                    Action<object, object> setter;
+                    if (prop != null) {
+                        type = prop.PropertyType;
+                        value = prop.GetValue(instance);
+                        setter = prop.SetValue;
+                    } else if (field != null) {
+                        type = field.FieldType;
+                        value = field.GetValue(instance);
+                        setter = field.SetValue;
+                    } else {
+                        continue;
+                    }
 
-                RenderProperty(instance, kvp.Key, type, value, setter);
+                    RenderProperty(instance, kvp.Key, type, value, setter);
+                }
             }
         }
 
@@ -198,7 +201,7 @@ namespace ParticleEditor {
                         setter(instance, b);
                     return;
                 default:
-                    Nuklear.SelectableText("", isActive);
+                    Nuklear.SelectableText(value.GetType().Name, isActive);
                     return;
             }
         }
@@ -206,7 +209,7 @@ namespace ParticleEditor {
         private unsafe void RenderGlobalSettings () {
             var ctx = Nuklear.Context;
 
-            using (var sGlobalSettings = new UTF8String("Global Settings"))
+            using (var sGlobalSettings = new NString("Global Settings"))
             if (Nuke.nk_tree_push_hashed(ctx, NuklearDotNet.nk_tree_type.NK_TREE_TAB, sGlobalSettings.pText, NuklearDotNet.nk_collapse_states.NK_MINIMIZED, sGlobalSettings.pText, sGlobalSettings.Length, 256) != 0) {
                 var vsync = Graphics.SynchronizeWithVerticalRetrace;
                 if (Checkbox("VSync", ref vsync)) {
@@ -228,7 +231,7 @@ namespace ParticleEditor {
         // Returns true if value changed
         private unsafe bool Checkbox (string text, ref bool value) {
             bool newValue;
-            using (var temp = new UTF8String(text))
+            using (var temp = new NString(text))
                 newValue = Nuke.nk_check_text(Nuklear.Context, temp.pText, temp.Length, value ? 0 : 1) == 0;
 
             var result = newValue != value;

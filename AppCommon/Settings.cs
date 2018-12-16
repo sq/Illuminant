@@ -14,7 +14,7 @@ namespace TestGame {
         void Update (Scene s);
         string Name { get; set; }
         string Group { get; set; }
-        UTF8String GetLabelUTF8 ();
+        NString GetLabelUTF8 ();
         string GetFormattedValue ();
     }
 
@@ -46,7 +46,7 @@ namespace TestGame {
         public string Group { get; set; }
         protected T _Value;
 
-        private UTF8String LabelUTF8;
+        private NString LabelUTF8;
 
         public virtual T Value { 
             get { return _Value; }
@@ -60,9 +60,9 @@ namespace TestGame {
             }
         }
 
-        public UTF8String GetLabelUTF8 () {
+        public NString GetLabelUTF8 () {
             if (LabelUTF8.Length == 0)
-                LabelUTF8 = new UTF8String(GetLabelText());
+                LabelUTF8 = new NString(GetLabelText());
 
             return LabelUTF8;
         }
@@ -200,11 +200,11 @@ namespace TestGame {
             public T Value;
             public string Label;
 
-            private UTF8String _LabelString;
+            private NString _LabelString;
 
             public unsafe byte* GetLabelUTF8 () {
                 if (_LabelString.Length <= 0)
-                    _LabelString = new UTF8String(Label ?? Value.ToString());
+                    _LabelString = new NString(Label ?? Value.ToString());
                 return _LabelString.pText;
             }
         }
@@ -301,15 +301,15 @@ namespace TestGame {
         public class Group : List<ISetting> {
             public readonly string Name;
             public bool Visible = true;
-            private UTF8String NameUTF8;
+            private NString NameUTF8;
 
             public Group (string name) {
                 Name = name;
             }
 
-            public UTF8String GetNameUTF8 () {
+            public NString GetNameUTF8 () {
                 if (NameUTF8.Length == 0)
-                    NameUTF8 = new UTF8String(Name);
+                    NameUTF8 = new NString(Name);
 
                 return NameUTF8;
             }

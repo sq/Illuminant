@@ -276,6 +276,8 @@ namespace Framework {
             KeyboardState previousKeyboardState, KeyboardState keyboardState,
             bool processMousewheel
         ) {
+            NString.GC();
+
             var ctx = Context;
             Nuklear.nk_input_begin(ctx);
             if ((mouseState.X != previousMouseState.X) || (mouseState.Y != previousMouseState.Y))
@@ -289,8 +291,8 @@ namespace Framework {
         }
 
         public Tree CollapsingGroup (string caption, string name, int hash) {
-            using (var tCaption = new UTF8String(caption))
-            using (var tName = new UTF8String(name)) {
+            using (var tCaption = new NString(caption))
+            using (var tName = new NString(name)) {
                 var result = Nuklear.nk_tree_push_hashed(
                     Context, nk_tree_type.NK_TREE_TAB, tCaption.pText,
                     nk_collapse_states.NK_MAXIMIZED, tName.pText, tName.Length, hash
@@ -305,13 +307,13 @@ namespace Framework {
         public bool SelectableText (string name, bool state) {
             var flags = (uint)NkTextAlignment.NK_TEXT_LEFT;
             int selected = state ? 1 : 0;
-            using (var s = new UTF8String(name))
+            using (var s = new NString(name))
                 Nuklear.nk_selectable_text(Context, s.pText, s.Length, flags, ref selected);
             return selected != 0;
         }
 
         public GroupScrolled ScrollingGroup (float heightPx, string name, ref uint scrollX, ref uint scrollY) {
-            using (var tName = new UTF8String(name)) {
+            using (var tName = new NString(name)) {
                 uint flags = 0;
                 Nuklear.nk_layout_row(Context, nk_layout_format.NK_DYNAMIC, heightPx, 1, new[] { 1.0f });
                 Nuklear.nk_group_scrolled_offset_begin(Context, ref scrollX, ref scrollY, tName.pText, flags);
@@ -331,7 +333,9 @@ namespace Framework {
         }
     }
 
-    public unsafe struct UTF8String : IDisposable {
+    public unsafe struct NString : IDisposable {
+        private static readonly List<IntPtr> ToFree = new List<IntPtr>();
+
         private static byte[] NullString;
         private static GCHandle hNullString;
         private static byte* pNullString;
@@ -340,13 +344,13 @@ namespace Framework {
         public byte* pText;
         public int Length;
 
-        static UTF8String () {
+        static NString () {
             NullString = new byte[2];
             hNullString = GCHandle.Alloc(NullString, GCHandleType.Pinned);
             pNullString = (byte*)hNullString.AddrOfPinnedObject().ToPointer();
         }
 
-        public UTF8String (string text) {
+        public NString (string text) {
             if (string.IsNullOrEmpty(text)) {
                 pText = pNullString;
                 Length = 1;
@@ -366,9 +370,19 @@ namespace Framework {
             }
         }
 
+        public static void GC () {
+            lock (ToFree) {
+                foreach (var ptr in ToFree)
+                    NuklearAPI.StdFree(ptr);
+                ToFree.Clear();
+            }
+        }
+
         public void Dispose () {
             if (OwnsPointer)
-                NuklearAPI.StdFree((IntPtr)pText);
+            lock (ToFree)
+                ToFree.Add((IntPtr)pText);
+
             pText = null;
             Length = 0;
         }
