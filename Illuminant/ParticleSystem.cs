@@ -624,6 +624,10 @@ namespace Squared.Illuminant.Particles {
                     p["PositionTexture"].SetValue((Texture2D)null);
                     p["VelocityTexture"].SetValue((Texture2D)null);
 
+                    var rt = p["RandomnessTexture"];
+                    if (rt != null)
+                        rt.SetValue((Texture2D)null);
+
                     var at = p["AttributeTexture"];
                     if (at != null)
                         at.SetValue((Texture2D)null);
