@@ -62,15 +62,16 @@ void VS_Core (
     texCoord += (BitmapTextureRegion.zw - BitmapTextureRegion.xy) * floor(AnimationRate * position.w);
 }
 
-void VS_PosVelAttr (
+void VS_PosVelAttrWhite(
     in  float2 xy          : POSITION0,
     in  float3 offsetAndIndex : POSITION1,
     in  int2   cornerIndex : BLENDINDICES0, // 0-3
-    out float4 result      : POSITION0,
-    out float2 texCoord    : TEXCOORD0,
-    out float4 position    : TEXCOORD1,
-    out float4 velocity    : TEXCOORD2,
-    out float4 attributes  : COLOR0
+    out float4 result : POSITION0,
+    out float2 texCoord : TEXCOORD0,
+    out float4 position : TEXCOORD1,
+    out float4 velocity : TEXCOORD2,
+    out float4 attributes : TEXCOORD3,
+    out float4 color : COLOR0
 ) {
     float4 actualXy = float4(xy + offsetAndIndex.xy, 0, 0);
     readStateUv(actualXy, position, velocity, attributes);
@@ -85,7 +86,8 @@ void VS_PosVelAttr (
     float angle;
     if ((absvel.x < 0.01) && (absvel.y < 0.01)) {
         angle = 0;
-    } else {
+    }
+    else {
         angle = (atan2(velocity.y, velocity.x) + PI) * VelocityRotation;
     }
     float3 rotatedCorner = ComputeRotatedCorner(cornerIndex.x, angle);
@@ -94,6 +96,34 @@ void VS_PosVelAttr (
         position, rotatedCorner, cornerIndex,
         result, texCoord
     );
+
+    color = 1;
+}
+
+void VS_PosVelAttr(
+    in  float2 xy          : POSITION0,
+    in  float3 offsetAndIndex : POSITION1,
+    in  int2   cornerIndex : BLENDINDICES0, // 0-3
+    out float4 result : POSITION0,
+    out float2 texCoord : TEXCOORD0,
+    out float4 position : TEXCOORD1,
+    out float4 velocity : TEXCOORD2,
+    out float4 attributes : TEXCOORD3,
+    out float4 color : COLOR0
+) {
+    VS_PosVelAttrWhite(
+        xy,
+        offsetAndIndex,
+        cornerIndex,
+        result,
+        texCoord,
+        position,
+        velocity,
+        attributes,
+        color
+    );
+
+    color = attributes;
 }
 
 void VS_PosAttr (
@@ -121,7 +151,7 @@ void VS_PosAttr (
     );
 }
 
-void PS_White (
+void PS_Texture (
     in  float2 texCoord : TEXCOORD0,
     in  float4 position : TEXCOORD1,
     out float4 result   : COLOR0
@@ -138,44 +168,10 @@ void PS_White (
         discard;
 }
 
-void PS_AttributeColor (
+void PS_NoTexture(
     in  float4 color    : COLOR0,
-    in  float2 texCoord : TEXCOORD0,
     in  float4 position : TEXCOORD1,
     out float4 result   : COLOR0
-) {
-    // FIXME
-    float4 texColor = tex2D(BitmapSampler, texCoord);
-    if (OpacityFromLife > 0)
-        texColor *= clamp(position.w / OpacityFromLife, 0, 1);
-    else if (OpacityFromLife < 0)
-        texColor *= 1 - clamp(position.w / -OpacityFromLife, 0, 1);
-
-    result = texColor * color;
-    if (result.a <= 0)
-        discard;
-}
-
-void PS_WhiteNoTexture(
-    in  float4 position : TEXCOORD1,
-    out float4 result : COLOR0
-) {
-    // FIXME
-    if (OpacityFromLife > 0)
-        result = clamp(position.w / OpacityFromLife, 0, 1);
-    else if (OpacityFromLife < 0)
-        result = 1 - clamp(position.w / -OpacityFromLife, 0, 1);
-    else
-        result = 1;
-
-    if (result.a <= 0)
-        discard;
-}
-
-void PS_AttributeColorNoTexture(
-    in  float4 color    : COLOR0,
-    in  float4 position : TEXCOORD1,
-    out float4 result : COLOR0
 ) {
     // FIXME
     if (OpacityFromLife > 0)
@@ -194,15 +190,15 @@ technique AttributeColor {
     pass P0
     {
         vertexShader = compile vs_3_0 VS_PosVelAttr();
-        pixelShader = compile ps_3_0 PS_AttributeColor();
+        pixelShader = compile ps_3_0 PS_Texture();
     }
 }
 
 technique White {
     pass P0
     {
-        vertexShader = compile vs_3_0 VS_PosVelAttr();
-        pixelShader = compile ps_3_0 PS_White();
+        vertexShader = compile vs_3_0 VS_PosVelAttrWhite();
+        pixelShader = compile ps_3_0 PS_Texture();
     }
 }
 
@@ -210,14 +206,14 @@ technique AttributeColorNoTexture {
     pass P0
     {
         vertexShader = compile vs_3_0 VS_PosVelAttr();
-        pixelShader = compile ps_3_0 PS_AttributeColorNoTexture();
+        pixelShader = compile ps_3_0 PS_NoTexture();
     }
 }
 
 technique WhiteNoTexture {
     pass P0
     {
-        vertexShader = compile vs_3_0 VS_PosVelAttr();
-        pixelShader = compile ps_3_0 PS_WhiteNoTexture();
+        vertexShader = compile vs_3_0 VS_PosVelAttrWhite();
+        pixelShader = compile ps_3_0 PS_NoTexture();
     }
 }

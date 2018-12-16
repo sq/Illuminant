@@ -77,10 +77,6 @@ namespace ParticleEditor {
             UseThreadedDraw = true;
             IsFixedTimeStep = false;
 
-            if (IsFixedTimeStep) {
-                TargetElapsedTime = TimeSpan.FromSeconds(1.0 / 30);
-            }
-
             PreviousKeyboardState = Keyboard.GetState();
             IsMouseVisible = true;
             WindowedResolution = new Pair<int>(1920, 1080);
@@ -121,6 +117,7 @@ namespace ParticleEditor {
 
             base.LoadContent();
 
+            Time.CurrentTime = 0;
             Font = new FreeTypeFont(RenderCoordinator, "FiraSans-Medium.otf") {
                 SizePoints = 17f,
                 GlyphMargin = 2
@@ -148,10 +145,18 @@ namespace ParticleEditor {
 
             LastTimeOverUI = Time.Ticks;
 
-            Model = new Model();
+            if (Model == null)
+                Model = new Model();
+
+            if (View != null)
+                View.Dispose();
             View = new View(Model);
-            Controller = new Controller(Model, View);
-            ControllerPin = GCHandle.Alloc(Controller, GCHandleType.Normal);
+
+            if (Controller == null) {
+                Controller = new Controller(Model, View);
+                ControllerPin = GCHandle.Alloc(Controller, GCHandleType.Normal);
+            } else
+                Controller.View = View;
 
             View.Initialize(this);
         }

@@ -15,7 +15,10 @@ namespace ParticleEditor {
             var panelWidth = 400;
             
             var isWindowOpen = Nuke.nk_begin(
-                ctx, "SidePanel", new NuklearDotNet.NkRect(Graphics.PreferredBackBufferWidth - panelWidth, 0, panelWidth, Graphics.PreferredBackBufferHeight),
+                ctx, "SidePanel", new NuklearDotNet.NkRect(
+                    Graphics.PreferredBackBufferWidth - panelWidth, 0, 
+                    panelWidth, Graphics.PreferredBackBufferHeight
+                ),
                 (uint)(NuklearDotNet.NkPanelFlags.Border)
             ) != 0;
 
@@ -60,6 +63,9 @@ namespace ParticleEditor {
 
             using (var group = Nuklear.CollapsingGroup("System Properties", "System Properties", 2))
             if (group.Visible && (Controller.SelectedSystem != null)) {
+                var s = Controller.SelectedSystem.Instance;
+                using (var tCount = new UTF8String(string.Format("{0}/{1}", s.LiveCount, s.Capacity)))
+                    Nuke.nk_text(ctx, tCount.pText, tCount.Length, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
             }
 
             using (var group = Nuklear.CollapsingGroup("Transforms", "Transforms", 3))

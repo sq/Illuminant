@@ -31,6 +31,8 @@ namespace ParticleEditor {
             get {
                 if (View.Systems.Count == 0)
                     return null;
+                if (CurrentState.Systems.SelectedIndex >= View.Systems.Count)
+                    return null;
                 return View.Systems[CurrentState.Systems.SelectedIndex];
             }
         }
@@ -40,6 +42,8 @@ namespace ParticleEditor {
                 if (SelectedSystem == null)
                     return null;
                 if (SelectedSystem.Transforms.Count == 0)
+                    return null;
+                if (CurrentState.Transforms.SelectedIndex >= SelectedSystem.Transforms.Count)
                     return null;
                 return SelectedSystem.Transforms[CurrentState.Transforms.SelectedIndex];
             }
@@ -78,11 +82,11 @@ namespace ParticleEditor {
             var xformModel = new ParticleTransformModel {
                 Type = typeof(Spawner),
                 Properties = {
-                    { "MinRate", 4 },
-                    { "MaxRate", 4 },
+                    { "MinRate", 240 },
+                    { "MaxRate", 240 },
                     { "Position",
                         new Formula {
-                            Constant = new Vector4(512, 512, 0, 256),
+                            Constant = new Vector4(256 * (view.Transforms.Count + 1), 256, 0, 256),
                             RandomScale = new Vector4(256, 256, 0, 0),
                             RandomOffset = new Vector4(-0.5f, -0.5f, 0, 0),
                             RandomCircularity = 1

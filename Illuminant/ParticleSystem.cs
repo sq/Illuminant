@@ -530,7 +530,10 @@ namespace Squared.Illuminant.Particles {
                             if (!SpawnStates.TryGetValue(spawnId.Value, out spawnState))
                                 spawnState = new SpawnState { Offset = ChunkMaximumCount, Free = 0 };
 
-                            spawner.SetIndices(spawnState.Offset + 1, spawnState.Offset + spawnCount);
+                            var first = spawnState.Offset + 1;
+                            var last = spawnState.Offset + spawnCount;
+                            spawner.SetIndices(first, last);
+                            // Console.WriteLine("Spawning {0}-{1} free {2}", first, last, spawnState.Free);
 
                             spawnState.Offset += spawnCount;
                             spawnState.Free -= spawnCount;
@@ -1104,6 +1107,11 @@ namespace Squared.Illuminant.Particles {
         /// Store system state as 32-bit float instead of 16-bit float
         /// </summary>
         public bool          HighPrecision = true;
+
+        /// <summary>
+        /// Sets a global multiply color to apply to the white and attributecolor materials
+        /// </summary>
+        public Vector4       GlobalColor = Vector4.One;
 
         public ParticleSystemConfiguration (
             int attributeCount = 0
