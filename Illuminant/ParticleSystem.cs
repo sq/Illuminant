@@ -929,6 +929,18 @@ namespace Squared.Illuminant.Particles {
                 source.Lock("render");
             }
 
+            if (material == null) {
+                if (Configuration.Texture != null) {
+                    material = Configuration.AttributeCount > 0
+                        ? Engine.ParticleMaterials.AttributeColor
+                        : Engine.ParticleMaterials.White;
+                } else {
+                    material = Configuration.AttributeCount > 0
+                        ? Engine.ParticleMaterials.AttributeColorNoTexture
+                        : Engine.ParticleMaterials.WhiteNoTexture;
+                }
+            }
+
             var m = Engine.Materials.Get(
                 material ?? Engine.ParticleMaterials.White, blendState: blendState
             );

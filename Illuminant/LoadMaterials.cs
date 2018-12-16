@@ -306,6 +306,12 @@ namespace Squared.Illuminant.Particles {
                 DefineMaterial(ParticleMaterials.AttributeColor = new Material(
                     content.Load<Effect>("RasterizeParticleSystem"), "AttributeColor"
                 ));
+                DefineMaterial(ParticleMaterials.WhiteNoTexture = new Material(
+                    content.Load<Effect>("RasterizeParticleSystem"), "WhiteNoTexture"
+                ));
+                DefineMaterial(ParticleMaterials.AttributeColorNoTexture = new Material(
+                    content.Load<Effect>("RasterizeParticleSystem"), "AttributeColorNoTexture"
+                ));
 
                 Materials.ForEachMaterial<object>((m, _) => {
                     Materials.GetUniformBinding<Uniforms.Environment>(m, "Environment");

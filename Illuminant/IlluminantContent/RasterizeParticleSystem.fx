@@ -156,6 +156,36 @@ void PS_AttributeColor (
         discard;
 }
 
+void PS_WhiteNoTexture(
+    in  float4 position : TEXCOORD1,
+    out float4 result : COLOR0
+) {
+    // FIXME
+    if (OpacityFromLife > 0)
+        result = clamp(position.w / OpacityFromLife, 0, 1);
+    else if (OpacityFromLife < 0)
+        result = 1 - clamp(position.w / -OpacityFromLife, 0, 1);
+
+    if (result.a <= 0)
+        discard;
+}
+
+void PS_AttributeColorNoTexture(
+    in  float4 color    : COLOR0,
+    in  float4 position : TEXCOORD1,
+    out float4 result : COLOR0
+) {
+    // FIXME
+    if (OpacityFromLife > 0)
+        result = clamp(position.w / OpacityFromLife, 0, 1);
+    else if (OpacityFromLife < 0)
+        result = 1 - clamp(position.w / -OpacityFromLife, 0, 1);
+
+    result *= color;
+    if (result.a <= 0)
+        discard;
+}
+
 technique AttributeColor {
     pass P0
     {
@@ -165,6 +195,22 @@ technique AttributeColor {
 }
 
 technique White {
+    pass P0
+    {
+        vertexShader = compile vs_3_0 VS_PosVelAttr();
+        pixelShader = compile ps_3_0 PS_White();
+    }
+}
+
+technique AttributeColorNoTexture {
+    pass P0
+    {
+        vertexShader = compile vs_3_0 VS_PosVelAttr();
+        pixelShader = compile ps_3_0 PS_AttributeColor();
+    }
+}
+
+technique WhiteNoTexture {
     pass P0
     {
         vertexShader = compile vs_3_0 VS_PosVelAttr();
