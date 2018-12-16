@@ -110,6 +110,9 @@ namespace Framework {
         }
 
         private float _TextWidthF (NkHandle handle, float h, byte* s, int len) {
+            if ((s == null) || (len == 0))
+                return 0;
+
             var textUtf8 = Encoding.UTF8.GetString(s, len);
             float result;
             if (!TextWidthCache.TryGetValue(textUtf8, out result))
@@ -330,10 +333,29 @@ namespace Framework {
     }
 
     public unsafe struct UTF8String : IDisposable {
+        private static byte[] NullString;
+        private static GCHandle hNullString;
+        private static byte* pNullString;
+
+        private bool OwnsPointer;
         public byte* pText;
         public int Length;
 
+        static UTF8String () {
+            NullString = new byte[2];
+            hNullString = GCHandle.Alloc(NullString, GCHandleType.Pinned);
+            pNullString = (byte*)hNullString.AddrOfPinnedObject().ToPointer();
+        }
+
         public UTF8String (string text) {
+            if (string.IsNullOrEmpty(text)) {
+                pText = pNullString;
+                Length = 1;
+                OwnsPointer = false;
+                return;
+            }
+
+            OwnsPointer = true;
             var encoder = Encoding.UTF8.GetEncoder();
             fixed (char* pChars = text) {
                 Length = encoder.GetByteCount(pChars, text.Length, true);
@@ -346,7 +368,8 @@ namespace Framework {
         }
 
         public void Dispose () {
-            NuklearDotNet.NuklearAPI.StdFree((IntPtr)pText);
+            if (OwnsPointer)
+                NuklearDotNet.NuklearAPI.StdFree((IntPtr)pText);
             pText = null;
             Length = 0;
         }

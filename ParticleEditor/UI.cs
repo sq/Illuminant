@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Framework;
@@ -34,6 +35,8 @@ namespace ParticleEditor {
 
         private void RenderSidePanels () {
             RenderSystemList();
+            RenderTransformList();
+            RenderTransformProperties();
             RenderGlobalSettings();
         }
 
@@ -66,7 +69,12 @@ namespace ParticleEditor {
                 var s = Controller.SelectedSystem.Instance;
                 using (var tCount = new UTF8String(string.Format("{0}/{1}", s.LiveCount, s.Capacity)))
                     Nuke.nk_text(ctx, tCount.pText, tCount.Length, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
-            }
+            }            
+        }
+
+        private unsafe void RenderTransformList () {
+            var ctx = Nuklear.Context;
+            var state = Controller.CurrentState;
 
             using (var group = Nuklear.CollapsingGroup("Transforms", "Transforms", 3))
             if (group.Visible && (Controller.SelectedSystem != null)) {
@@ -88,9 +96,83 @@ namespace ParticleEditor {
                     }
                 }
             }
+        }
+
+        private object PreviousSelectedTransform;
+        private SortedDictionary<string, MemberInfo> TransformMembers;
+
+        private unsafe void RenderTransformProperties () {
+            var ctx = Nuklear.Context;
+            var state = Controller.CurrentState;
+            var xform = Controller.SelectedTransform;
 
             using (var group = Nuklear.CollapsingGroup("Transform Properties", "Transform Properties", 4))
-            if (group.Visible && (Controller.SelectedTransform != null)) {
+            if (group.Visible && (xform != null)) {
+                var instance = xform.Instance;
+                if (PreviousSelectedTransform != xform) {
+                    PreviousSelectedTransform = xform;
+                    TransformMembers = new SortedDictionary<string, MemberInfo>();
+                    var seq = from m in instance.GetType().GetMembers(BindingFlags.Instance | BindingFlags.Public)
+                                where (m.MemberType == MemberTypes.Field) || (m.MemberType == MemberTypes.Property)
+                                where !m.GetCustomAttributes<NonSerializedAttribute>().Any()
+                                select new KeyValuePair<string, MemberInfo>(m.Name, m);
+                    foreach (var kvp in seq)
+                        TransformMembers.Add(kvp.Key, kvp.Value);
+                }
+
+                foreach (var kvp in TransformMembers) {
+                    Type type;
+                    object value = null;
+                    var prop = kvp.Value as PropertyInfo;
+                    var field = kvp.Value as FieldInfo;
+                    Action<object, object> setter;
+                    if (prop != null) {
+                        type = prop.PropertyType;
+                        value = prop.GetValue(instance);
+                        setter = prop.SetValue;
+                    } else if (field != null) {
+                        type = field.FieldType;
+                        value = field.GetValue(instance);
+                        setter = field.SetValue;
+                    } else {
+                        continue;
+                    }
+
+                    RenderProperty(instance, kvp.Key, type, value, setter);
+                }
+            }
+        }
+
+        private unsafe void RenderProperty (
+            object instance, 
+            string name, Type type, 
+            object value, Action<object, object> setter
+        ) {
+            var ctx = Nuklear.Context;
+            var isActive = false;
+
+            Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 2);
+            Nuklear.SelectableText(name, isActive);
+
+            if (value == null) {
+                Nuklear.SelectableText("null", isActive);
+                return;
+            }
+
+            switch (type.Name) {
+                case "String":
+                case "Int32":
+                case "Single":
+                    Nuklear.SelectableText(value.ToString(), isActive);
+                    return;
+                case "Boolean":
+                    var b = (bool)value;
+                    if (Checkbox(null, ref b))
+                        setter(instance, b);
+                    return;
+                default:
+                    Nuklear.SelectableText("", isActive);
+                    return;
             }
         }
 
@@ -117,12 +199,13 @@ namespace ParticleEditor {
 
         // Returns true if value changed
         private unsafe bool Checkbox (string text, ref bool value) {
-            using (var temp = new UTF8String(text)) {
-                var newValue = Nuke.nk_check_text(Nuklear.Context, temp.pText, temp.Length, value ? 0 : 1) == 0;
-                var result = newValue != value;
-                value = newValue;
-                return result;
-            }
+            bool newValue;
+            using (var temp = new UTF8String(text))
+                newValue = Nuke.nk_check_text(Nuklear.Context, temp.pText, temp.Length, value ? 0 : 1) == 0;
+
+            var result = newValue != value;
+            value = newValue;
+            return result;
         }
     }
 }
