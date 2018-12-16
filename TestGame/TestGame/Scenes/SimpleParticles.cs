@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Framework;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Graphics.PackedVector;
@@ -74,7 +75,9 @@ namespace TestGame.Scenes {
         public override void LoadContent () {
             Engine = new ParticleEngine(
                 Game.Content, Game.RenderCoordinator, Game.Materials, 
-                new ParticleEngineConfiguration(), Game.ParticleMaterials
+                new ParticleEngineConfiguration {
+                    TextureLoader = Game.Content.Load<Texture2D>
+                }, Game.ParticleMaterials
             );
 
             SetupParticleSystem();
@@ -104,7 +107,7 @@ namespace TestGame.Scenes {
                 new ParticleSystemConfiguration(
                     attributeCount: 1
                 ) {
-                    Texture = spark,
+                    Texture = new NullableLazyResource<Texture2D>("spark"),
                     Size = Vector2.One * 2.6f,
                     /*
                     Texture = fireball,

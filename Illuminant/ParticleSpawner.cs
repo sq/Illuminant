@@ -11,21 +11,32 @@ using Squared.Render;
 
 namespace Squared.Illuminant.Particles.Transforms {
     public class Spawner : ParticleTransform {
+        [NonSerialized]
         private static int NextSeed = 1;
 
         public float    MinRate, MaxRate;
-        private double  RateError;
 
         public Formula  Position, Velocity, Attributes;
 
+        [NonSerialized]
+        private double  RateError;
+        [NonSerialized]
         private Vector2 Indices;
+        [NonSerialized]
         private MersenneTwister RNG;
+        [NonSerialized]
         private int     TotalSpawned;
 
+        [NonSerialized]
         private Vector4[] Temp = new Vector4[12];
+        [NonSerialized]
         private float[] Temp2 = new float[3];
 
-        public Spawner (int? seed = null) {
+        public Spawner ()
+            : this(null) {
+        }
+
+        public Spawner (int? seed) {
             RNG = new MersenneTwister(seed.GetValueOrDefault(NextSeed++));
         }
 
@@ -46,11 +57,11 @@ namespace Squared.Illuminant.Particles.Transforms {
             }
         }
 
-        internal override Material GetMaterial (ParticleMaterials materials) {
+        protected override Material GetMaterial (ParticleMaterials materials) {
             return materials.Spawn;
         }
 
-        internal override void SetParameters (EffectParameterCollection parameters, int frameIndex) {
+        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, int frameIndex) {
             var secs = (float)Squared.Util.Time.Seconds;
 
             var ro = parameters["RandomnessOffset"];
@@ -84,7 +95,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             parameters["Configuration"].SetValue(Temp);
             parameters["RandomCircularity"].SetValue(Temp2);
             parameters["ChunkSizeAndIndices"].SetValue(new Vector4(
-                Engine.Configuration.ChunkSize, Engine.Configuration.ChunkSize,
+                engine.Configuration.ChunkSize, engine.Configuration.ChunkSize,
                 Indices.X, Indices.Y
             ));
         }

@@ -1,21 +1,20 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="..\..\Illuminant\packages\SharpFont.4.0.1\build\SharpFont.props" Condition="Exists('..\..\Illuminant\packages\SharpFont.4.0.1\build\SharpFont.props')" />
-  <Import Project="..\..\Illuminant\packages\SharpFont.Dependencies.2.6\build\SharpFont.Dependencies.props" Condition="Exists('..\..\Illuminant\packages\SharpFont.Dependencies.2.6\build\SharpFont.Dependencies.props')" />
+  <Import Project="..\Illuminant\packages\SharpFont.4.0.1\build\SharpFont.props" Condition="Exists('..\Illuminant\packages\SharpFont.4.0.1\build\SharpFont.props')" />
+  <Import Project="..\Illuminant\packages\SharpFont.Dependencies.2.6\build\SharpFont.Dependencies.props" Condition="Exists('..\Illuminant\packages\SharpFont.Dependencies.2.6\build\SharpFont.Dependencies.props')" />
   <PropertyGroup>
-    <ProjectGuid>{B689A415-A94D-4B41-9DAE-8A542EFB76B4}</ProjectGuid>
+    <ProjectGuid>{B689A415-A94D-4B41-9DAE-8A542EFB76B5}</ProjectGuid>
     <ProjectTypeGuids>{6D335F3A-9D43-41b4-9D22-F6F17C4BE596};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>TestGame</RootNamespace>
-    <AssemblyName>TestGame</AssemblyName>
+    <RootNamespace>ParticleEditor</RootNamespace>
+    <AssemblyName>ParticleEditor</AssemblyName>
     <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
     <XnaFrameworkVersion>v4.0</XnaFrameworkVersion>
     <XnaPlatform>Windows</XnaPlatform>
     <XnaProfile>HiDef</XnaProfile>
-    <XnaCrossPlatformGroupID>3107e376-0097-4e26-ab25-48a6d9eb659d</XnaCrossPlatformGroupID>
     <XnaOutputType>Game</XnaOutputType>
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
@@ -65,7 +64,7 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="SharpFont, Version=4.0.1.200, Culture=neutral, PublicKeyToken=48add4c483071cdf, processorArchitecture=MSIL">
-      <HintPath>..\..\Illuminant\packages\SharpFont.4.0.1\lib\net45\SharpFont.dll</HintPath>
+      <HintPath>..\Illuminant\packages\SharpFont.4.0.1\lib\net45\SharpFont.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System">
@@ -79,69 +78,52 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\..\AppCommon\NuklearService.cs">
+    <Compile Include="..\AppCommon\NuklearService.cs">
       <Link>NuklearService.cs</Link>
     </Compile>
-    <Compile Include="..\..\AppCommon\PerformanceStats.cs">
+    <Compile Include="..\AppCommon\PerformanceStats.cs">
       <Link>PerformanceStats.cs</Link>
     </Compile>
-    <Compile Include="..\..\AppCommon\Settings.cs">
-      <Link>Settings.cs</Link>
-    </Compile>
+    <Compile Include="Controller.cs" />
+    <Compile Include="Model.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Program.cs" />
-    <Compile Include="Scenes\DistanceFieldEditor.cs" />
-    <Compile Include="Scenes\LineLight.cs" />
-    <Compile Include="Scenes\ParticleLights.cs" />
-    <Compile Include="Scenes\DynamicObstructions.cs" />
-    <Compile Include="Scenes\LUTTest.cs" />
-    <Compile Include="Scenes\VectorFieldTest.cs" />
-    <Compile Include="Scenes\SimpleParticles.cs" />
-    <Compile Include="Scenes\SC3.cs" />
-    <Compile Include="Scenes\ScrollingGeo.cs" />
-    <Compile Include="Scenes\LightProbes.cs" />
-    <Compile Include="Scenes\GI.cs" />
-    <Compile Include="Scenes\Dithering.cs" />
-    <Compile Include="Scenes\TwoPointFiveD.cs" />
-    <Compile Include="Scenes\HeightVolumeTest.cs" />
-    <Compile Include="TestGame.cs" />
+    <Compile Include="ParticleEditorGame.cs" />
+    <Compile Include="UI.cs" />
+    <Compile Include="View.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Fracture\Squared\Render.Freetype\Squared.Render.Freetype.csproj">
+    <ProjectReference Include="..\..\Fracture\Squared\Render.Freetype\Squared.Render.Freetype.csproj">
       <Project>{cfb603c1-8371-460d-ba60-91e697eae1b3}</Project>
       <Name>Squared.Render.Freetype</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\Illuminant\Illuminant.csproj">
+    <ProjectReference Include="..\Illuminant\Illuminant.csproj">
       <Project>{E86544AD-5974-4FEE-B96F-71331EFAB054}</Project>
       <Name>Illuminant</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\Fracture\Squared\GameLib\Squared.Game.csproj">
+    <ProjectReference Include="..\..\Fracture\Squared\GameLib\Squared.Game.csproj">
       <Project>{36463AEE-E309-43A6-BCFA-A69944390AF0}</Project>
       <Name>Squared.Game</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\Fracture\Squared\RenderLib\Squared.Render.csproj">
+    <ProjectReference Include="..\..\Fracture\Squared\RenderLib\Squared.Render.csproj">
       <Project>{FE871F18-FD35-4124-AF8F-0021C9D4BA29}</Project>
       <Name>Squared.Render</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\Fracture\Squared\Threading\Squared.Threading.csproj">
+    <ProjectReference Include="..\..\Fracture\Squared\Threading\Squared.Threading.csproj">
       <Project>{eccb8787-0fc6-43b2-abd1-6cbb237916ec}</Project>
       <Name>Squared.Threading</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\Fracture\Squared\Util\Squared.Util.csproj">
+    <ProjectReference Include="..\..\Fracture\Squared\Util\Squared.Util.csproj">
       <Project>{D7F549CF-E0A6-491C-A78C-ECAB590BB2A7}</Project>
       <Name>Squared.Util</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\Squared.Nuklear\Nuklear\Nuklear.vcxproj">
+    <ProjectReference Include="..\Squared.Nuklear\Nuklear\Nuklear.vcxproj">
       <Project>{6ef251c3-0cf3-4e0c-907b-11bd3deba8e6}</Project>
       <Name>Nuklear</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\Squared.Nuklear\Squared.Nuklear\Squared.Nuklear.csproj">
+    <ProjectReference Include="..\Squared.Nuklear\Squared.Nuklear\Squared.Nuklear.csproj">
       <Project>{bdb132a4-22a1-479d-a4d0-0a2b00021f16}</Project>
       <Name>Squared.Nuklear</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\TestGameContent\TestGameContent.contentproj">
-      <Name>TestGameContent</Name>
-      <XnaReferenceType>Content</XnaReferenceType>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
@@ -162,15 +144,15 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\AppCommon\Fonts\FiraSans-Light.otf">
+    <None Include="..\AppCommon\Fonts\FiraSans-Light.otf">
       <Link>FiraSans-Light.otf</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\AppCommon\Fonts\FiraSans-Medium.otf">
+    <None Include="..\AppCommon\Fonts\FiraSans-Medium.otf">
       <Link>FiraSans-Medium.otf</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\AppCommon\Fonts\FiraSans-Regular.otf">
+    <None Include="..\AppCommon\Fonts\FiraSans-Regular.otf">
       <Link>FiraSans-Regular.otf</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
@@ -178,7 +160,7 @@
     <None Include="Properties\app.manifest" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="..\..\Squared.Nuklear\bin_dbg\Nuklear.dll">
+    <Content Include="..\Squared.Nuklear\bin_dbg\Nuklear.dll">
       <Link>Nuklear.dll</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
@@ -189,8 +171,8 @@
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\..\Illuminant\packages\SharpFont.Dependencies.2.6\build\SharpFont.Dependencies.props')" Text="$([System.String]::Format('$(ErrorText)', '..\..\Illuminant\packages\SharpFont.Dependencies.2.6\build\SharpFont.Dependencies.props'))" />
-    <Error Condition="!Exists('..\..\Illuminant\packages\SharpFont.4.0.1\build\SharpFont.props')" Text="$([System.String]::Format('$(ErrorText)', '..\..\Illuminant\packages\SharpFont.4.0.1\build\SharpFont.props'))" />
+    <Error Condition="!Exists('..\Illuminant\packages\SharpFont.Dependencies.2.6\build\SharpFont.Dependencies.props')" Text="$([System.String]::Format('$(ErrorText)', '..\Illuminant\packages\SharpFont.Dependencies.2.6\build\SharpFont.Dependencies.props'))" />
+    <Error Condition="!Exists('..\Illuminant\packages\SharpFont.4.0.1\build\SharpFont.props')" Text="$([System.String]::Format('$(ErrorText)', '..\Illuminant\packages\SharpFont.4.0.1\build\SharpFont.props'))" />
   </Target>
   <!--
       To modify your build process, add your task inside one of the targets below and uncomment it. 

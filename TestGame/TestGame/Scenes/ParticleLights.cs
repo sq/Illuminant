@@ -409,7 +409,7 @@ namespace TestGame.Scenes {
                             Renderer.GBuffer.Texture, Vector2.Zero, new Bounds(Vector2.Zero, Vector2.One), 
                             Color.White, LightmapScaleRatio
                         ));
-                }                
+                }
             }
 
             if (ShowParticles)

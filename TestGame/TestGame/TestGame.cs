@@ -7,6 +7,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using System.Threading;
+using Framework;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Content;
@@ -25,9 +26,9 @@ using ThreefoldTrials.Framework;
 using Nuke = NuklearDotNet.Nuklear;
 
 namespace TestGame {
-    public class TestGame : MultithreadedGame {
+    public class TestGame : MultithreadedGame, INuklearHost {
         public GraphicsDeviceManager Graphics;
-        public DefaultMaterialSet Materials;
+        public DefaultMaterialSet Materials { get; private set; }
         public NuklearService Nuklear;
         public IlluminantMaterials IlluminantMaterials;
         public ParticleMaterials ParticleMaterials;
@@ -35,7 +36,7 @@ namespace TestGame {
         public KeyboardState PreviousKeyboardState, KeyboardState;
         public MouseState PreviousMouseState, MouseState;
 
-        public Material TextMaterial;
+        public Material TextMaterial { get; private set; }
 
         public FreeTypeFont Font;
         public Texture2D RampTexture;
@@ -94,6 +95,12 @@ namespace TestGame {
 
             ActiveSceneIndex = Scenes.Length - 1;
             // ActiveSceneIndex = 1;
+        }
+
+        protected override void Initialize () {
+            base.Initialize();
+
+            Window.AllowUserResizing = false;
         }
 
         const float settingRowHeight = 26;

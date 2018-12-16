@@ -3,111 +3,93 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Illuminant", "Illuminant.csproj", "{E86544AD-5974-4FEE-B96F-71331EFAB054}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Illuminant", "Illuminant\Illuminant.csproj", "{E86544AD-5974-4FEE-B96F-71331EFAB054}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestGame", "..\TestGame\TestGame\TestGame.csproj", "{B689A415-A94D-4B41-9DAE-8A542EFB76B4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestGame", "TestGame\TestGame\TestGame.csproj", "{B689A415-A94D-4B41-9DAE-8A542EFB76B4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestGameContent", "..\TestGame\TestGameContent\TestGameContent.contentproj", "{B9E5BF6A-D7A2-4BB7-B620-B586E4B24319}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestGameContent", "TestGame\TestGameContent\TestGameContent.contentproj", "{B9E5BF6A-D7A2-4BB7-B620-B586E4B24319}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IlluminantContent", "IlluminantContent\IlluminantContent.contentproj", "{7ACF41C8-1040-4567-9257-CBCF3AD6B431}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IlluminantContent", "Illuminant\IlluminantContent\IlluminantContent.contentproj", "{7ACF41C8-1040-4567-9257-CBCF3AD6B431}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Squared.Render", "..\..\Fracture\Squared\RenderLib\Squared.Render.csproj", "{FE871F18-FD35-4124-AF8F-0021C9D4BA29}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Squared.Render", "..\Fracture\Squared\RenderLib\Squared.Render.csproj", "{FE871F18-FD35-4124-AF8F-0021C9D4BA29}"
 	ProjectSection(ProjectDependencies) = postProject
 		{EAB7FAD6-0915-4134-8331-A2A1F84C6274} = {EAB7FAD6-0915-4134-8331-A2A1F84C6274}
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Squared.Game", "..\..\Fracture\Squared\GameLib\Squared.Game.csproj", "{36463AEE-E309-43A6-BCFA-A69944390AF0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Squared.Game", "..\Fracture\Squared\GameLib\Squared.Game.csproj", "{36463AEE-E309-43A6-BCFA-A69944390AF0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Squared.Util", "..\..\Fracture\Squared\Util\Squared.Util.csproj", "{D7F549CF-E0A6-491C-A78C-ECAB590BB2A7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Squared.Util", "..\Fracture\Squared\Util\Squared.Util.csproj", "{D7F549CF-E0A6-491C-A78C-ECAB590BB2A7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RenderLibContent", "..\..\Fracture\Squared\RenderLib\Content\RenderLibContent.contentproj", "{D4565A8E-D70B-4E36-B1AE-DF5D9C0EA4B0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RenderLibContent", "..\Fracture\Squared\RenderLib\Content\RenderLibContent.contentproj", "{D4565A8E-D70B-4E36-B1AE-DF5D9C0EA4B0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DummyContentContainer", "..\..\Fracture\Squared\DummyContentContainer\DummyContentContainer.csproj", "{EAB7FAD6-0915-4134-8331-A2A1F84C6274}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DummyContentContainer", "..\Fracture\Squared\DummyContentContainer\DummyContentContainer.csproj", "{EAB7FAD6-0915-4134-8331-A2A1F84C6274}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Squared.Threading", "..\..\Fracture\Squared\Threading\Squared.Threading.csproj", "{ECCB8787-0FC6-43B2-ABD1-6CBB237916EC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Squared.Threading", "..\Fracture\Squared\Threading\Squared.Threading.csproj", "{ECCB8787-0FC6-43B2-ABD1-6CBB237916EC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Squared.Render.Freetype", "..\..\Fracture\Squared\Render.Freetype\Squared.Render.Freetype.csproj", "{CFB603C1-8371-460D-BA60-91E697EAE1B3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Squared.Render.Freetype", "..\Fracture\Squared\Render.Freetype\Squared.Render.Freetype.csproj", "{CFB603C1-8371-460D-BA60-91E697EAE1B3}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Nuklear", "..\Squared.Nuklear\Nuklear\Nuklear.vcxproj", "{6EF251C3-0CF3-4E0C-907B-11BD3DEBA8E6}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Nuklear", "Squared.Nuklear\Nuklear\Nuklear.vcxproj", "{6EF251C3-0CF3-4E0C-907B-11BD3DEBA8E6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Squared.Nuklear", "..\Squared.Nuklear\Squared.Nuklear\Squared.Nuklear.csproj", "{BDB132A4-22A1-479D-A4D0-0A2B00021F16}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Squared.Nuklear", "Squared.Nuklear\Squared.Nuklear\Squared.Nuklear.csproj", "{BDB132A4-22A1-479D-A4D0-0A2B00021F16}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ParticleEditor", "ParticleEditor\ParticleEditor.csproj", "{B689A415-A94D-4B41-9DAE-8A542EFB76B5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x86 = Debug|x86
-		Mono|x86 = Mono|x86
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{E86544AD-5974-4FEE-B96F-71331EFAB054}.Debug|x86.ActiveCfg = Debug|x86
 		{E86544AD-5974-4FEE-B96F-71331EFAB054}.Debug|x86.Build.0 = Debug|x86
-		{E86544AD-5974-4FEE-B96F-71331EFAB054}.Mono|x86.ActiveCfg = Release|x86
-		{E86544AD-5974-4FEE-B96F-71331EFAB054}.Mono|x86.Build.0 = Release|x86
 		{E86544AD-5974-4FEE-B96F-71331EFAB054}.Release|x86.ActiveCfg = Release|x86
 		{E86544AD-5974-4FEE-B96F-71331EFAB054}.Release|x86.Build.0 = Release|x86
 		{B689A415-A94D-4B41-9DAE-8A542EFB76B4}.Debug|x86.ActiveCfg = Debug|x86
 		{B689A415-A94D-4B41-9DAE-8A542EFB76B4}.Debug|x86.Build.0 = Debug|x86
-		{B689A415-A94D-4B41-9DAE-8A542EFB76B4}.Mono|x86.ActiveCfg = Release|x86
-		{B689A415-A94D-4B41-9DAE-8A542EFB76B4}.Mono|x86.Build.0 = Release|x86
 		{B689A415-A94D-4B41-9DAE-8A542EFB76B4}.Release|x86.ActiveCfg = Release|x86
 		{B689A415-A94D-4B41-9DAE-8A542EFB76B4}.Release|x86.Build.0 = Release|x86
 		{B9E5BF6A-D7A2-4BB7-B620-B586E4B24319}.Debug|x86.ActiveCfg = Debug|x86
-		{B9E5BF6A-D7A2-4BB7-B620-B586E4B24319}.Mono|x86.ActiveCfg = Release|x86
 		{B9E5BF6A-D7A2-4BB7-B620-B586E4B24319}.Release|x86.ActiveCfg = Release|x86
 		{7ACF41C8-1040-4567-9257-CBCF3AD6B431}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{7ACF41C8-1040-4567-9257-CBCF3AD6B431}.Mono|x86.ActiveCfg = Debug|Any CPU
 		{7ACF41C8-1040-4567-9257-CBCF3AD6B431}.Release|x86.ActiveCfg = Debug|Any CPU
 		{FE871F18-FD35-4124-AF8F-0021C9D4BA29}.Debug|x86.ActiveCfg = Debug|x86
 		{FE871F18-FD35-4124-AF8F-0021C9D4BA29}.Debug|x86.Build.0 = Debug|x86
-		{FE871F18-FD35-4124-AF8F-0021C9D4BA29}.Mono|x86.ActiveCfg = Release|x86
-		{FE871F18-FD35-4124-AF8F-0021C9D4BA29}.Mono|x86.Build.0 = Release|x86
 		{FE871F18-FD35-4124-AF8F-0021C9D4BA29}.Release|x86.ActiveCfg = Release|x86
 		{FE871F18-FD35-4124-AF8F-0021C9D4BA29}.Release|x86.Build.0 = Release|x86
 		{36463AEE-E309-43A6-BCFA-A69944390AF0}.Debug|x86.ActiveCfg = Debug|x86
 		{36463AEE-E309-43A6-BCFA-A69944390AF0}.Debug|x86.Build.0 = Debug|x86
-		{36463AEE-E309-43A6-BCFA-A69944390AF0}.Mono|x86.ActiveCfg = Release|x86
-		{36463AEE-E309-43A6-BCFA-A69944390AF0}.Mono|x86.Build.0 = Release|x86
 		{36463AEE-E309-43A6-BCFA-A69944390AF0}.Release|x86.ActiveCfg = Release|x86
 		{36463AEE-E309-43A6-BCFA-A69944390AF0}.Release|x86.Build.0 = Release|x86
 		{D7F549CF-E0A6-491C-A78C-ECAB590BB2A7}.Debug|x86.ActiveCfg = Debug|x86
 		{D7F549CF-E0A6-491C-A78C-ECAB590BB2A7}.Debug|x86.Build.0 = Debug|x86
-		{D7F549CF-E0A6-491C-A78C-ECAB590BB2A7}.Mono|x86.ActiveCfg = Mono|x86
-		{D7F549CF-E0A6-491C-A78C-ECAB590BB2A7}.Mono|x86.Build.0 = Mono|x86
 		{D7F549CF-E0A6-491C-A78C-ECAB590BB2A7}.Release|x86.ActiveCfg = Release|x86
 		{D7F549CF-E0A6-491C-A78C-ECAB590BB2A7}.Release|x86.Build.0 = Release|x86
 		{D4565A8E-D70B-4E36-B1AE-DF5D9C0EA4B0}.Debug|x86.ActiveCfg = Debug|x86
-		{D4565A8E-D70B-4E36-B1AE-DF5D9C0EA4B0}.Mono|x86.ActiveCfg = Release|x86
 		{D4565A8E-D70B-4E36-B1AE-DF5D9C0EA4B0}.Release|x86.ActiveCfg = Release|x86
 		{EAB7FAD6-0915-4134-8331-A2A1F84C6274}.Debug|x86.ActiveCfg = Debug|x86
 		{EAB7FAD6-0915-4134-8331-A2A1F84C6274}.Debug|x86.Build.0 = Debug|x86
-		{EAB7FAD6-0915-4134-8331-A2A1F84C6274}.Mono|x86.ActiveCfg = Release|x86
-		{EAB7FAD6-0915-4134-8331-A2A1F84C6274}.Mono|x86.Build.0 = Release|x86
 		{EAB7FAD6-0915-4134-8331-A2A1F84C6274}.Release|x86.ActiveCfg = Release|x86
 		{EAB7FAD6-0915-4134-8331-A2A1F84C6274}.Release|x86.Build.0 = Release|x86
 		{ECCB8787-0FC6-43B2-ABD1-6CBB237916EC}.Debug|x86.ActiveCfg = Debug|Any CPU
 		{ECCB8787-0FC6-43B2-ABD1-6CBB237916EC}.Debug|x86.Build.0 = Debug|Any CPU
-		{ECCB8787-0FC6-43B2-ABD1-6CBB237916EC}.Mono|x86.ActiveCfg = Release|Any CPU
-		{ECCB8787-0FC6-43B2-ABD1-6CBB237916EC}.Mono|x86.Build.0 = Release|Any CPU
 		{ECCB8787-0FC6-43B2-ABD1-6CBB237916EC}.Release|x86.ActiveCfg = Release|Any CPU
 		{ECCB8787-0FC6-43B2-ABD1-6CBB237916EC}.Release|x86.Build.0 = Release|Any CPU
 		{CFB603C1-8371-460D-BA60-91E697EAE1B3}.Debug|x86.ActiveCfg = Debug|x86
 		{CFB603C1-8371-460D-BA60-91E697EAE1B3}.Debug|x86.Build.0 = Debug|x86
-		{CFB603C1-8371-460D-BA60-91E697EAE1B3}.Mono|x86.ActiveCfg = Release|x86
-		{CFB603C1-8371-460D-BA60-91E697EAE1B3}.Mono|x86.Build.0 = Release|x86
 		{CFB603C1-8371-460D-BA60-91E697EAE1B3}.Release|x86.ActiveCfg = Release|x86
 		{CFB603C1-8371-460D-BA60-91E697EAE1B3}.Release|x86.Build.0 = Release|x86
 		{6EF251C3-0CF3-4E0C-907B-11BD3DEBA8E6}.Debug|x86.ActiveCfg = Debug|Win32
 		{6EF251C3-0CF3-4E0C-907B-11BD3DEBA8E6}.Debug|x86.Build.0 = Debug|Win32
-		{6EF251C3-0CF3-4E0C-907B-11BD3DEBA8E6}.Mono|x86.ActiveCfg = Release|Win32
-		{6EF251C3-0CF3-4E0C-907B-11BD3DEBA8E6}.Mono|x86.Build.0 = Release|Win32
 		{6EF251C3-0CF3-4E0C-907B-11BD3DEBA8E6}.Release|x86.ActiveCfg = Release|Win32
 		{6EF251C3-0CF3-4E0C-907B-11BD3DEBA8E6}.Release|x86.Build.0 = Release|Win32
 		{BDB132A4-22A1-479D-A4D0-0A2B00021F16}.Debug|x86.ActiveCfg = Debug|x86
 		{BDB132A4-22A1-479D-A4D0-0A2B00021F16}.Debug|x86.Build.0 = Debug|x86
-		{BDB132A4-22A1-479D-A4D0-0A2B00021F16}.Mono|x86.ActiveCfg = Release|x86
-		{BDB132A4-22A1-479D-A4D0-0A2B00021F16}.Mono|x86.Build.0 = Release|x86
 		{BDB132A4-22A1-479D-A4D0-0A2B00021F16}.Release|x86.ActiveCfg = Release|x86
 		{BDB132A4-22A1-479D-A4D0-0A2B00021F16}.Release|x86.Build.0 = Release|x86
+		{B689A415-A94D-4B41-9DAE-8A542EFB76B5}.Debug|x86.ActiveCfg = Debug|x86
+		{B689A415-A94D-4B41-9DAE-8A542EFB76B5}.Debug|x86.Build.0 = Debug|x86
+		{B689A415-A94D-4B41-9DAE-8A542EFB76B5}.Release|x86.ActiveCfg = Release|x86
+		{B689A415-A94D-4B41-9DAE-8A542EFB76B5}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

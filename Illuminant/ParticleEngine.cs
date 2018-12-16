@@ -196,6 +196,21 @@ namespace Squared.Illuminant.Particles {
 
         public int FreeListCapacity = 12;
 
+        /// <summary>
+        /// Used to measure elapsed time automatically for updates
+        /// </summary>
+        public ITimeProvider TimeProvider = null;
+
+        /// <summary>
+        /// Any update's elapsed time will be limited to at most this long
+        /// </summary>
+        public float MaximumUpdateDeltaTimeSeconds = 1 / 20f;
+
+        /// <summary>
+        /// Used to load lazy texture resources.
+        /// </summary>
+        public Func<string, Texture2D> TextureLoader = null;
+
         public ParticleEngineConfiguration (int chunkSize = 256) {
             ChunkSize = chunkSize;
         }
