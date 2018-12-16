@@ -530,8 +530,8 @@ namespace Squared.Illuminant.Particles {
                             if (!SpawnStates.TryGetValue(spawnId.Value, out spawnState))
                                 spawnState = new SpawnState { Offset = ChunkMaximumCount, Free = 0 };
 
-                            var first = spawnState.Offset + 1;
-                            var last = spawnState.Offset + spawnCount;
+                            var first = spawnState.Offset;
+                            var last = spawnState.Offset + spawnCount - 1;
                             spawner.SetIndices(first, last);
                             // Console.WriteLine("Spawning {0}-{1} free {2}", first, last, spawnState.Free);
 
