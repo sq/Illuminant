@@ -530,7 +530,7 @@ namespace Squared.Illuminant.Particles {
                             if (!SpawnStates.TryGetValue(spawnId.Value, out spawnState))
                                 spawnState = new SpawnState { Offset = ChunkMaximumCount, Free = 0 };
 
-                            spawner.SetIndices(spawnState.Offset, spawnState.Offset + spawnCount);
+                            spawner.SetIndices(spawnState.Offset + 1, spawnState.Offset + spawnCount);
 
                             spawnState.Offset += spawnCount;
                             spawnState.Free -= spawnCount;
@@ -935,7 +935,7 @@ namespace Squared.Illuminant.Particles {
             }
 
             if (material == null) {
-                if (Configuration.Texture != null) {
+                if ((Configuration.Texture != null) && (Configuration.Texture.Instance != null)) {
                     material = Configuration.AttributeCount > 0
                         ? Engine.ParticleMaterials.AttributeColor
                         : Engine.ParticleMaterials.White;
@@ -947,7 +947,7 @@ namespace Squared.Illuminant.Particles {
             }
 
             var m = Engine.Materials.Get(
-                material ?? Engine.ParticleMaterials.White, blendState: blendState
+                material, blendState: blendState
             );
             var e = m.Effect;
             var p = e.Parameters;

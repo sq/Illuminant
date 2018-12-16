@@ -65,11 +65,11 @@ namespace ParticleEditor {
 
             Graphics = new GraphicsDeviceManager(this);
             Graphics.PreferredBackBufferFormat = SurfaceFormat.Color;
-            Graphics.PreferredDepthStencilFormat = DepthFormat.Depth24Stencil8;
+            Graphics.PreferredDepthStencilFormat = DepthFormat.None;
             Graphics.PreferredBackBufferWidth = 1920;
             Graphics.PreferredBackBufferHeight = 1080;
             Graphics.SynchronizeWithVerticalRetrace = true;
-            Graphics.PreferMultiSampling = false;
+            Graphics.PreferMultiSampling = true;
             Graphics.IsFullScreen = false;
 
             Content.RootDirectory = "Content";
@@ -232,7 +232,7 @@ namespace ParticleEditor {
             if (IsActive)
                 View.Update(this, frame, -2, (float)gameTime.ElapsedGameTime.TotalSeconds);
 
-            ClearBatch.AddNew(frame, -1, Materials.Clear, Color.Black);
+            ClearBatch.AddNew(frame, -1, Materials.Clear, new Color(0.01f, 0.03f, 0.04f, 1f));
 
             var ir = new ImperativeRenderer(
                 frame, Materials, 

@@ -4,6 +4,8 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Xna.Framework;
+using Squared.Illuminant;
 using Squared.Illuminant.Particles;
 using Squared.Illuminant.Particles.Transforms;
 
@@ -51,6 +53,9 @@ namespace ParticleEditor {
 
         public void AddSystem () {
             var config = new ParticleSystemConfiguration {
+                OpacityFromLife = 256,
+                GlobalLifeDecayRate = 90,
+                Size = Vector2.One * 1.5f
             };
             var model = new ParticleSystemModel {
                 Configuration = config
@@ -71,7 +76,26 @@ namespace ParticleEditor {
             var view = SelectedSystem;
             var model = view.Model;
             var xformModel = new ParticleTransformModel {
-                Type = typeof(Spawner)
+                Type = typeof(Spawner),
+                Properties = {
+                    { "MinRate", 4 },
+                    { "MaxRate", 4 },
+                    { "Position",
+                        new Formula {
+                            Constant = new Vector4(512, 512, 0, 256),
+                            RandomScale = new Vector4(256, 256, 0, 0),
+                            RandomOffset = new Vector4(-0.5f, -0.5f, 0, 0),
+                            RandomCircularity = 1
+                        }
+                    },
+                    { "Velocity",
+                        new Formula {
+                            RandomScale = new Vector4(32f, 32f, 0, 0),
+                            RandomOffset = new Vector4(-0.5f, -0.5f, 0, 0),
+                            RandomCircularity = 1
+                        }
+                    }
+                }
             };
             model.Transforms.Add(xformModel);
             view.AddNewViewForModel(xformModel);

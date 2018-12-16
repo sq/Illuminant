@@ -165,6 +165,8 @@ void PS_WhiteNoTexture(
         result = clamp(position.w / OpacityFromLife, 0, 1);
     else if (OpacityFromLife < 0)
         result = 1 - clamp(position.w / -OpacityFromLife, 0, 1);
+    else
+        result = 1;
 
     if (result.a <= 0)
         discard;
@@ -180,6 +182,8 @@ void PS_AttributeColorNoTexture(
         result = clamp(position.w / OpacityFromLife, 0, 1);
     else if (OpacityFromLife < 0)
         result = 1 - clamp(position.w / -OpacityFromLife, 0, 1);
+    else
+        result = 1;
 
     result *= color;
     if (result.a <= 0)
@@ -206,7 +210,7 @@ technique AttributeColorNoTexture {
     pass P0
     {
         vertexShader = compile vs_3_0 VS_PosVelAttr();
-        pixelShader = compile ps_3_0 PS_AttributeColor();
+        pixelShader = compile ps_3_0 PS_AttributeColorNoTexture();
     }
 }
 
@@ -214,6 +218,6 @@ technique WhiteNoTexture {
     pass P0
     {
         vertexShader = compile vs_3_0 VS_PosVelAttr();
-        pixelShader = compile ps_3_0 PS_White();
+        pixelShader = compile ps_3_0 PS_WhiteNoTexture();
     }
 }

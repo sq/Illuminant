@@ -24,5 +24,6 @@ namespace ParticleEditor {
     public class ParticleTransformModel {
         public string Name;
         public Type Type;
+        public readonly Dictionary<string, object> Properties = new Dictionary<string, object>();
     }
 }

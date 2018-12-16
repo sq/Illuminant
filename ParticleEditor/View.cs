@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework.Graphics;
@@ -57,7 +58,7 @@ namespace ParticleEditor {
             using (var g = BatchGroup.New(container, layer)) {
                 int i = 0;
                 foreach (var s in Systems)
-                    s.Instance.Render(g, i++);
+                    s.Instance.Render(g, i++, blendState: BlendState.AlphaBlend);
             }
         }
 
@@ -105,14 +106,36 @@ namespace ParticleEditor {
     }
 
     public class ParticleTransformView : IDisposable {
+        public ParticleSystemView System;
         public ParticleTransform Instance;
         public ParticleTransformModel Model;
 
         public void Initialize (ParticleSystemView view) {
+            System = view;
             Instance = (ParticleTransform)Activator.CreateInstance(Model.Type);
+            foreach (var kvp in Model.Properties) {
+                var m = Model.Type.GetMember(kvp.Key).FirstOrDefault();
+                if (m == null) {
+                    Console.WriteLine("No property named {0}", kvp.Key);
+                    continue;
+                }
+                var prop = m as PropertyInfo;
+                var field = m as FieldInfo;
+                if (prop != null)
+                    prop.SetValue(Instance, kvp.Value);
+                else if (field != null)
+                    field.SetValue(Instance, kvp.Value);
+                else
+                    Console.WriteLine("Member {0} is not field or property", kvp.Key);
+            }
+
+            Instance.IsActive = true;
+
+            System.Instance.Transforms.Add(Instance);
         }
 
         public void Dispose () {
+            System.Instance.Transforms.Remove(Instance);
             Instance.Dispose();
             Instance = null;
         }
