@@ -116,9 +116,6 @@ namespace ParticleEditor {
         }
 
         protected override void LoadContent () {
-            if (DidLoadContent)
-                FreeContent();
-
             DidLoadContent = true;
 
             base.LoadContent();
@@ -169,6 +166,9 @@ namespace ParticleEditor {
 
         private void Window_ClientSizeChanged (object sender, EventArgs e) {
             Console.WriteLine("ClientSizeChanged");
+            if (Window.ClientBounds.Width <= 0)
+                return;
+
             if (!Graphics.IsFullScreen) {
                 WindowedResolution = new Pair<int>(Window.ClientBounds.Width, Window.ClientBounds.Height);
                 Graphics.PreferredBackBufferWidth = Window.ClientBounds.Width;

@@ -32,6 +32,14 @@ namespace Framework {
             }
         }
 
+        public struct GroupNormal : IDisposable {
+            public nk_context* ctx;
+
+            public void Dispose () {
+                Nuklear.nk_group_end(ctx);
+            }
+        }
+
         public struct GroupScrolled : IDisposable {
             public nk_context* ctx;
 
@@ -313,12 +321,12 @@ namespace Framework {
             };
         }
 
-        public Tree CollapsingGroup (string caption, string name, int hash) {
+        public Tree CollapsingGroup (string caption, string name, bool defaultOpen = true, int hash = 0) {
             using (var tCaption = new NString(caption))
             using (var tName = new NString(name)) {
                 var result = Nuklear.nk_tree_push_hashed(
                     Context, nk_tree_type.NK_TREE_TAB, tCaption.pText,
-                    nk_collapse_states.NK_MAXIMIZED, tName.pText, tName.Length, hash
+                    defaultOpen ? nk_collapse_states.NK_MAXIMIZED : nk_collapse_states.NK_MINIMIZED, tName.pText, tName.Length, hash
                 );
                 return new Tree {
                     ctx = Context,

@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
+using Squared.Util;
 
 namespace Squared.Illuminant.Uniforms {
     [StructLayout(LayoutKind.Sequential)]
@@ -179,6 +180,14 @@ namespace Squared.Illuminant {
         public Vector4 RandomOffset;
         public Vector4 RandomScale;
         public Vector4 RandomScaleConstant;
-        public float   RandomCircularity;
+        private float  _RandomCircularity;
+        public float   RandomCircularity {
+            get {
+                return _RandomCircularity;
+            }
+            set {
+                _RandomCircularity = Arithmetic.Clamp(value, 0, 1);
+            }
+        }
     }
 }

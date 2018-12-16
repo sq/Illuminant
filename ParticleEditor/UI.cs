@@ -6,12 +6,14 @@ using System.Text;
 using System.Threading.Tasks;
 using Framework;
 using Squared.Game;
+using Squared.Illuminant;
+using Squared.Illuminant.Particles;
 using Squared.Render;
 using Nuke = NuklearDotNet.Nuklear;
 
 namespace ParticleEditor {
     public partial class ParticleEditor : MultithreadedGame, INuklearHost {
-        private struct CachedPropertyInfo {
+        private class CachedPropertyInfo {
             public string Name;
             public FieldInfo Field;
             public PropertyInfo Property;
@@ -21,12 +23,24 @@ namespace ParticleEditor {
         }
 
         private struct PropertyGridCache {
-            public object Instance;
+            public Type CachedType;
             public List<CachedPropertyInfo> Members;
+
             public uint ScrollX, ScrollY;
             public string SelectedPropertyName;
+
+            internal bool Prepare (Type type) {
+                if (type == CachedType)
+                    return false;
+
+                CachedType = type;
+                Members = CachePropertyInfo(type).ToList();
+                SelectedPropertyName = null;
+                return true;
+            }
         }
 
+        private List<CachedPropertyInfo> FormulaMembers = CachePropertyInfo(typeof(Formula)).ToList();
         private PropertyGridCache SystemProperties, TransformProperties;
 
         protected unsafe void UIScene () {
@@ -76,7 +90,7 @@ namespace ParticleEditor {
             var ctx = Nuklear.Context;
             var state = Controller.CurrentState;
 
-            using (var group = Nuklear.CollapsingGroup("Systems", "Systems", 1))
+            using (var group = Nuklear.CollapsingGroup("Systems", "Systems"))
             if (group.Visible) {
                 Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 2);
                 if (Nuklear.Button("Add"))
@@ -94,12 +108,14 @@ namespace ParticleEditor {
                 }
             }
 
-            using (var group = Nuklear.CollapsingGroup("System Properties", "System Properties", 2))
+            using (var group = Nuklear.CollapsingGroup("System Properties", "System Properties", false))
             if (group.Visible && (Controller.SelectedSystem != null)) {
                 var s = Controller.SelectedSystem.Instance;
                 using (var tCount = new NString(string.Format("{0}/{1}", s.LiveCount, s.Capacity)))
                     Nuke.nk_text(ctx, tCount.pText, tCount.Length, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
-                RenderPropertyGrid(Controller.SelectedSystem.Model.Configuration, ref SystemProperties, 250);
+
+                SystemProperties.Prepare(typeof (ParticleSystemConfiguration));
+                RenderPropertyGrid(Controller.SelectedSystem.Model.Configuration, ref SystemProperties, 500);
             }
         }
 
@@ -107,7 +123,7 @@ namespace ParticleEditor {
             var ctx = Nuklear.Context;
             var state = Controller.CurrentState;
 
-            using (var group = Nuklear.CollapsingGroup("Transforms", "Transforms", 3))
+            using (var group = Nuklear.CollapsingGroup("Transforms", "Transforms"))
             if (group.Visible && (Controller.SelectedSystem != null)) {
                 Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 2);
                 if (Nuklear.Button("Add"))
@@ -134,66 +150,94 @@ namespace ParticleEditor {
             var state = Controller.CurrentState;
             var xform = Controller.SelectedTransform;
 
-            using (var group = Nuklear.CollapsingGroup("Transform Properties", "Transform Properties", 4))
-            if (group.Visible && (xform != null))
-                RenderPropertyGrid(xform.Instance, ref TransformProperties, 250);
+            using (var group = Nuklear.CollapsingGroup("Transform Properties", "Transform Properties"))
+            if (group.Visible && (xform != null)) {
+                if (TransformProperties.Prepare(xform.Model.Type)) {
+                    foreach (var m in TransformProperties.Members) {
+                        var name = m.Name;
+                        var setter = m.Setter;
+                        m.Setter = (i, v) => {
+                            Controller.SelectedTransform.Model.Properties[name] = v;
+                            setter(i, v);
+                        };
+                    }
+                }
+                RenderPropertyGrid(xform.Instance, ref TransformProperties, 500);
+            }
+        }
+
+        private static IEnumerable<CachedPropertyInfo> CachePropertyInfo (Type type) {
+            return from m in type.GetMembers(BindingFlags.Instance | BindingFlags.Public)
+                   where (m.MemberType == MemberTypes.Field) || (m.MemberType == MemberTypes.Property)
+                   let f = m as FieldInfo
+                   let p = m as PropertyInfo
+                   where (f == null) || !f.IsInitOnly
+                   where (p == null) || p.CanWrite
+                   where !m.GetCustomAttributes<NonSerializedAttribute>().Any()
+                   orderby m.Name
+                   select new CachedPropertyInfo {
+                       Name = m.Name,
+                       Field = f,
+                       Property = p,
+                       Type = (f != null) ? f.FieldType : p.PropertyType,
+                       Getter = (f != null) ? (Func<object, object>)f.GetValue : p.GetValue,
+                       Setter = (f != null) ? (Action<object, object>)f.SetValue : p.SetValue
+                   };
         }
 
         private unsafe void RenderPropertyGrid (object instance, ref PropertyGridCache cache, float heightPx) {
-            if (cache.Instance != instance) {
-                cache.Instance = instance;
-                var seq = from m in instance.GetType().GetMembers(BindingFlags.Instance | BindingFlags.Public)
-                          where (m.MemberType == MemberTypes.Field) || (m.MemberType == MemberTypes.Property)
-                          let f = m as FieldInfo
-                          let p = m as PropertyInfo
-                          where (f == null) || !f.IsInitOnly
-                          where (p == null) || p.CanWrite
-                          where !m.GetCustomAttributes<NonSerializedAttribute>().Any()
-                          orderby m.Name
-                          select new CachedPropertyInfo {
-                              Name = m.Name,
-                              Field = f,
-                              Property = p,
-                              Type = (f != null) ? f.FieldType : p.PropertyType,
-                              Getter = (f != null) ? (Func<object, object>)f.GetValue : p.GetValue,
-                              Setter = (f != null) ? (Action<object, object>)f.SetValue : p.SetValue
-                          };
-                cache.Members = seq.ToList();
-                cache.SelectedPropertyName = null;
-            }
-
             using (var g = Nuklear.ScrollingGroup(heightPx, "Properties", ref cache.ScrollX, ref cache.ScrollY)) {
                 foreach (var cpi in cache.Members)
-                    RenderProperty(ref cache, cpi);
+                    RenderProperty(ref cache, cpi, instance);
             }
         }
 
-        private unsafe void RenderProperty (
+        private unsafe bool RenderProperty (
             ref PropertyGridCache cache,
-            CachedPropertyInfo cpi
+            CachedPropertyInfo cpi,
+            object instance,
+            string prefix = null
         ) {
             var ctx = Nuklear.Context;
-            var isActive = cache.SelectedPropertyName == cpi.Name;
+            var actualName = cpi.Name;
+            if (!string.IsNullOrEmpty(prefix))
+                actualName = prefix + actualName;
 
-            var value = cpi.Getter(cache.Instance);
+            var isActive = cache.SelectedPropertyName == actualName;
+            var value = cpi.Getter(instance);
+
+            switch (cpi.Type.Name) {
+                case "Formula":
+                    using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, actualName, false)) {
+                        var changed = false;
+                        if (pGroup.Visible) {
+                            foreach (var m in FormulaMembers)
+                                changed = RenderProperty(ref cache, m, value, cpi.Name) || changed;
+
+                            if (changed)
+                                cpi.Setter(instance, value);
+                        }
+                        return changed;
+                    }
+            }
 
             Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 2);
             Nuklear.SelectableText(cpi.Name, isActive);
 
             if (value == null) {
                 Nuklear.SelectableText("null", isActive);
-                return;
+                return false;
             }
 
             switch (cpi.Type.Name) {
                 case "String":
                     if (Nuklear.SelectableText(value.ToString(), isActive))
-                        cache.SelectedPropertyName = cpi.Name;
-                    return;
+                        cache.SelectedPropertyName = actualName;
+                    return false;
                 case "Int32":
                 case "Single":
                     if (Nuklear.SelectableText(value.ToString(), isActive))
-                        cache.SelectedPropertyName = cpi.Name;
+                        cache.SelectedPropertyName = actualName;
 
                     Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 1);
                     if (cpi.Type == typeof(float)) {
@@ -201,26 +245,33 @@ namespace ParticleEditor {
                         if (v > 4096)
                             v = 4096;
                         var newValue = Nuke.nk_slide_float(ctx, 0, v, 4096, 8);
-                        if (newValue != v)
-                            cpi.Setter(cache.Instance, newValue);
+                        if (newValue != v) {
+                            cpi.Setter(instance, newValue);
+                            return true;
+                        }
                     } else {
                         var v = Convert.ToInt32(value);
                         if (v > 4096)
                             v = 4096;
                         var newValue = Nuke.nk_slide_int(ctx, 0, v, 4096, 8);
-                        if (newValue != v)
-                            cpi.Setter(cache.Instance, newValue);
+                        if (newValue != v) {
+                            cpi.Setter(instance, newValue);
+                            return true;
+                        }
                     }
-                    return;
+
+                    return false;
                 case "Boolean":
                     var b = (bool)value;
-                    if (Checkbox(null, ref b))
-                        cpi.Setter(cache.Instance, b);
-                    return;
+                    if (Checkbox(null, ref b)) {
+                        cpi.Setter(instance, b);
+                        return true;
+                    }
+                    return false;
                 default:
                     if (Nuklear.SelectableText(value.GetType().Name, isActive))
-                        cache.SelectedPropertyName = cpi.Name;
-                    return;
+                        cache.SelectedPropertyName = actualName;
+                    return false;
             }
         }
 
