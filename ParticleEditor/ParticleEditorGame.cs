@@ -52,8 +52,6 @@ namespace ParticleEditor {
         public DisplayMode DesktopDisplayMode;
         public Pair<int> WindowedResolution;
 
-        public MockTimeProvider Time = new MockTimeProvider();
-
         public Model Model;
         public View View;
         public Controller Controller;
@@ -120,7 +118,6 @@ namespace ParticleEditor {
 
             base.LoadContent();
 
-            Time.CurrentTime = 0;
             Font = new FreeTypeFont(RenderCoordinator, "FiraSans-Medium.otf") {
                 SizePoints = 14f,
                 GlyphMargin = 2
@@ -192,8 +189,6 @@ namespace ParticleEditor {
             MouseState = Mouse.GetState();
 
             if (IsActive) {
-                Time.Advance(gameTime.ElapsedGameTime.Ticks);
-
                 var alt = KeyboardState.IsKeyDown(Keys.LeftAlt) || KeyboardState.IsKeyDown(Keys.RightAlt);
                 var wasAlt = PreviousKeyboardState.IsKeyDown(Keys.LeftAlt) || PreviousKeyboardState.IsKeyDown(Keys.RightAlt);
                 
@@ -240,8 +235,10 @@ namespace ParticleEditor {
                 Nuklear.Render(gameTime.ElapsedGameTime.Seconds, group, 1);
             }
 
+            Controller.Update();
+
             if (IsActive)
-                View.Update(this, frame, -2, (float)gameTime.ElapsedGameTime.TotalSeconds);
+                View.Update(this, frame, -2, gameTime.ElapsedGameTime.Ticks);
 
             ClearBatch.AddNew(frame, -1, Materials.Clear, new Color(0.02f, 0.05f, 0.07f, 1f));
 

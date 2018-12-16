@@ -61,6 +61,7 @@ namespace ParticleEditor {
                     RenderSidePanels();
             }
 
+            if (false)
             using (var wnd = Nuklear.Window(
                 "Select Texture",
                 Bounds.FromPositionAndSize(100, 100, 640, 480),
@@ -73,8 +74,7 @@ namespace ParticleEditor {
 
             IsMouseOverUI = Nuke.nk_item_is_any_active(ctx) != 0;
             if (IsMouseOverUI)
-                LastTimeOverUI = Time.Ticks;
-
+                LastTimeOverUI = Squared.Util.Time.Ticks;
         }
 
         private void RenderTexturePicker () {
@@ -111,14 +111,29 @@ namespace ParticleEditor {
             }
 
             using (var group = Nuklear.CollapsingGroup("System Properties", "System Properties", false))
-            if (group.Visible && (Controller.SelectedSystem != null)) {
-                var s = Controller.SelectedSystem.Instance;
-                using (var tCount = new NString(string.Format("{0}/{1}", s.LiveCount, s.Capacity)))
-                    Nuke.nk_text(ctx, tCount.pText, tCount.Length, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
+            if (group.Visible && (Controller.SelectedSystem != null))
+                RenderSystemProperties();
+        }
 
-                SystemProperties.Prepare(typeof (ParticleSystemConfiguration));
-                RenderPropertyGrid(Controller.SelectedSystem.Model.Configuration, ref SystemProperties, 500);
-            }
+        private unsafe void RenderSystemProperties () {
+            var ctx = Nuklear.Context;
+            var state = Controller.CurrentState;
+            var s = Controller.SelectedSystem;
+            var i = s.Instance;
+
+            Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 2);
+            var time = TimeSpan.FromTicks(s.Time.Ticks);
+            using (var tCount = new NString(time.ToString()))
+                Nuke.nk_text(ctx, tCount.pText, tCount.Length, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
+            if (Nuklear.Button("Reset"))
+                Controller.QueueReset(s);
+
+            Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 1);
+            using (var tCount = new NString(string.Format("{0}/{1}", i.LiveCount, i.Capacity)))
+                Nuke.nk_text(ctx, tCount.pText, tCount.Length, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
+
+            SystemProperties.Prepare(typeof (ParticleSystemConfiguration));
+            RenderPropertyGrid(Controller.SelectedSystem.Model.Configuration, ref SystemProperties, 500);
         }
 
         private unsafe void RenderTransformList () {
@@ -230,7 +245,7 @@ namespace ParticleEditor {
                     Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 1);
                     if (cpi.Type == typeof(float)) {
                         var v = (float)value;
-                        if (Nuklear.Property(cpi.Name, ref v, 0, 4096, 8, 0.02f)) {
+                        if (Nuklear.Property(cpi.Name, ref v, 0, 4096, 8, 0.5f)) {
                             cpi.Setter(instance, v);
                             return true;
                         }

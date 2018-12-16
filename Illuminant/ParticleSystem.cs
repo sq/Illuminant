@@ -29,6 +29,7 @@ namespace Squared.Illuminant.Particles {
             public long           LastQueryStart;
             public int            DeadFrameCount;
             public bool           SpawnedParticlesThisFrame;
+            public bool           WasCleared;
         }
 
         internal class ChunkInitializer<TElement>
@@ -267,6 +268,7 @@ namespace Squared.Illuminant.Particles {
         private int CurrentFrameIndex;
 
         internal long LastClearTimestamp;
+        internal bool IsClearPending;
 
         private int LastResetCount = 0;
         public event Action<ParticleSystem> OnDeviceReset;
@@ -290,7 +292,7 @@ namespace Squared.Illuminant.Particles {
 
         public ITimeProvider TimeProvider {
             get {
-                return Engine.Configuration.TimeProvider ?? Time.DefaultTimeProvider;
+                return Configuration.TimeProvider ?? (Engine.Configuration.TimeProvider ?? Time.DefaultTimeProvider);
             }
         }
 
@@ -651,8 +653,8 @@ namespace Squared.Illuminant.Particles {
         }
 
         public void Clear () {
-            // FIXME: Reap everything
             LastClearTimestamp = Time.Ticks;
+            IsClearPending = true;
         }
 
         public int Spawn (
@@ -702,7 +704,7 @@ namespace Squared.Illuminant.Particles {
 
                 target.IsQueryRunning = false;
 
-                if (target.LastQueryStart <= LastClearTimestamp) {
+                if ((target.LastQueryStart <= LastClearTimestamp) || target.WasCleared) {
                     target.Count = null;
                     target.DeadFrameCount = 0;
                 } else {
@@ -815,6 +817,17 @@ namespace Squared.Illuminant.Particles {
                 (dm, _) => dm.PopRenderTarget()
             )) {
                 int i = 0;
+
+                if (IsClearPending) {
+                    IsClearPending = false;
+                    // We need to forcibly erase all the position+life data in the system because a clear was requested
+                    foreach (var s in Slices) {
+                        foreach (var c in s) {
+                            using (var g = BatchGroup.ForRenderTarget(group, i++, c.PositionAndLife))
+                                ClearBatch.AddNew(g, 0, Engine.Materials.Clear, clearColor: Color.Transparent);
+                        }
+                    }
+                }
 
                 foreach (var t in Transforms) {
                     if (!t.IsActive)
@@ -1018,6 +1031,12 @@ namespace Squared.Illuminant.Particles {
 
     public class ParticleSystemConfiguration {
         public readonly int  AttributeCount;
+
+        /// <summary>
+        /// Used to measure elapsed time automatically for updates
+        /// </summary>
+        [NonSerialized]
+        public ITimeProvider TimeProvider = null;
 
         /// <summary>
         /// Configures the sprite used to render each particle.

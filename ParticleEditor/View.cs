@@ -8,6 +8,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Squared.Illuminant.Particles;
 using Squared.Illuminant.Particles.Transforms;
 using Squared.Render;
+using Squared.Util;
 
 namespace ParticleEditor {
     public class View : IDisposable {
@@ -30,8 +31,7 @@ namespace ParticleEditor {
             Engine = new ParticleEngine(
                 editor.Content, editor.RenderCoordinator, editor.Materials,
                 new ParticleEngineConfiguration {
-                    TextureLoader = editor.Content.Load<Texture2D>,
-                    TimeProvider = editor.Time
+                    TextureLoader = editor.Content.Load<Texture2D>
                 },
                 editor.ParticleMaterials
             );
@@ -46,11 +46,13 @@ namespace ParticleEditor {
             system.Initialize(this);
         }
 
-        public void Update (ParticleEditor editor, IBatchContainer container, int layer, float? deltaTimeSeconds) {
+        public void Update (ParticleEditor editor, IBatchContainer container, int layer, long deltaTimeTicks) {
             using (var g = BatchGroup.New(container, layer)) {
                 int i = 0;
-                foreach (var s in Systems)
-                    s.Instance.Update(g, i++, deltaTimeSeconds);
+                foreach (var s in Systems) {
+                    s.Time.Advance(deltaTimeTicks);
+                    s.Instance.Update(g, i++);
+                }
             }
         }
 
@@ -73,9 +75,13 @@ namespace ParticleEditor {
     public class ParticleSystemView : IDisposable {
         public ParticleSystem Instance;
         public ParticleSystemModel Model;
+        public MockTimeProvider Time;
         public readonly List<ParticleTransformView> Transforms = new List<ParticleTransformView>();
 
         public void Initialize (View view) {
+            Time = new MockTimeProvider();
+            Model.Configuration.TimeProvider = Time;
+
             Instance = new ParticleSystem(
                 view.Engine, Model.Configuration
             );

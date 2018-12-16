@@ -24,6 +24,7 @@ namespace ParticleEditor {
         public Model Model;
         public View View;
         public readonly State CurrentState = new State();
+        public readonly List<ParticleSystemView> QueuedResets = new List<ParticleSystemView>();
 
         private GCHandle StatePin;
 
@@ -74,6 +75,19 @@ namespace ParticleEditor {
             view.Dispose();
             Model.Systems.RemoveAt(index);
             View.Systems.RemoveAt(index);
+        }
+
+        public void QueueReset (ParticleSystemView v) {
+            QueuedResets.Add(v);
+        }
+
+        public void Update () {
+            foreach (var v in QueuedResets) {
+                v.Time.CurrentTime = 0;
+                v.Instance.Clear();
+            }
+
+            QueuedResets.Clear();
         }
 
         public void AddTransform () {
