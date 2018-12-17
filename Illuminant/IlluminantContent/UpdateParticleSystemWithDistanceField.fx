@@ -23,14 +23,14 @@ void PS_Update (
         xy, oldPosition, oldVelocity, newAttributes
     );
 
-    float newLife = oldPosition.w - (getLifeDecayRate() * getDeltaTime());
+    float newLife = oldPosition.w - (getLifeDecayRate() * getDeltaTimeSeconds());
     float3 unitVector = normalize(oldVelocity.xyz);
     float3 velocity = applyFrictionAndMaximum(oldVelocity.xyz);
 
     TVARS vars = makeDistanceFieldConstants();
 
     bool collided = false, escaping = false;
-    float3 scaledVelocity = velocity * getDeltaTime();
+    float3 scaledVelocity = velocity * getDeltaTimeSeconds();
 
     float3 previousPosition = oldPosition.xyz, collisionPosition = 0, newPosition = previousPosition;
 
@@ -83,7 +83,7 @@ void PS_Update (
             float3 escapeVector = normalize(normal);
             float newSpeed = min(getMaximumVelocity(), getEscapeVelocity());
             newVelocity = float4(escapeVector * newSpeed, BOUNCE_DELAY);
-            float3 escapeDelta = newVelocity.xyz * getDeltaTime();
+            float3 escapeDelta = newVelocity.xyz * getDeltaTimeSeconds();
             newPosition = oldPosition.xyz + escapeDelta;
         } else if (bounce) {
             // We started outside. Bounce away next step if configured to. Otherwise, we'll halt.

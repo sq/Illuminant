@@ -9,6 +9,10 @@ struct ParticleSystemSettings {
 uniform ParticleSystemSettings System;
 uniform float StippleFactor;
 
+float getDeltaTimeSeconds () {
+    return System.GlobalSettings.x / 1000;
+}
+
 float getDeltaTime () {
     return System.GlobalSettings.x;
 }

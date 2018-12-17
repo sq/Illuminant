@@ -3,6 +3,7 @@
 
 uniform float4x4 PositionMatrix, VelocityMatrix, AttributeMatrix;
 
+uniform float  TimeDivisor;
 uniform float  Strength;
 uniform int    AreaType;
 uniform float3 AreaCenter, AreaSize;
@@ -41,7 +42,7 @@ void PS_MatrixMultiply (
         xy, oldPosition, oldVelocity, oldAttributes
     );
 
-    float w = computeWeight(oldPosition) * getDeltaTime();
+    float w = computeWeight(oldPosition) * getDeltaTime() / TimeDivisor;
 
     newPosition = lerp(
         oldPosition, mul3(oldPosition, PositionMatrix, 1),

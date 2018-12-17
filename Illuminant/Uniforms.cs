@@ -148,7 +148,7 @@ namespace Squared.Illuminant.Uniforms {
 
     public struct ParticleSystem {
         public Vector2 Texel;
-        // deltaTimeSeconds, friction, maximumVelocity, lifeDecayRate
+        // deltaTimeMilliseconds, friction, maximumVelocity, lifeDecayRate
         public Vector4 GlobalSettings;
         // escapeVelocity, bounceVelocityMultiplier, collisionDistance, collisionLifePenalty
         public Vector4 CollisionSettings;
@@ -160,7 +160,7 @@ namespace Squared.Illuminant.Uniforms {
         ) {
             Texel = new Vector2(1f / Engine.ChunkSize, 1f / Engine.ChunkSize);
             GlobalSettings = new Vector4(
-                (float)deltaTimeSeconds, Configuration.Friction, 
+                (float)(deltaTimeSeconds * 1000), Configuration.Friction, 
                 Configuration.MaximumVelocity, Configuration.GlobalLifeDecayRate
             );
             CollisionSettings = new Vector4(

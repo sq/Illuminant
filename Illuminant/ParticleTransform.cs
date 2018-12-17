@@ -97,6 +97,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             public T Multiply;
         }
 
+        public float CyclesPerSecond = 10;
         public FMAParameters<Vector3> Position;
         public FMAParameters<Vector3> Velocity;
         public FMAParameters<Vector4> Attribute;
@@ -118,6 +119,7 @@ namespace Squared.Illuminant.Particles.Transforms {
 
         protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, int frameIndex) {
             base.SetParameters(engine, parameters, frameIndex);
+            parameters["TimeDivisor"].SetValue(1000f / CyclesPerSecond);
             parameters["PositionAdd"].SetValue(new Vector4(Position.Add, 0));
             parameters["PositionMultiply"].SetValue(new Vector4(Position.Multiply, 1));
             parameters["VelocityAdd"].SetValue(new Vector4(Velocity.Add, 0));
@@ -132,6 +134,7 @@ namespace Squared.Illuminant.Particles.Transforms {
     }
 
     public class MatrixMultiply : ParticleAreaTransform {
+        public float CyclesPerSecond = 10;
         public Matrix Position, Velocity, Attribute;
 
         public MatrixMultiply () {
@@ -140,6 +143,7 @@ namespace Squared.Illuminant.Particles.Transforms {
 
         protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, int frameIndex) {
             base.SetParameters(engine, parameters, frameIndex);
+            parameters["TimeDivisor"].SetValue(1000f / CyclesPerSecond);
             parameters["PositionMatrix"].SetValue(Position);
             parameters["VelocityMatrix"].SetValue(Velocity);
             parameters["AttributeMatrix"].SetValue(Attribute);

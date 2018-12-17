@@ -994,6 +994,11 @@ namespace Squared.Illuminant.Particles {
 
                     p["OpacityFromLife"].SetValue(Configuration.OpacityFromLife);
                     p["StippleFactor"].SetValue(overrideStippleFactor.GetValueOrDefault(Configuration.StippleFactor));
+                    var gcolor = Configuration.GlobalColor;
+                    gcolor.X *= gcolor.W;
+                    gcolor.Y *= gcolor.W;
+                    gcolor.Z *= gcolor.W;
+                    p["GlobalColor"].SetValue(gcolor);
                 },
                 (dm, _) => {
                     p["PositionTexture"].SetValue((Texture2D)null);

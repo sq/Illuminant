@@ -4,6 +4,7 @@
 
 #define PI 3.14159265358979323846
 
+uniform float4 GlobalColor;
 uniform float2 Size;
 uniform float2 AnimationRate;
 uniform float  VelocityRotation;
@@ -164,6 +165,7 @@ void PS_Texture (
         texColor *= 1 - clamp(position.w / -OpacityFromLife, 0, 1);
 
     result = texColor;
+    result *= GlobalColor;
     if (result.a <= 0)
         discard;
 }
@@ -182,6 +184,7 @@ void PS_NoTexture(
         result = 1;
 
     result *= color;
+    result *= GlobalColor;
     if (result.a <= 0)
         discard;
 }

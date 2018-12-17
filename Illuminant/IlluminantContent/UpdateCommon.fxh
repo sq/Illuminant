@@ -5,7 +5,7 @@ float3 applyFrictionAndMaximum (float3 velocity) {
 
     float friction = l * getFriction();
 
-    l -= (friction * getDeltaTime());
+    l -= (friction * getDeltaTimeSeconds());
     l = clamp(l, 0, getMaximumVelocity());
 
     return normalize(velocity) * l;

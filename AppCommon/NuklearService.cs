@@ -212,6 +212,14 @@ namespace Framework {
             */
             PendingIR.Ellipse(bounds.Center, radius, color);
         }
+        
+        private void RenderCommand (nk_command_line* c) {
+            var gb = PendingIR.GetGeometryBatch(null, null, null);
+            var color = ConvertColor(c->color);
+            var v1 = new Vector2(c->begin.x, c->begin.y);
+            var v2 = new Vector2(c->end.x, c->end.y);
+            gb.AddLine(v1, v2, color);
+        }
 
         private void RenderCommand (nk_command_triangle_filled* c) {
             var gb = PendingIR.GetGeometryBatch(null, null, null);
@@ -224,6 +232,19 @@ namespace Framework {
             gb.AddLine(v1, v2, color);
             gb.AddLine(v2, v3, color);
             gb.AddLine(v3, v1, color);
+        }
+
+        private void RenderCommand (nk_command_rect_multi_color* c) {
+            if (TextAdvancePending)
+                PendingIR.Layer += 1;
+            PendingIR.GradientFillRectangle(
+                ConvertBounds(c->x, c->y, c->w, c->h),
+                ConvertColor(c->left),
+                ConvertColor(c->top),
+                ConvertColor(c->bottom),
+                ConvertColor(c->right)
+            );
+            TextAdvancePending = false;
         }
 
         private HashSet<string> WarnedCommands = new HashSet<string>();
@@ -245,8 +266,14 @@ namespace Framework {
                 case nk_command_type.NK_COMMAND_CIRCLE_FILLED:
                     RenderCommand((nk_command_circle_filled*)c);
                     break;
+                case nk_command_type.NK_COMMAND_LINE:
+                    RenderCommand((nk_command_line*)c);
+                    break;
                 case nk_command_type.NK_COMMAND_TRIANGLE_FILLED:
                     RenderCommand((nk_command_triangle_filled*)c);
+                    break;
+                case nk_command_type.NK_COMMAND_RECT_MULTI_COLOR:
+                    RenderCommand((nk_command_rect_multi_color*)c);
                     break;
                 default:
                     var name = c->ctype.ToString();

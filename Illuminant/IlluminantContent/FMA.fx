@@ -1,6 +1,7 @@
 #include "DistanceFunctionCommon.fxh"
 #include "ParticleCommon.fxh"
 
+uniform float TimeDivisor;
 uniform float4 PositionAdd, PositionMultiply;
 uniform float4 VelocityAdd, VelocityMultiply;
 uniform float4 AttributeAdd, AttributeMultiply;
@@ -22,7 +23,7 @@ float4 computeFMA (
 ) {
     float weight = computeWeight(oldPosition);
     return lerp(
-        oldValue, (oldValue * multiply) + add, weight * getDeltaTime()
+        oldValue, (oldValue * multiply) + add, weight * getDeltaTime() / TimeDivisor
     );
 }
 

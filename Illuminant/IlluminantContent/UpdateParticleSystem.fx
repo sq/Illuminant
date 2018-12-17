@@ -14,9 +14,9 @@ void PS_Update (
 
     float3 velocity = applyFrictionAndMaximum(oldVelocity.xyz);
 
-    float3 scaledVelocity = velocity * getDeltaTime();
+    float3 scaledVelocity = velocity * getDeltaTimeSeconds();
 
-    float newLife = oldPosition.w - (getLifeDecayRate() * getDeltaTime());
+    float newLife = oldPosition.w - (getLifeDecayRate() * getDeltaTimeSeconds());
     if (newLife <= 0) {
         newPosition = 0;
         newVelocity = 0;
