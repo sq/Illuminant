@@ -57,7 +57,7 @@ namespace ParticleEditor {
         }
 
         public void AddSystem () {
-            var config = new ParticleSystemConfiguration {
+            var config = new ParticleSystemConfiguration(1) {
                 OpacityFromLife = 256,
                 GlobalLifeDecayRate = 90,
                 Size = Vector2.One * 1.5f
@@ -111,6 +111,11 @@ namespace ParticleEditor {
                             RandomScale = new Vector4(32f, 32f, 0, 0),
                             RandomOffset = new Vector4(-0.5f, -0.5f, 0, 0),
                             Circular = true
+                        }
+                    },
+                    { "Attributes",
+                        new Formula {
+                            Constant = Vector4.One
                         }
                     }
                 }

@@ -194,23 +194,6 @@ namespace ParticleEditor {
                         }
                     }
                     return false;
-
-                case "ColorF":
-                    var c = (Vector4)value;
-                    var oldColor = new NuklearDotNet.nk_colorf {
-                        r = c.X,
-                        g = c.Y,
-                        b = c.Z,
-                        a = c.W,
-                    };
-                    Nuke.nk_layout_row_dynamic(ctx, 96, 1);
-                    var temp = Nuke.nk_color_picker(ctx, oldColor, NuklearDotNet.nk_color_format.NK_RGBA);
-                    var newColor = new Vector4(temp.r, temp.g, temp.b, temp.a);
-                    if (newColor != c) {
-                        cpi.Setter(instance, newColor);
-                        return true;
-                    }
-                    return false;
             }
 
             Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 2);
@@ -267,6 +250,23 @@ namespace ParticleEditor {
                     RenderPropertyElement("#w", ref v4.W, ref changed);
                     if (changed) {
                         cpi.Setter(instance, v4);
+                        return true;
+                    }
+                    return false;
+
+                case "ColorF":
+                    var c = (Vector4)value;
+                    var oldColor = new NuklearDotNet.nk_colorf {
+                        r = c.X,
+                        g = c.Y,
+                        b = c.Z,
+                        a = c.W,
+                    };
+                    Nuke.nk_layout_row_dynamic(ctx, 96, 1);
+                    var temp = Nuke.nk_color_picker(ctx, oldColor, NuklearDotNet.nk_color_format.NK_RGBA);
+                    var newColor = new Vector4(temp.r, temp.g, temp.b, temp.a);
+                    if (newColor != c) {
+                        cpi.Setter(instance, newColor);
                         return true;
                     }
                     return false;
