@@ -86,13 +86,8 @@ namespace ParticleEditor {
                 view.Engine, Model.Configuration
             );
 
-            foreach (var transform in Model.Transforms) {
-                var transformView = new ParticleTransformView {
-                    Model = transform
-                };
-                transformView.Initialize(this);
-                Instance.Transforms.Add(transformView.Instance);
-            }
+            foreach (var transform in Model.Transforms)
+                AddNewViewForModel(transform);
         }
 
         public void AddNewViewForModel (ParticleTransformModel model) {

@@ -22,7 +22,7 @@ float4 computeFMA (
 ) {
     float weight = computeWeight(oldPosition);
     return lerp(
-        oldValue, (oldValue * multiply) + add, weight
+        oldValue, (oldValue * multiply) + add, weight * getDeltaTime()
     );
 }
 

@@ -115,9 +115,10 @@ namespace ParticleEditor {
                         var changed = false;
                         // FIXME: Slow
                         var infos = CachePropertyInfo(cpi.Type);
-                        if (pGroup.Visible)
-                        foreach (var i in infos) {
-                            RenderProperty(ref cache, i, value, cpi.Name);
+                        if (pGroup.Visible) {
+                            foreach (var i in infos) 
+                                if (RenderProperty(ref cache, i, value, cpi.Name))
+                                    changed = true;
                         }
                         return changed;
                     }
@@ -167,8 +168,8 @@ namespace ParticleEditor {
                 case "Vector2":
                     Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 2);
                     var v2 = (Vector2)value;
-                    a = Nuklear.Property("#x", ref v2.X, -1, 1, 0.1f, 0.01f);
-                    b = Nuklear.Property("#y", ref v2.Y, -1, 1, 0.1f, 0.01f);
+                    a = Nuklear.Property("#x", ref v2.X, -1, 4, 0.1f, 0.01f);
+                    b = Nuklear.Property("#y", ref v2.Y, -1, 4, 0.1f, 0.01f);
                     if (a || b) {
                         cpi.Setter(instance, v2);
                         return true;
@@ -178,9 +179,9 @@ namespace ParticleEditor {
                 case "Vector3":
                     Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 3);
                     var v3 = (Vector3)value;
-                    a = Nuklear.Property("#x", ref v3.X, -1, 1, 0.1f, 0.01f);
-                    b = Nuklear.Property("#y", ref v3.Y, -1, 1, 0.1f, 0.01f);
-                    c = Nuklear.Property("#z", ref v3.Z, -1, 1, 0.1f, 0.01f);
+                    a = Nuklear.Property("#x", ref v3.X, -1, 4, 0.1f, 0.01f);
+                    b = Nuklear.Property("#y", ref v3.Y, -1, 4, 0.1f, 0.01f);
+                    c = Nuklear.Property("#z", ref v3.Z, -1, 4, 0.1f, 0.01f);
                     if (a || b || c) {
                         cpi.Setter(instance, v3);
                         return true;
@@ -190,10 +191,10 @@ namespace ParticleEditor {
                 case "Vector4":
                     Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 4);
                     var v4 = (Vector4)value;
-                    a = Nuklear.Property("#x", ref v4.X, -1, 1, 0.1f, 0.01f);
-                    b = Nuklear.Property("#y", ref v4.Y, -1, 1, 0.1f, 0.01f);
-                    c = Nuklear.Property("#z", ref v4.Z, -1, 1, 0.1f, 0.01f);
-                    d = Nuklear.Property("#w", ref v4.W, -1, 1, 0.1f, 0.01f);
+                    a = Nuklear.Property("#x", ref v4.X, -1, 4, 0.1f, 0.01f);
+                    b = Nuklear.Property("#y", ref v4.Y, -1, 4, 0.1f, 0.01f);
+                    c = Nuklear.Property("#z", ref v4.Z, -1, 4, 0.1f, 0.01f);
+                    d = Nuklear.Property("#w", ref v4.W, -1, 4, 0.1f, 0.01f);
                     if (a || b || c || d) {
                         cpi.Setter(instance, v4);
                         return true;

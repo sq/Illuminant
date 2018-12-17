@@ -41,17 +41,19 @@ void PS_MatrixMultiply (
         xy, oldPosition, oldVelocity, oldAttributes
     );
 
+    float w = computeWeight(oldPosition) * getDeltaTime();
+
     newPosition = lerp(
         oldPosition, mul3(oldPosition, PositionMatrix, 1),
-        computeWeight(oldPosition)
+        w
     );
     newVelocity = lerp(
         oldVelocity, mul3(oldVelocity, VelocityMatrix, 0),
-        computeWeight(oldPosition)
+        w
     );
     newAttributes = lerp(
         oldAttributes, mul(oldAttributes, AttributeMatrix),
-        computeWeight(oldPosition)
+        w
     );
 }
 
