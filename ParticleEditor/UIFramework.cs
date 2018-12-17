@@ -96,9 +96,8 @@ namespace ParticleEditor {
         }
 
         private unsafe void RenderPropertyElement (
-            string key, ref float value, ref bool changed
+            string key, ref float value, ref bool changed, float? min = null, float? max = null
         ) {
-            float min = -4096f, max = 4096f;
             float lowStep = 0.05f;
             float highStep = 1f;
             float lowInc = 0.01f;
@@ -106,7 +105,7 @@ namespace ParticleEditor {
             float lowThreshold = 10f;
             float step = Math.Abs(value) <= lowThreshold ? lowStep : highStep;
             float inc = Math.Abs(value) <= lowThreshold ? lowInc : highInc;
-            if (Nuklear.Property(key, ref value, min, max, step, inc))
+            if (Nuklear.Property(key, ref value, min.GetValueOrDefault(-4096), max.GetValueOrDefault(4096), step, inc))
                 changed = true;
         }
 
@@ -262,10 +261,17 @@ namespace ParticleEditor {
                         b = c.Z,
                         a = c.W,
                     };
+                    var resetToWhite = Nuklear.Button("White");
                     Nuke.nk_layout_row_dynamic(ctx, 96, 1);
                     var temp = Nuke.nk_color_picker(ctx, oldColor, NuklearDotNet.nk_color_format.NK_RGBA);
-                    var newColor = new Vector4(temp.r, temp.g, temp.b, temp.a);
-                    if (newColor != c) {
+                    var newColor = resetToWhite ? Vector4.One : new Vector4(temp.r, temp.g, temp.b, temp.a);
+                    changed = newColor != c;
+                    Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 4);
+                    RenderPropertyElement("#R", ref newColor.X, ref changed, 0, 1);
+                    RenderPropertyElement("#G", ref newColor.Y, ref changed, 0, 1);
+                    RenderPropertyElement("#B", ref newColor.Z, ref changed, 0, 1);
+                    RenderPropertyElement("#A", ref newColor.W, ref changed, 0, 1);
+                    if (changed) {
                         cpi.Setter(instance, newColor);
                         return true;
                     }

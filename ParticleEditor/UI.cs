@@ -175,7 +175,10 @@ namespace ParticleEditor {
                 if (Checkbox("Fullscreen", ref fullscreen))
                     SetFullScreen(fullscreen);
 
-                Checkbox("Show Statistics", ref ShowPerformanceStats);
+                Checkbox("Statistics", ref ShowPerformanceStats);
+
+                Nuke.nk_label(ctx, "Zoom", (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
+                Zoom = Nuke.nk_slide_float(ctx, 0.5f, Zoom, 2.0f, 0.1f);
 
                 Nuke.nk_tree_pop(ctx);
             }

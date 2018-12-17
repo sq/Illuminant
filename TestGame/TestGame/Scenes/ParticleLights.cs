@@ -415,7 +415,6 @@ namespace TestGame.Scenes {
             if (ShowParticles)
                 System.Render(
                     frame, 10, 
-                    material: Engine.ParticleMaterials.AttributeColor,
                     blendState: BlendState.Additive
                 );
 

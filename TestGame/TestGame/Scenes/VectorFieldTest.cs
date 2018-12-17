@@ -150,7 +150,6 @@ namespace TestGame.Scenes {
             // if (Running)
                 System.Render(
                     frame, 3, 
-                    material: Engine.ParticleMaterials.AttributeColor,
                     blendState: RenderStates.AdditiveBlend
                 );
         }

@@ -57,6 +57,7 @@ namespace ParticleEditor {
         public Controller Controller;
 
         private GCHandle ControllerPin;
+        public float Zoom = 1.0f;
 
         public ParticleEditor () {
             // UniformBinding.ForceCompatibilityMode = true;
@@ -255,6 +256,7 @@ namespace ParticleEditor {
 
             ir.Draw(UIRenderTarget, Vector2.Zero, multiplyColor: Color.White * uiOpacity);
 
+            Materials.ViewportScale = Zoom * Vector2.One;
             View.Draw(this, frame, 3);
 
             if (ShowPerformanceStats)

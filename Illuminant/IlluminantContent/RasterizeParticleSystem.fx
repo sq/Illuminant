@@ -52,9 +52,11 @@ void VS_Core (
     // HACK: Discard Z
     float3 displayXyz = float3(position.x, position.y - (position.z * ZToY), 0);
 
+    float3 screenXyz = displayXyz - float3(Viewport.Position.xy, 0) + corner;
+
     // FIXME
     result = TransformPosition(
-        float4(displayXyz + corner, 1), 0
+        float4(screenXyz.xy * Viewport.Scale.xy, screenXyz.z, 1), 0
     );
 
     texCoord = (Corners[cornerIndex.x].xy / 2) + 0.5;
@@ -153,6 +155,7 @@ void VS_PosAttr (
 }
 
 void PS_Texture (
+    in  float4 color    : COLOR0,
     in  float2 texCoord : TEXCOORD0,
     in  float4 position : TEXCOORD1,
     out float4 result   : COLOR0
@@ -164,7 +167,7 @@ void PS_Texture (
     else if (OpacityFromLife < 0)
         texColor *= 1 - clamp(position.w / -OpacityFromLife, 0, 1);
 
-    result = texColor;
+    result = color * texColor;
     result *= GlobalColor;
     if (result.a <= 0)
         discard;
