@@ -117,7 +117,7 @@ namespace TestGame {
                 Nuke.nk_label(ctx, name.pText, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
                 int selected = dropdown.SelectedIndex;
                 var rect = Nuke.nk_layout_space_bounds(ctx);
-                Nuke.nk_combobox_callback(ctx, dropdown.Getter, IntPtr.Zero, &selected, dropdown.Count, 32, new NuklearDotNet.nk_vec2(rect.W, 8192));
+                Nuke.nk_combobox_callback(ctx, dropdown.Getter, IntPtr.Zero, ref selected, dropdown.Count, 32, new NuklearDotNet.nk_vec2(rect.W, 512));
                 dropdown.SelectedIndex = selected;
             } else if (toggle != null) {
                 // FIXME: Why is this backwards?

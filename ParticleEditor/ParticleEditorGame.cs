@@ -119,7 +119,7 @@ namespace ParticleEditor {
             base.LoadContent();
 
             Font = new FreeTypeFont(RenderCoordinator, "FiraSans-Medium.otf") {
-                SizePoints = 14f,
+                SizePoints = 15f,
                 GlyphMargin = 2
             };
             Materials = new DefaultMaterialSet(Services);

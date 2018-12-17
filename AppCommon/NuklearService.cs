@@ -372,6 +372,25 @@ namespace Framework {
             return Nuklear.nk_button_label(Context, text) != 0;
         }
 
+        public bool ComboBox (ref int selectedIndex, Func<int, string> getter, int count) {
+            var rect = Nuklear.nk_layout_space_bounds(Context);
+            var strings = new List<NString>();
+            nk_item_getter_fun wrappedGetter = (user, i, idk) => {
+                var text = getter(i);
+                var str = new NString(text);
+                *idk = str.pText;
+                strings.Add(str);
+            };
+            var oldIndex = selectedIndex;
+            Nuklear.nk_combobox_callback(
+                Context, wrappedGetter, IntPtr.Zero, 
+                ref selectedIndex, count, (int)_Font.LineSpacing, new NuklearDotNet.nk_vec2(rect.W - 32, 512)
+            );
+            foreach (var s in strings)
+                s.Dispose();
+            return (oldIndex != selectedIndex);
+        }
+
         public void Dispose () {
             // FIXME
         }

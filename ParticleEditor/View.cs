@@ -118,6 +118,13 @@ namespace ParticleEditor {
 
         public void Initialize (ParticleSystemView view) {
             System = view;
+
+            CreateInstance();
+
+            System.Instance.Transforms.Add(Instance);
+        }
+
+        private void CreateInstance () {
             Instance = (ParticleTransform)Activator.CreateInstance(Model.Type);
             foreach (var kvp in Model.Properties) {
                 var m = Model.Type.GetMember(kvp.Key).FirstOrDefault();
@@ -127,17 +134,30 @@ namespace ParticleEditor {
                 }
                 var prop = m as PropertyInfo;
                 var field = m as FieldInfo;
-                if (prop != null)
-                    prop.SetValue(Instance, kvp.Value);
-                else if (field != null)
-                    field.SetValue(Instance, kvp.Value);
-                else
-                    Console.WriteLine("Member {0} is not field or property", kvp.Key);
+                Type targetType = (prop != null) ? prop.PropertyType : field.FieldType;
+                try {
+                    var value = Convert.ChangeType(kvp.Value, targetType);
+                    if (prop != null)
+                        prop.SetValue(Instance, value);
+                    else if (field != null)
+                        field.SetValue(Instance, value);
+                    else
+                        Console.WriteLine("Member {0} is not field or property", kvp.Key);
+                } catch (InvalidCastException) {
+                    Console.WriteLine("Could not convert property {0} to appropriate type ({1})", kvp.Key, targetType.Name);
+                }
             }
 
             Instance.IsActive = true;
+        }
 
-            System.Instance.Transforms.Add(Instance);
+        public void TypeChanged () {
+            var index = System.Instance.Transforms.IndexOf(Instance);
+            Instance.Dispose();
+            Instance = null;
+
+            CreateInstance();
+            System.Instance.Transforms[index] = Instance;
         }
 
         public void Dispose () {

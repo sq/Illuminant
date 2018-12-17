@@ -90,6 +90,7 @@
     <Compile Include="Program.cs" />
     <Compile Include="ParticleEditorGame.cs" />
     <Compile Include="UI.cs" />
+    <Compile Include="UIFramework.cs" />
     <Compile Include="View.cs" />
   </ItemGroup>
   <ItemGroup>

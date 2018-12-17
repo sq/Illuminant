@@ -126,5 +126,11 @@ namespace ParticleEditor {
             view.Transforms.RemoveAt(index);
             model.Transforms.RemoveAt(index);
         }
+
+        public void ChangeTransformType (ParticleTransformView xform, Type type) {
+            var model = xform.Model;
+            model.Type = type;
+            xform.TypeChanged();
+        }
     }
 }
