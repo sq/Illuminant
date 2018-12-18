@@ -129,24 +129,45 @@ namespace ParticleEditor {
             }
         }
 
+        private static readonly KeyValuePair<float, float>[] PropertyIncrementSteps = new[] {
+            new KeyValuePair<float, float>(0f, 0.01f),
+            new KeyValuePair<float, float>(1f, 0.02f),
+            new KeyValuePair<float, float>(5f, 0.1f),
+            new KeyValuePair<float, float>(25f, 0.5f),
+            new KeyValuePair<float, float>(100f, 1f),
+            new KeyValuePair<float, float>(1000f, 5f),
+        };
+
+        private int GetScaleIndex (float value, out float inc) {
+            int result = 0;
+            inc = PropertyIncrementSteps[0].Value;
+            for (int i = 0; i < PropertyIncrementSteps.Length; i++) {
+                var kvp = PropertyIncrementSteps[i];
+                result = i;
+                inc = kvp.Value;
+                if (Math.Abs(value) <= kvp.Key)
+                    break;
+            }
+            return result;
+        }
+
         private unsafe void RenderPropertyElement (
             string key, ref float value, ref bool changed, float? min = null, float? max = null
         ) {
             float lowStep = 0.05f;
             float highStep = 1f;
-            float lowInc = 0.02f;
-            float highInc = 1f;
-            float lowThreshold = 10f;
-            var isLow = Math.Abs(value) < lowThreshold;
-            float step = isLow ? lowStep : highStep;
-            float inc = isLow ? lowInc : highInc;
+            float step = (value >= 5) ? highStep : lowStep;
+
+            float inc = PropertyIncrementSteps[0].Value;
+            int scaleIndex = GetScaleIndex(value, out inc);
+
             if (Nuklear.Property(key, ref value, min.GetValueOrDefault(-4096), max.GetValueOrDefault(4096), step, inc)) {
                 changed = true;
+                float newInc;
+                var newIndex = GetScaleIndex(value, out newInc);
                 // Mask off tiny decimals when transitioning between small and large
-                if (isLow != Math.Abs(value) < lowThreshold) {
-                    if (isLow)
-                        value = (float)(Math.Floor(Math.Abs(value)) * Math.Sign(value));
-                }
+                if ((newInc > 1) && (inc < 1))
+                    value = (float)(Math.Floor(Math.Abs(value)) * Math.Sign(value));
             }
         }
 
