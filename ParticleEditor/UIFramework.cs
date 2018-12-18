@@ -134,13 +134,20 @@ namespace ParticleEditor {
         ) {
             float lowStep = 0.05f;
             float highStep = 1f;
-            float lowInc = 0.01f;
+            float lowInc = 0.02f;
             float highInc = 1f;
             float lowThreshold = 10f;
-            float step = Math.Abs(value) <= lowThreshold ? lowStep : highStep;
-            float inc = Math.Abs(value) <= lowThreshold ? lowInc : highInc;
-            if (Nuklear.Property(key, ref value, min.GetValueOrDefault(-4096), max.GetValueOrDefault(4096), step, inc))
+            var isLow = Math.Abs(value) < lowThreshold;
+            float step = isLow ? lowStep : highStep;
+            float inc = isLow ? lowInc : highInc;
+            if (Nuklear.Property(key, ref value, min.GetValueOrDefault(-4096), max.GetValueOrDefault(4096), step, inc)) {
                 changed = true;
+                // Mask off tiny decimals when transitioning between small and large
+                if (isLow != Math.Abs(value) < lowThreshold) {
+                    if (isLow)
+                        value = (float)(Math.Floor(Math.Abs(value)) * Math.Sign(value));
+                }
+            }
         }
 
         private unsafe bool RenderProperty (
@@ -185,7 +192,8 @@ namespace ParticleEditor {
                     Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 1);
                     if (cpi.Type == typeof(float)) {
                         var v = (float)value;
-                        if (Nuklear.Property(cpi.Name, ref v, 0, 40960, 1, 0.25f)) {
+                        RenderPropertyElement(cpi.Name, ref v, ref changed);
+                        if (changed) {
                             cpi.Setter(instance, v);
                             return true;
                         }

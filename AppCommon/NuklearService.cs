@@ -165,10 +165,24 @@ namespace Framework {
         private void RenderCommand (nk_command_rect_filled* c) {
             if (TextAdvancePending)
                 PendingIR.Layer += 1;
-            PendingIR.FillRectangle(
-                ConvertBounds(c->x, c->y, c->w, c->h), 
-                ConvertColor(c->color)
-            );
+            var color = ConvertColor(c->color);
+            var colorBright = new Color(color.R + 20, color.G + 20, color.B + 20, color.A);
+
+            switch (c->header.mtype) {
+                case nk_meta_type.NK_META_TREE_HEADER:
+                    PendingIR.GradientFillRectangle(
+                        ConvertBounds(c->x, c->y, c->w, c->h), 
+                        color, colorBright, color, colorBright
+                    );
+                    break;
+                default:
+                    PendingIR.FillRectangle(
+                        ConvertBounds(c->x, c->y, c->w, c->h), 
+                        color
+                    );
+                    break;
+            }
+
             TextAdvancePending = false;
         }
 
@@ -179,10 +193,15 @@ namespace Framework {
                 fixed (char* pChars = charBuffer.Data)
                     charsDecoded = Encoding.UTF8.GetChars(pTextUtf8, c->length, pChars, charBuffer.Data.Length);
                 var str = new AbstractString(new ArraySegment<char>(charBuffer.Data, 0, charsDecoded));
+                var color = ConvertColor(c->foreground);
+
+                if (c->header.mtype == nk_meta_type.NK_META_PROPERTY_LABEL)
+                    color *= 0.66f;
+
                 using (var layoutBuffer = BufferPool<BitmapDrawCall>.Allocate(c->length + 64)) {
                     var layout = _Font.LayoutString(
                         str, position: new Vector2(c->x, c->y),
-                        color: ConvertColor(c->foreground),
+                        color: color,
                         scale: FontScale, buffer: new ArraySegment<BitmapDrawCall>(layoutBuffer.Data)
                     );
                     PendingIR.DrawMultiple(
