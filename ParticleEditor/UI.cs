@@ -156,7 +156,8 @@ namespace ParticleEditor {
                             var name = m.Name;
                             var setter = m.Setter;
                             m.Setter = (i, v) => {
-                                Controller.SelectedTransform.Model.Properties[name] = v;
+                                Controller.SelectedTransform.Model.Properties[name] = 
+                                    ModelProperty.New(v);
                                 setter(i, v);
                             };
                         }

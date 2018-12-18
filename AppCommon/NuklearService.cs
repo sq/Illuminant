@@ -123,6 +123,9 @@ namespace Framework {
             if ((s == null) || (len == 0))
                 return 0;
 
+            if ((len == 1) && (s[0] == 0))
+                return 0;
+
             var textUtf8 = Encoding.UTF8.GetString(s, len);
             float result;
             if (!TextWidthCache.TryGetValue(textUtf8, out result))

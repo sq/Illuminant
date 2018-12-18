@@ -133,13 +133,12 @@ namespace ParticleEditor {
                 var field = m as FieldInfo;
                 Type targetType = (prop != null) ? prop.PropertyType : field.FieldType;
                 try {
-                    object value;
-                    var jObject = kvp.Value as JObject;
-                    if (jObject != null) {
-                        value = jObject.ToObject(targetType);
-                    } else {
-                        value = Convert.ChangeType(kvp.Value, targetType);
-                    }
+                    object value = kvp.Value.Value;
+                    var jObject = value as JObject;
+                    if (jObject != null)
+                        value = jObject.ToObject(kvp.Value.Type);
+
+                    value = Convert.ChangeType(value, targetType);
                     
                     if (prop != null)
                         prop.SetValue(Instance, value);

@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using Microsoft.Xna.Framework;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Squared.Illuminant;
 using Squared.Illuminant.Particles;
 using Squared.Illuminant.Particles.Transforms;
@@ -102,27 +103,27 @@ namespace ParticleEditor {
             var xformModel = new ParticleTransformModel {
                 Type = typeof(Spawner),
                 Properties = {
-                    { "MinRate", 240 },
-                    { "MaxRate", 240 },
+                    { "MinRate", ModelProperty.New(240) },
+                    { "MaxRate", ModelProperty.New(240) },
                     { "Position",
-                        new Formula {
+                        ModelProperty.New(new Formula {
                             Constant = new Vector4(0, 0, 0, 256),
                             RandomScale = new Vector4(256, 256, 0, 0),
                             RandomOffset = new Vector4(-0.5f, -0.5f, 0, 0),
                             Circular = true
-                        }
+                        })
                     },
                     { "Velocity",
-                        new Formula {
+                        ModelProperty.New(new Formula {
                             RandomScale = new Vector4(32f, 32f, 0, 0),
                             RandomOffset = new Vector4(-0.5f, -0.5f, 0, 0),
                             Circular = true
-                        }
+                        })
                     },
                     { "Attributes",
-                        new Formula {
+                        ModelProperty.New(new Formula {
                             Constant = Vector4.One
-                        }
+                        })
                     }
                 }
             };
@@ -156,7 +157,9 @@ namespace ParticleEditor {
         public void ShowSaveDialog () {
             Game.Scheduler.QueueWorkItem(() => {
                 using (var dlg = new SaveFileDialog {
-                    Title = "Save Particle Systems"
+                    Title = "Save Particle Systems",
+                    CreatePrompt = false,
+                    OverwritePrompt = false
                 }) {
                     InitFileDialog(dlg);
                     if (dlg.ShowDialog() != DialogResult.OK)
@@ -166,6 +169,9 @@ namespace ParticleEditor {
 
                     using (var writer = new StreamWriter(dlg.FileName, false, Encoding.UTF8)) {
                         var serializer = new JsonSerializer {
+                            Converters = {
+                                new XnaJsonConverter()
+                            },
                             Formatting = Formatting.Indented
                         };
                         serializer.Serialize(writer, Model);
@@ -187,6 +193,9 @@ namespace ParticleEditor {
 
                     using (var reader = new StreamReader(dlg.FileName, Encoding.UTF8, false)) {
                         var serializer = new JsonSerializer {
+                            Converters = {
+                                new XnaJsonConverter()
+                            },
                             Formatting = Formatting.Indented
                         };
                         using (var jreader = new JsonTextReader(reader)) {
@@ -203,11 +212,71 @@ namespace ParticleEditor {
         }
 
         public void SetModel (Model model) {
+            model.Normalize();
             Game.Model = model;
             Model = model;
             Game.RenderCoordinator.DisposeResource(View);
             Game.View = View = new View(model);
             View.Initialize(Game);
+        }
+    }
+
+    public class XnaJsonConverter : JsonConverter {
+        public override bool CanConvert (Type objectType) {
+            switch (objectType.Name) {
+                case "ModelProperty":
+                case "Matrix":
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        public override object ReadJson (JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer) {
+            switch (objectType.Name) {
+                case "ModelProperty":
+                    var obj = JObject.Load(reader);
+                    var type = Type.GetType(obj["Type"].ToString(), true, false);
+                    var result = new ModelProperty {
+                        Type = type,
+                        Value = obj["Value"].ToObject(type, serializer)
+                    };
+                    return result;
+                case "Matrix":
+                    var arr = serializer.Deserialize<float[]>(reader);
+                    return new Matrix(
+                        arr[0], arr[1], arr[2], arr[3],
+                        arr[4], arr[5], arr[6], arr[7],
+                        arr[8], arr[9], arr[10], arr[11],
+                        arr[12], arr[13], arr[14], arr[15]
+                    );
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+
+        public override void WriteJson (JsonWriter writer, object value, JsonSerializer serializer) {
+            if (value == null)
+                return;
+
+            var type = value.GetType();
+            switch (type.Name) {
+                case "ModelProperty":
+                    serializer.Serialize(writer, value);
+                    return;
+                case "Matrix":
+                    var m = (Matrix)value;
+                    var values = new float[] {
+                        m.M11, m.M12, m.M13, m.M14,
+                        m.M21, m.M22, m.M23, m.M24,
+                        m.M31, m.M32, m.M33, m.M34,
+                        m.M41, m.M42, m.M43, m.M44,
+                    };
+                    serializer.Serialize(writer, values);
+                    return;
+                default:
+                    throw new NotImplementedException();
+            }
         }
     }
 }
