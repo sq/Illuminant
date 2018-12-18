@@ -276,7 +276,9 @@ namespace TestGame.Scenes {
                 Direction = new Vector3(-0.75f, -0.7f, -0.33f),
                 Bounds = new Bounds(new Vector2(16, 32), new Vector2(620, 550)),
                 Color = new Vector4(0.2f, 0.4f, 0.6f, 0.4f),
-                Quality = DirectionalQuality
+                Quality = DirectionalQuality,
+                BlendMode = RenderStates.MaxBlendValue,
+                SortKey = 1
             });
 
             Environment.Lights.Add(new DirectionalLightSource {

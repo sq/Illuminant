@@ -42,18 +42,21 @@ namespace Squared.Illuminant {
         private struct LightTypeRenderStateKey {
             public LightSourceTypeID       Type;
             public Texture2D               RampTexture;
+            public BlendState              BlendState;
             public RendererQualitySettings Quality;
             public bool                    DistanceRamp;
             public object                  UniqueObject;
 
             public override int GetHashCode () {
                 var result = ((int)Type) ^ (DistanceRamp ? 2057 : 16593);
+                if (BlendState != null)
+                    result ^= BlendState.GetHashCode() << 2;
                 if (RampTexture != null)
-                    result ^= RampTexture.GetHashCode();
+                    result ^= RampTexture.GetHashCode() << 4;
                 if (Quality != null)
-                    result ^= Quality.GetHashCode();
+                    result ^= Quality.GetHashCode() << 6;
                 if (UniqueObject != null)
-                    result ^= UniqueObject.GetHashCode();
+                    result ^= UniqueObject.GetHashCode() << 8;
                 return result;
             }
 
@@ -69,6 +72,7 @@ namespace Squared.Illuminant {
                     (Type == ltrsk.Type) &&
                     (DistanceRamp == ltrsk.DistanceRamp) &&
                     (RampTexture == ltrsk.RampTexture) &&
+                    (BlendState == ltrsk.BlendState) &&
                     (Quality == ltrsk.Quality);
             }
         }
@@ -144,6 +148,12 @@ namespace Squared.Illuminant {
                         break;
                     default:
                         throw new NotImplementedException(key.Type.ToString());
+                }
+
+                if (Key.BlendState != null) {
+                    Material = parent.Materials.Get(Material, blendState: Key.BlendState);
+                    if (ProbeMaterial != null)
+                        ProbeMaterial = parent.Materials.Get(ProbeMaterial, blendState: Key.BlendState);
                 }
 
                 if (Material == null)
@@ -683,6 +693,7 @@ namespace Squared.Illuminant {
             var ltk =
                 new LightTypeRenderStateKey {
                     Type = ls.TypeID,
+                    BlendState = ls.BlendMode,
                     RampTexture = ls.RampTexture ?? Configuration.DefaultRampTexture,
                     Quality = ls.Quality ?? Configuration.DefaultQuality,
                     UniqueObject = (ls is ParticleLightSource) ? ls : null
@@ -1909,13 +1920,25 @@ namespace Squared.Illuminant {
         public static readonly LightSorter Instance = new LightSorter();
 
         public int Compare (LightSource x, LightSource y) {
+            int result = x.SortKey - y.SortKey;
+            if (result != 0)
+                return result;
+
+            int xBlendID = 0, yBlendID = 0;
+            if (x.BlendMode != null)
+                xBlendID = x.BlendMode.GetHashCode();
+            if (y.BlendMode != null)
+                yBlendID = y.BlendMode.GetHashCode();
+
             int xTexID = 0, yTexID = 0;
             if (x.RampTexture != null)
                 xTexID = x.RampTexture.GetHashCode();
             if (y.RampTexture != null)
                 yTexID = y.RampTexture.GetHashCode();
 
-            var result = xTexID - yTexID;
+            result = xBlendID - yBlendID;
+            if (result == 0)
+                result = xTexID - yTexID;
             if (result == 0)
                 result = x.TypeID - y.TypeID;
             return result;

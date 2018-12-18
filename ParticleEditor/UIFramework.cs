@@ -329,7 +329,7 @@ namespace ParticleEditor {
                     if (Nuklear.Button("Identity")) {
                         m = Matrix.Identity;
                         changed = true;
-                    }                    
+                    }
                     if (Nuklear.Button("Mutate")) {
                     }
                     Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 4);

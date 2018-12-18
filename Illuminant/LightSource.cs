@@ -19,34 +19,48 @@ namespace Squared.Illuminant {
     public abstract class LightSource {
         public readonly LightSourceTypeID TypeID;
 
-        public object UserData;
+        public object     UserData;
+
+        /// <summary>
+        /// Light sources are sorted by this value before being rendered.
+        /// You can use this to create layers when using alternate blend modes.
+        /// </summary>
+        public int        SortKey;
+
+        /// <summary>
+        /// Overrides how light is blended into the lightmap.
+        /// The default is an additive blend, use null for that.
+        /// Mixing blend modes will cause lights to be sorted into groups by mode,
+        ///  if you want them to be painted in a particular order use SortKey.
+        /// </summary>
+        public BlendState BlendMode;
 
         /// <summary>
         /// A separate opacity factor that you can use to easily fade lights in/out.
         /// </summary>
-        public float     Opacity = 1.0f;
+        public float      Opacity = 1.0f;
         /// <summary>
         /// If set, volumes within the distance field will obstruct light from this light source,
         ///  creating shadows. Otherwise, any objects facing this light will be lit (if in range).
         /// </summary>
-        public bool      CastsShadows = true;
-        public float?    ShadowDistanceFalloff = null;
+        public bool       CastsShadows = true;
+        public float?     ShadowDistanceFalloff = null;
         /// <summary>
         /// Uniformly obscures light if it is within N pixels of any obstacle. This produces
         ///  a 'blob shadow' around volumes within the distance field.
         /// </summary>
-        public float     AmbientOcclusionRadius = 0;
-        public float     AmbientOcclusionOpacity = 1;
+        public float      AmbientOcclusionRadius = 0;
+        public float      AmbientOcclusionOpacity = 1;
         /// <summary>
         /// Allows you to scale the falloff of the light along the Y axis to fake foreshortening,
         ///  turning a spherical light into an ellipse. Isometric or 2.5D perspectives may look
         ///  better with this option adjusted.
         /// </summary>
-        public float     FalloffYFactor = 1;
+        public float      FalloffYFactor = 1;
         /// <summary>
         /// Allows you to optionally set a ramp texture to control the appearance of light falloff.
         /// </summary>
-        public Texture2D RampTexture = null;
+        public Texture2D  RampTexture = null;
         /// <summary>
         /// Allows you to optionally override quality settings for this light.
         /// It is *much* faster to share a single settings instance for many lights!
