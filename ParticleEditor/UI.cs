@@ -61,6 +61,12 @@ namespace ParticleEditor {
             var ctx = Nuklear.Context;
             var state = Controller.CurrentState;
 
+            Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 2);
+            if (Nuklear.Button("Save"))
+                Controller.ShowSaveDialog();
+            if (Nuklear.Button("Load"))
+                Controller.ShowLoadDialog();
+
             using (var group = Nuklear.CollapsingGroup("Systems", "Systems"))
             if (group.Visible) {
                 Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 2);

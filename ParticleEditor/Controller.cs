@@ -1,10 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 using Microsoft.Xna.Framework;
+using Newtonsoft.Json;
 using Squared.Illuminant;
 using Squared.Illuminant.Particles;
 using Squared.Illuminant.Particles.Transforms;
@@ -21,6 +25,7 @@ namespace ParticleEditor {
             public ListState Systems, Transforms;
         }
 
+        public readonly ParticleEditor Game;
         public Model Model;
         public View View;
         public readonly State CurrentState = new State();
@@ -50,7 +55,8 @@ namespace ParticleEditor {
             }
         }
 
-        public Controller (Model model, View view) {
+        public Controller (ParticleEditor game, Model model, View view) {
+            Game = game;
             Model = model;
             View = view;
             StatePin = GCHandle.Alloc(CurrentState, GCHandleType.Pinned);
@@ -136,6 +142,72 @@ namespace ParticleEditor {
             var model = xform.Model;
             model.Type = type;
             xform.TypeChanged();
+        }
+
+        private void InitFileDialog (FileDialog dlg) {
+            dlg.Filter =
+                "Particle Systems|*.particlesystem|All Files|*.*";
+            dlg.SupportMultiDottedExtensions = false;
+            dlg.DefaultExt = ".particlesystem";
+            dlg.RestoreDirectory = true;
+            dlg.ShowHelp = false;
+        }
+
+        public void ShowSaveDialog () {
+            Game.Scheduler.QueueWorkItem(() => {
+                using (var dlg = new SaveFileDialog {
+                    Title = "Save Particle Systems"
+                }) {
+                    InitFileDialog(dlg);
+                    if (dlg.ShowDialog() != DialogResult.OK)
+                        return;
+
+                    Console.WriteLine(dlg.FileName);
+
+                    using (var writer = new StreamWriter(dlg.FileName, false, Encoding.UTF8)) {
+                        var serializer = new JsonSerializer {
+                            Formatting = Formatting.Indented
+                        };
+                        serializer.Serialize(writer, Model);
+                    }
+                }
+            });
+        }
+
+        public void ShowLoadDialog () {
+            Game.Scheduler.QueueWorkItem(() => {
+                using (var dlg = new OpenFileDialog {
+                    Title = "Load Particle Systems"
+                }) {
+                    InitFileDialog(dlg);
+                    if (dlg.ShowDialog() != DialogResult.OK)
+                        return;
+
+                    Console.WriteLine(dlg.FileName);
+
+                    using (var reader = new StreamReader(dlg.FileName, Encoding.UTF8, false)) {
+                        var serializer = new JsonSerializer {
+                            Formatting = Formatting.Indented
+                        };
+                        using (var jreader = new JsonTextReader(reader)) {
+                            try {
+                                var model = serializer.Deserialize<Model>(jreader);
+                                SetModel(model);
+                            } catch (Exception exc) {
+                                Console.WriteLine(exc);
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        public void SetModel (Model model) {
+            Game.Model = model;
+            Model = model;
+            Game.RenderCoordinator.DisposeResource(View);
+            Game.View = View = new View(model);
+            View.Initialize(Game);
         }
     }
 }

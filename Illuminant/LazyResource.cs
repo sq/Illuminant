@@ -12,6 +12,9 @@ namespace Squared.Illuminant {
         [NonSerialized]
         public T Instance;
 
+        protected LazyResource () {
+        }
+
         public LazyResource (string name, T existingInstance = null) {
             Name = name;
             Instance = existingInstance;
@@ -53,7 +56,7 @@ namespace Squared.Illuminant {
         }
     }
 
-    public class NullableLazyResource<T> : LazyResource<T> where T : class {
+    public sealed class NullableLazyResource<T> : LazyResource<T> where T : class {
         public NullableLazyResource (string name, T existingInstance = null)
             : base (name, existingInstance) {
             IsNullable = true;
@@ -67,6 +70,10 @@ namespace Squared.Illuminant {
         public NullableLazyResource ()
             : base (null) {
             IsNullable = true;
+        }
+
+        public static implicit operator NullableLazyResource<T> (T instance) {
+            return new NullableLazyResource<T>(instance);
         }
     }
 

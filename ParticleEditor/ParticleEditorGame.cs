@@ -27,6 +27,7 @@ using Nuke = NuklearDotNet.Nuklear;
 
 namespace ParticleEditor {
     public partial class ParticleEditor : MultithreadedGame, INuklearHost {
+        public Squared.Task.TaskScheduler Scheduler;
         public GraphicsDeviceManager Graphics;
         public DefaultMaterialSet Materials { get; private set; }
         public NuklearService Nuklear;
@@ -79,6 +80,8 @@ namespace ParticleEditor {
             PreviousKeyboardState = Keyboard.GetState();
             IsMouseVisible = true;
             WindowedResolution = new Pair<int>(1920, 1080);
+
+            Scheduler = new Squared.Task.TaskScheduler(Squared.Task.JobQueue.ThreadSafe);
         }
 
         public bool LeftMouse {
@@ -157,7 +160,7 @@ namespace ParticleEditor {
             View = new View(Model);
 
             if (Controller == null) {
-                Controller = new Controller(Model, View);
+                Controller = new Controller(this, Model, View);
                 ControllerPin = GCHandle.Alloc(Controller, GCHandleType.Normal);
             } else
                 Controller.View = View;
@@ -187,6 +190,8 @@ namespace ParticleEditor {
         }
 
         protected override void Update (GameTime gameTime) {
+            Scheduler.Step();
+
             PreviousKeyboardState = KeyboardState;
             PreviousMouseState = MouseState;
             KeyboardState = Keyboard.GetState();

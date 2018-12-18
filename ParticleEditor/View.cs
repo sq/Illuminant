@@ -5,6 +5,8 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework.Graphics;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Squared.Illuminant.Particles;
 using Squared.Illuminant.Particles.Transforms;
 using Squared.Render;
@@ -131,7 +133,14 @@ namespace ParticleEditor {
                 var field = m as FieldInfo;
                 Type targetType = (prop != null) ? prop.PropertyType : field.FieldType;
                 try {
-                    var value = Convert.ChangeType(kvp.Value, targetType);
+                    object value;
+                    var jObject = kvp.Value as JObject;
+                    if (jObject != null) {
+                        value = jObject.ToObject(targetType);
+                    } else {
+                        value = Convert.ChangeType(kvp.Value, targetType);
+                    }
+                    
                     if (prop != null)
                         prop.SetValue(Instance, value);
                     else if (field != null)
