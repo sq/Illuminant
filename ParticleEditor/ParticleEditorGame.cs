@@ -265,6 +265,10 @@ namespace ParticleEditor {
 
             ir.Draw(UIRenderTarget, Vector2.Zero, multiplyColor: Color.White * uiOpacity);
 
+            Materials.ViewportPosition = new Vector2(
+                -(Graphics.PreferredBackBufferWidth - SidePanelWidth) / 2f,
+                -Graphics.PreferredBackBufferHeight / 2f
+            ) / Zoom;
             Materials.ViewportScale = Zoom * Vector2.One;
             View.Draw(this, frame, 3);
 

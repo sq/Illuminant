@@ -100,7 +100,7 @@ namespace ParticleEditor {
                     { "MaxRate", 240 },
                     { "Position",
                         new Formula {
-                            Constant = new Vector4(256 * (view.Transforms.Count + 1), 256 * (CurrentState.Systems.SelectedIndex + 1), 0, 256),
+                            Constant = new Vector4(0, 0, 0, 256),
                             RandomScale = new Vector4(256, 256, 0, 0),
                             RandomOffset = new Vector4(-0.5f, -0.5f, 0, 0),
                             Circular = true

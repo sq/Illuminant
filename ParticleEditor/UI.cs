@@ -14,16 +14,16 @@ using Nuke = NuklearDotNet.Nuklear;
 
 namespace ParticleEditor {
     public partial class ParticleEditor : MultithreadedGame, INuklearHost {
+        public const int SidePanelWidth = 550;
+
         protected unsafe void UIScene () {
             var ctx = Nuklear.Context;
-
-            var panelWidth = 550;
             
             using (var wnd = Nuklear.Window(
                 "SidePanel",
                 Bounds.FromPositionAndSize(
-                    Graphics.PreferredBackBufferWidth - panelWidth, 0, 
-                    panelWidth, Graphics.PreferredBackBufferHeight
+                    Graphics.PreferredBackBufferWidth - SidePanelWidth, 0, 
+                    SidePanelWidth, Graphics.PreferredBackBufferHeight
                 ),
                 NuklearDotNet.NkPanelFlags.Border
             )) {

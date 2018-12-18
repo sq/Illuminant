@@ -49,7 +49,8 @@ namespace ParticleEditor {
         }
 
         private class CachedPropertyInfo {
-            public string Name, TypeName;
+            public string Name;
+            public ModelTypeInfo Info;
             public FieldInfo Field;
             public PropertyInfo Property;
             public Type Type;
@@ -90,14 +91,21 @@ namespace ParticleEditor {
                    select t;
         }
 
-        private static string GetTypeNameForField (Type type, string fieldName, Type fieldType) {
-            Dictionary<string, string> d;
-            if (!FieldTypeOverrides.TryGetValue(type.Name, out d))
-                return fieldType.Name;
-            string result;
-            if (!d.TryGetValue(fieldName, out result))
-                return fieldType.Name;
-            return result;
+        private static ModelTypeInfo GetInfoForField (Type type, string fieldName, Type fieldType) {
+            var t = type;
+            while (t != null) {
+                Dictionary<string, ModelTypeInfo> d;
+                if (FieldTypeOverrides.TryGetValue(type.Name, out d)) {
+                    ModelTypeInfo temp;
+                    if (d.TryGetValue(fieldName, out temp))
+                        return temp;
+                }
+                t = t.BaseType;
+            }
+
+            return new ModelTypeInfo {
+                Type = fieldType.Name
+            };
         }
 
         private static IEnumerable<CachedPropertyInfo> CachePropertyInfo (Type type) {
@@ -112,7 +120,7 @@ namespace ParticleEditor {
                    orderby m.Name
                    select new CachedPropertyInfo {
                        Name = m.Name,
-                       TypeName = GetTypeNameForField(type, m.Name, mtype),
+                       Info = GetInfoForField(type, m.Name, mtype),
                        Field = f,
                        Property = p,
                        Type = mtype,
@@ -152,8 +160,9 @@ namespace ParticleEditor {
         }
 
         private unsafe void RenderPropertyElement (
-            string key, ref float value, ref bool changed, float? min = null, float? max = null
+            string key, ModelTypeInfo? info, ref float value, ref bool changed, float? min = null, float? max = null
         ) {
+            var _info = info.GetValueOrDefault(default(ModelTypeInfo));
             float lowStep = 0.05f;
             float highStep = 1f;
             float step = (value >= 5) ? highStep : lowStep;
@@ -161,7 +170,9 @@ namespace ParticleEditor {
             float inc = PropertyIncrementSteps[0].Value;
             int scaleIndex = GetScaleIndex(value, out inc);
 
-            if (Nuklear.Property(key, ref value, min.GetValueOrDefault(-4096), max.GetValueOrDefault(4096), step, inc)) {
+            var _min = min.GetValueOrDefault(_info.Min.GetValueOrDefault(-4096));
+            var _max = max.GetValueOrDefault(_info.Max.GetValueOrDefault(4096));
+            if (Nuklear.Property(key, ref value, _min, _max, step, inc)) {
                 changed = true;
                 float newInc;
                 var newIndex = GetScaleIndex(value, out newInc);
@@ -186,7 +197,7 @@ namespace ParticleEditor {
             var isActive = cache.SelectedPropertyName == actualName;
             var value = cpi.Getter(instance);
 
-            var valueType = cpi.TypeName;
+            var valueType = cpi.Info.Type ?? cpi.Type.Name;
 
             switch (valueType) {
                 case "Formula":
@@ -213,14 +224,19 @@ namespace ParticleEditor {
                     Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 1);
                     if (cpi.Type == typeof(float)) {
                         var v = (float)value;
-                        RenderPropertyElement(cpi.Name, ref v, ref changed);
+                        RenderPropertyElement(cpi.Name, cpi.Info, ref v, ref changed);
                         if (changed) {
                             cpi.Setter(instance, v);
                             return true;
                         }
                     } else {
                         var v = (int)value;
-                        if (Nuklear.Property(cpi.Name, ref v, 0, 40960, 1, 1)) {
+                        if (Nuklear.Property(
+                            cpi.Name, ref v, 
+                            (int)cpi.Info.Min.GetValueOrDefault(0), 
+                            (int)cpi.Info.Min.GetValueOrDefault(40960), 
+                            1, 1
+                        )) {
                             cpi.Setter(instance, v);
                             return true;
                         }
@@ -257,8 +273,8 @@ namespace ParticleEditor {
                 case "Vector2":
                     Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 2);
                     var v2 = (Vector2)value;
-                    RenderPropertyElement("#x", ref v2.X, ref changed);
-                    RenderPropertyElement("#y", ref v2.Y, ref changed);
+                    RenderPropertyElement("#x", cpi.Info, ref v2.X, ref changed);
+                    RenderPropertyElement("#y", cpi.Info, ref v2.Y, ref changed);
                     if (changed) {
                         cpi.Setter(instance, v2);
                         return true;
@@ -268,9 +284,9 @@ namespace ParticleEditor {
                 case "Vector3":
                     Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 3);
                     var v3 = (Vector3)value;
-                    RenderPropertyElement("#x", ref v3.X, ref changed);
-                    RenderPropertyElement("#y", ref v3.Y, ref changed);
-                    RenderPropertyElement("#z", ref v3.Z, ref changed);
+                    RenderPropertyElement("#x", cpi.Info, ref v3.X, ref changed);
+                    RenderPropertyElement("#y", cpi.Info, ref v3.Y, ref changed);
+                    RenderPropertyElement("#z", cpi.Info, ref v3.Z, ref changed);
                     if (changed) {
                         cpi.Setter(instance, v3);
                         return true;
@@ -280,10 +296,10 @@ namespace ParticleEditor {
                 case "Vector4":
                     Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 4);
                     var v4 = (Vector4)value;
-                    RenderPropertyElement("#x", ref v4.X, ref changed);
-                    RenderPropertyElement("#y", ref v4.Y, ref changed);
-                    RenderPropertyElement("#z", ref v4.Z, ref changed);
-                    RenderPropertyElement("#w", ref v4.W, ref changed);
+                    RenderPropertyElement("#x", cpi.Info, ref v4.X, ref changed);
+                    RenderPropertyElement("#y", cpi.Info, ref v4.Y, ref changed);
+                    RenderPropertyElement("#z", cpi.Info, ref v4.Z, ref changed);
+                    RenderPropertyElement("#w", cpi.Info, ref v4.W, ref changed);
                     if (changed) {
                         cpi.Setter(instance, v4);
                         return true;
@@ -317,22 +333,22 @@ namespace ParticleEditor {
                     if (Nuklear.Button("Mutate")) {
                     }
                     Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 4);
-                    RenderPropertyElement("#xx", ref m.M11, ref changed);
-                    RenderPropertyElement("#xy", ref m.M12, ref changed);
-                    RenderPropertyElement("#xz", ref m.M13, ref changed);
-                    RenderPropertyElement("#xw", ref m.M14, ref changed);
-                    RenderPropertyElement("#yx", ref m.M21, ref changed);
-                    RenderPropertyElement("#yy", ref m.M22, ref changed);
-                    RenderPropertyElement("#yz", ref m.M23, ref changed);
-                    RenderPropertyElement("#yw", ref m.M24, ref changed);
-                    RenderPropertyElement("#zx", ref m.M31, ref changed);
-                    RenderPropertyElement("#zy", ref m.M32, ref changed);
-                    RenderPropertyElement("#zz", ref m.M33, ref changed);
-                    RenderPropertyElement("#zw", ref m.M34, ref changed);
-                    RenderPropertyElement("#wx", ref m.M41, ref changed);
-                    RenderPropertyElement("#wy", ref m.M42, ref changed);
-                    RenderPropertyElement("#wz", ref m.M43, ref changed);
-                    RenderPropertyElement("#ww", ref m.M44, ref changed);
+                    RenderPropertyElement("#xx", cpi.Info, ref m.M11, ref changed);
+                    RenderPropertyElement("#xy", cpi.Info, ref m.M12, ref changed);
+                    RenderPropertyElement("#xz", cpi.Info, ref m.M13, ref changed);
+                    RenderPropertyElement("#xw", cpi.Info, ref m.M14, ref changed);
+                    RenderPropertyElement("#yx", cpi.Info, ref m.M21, ref changed);
+                    RenderPropertyElement("#yy", cpi.Info, ref m.M22, ref changed);
+                    RenderPropertyElement("#yz", cpi.Info, ref m.M23, ref changed);
+                    RenderPropertyElement("#yw", cpi.Info, ref m.M24, ref changed);
+                    RenderPropertyElement("#zx", cpi.Info, ref m.M31, ref changed);
+                    RenderPropertyElement("#zy", cpi.Info, ref m.M32, ref changed);
+                    RenderPropertyElement("#zz", cpi.Info, ref m.M33, ref changed);
+                    RenderPropertyElement("#zw", cpi.Info, ref m.M34, ref changed);
+                    RenderPropertyElement("#wx", cpi.Info, ref m.M41, ref changed);
+                    RenderPropertyElement("#wy", cpi.Info, ref m.M42, ref changed);
+                    RenderPropertyElement("#wz", cpi.Info, ref m.M43, ref changed);
+                    RenderPropertyElement("#ww", cpi.Info, ref m.M44, ref changed);
                     if (changed) {
                         cpi.Setter(instance, m);
                         return true;
@@ -360,10 +376,10 @@ namespace ParticleEditor {
             var newColor = resetToWhite ? Vector4.One : new Vector4(temp.r, temp.g, temp.b, temp.a);
             changed = newColor != c;
             Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 4);
-            RenderPropertyElement("#R", ref newColor.X, ref changed, 0, 1);
-            RenderPropertyElement("#G", ref newColor.Y, ref changed, 0, 1);
-            RenderPropertyElement("#B", ref newColor.Z, ref changed, 0, 1);
-            RenderPropertyElement("#A", ref newColor.W, ref changed, 0, 1);
+            RenderPropertyElement("#R", null, ref newColor.X, ref changed, 0, 1);
+            RenderPropertyElement("#G", null, ref newColor.Y, ref changed, 0, 1);
+            RenderPropertyElement("#B", null, ref newColor.Z, ref changed, 0, 1);
+            RenderPropertyElement("#A", null, ref newColor.W, ref changed, 0, 1);
             if (changed) {
                 cpi.Setter(instance, newColor);
                 return true;
