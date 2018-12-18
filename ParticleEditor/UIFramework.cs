@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Framework;
@@ -16,6 +17,37 @@ using Nuke = NuklearDotNet.Nuklear;
 
 namespace ParticleEditor {
     public partial class ParticleEditor : MultithreadedGame, INuklearHost {
+        private class KeyboardInput : System.Windows.Forms.IMessageFilter {
+            [DllImport("user32.dll")]
+            static extern bool TranslateMessage(ref System.Windows.Forms.Message lpMsg);
+
+            const int WM_KEYDOWN = 0x100;
+            const int WM_KEYUP = 0x101;
+            const int WM_CHAR = 0x102;
+
+            public readonly ParticleEditor Game;
+            public readonly List<char> Buffer = new List<char>();
+
+            public KeyboardInput (ParticleEditor game) {
+                Game = game;
+            }
+
+            public bool PreFilterMessage (ref System.Windows.Forms.Message m) {
+                switch (m.Msg) {
+                    case WM_KEYDOWN:
+                    case WM_KEYUP:
+                        // XNA normally doesn't invoke TranslateMessage so we don't get any char events
+                        TranslateMessage(ref m);
+                        return false;
+                    case WM_CHAR:
+                        Buffer.Add((char)m.WParam.ToInt32());
+                        return true;
+                    default:
+                        return false;
+                }
+            }
+        }
+
         private class CachedPropertyInfo {
             public string Name, TypeName;
             public FieldInfo Field;
@@ -47,6 +79,8 @@ namespace ParticleEditor {
             new Dictionary<Type, List<CachedPropertyInfo>>(new ReferenceComparer<Type>());
         private PropertyGridCache SystemProperties, TransformProperties;
         private List<Type> TransformTypes = GetTransformTypes().ToList();
+
+        private KeyboardInput KeyboardInputHandler;
 
         private static IEnumerable<Type> GetTransformTypes () {
             var tTransform = typeof(ParticleTransform);
@@ -166,33 +200,7 @@ namespace ParticleEditor {
                     return false;
 
                 case "Matrix":
-                    using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, actualName, false)) {
-                        if (pGroup.Visible) {
-                            Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 4);
-                            var m = (Matrix)value;
-                            RenderPropertyElement("#xx", ref m.M11, ref changed);
-                            RenderPropertyElement("#xy", ref m.M12, ref changed);
-                            RenderPropertyElement("#xz", ref m.M13, ref changed);
-                            RenderPropertyElement("#xw", ref m.M14, ref changed);
-                            RenderPropertyElement("#yx", ref m.M21, ref changed);
-                            RenderPropertyElement("#yy", ref m.M22, ref changed);
-                            RenderPropertyElement("#yz", ref m.M23, ref changed);
-                            RenderPropertyElement("#yw", ref m.M24, ref changed);
-                            RenderPropertyElement("#zx", ref m.M31, ref changed);
-                            RenderPropertyElement("#zy", ref m.M32, ref changed);
-                            RenderPropertyElement("#zz", ref m.M33, ref changed);
-                            RenderPropertyElement("#zw", ref m.M34, ref changed);
-                            RenderPropertyElement("#wx", ref m.M41, ref changed);
-                            RenderPropertyElement("#wy", ref m.M42, ref changed);
-                            RenderPropertyElement("#wz", ref m.M43, ref changed);
-                            RenderPropertyElement("#ww", ref m.M44, ref changed);
-                            if (changed) {
-                                cpi.Setter(instance, m);
-                                return true;
-                            }
-                        }
-                    }
-                    return false;
+                    return RenderMatrixProperty(cpi, instance, ref changed, actualName, value);
             }
 
             Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 2);
@@ -254,34 +262,84 @@ namespace ParticleEditor {
                     return false;
 
                 case "ColorF":
-                    var c = (Vector4)value;
-                    var oldColor = new NuklearDotNet.nk_colorf {
-                        r = c.X,
-                        g = c.Y,
-                        b = c.Z,
-                        a = c.W,
-                    };
-                    var resetToWhite = Nuklear.Button("White");
-                    Nuke.nk_layout_row_dynamic(ctx, 96, 1);
-                    var temp = Nuke.nk_color_picker(ctx, oldColor, NuklearDotNet.nk_color_format.NK_RGBA);
-                    var newColor = resetToWhite ? Vector4.One : new Vector4(temp.r, temp.g, temp.b, temp.a);
-                    changed = newColor != c;
-                    Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 4);
-                    RenderPropertyElement("#R", ref newColor.X, ref changed, 0, 1);
-                    RenderPropertyElement("#G", ref newColor.Y, ref changed, 0, 1);
-                    RenderPropertyElement("#B", ref newColor.Z, ref changed, 0, 1);
-                    RenderPropertyElement("#A", ref newColor.W, ref changed, 0, 1);
-                    if (changed) {
-                        cpi.Setter(instance, newColor);
-                        return true;
-                    }
-                    return false;
+                    return RenderColorProperty(cpi, instance, out changed, value);
 
                 default:
                     if (Nuklear.SelectableText(value.GetType().Name, isActive))
                         cache.SelectedPropertyName = actualName;
                     return false;
             }
+        }
+
+        private unsafe bool RenderMatrixProperty (
+            CachedPropertyInfo cpi, object instance, ref bool changed, 
+            string actualName, object value
+        ) {
+            var ctx = Nuklear.Context;
+            using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, actualName, false)) {
+                if (pGroup.Visible) {
+                    var m = (Matrix)value;
+
+                    Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 2);
+                    if (Nuklear.Button("Identity")) {
+                        m = Matrix.Identity;
+                        changed = true;
+                    }                    
+                    if (Nuklear.Button("Mutate")) {
+                    }
+                    Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 4);
+                    RenderPropertyElement("#xx", ref m.M11, ref changed);
+                    RenderPropertyElement("#xy", ref m.M12, ref changed);
+                    RenderPropertyElement("#xz", ref m.M13, ref changed);
+                    RenderPropertyElement("#xw", ref m.M14, ref changed);
+                    RenderPropertyElement("#yx", ref m.M21, ref changed);
+                    RenderPropertyElement("#yy", ref m.M22, ref changed);
+                    RenderPropertyElement("#yz", ref m.M23, ref changed);
+                    RenderPropertyElement("#yw", ref m.M24, ref changed);
+                    RenderPropertyElement("#zx", ref m.M31, ref changed);
+                    RenderPropertyElement("#zy", ref m.M32, ref changed);
+                    RenderPropertyElement("#zz", ref m.M33, ref changed);
+                    RenderPropertyElement("#zw", ref m.M34, ref changed);
+                    RenderPropertyElement("#wx", ref m.M41, ref changed);
+                    RenderPropertyElement("#wy", ref m.M42, ref changed);
+                    RenderPropertyElement("#wz", ref m.M43, ref changed);
+                    RenderPropertyElement("#ww", ref m.M44, ref changed);
+                    if (changed) {
+                        cpi.Setter(instance, m);
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        private unsafe bool RenderColorProperty (
+            CachedPropertyInfo cpi, object instance, out bool changed, 
+            object value
+        ) {
+            var ctx = Nuklear.Context;
+            var c = (Vector4)value;
+            var oldColor = new NuklearDotNet.nk_colorf {
+                r = c.X,
+                g = c.Y,
+                b = c.Z,
+                a = c.W,
+            };
+            var resetToWhite = Nuklear.Button("White");
+            Nuke.nk_layout_row_dynamic(ctx, 96, 1);
+            var temp = Nuke.nk_color_picker(ctx, oldColor, NuklearDotNet.nk_color_format.NK_RGBA);
+            var newColor = resetToWhite ? Vector4.One : new Vector4(temp.r, temp.g, temp.b, temp.a);
+            changed = newColor != c;
+            Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 4);
+            RenderPropertyElement("#R", ref newColor.X, ref changed, 0, 1);
+            RenderPropertyElement("#G", ref newColor.Y, ref changed, 0, 1);
+            RenderPropertyElement("#B", ref newColor.Z, ref changed, 0, 1);
+            RenderPropertyElement("#A", ref newColor.W, ref changed, 0, 1);
+            if (changed) {
+                cpi.Setter(instance, newColor);
+                return true;
+            }
+            return false;
         }
 
         // Returns true if value changed

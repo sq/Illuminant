@@ -309,10 +309,27 @@ namespace Framework {
             }
         }
 
+        private static readonly Dictionary<Keys, NkKeys> KeyMap = new Dictionary<Keys, NkKeys> {
+            { Keys.LeftControl, NkKeys.Ctrl },
+            { Keys.RightControl, NkKeys.Ctrl },
+            { Keys.LeftShift, NkKeys.Shift },
+            { Keys.RightShift, NkKeys.Shift },
+            { Keys.Back, NkKeys.Backspace },
+            { Keys.Delete, NkKeys.Del },
+            { Keys.Left, NkKeys.Left },
+            { Keys.Right, NkKeys.Right },
+            { Keys.Up, NkKeys.Up },
+            { Keys.Down, NkKeys.Down },
+            { Keys.Enter, NkKeys.Enter },
+            { Keys.Tab, NkKeys.Tab },
+            { Keys.Home, NkKeys.LineStart },
+            { Keys.End, NkKeys.LineEnd }
+        };
+
         public unsafe void UpdateInput (
             MouseState previousMouseState, MouseState mouseState,
             KeyboardState previousKeyboardState, KeyboardState keyboardState,
-            bool processMousewheel
+            bool processMousewheel, IEnumerable<char> keystrokes = null
         ) {
             NString.GC();
 
@@ -325,6 +342,32 @@ namespace Framework {
             var scrollDelta = (mouseState.ScrollWheelValue - previousMouseState.ScrollWheelValue) / 106f;
             if ((scrollDelta != 0) && processMousewheel)
                 Nuklear.nk_input_scroll(ctx, new nk_vec2(0, scrollDelta));
+
+            var previousKeys = new HashSet<Keys>(previousKeyboardState.GetPressedKeys());
+            var currentKeys = new HashSet<Keys>(keyboardState.GetPressedKeys());
+
+            foreach (var key in previousKeys) {
+                if (currentKeys.Contains(key))
+                    continue;
+                NkKeys mapped;
+                if (!KeyMap.TryGetValue(key, out mapped))
+                    continue;
+                Nuklear.nk_input_key(ctx, mapped, 0);
+            }
+            foreach (var key in currentKeys) {
+                if (previousKeys.Contains(key))
+                    continue;
+                NkKeys mapped;
+                if (!KeyMap.TryGetValue(key, out mapped))
+                    continue;
+                Nuklear.nk_input_key(ctx, mapped, 1);
+            }
+
+            if (keystrokes != null) {
+                foreach (var ch in keystrokes)
+                    Nuklear.nk_input_char(ctx, (byte)ch);
+            }
+
             Nuklear.nk_input_end(ctx);
         }
 

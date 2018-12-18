@@ -106,6 +106,9 @@ namespace ParticleEditor {
 
             Window.AllowUserResizing = true;
             Window.ClientSizeChanged += Window_ClientSizeChanged;
+
+            KeyboardInputHandler = new KeyboardInput(this);
+            System.Windows.Forms.Application.AddMessageFilter(KeyboardInputHandler);
         }
 
         protected override void UnloadContent () {
@@ -229,7 +232,13 @@ namespace ParticleEditor {
             if ((Window.ClientBounds.Width != Graphics.PreferredBackBufferWidth) || (Window.ClientBounds.Height != Graphics.PreferredBackBufferHeight))
                 return;
 
-            Nuklear.UpdateInput(PreviousMouseState, MouseState, PreviousKeyboardState, KeyboardState, IsMouseOverUI);
+            Nuklear.UpdateInput(
+                PreviousMouseState, MouseState, 
+                PreviousKeyboardState, KeyboardState, 
+                IsMouseOverUI, KeyboardInputHandler.Buffer
+            );
+
+            KeyboardInputHandler.Buffer.Clear();
 
             using (var group = BatchGroup.ForRenderTarget(frame, -9990, UIRenderTarget)) {
                 ClearBatch.AddNew(group, -1, Materials.Clear, clearColor: Color.Transparent);
