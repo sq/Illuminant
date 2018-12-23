@@ -133,3 +133,18 @@ bool stippleReject (float vertexIndex) {
     float stippleThreshold = thresholdMatrix[vertexIndex % 16];
     return (StippleFactor - stippleThreshold) <= 0;
 }
+
+// Because w is used to store unrelated data, we split it out and store it
+//  and then restore it after doing a matrix multiply.
+// We take a w-value to attach to the position/velocity so that it is properly
+//  handled as a position or vector.
+float4 mul3 (float4 oldValue, float4x4 mat, float w) {
+    float4 temp = mul(float4(oldValue.xyz, 1), mat);
+    float3 divided;
+    // FIXME: Is this right?
+    if (w != 0)
+        divided = temp.xyz / temp.w;
+    else
+        divided = temp.xyz;
+    return float4(divided, oldValue.w);
+}

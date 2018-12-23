@@ -155,11 +155,18 @@ namespace ParticleEditor {
             });
         }
 
-        private unsafe void RenderPropertyGrid (object instance, ref PropertyGridCache cache, float heightPx) {
-            using (var g = Nuklear.ScrollingGroup(heightPx, "Properties", ref cache.ScrollX, ref cache.ScrollY))
-            if (g.Visible) {
-                foreach (var cpi in cache.Members)
-                    RenderProperty(ref cache, cpi, instance);
+        private unsafe void RenderPropertyGridNonScrolling (object instance, ref PropertyGridCache cache) {
+            foreach (var cpi in cache.Members)
+                RenderProperty(ref cache, cpi, instance);
+        }
+
+        private unsafe void RenderPropertyGrid (object instance, ref PropertyGridCache cache, float? heightPx) {
+            if (heightPx.HasValue) {
+                using (var g = Nuklear.ScrollingGroup(heightPx.Value, "Properties", ref cache.ScrollX, ref cache.ScrollY))
+                if (g.Visible)
+                    RenderPropertyGridNonScrolling(instance, ref cache);
+            } else {
+                RenderPropertyGridNonScrolling(instance, ref cache);
             }
         }
 
@@ -344,6 +351,8 @@ namespace ParticleEditor {
             }
         }
 
+        private readonly Dictionary<string, float> RotationSliderValues = new Dictionary<string, float>();
+
         private unsafe bool RenderMatrixProperty (
             CachedPropertyInfo cpi, object instance, ref bool changed, 
             string actualName, object value, bool is3x4
@@ -353,13 +362,26 @@ namespace ParticleEditor {
                 if (pGroup.Visible) {
                     var m = (Matrix)value;
 
-                    Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 2);
-                    if (Nuklear.Button("Identity")) {
-                        m = Matrix.Identity;
-                        changed = true;
+                    using (var grp = Nuklear.CollapsingGroup("Generate", "GenerateMatrix", false, NextMatrixIndex++))
+                    if (grp.Visible) {
+                        float angle;
+                        RotationSliderValues.TryGetValue(actualName, out angle);
+
+                        Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 1);
+                        if (Nuklear.Button("Identity")) {
+                            m = Matrix.Identity;
+                            RotationSliderValues[actualName] = angle = 0;
+                            changed = true;
+                        }
+
+                        Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 1);
+                        if (Nuklear.Property("Rotate", ref angle, -360, 360, 1, 0.5f)) {
+                            m = Matrix.CreateRotationZ(MathHelper.ToRadians(angle));
+                            RotationSliderValues[actualName] = angle;
+                            changed = true;
+                        }
                     }
-                    if (Nuklear.Button("Mutate")) {
-                    }
+
                     Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, is3x4 ? 3 : 4);
                     RenderPropertyElement("#xx", cpi.Info, ref m.M11, ref changed);
                     RenderPropertyElement("#xy", cpi.Info, ref m.M12, ref changed);

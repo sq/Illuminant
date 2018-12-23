@@ -6,6 +6,7 @@
 uniform float4 ChunkSizeAndIndices;
 uniform float4 Configuration[12];
 uniform float  RandomCircularity[3];
+uniform float4x4 PositionMatrix;
 
 void VS_Spawn (
     in  float2 xy     : POSITION0,
@@ -53,6 +54,7 @@ void PS_Spawn (
         );
     } else {
         newPosition   = evaluateFormula(Configuration[0], Configuration[1], Configuration[2], Configuration[3], RandomCircularity[0], float2(index % 8039, 0 + (index % 57)));
+        newPosition   = mul3(newPosition, PositionMatrix, 1);
         newVelocity   = evaluateFormula(Configuration[4], Configuration[5], Configuration[6], Configuration[7], RandomCircularity[1], float2(index % 6180, 1 + (index % 4031)));
         newAttributes = evaluateFormula(Configuration[8], Configuration[9], Configuration[10], Configuration[11], RandomCircularity[2], float2(index % 2025, 2 + (index % 65531)));
     }

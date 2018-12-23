@@ -43,12 +43,12 @@ namespace ParticleEditor {
                 },
                 {
                     "FMA", new Dictionary<string, ModelTypeInfo> {
-                        {"CyclesPerSecond", new ModelTypeInfo { Min = 0, Max = 60 } },
+                        {"CyclesPerSecond", new ModelTypeInfo { Min = -1, Max = 60 } },
                     }
                 },
                 {
                     "MatrixMultiply", new Dictionary<string, ModelTypeInfo> {
-                        {"CyclesPerSecond", new ModelTypeInfo { Min = 0, Max = 60 } },
+                        {"CyclesPerSecond", new ModelTypeInfo { Min = -1, Max = 60 } },
                         {"Velocity", new ModelTypeInfo { Type = "Matrix3x4" } }
                     }
                 },

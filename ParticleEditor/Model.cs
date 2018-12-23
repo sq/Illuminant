@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Squared.Illuminant.Particles;
+using Newtonsoft.Json;
+using System.IO;
 
 namespace ParticleEditor {
     public class Model {
@@ -11,12 +13,41 @@ namespace ParticleEditor {
         public readonly List<ParticleSystemModel> Systems = new List<ParticleSystemModel>();
 
         public Model () {
-            Filename = "untitled";
+            Filename = null;
         }
 
         public void Normalize () {
             foreach (var s in Systems)
                 s.Normalize();
+        }
+
+        public static Model Load (string fileName) {
+            using (var reader = new System.IO.StreamReader(fileName, Encoding.UTF8, false)) {
+                var serializer = new JsonSerializer {
+                    Converters = {
+                        new XnaJsonConverter()
+                    },
+                    Formatting = Formatting.Indented
+                };
+                using (var jreader = new JsonTextReader(reader)) {
+                    var result = serializer.Deserialize<Model>(jreader);
+                    result.Filename = Path.GetFullPath(fileName);
+                    return result;
+                }
+            }
+        }
+
+        public void Save (string fileName) {
+            using (var writer = new System.IO.StreamWriter(fileName, false, Encoding.UTF8)) {
+                var serializer = new JsonSerializer {
+                    Converters = {
+                        new XnaJsonConverter()
+                    },
+                    Formatting = Formatting.Indented
+                };
+                serializer.Serialize(writer, this);
+                Filename = Path.GetFullPath(fileName);
+            }
         }
     }
 

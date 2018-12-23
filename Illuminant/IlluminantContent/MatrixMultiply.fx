@@ -16,21 +16,6 @@ float computeWeight (float3 worldPosition) {
     return (1 - clamp(distance / AreaFalloff, 0, 1)) * Strength;
 }
 
-// Because w is used to store unrelated data, we split it out and store it
-//  and then restore it after doing a matrix multiply.
-// We take a w-value to attach to the position/velocity so that it is properly
-//  handled as a position or vector.
-float4 mul3 (float4 oldValue, float4x4 mat, float w) {
-    float4 temp = mul(float4(oldValue.xyz, 1), mat);
-    float3 divided;
-    // FIXME: Is this right?
-    if (w != 0)
-        divided = temp.xyz / temp.w;
-    else
-        divided = temp.xyz;
-    return float4(divided, oldValue.w);
-}
-
 void PS_MatrixMultiply (
     in  float2 xy            : VPOS,
     out float4 newPosition   : COLOR0,
@@ -42,7 +27,10 @@ void PS_MatrixMultiply (
         xy, oldPosition, oldVelocity, oldAttributes
     );
 
-    float w = computeWeight(oldPosition) * getDeltaTime() / TimeDivisor;
+    float timeScale = (TimeDivisor >= 0) ?
+        getDeltaTime() / TimeDivisor
+        : 1;
+    float w = computeWeight(oldPosition) * timeScale;
 
     newPosition = lerp(
         oldPosition, mul3(oldPosition, PositionMatrix, 1),

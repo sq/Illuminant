@@ -68,8 +68,6 @@ namespace Framework {
 
         public readonly INuklearHost Game;
 
-        private readonly Dictionary<string, float> TextWidthCache = new Dictionary<string, float>(StringComparer.Ordinal);
-
         public NuklearService (INuklearHost game) {
             Game = game;
             QueryFontGlyphF = _QueryFontGlyphF;
@@ -126,11 +124,14 @@ namespace Framework {
             if ((len == 1) && (s[0] == 0))
                 return 0;
 
-            var textUtf8 = Encoding.UTF8.GetString(s, len);
-            float result;
-            if (!TextWidthCache.TryGetValue(textUtf8, out result))
-                TextWidthCache[textUtf8] = result = _Font.LayoutString(textUtf8, scale: FontScale).Size.X;
-            return result;
+            using (var buf = BufferPool<char>.Allocate(len + 1)) {
+                int cnt;
+                fixed (char * pResult = buf.Data)
+                    cnt = Encoding.UTF8.GetChars(s, len, pResult, buf.Data.Length);
+                var astr = new AbstractString(new ArraySegment<char>(buf.Data, 0, cnt));
+                float result = _Font.LayoutString(astr, scale: FontScale).Size.X;
+                return result;
+            }
         }
 
         private void SetNewFont (IGlyphSource newFont) {
@@ -319,11 +320,17 @@ namespace Framework {
                 PendingIR = new ImperativeRenderer(group, Game.Materials, 0, autoIncrementSortKey: true, worldSpace: false, blendState: BlendState.AlphaBlend);
 
                 // https://docs.microsoft.com/en-us/dotnet/standard/garbage-collection/fundamentals?view=netframework-4.7.2
-                // Says lowest max size of ephemeral segment is 16mb
-                // We shouldn't end up using remotely that much, but let's set it to 12mb.
+                // Says lowest max size of ephemeral segment is 16mb. However, the GC needs to be able to carve out
+                //  the amount of space we request from the current ephemeral segments. If it can't, it will either
+                //  do a full GC or it will refuse to enter a region. (We're not interested in a full GC here.)
+                // So as a result, we pick a number small enough to increase the odds that there will be enough
+                //  room left in the ephemeral segment.
                 // Suspending GC while talking to nuklear is probably for the best to avoid weird crashes...
-                const int size = 1024 * 1024 * 12;
-                var isGcOff = GC.TryStartNoGCRegion(size, true);
+                const int size = 1024 * 1024 * 4;
+                var isGcOff = false; // GC.TryStartNoGCRegion(size, true);
+                if (!isGcOff)
+                    ;
+                    // Console.WriteLine("Failed to start no gc region");
 
                 try {
                     Scene();

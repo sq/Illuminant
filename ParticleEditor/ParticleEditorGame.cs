@@ -122,6 +122,10 @@ namespace ParticleEditor {
             base.UnloadContent();
         }
 
+        protected override void OnExiting (object sender, EventArgs args) {
+            Process.GetCurrentProcess().Kill();
+        }
+
         protected override void LoadContent () {
             DidLoadContent = true;
 

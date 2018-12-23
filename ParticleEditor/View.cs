@@ -126,7 +126,7 @@ namespace ParticleEditor {
             foreach (var kvp in Model.Properties) {
                 var m = Model.Type.GetMember(kvp.Key).FirstOrDefault();
                 if (m == null) {
-                    Console.WriteLine("No property named {0}", kvp.Key);
+                    Console.WriteLine("Type {0} has no property named {1}", Model.Type.Name, kvp.Key);
                     continue;
                 }
                 var prop = m as PropertyInfo;

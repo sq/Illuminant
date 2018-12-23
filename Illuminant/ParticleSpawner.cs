@@ -18,6 +18,8 @@ namespace Squared.Illuminant.Particles.Transforms {
 
         public Formula  Position, Velocity, Attributes;
 
+        public Matrix   PositionPostMatrix = Matrix.Identity;
+
         [NonSerialized]
         private double  RateError;
         [NonSerialized]
@@ -98,6 +100,7 @@ namespace Squared.Illuminant.Particles.Transforms {
                 engine.Configuration.ChunkSize, engine.Configuration.ChunkSize,
                 Indices.X, Indices.Y
             ));
+            parameters["PositionMatrix"].SetValue(PositionPostMatrix);
         }
     }
 }

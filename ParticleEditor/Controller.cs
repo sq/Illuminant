@@ -16,6 +16,7 @@ using Squared.Illuminant.Particles.Transforms;
 
 namespace ParticleEditor {
     public class Controller {
+        [StructLayout(LayoutKind.Sequential)]
         public struct ListState {
             public uint ScrollX, ScrollY;
             public int SelectedIndex;
@@ -165,17 +166,7 @@ namespace ParticleEditor {
                     if (dlg.ShowDialog() != DialogResult.OK)
                         return;
 
-                    Console.WriteLine(dlg.FileName);
-
-                    using (var writer = new StreamWriter(dlg.FileName, false, Encoding.UTF8)) {
-                        var serializer = new JsonSerializer {
-                            Converters = {
-                                new XnaJsonConverter()
-                            },
-                            Formatting = Formatting.Indented
-                        };
-                        serializer.Serialize(writer, Model);
-                    }
+                    Model.Save(dlg.FileName);
                 }
             });
         }
@@ -189,24 +180,8 @@ namespace ParticleEditor {
                     if (dlg.ShowDialog() != DialogResult.OK)
                         return;
 
-                    Console.WriteLine(dlg.FileName);
-
-                    using (var reader = new StreamReader(dlg.FileName, Encoding.UTF8, false)) {
-                        var serializer = new JsonSerializer {
-                            Converters = {
-                                new XnaJsonConverter()
-                            },
-                            Formatting = Formatting.Indented
-                        };
-                        using (var jreader = new JsonTextReader(reader)) {
-                            try {
-                                var model = serializer.Deserialize<Model>(jreader);
-                                SetModel(model);
-                            } catch (Exception exc) {
-                                Console.WriteLine(exc);
-                            }
-                        }
-                    }
+                    var model = Model.Load(dlg.FileName);
+                    SetModel(model);
                 }
             });
         }

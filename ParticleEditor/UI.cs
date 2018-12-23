@@ -14,10 +14,21 @@ using Nuke = NuklearDotNet.Nuklear;
 
 namespace ParticleEditor {
     public partial class ParticleEditor : MultithreadedGame, INuklearHost {
-        public const int SidePanelWidth = 550;
+        private int NextMatrixIndex;
+
+        public int SidePanelWidth {
+            get {
+                var w = Graphics.PreferredBackBufferWidth;
+                if (w >= 2000)
+                    return 650;
+                else
+                    return 500;
+            }
+        }
 
         protected unsafe void UIScene () {
             var ctx = Nuklear.Context;
+            NextMatrixIndex = 0;
             
             using (var wnd = Nuklear.Window(
                 "SidePanel",
@@ -51,21 +62,36 @@ namespace ParticleEditor {
         }
 
         private void RenderSidePanels () {
+            RenderFilePanel();
             RenderSystemList();
             RenderTransformList();
             RenderTransformProperties();
             RenderGlobalSettings();
         }
 
+        private unsafe void RenderFilePanel () {
+            var ctx = Nuklear.Context;
+
+            using (var group = Nuklear.CollapsingGroup("File", "File", true))
+            if (group.Visible) {
+                Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, Model.Filename == null ? 2 : 3);
+                if (Model.Filename != null) {
+                    if (Nuklear.Button("Save"))
+                        RunWorkItem(() => Model.Save(Model.Filename));
+                    if (Nuklear.Button("Save As"))
+                        Controller.ShowSaveDialog();
+                } else {
+                    if (Nuklear.Button("Save"))
+                        Controller.ShowSaveDialog();
+                }
+                if (Nuklear.Button("Load"))
+                    Controller.ShowLoadDialog();
+            }
+        }
+
         private unsafe void RenderSystemList () {
             var ctx = Nuklear.Context;
             var state = Controller.CurrentState;
-
-            Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 2);
-            if (Nuklear.Button("Save"))
-                Controller.ShowSaveDialog();
-            if (Nuklear.Button("Load"))
-                Controller.ShowLoadDialog();
 
             using (var group = Nuklear.CollapsingGroup("Systems", "Systems"))
             if (group.Visible) {
@@ -109,7 +135,7 @@ namespace ParticleEditor {
                 Nuke.nk_text(ctx, tCount.pText, tCount.Length, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
 
             SystemProperties.Prepare(typeof (ParticleSystemConfiguration));
-            RenderPropertyGrid(Controller.SelectedSystem.Model.Configuration, ref SystemProperties, 500);
+            RenderPropertyGrid(Controller.SelectedSystem.Model.Configuration, ref SystemProperties, null);
         }
 
         private unsafe void RenderTransformList () {
@@ -162,7 +188,7 @@ namespace ParticleEditor {
                             };
                         }
                     }
-                    RenderPropertyGrid(xform.Instance, ref TransformProperties, 500);
+                    RenderPropertyGrid(xform.Instance, ref TransformProperties, null);
                 }
             }
         }
