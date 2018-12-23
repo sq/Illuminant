@@ -46,6 +46,8 @@ namespace TestGame.Scenes {
 
             ShowOutlines.Key = Keys.D2;
             ShowDistanceField.Key = Keys.D3;
+
+            SelectedObject.Integral = true;
         }
 
         public override void LoadContent () {
@@ -389,13 +391,13 @@ namespace TestGame.Scenes {
                 var oldCenter = obs.Center;
                 var oldSize = obs.Size;
 
-                obs.Center.X = Nuke.nk_slide_float(ctx, min, obs.Center.X, max, 1f);
-                obs.Center.Y = Nuke.nk_slide_float(ctx, min, obs.Center.Y, max, 1f);
-                obs.Center.Z = Nuke.nk_slide_float(ctx, min, obs.Center.Z, max, 1f);
+                Game.Nuklear.Property("x", ref obs.Center.X, min, max, 1f, 0.1f);
+                Game.Nuklear.Property("y", ref obs.Center.Y, min, max, 1f, 0.1f);
+                Game.Nuklear.Property("z", ref obs.Center.Z, min, max, 1f, 0.1f);
 
-                obs.Size.X = Nuke.nk_slide_float(ctx, 1f, obs.Size.X, maxSize, 1f);
-                obs.Size.Y = Nuke.nk_slide_float(ctx, 1f, obs.Size.Y, maxSize, 1f);
-                obs.Size.Z = Nuke.nk_slide_float(ctx, 1f, obs.Size.Z, maxSize, 1f);
+                Game.Nuklear.Property("sizex", ref obs.Size.X, 1f, maxSize, 1f, 0.1f);
+                Game.Nuklear.Property("sizey", ref obs.Size.Y, 1f, maxSize, 1f, 0.1f);
+                Game.Nuklear.Property("sizez", ref obs.Size.Z, 1f, maxSize, 1f, 0.1f);
 
                 if (
                     ((obs.Center - oldCenter).Length() >= 0.5f) ||

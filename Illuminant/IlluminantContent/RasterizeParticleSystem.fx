@@ -8,7 +8,6 @@ uniform float4 GlobalColor;
 uniform float2 Size;
 uniform float2 AnimationRate;
 uniform float  VelocityRotation;
-uniform float  OpacityFromLife;
 uniform float  ZToY;
 
 Texture2D BitmapTexture;
@@ -100,19 +99,19 @@ void VS_PosVelAttrWhite(
         result, texCoord
     );
 
-    color = 1;
+    color = getColorForLifeValue(position.w);
 }
 
 void VS_PosVelAttr(
-    in  float2 xy          : POSITION0,
+    in  float2 xy             : POSITION0,
     in  float3 offsetAndIndex : POSITION1,
-    in  int2   cornerIndex : BLENDINDICES0, // 0-3
-    out float4 result : POSITION0,
-    out float2 texCoord : TEXCOORD0,
-    out float4 position : TEXCOORD1,
-    out float4 velocity : TEXCOORD2,
-    out float4 attributes : TEXCOORD3,
-    out float4 color : COLOR0
+    in  int2   cornerIndex    : BLENDINDICES0, // 0-3
+    out float4 result         : POSITION0,
+    out float2 texCoord       : TEXCOORD0,
+    out float4 position       : TEXCOORD1,
+    out float4 velocity       : TEXCOORD2,
+    out float4 attributes     : TEXCOORD3,
+    out float4 color          : COLOR0
 ) {
     VS_PosVelAttrWhite(
         xy,
@@ -126,7 +125,7 @@ void VS_PosVelAttr(
         color
     );
 
-    color = attributes;
+    color = attributes * getColorForLifeValue(position.w);
 }
 
 void VS_PosAttr (
@@ -152,6 +151,8 @@ void VS_PosAttr (
         position, Corners[cornerIndex.x], cornerIndex,
         result, texCoord
     );
+
+    attributes *= getColorForLifeValue(position.w);
 }
 
 void PS_Texture (
@@ -162,11 +163,6 @@ void PS_Texture (
 ) {
     // FIXME
     float4 texColor = tex2D(BitmapSampler, texCoord);
-    if (OpacityFromLife > 0)
-        texColor *= clamp(position.w / OpacityFromLife, 0, 1);
-    else if (OpacityFromLife < 0)
-        texColor *= 1 - clamp(position.w / -OpacityFromLife, 0, 1);
-
     result = color * texColor;
     result *= GlobalColor;
     if (result.a <= 0)
@@ -178,15 +174,7 @@ void PS_NoTexture(
     in  float4 position : TEXCOORD1,
     out float4 result   : COLOR0
 ) {
-    // FIXME
-    if (OpacityFromLife > 0)
-        result = clamp(position.w / OpacityFromLife, 0, 1);
-    else if (OpacityFromLife < 0)
-        result = 1 - clamp(position.w / -OpacityFromLife, 0, 1);
-    else
-        result = 1;
-
-    result *= color;
+    result = color;
     result *= GlobalColor;
     if (result.a <= 0)
         discard;

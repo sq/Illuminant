@@ -75,6 +75,16 @@ namespace Framework {
             QueryFontGlyphF = _QueryFontGlyphF;
             TextWidthF = _TextWidthF;
             Context = NuklearAPI.Init();
+
+            InitStyle();
+        }
+
+        private unsafe void InitStyle () {
+            var s = &Context->style;
+            s->selectable.normal.data.color = 
+                // s.selectable.normal_active.data.color =
+                s->edit.normal.data.color =
+                s->property.normal.data.color = default(NkColor);
         }
 
         public IGlyphSource Font {
@@ -169,17 +179,28 @@ namespace Framework {
         }
 
         private void RenderCommand (nk_command_rect* c) {
+            var color = ConvertColor(c->color);
+            if (color.A <= 0)
+                return;
+
             PendingIR.OutlineRectangle(
                 ConvertBounds(c->x, c->y, c->w - 1, c->h - 1), 
-                ConvertColor(c->color)
+                color
             );
         }
 
         private void RenderCommand (nk_command_rect_filled* c) {
-            if (TextAdvancePending)
-                PendingIR.Layer += 1;
             var color = ConvertColor(c->color);
             var colorBright = new Color(color.R + 20, color.G + 20, color.B + 20, color.A);
+
+            if (color.A <= 0)
+                return;
+
+            if (TextAdvancePending)
+                PendingIR.Layer += 1;
+
+            CurrentPaintIndex++;
+            // color = new Color((CurrentPaintIndex % 16) * 8, (CurrentPaintIndex / 16) * 8, (CurrentPaintIndex / 128) * 8, 255);
 
             switch (c->header.mtype) {
                 case nk_meta_type.NK_META_TREE_HEADER:
@@ -202,6 +223,7 @@ namespace Framework {
         private void RenderCommand (nk_command_text* c) {
             var pTextUtf8 = &c->stringFirstByte;
             int charsDecoded;
+
             using (var charBuffer = BufferPool<char>.Allocate(c->length + 1)) {
                 fixed (char* pChars = charBuffer.Data)
                     charsDecoded = Encoding.UTF8.GetChars(pTextUtf8, c->length, pChars, charBuffer.Data.Length);
@@ -237,6 +259,7 @@ namespace Framework {
             var bounds = ConvertBounds(c->x, c->y, c->w - 1, c->h - 1);
             var radius = bounds.Size / 2f;
             var color = ConvertColor(c->color);
+            
             /*
             var softEdge = Vector2.One * 1f;
             PendingIR.FillRing(bounds.Center, Vector2.Zero, radius - Vector2.One, color, color, quality: 2);
@@ -317,6 +340,8 @@ namespace Framework {
             }
         }
 
+        int CurrentPaintIndex = 0;
+
         public void Render (float deltaTime, IBatchContainer container, int layer) {
             if (Scene == null)
                 return;
@@ -351,6 +376,7 @@ namespace Framework {
                         }
                     }
 
+                    CurrentPaintIndex = 0;
                     NuklearAPI.Render(Context, HighLevelRenderCommand);
                 } finally {
                     if (isGcOff)

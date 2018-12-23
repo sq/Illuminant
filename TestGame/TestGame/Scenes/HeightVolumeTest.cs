@@ -58,6 +58,7 @@ namespace TestGame.Scenes {
             DistanceSliceCount.Max = 24;
             DistanceSliceCount.Speed = 1;
             DistanceSliceCount.Changed += (s, e) => CreateDistanceField();
+            DistanceSliceCount.Integral = true;
 
             LightmapScaleRatio.MinusKey = Keys.D7;
             LightmapScaleRatio.PlusKey = Keys.D8;
@@ -74,6 +75,7 @@ namespace TestGame.Scenes {
             MaxStepCount.Max = 128;
             MaxStepCount.Min = 32;
             MaxStepCount.Speed = 1;
+            MaxStepCount.Integral = true;
 
             MinStepSize.Min = 0.5f;
             MinStepSize.Max = 5f;

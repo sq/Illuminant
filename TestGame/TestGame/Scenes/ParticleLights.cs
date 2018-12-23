@@ -274,8 +274,10 @@ namespace TestGame.Scenes {
                 new ParticleSystemConfiguration(
                     attributeCount: 1
                 ) {
-                    Texture = fireball,
-                    TextureRegion = fireballRect,
+                    Appearance = {
+                        Texture = fireball,
+                        Region = fireballRect,
+                    },
                     Size = new Vector2(34, 21) * 0.35f,
                     AnimationRate = new Vector2(1 / 3f, 0),
                     RotationFromVelocity = true,

@@ -147,11 +147,14 @@ namespace Squared.Illuminant.Uniforms {
     }
 
     public struct ParticleSystem {
-        public Vector2 Texel;
         // deltaTimeMilliseconds, friction, maximumVelocity, lifeDecayRate
         public Vector4 GlobalSettings;
         // escapeVelocity, bounceVelocityMultiplier, collisionDistance, collisionLifePenalty
         public Vector4 CollisionSettings;
+        public Vector4 ColorFromLife;
+
+        public Vector2 Texel;
+        public Vector2 LifeSizeMultiplier;
 
         public ParticleSystem (
             Particles.ParticleEngineConfiguration Engine,
@@ -169,6 +172,9 @@ namespace Squared.Illuminant.Uniforms {
                 Configuration.CollisionDistance,
                 Configuration.CollisionLifePenalty
             );
+            // HACK: These formulas have the result saturate()d so this gets us close to a constant 1 result
+            ColorFromLife = Configuration._ColorFromLife.GetValueOrDefault(Vector4.Zero);
+            LifeSizeMultiplier = Configuration.SizeFromLife.GetValueOrDefault(Vector2.One * 9999999);
         }
     }
 }

@@ -124,12 +124,24 @@ namespace TestGame {
                 int result = Nuke.nk_check_text(ctx, name.pText, name.Length, toggle.Value ? 0 : 1);
                 toggle.Value = result == 0;
             } else if (slider != null) {
-                Nuke.nk_label(ctx, name.pText, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
-                var bounds = Nuke.nk_widget_bounds(ctx);
-                slider.Value = Nuke.nk_slide_float(ctx, slider.Min.GetValueOrDefault(0), slider.Value, slider.Max.GetValueOrDefault(1), slider.Speed);
-                if (Nuke.nk_input_is_mouse_hovering_rect(&ctx->input, bounds) != 0) {
-                    using (var utf8 = new NString("    " + slider.GetFormattedValue()))
-                        Nuke.nk_tooltip(ctx, utf8.pText);
+                var min = slider.Min.GetValueOrDefault(0);
+                var max = slider.Max.GetValueOrDefault(1);
+                float value = slider.Value, newValue = value;
+                if (slider.AsProperty) {
+                    newValue = Nuke.nk_propertyf(ctx, name.pText, min, value, max, slider.Speed, slider.Integral ? 1 : slider.Speed * 0.1f);
+                } else {
+                    Nuke.nk_label(ctx, name.pText, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
+                    var bounds = Nuke.nk_widget_bounds(ctx);
+                    newValue = Nuke.nk_slide_float(ctx, min, value, max, slider.Speed);
+                    if (Nuke.nk_input_is_mouse_hovering_rect(&ctx->input, bounds) != 0) {
+                        using (var utf8 = new NString("    " + slider.GetFormattedValue()))
+                            Nuke.nk_tooltip(ctx, utf8.pText);
+                    }
+                }
+                if (newValue != value) {
+                    if (slider.Integral)
+                        newValue = (float)Math.Floor(value);
+                    slider.Value = newValue;
                 }
             }
         }

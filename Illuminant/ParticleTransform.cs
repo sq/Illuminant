@@ -134,7 +134,7 @@ namespace Squared.Illuminant.Particles.Transforms {
     }
 
     public class MatrixMultiply : ParticleAreaTransform {
-        public float CyclesPerSecond = 10;
+        public float? CyclesPerSecond = 10;
         public Matrix Position, Velocity, Attribute;
 
         public MatrixMultiply () {
@@ -143,7 +143,7 @@ namespace Squared.Illuminant.Particles.Transforms {
 
         protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, int frameIndex) {
             base.SetParameters(engine, parameters, frameIndex);
-            parameters["TimeDivisor"].SetValue(1000f / CyclesPerSecond);
+            parameters["TimeDivisor"].SetValue(CyclesPerSecond.HasValue ? 1000f / CyclesPerSecond.Value : -1);
             parameters["PositionMatrix"].SetValue(Position);
             parameters["VelocityMatrix"].SetValue(Velocity);
             parameters["AttributeMatrix"].SetValue(Attribute);

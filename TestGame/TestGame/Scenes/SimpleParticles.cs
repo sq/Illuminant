@@ -107,7 +107,9 @@ namespace TestGame.Scenes {
                 new ParticleSystemConfiguration(
                     attributeCount: 1
                 ) {
-                    Texture = new NullableLazyResource<Texture2D>("spark"),
+                    Appearance = {
+                        Texture = new NullableLazyResource<Texture2D>("spark"),
+                    },
                     Size = Vector2.One * 2.6f,
                     /*
                     Texture = fireball,
@@ -179,7 +181,8 @@ namespace TestGame.Scenes {
                     */
                     new MatrixMultiply {
                         Velocity = Matrix.CreateRotationZ((float)Math.PI * 0.002f) * Matrix.CreateScale(1f, 1f, 0f),
-                        Position = Matrix.CreateScale(1f, 1f, 0f)
+                        Position = Matrix.CreateScale(1f, 1f, 0f),
+                        CyclesPerSecond = null
                     }
                 }
             };

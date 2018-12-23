@@ -938,8 +938,9 @@ namespace Squared.Illuminant.Particles {
 
             var startedWhen = Time.Ticks;
 
-            if (Configuration.Texture != null)
-                Configuration.Texture.EnsureInitialized(Engine.Configuration.TextureLoader);
+            var appearance = Configuration.Appearance;
+            if (appearance.Texture != null)
+                appearance.Texture.EnsureInitialized(Engine.Configuration.TextureLoader);
 
             lock (Slices) {
                 source = (
@@ -955,7 +956,7 @@ namespace Squared.Illuminant.Particles {
             }
 
             if (material == null) {
-                if ((Configuration.Texture != null) && (Configuration.Texture.Instance != null)) {
+                if ((appearance.Texture != null) && (appearance.Texture.Instance != null)) {
                     material = Configuration.AttributeCount > 0
                         ? Engine.ParticleMaterials.AttributeColor
                         : Engine.ParticleMaterials.White;
@@ -974,17 +975,20 @@ namespace Squared.Illuminant.Particles {
             using (var group = BatchGroup.New(
                 container, layer,
                 (dm, _) => {
+                    // FIXME: deltaTime
+                    SetSystemUniform(m, 0);
+
                     // TODO: transform arg
                     var bt = p["BitmapTexture"];
                     if (bt != null) {
                         bt.SetValue(Configuration.Texture);
                         p["BitmapTextureRegion"].SetValue(new Vector4(
-                            Configuration.TextureRegion.TopLeft, 
-                            Configuration.TextureRegion.BottomRight.X, 
-                            Configuration.TextureRegion.BottomRight.Y
+                            appearance.Region.TopLeft, 
+                            appearance.Region.BottomRight.X, 
+                            appearance.Region.BottomRight.Y
                         ));
                         p["AnimationRate"].SetValue(Configuration.AnimationRate);
-                        p["Size"].SetValue(Configuration.Size / 2);
+                        p["Size"].SetValue(Configuration.Size / 2f);
                         p["VelocityRotation"].SetValue(Configuration.RotationFromVelocity ? 1f : 0f);
                     }
 
@@ -992,7 +996,6 @@ namespace Squared.Illuminant.Particles {
                     if (zToY != null)
                         zToY.SetValue(Configuration.ZToY);
 
-                    p["OpacityFromLife"].SetValue(Configuration.OpacityFromLife);
                     p["StippleFactor"].SetValue(overrideStippleFactor.GetValueOrDefault(Configuration.StippleFactor));
 
                     var gc = p["GlobalColor"];
@@ -1038,6 +1041,19 @@ namespace Squared.Illuminant.Particles {
         }
     }
 
+    public struct ParticleTexture {
+        /// <summary>
+        /// Configures the sprite used to render each particle.
+        /// If null, the particle will be a solid-color quad
+        /// </summary>
+        public NullableLazyResource<Texture2D> Texture;
+        /// <summary>
+        /// Configures the region of the texture used by the particle. If you specify a subregion the region
+        ///  will scroll as the particle animates.
+        /// </summary>
+        public Bounds Region;
+    }
+
     public class ParticleSystemConfiguration {
         public readonly int  AttributeCount;
 
@@ -1048,16 +1064,13 @@ namespace Squared.Illuminant.Particles {
         public ITimeProvider TimeProvider = null;
 
         /// <summary>
-        /// Configures the sprite used to render each particle.
-        /// If null, the particle will be a solid-color quad
+        /// Configures the appearance of particles
         /// </summary>
-        public NullableLazyResource<Texture2D> Texture = 
-            new NullableLazyResource<Texture2D>();
-        /// <summary>
-        /// Configures the region of the texture used by the particle. If you specify a subregion the region
-        ///  will scroll as the particle animates.
-        /// </summary>
-        public Bounds        TextureRegion = new Bounds(Vector2.Zero, Vector2.One);
+        public ParticleTexture Appearance = new ParticleTexture {
+            Texture = new NullableLazyResource<Texture2D>(),
+            Region = new Bounds(Vector2.Zero, Vector2.One),
+        };
+
         /// <summary>
         /// The on-screen size of each particle, in pixels
         /// </summary>
@@ -1075,9 +1088,14 @@ namespace Squared.Illuminant.Particles {
         public bool          RotationFromVelocity;
 
         /// <summary>
-        /// If != 0, a particle's opacity is equal to its life divided by this value
+        /// Multiplies the particle's color, producing a fade-in or fade-out based on the particle's life
         /// </summary>
-        public float         OpacityFromLife = 0;
+        internal Vector4?    _ColorFromLife = null;
+
+        /// <summary>
+        /// Multiplies the particle's size, producing a shrink or grow based on the particle's life
+        /// </summary>
+        public Vector2?      SizeFromLife = null;
 
         /// <summary>
         /// Life of all particles decreases by this much every update
@@ -1147,10 +1165,53 @@ namespace Squared.Illuminant.Particles {
         /// </summary>
         public Vector4       GlobalColor = Vector4.One;
 
+        [NonSerialized]
+        private float? _OpacityFromLife = null;
+
+        public float? OpacityFromLife {
+            set {
+                if (value == _OpacityFromLife)
+                    return;
+
+                if (value != null) {
+                    _OpacityFromLife = value.Value;
+                    _ColorFromLife = new Vector4(0, 0, 0, value.Value);
+                } else {
+                    _OpacityFromLife = null;
+                    _ColorFromLife = null;
+                }
+            }
+            get {
+                if (_OpacityFromLife.HasValue)
+                    return _OpacityFromLife.Value;
+                else
+                    return null;
+            }
+        }
+
+        public Vector4? ColorFromLife {
+            get {
+                if (_OpacityFromLife.HasValue)
+                    return null;
+                else
+                    return _ColorFromLife;
+            }
+            set {
+                _ColorFromLife = value;
+                _OpacityFromLife = null;
+            }
+        }
+
         public ParticleSystemConfiguration (
             int attributeCount = 0
         ) {
             AttributeCount = attributeCount;
+        }
+
+        public Texture2D Texture {
+            get {
+                return Appearance.Texture;
+            }
         }
     }
 }

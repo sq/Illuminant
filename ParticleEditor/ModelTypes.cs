@@ -28,6 +28,8 @@ namespace ParticleEditor {
                         {"GlobalLifeDecayRate", new ModelTypeInfo { Min = 0, Max = 1000 } },
                         {"Size", new ModelTypeInfo { Min = 0, Max = 256 } },
                         {"AnimationRate", new ModelTypeInfo { Min = -100, Max = 100 } },
+                        {"OpacityFromLife", new ModelTypeInfo { Min = -2048, Max = 2048 } },
+                        {"SizeFromLife", new ModelTypeInfo { Min = -2048, Max = 2048 } },
                     }
                 },
                 {

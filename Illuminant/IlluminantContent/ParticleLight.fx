@@ -1,7 +1,6 @@
 #include "SphereLightCore.fxh"
 #include "ParticleCommon.fxh"
 
-uniform float OpacityFromLife;
 uniform float4 LightProperties;
 uniform float4 MoreLightProperties;
 uniform float4 LightColor;
@@ -57,13 +56,10 @@ void ParticleLightVertexShader(
 
     lightColor = attributes * LightColor;
 
-    if (OpacityFromLife > 0)
-        lightColor *= saturate(position.w / OpacityFromLife);
-    else if (OpacityFromLife < 0)
-        lightColor *= 1 - saturate(position.w / -OpacityFromLife);
-
     lightProperties = LightProperties;
     moreLightProperties = MoreLightProperties;
+
+    lightColor = getColorForLifeValue(position.w);
 
     if (lightColor.a <= 0) {
         result = float4(0, 0, 0, 0);

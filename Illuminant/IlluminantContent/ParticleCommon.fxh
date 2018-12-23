@@ -1,9 +1,11 @@
 struct ParticleSystemSettings {
-    float2 Texel;
     // deltaTimeSeconds, friction, maximumVelocity, lifeDecayRate
     float4 GlobalSettings;
     // escapeVelocity, bounceVelocityMultiplier, collisionDistance, collisionLifePenalty
     float4 CollisionSettings;
+    float4 ColorFromLife;
+    float2 Texel;
+    float2 LifeSizeMultiplier;
 };
 
 uniform ParticleSystemSettings System;
@@ -43,6 +45,18 @@ float getCollisionDistance () {
 
 float getCollisionLifePenalty () {
     return System.CollisionSettings.w;
+}
+
+float4 getColorForLifeValue (float life) {
+    // value = (1 + x) if threshold is negative
+    float4 base = saturate(-sign(System.ColorFromLife));
+    // fraction = (x / threshold)
+    float4 fraction = life / (System.ColorFromLife + 0.001);
+    // value = (1 + -x) if multiplier is negative else (0 + x)
+    float4 result = saturate(base + fraction);
+    // premultiply
+    result.rgb *= result.a;
+    return result;
 }
 
 Texture2D PositionTexture;

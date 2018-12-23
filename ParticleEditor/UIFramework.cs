@@ -70,9 +70,10 @@ namespace ParticleEditor {
             public ModelTypeInfo Info;
             public FieldInfo Field;
             public PropertyInfo Property;
-            public Type Type;
+            public Type RawType, Type;
             public Func<object, object> Getter;
             public Action<object, object> Setter;
+            public bool AllowNull;
         }
 
         private struct PropertyGridCache {
@@ -130,9 +131,12 @@ namespace ParticleEditor {
                    where (m.MemberType == MemberTypes.Field) || (m.MemberType == MemberTypes.Property)
                    let f = m as FieldInfo
                    let p = m as PropertyInfo
-                   let mtype = (f != null) ? f.FieldType : p.PropertyType
+                   let _mtype = (f != null) ? f.FieldType : p.PropertyType
+                   let isNullable = _mtype.Name == "Nullable`1"
+                   let allowNull = _mtype.IsClass || isNullable
+                   let mtype = isNullable ? _mtype.GetGenericArguments()[0] : _mtype
                    where (f == null) || !f.IsInitOnly
-                   where (p == null) || p.CanWrite
+                   where (p == null) || (p.CanWrite && p.CanRead)
                    where !m.GetCustomAttributes<NonSerializedAttribute>().Any()
                    orderby m.Name
                    select new CachedPropertyInfo {
@@ -140,7 +144,9 @@ namespace ParticleEditor {
                        Info = GetInfoForField(type, m.Name, mtype),
                        Field = f,
                        Property = p,
+                       RawType = _mtype,
                        Type = mtype,
+                       AllowNull = allowNull,
                        Getter = (f != null) ? (Func<object, object>)f.GetValue : p.GetValue,
                        Setter = (f != null) ? (Action<object, object>)f.SetValue : p.SetValue
                    };
@@ -195,6 +201,10 @@ namespace ParticleEditor {
         private unsafe void RenderPropertyElement (
             string key, ModelTypeInfo? info, ref float value, ref bool changed, float? min = null, float? max = null
         ) {
+            // FIXME
+            if (Single.IsInfinity(value) || Single.IsNaN(value))
+                value = 0;
+
             var _info = info.GetValueOrDefault(default(ModelTypeInfo));
             float lowStep = 0.05f;
             float highStep = 1f;
@@ -240,7 +250,6 @@ namespace ParticleEditor {
                         CachedMembers[cpi.Type] = members = CachePropertyInfo(cpi.Type).ToList();
 
                     using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, actualName, false)) {
-                        // FIXME: Slow
                         if (pGroup.Visible) {
                             foreach (var i in members) 
                                 if (RenderProperty(ref cache, i, value, cpi.Name))
@@ -252,31 +261,38 @@ namespace ParticleEditor {
                         return changed;
                     }
 
+                case "ParticleTexture":
+                    return RenderTextureProperty(cpi, instance, ref changed, actualName, value);
+
                 case "Int32":
                 case "Single":
-                    Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 1);
-                    if (cpi.Type == typeof(float)) {
-                        var v = (float)value;
-                        RenderPropertyElement(cpi.Name, cpi.Info, ref v, ref changed);
-                        if (changed) {
-                            cpi.Setter(instance, v);
-                            return true;
+                    if (!cpi.AllowNull || (value != null)) {
+                        Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 1);
+                        if (cpi.Type == typeof(float)) {
+                            var v = (float)value;
+                            RenderPropertyElement(cpi.Name, cpi.Info, ref v, ref changed);
+                            if (changed) {
+                                cpi.Setter(instance, v);
+                                return true;
+                            }
+                        } else {
+                            var v = (int)value;
+                            if (Nuklear.Property(
+                                cpi.Name, ref v, 
+                                (int)cpi.Info.Min.GetValueOrDefault(0), 
+                                (int)cpi.Info.Min.GetValueOrDefault(40960), 
+                                1, 1
+                            )) {
+                                cpi.Setter(instance, v);
+                                return true;
+                            }
                         }
-                    } else {
-                        var v = (int)value;
-                        if (Nuklear.Property(
-                            cpi.Name, ref v, 
-                            (int)cpi.Info.Min.GetValueOrDefault(0), 
-                            (int)cpi.Info.Min.GetValueOrDefault(40960), 
-                            1, 1
-                        )) {
-                            cpi.Setter(instance, v);
-                            return true;
-                        }
+                        return false;
                     }
+                    break;
 
-                    return false;
-
+                case "ColorF":
+                    return RenderColorProperty(cpi, instance, out changed, value);
                 case "Matrix":
                     return RenderMatrixProperty(cpi, instance, ref changed, actualName, value, false);
                 case "Matrix3x4":
@@ -285,6 +301,24 @@ namespace ParticleEditor {
 
             Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 2);
             Nuklear.SelectableText(cpi.Name, isActive);
+
+            if (cpi.AllowNull) {
+                var isNull = value == null;
+                if (isNull) {
+                    if (Nuklear.Button("Create")) {
+                        value = Activator.CreateInstance(cpi.Type);
+                        cpi.Setter(instance, value);
+                        changed = true;
+                    }
+                    return changed;
+                } else {
+                    if (Nuklear.Button("Erase")) {
+                        cpi.Setter(instance, value = null);
+                        changed = true;
+                        return changed;
+                    }
+                }
+            }
 
             if (value == null) {
                 Nuklear.SelectableText("null", isActive);
@@ -340,9 +374,6 @@ namespace ParticleEditor {
                         return true;
                     }
                     return false;
-
-                case "ColorF":
-                    return RenderColorProperty(cpi, instance, out changed, value);
 
                 default:
                     if (Nuklear.SelectableText(value.GetType().Name, isActive))
@@ -433,31 +464,55 @@ namespace ParticleEditor {
             return false;
         }
 
+        private unsafe bool RenderTextureProperty (
+            CachedPropertyInfo cpi, object instance, ref bool changed, 
+            string actualName, object value
+        ) {
+            var ctx = Nuklear.Context;
+            using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, actualName, false)) {
+                if (pGroup.Visible) {
+                }
+            }
+            return false;
+        }
+
         private unsafe bool RenderColorProperty (
             CachedPropertyInfo cpi, object instance, out bool changed, 
             object value
         ) {
+            changed = false;
             var ctx = Nuklear.Context;
-            var c = (Vector4)value;
-            var oldColor = new NuklearDotNet.nk_colorf {
-                r = c.X,
-                g = c.Y,
-                b = c.Z,
-                a = c.W,
-            };
-            var resetToWhite = Nuklear.Button("White");
-            Nuke.nk_layout_row_dynamic(ctx, 96, 1);
-            var temp = Nuke.nk_color_picker(ctx, oldColor, NuklearDotNet.nk_color_format.NK_RGBA);
-            var newColor = resetToWhite ? Vector4.One : new Vector4(temp.r, temp.g, temp.b, temp.a);
-            changed = newColor != c;
-            Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 4);
-            RenderPropertyElement("#R", null, ref newColor.X, ref changed, 0, 1);
-            RenderPropertyElement("#G", null, ref newColor.Y, ref changed, 0, 1);
-            RenderPropertyElement("#B", null, ref newColor.Z, ref changed, 0, 1);
-            RenderPropertyElement("#A", null, ref newColor.W, ref changed, 0, 1);
-            if (changed) {
-                cpi.Setter(instance, newColor);
-                return true;
+            using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, cpi.Name, false)) {
+                if (pGroup.Visible) {
+                    var c = (Vector4)value;
+                    var oldColor = new NuklearDotNet.nk_colorf {
+                        r = c.X,
+                        g = c.Y,
+                        b = c.Z,
+                        a = c.W,
+                    };
+                    Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 1, 2);
+                    var resetToTransparent = Nuklear.Button("Transparent");
+                    var resetToWhite = Nuklear.Button("White");
+                    Nuke.nk_layout_row_dynamic(ctx, 96, 1);
+                    var temp = Nuke.nk_color_picker(ctx, oldColor, NuklearDotNet.nk_color_format.NK_RGBA);
+                    var newColor = resetToWhite 
+                        ? Vector4.One 
+                        : resetToTransparent 
+                            ? Vector4.Zero
+                            : new Vector4(temp.r, temp.g, temp.b, temp.a);
+                    if (newColor != c)
+                        changed = true;
+                    Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 4);
+                    RenderPropertyElement("#R", null, ref newColor.X, ref changed, 0, 1);
+                    RenderPropertyElement("#G", null, ref newColor.Y, ref changed, 0, 1);
+                    RenderPropertyElement("#B", null, ref newColor.Z, ref changed, 0, 1);
+                    RenderPropertyElement("#A", null, ref newColor.W, ref changed, 0, 1);
+                    if (changed) {
+                        cpi.Setter(instance, newColor);
+                        return true;
+                    }
+                }
             }
             return false;
         }

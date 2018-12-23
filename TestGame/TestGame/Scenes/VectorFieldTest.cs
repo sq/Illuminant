@@ -87,7 +87,9 @@ namespace TestGame.Scenes {
                 new ParticleSystemConfiguration(
                     attributeCount: 1
                 ) {
-                    Texture = spark,
+                    Appearance = {
+                        Texture = spark,
+                    },
                     Size = Vector2.One * 2.6f,
                     RotationFromVelocity = true,
                     OpacityFromLife = opacityFromLife / 60f,

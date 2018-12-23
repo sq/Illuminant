@@ -135,6 +135,8 @@ namespace TestGame {
     }
 
     public class Slider : Setting<float> {
+        public bool AsProperty = true;
+        public bool Integral = false;
         public Keys MinusKey, PlusKey;
         public float? Min, Max;
         public float Speed = 1;

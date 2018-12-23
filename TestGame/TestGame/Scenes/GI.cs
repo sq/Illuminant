@@ -130,6 +130,7 @@ namespace TestGame.Scenes {
             GIBounceCount.Min = 0f;
             GIBounceCount.Max = BounceCount;
             GIBounceCount.Speed = 1f;
+            GIBounceCount.Integral = true;
 
             LightScaleFactor.MinusKey = Keys.Q;
             LightScaleFactor.PlusKey = Keys.W;
