@@ -351,8 +351,11 @@ namespace ParticleEditor {
             }
         }
 
-        private readonly Dictionary<string, float> RotationSliderValues = new Dictionary<string, float>();
-        private readonly Dictionary<string, float> ScaleSliderValues = new Dictionary<string, float>();
+        private struct MatrixGenerateParameters {
+            public float Angle, Scale;
+        }
+
+        private readonly Dictionary<string, MatrixGenerateParameters> MatrixGenerateParams = new Dictionary<string, MatrixGenerateParameters>();
 
         private unsafe bool RenderMatrixProperty (
             CachedPropertyInfo cpi, object instance, ref bool changed, 
@@ -365,63 +368,62 @@ namespace ParticleEditor {
 
                     using (var grp = Nuklear.CollapsingGroup("Generate", "GenerateMatrix", false, NextMatrixIndex++))
                     if (grp.Visible) {
-                        float angle, scale;
-                        RotationSliderValues.TryGetValue(actualName, out angle);
-                        if (!ScaleSliderValues.TryGetValue(actualName, out scale))
-                            scale = 1;
+                        MatrixGenerateParameters p;
+                        if (!MatrixGenerateParams.TryGetValue(actualName, out p)) {
+                            p = new MatrixGenerateParameters { Angle = 0, Scale = 1 };
+                        }
 
                         Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 1);
                         if (Nuklear.Button("Identity")) {
                             m = Matrix.Identity;
-                            angle = 0;
-                            scale = 1;
+                            p.Angle = 0;
+                            p.Scale = 1;
                             changed = true;
                         }
 
                         bool regenerate = false;
 
                         Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 1);
-                        if (Nuklear.Property("Rotate", ref angle, -360, 360, 0.5f, 0.25f)) {
+                        if (Nuklear.Property("Rotate", ref p.Angle, -360, 360, 0.5f, 0.25f)) {
                             regenerate = true;
                             changed = true;
                         }
-                        if (Nuklear.Property("Scale", ref scale, -5, 5, 0.05f, 0.01f)) {
+                        if (Nuklear.Property("Scale", ref p.Scale, -5, 5, 0.05f, 0.01f)) {
                             regenerate = true;
                             changed = true;
                         }
 
                         if (regenerate) {
-                            m = Matrix.CreateRotationZ(MathHelper.ToRadians(angle)) *
-                                Matrix.CreateScale(scale);
+                            m = Matrix.CreateRotationZ(MathHelper.ToRadians(p.Angle)) *
+                                Matrix.CreateScale(p.Scale);
                         }
 
-                        if (changed || regenerate) {
-                            RotationSliderValues[actualName] = angle;
-                            ScaleSliderValues[actualName] = scale;
-                        }
+                        if (changed || regenerate)
+                            MatrixGenerateParams[actualName] = p;
+                    } else {
+                        Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, is3x4 ? 3 : 4);
+                        RenderPropertyElement("#xx", cpi.Info, ref m.M11, ref changed);
+                        RenderPropertyElement("#xy", cpi.Info, ref m.M12, ref changed);
+                        RenderPropertyElement("#xz", cpi.Info, ref m.M13, ref changed);
+                        if (!is3x4)
+                            RenderPropertyElement("#xw", cpi.Info, ref m.M14, ref changed);
+                        RenderPropertyElement("#yx", cpi.Info, ref m.M21, ref changed);
+                        RenderPropertyElement("#yy", cpi.Info, ref m.M22, ref changed);
+                        RenderPropertyElement("#yz", cpi.Info, ref m.M23, ref changed);
+                        if (!is3x4)
+                            RenderPropertyElement("#yw", cpi.Info, ref m.M24, ref changed);
+                        RenderPropertyElement("#zx", cpi.Info, ref m.M31, ref changed);
+                        RenderPropertyElement("#zy", cpi.Info, ref m.M32, ref changed);
+                        RenderPropertyElement("#zz", cpi.Info, ref m.M33, ref changed);
+                        if (!is3x4)
+                            RenderPropertyElement("#zw", cpi.Info, ref m.M34, ref changed);
+                        RenderPropertyElement("#wx", cpi.Info, ref m.M41, ref changed);
+                        RenderPropertyElement("#wy", cpi.Info, ref m.M42, ref changed);
+                        RenderPropertyElement("#wz", cpi.Info, ref m.M43, ref changed);
+                        if (!is3x4)
+                            RenderPropertyElement("#ww", cpi.Info, ref m.M44, ref changed);
                     }
 
-                    Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, is3x4 ? 3 : 4);
-                    RenderPropertyElement("#xx", cpi.Info, ref m.M11, ref changed);
-                    RenderPropertyElement("#xy", cpi.Info, ref m.M12, ref changed);
-                    RenderPropertyElement("#xz", cpi.Info, ref m.M13, ref changed);
-                    if (!is3x4)
-                        RenderPropertyElement("#xw", cpi.Info, ref m.M14, ref changed);
-                    RenderPropertyElement("#yx", cpi.Info, ref m.M21, ref changed);
-                    RenderPropertyElement("#yy", cpi.Info, ref m.M22, ref changed);
-                    RenderPropertyElement("#yz", cpi.Info, ref m.M23, ref changed);
-                    if (!is3x4)
-                        RenderPropertyElement("#yw", cpi.Info, ref m.M24, ref changed);
-                    RenderPropertyElement("#zx", cpi.Info, ref m.M31, ref changed);
-                    RenderPropertyElement("#zy", cpi.Info, ref m.M32, ref changed);
-                    RenderPropertyElement("#zz", cpi.Info, ref m.M33, ref changed);
-                    if (!is3x4)
-                        RenderPropertyElement("#zw", cpi.Info, ref m.M34, ref changed);
-                    RenderPropertyElement("#wx", cpi.Info, ref m.M41, ref changed);
-                    RenderPropertyElement("#wy", cpi.Info, ref m.M42, ref changed);
-                    RenderPropertyElement("#wz", cpi.Info, ref m.M43, ref changed);
-                    if (!is3x4)
-                        RenderPropertyElement("#ww", cpi.Info, ref m.M44, ref changed);
                     if (changed) {
                         cpi.Setter(instance, m);
                         return true;

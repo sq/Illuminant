@@ -63,6 +63,8 @@ namespace Framework {
         private nk_query_font_glyph_f QueryFontGlyphF;
         private nk_text_width_f TextWidthF;
 
+        private Dictionary<uint, float> TextWidthCache = new Dictionary<uint, float>();
+
         public Action Scene = null;
         public UnorderedList<Func<bool>> Modals = new UnorderedList<Func<bool>>();
 
@@ -108,12 +110,12 @@ namespace Framework {
             if (!_Font.GetGlyph((char)codepoint, out result))
                 return;
 
-            var texBounds = result.Texture.BoundsFromRectangle(ref result.BoundsInTexture);
+            var texBounds = result.BoundsInTexture;
 
             glyph->uv0 = (nk_vec2)texBounds.TopLeft;
             glyph->uv1 = (nk_vec2)texBounds.BottomRight;
-            glyph->width = result.BoundsInTexture.Width * FontScale;
-            glyph->height = result.BoundsInTexture.Height * FontScale;
+            glyph->width = result.RectInTexture.Width * FontScale;
+            glyph->height = result.RectInTexture.Height * FontScale;
             glyph->xadvance = result.Width * FontScale;
         }
 
@@ -124,14 +126,21 @@ namespace Framework {
             if ((len == 1) && (s[0] == 0))
                 return 0;
 
-            using (var buf = BufferPool<char>.Allocate(len + 1)) {
-                int cnt;
-                fixed (char * pResult = buf.Data)
-                    cnt = Encoding.UTF8.GetChars(s, len, pResult, buf.Data.Length);
-                var astr = new AbstractString(new ArraySegment<char>(buf.Data, 0, cnt));
-                float result = _Font.LayoutString(astr, scale: FontScale).Size.X;
-                return result;
+            var hash = Nuklear.nk_murmur_hash((IntPtr)s, len, 0);
+            float result;
+            if (!TextWidthCache.TryGetValue(hash, out result)) {
+                using (var buf = BufferPool<char>.Allocate(len + 1))
+                using (var layoutBuf = BufferPool<BitmapDrawCall>.Allocate(len + 1)) {
+                    int cnt;
+                    fixed (char* pResult = buf.Data)
+                        cnt = Encoding.UTF8.GetChars(s, len, pResult, buf.Data.Length);
+                    var astr = new AbstractString(new ArraySegment<char>(buf.Data, 0, cnt));
+                    result = _Font.LayoutString(astr, layoutBuf, scale: FontScale).Size.X;
+                    TextWidthCache[hash] = result;
+                }
             }
+
+            return result;
         }
 
         private void SetNewFont (IGlyphSource newFont) {
@@ -141,7 +150,7 @@ namespace Framework {
             for (int i = 0; i < 255; i++) {
                 Glyph glyph;
                 if (newFont.GetGlyph((char)i, out glyph))
-                    estimatedHeight = Math.Max(estimatedHeight, glyph.BoundsInTexture.Height);
+                    estimatedHeight = Math.Max(estimatedHeight, glyph.RectInTexture.Height);
             }
             // LineSpacing includes whitespace :(
             userFont->height = (estimatedHeight - 3) * FontScale;
@@ -372,6 +381,8 @@ namespace Framework {
             KeyboardState previousKeyboardState, KeyboardState keyboardState,
             bool processMousewheel, IEnumerable<char> keystrokes = null
         ) {
+            if (TextWidthCache.Count > 16 * 1024)
+                TextWidthCache.Clear();
             NString.GC();
 
             var ctx = Context;
