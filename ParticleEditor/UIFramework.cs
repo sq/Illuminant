@@ -352,6 +352,7 @@ namespace ParticleEditor {
         }
 
         private readonly Dictionary<string, float> RotationSliderValues = new Dictionary<string, float>();
+        private readonly Dictionary<string, float> ScaleSliderValues = new Dictionary<string, float>();
 
         private unsafe bool RenderMatrixProperty (
             CachedPropertyInfo cpi, object instance, ref bool changed, 
@@ -364,21 +365,39 @@ namespace ParticleEditor {
 
                     using (var grp = Nuklear.CollapsingGroup("Generate", "GenerateMatrix", false, NextMatrixIndex++))
                     if (grp.Visible) {
-                        float angle;
+                        float angle, scale;
                         RotationSliderValues.TryGetValue(actualName, out angle);
+                        if (!ScaleSliderValues.TryGetValue(actualName, out scale))
+                            scale = 1;
 
                         Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 1);
                         if (Nuklear.Button("Identity")) {
                             m = Matrix.Identity;
-                            RotationSliderValues[actualName] = angle = 0;
+                            angle = 0;
+                            scale = 1;
                             changed = true;
                         }
 
+                        bool regenerate = false;
+
                         Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 1);
-                        if (Nuklear.Property("Rotate", ref angle, -360, 360, 1, 0.5f)) {
-                            m = Matrix.CreateRotationZ(MathHelper.ToRadians(angle));
-                            RotationSliderValues[actualName] = angle;
+                        if (Nuklear.Property("Rotate", ref angle, -360, 360, 0.5f, 0.25f)) {
+                            regenerate = true;
                             changed = true;
+                        }
+                        if (Nuklear.Property("Scale", ref scale, -5, 5, 0.05f, 0.01f)) {
+                            regenerate = true;
+                            changed = true;
+                        }
+
+                        if (regenerate) {
+                            m = Matrix.CreateRotationZ(MathHelper.ToRadians(angle)) *
+                                Matrix.CreateScale(scale);
+                        }
+
+                        if (changed || regenerate) {
+                            RotationSliderValues[actualName] = angle;
+                            ScaleSliderValues[actualName] = scale;
                         }
                     }
 
