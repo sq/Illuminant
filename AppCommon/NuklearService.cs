@@ -318,16 +318,28 @@ namespace Framework {
                 PendingGroup = group;
                 PendingIR = new ImperativeRenderer(group, Game.Materials, 0, autoIncrementSortKey: true, worldSpace: false, blendState: BlendState.AlphaBlend);
 
-                Scene();
+                // https://docs.microsoft.com/en-us/dotnet/standard/garbage-collection/fundamentals?view=netframework-4.7.2
+                // Says lowest max size of ephemeral segment is 16mb
+                // We shouldn't end up using remotely that much, but let's set it to 12mb.
+                // Suspending GC while talking to nuklear is probably for the best to avoid weird crashes...
+                const int size = 1024 * 1024 * 12;
+                var isGcOff = GC.TryStartNoGCRegion(size, true);
 
-                using (var e = Modals.GetEnumerator()) {
-                    while (e.MoveNext()) {
-                        if (!e.Current())
-                            e.RemoveCurrent();
+                try {
+                    Scene();
+
+                    using (var e = Modals.GetEnumerator()) {
+                        while (e.MoveNext()) {
+                            if (!e.Current())
+                                e.RemoveCurrent();
+                        }
                     }
-                }
 
-                NuklearAPI.Render(Context, HighLevelRenderCommand);
+                    NuklearAPI.Render(Context, HighLevelRenderCommand);
+                } finally {
+                    if (isGcOff)
+                        GC.EndNoGCRegion();
+                }
             }
         }
 

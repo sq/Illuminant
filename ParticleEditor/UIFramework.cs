@@ -271,7 +271,9 @@ namespace ParticleEditor {
                     return false;
 
                 case "Matrix":
-                    return RenderMatrixProperty(cpi, instance, ref changed, actualName, value);
+                    return RenderMatrixProperty(cpi, instance, ref changed, actualName, value, false);
+                case "Matrix3x4":
+                    return RenderMatrixProperty(cpi, instance, ref changed, actualName, value, true);
             }
 
             Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 2);
@@ -344,7 +346,7 @@ namespace ParticleEditor {
 
         private unsafe bool RenderMatrixProperty (
             CachedPropertyInfo cpi, object instance, ref bool changed, 
-            string actualName, object value
+            string actualName, object value, bool is3x4
         ) {
             var ctx = Nuklear.Context;
             using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, actualName, false)) {
@@ -358,23 +360,27 @@ namespace ParticleEditor {
                     }
                     if (Nuklear.Button("Mutate")) {
                     }
-                    Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 4);
+                    Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, is3x4 ? 3 : 4);
                     RenderPropertyElement("#xx", cpi.Info, ref m.M11, ref changed);
                     RenderPropertyElement("#xy", cpi.Info, ref m.M12, ref changed);
                     RenderPropertyElement("#xz", cpi.Info, ref m.M13, ref changed);
-                    RenderPropertyElement("#xw", cpi.Info, ref m.M14, ref changed);
+                    if (!is3x4)
+                        RenderPropertyElement("#xw", cpi.Info, ref m.M14, ref changed);
                     RenderPropertyElement("#yx", cpi.Info, ref m.M21, ref changed);
                     RenderPropertyElement("#yy", cpi.Info, ref m.M22, ref changed);
                     RenderPropertyElement("#yz", cpi.Info, ref m.M23, ref changed);
-                    RenderPropertyElement("#yw", cpi.Info, ref m.M24, ref changed);
+                    if (!is3x4)
+                        RenderPropertyElement("#yw", cpi.Info, ref m.M24, ref changed);
                     RenderPropertyElement("#zx", cpi.Info, ref m.M31, ref changed);
                     RenderPropertyElement("#zy", cpi.Info, ref m.M32, ref changed);
                     RenderPropertyElement("#zz", cpi.Info, ref m.M33, ref changed);
-                    RenderPropertyElement("#zw", cpi.Info, ref m.M34, ref changed);
+                    if (!is3x4)
+                        RenderPropertyElement("#zw", cpi.Info, ref m.M34, ref changed);
                     RenderPropertyElement("#wx", cpi.Info, ref m.M41, ref changed);
                     RenderPropertyElement("#wy", cpi.Info, ref m.M42, ref changed);
                     RenderPropertyElement("#wz", cpi.Info, ref m.M43, ref changed);
-                    RenderPropertyElement("#ww", cpi.Info, ref m.M44, ref changed);
+                    if (!is3x4)
+                        RenderPropertyElement("#ww", cpi.Info, ref m.M44, ref changed);
                     if (changed) {
                         cpi.Setter(instance, m);
                         return true;

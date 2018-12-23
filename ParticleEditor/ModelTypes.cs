@@ -49,6 +49,7 @@ namespace ParticleEditor {
                 {
                     "MatrixMultiply", new Dictionary<string, ModelTypeInfo> {
                         {"CyclesPerSecond", new ModelTypeInfo { Min = 0, Max = 60 } },
+                        {"Velocity", new ModelTypeInfo { Type = "Matrix3x4" } }
                     }
                 },
             };

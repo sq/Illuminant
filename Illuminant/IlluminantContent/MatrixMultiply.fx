@@ -21,7 +21,7 @@ float computeWeight (float3 worldPosition) {
 // We take a w-value to attach to the position/velocity so that it is properly
 //  handled as a position or vector.
 float4 mul3 (float4 oldValue, float4x4 mat, float w) {
-    float4 temp = mul(float4(oldValue.xyz, w), mat);
+    float4 temp = mul(float4(oldValue.xyz, 1), mat);
     float3 divided;
     // FIXME: Is this right?
     if (w != 0)

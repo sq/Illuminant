@@ -115,9 +115,11 @@ namespace ParticleEditor {
         }
 
         protected override void UnloadContent () {
-            base.UnloadContent();
+            RenderCoordinator.WaitForActiveDraws();
 
             FreeContent();
+
+            base.UnloadContent();
         }
 
         protected override void LoadContent () {
