@@ -111,7 +111,7 @@ namespace ParticleEditor {
             Window.ClientSizeChanged += Window_ClientSizeChanged;
 
             KeyboardInputHandler = new KeyboardInput(this);
-            System.Windows.Forms.Application.AddMessageFilter(KeyboardInputHandler);
+            KeyboardInputHandler.Install();
         }
 
         protected override void UnloadContent () {

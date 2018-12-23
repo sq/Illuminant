@@ -155,7 +155,7 @@ namespace ParticleEditor {
         }
 
         public void ShowSaveDialog () {
-            Game.Scheduler.QueueWorkItem(() => {
+            Game.RunWorkItem(() => {
                 using (var dlg = new SaveFileDialog {
                     Title = "Save Particle Systems",
                     CreatePrompt = false,
@@ -181,7 +181,7 @@ namespace ParticleEditor {
         }
 
         public void ShowLoadDialog () {
-            Game.Scheduler.QueueWorkItem(() => {
+            Game.RunWorkItem(() => {
                 using (var dlg = new OpenFileDialog {
                     Title = "Load Particle Systems"
                 }) {
@@ -262,7 +262,11 @@ namespace ParticleEditor {
             var type = value.GetType();
             switch (type.Name) {
                 case "ModelProperty":
-                    serializer.Serialize(writer, value);
+                    var mp = (ModelProperty)value;
+                    serializer.Serialize(writer, new {
+                        Type = mp.Type,
+                        Value = mp.Value
+                    });
                     return;
                 case "Matrix":
                     var m = (Matrix)value;

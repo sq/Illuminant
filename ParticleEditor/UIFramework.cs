@@ -17,7 +17,15 @@ using Nuke = NuklearDotNet.Nuklear;
 
 namespace ParticleEditor {
     public partial class ParticleEditor : MultithreadedGame, INuklearHost {
-        private class KeyboardInput : System.Windows.Forms.IMessageFilter {
+        internal class KeyboardInput : System.Windows.Forms.IMessageFilter {
+            public struct Deactivation : IDisposable {
+                public KeyboardInput This;
+
+                public void Dispose () {
+                    System.Windows.Forms.Application.AddMessageFilter(This);
+                }
+            }
+
             [DllImport("user32.dll")]
             static extern bool TranslateMessage(ref System.Windows.Forms.Message lpMsg);
 
@@ -30,6 +38,15 @@ namespace ParticleEditor {
 
             public KeyboardInput (ParticleEditor game) {
                 Game = game;
+            }
+
+            public void Install () {
+                System.Windows.Forms.Application.AddMessageFilter(this);
+            }
+
+            public Deactivation Deactivate () {
+                System.Windows.Forms.Application.RemoveMessageFilter(this);
+                return new Deactivation { This = this };
             }
 
             public bool PreFilterMessage (ref System.Windows.Forms.Message m) {
@@ -81,7 +98,7 @@ namespace ParticleEditor {
         private PropertyGridCache SystemProperties, TransformProperties;
         private List<Type> TransformTypes = GetTransformTypes().ToList();
 
-        private KeyboardInput KeyboardInputHandler;
+        internal KeyboardInput KeyboardInputHandler;
 
         private static IEnumerable<Type> GetTransformTypes () {
             var tTransform = typeof(ParticleTransform);
@@ -127,6 +144,15 @@ namespace ParticleEditor {
                        Getter = (f != null) ? (Func<object, object>)f.GetValue : p.GetValue,
                        Setter = (f != null) ? (Action<object, object>)f.SetValue : p.SetValue
                    };
+        }
+
+        internal void RunWorkItem (Action workItem) {
+            Scheduler.QueueWorkItemForNextStep(() => {
+                using (KeyboardInputHandler.Deactivate()) {
+                    RenderCoordinator.WaitForActiveDraws();
+                    workItem();
+                }
+            });
         }
 
         private unsafe void RenderPropertyGrid (object instance, ref PropertyGridCache cache, float heightPx) {
