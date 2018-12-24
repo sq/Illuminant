@@ -194,12 +194,24 @@ namespace Squared.Illuminant {
         public Vector4 RandomScaleConstant;
         public bool Circular;
 
-        public Formula () {
-            Constant = Vector4.Zero;
-            RandomOffset = Vector4.One * -0.5f;
-            RandomScale = Vector4.One;
-            RandomScaleConstant = Vector4.Zero;
-            Circular = true;
+        public static Formula UnitNormal () {
+            return new Formula {
+                Constant = Vector4.Zero,
+                RandomOffset = Vector4.One * -0.5f,
+                RandomScale = Vector4.One,
+                RandomScaleConstant = Vector4.Zero,
+                Circular = true
+            };
+        }
+
+        public static Formula Zero () {
+            return new Formula();
+        }
+
+        public static Formula One () {
+            return new Formula {
+                Constant = Vector4.One
+            };
         }
     }
 }

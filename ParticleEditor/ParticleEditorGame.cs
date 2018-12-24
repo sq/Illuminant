@@ -287,7 +287,7 @@ namespace ParticleEditor {
             if ((Window.ClientBounds.Width != Graphics.PreferredBackBufferWidth) || (Window.ClientBounds.Height != Graphics.PreferredBackBufferHeight))
                 return;
 
-            Font.SizePoints = Graphics.PreferredBackBufferWidth > 2000 ? 15f : 14f;
+            Font.SizePoints = Graphics.PreferredBackBufferWidth > 2000 ? 16f : 14f;
 
             View view;
             lock (this)

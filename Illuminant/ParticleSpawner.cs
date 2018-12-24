@@ -20,7 +20,9 @@ namespace Squared.Illuminant.Particles.Transforms {
 
         public bool     RatePerPosition;
 
-        public Formula  Position, Velocity, Attributes;
+        public Formula  Position = Formula.UnitNormal(), 
+            Velocity = Formula.UnitNormal(), 
+            Attributes = Formula.One();
 
         public Matrix   PositionPostMatrix = Matrix.Identity;
 

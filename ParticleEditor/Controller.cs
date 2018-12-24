@@ -186,9 +186,7 @@ namespace ParticleEditor {
                         })
                     },
                     { "Attributes",
-                        ModelProperty.New(new Formula {
-                            Constant = Vector4.One
-                        })
+                        ModelProperty.New(Formula.One())
                     }
                 }
             };
