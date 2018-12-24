@@ -207,7 +207,7 @@ namespace ParticleEditor {
                 Checkbox("Statistics", ref ShowPerformanceStats);
 
                 Nuke.nk_label(ctx, "Zoom", (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
-                Zoom = Nuke.nk_slide_float(ctx, 0.5f, Zoom, 4.0f, 0.1f);
+                Zoom = Nuke.nk_slide_float(ctx, MinZoom, Zoom, MaxZoom, 0.1f);
 
                 Nuke.nk_tree_pop(ctx);
             }

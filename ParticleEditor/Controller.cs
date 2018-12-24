@@ -17,12 +17,14 @@ using Squared.Illuminant.Particles;
 using Squared.Illuminant.Particles.Transforms;
 using Squared.Render;
 using Squared.Render.Convenience;
+using Squared.Util;
 
 namespace ParticleEditor {
     public class Controller {
         internal class PositionPropertyInfo {
             public object Instance;
             public string Key;
+            public Func<Vector2?> Get;
             public Action<Vector2> Set;
         }
 
@@ -117,6 +119,11 @@ namespace ParticleEditor {
             QueuedResets.Clear();
 
             if (Game.IsActive && !Game.IsMouseOverUI) {
+                var wheelDelta = Game.MouseState.ScrollWheelValue - Game.PreviousMouseState.ScrollWheelValue;
+                var zoomDelta = wheelDelta * 0.1f / 160;
+                var newZoom = Arithmetic.Clamp((float)Math.Round(Game.Zoom + zoomDelta, 2), ParticleEditor.MinZoom, ParticleEditor.MaxZoom);
+                Game.Zoom = newZoom;
+
                 if ((SelectedPositionProperty != null) && Game.LeftMouse) {
                     var pos = GetMouseWorldPosition();
                     SelectedPositionProperty.Set(pos);
@@ -124,22 +131,34 @@ namespace ParticleEditor {
             }
         }
 
+        private void DrawCross (ref ImperativeRenderer ir, Vector2 pos, float alpha) {
+            var len = 16;
+            var pos1 = pos + Vector2.One;
+            ir.DrawLine(new Vector2(pos1.X - len, pos1.Y), new Vector2(pos1.X + len, pos1.Y), Color.Black * alpha, worldSpace: true);
+            ir.DrawLine(new Vector2(pos1.X, pos1.Y - len), new Vector2(pos1.X, pos1.Y + len), Color.Black * alpha, worldSpace: true);
+            ir.DrawLine(new Vector2(pos.X - len, pos.Y), new Vector2(pos.X + len, pos.Y), Color.White * alpha, worldSpace: true);
+            ir.DrawLine(new Vector2(pos.X, pos.Y - len), new Vector2(pos.X, pos.Y + len), Color.White * alpha, worldSpace: true);
+        }
+
         public void Draw (ParticleEditor editor, IBatchContainer container, int layer) {
             var ir = new ImperativeRenderer(
                 container, Game.Materials, layer, blendState: BlendState.AlphaBlend, worldSpace: false
             );
             if (SelectedPositionProperty != null) {
-                var pos = GetMouseWorldPosition();
-                var drawPos = new Vector2(Game.MouseState.X + 4, Game.MouseState.Y - Game.LineHeight - 4);
                 var scale = 0.85f;
-                ir.DrawString(Game.Font, pos.X.ToString("0000.0"), drawPos - new Vector2(0, Game.LineHeight), material: Game.TextMaterial, scale: scale);
-                ir.DrawString(Game.Font, pos.Y.ToString("0000.0"), drawPos, material: Game.TextMaterial, scale: scale);
-                var len = 16;
-                var pos1 = pos + Vector2.One;
-                ir.DrawLine(new Vector2(pos1.X - len, pos1.Y), new Vector2(pos1.X + len, pos1.Y), Color.Black, worldSpace: true);
-                ir.DrawLine(new Vector2(pos1.X, pos1.Y - len), new Vector2(pos1.X, pos1.Y + len), Color.Black, worldSpace: true);
-                ir.DrawLine(new Vector2(pos.X - len, pos.Y), new Vector2(pos.X + len, pos.Y), Color.White, worldSpace: true);
-                ir.DrawLine(new Vector2(pos.X, pos.Y - len), new Vector2(pos.X, pos.Y + len), Color.White, worldSpace: true);
+                Vector2 drawPos;
+
+                var currentPos = SelectedPositionProperty.Get();
+                if (currentPos.HasValue) {
+                    drawPos = currentPos.Value;
+                    drawPos.X += 4;
+                    drawPos.Y -= Game.LineHeight * scale;
+                    ir.DrawString(Game.Font, SelectedPositionProperty.Key, drawPos, material: Game.WorldSpaceTextMaterial, scale: scale);
+                    DrawCross(ref ir, currentPos.Value, 1.0f);
+                }
+
+                var pos = GetMouseWorldPosition();
+                DrawCross(ref ir, pos, 0.5f);
             }
         }
 

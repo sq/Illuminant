@@ -39,6 +39,7 @@ namespace ParticleEditor {
         public MouseState PreviousMouseState, MouseState;
 
         public Material TextMaterial { get; private set; }
+        public Material WorldSpaceTextMaterial { get; private set; }
 
         public FreeTypeFont Font;
         public RenderTarget2D UIRenderTarget;
@@ -59,6 +60,7 @@ namespace ParticleEditor {
         public Controller Controller;
 
         private GCHandle ControllerPin;
+        public const float MinZoom = 0.5f, MaxZoom = 3.0f;
         public float Zoom = 1.0f;
 
         private long LastViewRelease = 0;
@@ -162,8 +164,12 @@ namespace ParticleEditor {
             ParticleMaterials = new ParticleMaterials(Materials);
 
             TextMaterial = Materials.Get(Materials.ScreenSpaceShadowedBitmap, blendState: BlendState.AlphaBlend);
-            TextMaterial.Parameters.ShadowColor.SetValue(new Vector4(0, 0, 0, 0.5f));
+            TextMaterial.Parameters.ShadowColor.SetValue(new Vector4(0, 0, 0, 0.66f));
             TextMaterial.Parameters.ShadowOffset.SetValue(Vector2.One);
+
+            WorldSpaceTextMaterial = Materials.Get(Materials.WorldSpaceShadowedBitmap, blendState: BlendState.AlphaBlend);
+            WorldSpaceTextMaterial.Parameters.ShadowColor.SetValue(new Vector4(0, 0, 0, 0.66f));
+            WorldSpaceTextMaterial.Parameters.ShadowOffset.SetValue(Vector2.One);
             
             UIRenderTarget = new RenderTarget2D(
                 GraphicsDevice, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight, 

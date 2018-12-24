@@ -286,8 +286,27 @@ namespace ParticleEditor {
                 Key = actualName,
                 Instance = instance,
                 Set = (xy) =>
-                    TrySetPropertyPosition(cpi, instance, xy)
+                    TrySetPropertyPosition(cpi, instance, xy),
+                Get = () =>
+                    TryGetPropertyPosition(cpi, instance)
             };
+        }
+
+        private Vector2? TryGetPropertyPosition (CachedPropertyInfo cpi, object instance) {
+            var valueType = cpi.Info.Type ?? cpi.Type.Name;
+            var value = cpi.Getter(instance);
+            switch (valueType) {
+                case "Vector2":
+                    return (Vector2)value;
+                case "Vector3":
+                    var v3 = (Vector3)value;
+                    return new Vector2(v3.X, v3.Y);
+                case "Vector4":
+                    var v4 = (Vector4)value;
+                    return new Vector2(v4.X, v4.Y);
+            }
+
+            return null;
         }
 
         private bool TrySetPropertyPosition (CachedPropertyInfo cpi, object instance, Vector2 xy) {
