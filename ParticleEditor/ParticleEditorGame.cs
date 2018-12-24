@@ -268,6 +268,15 @@ namespace ParticleEditor {
             Graphics.ApplyChangesAfterPresent(RenderCoordinator);
         }
 
+        public Vector2 ViewOffset {
+            get {
+                return new Vector2(
+                    -(Graphics.PreferredBackBufferWidth - SidePanelWidth) / 2f,
+                    -Graphics.PreferredBackBufferHeight / 2f
+                ) / Zoom;
+            }
+        }
+
         public override void Draw (GameTime gameTime, Frame frame) {
             if ((Window.ClientBounds.Width != Graphics.PreferredBackBufferWidth) || (Window.ClientBounds.Height != Graphics.PreferredBackBufferHeight))
                 return;
@@ -311,14 +320,13 @@ namespace ParticleEditor {
 
             ir.Draw(UIRenderTarget, Vector2.Zero, multiplyColor: Color.White * uiOpacity);
 
-            Materials.ViewportPosition = new Vector2(
-                -(Graphics.PreferredBackBufferWidth - SidePanelWidth) / 2f,
-                -Graphics.PreferredBackBufferHeight / 2f
-            ) / Zoom;
+            Materials.ViewportPosition = ViewOffset;
             Materials.ViewportScale = Zoom * Vector2.One;
 
             if (View != null)
                 View.Draw(this, frame, 3);
+
+            Controller.Draw(this, frame, 4);
 
             if (ShowPerformanceStats)
                 DrawPerformanceStats(ref ir);

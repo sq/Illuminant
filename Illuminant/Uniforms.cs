@@ -187,11 +187,19 @@ namespace Squared.Illuminant.Uniforms {
 
 namespace Squared.Illuminant {
     [StructLayout(LayoutKind.Sequential)]
-    public struct Formula {
+    public class Formula {
         public Vector4 Constant;
         public Vector4 RandomOffset;
         public Vector4 RandomScale;
         public Vector4 RandomScaleConstant;
         public bool Circular;
+
+        public Formula () {
+            Constant = Vector4.Zero;
+            RandomOffset = Vector4.One * -0.5f;
+            RandomScale = Vector4.One;
+            RandomScaleConstant = Vector4.Zero;
+            Circular = true;
+        }
     }
 }

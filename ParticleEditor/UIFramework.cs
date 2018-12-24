@@ -271,6 +271,50 @@ namespace ParticleEditor {
             }
         }
 
+        private bool IsPropertySelected (
+            ref PropertyGridCache cache, CachedPropertyInfo cpi, object instance, string actualName
+        ) {
+            return (Controller.SelectedPositionProperty != null) &&
+                object.ReferenceEquals(Controller.SelectedPositionProperty.Instance, instance) &&
+                (Controller.SelectedPositionProperty.Key == actualName);
+        }
+
+        private void SelectProperty (
+            ref PropertyGridCache cache, CachedPropertyInfo cpi, object instance, string actualName
+        ) {
+            Controller.SelectedPositionProperty = new Controller.PositionPropertyInfo {
+                Key = actualName,
+                Instance = instance,
+                Set = (xy) =>
+                    TrySetPropertyPosition(cpi, instance, xy)
+            };
+        }
+
+        private bool TrySetPropertyPosition (CachedPropertyInfo cpi, object instance, Vector2 xy) {
+            var valueType = cpi.Info.Type ?? cpi.Type.Name;
+
+            var value = cpi.Getter(instance);
+            switch (valueType) {
+                case "Vector2":
+                    cpi.Setter(instance, xy);
+                    return true;
+                case "Vector3":
+                    var v3 = (Vector3)value;
+                    v3.X = xy.X;
+                    v3.Y = xy.Y;
+                    cpi.Setter(instance, v3);
+                    return true;
+                case "Vector4":
+                    var v4 = (Vector4)value;
+                    v4.X = xy.X;
+                    v4.Y = xy.Y;
+                    cpi.Setter(instance, v4);
+                    return true;
+            }
+
+            return false;
+        }
+
         private unsafe bool RenderProperty (
             ref PropertyGridCache cache,
             CachedPropertyInfo cpi,
@@ -283,7 +327,7 @@ namespace ParticleEditor {
             if (!string.IsNullOrEmpty(prefix))
                 actualName = prefix + actualName;
 
-            var isActive = false;
+            var isActive = IsPropertySelected(ref cache, cpi, instance, actualName);
             var value = cpi.Getter(instance);
 
             var valueType = cpi.Info.Type ?? cpi.Type.Name;
@@ -352,7 +396,8 @@ namespace ParticleEditor {
             }
 
             Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
-            Nuklear.SelectableText(cpi.Name, isActive);
+            if (Nuklear.SelectableText(cpi.Name, isActive))
+                SelectProperty(ref cache, cpi, instance, actualName);
 
             if (cpi.AllowNull) {
                 var isNull = value == null;

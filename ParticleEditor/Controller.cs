@@ -15,9 +15,17 @@ using Squared.Illuminant;
 using Squared.Illuminant.Modeling;
 using Squared.Illuminant.Particles;
 using Squared.Illuminant.Particles.Transforms;
+using Squared.Render;
+using Squared.Render.Convenience;
 
 namespace ParticleEditor {
     public class Controller {
+        internal class PositionPropertyInfo {
+            public object Instance;
+            public string Key;
+            public Action<Vector2> Set;
+        }
+
         [StructLayout(LayoutKind.Sequential)]
         public struct ListState {
             public uint ScrollX, ScrollY;
@@ -34,6 +42,8 @@ namespace ParticleEditor {
         public View View;
         public readonly State CurrentState = new State();
         public readonly List<ParticleSystemView> QueuedResets = new List<ParticleSystemView>();
+
+        internal PositionPropertyInfo SelectedPositionProperty;
 
         private GCHandle StatePin;
 
@@ -91,6 +101,13 @@ namespace ParticleEditor {
             QueuedResets.Add(v);
         }
 
+        public Vector2 GetMouseWorldPosition () {
+            var pos = new Vector2(Game.MouseState.X, Game.MouseState.Y);
+            pos *= 1.0f / Game.Zoom;
+            pos += Game.ViewOffset;
+            return pos;
+        }
+
         public void Update () {
             foreach (var v in QueuedResets) {
                 v.Time.CurrentTime = 0;
@@ -98,6 +115,32 @@ namespace ParticleEditor {
             }
 
             QueuedResets.Clear();
+
+            if (Game.IsActive && !Game.IsMouseOverUI) {
+                if ((SelectedPositionProperty != null) && Game.LeftMouse) {
+                    var pos = GetMouseWorldPosition();
+                    SelectedPositionProperty.Set(pos);
+                }
+            }
+        }
+
+        public void Draw (ParticleEditor editor, IBatchContainer container, int layer) {
+            var ir = new ImperativeRenderer(
+                container, Game.Materials, layer, blendState: BlendState.AlphaBlend, worldSpace: false
+            );
+            if (SelectedPositionProperty != null) {
+                var pos = GetMouseWorldPosition();
+                var drawPos = new Vector2(Game.MouseState.X + 4, Game.MouseState.Y - Game.LineHeight - 4);
+                var scale = 0.85f;
+                ir.DrawString(Game.Font, pos.X.ToString("0000.0"), drawPos - new Vector2(0, Game.LineHeight), material: Game.TextMaterial, scale: scale);
+                ir.DrawString(Game.Font, pos.Y.ToString("0000.0"), drawPos, material: Game.TextMaterial, scale: scale);
+                var len = 16;
+                var pos1 = pos + Vector2.One;
+                ir.DrawLine(new Vector2(pos1.X - len, pos1.Y), new Vector2(pos1.X + len, pos1.Y), Color.Black, worldSpace: true);
+                ir.DrawLine(new Vector2(pos1.X, pos1.Y - len), new Vector2(pos1.X, pos1.Y + len), Color.Black, worldSpace: true);
+                ir.DrawLine(new Vector2(pos.X - len, pos.Y), new Vector2(pos.X + len, pos.Y), Color.White, worldSpace: true);
+                ir.DrawLine(new Vector2(pos.X, pos.Y - len), new Vector2(pos.X, pos.Y + len), Color.White, worldSpace: true);
+            }
         }
 
         public void AddTransform () {
