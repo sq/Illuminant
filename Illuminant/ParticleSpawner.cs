@@ -11,14 +11,20 @@ using Squared.Render;
 
 namespace Squared.Illuminant.Particles.Transforms {
     public class Spawner : ParticleTransform {
+        public const int MaxPositions = 32;
+
         [NonSerialized]
         private static int NextSeed = 1;
 
         public float    MinRate, MaxRate;
 
+        public bool     RatePerPosition;
+
         public Formula  Position, Velocity, Attributes;
 
         public Matrix   PositionPostMatrix = Matrix.Identity;
+
+        public readonly List<Vector4> AdditionalPositions = new List<Vector4>();
 
         [NonSerialized]
         private double  RateError;
@@ -33,6 +39,8 @@ namespace Squared.Illuminant.Particles.Transforms {
         private Vector4[] Temp = new Vector4[12];
         [NonSerialized]
         private float[] Temp2 = new float[3];
+        [NonSerialized]
+        private Vector4[] Temp3 = new Vector4[MaxPositions];
 
         public Spawner ()
             : this(null) {
@@ -40,6 +48,11 @@ namespace Squared.Illuminant.Particles.Transforms {
 
         public Spawner (int? seed) {
             RNG = new MersenneTwister(seed.GetValueOrDefault(NextSeed++));
+            ActiveStateChanged += Spawner_ActiveStateChanged;
+        }
+
+        private void Spawner_ActiveStateChanged () {
+            RateError = 0;
         }
 
         internal void SetIndices (int first, int last) {
@@ -47,7 +60,16 @@ namespace Squared.Illuminant.Particles.Transforms {
         }
 
         internal void Tick (double deltaTimeSeconds, out int spawnCount) {
-            var currentRate = ((RNG.NextDouble() * (MaxRate - MinRate)) + MinRate) * deltaTimeSeconds;
+            if (AdditionalPositions.Count >= MaxPositions)
+                throw new Exception("Maximum number of positions for a spawner is " + MaxPositions);
+            if (!IsActive) {
+                RateError = 0;
+                spawnCount = 0;
+                return;
+            }
+
+            var countScaler = RatePerPosition ? AdditionalPositions.Count + 1 : 1;
+            var currentRate = ((RNG.NextDouble() * (MaxRate - MinRate)) + MinRate) * countScaler * deltaTimeSeconds;
             currentRate += RateError;
             if (currentRate < 1) {
                 RateError = Math.Max(currentRate, 0);
@@ -77,28 +99,35 @@ namespace Squared.Illuminant.Particles.Transforms {
                 (float)(b * 127)
             ));
 
-            Temp[0] = Position.Constant;
-            Temp[1] = Position.RandomOffset;
-            Temp[2] = Position.RandomScale;
-            Temp[3] = Position.RandomScaleConstant;
-            Temp[4] = Velocity.Constant;
-            Temp[5] = Velocity.RandomOffset;
-            Temp[6] = Velocity.RandomScale;
-            Temp[7] = Velocity.RandomScaleConstant;
-            Temp[8] = Attributes.Constant;
-            Temp[9] = Attributes.RandomOffset;
-            Temp[10] = Attributes.RandomScale;
-            Temp[11] = Attributes.RandomScaleConstant;
+            Temp[0] = Position.RandomOffset;
+            Temp[1] = Position.RandomScale;
+            Temp[2] = Position.RandomScaleConstant;
+            Temp[3] = Velocity.Constant;
+            Temp[4] = Velocity.RandomOffset;
+            Temp[5] = Velocity.RandomScale;
+            Temp[6] = Velocity.RandomScaleConstant;
+            Temp[7] = Attributes.Constant;
+            Temp[8] = Attributes.RandomOffset;
+            Temp[9] = Attributes.RandomScale;
+            Temp[10] = Attributes.RandomScaleConstant;
 
             Temp2[0] = Position.Circular   ? 1 : 0;
             Temp2[1] = Velocity.Circular   ? 1 : 0;
             Temp2[2] = Attributes.Circular ? 1 : 0;
 
+            Temp3[0] = Position.Constant;
+            for (var i = 0; (i < AdditionalPositions.Count) && (i < MaxPositions - 1); i++)
+                Temp3[i + 1] = AdditionalPositions[i];
+
+            var count = Math.Min(1 + AdditionalPositions.Count, MaxPositions);
+
+            parameters["PositionConstantCount"].SetValue((float)count);
             parameters["Configuration"].SetValue(Temp);
             parameters["RandomCircularity"].SetValue(Temp2);
+            parameters["PositionConstants"].SetValue(Temp3);
             parameters["ChunkSizeAndIndices"].SetValue(new Vector4(
-                engine.Configuration.ChunkSize, engine.Configuration.ChunkSize,
-                Indices.X, Indices.Y
+                engine.Configuration.ChunkSize, Indices.X, Indices.Y,
+                TotalSpawned % count
             ));
             parameters["PositionMatrix"].SetValue(PositionPostMatrix);
         }

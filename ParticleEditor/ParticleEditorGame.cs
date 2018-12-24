@@ -154,7 +154,7 @@ namespace ParticleEditor {
 
             base.LoadContent();
 
-            Font = new FreeTypeFont(RenderCoordinator, "FiraSans-Medium.otf") {
+            Font = new FreeTypeFont(RenderCoordinator, "FiraSans-Regular.otf") {
                 GlyphMargin = 2
             };
             Materials = new DefaultMaterialSet(Services);
@@ -272,7 +272,7 @@ namespace ParticleEditor {
             if ((Window.ClientBounds.Width != Graphics.PreferredBackBufferWidth) || (Window.ClientBounds.Height != Graphics.PreferredBackBufferHeight))
                 return;
 
-            Font.SizePoints = Graphics.PreferredBackBufferWidth > 2000 ? 16f : 14f;
+            Font.SizePoints = Graphics.PreferredBackBufferWidth > 2000 ? 15f : 14f;
 
             View view;
             lock (this)

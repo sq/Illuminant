@@ -115,6 +115,7 @@ namespace Squared.Illuminant.Particles {
                 public RenderTarget2D Attributes;
 
                 public OcclusionQuery Query;
+                public bool NeedsClear;
 
                 public object Lock = new object();
 
@@ -126,6 +127,7 @@ namespace Squared.Illuminant.Particles {
                     ID = id;
                     Size = size;
                     MaximumCount = size * size;
+                    NeedsClear = true;
 
                     Bindings = new RenderTargetBinding[2 + configuration.AttributeCount];
                     Bindings[0] = PositionAndLife = CreateRenderTarget(configuration, device);
@@ -358,12 +360,15 @@ namespace Squared.Illuminant.Particles {
 
         private volatile int NextChunkId = 1;
         
-        private Slice.Chunk CreateChunk (GraphicsDevice device, int id) {
+        private Slice.Chunk CreateChunk (GraphicsDevice device, int id, List<Slice.Chunk> clearList) {
             lock (Engine.FreeList) {
                 if (Engine.FreeList.Count > 0) {
                     var result = Engine.FreeList[0];
                     Engine.FreeList.RemoveAt(0);
                     result.ID = id;
+                    result.NeedsClear = true;
+                    if (clearList != null)
+                        clearList.Add(result);
                     return result;
                 }
             }
@@ -387,7 +392,8 @@ namespace Squared.Illuminant.Particles {
             var g = parallel ? Engine.Coordinator.ThreadGroup : null;
 
             for (int i = 0; i < numToSpawn; i++) {
-                var c = CreateChunk(device, Interlocked.Increment(ref NextChunkId));
+                var c = CreateChunk(device, Interlocked.Increment(ref NextChunkId), null);
+                c.NeedsClear = false;
                 var offset = i * mc;
                 var pos = new BufferInitializer<TElement> { Buffer = c.PositionAndLife, Initializer = positionInitializer, Offset = offset };
                 var vel = new BufferInitializer<TElement> { Buffer = c.Velocity, Initializer = velocityInitializer, Offset = offset };
@@ -433,7 +439,8 @@ namespace Squared.Illuminant.Particles {
             ref Slice passSource, ref Slice passDest, 
             long startedWhen, Transforms.Spawner spawner,
             Transforms.ParameterSetter setParameters,
-            bool clearFirst, double deltaTimeSeconds
+            bool clearFirst, double deltaTimeSeconds,
+            List<Slice.Chunk> clearList
         ) {
             var _source = passSource;
             var _dest = passDest;
@@ -443,7 +450,7 @@ namespace Squared.Illuminant.Particles {
                 var destChunk = _dest.GetByID(chunk.ID);
                 if (destChunk == null) {
                     lock (container.RenderManager.CreateResourceLock)
-                        destChunk = CreateChunk(device, chunk.ID);
+                        destChunk = CreateChunk(device, chunk.ID, clearList);
 
                     _dest.Add(destChunk);
                 }
@@ -474,8 +481,8 @@ namespace Squared.Illuminant.Particles {
                     spawnId = Interlocked.Increment(ref NextChunkId);
                     SpawnStates[spawnId.Value] = new SpawnState { Offset = 0, Free = ChunkMaximumCount };
                     lock (container.RenderManager.CreateResourceLock) {
-                        _source.Add(CreateChunk(device, spawnId.Value));
-                        _dest.Add(CreateChunk(device, spawnId.Value));
+                        _source.Add(CreateChunk(device, spawnId.Value, clearList));
+                        _dest.Add(CreateChunk(device, spawnId.Value, clearList));
                     }
                 }
             }
@@ -750,6 +757,8 @@ namespace Squared.Illuminant.Particles {
 
         private void Reap (Slice.Chunk chunk) {
             lock (Engine.FreeList) {
+                ClearList.Remove(chunk);
+
                 if (Engine.FreeList.Count < Engine.Configuration.FreeListCapacity)
                     Engine.FreeList.Add(chunk);
                 else
@@ -761,6 +770,8 @@ namespace Squared.Illuminant.Particles {
             var psu = new Uniforms.ParticleSystem(Engine.Configuration, Configuration, deltaTimeSeconds);
             Engine.ParticleMaterials.MaterialSet.TrySetBoundUniform(m, "System", ref psu);
         }
+
+        private readonly List<Slice.Chunk> ClearList = new List<Slice.Chunk>();
 
         public void Update (IBatchContainer container, int layer, float? deltaTimeSeconds = null) {
             var lastUpdateTimeSeconds = LastUpdateTimeSeconds;
@@ -803,7 +814,7 @@ namespace Squared.Illuminant.Particles {
 
                 source.Lock("update");
             }
-                        
+            
             a = GrabWriteSlice();
             b = GrabWriteSlice();
             passSource = source;
@@ -818,28 +829,38 @@ namespace Squared.Illuminant.Particles {
             )) {
                 int i = 0;
 
+                var clears = BatchGroup.New(container, -1);
+
                 if (IsClearPending) {
                     IsClearPending = false;
                     // We need to forcibly erase all the position+life data in the system because a clear was requested
                     foreach (var s in Slices) {
                         foreach (var c in s) {
-                            using (var g = BatchGroup.ForRenderTarget(group, i++, c.PositionAndLife))
+                            using (var g = BatchGroup.ForRenderTarget(clears, 0, c.PositionAndLife))
                                 ClearBatch.AddNew(g, 0, Engine.Materials.Clear, clearColor: Color.Transparent);
                         }
                     }
                 }
 
+                int numActive = 0;
                 foreach (var t in Transforms) {
-                    if (!t.IsActive)
-                        continue;
+                    if (t.IsActive)
+                        numActive++;
+                }
 
+                foreach (var t in Transforms) {
                     var it = (Transforms.IParticleTransform)t;
                     var spawner = t as Transforms.Spawner;
+
+                    var shouldSkip = !t.IsActive;
+                    if (shouldSkip)
+                        continue;
 
                     UpdatePass(
                         group, i++, it.GetMaterial(Engine.ParticleMaterials),
                         source, a, b, ref passSource, ref passDest, 
-                        startedWhen, spawner, it.SetParameters, false, actualDeltaTimeSeconds
+                        startedWhen, spawner, it.SetParameters, 
+                        false, actualDeltaTimeSeconds, ClearList
                     );
                 }
 
@@ -864,16 +885,26 @@ namespace Squared.Illuminant.Particles {
                         (Engine, p, frameIndex) => {
                             var dfu = new Uniforms.DistanceField(Configuration.DistanceField, Configuration.DistanceFieldMaximumZ.Value);
                             pm.MaterialSet.TrySetBoundUniform(pm.UpdateWithDistanceField, "DistanceField", ref dfu);
-                        }, true, actualDeltaTimeSeconds
+                        }, true, actualDeltaTimeSeconds, ClearList
                     );
                 } else {
                     UpdatePass(
                         group, i++, pm.UpdatePositions,
                         source, a, b, ref passSource, ref passDest,
                         startedWhen, null,
-                        null, true, actualDeltaTimeSeconds
+                        null, true, actualDeltaTimeSeconds, ClearList
                     );
                 }
+
+                // Clear any chunks that were recovered from the freelist this frame, because
+                //  they probably have garbage data in them
+                foreach (var c in ClearList) {
+                    using (var g = BatchGroup.ForRenderTarget(clears, 0, c.PositionAndLife))
+                        ClearBatch.AddNew(g, 0, Engine.Materials.Clear, clearColor: Color.Transparent);
+                }
+                ClearList.Clear();
+
+                clears.Dispose();
 
                 // ComputeLiveness(group, i++, passSource);
             }

@@ -24,14 +24,17 @@ void PS_Gravity (
         float3 apos = AttractorPositions[i];
         float3 ars = AttractorRadiusesAndStrengths[i];
         float3 toCenter = (apos - newPosition.xyz);
-        float  distanceSquared = dot(toCenter, toCenter) - ars.x;
+        float  attraction = 0;
         if (ars.z >= 0.5) {
-            distanceSquared = max(distanceSquared, 0);
+            float distance = length(toCenter);
+            attraction = 1 - saturate(distance / ars.x);
+            attraction = attraction * getDeltaTime() / 1000;
         } else {
-            if (distanceSquared <= 1)
-                continue;
+            float  distanceSquared = dot(toCenter, toCenter) - ars.x;
+            distanceSquared = max(distanceSquared, 0);
+            // FIXME: For some reason time-scaling doesn't work for this version of the formula
+            attraction = 1 / distanceSquared;
         }
-        float  attraction = 1 / distanceSquared;
         float3 newAccel = normalize(toCenter) * attraction * ars.y;
         acceleration += newAccel;
     }

@@ -10,13 +10,18 @@ namespace Squared.Illuminant {
     [Serializable]
     public class LazyResource<T> : ISerializable 
         where T : GraphicsResource {
-        public bool IsNullable { get; protected set; }
 
         public string Name;
         [NonSerialized]
         public T Instance;
 
         protected LazyResource () {
+        }
+
+        public virtual bool IsNullable {
+            get {
+                return false;
+            }
         }
 
         public LazyResource (string name, T existingInstance = null) {
@@ -82,17 +87,20 @@ namespace Squared.Illuminant {
     public sealed class NullableLazyResource<T> : LazyResource<T> where T : GraphicsResource {
         public NullableLazyResource (string name, T existingInstance = null)
             : base (name, existingInstance) {
-            IsNullable = true;
         }
 
         public NullableLazyResource (T existingInstance)
             : base (existingInstance) {
-            IsNullable = true;
         }
 
         public NullableLazyResource ()
             : base (null) {
-            IsNullable = true;
+        }
+
+        public override bool IsNullable {
+            get {
+                return true;
+            }
         }
 
         internal NullableLazyResource (SerializationInfo info, StreamingContext context) {

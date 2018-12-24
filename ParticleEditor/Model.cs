@@ -8,6 +8,7 @@ using Newtonsoft.Json;
 using System.IO;
 using Newtonsoft.Json.Linq;
 using Microsoft.Xna.Framework;
+using System.Runtime.Serialization;
 
 namespace Squared.Illuminant.Modeling {
     public class EngineModel {
@@ -27,7 +28,7 @@ namespace Squared.Illuminant.Modeling {
             using (var reader = new System.IO.StreamReader(fileName, Encoding.UTF8, false)) {
                 var serializer = new JsonSerializer {
                     Converters = {
-                        new XnaJsonConverter()
+                        new IlluminantJsonConverter()
                     },
                     Formatting = Formatting.Indented
                 };
@@ -47,7 +48,7 @@ namespace Squared.Illuminant.Modeling {
             using (var writer = new StreamWriter(tempPath, false, Encoding.UTF8)) {
                 var serializer = new JsonSerializer {
                     Converters = {
-                        new XnaJsonConverter()
+                        new IlluminantJsonConverter()
                     },
                     Formatting = Formatting.Indented
                 };
@@ -95,10 +96,7 @@ namespace Squared.Illuminant.Modeling {
             if (value == null)
                 return null;
 
-            return new ModelProperty {
-                Type = value.GetType(),
-                Value = value
-            };
+            return new ModelProperty(value);
         }
 
         public void Normalize () {
@@ -108,11 +106,21 @@ namespace Squared.Illuminant.Modeling {
             if (Type == typeof(string))
                 return;
 
-            Value = Newtonsoft.Json.JsonConvert.DeserializeObject(s, Type, new XnaJsonConverter());
+            Value = JsonConvert.DeserializeObject(s, Type, new IlluminantJsonConverter());
+        }
+
+        public ModelProperty (Type type, object value) {
+            Type = type;
+            Value = value;
+        }
+
+        internal ModelProperty (object value) {
+            Type = value.GetType();
+            Value = value;
         }
     }
 
-    public class XnaJsonConverter : JsonConverter {
+    public class IlluminantJsonConverter : JsonConverter {
         public override bool CanConvert (Type objectType) {
             switch (objectType.Name) {
                 case "ModelProperty":
@@ -123,15 +131,21 @@ namespace Squared.Illuminant.Modeling {
             }
         }
 
+        private static Type ResolveTypeFromShortName (string name) {
+            return Type.GetType(name, false) ?? typeof(ParticleSystem).Assembly.GetType(name, false);
+        }
+
         public override object ReadJson (JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer) {
             switch (objectType.Name) {
                 case "ModelProperty":
                     var obj = JObject.Load(reader);
-                    var type = Type.GetType(obj["Type"].ToString(), true, false);
-                    var result = new ModelProperty {
-                        Type = type,
-                        Value = obj["Value"].ToObject(type, serializer)
-                    };
+                    var typeName = obj["Type"].ToString();
+                    var type = ResolveTypeFromShortName(typeName);
+                    if (type == null)
+                        throw new Exception("Could not resolve type " + typeName); 
+                    var result = new ModelProperty(
+                        type, obj["Value"].ToObject(type, serializer)
+                    );
                     return result;
                 case "Matrix":
                     var arr = serializer.Deserialize<float[]>(reader);
@@ -154,8 +168,13 @@ namespace Squared.Illuminant.Modeling {
             switch (type.Name) {
                 case "ModelProperty":
                     var mp = (ModelProperty)value;
+                    string typeName;
+                    if (ResolveTypeFromShortName(mp.Type.FullName) == mp.Type)
+                        typeName = mp.Type.FullName;
+                    else
+                        typeName = mp.Type.AssemblyQualifiedName;
                     serializer.Serialize(writer, new {
-                        Type = mp.Type,
+                        Type = typeName,
                         Value = mp.Value
                     });
                     return;

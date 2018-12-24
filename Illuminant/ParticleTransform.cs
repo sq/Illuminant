@@ -57,7 +57,22 @@ namespace Squared.Illuminant.Particles.Transforms {
 
     
     public abstract class ParticleTransform : IDisposable, IParticleTransform {
-        public bool IsActive = true;
+        private bool _IsActive;
+
+        public bool IsActive {
+            get {
+                return _IsActive;
+            }
+            set {
+                if (value == _IsActive)
+                    return;
+
+                _IsActive = value;
+                ActiveStateChanged?.Invoke();
+            }
+        }
+
+        public event Action ActiveStateChanged;
 
         protected abstract Material GetMaterial (ParticleMaterials materials);
         protected abstract void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, int frameIndex);
@@ -155,11 +170,13 @@ namespace Squared.Illuminant.Particles.Transforms {
     }
 
     public class Gravity : ParticleTransform {
+        public const int MaxAttractors = 16;
+
         public class Attractor {
             public Vector3 Position;
             public float   Radius = 1;
             public float   Strength = 1;
-            public bool    Slingshot = true;
+            public bool    Linear = false;
         }
 
         public float MaximumAcceleration = 8;
@@ -175,8 +192,8 @@ namespace Squared.Illuminant.Particles.Transforms {
         }
 
         protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, int frameIndex) {
-            if (Attractors.Count > 8)
-                throw new Exception("Maximum number of attractors per instance is 8");
+            if (Attractors.Count > MaxAttractors)
+                throw new Exception("Maximum number of attractors per instance is " + MaxAttractors);
 
             if ((_Positions == null) || (_Positions.Length != Attractors.Count))
                 _Positions = new Vector3[Attractors.Count];
@@ -185,7 +202,7 @@ namespace Squared.Illuminant.Particles.Transforms {
 
             for (int i = 0; i < Attractors.Count; i++) {
                 _Positions[i] = Attractors[i].Position;
-                _RadiusesAndStrengths[i] = new Vector3(Attractors[i].Radius, Attractors[i].Strength, Attractors[i].Slingshot ? 1 : 0);
+                _RadiusesAndStrengths[i] = new Vector3(Attractors[i].Radius, Attractors[i].Strength, Attractors[i].Linear ? 1 : 0);
             }
 
             parameters["AttractorCount"].SetValue(Attractors.Count);

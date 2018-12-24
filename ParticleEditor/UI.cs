@@ -92,7 +92,7 @@ namespace ParticleEditor {
                 Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
                 if (Nuklear.Button("Add"))
                     Controller.AddSystem();
-                if (Nuklear.Button("Remove"))
+                if (Nuklear.Button("Remove", Model.Systems.Count > 0))
                     Controller.RemoveSystem(state.Systems.SelectedIndex);
 
                 using (var list = Nuklear.ScrollingGroup(80, "System List", ref state.Systems.ScrollX, ref state.Systems.ScrollY))
@@ -143,7 +143,7 @@ namespace ParticleEditor {
                 Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
                 if (Nuklear.Button("Add"))
                     Controller.AddTransform();
-                if (Nuklear.Button("Remove"))
+                if (Nuklear.Button("Remove", Controller.SelectedSystem.Transforms.Count > 0))
                     Controller.RemoveTransform(state.Transforms.SelectedIndex);
 
                 var view = Controller.View.Systems[state.Systems.SelectedIndex];

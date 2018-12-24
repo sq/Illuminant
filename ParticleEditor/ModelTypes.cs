@@ -4,13 +4,17 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Framework;
+using Squared.Illuminant.Particles.Transforms;
 using Squared.Render;
 
 namespace ParticleEditor {
     public partial class ParticleEditor : MultithreadedGame, INuklearHost {
         public struct ModelTypeInfo {
-            public string Type;
-            public float? Min, Max;
+            public string               Type;
+            public float?               Min, Max;
+            public bool                 AllowNull;
+            public Func<object, object> GetDefaultValue;
+            public int?                 MaxCount;
         }
 
         public static readonly Dictionary<string, Dictionary<string, ModelTypeInfo>> FieldTypeOverrides =
@@ -36,6 +40,14 @@ namespace ParticleEditor {
                     "Spawner", new Dictionary<string, ModelTypeInfo> {
                         {"MinRate", new ModelTypeInfo { Min = 0, Max = 100000 } },
                         {"MaxRate", new ModelTypeInfo { Min = 0, Max = 100000 } },
+                        {"AdditionalPositions", new ModelTypeInfo {
+                            Type = "ValueList",
+                            GetDefaultValue = (obj) => {
+                                var s = ((Spawner)obj);
+                                return s.Position.Constant;
+                            },
+                            MaxCount = Spawner.MaxPositions - 1
+                        } }
                     }
                 },
                 {
@@ -56,7 +68,10 @@ namespace ParticleEditor {
                 },
                 {
                     "Gravity", new Dictionary<string, ModelTypeInfo> {
-                        {"Attractors", new ModelTypeInfo { Type = "List" } },
+                        {"Attractors", new ModelTypeInfo {
+                            Type = "List",
+                            MaxCount = Gravity.MaxAttractors
+                        } },
                     }
                 }
             };

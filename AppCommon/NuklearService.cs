@@ -558,8 +558,13 @@ namespace Framework {
             }
         }
 
-        public bool Button (string text) {
-            return Nuklear.nk_button_label(Context, text) != 0;
+        public bool Button (string text, bool enabled = true) {
+            if (enabled)
+                return Nuklear.nk_button_label(Context, text) != 0;
+            else {
+                Nuklear.nk_label(Context, text, (uint)(NkTextAlign.NK_TEXT_ALIGN_CENTERED | NkTextAlign.NK_TEXT_ALIGN_MIDDLE));
+                return false;
+            }
         }
 
         public bool ComboBox (ref int selectedIndex, Func<int, string> getter, int count) {

@@ -79,6 +79,7 @@ namespace ParticleEditor {
             public Func<object, object> Getter;
             public Action<object, object> Setter;
             public bool AllowNull;
+            public CachedPropertyInfo ElementInfo;
         }
 
         private struct PropertyGridCache {
@@ -116,7 +117,7 @@ namespace ParticleEditor {
                    select t;
         }
 
-        private static ModelTypeInfo GetInfoForField (Type type, string fieldName, Type fieldType) {
+        internal static ModelTypeInfo GetInfoForField (Type type, string fieldName, Type fieldType) {
             var t = type;
             while (t != null) {
                 Dictionary<string, ModelTypeInfo> d;
@@ -133,6 +134,30 @@ namespace ParticleEditor {
             };
         }
 
+        internal class ElementBox {
+            public object Value;
+        }
+
+        private static CachedPropertyInfo GetElementInfo (Type type) {
+            if (typeof(System.Collections.IList).IsAssignableFrom(type)) {
+                var elementType = type.GetGenericArguments()[0];
+                var info = GetInfoForField(type, "Item", elementType);
+                return new CachedPropertyInfo {
+                    Name = "Value",
+                    Info = info,
+                    Field = null,
+                    Property = null,
+                    RawType = elementType,
+                    Type = elementType,
+                    AllowNull = false,
+                    Getter = (i) => ((ElementBox)i).Value,
+                    Setter = (i, v) => {  ((ElementBox)i).Value = v; }
+                };
+            } else {
+                return null;
+            }
+        }
+
         private static IEnumerable<CachedPropertyInfo> CachePropertyInfo (Type type) {
             return from m in type.GetMembers(BindingFlags.Instance | BindingFlags.Public)
                    where (m.MemberType == MemberTypes.Field) || (m.MemberType == MemberTypes.Property)
@@ -143,9 +168,10 @@ namespace ParticleEditor {
                    let allowNull = _mtype.IsClass || isNullable
                    let mtype = isNullable ? _mtype.GetGenericArguments()[0] : _mtype
                    let info = GetInfoForField(type, m.Name, mtype)
+                   let isList = (info.Type == "List") || (info.Type == "ValueList")
                    let isWritable = ((f != null) && !f.IsInitOnly) || ((p != null) && p.CanWrite)
-                   where (f == null) || !f.IsInitOnly || (info.Type == "List")
-                   where (p == null) || (p.CanWrite && p.CanRead) || (info.Type == "List")
+                   where (f == null) || !f.IsInitOnly || isList
+                   where (p == null) || (p.CanWrite && p.CanRead) || isList
                    where !m.GetCustomAttributes<NonSerializedAttribute>().Any()
                    orderby m.Name
                    select new CachedPropertyInfo {
@@ -159,7 +185,8 @@ namespace ParticleEditor {
                        Getter = (f != null) ? (Func<object, object>)f.GetValue : p.GetValue,
                        Setter = isWritable
                            ? ((f != null) ? (Action<object, object>)f.SetValue : p.SetValue)
-                           : (i, v) => { }
+                           : (i, v) => { },
+                       ElementInfo = GetElementInfo(mtype)
                    };
         }
 
@@ -172,18 +199,26 @@ namespace ParticleEditor {
             });
         }
 
-        private unsafe void RenderPropertyGridNonScrolling (object instance, ref PropertyGridCache cache) {
-            foreach (var cpi in cache.Members)
-                RenderProperty(ref cache, cpi, instance);
+        private unsafe bool RenderPropertyGridNonScrolling (object instance, ref PropertyGridCache cache) {
+            var result = false;
+
+            foreach (var cpi in cache.Members) {
+                if (RenderProperty(ref cache, cpi, instance))
+                    result = true;
+            }
+
+            return result;
         }
 
-        private unsafe void RenderPropertyGrid (object instance, ref PropertyGridCache cache, float? heightPx) {
+        private unsafe bool RenderPropertyGrid (object instance, ref PropertyGridCache cache, float? heightPx) {
             if (heightPx.HasValue) {
                 using (var g = Nuklear.ScrollingGroup(heightPx.Value, "Properties", ref cache.ScrollX, ref cache.ScrollY))
                 if (g.Visible)
-                    RenderPropertyGridNonScrolling(instance, ref cache);
+                    return RenderPropertyGridNonScrolling(instance, ref cache);
+                else
+                    return false;
             } else {
-                RenderPropertyGridNonScrolling(instance, ref cache);
+                return RenderPropertyGridNonScrolling(instance, ref cache);
             }
         }
 
@@ -255,7 +290,10 @@ namespace ParticleEditor {
 
             switch (valueType) {
                 case "List":
-                    return RenderListProperty(cpi, instance, ref changed, actualName, value);
+                    return RenderListProperty(cpi, instance, ref changed, actualName, value, false);
+
+                case "ValueList":
+                    return RenderListProperty(cpi, instance, ref changed, actualName, value, true);
 
                 case "Formula":
                 case "FMAParameters`1":
@@ -511,7 +549,7 @@ namespace ParticleEditor {
 
         private unsafe bool RenderListProperty (
             CachedPropertyInfo cpi, object instance, ref bool changed, 
-            string actualName, object _list
+            string actualName, object _list, bool itemsAreValues
         ) {
             var ctx = Nuklear.Context;
             var list = (System.Collections.IList)_list;
@@ -525,23 +563,46 @@ namespace ParticleEditor {
 
                     Nuke.nk_layout_row_dynamic(ctx, LineHeight, 3);
                     var indexChanged = Nuklear.Property("##", ref pgc.SelectedIndex, 0, list.Count - 1, 1, 1);
-                    if (Nuklear.Button("Add")) {
-                        var newItem = Activator.CreateInstance(itemType);
+                    var canAdd = (list.Count < cpi.Info.MaxCount.GetValueOrDefault(999));
+                    var canRemove = (list.Count > 0);
+                    if (Nuklear.Button("Add", canAdd)) {
+                        object newItem;
+                        var gdv = cpi.Info.GetDefaultValue;
+                        if (gdv != null)
+                            newItem = gdv(instance);
+                        else
+                            newItem = Activator.CreateInstance(itemType);
+
                         list.Add(newItem);
+                        pgc.SelectedIndex = list.Count - 1;
                         changed = true;
                     }
-                    if (Nuklear.Button("Remove")) {
+                    if (Nuklear.Button("Remove", canRemove)) {
                         list.RemoveAt(pgc.SelectedIndex);
-                        if (pgc.SelectedIndex >= list.Count)
-                            pgc.SelectedIndex--;
                         changed = true;
                     }
+
+                    if (pgc.SelectedIndex >= list.Count)
+                        pgc.SelectedIndex--;
+                    if (pgc.SelectedIndex < 0)
+                        pgc.SelectedIndex = 0;
 
                     if (pgc.SelectedIndex < list.Count) {
                         var item = list[pgc.SelectedIndex];
                         if (item != null) {
                             pgc.Prepare(item.GetType());
-                            RenderPropertyGridNonScrolling(item, ref pgc);
+                            if (itemsAreValues) {
+                                var box = new ElementBox { Value = item };
+                                if (RenderProperty(ref pgc, cpi.ElementInfo, box)) {
+                                    list[pgc.SelectedIndex] = box.Value;
+                                    changed = true;
+                                }
+                            } else {
+                                if (RenderPropertyGridNonScrolling(item, ref pgc)) {
+                                    list[pgc.SelectedIndex] = item;
+                                    changed = true;
+                                }
+                            }
                         }
                     }
 
