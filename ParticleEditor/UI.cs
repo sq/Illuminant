@@ -20,7 +20,7 @@ namespace ParticleEditor {
             get {
                 var w = Graphics.PreferredBackBufferWidth;
                 if (w >= 2000)
-                    return 650;
+                    return 675;
                 else
                     return 500;
             }
@@ -42,23 +42,9 @@ namespace ParticleEditor {
                     RenderSidePanels();
             }
 
-            if (false)
-            using (var wnd = Nuklear.Window(
-                "Select Texture",
-                Bounds.FromPositionAndSize(100, 100, 640, 480),
-                NuklearDotNet.NkPanelFlags.BorderTitle |
-                NuklearDotNet.NkPanelFlags.Movable
-            )) {
-                if (wnd.Visible)
-                    RenderTexturePicker();
-            }
-
             IsMouseOverUI = Nuke.nk_item_is_any_active(ctx) != 0;
             if (IsMouseOverUI)
                 LastTimeOverUI = Squared.Util.Time.Ticks;
-        }
-
-        private void RenderTexturePicker () {
         }
 
         private void RenderSidePanels () {
@@ -95,7 +81,7 @@ namespace ParticleEditor {
 
             using (var group = Nuklear.CollapsingGroup("Systems", "Systems"))
             if (group.Visible) {
-                Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 2);
+                Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, Model.Systems.Count > 0 ? 3 : 2);
                 if (Nuklear.Button("Add"))
                     Controller.AddSystem();
                 if (Nuklear.Button("Remove"))

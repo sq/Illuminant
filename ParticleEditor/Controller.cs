@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Squared.Illuminant;
@@ -146,11 +147,15 @@ namespace ParticleEditor {
             xform.TypeChanged();
         }
 
-        private void InitFileDialog (FileDialog dlg) {
+        private void InitSystemDialog (FileDialog dlg) {
+            InitFileDialog(dlg);
             dlg.Filter =
                 "Particle Systems|*.particlesystem|All Files|*.*";
-            dlg.SupportMultiDottedExtensions = false;
             dlg.DefaultExt = ".particlesystem";
+        }
+
+        private void InitFileDialog (FileDialog dlg) {
+            dlg.SupportMultiDottedExtensions = false;
             dlg.RestoreDirectory = true;
             dlg.ShowHelp = false;
         }
@@ -158,11 +163,11 @@ namespace ParticleEditor {
         public void ShowSaveDialog () {
             Game.RunWorkItem(() => {
                 using (var dlg = new SaveFileDialog {
-                    Title = "Save Particle Systems",
+                    Title = "Save",
                     CreatePrompt = false,
                     OverwritePrompt = false
                 }) {
-                    InitFileDialog(dlg);
+                    InitSystemDialog(dlg);
                     if (dlg.ShowDialog() != DialogResult.OK)
                         return;
 
@@ -174,14 +179,17 @@ namespace ParticleEditor {
         public void ShowLoadDialog () {
             Game.RunWorkItem(() => {
                 using (var dlg = new OpenFileDialog {
-                    Title = "Load Particle Systems"
+                    Title = "Load"
                 }) {
-                    InitFileDialog(dlg);
+                    InitSystemDialog(dlg);
                     if (dlg.ShowDialog() != DialogResult.OK)
                         return;
 
                     var model = Model.Load(dlg.FileName);
-                    SetModel(model);
+                    if (model == null)
+                        Console.WriteLine("Failed to load file");
+                    else
+                        SetModel(model);
                 }
             });
         }
@@ -193,6 +201,28 @@ namespace ParticleEditor {
             Game.RenderCoordinator.DisposeResource(View);
             Game.View = View = new View(model);
             View.Initialize(Game);
+        }
+
+        internal void SelectTexture (ParticleEditor.CachedPropertyInfo cpi, object instance, ParticleTexture pt) {
+            Game.RunWorkItem(() => {
+                using (var dlg = new OpenFileDialog {
+                    Title = "Select Texture"
+                }) {
+                    InitFileDialog(dlg);
+                    dlg.Filter =
+                        "Textures|*.png;*.jpeg;*.jpg;*.bmp;*.tga|All Files|*.*";
+                    if (pt.Texture.Name != null) {
+                        dlg.InitialDirectory = Path.GetDirectoryName(pt.Texture.Name);
+                        dlg.RestoreDirectory = false;
+                        dlg.FileName = Path.GetFileName(pt.Texture.Name);
+                    }
+                    if (dlg.ShowDialog() != DialogResult.OK)
+                        return;
+
+                    pt.Texture = new NullableLazyResource<Texture2D>(dlg.FileName);
+                    cpi.Setter(instance, pt);
+                }
+            });
         }
     }
 

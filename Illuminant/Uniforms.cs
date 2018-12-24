@@ -152,16 +152,19 @@ namespace Squared.Illuminant.Uniforms {
         // escapeVelocity, bounceVelocityMultiplier, collisionDistance, collisionLifePenalty
         public Vector4 CollisionSettings;
         public Vector4 ColorFromLife;
-
-        public Vector2 Texel;
-        public Vector2 LifeSizeMultiplier;
+        public Vector4 TexelAndSize;
+        public Vector2 SizeFromLife;
+        public Vector2 RotationFromLifeAndIndex;
 
         public ParticleSystem (
             Particles.ParticleEngineConfiguration Engine,
             Particles.ParticleSystemConfiguration Configuration,
             double deltaTimeSeconds
         ) {
-            Texel = new Vector2(1f / Engine.ChunkSize, 1f / Engine.ChunkSize);
+            TexelAndSize = new Vector4(
+                1f / Engine.ChunkSize, 1f / Engine.ChunkSize,
+                Configuration.Size.X, Configuration.Size.Y
+            );
             GlobalSettings = new Vector4(
                 (float)(deltaTimeSeconds * 1000), Configuration.Friction, 
                 Configuration.MaximumVelocity, Configuration.GlobalLifeDecayRate
@@ -172,9 +175,12 @@ namespace Squared.Illuminant.Uniforms {
                 Configuration.CollisionDistance,
                 Configuration.CollisionLifePenalty
             );
-            // HACK: These formulas have the result saturate()d so this gets us close to a constant 1 result
             ColorFromLife = Configuration._ColorFromLife.GetValueOrDefault(Vector4.Zero);
-            LifeSizeMultiplier = Configuration.SizeFromLife.GetValueOrDefault(Vector2.One * 9999999);
+            SizeFromLife = Configuration.SizeFromLife.GetValueOrDefault(Vector2.Zero);
+            RotationFromLifeAndIndex = new Vector2(
+                MathHelper.ToRadians(Configuration.RotationFromLife), 
+                MathHelper.ToRadians(Configuration.RotationFromIndex)
+            );
         }
     }
 }

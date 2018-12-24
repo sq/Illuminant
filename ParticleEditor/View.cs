@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -14,9 +15,12 @@ using Squared.Util;
 
 namespace ParticleEditor {
     public class View : IDisposable {
+        public ParticleEditor Game;
         public ParticleEngine Engine;
         public Model Model;
         public readonly List<ParticleSystemView> Systems = new List<ParticleSystemView>();
+
+        private readonly List<IDisposable> LoadedResources = new List<IDisposable>();
 
         public View (Model model) {
             Model = model;
@@ -30,16 +34,33 @@ namespace ParticleEditor {
             if (Engine != null)
                 Engine.Dispose();
 
+            Game = editor;
+
             Engine = new ParticleEngine(
                 editor.Content, editor.RenderCoordinator, editor.Materials,
                 new ParticleEngineConfiguration {
-                    TextureLoader = editor.Content.Load<Texture2D>
+                    TextureLoader = LoadTexture
                 },
                 editor.ParticleMaterials
             );
             Systems.Clear();
             foreach (var systemModel in Model.Systems)
                 AddNewViewForModel(systemModel);
+        }
+
+        internal Texture2D LoadTexture (string name) {
+            Texture2D result;
+
+            if (File.Exists(name)) {
+                using (var img = new Squared.Render.STB.Image(name, true))
+                    result = img.CreateTexture(Game.RenderCoordinator, true);
+            } else {
+                lock (Game.RenderCoordinator.CreateResourceLock)
+                    result = Game.Content.Load<Texture2D>(name);
+            }
+
+            LoadedResources.Add(result);
+            return result;
         }
 
         internal void AddNewViewForModel (ParticleSystemModel model) {
@@ -67,6 +88,11 @@ namespace ParticleEditor {
         }
 
         public void Dispose () {
+            foreach (var r in LoadedResources)
+                Engine.Coordinator.DisposeResource(r);
+
+            LoadedResources.Clear();
+
             foreach (var s in Systems)
                 s.Dispose();
 
@@ -132,6 +158,9 @@ namespace ParticleEditor {
                 var prop = m as PropertyInfo;
                 var field = m as FieldInfo;
                 Type targetType = (prop != null) ? prop.PropertyType : field.FieldType;
+                if (targetType.Name == "Nullable`1")
+                    targetType = targetType.GetGenericArguments()[0];
+
                 try {
                     object value = kvp.Value.Value;
                     var jObject = value as JObject;

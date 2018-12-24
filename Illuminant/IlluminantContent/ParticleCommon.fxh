@@ -4,8 +4,9 @@ struct ParticleSystemSettings {
     // escapeVelocity, bounceVelocityMultiplier, collisionDistance, collisionLifePenalty
     float4 CollisionSettings;
     float4 ColorFromLife;
-    float2 Texel;
-    float2 LifeSizeMultiplier;
+    float4 TexelAndSize;
+    float2 SizeFromLife;
+    float2 RotationFromLifeAndIndex;
 };
 
 uniform ParticleSystemSettings System;
@@ -47,6 +48,10 @@ float getCollisionLifePenalty () {
     return System.CollisionSettings.w;
 }
 
+float2 getTexel () {
+    return System.TexelAndSize.xy;
+}
+
 float4 getColorForLifeValue (float life) {
     // value = (1 + x) if threshold is negative
     float4 base = saturate(-sign(System.ColorFromLife));
@@ -57,6 +62,21 @@ float4 getColorForLifeValue (float life) {
     // premultiply
     result.rgb *= result.a;
     return result;
+}
+
+float2 getSizeForLifeValue (float life) {
+    // value = (1 + x) if threshold is negative
+    float2 base = saturate(-sign(System.SizeFromLife));
+    // fraction = (x / threshold)
+    float2 fraction = life / (System.SizeFromLife + 0.0001);
+    // value = (1 + -x) if multiplier is negative else (0 + x)
+    float2 result = saturate(base + fraction);
+    return result * System.TexelAndSize.zw;
+}
+
+float2 getRotationForLifeAndIndex (float life, float index) {
+    return (life * System.RotationFromLifeAndIndex.x) + 
+        (index * System.RotationFromLifeAndIndex.y);
 }
 
 Texture2D PositionTexture;
@@ -120,7 +140,7 @@ void readState (
     out float4 velocity,
     out float4 attributes
 ) {
-    float4 uv = float4(xy * System.Texel, 0, 0);
+    float4 uv = float4(xy * getTexel(), 0, 0);
     position = tex2Dlod(PositionSampler, uv);
     velocity = tex2Dlod(VelocitySampler, uv);
     attributes = tex2Dlod(AttributeSampler, uv);
@@ -132,7 +152,7 @@ void readStateOrDiscard (
     out float4 velocity,
     out float4 attributes
 ) {
-    float4 uv = float4(xy * System.Texel, 0, 0);
+    float4 uv = float4(xy * getTexel(), 0, 0);
     position = tex2Dlod(PositionSampler, uv);
 
     // To support occlusion queries and reduce bandwidth used by dead particles

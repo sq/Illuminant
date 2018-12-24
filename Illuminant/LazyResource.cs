@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace Squared.Illuminant {
-    public class LazyResource<T> where T : class {
+    public class LazyResource<T> where T : GraphicsResource {
         public bool IsNullable { get; protected set; }
 
         public string Name;
@@ -25,6 +26,9 @@ namespace Squared.Illuminant {
         }
 
         public void EnsureInitialized (Func<string, T> resourceLoader) {
+            if ((Instance != null) && Instance.IsDisposed)
+                Instance = null;
+
             if (Instance != null)
                 return;
 
@@ -46,17 +50,24 @@ namespace Squared.Illuminant {
         }
 
         public static implicit operator T (LazyResource<T> rsrc) {
+            if (rsrc == null)
+                return null;
+
+            if ((rsrc.Instance != null) && rsrc.Instance.IsDisposed)
+                rsrc.Instance = null;
+
             if (rsrc.Instance == null) {
                 if (rsrc.IsNullable)
                     return null;
                 else
                     throw new ResourceNotLoadedException();
             }
+
             return rsrc.Instance;
         }
     }
 
-    public sealed class NullableLazyResource<T> : LazyResource<T> where T : class {
+    public sealed class NullableLazyResource<T> : LazyResource<T> where T : GraphicsResource {
         public NullableLazyResource (string name, T existingInstance = null)
             : base (name, existingInstance) {
             IsNullable = true;

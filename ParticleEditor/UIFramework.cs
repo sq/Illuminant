@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -7,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Framework;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using Squared.Game;
 using Squared.Illuminant;
 using Squared.Illuminant.Particles;
@@ -65,7 +67,7 @@ namespace ParticleEditor {
             }
         }
 
-        private class CachedPropertyInfo {
+        internal class CachedPropertyInfo {
             public string Name;
             public ModelTypeInfo Info;
             public FieldInfo Field;
@@ -471,6 +473,22 @@ namespace ParticleEditor {
             var ctx = Nuklear.Context;
             using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, actualName, false)) {
                 if (pGroup.Visible) {
+                    var tex = (ParticleTexture)value;
+                    Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 1, 2);
+                    if (Nuklear.Button("Select")) {
+                        Controller.SelectTexture(cpi, instance, tex);
+                        changed = false;
+                        return false;
+                    }
+                    if (Nuklear.Button("Erase")) {
+                        tex.Texture = new NullableLazyResource<Texture2D>();
+                        cpi.Setter(instance, tex);
+                        changed = true;
+                        return true;
+                    }
+                    
+                    Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 1, 1);
+                    Nuke.nk_label_wrap(ctx, tex.Texture.Name != null ? Path.GetFileName(tex.Texture.Name) : "none");
                 }
             }
             return false;

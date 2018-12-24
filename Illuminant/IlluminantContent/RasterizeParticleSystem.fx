@@ -5,7 +5,6 @@
 #define PI 3.14159265358979323846
 
 uniform float4 GlobalColor;
-uniform float2 Size;
 uniform float2 AnimationRate;
 uniform float  VelocityRotation;
 uniform float  ZToY;
@@ -30,9 +29,9 @@ static const float3 Corners[] = {
 };
 
 inline float3 ComputeRotatedCorner(
-    in int cornerIndex, in float angle
+    in int cornerIndex, in float angle, in float2 size
 ) {    
-    float3 corner = Corners[cornerIndex.x] * float3(Size, 1), sinCos;
+    float3 corner = Corners[cornerIndex.x] * float3(size, 1), sinCos;
     sincos(angle, sinCos.x, sinCos.y);
     return float3(
         (sinCos.y * corner.x) - (sinCos.x * corner.y),
@@ -88,11 +87,12 @@ void VS_PosVelAttrWhite(
     float angle;
     if ((absvel.x < 0.01) && (absvel.y < 0.01)) {
         angle = 0;
-    }
-    else {
+    } else {
         angle = (atan2(velocity.y, velocity.x) + PI) * VelocityRotation;
     }
-    float3 rotatedCorner = ComputeRotatedCorner(cornerIndex.x, angle);
+    angle += getRotationForLifeAndIndex(position.w, offsetAndIndex.z);
+    float2 size = getSizeForLifeValue(position.w);
+    float3 rotatedCorner = ComputeRotatedCorner(cornerIndex.x, angle, size);
 
     VS_Core(
         position, rotatedCorner, cornerIndex,
@@ -147,8 +147,12 @@ void VS_PosAttr (
         return;
     }
 
+    float angle = getRotationForLifeAndIndex(position.w, offsetAndIndex.z);
+    float2 size = getSizeForLifeValue(position.w);
+    float3 rotatedCorner = ComputeRotatedCorner(cornerIndex.x, angle, size);
+
     VS_Core(
-        position, Corners[cornerIndex.x], cornerIndex,
+        position, rotatedCorner, cornerIndex,
         result, texCoord
     );
 
@@ -162,10 +166,13 @@ void PS_Texture (
     out float4 result   : COLOR0
 ) {
     // FIXME
-    float4 texColor = tex2D(BitmapSampler, texCoord);
-    result = color * texColor;
-    result *= GlobalColor;
-    if (result.a <= 0)
+    result = color;
+    if (color.a > (1 / 512)) {
+        float4 texColor = tex2D(BitmapSampler, texCoord);
+        result *= texColor;
+        result *= GlobalColor;
+    }
+    if (result.a <= (1 / 512))
         discard;
 }
 
@@ -176,7 +183,7 @@ void PS_NoTexture(
 ) {
     result = color;
     result *= GlobalColor;
-    if (result.a <= 0)
+    if (result.a <= (1 / 512))
         discard;
 }
 

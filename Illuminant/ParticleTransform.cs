@@ -97,7 +97,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             public T Multiply;
         }
 
-        public float CyclesPerSecond = 10;
+        public float? CyclesPerSecond = 10;
         public FMAParameters<Vector3> Position;
         public FMAParameters<Vector3> Velocity;
         public FMAParameters<Vector4> Attribute;
@@ -119,7 +119,7 @@ namespace Squared.Illuminant.Particles.Transforms {
 
         protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, int frameIndex) {
             base.SetParameters(engine, parameters, frameIndex);
-            parameters["TimeDivisor"].SetValue(1000f / CyclesPerSecond);
+            parameters["TimeDivisor"].SetValue(CyclesPerSecond.HasValue ? 1000f / CyclesPerSecond.Value : -1);
             parameters["PositionAdd"].SetValue(new Vector4(Position.Add, 0));
             parameters["PositionMultiply"].SetValue(new Vector4(Position.Multiply, 1));
             parameters["VelocityAdd"].SetValue(new Vector4(Velocity.Add, 0));

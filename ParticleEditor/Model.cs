@@ -31,14 +31,16 @@ namespace ParticleEditor {
                 };
                 using (var jreader = new JsonTextReader(reader)) {
                     var result = serializer.Deserialize<Model>(jreader);
-                    result.Filename = Path.GetFullPath(fileName);
+                    if (result != null)
+                        result.Filename = Path.GetFullPath(fileName);
                     return result;
                 }
             }
         }
 
         public void Save (string fileName) {
-            using (var writer = new System.IO.StreamWriter(fileName, false, Encoding.UTF8)) {
+            var tempPath = Path.GetTempFileName();
+            using (var writer = new StreamWriter(tempPath, false, Encoding.UTF8)) {
                 var serializer = new JsonSerializer {
                     Converters = {
                         new XnaJsonConverter()
@@ -46,8 +48,9 @@ namespace ParticleEditor {
                     Formatting = Formatting.Indented
                 };
                 serializer.Serialize(writer, this);
-                Filename = Path.GetFullPath(fileName);
             }
+            File.Copy(tempPath, fileName, true);
+            Filename = Path.GetFullPath(fileName);
         }
     }
 

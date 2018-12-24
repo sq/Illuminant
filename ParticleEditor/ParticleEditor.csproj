@@ -104,6 +104,10 @@
       <Project>{cfb603c1-8371-460d-ba60-91e697eae1b3}</Project>
       <Name>Squared.Render.Freetype</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\Fracture\Squared\Render.STB\Squared.Render.STB.csproj">
+      <Project>{cfb603c1-8371-460d-ba60-91e697eae1b4}</Project>
+      <Name>Squared.Render.STB</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\Fracture\Squared\TaskLib\Squared.Task.csproj">
       <Project>{173abdca-7278-46ff-a300-d3bf8ccef181}</Project>
       <Name>Squared.Task</Name>

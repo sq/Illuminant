@@ -981,14 +981,13 @@ namespace Squared.Illuminant.Particles {
                     // TODO: transform arg
                     var bt = p["BitmapTexture"];
                     if (bt != null) {
-                        bt.SetValue(Configuration.Texture);
+                        bt.SetValue(appearance.Texture);
                         p["BitmapTextureRegion"].SetValue(new Vector4(
                             appearance.Region.TopLeft, 
                             appearance.Region.BottomRight.X, 
                             appearance.Region.BottomRight.Y
                         ));
                         p["AnimationRate"].SetValue(Configuration.AnimationRate);
-                        p["Size"].SetValue(Configuration.Size / 2f);
                         p["VelocityRotation"].SetValue(Configuration.RotationFromVelocity ? 1f : 0f);
                     }
 
@@ -1087,10 +1086,10 @@ namespace Squared.Illuminant.Particles {
         /// </summary>
         public bool          RotationFromVelocity;
 
-        /// <summary>
-        /// Multiplies the particle's color, producing a fade-in or fade-out based on the particle's life
-        /// </summary>
         internal Vector4?    _ColorFromLife = null;
+
+        [NonSerialized]
+        private float?       _OpacityFromLife = null;
 
         /// <summary>
         /// Multiplies the particle's size, producing a shrink or grow based on the particle's life
@@ -1152,6 +1151,7 @@ namespace Squared.Illuminant.Particles {
         /// <summary>
         /// Coarse-grained control over the number of particles actually rendered
         /// </summary>
+        [NonSerialized]
         public float         StippleFactor = 1.0f;
 
         /// <summary>
@@ -1165,9 +1165,19 @@ namespace Squared.Illuminant.Particles {
         /// </summary>
         public Vector4       GlobalColor = Vector4.One;
 
-        [NonSerialized]
-        private float? _OpacityFromLife = null;
+        /// <summary>
+        /// Makes particles spin based on their life value
+        /// </summary>
+        public float         RotationFromLife = 0;
 
+        /// <summary>
+        /// Gives particles a constant rotation based on their index (pseudorandom-ish)
+        /// </summary>
+        public float         RotationFromIndex = 0;
+
+        /// <summary>
+        /// Multiplies the particle's opacity, producing a fade-in or fade-out based on the particle's life
+        /// </summary>
         public float? OpacityFromLife {
             set {
                 if (value == _OpacityFromLife)
@@ -1189,6 +1199,9 @@ namespace Squared.Illuminant.Particles {
             }
         }
 
+        /// <summary>
+        /// Multiplies the particle's color, producing a fade-in or fade-out based on the particle's life
+        /// </summary>
         public Vector4? ColorFromLife {
             get {
                 if (_OpacityFromLife.HasValue)
@@ -1206,12 +1219,6 @@ namespace Squared.Illuminant.Particles {
             int attributeCount = 0
         ) {
             AttributeCount = attributeCount;
-        }
-
-        public Texture2D Texture {
-            get {
-                return Appearance.Texture;
-            }
         }
     }
 }

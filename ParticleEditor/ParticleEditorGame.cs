@@ -60,6 +60,8 @@ namespace ParticleEditor {
         private GCHandle ControllerPin;
         public float Zoom = 1.0f;
 
+        private long LastViewRelease = 0;
+
         public ParticleEditor () {
             // UniformBinding.ForceCompatibilityMode = true;
 
@@ -72,6 +74,9 @@ namespace ParticleEditor {
             Graphics.PreferMultiSampling = true;
             Graphics.IsFullScreen = false;
 
+            Graphics.DeviceDisposing += Graphics_DeviceDisposing;
+            Graphics.DeviceResetting += Graphics_DeviceResetting;
+
             Content.RootDirectory = "Content";
 
             UseThreadedDraw = true;
@@ -82,6 +87,23 @@ namespace ParticleEditor {
             WindowedResolution = new Pair<int>(1920, 1080);
 
             Scheduler = new Squared.Task.TaskScheduler(Squared.Task.JobQueue.ThreadSafe);
+        }
+
+        private void ReleaseView () {
+            lock (this) {
+                LastViewRelease = Time.Ticks;
+                if (View != null)
+                    RenderCoordinator.DisposeResource(View);
+                View = null;
+            }
+        }
+
+        private void Graphics_DeviceDisposing (object sender, EventArgs e) {
+            ReleaseView();
+        }
+
+        private void Graphics_DeviceResetting (object sender, EventArgs e) {
+            ReleaseView();
         }
 
         public bool LeftMouse {
@@ -163,6 +185,10 @@ namespace ParticleEditor {
 
             if (View != null)
                 View.Dispose();
+            CreateView();
+        }
+
+        private void CreateView () {
             View = new View(Model);
 
             if (Controller == null) {
@@ -178,6 +204,9 @@ namespace ParticleEditor {
             Console.WriteLine("ClientSizeChanged");
             if (Window.ClientBounds.Width <= 0)
                 return;
+
+            RenderCoordinator.WaitForActiveDraws();
+            ReleaseView();
 
             if (!Graphics.IsFullScreen) {
                 WindowedResolution = new Pair<int>(Window.ClientBounds.Width, Window.ClientBounds.Height);
@@ -243,6 +272,10 @@ namespace ParticleEditor {
             if ((Window.ClientBounds.Width != Graphics.PreferredBackBufferWidth) || (Window.ClientBounds.Height != Graphics.PreferredBackBufferHeight))
                 return;
 
+            View view;
+            lock (this)
+                view = View;
+
             Nuklear.UpdateInput(
                 PreviousMouseState, MouseState, 
                 PreviousKeyboardState, KeyboardState, 
@@ -258,7 +291,7 @@ namespace ParticleEditor {
 
             Controller.Update();
 
-            if (IsActive)
+            if (IsActive && View != null)
                 View.Update(this, frame, -2, gameTime.ElapsedGameTime.Ticks);
 
             ClearBatch.AddNew(frame, -1, Materials.Clear, new Color(0.02f, 0.05f, 0.07f, 1f) * 3);
@@ -281,10 +314,20 @@ namespace ParticleEditor {
                 -Graphics.PreferredBackBufferHeight / 2f
             ) / Zoom;
             Materials.ViewportScale = Zoom * Vector2.One;
-            View.Draw(this, frame, 3);
+
+            if (View != null)
+                View.Draw(this, frame, 3);
 
             if (ShowPerformanceStats)
                 DrawPerformanceStats(ref ir);
+
+            if (View == null) {
+                if ((Time.Ticks - LastViewRelease) > Time.MillisecondInTicks * 1000)
+                    RenderCoordinator.AfterPresent(() => {
+                        lock (this)
+                            CreateView();
+                    });
+            }
         }
 
         private void DrawPerformanceStats (ref ImperativeRenderer ir) {
