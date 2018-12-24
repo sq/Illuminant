@@ -54,6 +54,11 @@ namespace ParticleEditor {
                         {"Velocity", new ModelTypeInfo { Type = "Matrix3x4" } }
                     }
                 },
+                {
+                    "Gravity", new Dictionary<string, ModelTypeInfo> {
+                        {"Attractors", new ModelTypeInfo { Type = "List" } },
+                    }
+                }
             };
     }
 }

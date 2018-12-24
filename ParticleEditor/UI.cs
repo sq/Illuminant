@@ -55,15 +55,22 @@ namespace ParticleEditor {
             RenderGlobalSettings();
         }
 
+        public float LineHeight {
+            get {
+                return (float)Math.Ceiling(Font.LineSpacing) + 2;
+            }
+        }
+
         private unsafe void RenderFilePanel () {
             var ctx = Nuklear.Context;
 
             using (var group = Nuklear.CollapsingGroup("File", "File", true))
             if (group.Visible) {
-                Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, Model.Filename == null ? 2 : 3);
+                Nuke.nk_layout_row_dynamic(ctx, LineHeight, Model.Filename == null ? 2 : 3);
                 if (Model.Filename != null) {
-                    if (Nuklear.Button("Save"))
+                    if (Nuklear.Button("Save")) {
                         RunWorkItem(() => Model.Save(Model.Filename));
+                    }
                     if (Nuklear.Button("Save As"))
                         Controller.ShowSaveDialog();
                 } else {
@@ -81,7 +88,7 @@ namespace ParticleEditor {
 
             using (var group = Nuklear.CollapsingGroup("Systems", "Systems"))
             if (group.Visible) {
-                Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, Model.Systems.Count > 0 ? 3 : 2);
+                Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
                 if (Nuklear.Button("Add"))
                     Controller.AddSystem();
                 if (Nuklear.Button("Remove"))
@@ -89,7 +96,7 @@ namespace ParticleEditor {
 
                 using (var list = Nuklear.ScrollingGroup(80, "System List", ref state.Systems.ScrollX, ref state.Systems.ScrollY))
                 if (list.Visible) {
-                    Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing, 1);
+                    Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
                     for (int i = 0; i < Model.Systems.Count; i++) {
                         var system = Model.Systems[i];
                         if (Nuklear.SelectableText(system.Name ?? string.Format("{0} Unnamed", i), state.Systems.SelectedIndex == i))
@@ -109,16 +116,18 @@ namespace ParticleEditor {
             var s = Controller.SelectedSystem;
             var i = s.Instance;
 
-            Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 2);
+            Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
             var time = TimeSpan.FromTicks(s.Time.Ticks);
             using (var tCount = new NString(time.ToString()))
                 Nuke.nk_text(ctx, tCount.pText, tCount.Length, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
             if (Nuklear.Button("Reset"))
                 Controller.QueueReset(s);
 
-            Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 1);
+            Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
             using (var tCount = new NString(string.Format("{0}/{1}", i.LiveCount, i.Capacity)))
                 Nuke.nk_text(ctx, tCount.pText, tCount.Length, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
+
+            Nuklear.Textbox(ref s.Model.Name);
 
             SystemProperties.Prepare(typeof (ParticleSystemConfiguration));
             RenderPropertyGrid(Controller.SelectedSystem.Model.Configuration, ref SystemProperties, null);
@@ -130,7 +139,7 @@ namespace ParticleEditor {
 
             using (var group = Nuklear.CollapsingGroup("Transforms", "Transforms"))
             if (group.Visible && (Controller.SelectedSystem != null)) {
-                Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 2);
+                Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
                 if (Nuklear.Button("Add"))
                     Controller.AddTransform();
                 if (Nuklear.Button("Remove"))
@@ -141,7 +150,7 @@ namespace ParticleEditor {
 
                 using (var list = Nuklear.ScrollingGroup(140, "Transform List", ref state.Transforms.ScrollX, ref state.Transforms.ScrollY))
                 if (list.Visible) {
-                    Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing, 1);
+                    Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
                     for (int i = 0; i < model.Transforms.Count; i++) {
                         var xform = model.Transforms[i];
                         if (Nuklear.SelectableText(xform.Name ?? string.Format("{0} {1}", i, xform.Type.Name), state.Transforms.SelectedIndex == i))
@@ -197,7 +206,7 @@ namespace ParticleEditor {
                 Checkbox("Statistics", ref ShowPerformanceStats);
 
                 Nuke.nk_label(ctx, "Zoom", (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
-                Zoom = Nuke.nk_slide_float(ctx, 0.5f, Zoom, 2.0f, 0.1f);
+                Zoom = Nuke.nk_slide_float(ctx, 0.5f, Zoom, 4.0f, 0.1f);
 
                 Nuke.nk_tree_pop(ctx);
             }

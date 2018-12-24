@@ -59,7 +59,10 @@ namespace ParticleEditor {
                         TranslateMessage(ref m);
                         return false;
                     case WM_CHAR:
-                        Buffer.Add((char)m.WParam.ToInt32());
+                        var ch = (char)m.WParam.ToInt32();
+                        // We can get wm_char events for control characters like backspace and Nuklear *does not like that*
+                        if (ch >= 32)
+                            Buffer.Add(ch);
                         return true;
                     default:
                         return false;
@@ -98,7 +101,7 @@ namespace ParticleEditor {
 
         private readonly Dictionary<Type, List<CachedPropertyInfo>> CachedMembers =
             new Dictionary<Type, List<CachedPropertyInfo>>(new ReferenceComparer<Type>());
-        private PropertyGridCache SystemProperties, TransformProperties;
+        private PropertyGridCache SystemProperties, TransformProperties, ListProperty;
         private List<Type> TransformTypes = GetTransformTypes().ToList();
 
         internal KeyboardInput KeyboardInputHandler;
@@ -137,20 +140,24 @@ namespace ParticleEditor {
                    let isNullable = _mtype.Name == "Nullable`1"
                    let allowNull = _mtype.IsClass || isNullable
                    let mtype = isNullable ? _mtype.GetGenericArguments()[0] : _mtype
-                   where (f == null) || !f.IsInitOnly
-                   where (p == null) || (p.CanWrite && p.CanRead)
+                   let info = GetInfoForField(type, m.Name, mtype)
+                   let isWritable = ((f != null) && !f.IsInitOnly) || ((p != null) && p.CanWrite)
+                   where (f == null) || !f.IsInitOnly || (info.Type == "List")
+                   where (p == null) || (p.CanWrite && p.CanRead) || (info.Type == "List")
                    where !m.GetCustomAttributes<NonSerializedAttribute>().Any()
                    orderby m.Name
                    select new CachedPropertyInfo {
                        Name = m.Name,
-                       Info = GetInfoForField(type, m.Name, mtype),
+                       Info = info,
                        Field = f,
                        Property = p,
                        RawType = _mtype,
                        Type = mtype,
                        AllowNull = allowNull,
                        Getter = (f != null) ? (Func<object, object>)f.GetValue : p.GetValue,
-                       Setter = (f != null) ? (Action<object, object>)f.SetValue : p.SetValue
+                       Setter = isWritable
+                           ? ((f != null) ? (Action<object, object>)f.SetValue : p.SetValue)
+                           : (i, v) => { }
                    };
         }
 
@@ -245,6 +252,9 @@ namespace ParticleEditor {
             var valueType = cpi.Info.Type ?? cpi.Type.Name;
 
             switch (valueType) {
+                case "List":
+                    return RenderListProperty(cpi, instance, ref changed, actualName, value);
+
                 case "Formula":
                 case "FMAParameters`1":
                     List<CachedPropertyInfo> members;
@@ -269,7 +279,7 @@ namespace ParticleEditor {
                 case "Int32":
                 case "Single":
                     if (!cpi.AllowNull || (value != null)) {
-                        Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 1);
+                        Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
                         if (cpi.Type == typeof(float)) {
                             var v = (float)value;
                             RenderPropertyElement(cpi.Name, cpi.Info, ref v, ref changed);
@@ -301,7 +311,7 @@ namespace ParticleEditor {
                     return RenderMatrixProperty(cpi, instance, ref changed, actualName, value, true);
             }
 
-            Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 2);
+            Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
             Nuklear.SelectableText(cpi.Name, isActive);
 
             if (cpi.AllowNull) {
@@ -342,7 +352,7 @@ namespace ParticleEditor {
                     return false;
 
                 case "Vector2":
-                    Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 2);
+                    Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
                     var v2 = (Vector2)value;
                     RenderPropertyElement("#x", cpi.Info, ref v2.X, ref changed);
                     RenderPropertyElement("#y", cpi.Info, ref v2.Y, ref changed);
@@ -353,7 +363,7 @@ namespace ParticleEditor {
                     return false;
 
                 case "Vector3":
-                    Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 3);
+                    Nuke.nk_layout_row_dynamic(ctx, LineHeight, 3);
                     var v3 = (Vector3)value;
                     RenderPropertyElement("#x", cpi.Info, ref v3.X, ref changed);
                     RenderPropertyElement("#y", cpi.Info, ref v3.Y, ref changed);
@@ -365,7 +375,7 @@ namespace ParticleEditor {
                     return false;
 
                 case "Vector4":
-                    Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 4);
+                    Nuke.nk_layout_row_dynamic(ctx, LineHeight, 4);
                     var v4 = (Vector4)value;
                     RenderPropertyElement("#x", cpi.Info, ref v4.X, ref changed);
                     RenderPropertyElement("#y", cpi.Info, ref v4.Y, ref changed);
@@ -406,7 +416,7 @@ namespace ParticleEditor {
                             p = new MatrixGenerateParameters { Angle = 0, Scale = 1 };
                         }
 
-                        Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 1);
+                        Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
                         if (Nuklear.Button("Identity")) {
                             m = Matrix.Identity;
                             p.Angle = 0;
@@ -416,7 +426,7 @@ namespace ParticleEditor {
 
                         bool regenerate = false;
 
-                        Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 1);
+                        Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
                         if (Nuklear.Property("Rotate", ref p.Angle, -360, 360, 0.5f, 0.25f)) {
                             regenerate = true;
                             changed = true;
@@ -434,7 +444,7 @@ namespace ParticleEditor {
                         if (changed || regenerate)
                             MatrixGenerateParams[actualName] = p;
                     } else {
-                        Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, is3x4 ? 3 : 4);
+                        Nuke.nk_layout_row_dynamic(ctx, LineHeight, is3x4 ? 3 : 4);
                         RenderPropertyElement("#xx", cpi.Info, ref m.M11, ref changed);
                         RenderPropertyElement("#xy", cpi.Info, ref m.M12, ref changed);
                         RenderPropertyElement("#xz", cpi.Info, ref m.M13, ref changed);
@@ -474,7 +484,7 @@ namespace ParticleEditor {
             using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, actualName, false)) {
                 if (pGroup.Visible) {
                     var tex = (ParticleTexture)value;
-                    Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 1, 2);
+                    Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
                     if (Nuklear.Button("Select")) {
                         Controller.SelectTexture(cpi, instance, tex);
                         changed = false;
@@ -487,11 +497,50 @@ namespace ParticleEditor {
                         return true;
                     }
                     
-                    Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 1, 1);
+                    Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
                     Nuke.nk_label_wrap(ctx, tex.Texture.Name != null ? Path.GetFileName(tex.Texture.Name) : "none");
                 }
             }
             return false;
+        }
+
+        private unsafe bool RenderListProperty (
+            CachedPropertyInfo cpi, object instance, ref bool changed, 
+            string actualName, object _list
+        ) {
+            var ctx = Nuklear.Context;
+            var list = (System.Collections.IList)_list;
+            var itemType = _list.GetType().GetGenericArguments()[0];
+            uint scrollX = 0, scrollY = 0;
+            using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, actualName, false)) {
+                if (pGroup.Visible) {
+                    var selectedIndex = 0;
+
+                    Nuke.nk_layout_row_dynamic(ctx, LineHeight, 3);
+                    var indexChanged = Nuklear.Property("#i", ref selectedIndex, 0, list.Count, 1, 1);
+                    if (Nuklear.Button("Add")) {
+                        var newItem = Activator.CreateInstance(itemType);
+                        list.Add(newItem);
+                        changed = true;
+                    }
+                    if (Nuklear.Button("Remove")) {
+                        list.RemoveAt(selectedIndex);
+                        changed = true;
+                    }
+
+                    if (selectedIndex < list.Count) {
+                        var item = list[selectedIndex];
+                        if (item != null) {
+                            ListProperty.Prepare(item.GetType());
+                            RenderPropertyGridNonScrolling(item, ref ListProperty);
+                        }
+                    }
+                }
+            }
+
+            if (changed)
+                cpi.Setter(instance, list);
+            return changed;
         }
 
         private unsafe bool RenderColorProperty (
@@ -509,7 +558,7 @@ namespace ParticleEditor {
                         b = c.Z,
                         a = c.W,
                     };
-                    Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 1, 2);
+                    Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
                     var resetToTransparent = Nuklear.Button("Transparent");
                     var resetToWhite = Nuklear.Button("White");
                     Nuke.nk_layout_row_dynamic(ctx, 96, 1);
@@ -521,7 +570,7 @@ namespace ParticleEditor {
                             : new Vector4(temp.r, temp.g, temp.b, temp.a);
                     if (newColor != c)
                         changed = true;
-                    Nuke.nk_layout_row_dynamic(ctx, Font.LineSpacing + 2, 4);
+                    Nuke.nk_layout_row_dynamic(ctx, LineHeight, 4);
                     RenderPropertyElement("#R", null, ref newColor.X, ref changed, 0, 1);
                     RenderPropertyElement("#G", null, ref newColor.Y, ref changed, 0, 1);
                     RenderPropertyElement("#B", null, ref newColor.Z, ref changed, 0, 1);

@@ -16,9 +16,9 @@ namespace ParticleEditor {
             Filename = null;
         }
 
-        public void Normalize () {
+        public void Normalize (bool forSave) {
             foreach (var s in Systems)
-                s.Normalize();
+                s.Normalize(forSave);
         }
 
         public static Model Load (string fileName) {
@@ -39,6 +39,8 @@ namespace ParticleEditor {
         }
 
         public void Save (string fileName) {
+            Normalize(true);
+
             var tempPath = Path.GetTempFileName();
             using (var writer = new StreamWriter(tempPath, false, Encoding.UTF8)) {
                 var serializer = new JsonSerializer {
@@ -59,9 +61,9 @@ namespace ParticleEditor {
         public ParticleSystemConfiguration Configuration;
         public readonly List<ParticleTransformModel> Transforms = new List<ParticleTransformModel>();
 
-        public void Normalize () {
+        public void Normalize (bool forSave) {
             foreach (var t in Transforms)
-                t.Normalize();
+                t.Normalize(forSave);
         }
     }
 
@@ -70,9 +72,16 @@ namespace ParticleEditor {
         public Type Type;
         public readonly Dictionary<string, ModelProperty> Properties = new Dictionary<string, ModelProperty>();
 
-        public void Normalize () {
-            foreach (var kvp in Properties)
-                kvp.Value.Normalize();
+        public void Normalize (bool forSave) {
+            var keys = Properties.Keys.ToList();
+            foreach (var key in keys) {
+                var m = Type.GetMember(key).FirstOrDefault();
+                if (m == null) {
+                    if (forSave)
+                        Properties.Remove(key);
+                } else
+                    Properties[key].Normalize();
+            }
         }
     }
 

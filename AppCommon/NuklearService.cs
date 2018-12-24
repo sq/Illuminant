@@ -235,7 +235,7 @@ namespace Framework {
 
                 using (var layoutBuffer = BufferPool<BitmapDrawCall>.Allocate(c->length + 64)) {
                     var layout = _Font.LayoutString(
-                        str, position: new Vector2(c->x, c->y),
+                        str, position: new Vector2(c->x, c->y - 1),
                         color: color,
                         scale: FontScale, buffer: new ArraySegment<BitmapDrawCall>(layoutBuffer.Data)
                     );
@@ -503,6 +503,48 @@ namespace Framework {
             return selected != 0;
         }
 
+        public unsafe bool Textbox (ref string text) {
+            const int bufferSize = 4096;
+            if ((text != null) && (text.Length >= bufferSize))
+                throw new ArgumentOutOfRangeException("Text too long");
+
+            var currentText = text ?? String.Empty;
+
+            using (var buf1 = BufferPool<byte>.Allocate(bufferSize))
+            using (var buf2 = BufferPool<byte>.Allocate(bufferSize)) {
+                int byteLen = Encoding.UTF8.GetBytes(currentText, 0, currentText.Length, buf1.Data, 0);
+                Array.Copy(buf1.Data, buf2.Data, byteLen);
+                int newByteLen = byteLen;
+
+                fixed (byte* pBuf2 = buf2.Data) {
+                    var flags = (uint)NkEditTypes.Field | (uint)NkEditFlags.AutoSelect;
+                    var res = Nuklear.nk_edit_string(Context, flags, pBuf2, &newByteLen, bufferSize - 1, null);
+                    var changed = (newByteLen != byteLen);
+                    if (!changed) {
+                        for (int i = 0; i < newByteLen; i++) {
+                            if (buf1.Data[i] != buf2.Data[i]) {
+                                changed = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (changed) {
+                        var nullPos = Array.IndexOf(buf2.Data, (byte)0);
+                        if (nullPos > 0)
+                            newByteLen = Math.Min(newByteLen, nullPos);
+                        // what the fuck
+                        var bsPos = Array.IndexOf(buf2.Data, (byte)8);
+                        if (bsPos > 0)
+                            newByteLen = Math.Min(newByteLen, bsPos);
+                        text = Encoding.UTF8.GetString(pBuf2, newByteLen);
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
         public GroupScrolled ScrollingGroup (float heightPx, string name, ref uint scrollX, ref uint scrollY) {
             using (var tName = new NString(name)) {
                 uint flags = 0;
@@ -532,7 +574,7 @@ namespace Framework {
             var oldIndex = selectedIndex;
             Nuklear.nk_combobox_callback(
                 Context, wrappedGetter, IntPtr.Zero, 
-                ref selectedIndex, count, (int)_Font.LineSpacing, new NuklearDotNet.nk_vec2(rect.W - 32, 512)
+                ref selectedIndex, count, (int)_Font.LineSpacing + 1, new NuklearDotNet.nk_vec2(rect.W - 32, 512)
             );
             foreach (var s in strings)
                 s.Dispose();

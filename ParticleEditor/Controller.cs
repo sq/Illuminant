@@ -195,7 +195,7 @@ namespace ParticleEditor {
         }
 
         public void SetModel (Model model) {
-            model.Normalize();
+            model.Normalize(false);
             Game.Model = model;
             Model = model;
             Game.RenderCoordinator.DisposeResource(View);

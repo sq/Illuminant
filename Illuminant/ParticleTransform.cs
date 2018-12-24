@@ -159,13 +159,16 @@ namespace Squared.Illuminant.Particles.Transforms {
             public Vector3 Position;
             public float   Radius = 1;
             public float   Strength = 1;
+            public bool    Slingshot = true;
         }
+
+        public float MaximumAcceleration = 8;
 
         public readonly List<Attractor> Attractors = new List<Attractor>();
         [NonSerialized]
         private Vector3[] _Positions;
         [NonSerialized]
-        private Vector2[] _RadiusesAndStrengths;
+        private Vector3[] _RadiusesAndStrengths;
 
         protected override Material GetMaterial (ParticleMaterials materials) {
             return materials.Gravity;
@@ -178,16 +181,17 @@ namespace Squared.Illuminant.Particles.Transforms {
             if ((_Positions == null) || (_Positions.Length != Attractors.Count))
                 _Positions = new Vector3[Attractors.Count];
             if ((_RadiusesAndStrengths == null) || (_RadiusesAndStrengths.Length != Attractors.Count))
-                _RadiusesAndStrengths = new Vector2[Attractors.Count];
+                _RadiusesAndStrengths = new Vector3[Attractors.Count];
 
             for (int i = 0; i < Attractors.Count; i++) {
                 _Positions[i] = Attractors[i].Position;
-                _RadiusesAndStrengths[i] = new Vector2(Attractors[i].Radius, Attractors[i].Strength);
+                _RadiusesAndStrengths[i] = new Vector3(Attractors[i].Radius, Attractors[i].Strength, Attractors[i].Slingshot ? 1 : 0);
             }
 
             parameters["AttractorCount"].SetValue(Attractors.Count);
             parameters["AttractorPositions"].SetValue(_Positions);
             parameters["AttractorRadiusesAndStrengths"].SetValue(_RadiusesAndStrengths);
+            parameters["MaximumAcceleration"].SetValue(MaximumAcceleration);
         }
     }
 }
