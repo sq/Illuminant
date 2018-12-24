@@ -12,6 +12,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Squared.Illuminant;
+using Squared.Illuminant.Modeling;
 using Squared.Illuminant.Particles;
 using Squared.Illuminant.Particles.Transforms;
 
@@ -29,7 +30,7 @@ namespace ParticleEditor {
         }
 
         public readonly ParticleEditor Game;
-        public Model Model;
+        public EngineModel Model;
         public View View;
         public readonly State CurrentState = new State();
         public readonly List<ParticleSystemView> QueuedResets = new List<ParticleSystemView>();
@@ -58,7 +59,7 @@ namespace ParticleEditor {
             }
         }
 
-        public Controller (ParticleEditor game, Model model, View view) {
+        public Controller (ParticleEditor game, EngineModel model, View view) {
             Game = game;
             Model = model;
             View = view;
@@ -71,7 +72,7 @@ namespace ParticleEditor {
                 GlobalLifeDecayRate = 90,
                 Size = Vector2.One * 1.5f
             };
-            var model = new ParticleSystemModel {
+            var model = new SystemModel {
                 Configuration = config
             };
             Model.Systems.Add(model);
@@ -102,7 +103,7 @@ namespace ParticleEditor {
         public void AddTransform () {
             var view = SelectedSystem;
             var model = view.Model;
-            var xformModel = new ParticleTransformModel {
+            var xformModel = new TransformModel {
                 Type = typeof(Spawner),
                 Properties = {
                     { "MinRate", ModelProperty.New(240) },
@@ -185,7 +186,7 @@ namespace ParticleEditor {
                     if (dlg.ShowDialog() != DialogResult.OK)
                         return;
 
-                    var model = Model.Load(dlg.FileName);
+                    var model = EngineModel.Load(dlg.FileName);
                     if (model == null)
                         Console.WriteLine("Failed to load file");
                     else
@@ -194,7 +195,7 @@ namespace ParticleEditor {
             });
         }
 
-        public void SetModel (Model model) {
+        public void SetModel (EngineModel model) {
             model.Normalize(false);
             Game.Model = model;
             Model = model;
@@ -223,69 +224,6 @@ namespace ParticleEditor {
                     cpi.Setter(instance, pt);
                 }
             });
-        }
-    }
-
-    public class XnaJsonConverter : JsonConverter {
-        public override bool CanConvert (Type objectType) {
-            switch (objectType.Name) {
-                case "ModelProperty":
-                case "Matrix":
-                    return true;
-                default:
-                    return false;
-            }
-        }
-
-        public override object ReadJson (JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer) {
-            switch (objectType.Name) {
-                case "ModelProperty":
-                    var obj = JObject.Load(reader);
-                    var type = Type.GetType(obj["Type"].ToString(), true, false);
-                    var result = new ModelProperty {
-                        Type = type,
-                        Value = obj["Value"].ToObject(type, serializer)
-                    };
-                    return result;
-                case "Matrix":
-                    var arr = serializer.Deserialize<float[]>(reader);
-                    return new Matrix(
-                        arr[0], arr[1], arr[2], arr[3],
-                        arr[4], arr[5], arr[6], arr[7],
-                        arr[8], arr[9], arr[10], arr[11],
-                        arr[12], arr[13], arr[14], arr[15]
-                    );
-                default:
-                    throw new NotImplementedException();
-            }
-        }
-
-        public override void WriteJson (JsonWriter writer, object value, JsonSerializer serializer) {
-            if (value == null)
-                return;
-
-            var type = value.GetType();
-            switch (type.Name) {
-                case "ModelProperty":
-                    var mp = (ModelProperty)value;
-                    serializer.Serialize(writer, new {
-                        Type = mp.Type,
-                        Value = mp.Value
-                    });
-                    return;
-                case "Matrix":
-                    var m = (Matrix)value;
-                    var values = new float[] {
-                        m.M11, m.M12, m.M13, m.M14,
-                        m.M21, m.M22, m.M23, m.M24,
-                        m.M31, m.M32, m.M33, m.M34,
-                        m.M41, m.M42, m.M43, m.M44,
-                    };
-                    serializer.Serialize(writer, values);
-                    return;
-                default:
-                    throw new NotImplementedException();
-            }
         }
     }
 }

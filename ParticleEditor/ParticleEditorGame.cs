@@ -18,6 +18,7 @@ using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Media;
 using Squared.Game;
 using Squared.Illuminant;
+using Squared.Illuminant.Modeling;
 using Squared.Render;
 using Squared.Render.Convenience;
 using Squared.Render.Text;
@@ -53,7 +54,7 @@ namespace ParticleEditor {
         public DisplayMode DesktopDisplayMode;
         public Pair<int> WindowedResolution;
 
-        public Model Model;
+        public EngineModel Model;
         public View View;
         public Controller Controller;
 
@@ -180,7 +181,7 @@ namespace ParticleEditor {
             LastTimeOverUI = Time.Ticks;
 
             if (Model == null)
-                Model = new Model();
+                Model = new EngineModel();
 
             if (View != null)
                 View.Dispose();
@@ -295,7 +296,7 @@ namespace ParticleEditor {
             if (IsActive && View != null)
                 View.Update(this, frame, -2, gameTime.ElapsedGameTime.Ticks);
 
-            ClearBatch.AddNew(frame, -1, Materials.Clear, new Color(0.02f, 0.05f, 0.07f, 1f) * 3);
+            ClearBatch.AddNew(frame, -1, Materials.Clear, new Color(0.03f, 0.06f, 0.08f, 1f));
 
             var ir = new ImperativeRenderer(
                 frame, Materials, 

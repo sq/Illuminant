@@ -86,7 +86,7 @@ namespace ParticleEditor {
             public List<CachedPropertyInfo> Members;
 
             public uint ScrollX, ScrollY;
-            public string SelectedPropertyName;
+            public int SelectedIndex;
 
             internal bool Prepare (Type type) {
                 if (type == CachedType)
@@ -94,14 +94,16 @@ namespace ParticleEditor {
 
                 CachedType = type;
                 Members = CachePropertyInfo(type).ToList();
-                SelectedPropertyName = null;
+                SelectedIndex = 0;
                 return true;
             }
         }
 
         private readonly Dictionary<Type, List<CachedPropertyInfo>> CachedMembers =
             new Dictionary<Type, List<CachedPropertyInfo>>(new ReferenceComparer<Type>());
-        private PropertyGridCache SystemProperties, TransformProperties, ListProperty;
+        private readonly Dictionary<string, PropertyGridCache> GridCaches = 
+            new Dictionary<string, PropertyGridCache>();
+        private PropertyGridCache SystemProperties, TransformProperties;
         private List<Type> TransformTypes = GetTransformTypes().ToList();
 
         internal KeyboardInput KeyboardInputHandler;
@@ -246,7 +248,7 @@ namespace ParticleEditor {
             if (!string.IsNullOrEmpty(prefix))
                 actualName = prefix + actualName;
 
-            var isActive = cache.SelectedPropertyName == actualName;
+            var isActive = false;
             var value = cpi.Getter(instance);
 
             var valueType = cpi.Info.Type ?? cpi.Type.Name;
@@ -339,8 +341,11 @@ namespace ParticleEditor {
 
             switch (valueType) {
                 case "String":
-                    if (Nuklear.SelectableText(value.ToString(), isActive))
-                        cache.SelectedPropertyName = actualName;
+                    var text = value.ToString();
+                    if (Nuklear.Textbox(ref text)) {
+                        cpi.Setter(instance, text);
+                        return true;
+                    }
                     return false;
 
                 case "Boolean":
@@ -389,7 +394,7 @@ namespace ParticleEditor {
 
                 default:
                     if (Nuklear.SelectableText(value.GetType().Name, isActive))
-                        cache.SelectedPropertyName = actualName;
+                        return true;
                     return false;
             }
         }
@@ -511,30 +516,36 @@ namespace ParticleEditor {
             var ctx = Nuklear.Context;
             var list = (System.Collections.IList)_list;
             var itemType = _list.GetType().GetGenericArguments()[0];
-            uint scrollX = 0, scrollY = 0;
+
             using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, actualName, false)) {
                 if (pGroup.Visible) {
-                    var selectedIndex = 0;
+                    PropertyGridCache pgc;
+                    if (!GridCaches.TryGetValue(actualName, out pgc))
+                        pgc = new PropertyGridCache();
 
                     Nuke.nk_layout_row_dynamic(ctx, LineHeight, 3);
-                    var indexChanged = Nuklear.Property("#i", ref selectedIndex, 0, list.Count, 1, 1);
+                    var indexChanged = Nuklear.Property("##", ref pgc.SelectedIndex, 0, list.Count - 1, 1, 1);
                     if (Nuklear.Button("Add")) {
                         var newItem = Activator.CreateInstance(itemType);
                         list.Add(newItem);
                         changed = true;
                     }
                     if (Nuklear.Button("Remove")) {
-                        list.RemoveAt(selectedIndex);
+                        list.RemoveAt(pgc.SelectedIndex);
+                        if (pgc.SelectedIndex >= list.Count)
+                            pgc.SelectedIndex--;
                         changed = true;
                     }
 
-                    if (selectedIndex < list.Count) {
-                        var item = list[selectedIndex];
+                    if (pgc.SelectedIndex < list.Count) {
+                        var item = list[pgc.SelectedIndex];
                         if (item != null) {
-                            ListProperty.Prepare(item.GetType());
-                            RenderPropertyGridNonScrolling(item, ref ListProperty);
+                            pgc.Prepare(item.GetType());
+                            RenderPropertyGridNonScrolling(item, ref pgc);
                         }
                     }
+
+                    GridCaches[actualName] = pgc;
                 }
             }
 

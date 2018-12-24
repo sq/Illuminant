@@ -36,9 +36,11 @@ void PS_Gravity (
         acceleration += newAccel;
     }
 
+    float maximumAcceleration = MaximumAcceleration * getDeltaTime() / 1000;
+
     float currentLength = length(acceleration);
-    if (currentLength > MaximumAcceleration)
-        acceleration = normalize(acceleration) * MaximumAcceleration;
+    if (currentLength > maximumAcceleration)
+        acceleration = normalize(acceleration) * maximumAcceleration;
 
     newVelocity = float4(
         min(getMaximumVelocity(), oldVelocity + acceleration), oldVelocity.w

@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.Xna.Framework.Graphics;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Squared.Illuminant.Modeling;
 using Squared.Illuminant.Particles;
 using Squared.Illuminant.Particles.Transforms;
 using Squared.Render;
@@ -17,12 +18,12 @@ namespace ParticleEditor {
     public class View : IDisposable {
         public ParticleEditor Game;
         public ParticleEngine Engine;
-        public Model Model;
+        public EngineModel Model;
         public readonly List<ParticleSystemView> Systems = new List<ParticleSystemView>();
 
         private readonly List<IDisposable> LoadedResources = new List<IDisposable>();
 
-        public View (Model model) {
+        public View (EngineModel model) {
             Model = model;
         }
 
@@ -63,7 +64,7 @@ namespace ParticleEditor {
             return result;
         }
 
-        internal void AddNewViewForModel (ParticleSystemModel model) {
+        internal void AddNewViewForModel (SystemModel model) {
             var system = new ParticleSystemView { Model = model };
             Systems.Add(system);
             system.Initialize(this);
@@ -102,7 +103,7 @@ namespace ParticleEditor {
 
     public class ParticleSystemView : IDisposable {
         public ParticleSystem Instance;
-        public ParticleSystemModel Model;
+        public SystemModel Model;
         public MockTimeProvider Time;
         public readonly List<ParticleTransformView> Transforms = new List<ParticleTransformView>();
 
@@ -118,7 +119,7 @@ namespace ParticleEditor {
                 AddNewViewForModel(transform);
         }
 
-        public void AddNewViewForModel (ParticleTransformModel model) {
+        public void AddNewViewForModel (TransformModel model) {
             var xform = new ParticleTransformView { Model = model };
             Transforms.Add(xform);
             xform.Initialize(this);
@@ -137,7 +138,7 @@ namespace ParticleEditor {
     public class ParticleTransformView : IDisposable {
         public ParticleSystemView System;
         public ParticleTransform Instance;
-        public ParticleTransformModel Model;
+        public TransformModel Model;
 
         public void Initialize (ParticleSystemView view) {
             System = view;

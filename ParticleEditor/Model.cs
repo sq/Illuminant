@@ -6,13 +6,15 @@ using System.Threading.Tasks;
 using Squared.Illuminant.Particles;
 using Newtonsoft.Json;
 using System.IO;
+using Newtonsoft.Json.Linq;
+using Microsoft.Xna.Framework;
 
-namespace ParticleEditor {
-    public class Model {
+namespace Squared.Illuminant.Modeling {
+    public class EngineModel {
         public string Filename { get; private set; }
-        public readonly List<ParticleSystemModel> Systems = new List<ParticleSystemModel>();
+        public readonly List<SystemModel> Systems = new List<SystemModel>();
 
-        public Model () {
+        public EngineModel () {
             Filename = null;
         }
 
@@ -21,7 +23,7 @@ namespace ParticleEditor {
                 s.Normalize(forSave);
         }
 
-        public static Model Load (string fileName) {
+        public static EngineModel Load (string fileName) {
             using (var reader = new System.IO.StreamReader(fileName, Encoding.UTF8, false)) {
                 var serializer = new JsonSerializer {
                     Converters = {
@@ -30,7 +32,7 @@ namespace ParticleEditor {
                     Formatting = Formatting.Indented
                 };
                 using (var jreader = new JsonTextReader(reader)) {
-                    var result = serializer.Deserialize<Model>(jreader);
+                    var result = serializer.Deserialize<EngineModel>(jreader);
                     if (result != null)
                         result.Filename = Path.GetFullPath(fileName);
                     return result;
@@ -56,10 +58,10 @@ namespace ParticleEditor {
         }
     }
 
-    public class ParticleSystemModel {
+    public class SystemModel {
         public string Name;
         public ParticleSystemConfiguration Configuration;
-        public readonly List<ParticleTransformModel> Transforms = new List<ParticleTransformModel>();
+        public readonly List<TransformModel> Transforms = new List<TransformModel>();
 
         public void Normalize (bool forSave) {
             foreach (var t in Transforms)
@@ -67,7 +69,7 @@ namespace ParticleEditor {
         }
     }
 
-    public class ParticleTransformModel {
+    public class TransformModel {
         public string Name;
         public Type Type;
         public readonly Dictionary<string, ModelProperty> Properties = new Dictionary<string, ModelProperty>();
@@ -107,6 +109,69 @@ namespace ParticleEditor {
                 return;
 
             Value = Newtonsoft.Json.JsonConvert.DeserializeObject(s, Type, new XnaJsonConverter());
+        }
+    }
+
+    public class XnaJsonConverter : JsonConverter {
+        public override bool CanConvert (Type objectType) {
+            switch (objectType.Name) {
+                case "ModelProperty":
+                case "Matrix":
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        public override object ReadJson (JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer) {
+            switch (objectType.Name) {
+                case "ModelProperty":
+                    var obj = JObject.Load(reader);
+                    var type = Type.GetType(obj["Type"].ToString(), true, false);
+                    var result = new ModelProperty {
+                        Type = type,
+                        Value = obj["Value"].ToObject(type, serializer)
+                    };
+                    return result;
+                case "Matrix":
+                    var arr = serializer.Deserialize<float[]>(reader);
+                    return new Matrix(
+                        arr[0], arr[1], arr[2], arr[3],
+                        arr[4], arr[5], arr[6], arr[7],
+                        arr[8], arr[9], arr[10], arr[11],
+                        arr[12], arr[13], arr[14], arr[15]
+                    );
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+
+        public override void WriteJson (JsonWriter writer, object value, JsonSerializer serializer) {
+            if (value == null)
+                return;
+
+            var type = value.GetType();
+            switch (type.Name) {
+                case "ModelProperty":
+                    var mp = (ModelProperty)value;
+                    serializer.Serialize(writer, new {
+                        Type = mp.Type,
+                        Value = mp.Value
+                    });
+                    return;
+                case "Matrix":
+                    var m = (Matrix)value;
+                    var values = new float[] {
+                        m.M11, m.M12, m.M13, m.M14,
+                        m.M21, m.M22, m.M23, m.M24,
+                        m.M31, m.M32, m.M33, m.M34,
+                        m.M41, m.M42, m.M43, m.M44,
+                    };
+                    serializer.Serialize(writer, values);
+                    return;
+                default:
+                    throw new NotImplementedException();
+            }
         }
     }
 }

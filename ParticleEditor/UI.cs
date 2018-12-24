@@ -8,6 +8,7 @@ using Framework;
 using Microsoft.Xna.Framework;
 using Squared.Game;
 using Squared.Illuminant;
+using Squared.Illuminant.Modeling;
 using Squared.Illuminant.Particles;
 using Squared.Render;
 using Nuke = NuklearDotNet.Nuklear;
@@ -116,18 +117,18 @@ namespace ParticleEditor {
             var s = Controller.SelectedSystem;
             var i = s.Instance;
 
-            Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
+            Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
+
+            Nuklear.Textbox(ref s.Model.Name);
+
+            Nuke.nk_layout_row_dynamic(ctx, LineHeight, 3);
             var time = TimeSpan.FromTicks(s.Time.Ticks);
-            using (var tCount = new NString(time.ToString()))
+            using (var tCount = new NString(string.Format("{0}/{1}", i.LiveCount, i.Capacity)))
+                Nuke.nk_text(ctx, tCount.pText, tCount.Length, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
+            using (var tCount = new NString(time.ToString("hh\\:mm\\:ss\\.ff")))
                 Nuke.nk_text(ctx, tCount.pText, tCount.Length, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
             if (Nuklear.Button("Reset"))
                 Controller.QueueReset(s);
-
-            Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
-            using (var tCount = new NString(string.Format("{0}/{1}", i.LiveCount, i.Capacity)))
-                Nuke.nk_text(ctx, tCount.pText, tCount.Length, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
-
-            Nuklear.Textbox(ref s.Model.Name);
 
             SystemProperties.Prepare(typeof (ParticleSystemConfiguration));
             RenderPropertyGrid(Controller.SelectedSystem.Model.Configuration, ref SystemProperties, null);
