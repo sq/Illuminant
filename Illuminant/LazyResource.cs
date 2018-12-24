@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Squared.Illuminant {
-    public class LazyResource<T> where T : GraphicsResource {
+    [Serializable]
+    public class LazyResource<T> : ISerializable 
+        where T : GraphicsResource {
         public bool IsNullable { get; protected set; }
 
         public string Name;
@@ -45,6 +48,14 @@ namespace Squared.Illuminant {
                 throw new ResourceNotLoadedException("No resource loader for type " + typeof(T).Name);
         }
 
+        internal LazyResource (SerializationInfo info, StreamingContext context) {
+            Name = (string)info.GetValue("Name", typeof(string));
+        }
+
+        void ISerializable.GetObjectData (SerializationInfo info, StreamingContext context) {
+            info.AddValue("Name", Name);
+        }
+
         public static implicit operator LazyResource<T> (T instance) {
             return new LazyResource<T>(instance);
         }
@@ -67,6 +78,7 @@ namespace Squared.Illuminant {
         }
     }
 
+    [Serializable]
     public sealed class NullableLazyResource<T> : LazyResource<T> where T : GraphicsResource {
         public NullableLazyResource (string name, T existingInstance = null)
             : base (name, existingInstance) {
@@ -81,6 +93,10 @@ namespace Squared.Illuminant {
         public NullableLazyResource ()
             : base (null) {
             IsNullable = true;
+        }
+
+        internal NullableLazyResource (SerializationInfo info, StreamingContext context) {
+            Name = (string)info.GetValue("Name", typeof(string));
         }
 
         public static implicit operator NullableLazyResource<T> (T instance) {
