@@ -34,6 +34,7 @@ namespace ParticleEditor {
                         {"AnimationRate", new ModelTypeInfo { Min = -100, Max = 100 } },
                         {"OpacityFromLife", new ModelTypeInfo { Min = -2048, Max = 2048 } },
                         {"SizeFromLife", new ModelTypeInfo { Min = -2048, Max = 2048 } },
+                        {"RotationAxis", new ModelTypeInfo { Min = -1, Max = 1, Type = "Normal" } }
                     }
                 },
                 {

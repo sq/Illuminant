@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -39,7 +40,7 @@ namespace ParticleEditor {
 
             Engine = new ParticleEngine(
                 editor.Content, editor.RenderCoordinator, editor.Materials,
-                new ParticleEngineConfiguration {
+                new ParticleEngineConfiguration(32) {
                     TextureLoader = (fn) => LoadTexture(fn, false),
                     FPTextureLoader = (fn) => LoadTexture(fn, true)
                 },
@@ -82,7 +83,19 @@ namespace ParticleEditor {
         }
 
         public void Draw (ParticleEditor editor, IBatchContainer container, int layer) {
-            using (var g = BatchGroup.New(container, layer)) {
+            using (var g = BatchGroup.New(container, layer, (dm, _) => {
+                var vt = editor.Materials.ViewTransform;
+                /*
+                Matrix.CreatePerspectiveOffCenter(
+                    0, editor.Graphics.PreferredBackBufferWidth,
+                    editor.Graphics.PreferredBackBufferHeight, 0, 
+                    1, 200, out vt.ModelView
+                );
+                */
+                editor.Materials.PushViewTransform(ref vt);
+            }, (dm, _) => {
+                editor.Materials.PopViewTransform();
+            })) {
                 int i = 0;
                 foreach (var s in Systems)
                     s.Instance.Render(g, i++, blendState: BlendState.AlphaBlend);

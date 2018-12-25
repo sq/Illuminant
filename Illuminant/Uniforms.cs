@@ -194,12 +194,6 @@ namespace Squared.Illuminant {
         public bool Circular;
 
         public Vector4 RandomOffset {
-            get {
-                if (Circular)
-                    return Vector4.Zero;
-                else
-                    return Offset;
-            }
             set {
                 if (Circular)
                     return;
@@ -208,12 +202,6 @@ namespace Squared.Illuminant {
         }
 
         public Vector4 ConstantRadius {
-            get {
-                if (!Circular)
-                    return Vector4.Zero;
-                else
-                    return Offset;
-            }
             set {
                 if (!Circular)
                     return;

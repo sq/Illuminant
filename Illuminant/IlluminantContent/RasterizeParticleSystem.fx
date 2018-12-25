@@ -25,13 +25,15 @@ Texture2D LifeRampTexture;
 sampler LifeRampSampler {
     Texture = (LifeRampTexture);
     AddressU = CLAMP;
-    AddressV = CLAMP;
+    AddressV = WRAP;
     MinFilter = POINT;
     MagFilter = POINT;
 };
 
-// ramp_strength, ramp_min, ramp_divisor
-uniform float3 LifeRampSettings;
+// ramp_strength, ramp_min, ramp_divisor, index_divisor
+uniform float4 LifeRampSettings;
+
+uniform float3 RotationAxis;
 
 static const float3 Corners[] = {
     { -1, -1, 0 },
@@ -40,26 +42,59 @@ static const float3 Corners[] = {
     { -1, 1, 0 }
 };
 
-inline float3 ComputeRotatedCorner(
-    in int cornerIndex, in float angle, in float2 size
-) {    
-    float3 corner = Corners[cornerIndex.x] * float3(size, 1), sinCos;
-    sincos(angle, sinCos.x, sinCos.y);
-    return float3(
-        (sinCos.y * corner.x) - (sinCos.x * corner.y),
-        (sinCos.x * corner.x) + (sinCos.y * corner.y),
-        corner.z
-    );
+inline float3x3 RotationFromAxisAngle (float3 axis, float angle) {
+    // angle = angle % (2 * PI);
+
+    float c, s;
+    sincos(angle, s, c);
+
+    float x = axis.x;
+    float y = axis.y;
+    float z = axis.z;
+    float xx = x * x;
+    float yy = y * y;
+    float zz = z * z;
+    float xy = x * y;
+    float xz = x * z;
+    float yz = y * z;
+
+    float3x3 rotationMatrix = {
+        xx + (c * (1 - xx)),
+        (xy - (c * xy)) + (s * z),
+        (xz - (c * xz)) - (s * y),
+        (xy - (c * xy)) - (s * z),
+        yy + (c * (1 - yy)),
+        (yz - (c * yz)) + (s * x),
+        (xz - (c * xz)) + (s * y),
+        (yz - (c * yz)) - (s * x),
+        zz + (c * (1 - zz)),
+    };
+    return rotationMatrix;
 }
 
-float4 getRampedColorForLifeValue (float life) {
+inline float3 ComputeRotatedCorner(
+    in int cornerIndex, in float angle, in float2 size, in float3 axis
+) {
+    float3 computedAxis = cross(float3(0, -1, 0), axis);
+
+    float3 screenCorner = Corners[cornerIndex.x];
+    screenCorner.xy *= size;
+
+    float3x3 rotationMatrix = RotationFromAxisAngle(computedAxis, angle);
+
+    float3 rotatedScreenCorner = mul(screenCorner, rotationMatrix);
+    return rotatedScreenCorner.xyz;
+}
+
+float4 getRampedColorForLifeValueAndIndex (float life, float index) {
     float4 result = getColorForLifeValue(life);
     [branch]
     if (LifeRampSettings.x != 0) {
         float u = (life - LifeRampSettings.y) / LifeRampSettings.z;
         if (LifeRampSettings.x < 0)
             u = 1 - saturate(u);
-        float4 rampSample = tex2Dlod(LifeRampSampler, float4(u, 0, 0, 0));
+        float v = index / LifeRampSettings.w;
+        float4 rampSample = tex2Dlod(LifeRampSampler, float4(u, v, 0, 0));
         result = lerp(result, rampSample * result, saturate(abs(LifeRampSettings.x)));
     }
     return result;
@@ -117,14 +152,14 @@ void VS_PosVelAttrWhite(
     }
     angle += getRotationForLifeAndIndex(position.w, offsetAndIndex.z);
     float2 size = getSizeForLifeValue(position.w);
-    float3 rotatedCorner = ComputeRotatedCorner(cornerIndex.x, angle, size);
+    float3 rotatedCorner = ComputeRotatedCorner(cornerIndex.x, angle, size, RotationAxis);
 
     VS_Core(
         position, rotatedCorner, cornerIndex,
         result, texCoord
     );
 
-    color = getRampedColorForLifeValue(position.w);
+    color = getRampedColorForLifeValueAndIndex(position.w, offsetAndIndex.z);
 }
 
 void VS_PosVelAttr(
@@ -150,7 +185,7 @@ void VS_PosVelAttr(
         color
     );
 
-    color = attributes * getRampedColorForLifeValue(position.w);
+    color = attributes * getRampedColorForLifeValueAndIndex(position.w, offsetAndIndex.z);
 }
 
 void VS_PosAttr (
@@ -174,14 +209,14 @@ void VS_PosAttr (
 
     float angle = getRotationForLifeAndIndex(position.w, offsetAndIndex.z);
     float2 size = getSizeForLifeValue(position.w);
-    float3 rotatedCorner = ComputeRotatedCorner(cornerIndex.x, angle, size);
+    float3 rotatedCorner = ComputeRotatedCorner(cornerIndex.x, angle, size, RotationAxis);
 
     VS_Core(
         position, rotatedCorner, cornerIndex,
         result, texCoord
     );
 
-    attributes *= getRampedColorForLifeValue(position.w);
+    attributes *= getRampedColorForLifeValueAndIndex(position.w, offsetAndIndex.z);
 }
 
 void PS_Texture (
