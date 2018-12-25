@@ -92,7 +92,9 @@ namespace TestGame.Scenes {
                     },
                     Size = Vector2.One * 2.6f,
                     RotationFromVelocity = true,
-                    OpacityFromLife = opacityFromLife / 60f,
+                    Color = {
+                        OpacityFromLife = opacityFromLife / 60f,
+                    },
                     MaximumVelocity = 2048,
                     CollisionLifePenalty = 1,
                 }

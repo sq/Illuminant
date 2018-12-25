@@ -61,7 +61,7 @@ namespace ParticleEditor {
 
         private GCHandle ControllerPin;
         public const float MinZoom = 0.5f, MaxZoom = 3.0f;
-        public float Zoom = 1.0f;
+        public float Zoom = 1.0f, Brightness = 0.1f;
 
         private long LastViewRelease = 0;
 
@@ -156,20 +156,22 @@ namespace ParticleEditor {
 
             base.LoadContent();
 
-            Font = new FreeTypeFont(RenderCoordinator, "FiraSans-Regular.otf") {
-                GlyphMargin = 2
+            Font = new FreeTypeFont(RenderCoordinator, "Lato-Regular.ttf") {
+                GlyphMargin = 2,
+                DPIPercent = 100,
+                Gamma = 0.8f
             };
             Materials = new DefaultMaterialSet(Services);
             IlluminantMaterials = new IlluminantMaterials(Materials);
             ParticleMaterials = new ParticleMaterials(Materials);
 
             TextMaterial = Materials.Get(Materials.ScreenSpaceShadowedBitmap, blendState: BlendState.AlphaBlend);
-            TextMaterial.Parameters.ShadowColor.SetValue(new Vector4(0, 0, 0, 0.66f));
-            TextMaterial.Parameters.ShadowOffset.SetValue(Vector2.One);
+            TextMaterial.Parameters.ShadowColor.SetValue(new Vector4(0, 0, 0, 0.6f));
+            TextMaterial.Parameters.ShadowOffset.SetValue(Vector2.One * 0.75f);
 
             WorldSpaceTextMaterial = Materials.Get(Materials.WorldSpaceShadowedBitmap, blendState: BlendState.AlphaBlend);
-            WorldSpaceTextMaterial.Parameters.ShadowColor.SetValue(new Vector4(0, 0, 0, 0.66f));
-            WorldSpaceTextMaterial.Parameters.ShadowOffset.SetValue(Vector2.One);
+            WorldSpaceTextMaterial.Parameters.ShadowColor.SetValue(new Vector4(0, 0, 0, 0.9f));
+            WorldSpaceTextMaterial.Parameters.ShadowOffset.SetValue(Vector2.One * 0.75f);
             
             UIRenderTarget = new RenderTarget2D(
                 GraphicsDevice, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight, 
@@ -183,6 +185,8 @@ namespace ParticleEditor {
                 };
             else
                 Nuklear.Font = Font;
+
+            Nuklear.VerticalPadding = 2;
 
             LastTimeOverUI = Time.Ticks;
 
@@ -287,7 +291,7 @@ namespace ParticleEditor {
             if ((Window.ClientBounds.Width != Graphics.PreferredBackBufferWidth) || (Window.ClientBounds.Height != Graphics.PreferredBackBufferHeight))
                 return;
 
-            Font.SizePoints = Graphics.PreferredBackBufferWidth > 2000 ? 16f : 14f;
+            Font.SizePoints = Graphics.PreferredBackBufferWidth > 2000 ? 15f : 13.5f;
 
             View view;
             lock (this)
@@ -311,7 +315,7 @@ namespace ParticleEditor {
             if (IsActive && View != null)
                 View.Update(this, frame, -2, gameTime.ElapsedGameTime.Ticks);
 
-            ClearBatch.AddNew(frame, -1, Materials.Clear, new Color(0.03f, 0.06f, 0.08f, 1f));
+            ClearBatch.AddNew(frame, -1, Materials.Clear, new Color(0.3f * Brightness, 0.6f * Brightness, 0.8f * Brightness, 1f));
 
             var ir = new ImperativeRenderer(
                 frame, Materials, 

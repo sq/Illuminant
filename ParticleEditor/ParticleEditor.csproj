@@ -171,6 +171,70 @@
       <Link>FiraSans-Regular.otf</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Include="..\AppCommon\Fonts\Lato-Black.ttf">
+      <Link>Lato-Black.ttf</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="..\AppCommon\Fonts\Lato-BlackItalic.ttf">
+      <Link>Lato-BlackItalic.ttf</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="..\AppCommon\Fonts\Lato-Bold.ttf">
+      <Link>Lato-Bold.ttf</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="..\AppCommon\Fonts\Lato-BoldItalic.ttf">
+      <Link>Lato-BoldItalic.ttf</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="..\AppCommon\Fonts\Lato-Heavy.ttf">
+      <Link>Lato-Heavy.ttf</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="..\AppCommon\Fonts\Lato-HeavyItalic.ttf">
+      <Link>Lato-HeavyItalic.ttf</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="..\AppCommon\Fonts\Lato-Italic.ttf">
+      <Link>Lato-Italic.ttf</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="..\AppCommon\Fonts\Lato-Light.ttf">
+      <Link>Lato-Light.ttf</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="..\AppCommon\Fonts\Lato-LightItalic.ttf">
+      <Link>Lato-LightItalic.ttf</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="..\AppCommon\Fonts\Lato-Medium.ttf">
+      <Link>Lato-Medium.ttf</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="..\AppCommon\Fonts\Lato-MediumItalic.ttf">
+      <Link>Lato-MediumItalic.ttf</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="..\AppCommon\Fonts\Lato-Regular.ttf">
+      <Link>Lato-Regular.ttf</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="..\AppCommon\Fonts\Lato-Semibold.ttf">
+      <Link>Lato-Semibold.ttf</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="..\AppCommon\Fonts\Lato-SemiboldItalic.ttf">
+      <Link>Lato-SemiboldItalic.ttf</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="..\AppCommon\Fonts\Lato-Thin.ttf">
+      <Link>Lato-Thin.ttf</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="..\AppCommon\Fonts\Lato-ThinItalic.ttf">
+      <Link>Lato-ThinItalic.ttf</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="packages.config" />
     <None Include="Properties\app.manifest" />
   </ItemGroup>

@@ -970,8 +970,11 @@ namespace Squared.Illuminant.Particles {
             var startedWhen = Time.Ticks;
 
             var appearance = Configuration.Appearance;
+            var lifeRamp = Configuration.Color.LifeRampTexture;
             if (appearance.Texture != null)
                 appearance.Texture.EnsureInitialized(Engine.Configuration.TextureLoader);
+            if (lifeRamp != null)
+                lifeRamp.EnsureInitialized(Engine.Configuration.FPTextureLoader);
 
             lock (Slices) {
                 source = (
@@ -1030,17 +1033,38 @@ namespace Squared.Illuminant.Particles {
 
                     var gc = p["GlobalColor"];
                     if (gc != null) {
-                        var gcolor = Configuration.GlobalColor;
+                        var gcolor = Configuration.Color.Global;
                         gcolor.X *= gcolor.W;
                         gcolor.Y *= gcolor.W;
                         gcolor.Z *= gcolor.W;
                         gc.SetValue(gcolor);
+                    }
+
+                    var rt = p["LifeRampTexture"];
+                    if (rt != null) {
+                        var lifeRampTexture =
+                            (lifeRamp != null)
+                                ? lifeRamp.Instance
+                                : null;
+                        rt.SetValue(lifeRampTexture);
+                        var min = Configuration.Color.LifeRampMinimum;
+                        var rangeSize = Math.Max(Configuration.Color.LifeRampMaximum - min, 0.001f);
+                        var strength = lifeRampTexture != null
+                                ? Configuration.Color.LifeRampStrength
+                                : 0;
+                        p["LifeRampSettings"].SetValue(new Vector3(
+                            strength * (Configuration.Color.InvertLifeRamp ? -1 : 1),
+                            min, rangeSize
+                        ));
                     }
                 },
                 (dm, _) => {
                     p["PositionTexture"].SetValue((Texture2D)null);
                     p["VelocityTexture"].SetValue((Texture2D)null);
                     p["AttributeTexture"].SetValue((Texture2D)null);
+                    var rt = p["LifeRampTexture"];
+                    if (rt != null)
+                        rt.SetValue((Texture2D)null);
                     var bt = p["BitmapTexture"];
                     if (bt != null)
                         bt.SetValue((Texture2D)null);
@@ -1071,17 +1095,94 @@ namespace Squared.Illuminant.Particles {
         }
     }
 
-    public struct ParticleTexture {
+    public class ParticleAppearance {
         /// <summary>
         /// Configures the sprite used to render each particle.
         /// If null, the particle will be a solid-color quad
         /// </summary>
-        public NullableLazyResource<Texture2D> Texture;
+        public NullableLazyResource<Texture2D> Texture = new NullableLazyResource<Texture2D>();
         /// <summary>
         /// Configures the region of the texture used by the particle. If you specify a subregion the region
         ///  will scroll as the particle animates.
         /// </summary>
-        public Bounds Region;
+        public Bounds Region = Bounds.Unit;
+    }
+
+    public class ParticleColor {
+        internal Vector4? _ColorFromLife = null;
+        [NonSerialized]
+        private float?    _OpacityFromLife = null;
+
+        /// <summary>
+        /// Sets a global multiply color to apply to the white and attributecolor materials
+        /// </summary>
+        public Vector4    Global = Vector4.One;
+
+        /// <summary>
+        /// Specifies a color ramp texture
+        /// </summary>
+        public NullableLazyResource<Texture2D> LifeRampTexture;
+
+        /// <summary>
+        /// Life values below this are treated as zero
+        /// </summary>
+        public float LifeRampMinimum = 0.0f;
+
+        /// <summary>
+        /// Life values above this are treated as one
+        /// </summary>
+        public float LifeRampMaximum = 100f;
+
+        /// <summary>
+        /// Blends between the constant color value for the particle and the color
+        ///  from its life ramp
+        /// </summary>
+        public float LifeRampStrength = 1.0f;
+
+        /// <summary>
+        /// If set, the life ramp has its maximum value at the left instead of the right.
+        /// </summary>
+        public bool  InvertLifeRamp;
+
+        /// <summary>
+        /// Multiplies the particle's opacity, producing a fade-in or fade-out based on the particle's life
+        /// </summary>
+        public float? OpacityFromLife {
+            set {
+                if (value == _OpacityFromLife)
+                    return;
+
+                if (value != null) {
+                    _OpacityFromLife = value.Value;
+                    _ColorFromLife = new Vector4(0, 0, 0, value.Value);
+                } else {
+                    _OpacityFromLife = null;
+                    _ColorFromLife = null;
+                }
+            }
+            get {
+                if (_OpacityFromLife.HasValue)
+                    return _OpacityFromLife.Value;
+                else
+                    return null;
+            }
+        }
+
+        /// <summary>
+        /// Multiplies the particle's color, producing a fade-in or fade-out based on the particle's life
+        /// </summary>
+        public Vector4? FromLife {
+            get {
+                if (_OpacityFromLife.HasValue)
+                    return null;
+                else
+                    return _ColorFromLife;
+            }
+            set {
+                _ColorFromLife = value;
+                _OpacityFromLife = null;
+            }
+        }
     }
 
     public class ParticleSystemConfiguration {
@@ -1094,12 +1195,14 @@ namespace Squared.Illuminant.Particles {
         public ITimeProvider TimeProvider = null;
 
         /// <summary>
-        /// Configures the appearance of particles
+        /// Configures the texture used when drawing particles (if any)
         /// </summary>
-        public ParticleTexture Appearance = new ParticleTexture {
-            Texture = new NullableLazyResource<Texture2D>(),
-            Region = new Bounds(Vector2.Zero, Vector2.One),
-        };
+        public ParticleAppearance Appearance = new ParticleAppearance();
+
+        /// <summary>
+        /// Configures the color of particles
+        /// </summary>
+        public ParticleColor Color = new ParticleColor();
 
         /// <summary>
         /// The on-screen size of each particle, in pixels
@@ -1116,11 +1219,6 @@ namespace Squared.Illuminant.Particles {
         /// If set, particles will rotate based on their direction of movement
         /// </summary>
         public bool          RotationFromVelocity;
-
-        internal Vector4?    _ColorFromLife = null;
-
-        [NonSerialized]
-        private float?       _OpacityFromLife = null;
 
         /// <summary>
         /// Multiplies the particle's size, producing a shrink or grow based on the particle's life
@@ -1192,11 +1290,6 @@ namespace Squared.Illuminant.Particles {
         public bool          HighPrecision = true;
 
         /// <summary>
-        /// Sets a global multiply color to apply to the white and attributecolor materials
-        /// </summary>
-        public Vector4       GlobalColor = Vector4.One;
-
-        /// <summary>
         /// Makes particles spin based on their life value
         /// </summary>
         public float         RotationFromLife = 0;
@@ -1205,46 +1298,6 @@ namespace Squared.Illuminant.Particles {
         /// Gives particles a constant rotation based on their index (pseudorandom-ish)
         /// </summary>
         public float         RotationFromIndex = 0;
-
-        /// <summary>
-        /// Multiplies the particle's opacity, producing a fade-in or fade-out based on the particle's life
-        /// </summary>
-        public float? OpacityFromLife {
-            set {
-                if (value == _OpacityFromLife)
-                    return;
-
-                if (value != null) {
-                    _OpacityFromLife = value.Value;
-                    _ColorFromLife = new Vector4(0, 0, 0, value.Value);
-                } else {
-                    _OpacityFromLife = null;
-                    _ColorFromLife = null;
-                }
-            }
-            get {
-                if (_OpacityFromLife.HasValue)
-                    return _OpacityFromLife.Value;
-                else
-                    return null;
-            }
-        }
-
-        /// <summary>
-        /// Multiplies the particle's color, producing a fade-in or fade-out based on the particle's life
-        /// </summary>
-        public Vector4? ColorFromLife {
-            get {
-                if (_OpacityFromLife.HasValue)
-                    return null;
-                else
-                    return _ColorFromLife;
-            }
-            set {
-                _ColorFromLife = value;
-                _OpacityFromLife = null;
-            }
-        }
 
         public ParticleSystemConfiguration (
             int attributeCount = 0

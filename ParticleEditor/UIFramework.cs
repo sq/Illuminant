@@ -395,18 +395,22 @@ namespace ParticleEditor {
                     var k = value.Circular ? "Constant Radius" : "Random Offset";
                     Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
                     if (Nuklear.SelectableText(k, isFormulaSelected && (spp.Key == k))) {
-                        float scale = value.Circular ? 10f : 100f;
+                        float scale = value.Circular ? 10f : 200f;
+                        var off = (value.Circular ? 0 : 0.5f);
                         SelectProperty(
                             value, k,
                             (v) => {
-                                value.Offset.X = v.X / scale;
-                                value.Offset.Y = v.Y / scale;
+                                value.Offset.X = (v.X / scale) - off;
+                                value.Offset.Y = (v.Y / scale) - off;
                                 if (!value.Circular) {
-                                    value.Offset.X = Arithmetic.Clamp(value.Offset.X, -1, 1);
-                                    value.Offset.Y = Arithmetic.Clamp(value.Offset.Y, -1, 1);
+                                    value.Offset.X = Arithmetic.Clamp(value.Offset.X, -1, 0);
+                                    value.Offset.Y = Arithmetic.Clamp(value.Offset.Y, -1, 0);
                                 }
                             },
-                            () => new Vector2(value.Offset.X, value.Offset.Y) * scale
+                            () => {
+                                var res = new Vector2(value.Offset.X + off, value.Offset.Y + off);
+                                return res * scale;
+                            }
                         );
                     }
 
@@ -448,6 +452,11 @@ namespace ParticleEditor {
                 case "Formula":
                     return RenderFormula(cpi.Name, actualName, (Formula)value);
 
+                case "NullableLazyResource`1":
+                    return RenderTextureProperty(cpi, instance, ref changed, actualName, value);
+
+                case "ParticleAppearance":
+                case "ParticleColor":
                 case "FMAParameters`1":
                     List<CachedPropertyInfo> members;
                     if (!CachedMembers.TryGetValue(cpi.Type, out members))
@@ -464,9 +473,6 @@ namespace ParticleEditor {
                         }
                         return changed;
                     }
-
-                case "ParticleTexture":
-                    return RenderTextureProperty(cpi, instance, ref changed, actualName, value);
 
                 case "Int32":
                 case "Single":
@@ -677,27 +683,27 @@ namespace ParticleEditor {
 
         private unsafe bool RenderTextureProperty (
             CachedPropertyInfo cpi, object instance, ref bool changed, 
-            string actualName, object value
+            string actualName, object _value
         ) {
             var ctx = Nuklear.Context;
             using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, actualName, false)) {
                 if (pGroup.Visible) {
-                    var tex = (ParticleTexture)value;
+                    var value = (NullableLazyResource<Texture2D>)_value;
                     Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
                     if (Nuklear.Button("Select")) {
-                        Controller.SelectTexture(cpi, instance, tex);
+                        Controller.SelectTexture(cpi, instance, value);
                         changed = false;
                         return false;
                     }
                     if (Nuklear.Button("Erase")) {
-                        tex.Texture = new NullableLazyResource<Texture2D>();
-                        cpi.Setter(instance, tex);
+                        value = new NullableLazyResource<Texture2D>();
+                        cpi.Setter(instance, value);
                         changed = true;
                         return true;
                     }
                     
                     Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
-                    Nuke.nk_label_wrap(ctx, tex.Texture.Name != null ? Path.GetFileName(tex.Texture.Name) : "none");
+                    Nuke.nk_label_wrap(ctx, (value != null) && (value.Name != null) ? Path.GetFileName(value.Name) : "none");
                 }
             }
             return false;

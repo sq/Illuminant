@@ -58,6 +58,8 @@ namespace Framework {
         private ImperativeRenderer PendingIR;
         private int NextTextLayer;
 
+        public float VerticalPadding = 0;
+
         private float _FontScale = 1.0f;
         private IGlyphSource _Font;
         private nk_query_font_glyph_f QueryFontGlyphF;
@@ -125,7 +127,7 @@ namespace Framework {
             glyph->uv0 = (nk_vec2)texBounds.TopLeft;
             glyph->uv1 = (nk_vec2)texBounds.BottomRight;
             glyph->width = result.RectInTexture.Width * FontScale;
-            glyph->height = result.RectInTexture.Height * FontScale;
+            glyph->height = (result.RectInTexture.Height * FontScale) + VerticalPadding;
             glyph->xadvance = result.Width * FontScale;
         }
 
@@ -160,10 +162,10 @@ namespace Framework {
             for (int i = 0; i < 255; i++) {
                 Glyph glyph;
                 if (newFont.GetGlyph((char)i, out glyph))
-                    estimatedHeight = Math.Max(estimatedHeight, glyph.RectInTexture.Height);
+                    estimatedHeight = Math.Max(estimatedHeight, glyph.RectInTexture.Height / newFont.DPIScaleFactor);
             }
             // LineSpacing includes whitespace :(
-            userFont->height = (estimatedHeight - 3) * FontScale;
+            userFont->height = (estimatedHeight + VerticalPadding) * FontScale;
 
             userFont->queryfun_nkQueryFontGlyphF = Marshal.GetFunctionPointerForDelegate(QueryFontGlyphF);
             userFont->widthfun_nkTextWidthF = Marshal.GetFunctionPointerForDelegate(TextWidthF);

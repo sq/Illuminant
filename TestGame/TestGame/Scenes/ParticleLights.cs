@@ -285,7 +285,6 @@ namespace TestGame.Scenes {
                     BounceVelocityMultiplier = 1f,
                     MaximumVelocity = 128f,
                     CollisionLifePenalty = 1,
-                    OpacityFromLife = 0,
                     HighPrecision = false
                 }
             ) {
@@ -453,7 +452,7 @@ namespace TestGame.Scenes {
 
                 var s = System.Transforms.OfType<Spawner>().First();
                 s.Position.Constant = new Vector4(mousePos, 0);
-                System.Configuration.OpacityFromLife = OpacityFromLife.Value / 60f;
+                System.Configuration.Color.OpacityFromLife = OpacityFromLife.Value / 60f;
                 s.IsActive = Game.LeftMouse;
             }
         }

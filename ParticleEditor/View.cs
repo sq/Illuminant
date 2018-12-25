@@ -40,7 +40,8 @@ namespace ParticleEditor {
             Engine = new ParticleEngine(
                 editor.Content, editor.RenderCoordinator, editor.Materials,
                 new ParticleEngineConfiguration {
-                    TextureLoader = LoadTexture
+                    TextureLoader = (fn) => LoadTexture(fn, false),
+                    FPTextureLoader = (fn) => LoadTexture(fn, true)
                 },
                 editor.ParticleMaterials
             );
@@ -49,12 +50,12 @@ namespace ParticleEditor {
                 AddNewViewForModel(systemModel);
         }
 
-        internal Texture2D LoadTexture (string name) {
+        internal Texture2D LoadTexture (string name, bool floatingPoint) {
             Texture2D result;
 
             if (File.Exists(name)) {
-                using (var img = new Squared.Render.STB.Image(name, true))
-                    result = img.CreateTexture(Game.RenderCoordinator, true);
+                using (var img = new Squared.Render.STB.Image(name, premultiply: true, asFloatingPoint: floatingPoint))
+                    result = img.CreateTexture(Game.RenderCoordinator, !floatingPoint);
             } else {
                 lock (Game.RenderCoordinator.CreateResourceLock)
                     result = Game.Content.Load<Texture2D>(name);

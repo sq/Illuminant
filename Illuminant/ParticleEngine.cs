@@ -211,6 +211,11 @@ namespace Squared.Illuminant.Particles {
         /// </summary>
         public Func<string, Texture2D> TextureLoader = null;
 
+        /// <summary>
+        /// Used to load lazy texture resources in floating-point format.
+        /// </summary>
+        public Func<string, Texture2D> FPTextureLoader = null;
+
         public ParticleEngineConfiguration (int chunkSize = 256) {
             ChunkSize = chunkSize;
         }

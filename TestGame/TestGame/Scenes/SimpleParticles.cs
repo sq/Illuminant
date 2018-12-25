@@ -118,7 +118,9 @@ namespace TestGame.Scenes {
                     AnimationRate = new Vector2(1 / 6f, 0),
                     */
                     RotationFromVelocity = true,
-                    OpacityFromLife = opacityFromLife / 60f,
+                    Color = {
+                        OpacityFromLife = opacityFromLife / 60f,
+                    },
                     MaximumVelocity = 2048,
                     CollisionLifePenalty = 1,
                 }

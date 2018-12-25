@@ -175,7 +175,7 @@ namespace Squared.Illuminant.Uniforms {
                 Configuration.CollisionDistance,
                 Configuration.CollisionLifePenalty
             );
-            ColorFromLife = Configuration._ColorFromLife.GetValueOrDefault(Vector4.Zero);
+            ColorFromLife = Configuration.Color._ColorFromLife.GetValueOrDefault(Vector4.Zero);
             SizeFromLife = Configuration.SizeFromLife.GetValueOrDefault(Vector2.Zero);
             RotationFromLifeAndIndex = new Vector2(
                 MathHelper.ToRadians(Configuration.RotationFromLife), 

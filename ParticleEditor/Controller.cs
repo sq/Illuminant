@@ -80,7 +80,9 @@ namespace ParticleEditor {
 
         public void AddSystem () {
             var config = new ParticleSystemConfiguration(1) {
-                OpacityFromLife = 256,
+                Color = {
+                    OpacityFromLife = 256,
+                },
                 GlobalLifeDecayRate = 90,
                 Size = Vector2.One * 1.5f
             };
@@ -124,6 +126,9 @@ namespace ParticleEditor {
                 var newZoom = Arithmetic.Clamp((float)Math.Round(Game.Zoom + zoomDelta, 2), ParticleEditor.MinZoom, ParticleEditor.MaxZoom);
                 Game.Zoom = newZoom;
 
+                if (Game.RightMouse)
+                    SelectedPositionProperty = null;
+
                 if ((SelectedPositionProperty != null) && Game.LeftMouse) {
                     var pos = GetMouseWorldPosition();
                     SelectedPositionProperty.Set(pos);
@@ -131,8 +136,7 @@ namespace ParticleEditor {
             }
         }
 
-        private void DrawCross (ref ImperativeRenderer ir, Vector2 pos, float alpha) {
-            var len = 16;
+        private void DrawCross (ref ImperativeRenderer ir, Vector2 pos, float alpha, float len) {
             var pos1 = pos + Vector2.One;
             ir.DrawLine(new Vector2(pos1.X - len, pos1.Y), new Vector2(pos1.X + len, pos1.Y), Color.Black * alpha, worldSpace: true);
             ir.DrawLine(new Vector2(pos1.X, pos1.Y - len), new Vector2(pos1.X, pos1.Y + len), Color.Black * alpha, worldSpace: true);
@@ -154,11 +158,13 @@ namespace ParticleEditor {
                     drawPos.X += 4;
                     drawPos.Y -= Game.LineHeight * scale;
                     ir.DrawString(Game.Font, SelectedPositionProperty.Key, drawPos, material: Game.WorldSpaceTextMaterial, scale: scale);
-                    DrawCross(ref ir, currentPos.Value, 1.0f);
+                    DrawCross(ref ir, currentPos.Value, 1.0f, 12);
                 }
 
                 var pos = GetMouseWorldPosition();
-                DrawCross(ref ir, pos, 0.5f);
+                DrawCross(ref ir, pos, 0.5f, 12);
+
+                DrawCross(ref ir, Vector2.Zero, 0.33f, 4096);
             }
         }
 
@@ -264,7 +270,10 @@ namespace ParticleEditor {
             View.Initialize(Game);
         }
 
-        internal void SelectTexture (ParticleEditor.CachedPropertyInfo cpi, object instance, ParticleTexture pt) {
+        internal void SelectTexture (ParticleEditor.CachedPropertyInfo cpi, object instance, NullableLazyResource<Texture2D> tex) {
+            if (tex == null)
+                tex = new NullableLazyResource<Texture2D>();
+
             Game.RunWorkItem(() => {
                 using (var dlg = new OpenFileDialog {
                     Title = "Select Texture"
@@ -272,16 +281,16 @@ namespace ParticleEditor {
                     InitFileDialog(dlg);
                     dlg.Filter =
                         "Textures|*.png;*.jpeg;*.jpg;*.bmp;*.tga|All Files|*.*";
-                    if (pt.Texture.Name != null) {
-                        dlg.InitialDirectory = Path.GetDirectoryName(pt.Texture.Name);
+                    if (tex.Name != null) {
+                        dlg.InitialDirectory = Path.GetDirectoryName(tex.Name);
                         dlg.RestoreDirectory = false;
-                        dlg.FileName = Path.GetFileName(pt.Texture.Name);
+                        dlg.FileName = Path.GetFileName(tex.Name);
                     }
                     if (dlg.ShowDialog() != DialogResult.OK)
                         return;
 
-                    pt.Texture = new NullableLazyResource<Texture2D>(dlg.FileName);
-                    cpi.Setter(instance, pt);
+                    tex = new NullableLazyResource<Texture2D>(dlg.FileName);
+                    cpi.Setter(instance, tex);
                 }
             });
         }

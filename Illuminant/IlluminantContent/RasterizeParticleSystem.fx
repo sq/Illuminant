@@ -12,14 +12,26 @@ uniform float  ZToY;
 Texture2D BitmapTexture;
 sampler BitmapSampler {
     Texture = (BitmapTexture);
-    AddressU = WRAP;
-    AddressV = WRAP;
+    AddressU = CLAMP;
+    AddressV = CLAMP;
     MipFilter = LINEAR;
     MinFilter = LINEAR;
     MagFilter = LINEAR;
 };
 
 uniform float4 BitmapTextureRegion;
+
+Texture2D LifeRampTexture;
+sampler LifeRampSampler {
+    Texture = (LifeRampTexture);
+    AddressU = CLAMP;
+    AddressV = CLAMP;
+    MinFilter = POINT;
+    MagFilter = POINT;
+};
+
+// ramp_strength, ramp_min, ramp_divisor
+uniform float3 LifeRampSettings;
 
 static const float3 Corners[] = {
     { -1, -1, 0 },
@@ -38,6 +50,19 @@ inline float3 ComputeRotatedCorner(
         (sinCos.x * corner.x) + (sinCos.y * corner.y),
         corner.z
     );
+}
+
+float4 getRampedColorForLifeValue (float life) {
+    float4 result = getColorForLifeValue(life);
+    [branch]
+    if (LifeRampSettings.x != 0) {
+        float u = (life - LifeRampSettings.y) / LifeRampSettings.z;
+        if (LifeRampSettings.x < 0)
+            u = 1 - saturate(u);
+        float4 rampSample = tex2Dlod(LifeRampSampler, float4(u, 0, 0, 0));
+        result = lerp(result, rampSample * result, saturate(abs(LifeRampSettings.x)));
+    }
+    return result;
 }
 
 void VS_Core (
@@ -99,7 +124,7 @@ void VS_PosVelAttrWhite(
         result, texCoord
     );
 
-    color = getColorForLifeValue(position.w);
+    color = getRampedColorForLifeValue(position.w);
 }
 
 void VS_PosVelAttr(
@@ -125,7 +150,7 @@ void VS_PosVelAttr(
         color
     );
 
-    color = attributes * getColorForLifeValue(position.w);
+    color = attributes * getRampedColorForLifeValue(position.w);
 }
 
 void VS_PosAttr (
@@ -156,7 +181,7 @@ void VS_PosAttr (
         result, texCoord
     );
 
-    attributes *= getColorForLifeValue(position.w);
+    attributes *= getRampedColorForLifeValue(position.w);
 }
 
 void PS_Texture (

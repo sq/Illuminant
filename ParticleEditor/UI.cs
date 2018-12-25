@@ -23,7 +23,7 @@ namespace ParticleEditor {
                 if (w >= 2000)
                     return 675;
                 else
-                    return 500;
+                    return 525;
             }
         }
 
@@ -208,7 +208,10 @@ namespace ParticleEditor {
                 Checkbox("Statistics", ref ShowPerformanceStats);
 
                 Nuke.nk_label(ctx, "Zoom", (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
-                Zoom = Nuke.nk_slide_float(ctx, MinZoom, Zoom, MaxZoom, 0.1f);
+                Zoom = Nuke.nk_slide_float(ctx, MinZoom, Zoom, MaxZoom, 0.025f);
+
+                Nuke.nk_label(ctx, "Background Brightness", (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
+                Brightness = Nuke.nk_slide_float(ctx, 0, Brightness, 1, 0.01f);
 
                 Nuke.nk_tree_pop(ctx);
             }
