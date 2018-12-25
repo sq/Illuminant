@@ -288,13 +288,23 @@ namespace ParticleEditor {
         private void SelectProperty (
             CachedPropertyInfo cpi, object instance, string actualName
         ) {
+            float scale = cpi.Info.DragScale.GetValueOrDefault(1.0f);
             Controller.SelectedPositionProperty = new Controller.PositionPropertyInfo {
                 Key = actualName,
                 Instance = instance,
                 Set = (xy) =>
-                    TrySetPropertyPosition(cpi, instance, xy),
+                    TrySetPropertyPosition(cpi, instance, xy * scale),
                 Get = () =>
-                    TryGetPropertyPosition(cpi, instance)
+                    TryGetPropertyPosition(cpi, instance) / scale
+            };
+        }
+
+        private void SelectProperty (object instance, string key, Action<Vector2> set, Func<Vector2?> get) {
+            Controller.SelectedPositionProperty = new Controller.PositionPropertyInfo {
+                Instance = instance,
+                Key = key,
+                Set = set,
+                Get = get
             };
         }
 
@@ -340,15 +350,6 @@ namespace ParticleEditor {
             return false;
         }
 
-        private void SelectProperty (object instance, string key, Action<Vector2> set, Func<Vector2?> get) {
-            Controller.SelectedPositionProperty = new Controller.PositionPropertyInfo {
-                Instance = instance,
-                Key = key,
-                Set = set,
-                Get = get
-            };
-        }
-
         private unsafe bool RenderFormula (string name, string actualName, Formula value) {
             var result = false;
 
@@ -385,20 +386,29 @@ namespace ParticleEditor {
                     if (Nuklear.SelectableText("Scale", isFormulaSelected && (spp.Key == "Scale")))
                         SelectProperty(
                             value, "Scale",
-                            (v) => { value.RandomScale.X = v.X; value.RandomScale.Y = v.Y; },
-                            () => new Vector2(value.RandomScale.X, value.RandomScale.Y)
+                            (v) => { value.RandomScale.X = v.X / 10f; value.RandomScale.Y = v.Y / 10f; },
+                            () => new Vector2(value.RandomScale.X, value.RandomScale.Y) * 10f
                         );
 
                     RenderVectorProperty(ref value.RandomScale, ref result);
 
                     var k = value.Circular ? "Constant Radius" : "Random Offset";
                     Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
-                    if (Nuklear.SelectableText(k, isFormulaSelected && (spp.Key == k)))
+                    if (Nuklear.SelectableText(k, isFormulaSelected && (spp.Key == k))) {
+                        float scale = value.Circular ? 10f : 100f;
                         SelectProperty(
                             value, k,
-                            (v) => { value.Offset.X = v.X; value.Offset.Y = v.Y; },
-                            () => new Vector2(value.Offset.X, value.Offset.Y)
+                            (v) => {
+                                value.Offset.X = v.X / scale;
+                                value.Offset.Y = v.Y / scale;
+                                if (!value.Circular) {
+                                    value.Offset.X = Arithmetic.Clamp(value.Offset.X, -1, 1);
+                                    value.Offset.Y = Arithmetic.Clamp(value.Offset.Y, -1, 1);
+                                }
+                            },
+                            () => new Vector2(value.Offset.X, value.Offset.Y) * scale
                         );
+                    }
 
                     RenderVectorProperty(ref value.Offset, ref result);
 

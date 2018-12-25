@@ -15,6 +15,7 @@ namespace ParticleEditor {
             public bool                 AllowNull;
             public Func<object, object> GetDefaultValue;
             public int?                 MaxCount;
+            public float?               DragScale;
         }
 
         public static readonly Dictionary<string, Dictionary<string, ModelTypeInfo>> FieldTypeOverrides =
