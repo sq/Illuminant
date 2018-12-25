@@ -1052,9 +1052,12 @@ namespace Squared.Illuminant.Particles {
                         var strength = lifeRampTexture != null
                                 ? Configuration.Color.LifeRampStrength
                                 : 0;
-                        p["LifeRampSettings"].SetValue(new Vector3(
+                        var indexDivisor = lifeRampTexture != null
+                            ? lifeRampTexture.Height
+                            : 1;
+                        p["LifeRampSettings"].SetValue(new Vector4(
                             strength * (Configuration.Color.InvertLifeRamp ? -1 : 1),
-                            min, rangeSize
+                            min, rangeSize, indexDivisor
                         ));
                     }
                 },
@@ -1214,6 +1217,12 @@ namespace Squared.Illuminant.Particles {
         /// Smaller values will result in slower animation. Zero turns off animation.
         /// </summary>
         public Vector2       AnimationRate;
+
+        /// <summary>
+        /// Particle rotations occur around this axis. The default is to rotate clockwise
+        ///  around Z - a 2D on-screen rotation.
+        /// </summary>
+        public Vector3       RotationAxis = Vector3.UnitX;
 
         /// <summary>
         /// If set, particles will rotate based on their direction of movement

@@ -278,16 +278,26 @@ namespace ParticleEditor {
         }
 
         private bool IsPropertySelected (
-            PropertyGridCache cache, CachedPropertyInfo cpi, object instance, string actualName
+            object instance, string actualName
         ) {
             return (Controller.SelectedPositionProperty != null) &&
                 object.ReferenceEquals(Controller.SelectedPositionProperty.Instance, instance) &&
                 (Controller.SelectedPositionProperty.Key == actualName);
         }
 
-        private void SelectProperty (
+        private bool SelectProperty (
             CachedPropertyInfo cpi, object instance, string actualName
         ) {
+            switch (cpi.Info.Type) {
+                case "Vector2":
+                case "Vector3":
+                case "Vector4":
+                case "Matrix":
+                    break;
+                default:
+                    return false;
+            }
+
             float scale = cpi.Info.DragScale.GetValueOrDefault(1.0f);
             Controller.SelectedPositionProperty = new Controller.PositionPropertyInfo {
                 Key = actualName,
@@ -297,6 +307,7 @@ namespace ParticleEditor {
                 Get = () =>
                     TryGetPropertyPosition(cpi, instance) / scale
             };
+            return true;
         }
 
         private void SelectProperty (object instance, string key, Action<Vector2> set, Func<Vector2?> get) {
@@ -320,6 +331,9 @@ namespace ParticleEditor {
                 case "Vector4":
                     var v4 = (Vector4)value;
                     return new Vector2(v4.X, v4.Y);
+                case "Matrix":
+                    var m = (Matrix)value;
+                    return new Vector2(m.M41, m.M42);
             }
 
             return null;
@@ -344,6 +358,12 @@ namespace ParticleEditor {
                     v4.X = xy.X;
                     v4.Y = xy.Y;
                     cpi.Setter(instance, v4);
+                    return true;
+                case "Matrix":
+                    var m = (Matrix)value;
+                    m.M41 = xy.X;
+                    m.M42 = xy.Y;
+                    cpi.Setter(instance, m);
                     return true;
             }
 
@@ -386,8 +406,8 @@ namespace ParticleEditor {
                     if (Nuklear.SelectableText("Scale", isFormulaSelected && (spp.Key == "Scale")))
                         SelectProperty(
                             value, "Scale",
-                            (v) => { value.RandomScale.X = v.X / 10f; value.RandomScale.Y = v.Y / 10f; },
-                            () => new Vector2(value.RandomScale.X, value.RandomScale.Y) * 10f
+                            (v) => { value.RandomScale.X = v.X; value.RandomScale.Y = v.Y; },
+                            () => new Vector2(value.RandomScale.X, value.RandomScale.Y)
                         );
 
                     RenderVectorProperty(ref value.RandomScale, ref result);
@@ -437,7 +457,7 @@ namespace ParticleEditor {
             if (!string.IsNullOrEmpty(prefix))
                 actualName = prefix + actualName;
 
-            var isActive = IsPropertySelected(cache, cpi, instance, actualName);
+            var isActive = IsPropertySelected(instance, actualName);
             var value = cpi.Getter(instance);
 
             var valueType = cpi.Info.Type ?? cpi.Type.Name;
@@ -564,9 +584,24 @@ namespace ParticleEditor {
                     }
                     return false;
 
+                case "Normal":
                 case "Vector3":
                     Nuke.nk_layout_row_dynamic(ctx, LineHeight, 3);
                     var v3 = (Vector3)value;
+                    if (valueType == "Normal") {
+                        if (Nuklear.Button("X")) {
+                            v3 = Vector3.UnitX;
+                            changed = true;
+                        }
+                        if (Nuklear.Button("Y")) {
+                            v3 = Vector3.UnitY;
+                            changed = true;
+                        }
+                        if (Nuklear.Button("Z")) {
+                            v3 = Vector3.UnitZ;
+                            changed = true;
+                        }
+                    }
                     RenderPropertyElement("#x", cpi.Info, ref v3.X, ref changed);
                     RenderPropertyElement("#y", cpi.Info, ref v3.Y, ref changed);
                     RenderPropertyElement("#z", cpi.Info, ref v3.Z, ref changed);
@@ -665,11 +700,19 @@ namespace ParticleEditor {
                         RenderPropertyElement("#zz", cpi.Info, ref m.M33, ref changed);
                         if (!is3x4)
                             RenderPropertyElement("#zw", cpi.Info, ref m.M34, ref changed);
+
+                        var isSelected = IsPropertySelected(instance, "Constant");
+                        Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
+                        if (Nuklear.SelectableText("Constant", isSelected))
+                            SelectProperty(cpi, instance, "Constant");
+                        if (Nuklear.Button("Zero")) {
+                            m.M41 = m.M42 = m.M43 = 0;
+                            changed = true;
+                        }
+                        Nuke.nk_layout_row_dynamic(ctx, LineHeight, 3);
                         RenderPropertyElement("#wx", cpi.Info, ref m.M41, ref changed);
                         RenderPropertyElement("#wy", cpi.Info, ref m.M42, ref changed);
                         RenderPropertyElement("#wz", cpi.Info, ref m.M43, ref changed);
-                        if (!is3x4)
-                            RenderPropertyElement("#ww", cpi.Info, ref m.M44, ref changed);
                     }
 
                     if (changed) {
