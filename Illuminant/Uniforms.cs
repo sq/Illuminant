@@ -189,19 +189,55 @@ namespace Squared.Illuminant {
     [StructLayout(LayoutKind.Sequential)]
     public class Formula {
         public Vector4 Constant;
-        public Vector4 RandomOffset;
         public Vector4 RandomScale;
-        public Vector4 RandomScaleConstant;
+        public Vector4 Offset;
         public bool Circular;
 
+        public Vector4 RandomOffset {
+            get {
+                if (Circular)
+                    return Vector4.Zero;
+                else
+                    return Offset;
+            }
+            set {
+                if (Circular)
+                    return;
+                Offset = value;
+            }
+        }
+
+        public Vector4 ConstantRadius {
+            get {
+                if (!Circular)
+                    return Vector4.Zero;
+                else
+                    return Offset;
+            }
+            set {
+                if (!Circular)
+                    return;
+                Offset = value;
+            }
+        }
+
         public static Formula UnitNormal () {
-            return new Formula {
-                Constant = Vector4.Zero,
-                RandomOffset = Vector4.One * -0.5f,
-                RandomScale = Vector4.One,
-                RandomScaleConstant = Vector4.Zero,
-                Circular = true
-            };
+            var result = new Formula();
+            result.SetToUnitNormal();
+            return result;
+        }
+
+        public void SetToUnitNormal () {
+            Constant = Vector4.Zero;
+            Offset = Vector4.Zero;
+            RandomScale = Vector4.One;
+            Circular = true;
+        }
+
+        public void SetToConstant (Vector4 value) {
+            Constant = value;
+            Offset = RandomScale = Vector4.Zero;
+            Circular = false;
         }
 
         public static Formula Zero () {

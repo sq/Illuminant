@@ -302,7 +302,7 @@ namespace TestGame.Scenes {
                         Velocity = new Formula {
                             RandomOffset = new Vector4(-0.5f, -0.5f, -0.5f, 0f),
                             RandomScale = new Vector4(4f, 4f, 2f, 0f) * 60,
-                            RandomScaleConstant = new Vector4(3f, 3f, 0f, 0f),
+                            ConstantRadius = new Vector4(3f, 3f, 0f, 0f),
                             Circular = true
                         },
                         Attributes = new Formula {

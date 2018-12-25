@@ -500,7 +500,7 @@ namespace Framework {
             int selected = state ? 1 : 0;
             using (var s = new NString(name))
                 Nuklear.nk_selectable_text(Context, s.pText, s.Length, flags, ref selected);
-            return selected != 0;
+            return (selected != 0) && (state == false);
         }
 
         public unsafe bool Textbox (ref string text) {
@@ -558,11 +558,17 @@ namespace Framework {
             }
         }
 
+        public void Label (string text, bool centered = false) {
+            NkTextAlign flags = NkTextAlign.NK_TEXT_ALIGN_MIDDLE;
+            flags |= centered ? NkTextAlign.NK_TEXT_ALIGN_CENTERED : NkTextAlign.NK_TEXT_ALIGN_LEFT;
+            Nuklear.nk_label(Context, text, (uint)flags);
+        }
+
         public bool Button (string text, bool enabled = true) {
             if (enabled)
                 return Nuklear.nk_button_label(Context, text) != 0;
             else {
-                Nuklear.nk_label(Context, text, (uint)(NkTextAlign.NK_TEXT_ALIGN_CENTERED | NkTextAlign.NK_TEXT_ALIGN_MIDDLE));
+                Label(text, true);
                 return false;
             }
         }

@@ -82,20 +82,25 @@ namespace ParticleEditor {
             public CachedPropertyInfo ElementInfo;
         }
 
-        private struct PropertyGridCache {
+        private class PropertyGridCache {
             public Type CachedType;
             public List<CachedPropertyInfo> Members;
 
             public uint ScrollX, ScrollY;
             public int SelectedIndex;
 
-            internal bool Prepare (Type type) {
+            public ElementBox Box;
+
+            internal bool Prepare (object instance, Type type = null) {
+                if (type == null)
+                    type = instance.GetType();
                 if (type == CachedType)
                     return false;
 
                 CachedType = type;
                 Members = CachePropertyInfo(type).ToList();
                 SelectedIndex = 0;
+                Box = new ElementBox();
                 return true;
             }
         }
@@ -104,7 +109,8 @@ namespace ParticleEditor {
             new Dictionary<Type, List<CachedPropertyInfo>>(new ReferenceComparer<Type>());
         private readonly Dictionary<string, PropertyGridCache> GridCaches = 
             new Dictionary<string, PropertyGridCache>();
-        private PropertyGridCache SystemProperties, TransformProperties;
+        private PropertyGridCache SystemProperties = new PropertyGridCache(), 
+            TransformProperties = new PropertyGridCache();
         private List<Type> TransformTypes = GetTransformTypes().ToList();
 
         internal KeyboardInput KeyboardInputHandler;
@@ -151,7 +157,7 @@ namespace ParticleEditor {
                     Type = elementType,
                     AllowNull = false,
                     Getter = (i) => ((ElementBox)i).Value,
-                    Setter = (i, v) => {  ((ElementBox)i).Value = v; }
+                    Setter = (i, v) => { ((ElementBox)i).Value = v; }
                 };
             } else {
                 return null;
@@ -199,26 +205,26 @@ namespace ParticleEditor {
             });
         }
 
-        private unsafe bool RenderPropertyGridNonScrolling (object instance, ref PropertyGridCache cache) {
+        private unsafe bool RenderPropertyGridNonScrolling (object instance, PropertyGridCache cache) {
             var result = false;
 
             foreach (var cpi in cache.Members) {
-                if (RenderProperty(ref cache, cpi, instance))
+                if (RenderProperty(cache, cpi, instance))
                     result = true;
             }
 
             return result;
         }
 
-        private unsafe bool RenderPropertyGrid (object instance, ref PropertyGridCache cache, float? heightPx) {
+        private unsafe bool RenderPropertyGrid (object instance, PropertyGridCache cache, float? heightPx) {
             if (heightPx.HasValue) {
                 using (var g = Nuklear.ScrollingGroup(heightPx.Value, "Properties", ref cache.ScrollX, ref cache.ScrollY))
                 if (g.Visible)
-                    return RenderPropertyGridNonScrolling(instance, ref cache);
+                    return RenderPropertyGridNonScrolling(instance, cache);
                 else
                     return false;
             } else {
-                return RenderPropertyGridNonScrolling(instance, ref cache);
+                return RenderPropertyGridNonScrolling(instance, cache);
             }
         }
 
@@ -272,7 +278,7 @@ namespace ParticleEditor {
         }
 
         private bool IsPropertySelected (
-            ref PropertyGridCache cache, CachedPropertyInfo cpi, object instance, string actualName
+            PropertyGridCache cache, CachedPropertyInfo cpi, object instance, string actualName
         ) {
             return (Controller.SelectedPositionProperty != null) &&
                 object.ReferenceEquals(Controller.SelectedPositionProperty.Instance, instance) &&
@@ -280,7 +286,7 @@ namespace ParticleEditor {
         }
 
         private void SelectProperty (
-            ref PropertyGridCache cache, CachedPropertyInfo cpi, object instance, string actualName
+            CachedPropertyInfo cpi, object instance, string actualName
         ) {
             Controller.SelectedPositionProperty = new Controller.PositionPropertyInfo {
                 Key = actualName,
@@ -334,8 +340,79 @@ namespace ParticleEditor {
             return false;
         }
 
+        private void SelectProperty (object instance, string key, Action<Vector2> set, Func<Vector2?> get) {
+            Controller.SelectedPositionProperty = new Controller.PositionPropertyInfo {
+                Instance = instance,
+                Key = key,
+                Set = set,
+                Get = get
+            };
+        }
+
+        private unsafe bool RenderFormula (string name, string actualName, Formula value) {
+            var result = false;
+
+            using (var pGroup = Nuklear.CollapsingGroup(name, actualName, false)) {
+                if (pGroup.Visible) {
+                    Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 3);
+                    if (Nuklear.Button("Zero")) {
+                        value.SetToConstant(Vector4.Zero);
+                        result = true;
+                    }
+                    if (Nuklear.Button("One")) {
+                        value.SetToConstant(Vector4.One);
+                        result = true;
+                    }
+                    if (Nuklear.Button("Unit Normal")) {
+                        value.SetToUnitNormal();
+                        result = true;
+                    }
+
+                    var spp = Controller.SelectedPositionProperty;
+                    var isFormulaSelected = (spp != null) && (spp.Instance == value);
+
+                    Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
+                    if (Nuklear.SelectableText("Constant", isFormulaSelected && (spp.Key == "Constant")))
+                        SelectProperty(
+                            value, "Constant",
+                            (v) => { value.Constant.X = v.X; value.Constant.Y = v.Y; },
+                            () => new Vector2(value.Constant.X, value.Constant.Y)
+                        );
+
+                    RenderVectorProperty(ref value.Constant, ref result);
+
+                    Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
+                    if (Nuklear.SelectableText("Scale", isFormulaSelected && (spp.Key == "Scale")))
+                        SelectProperty(
+                            value, "Scale",
+                            (v) => { value.RandomScale.X = v.X; value.RandomScale.Y = v.Y; },
+                            () => new Vector2(value.RandomScale.X, value.RandomScale.Y)
+                        );
+
+                    RenderVectorProperty(ref value.RandomScale, ref result);
+
+                    var k = value.Circular ? "Constant Radius" : "Random Offset";
+                    Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
+                    if (Nuklear.SelectableText(k, isFormulaSelected && (spp.Key == k)))
+                        SelectProperty(
+                            value, k,
+                            (v) => { value.Offset.X = v.X; value.Offset.Y = v.Y; },
+                            () => new Vector2(value.Offset.X, value.Offset.Y)
+                        );
+
+                    RenderVectorProperty(ref value.Offset, ref result);
+
+                    Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
+                    if (Checkbox("Circular", ref value.Circular))
+                        result = true;
+                }
+            }
+
+            return result;
+        }
+
         private unsafe bool RenderProperty (
-            ref PropertyGridCache cache,
+            PropertyGridCache cache,
             CachedPropertyInfo cpi,
             object instance,
             string prefix = null
@@ -346,7 +423,7 @@ namespace ParticleEditor {
             if (!string.IsNullOrEmpty(prefix))
                 actualName = prefix + actualName;
 
-            var isActive = IsPropertySelected(ref cache, cpi, instance, actualName);
+            var isActive = IsPropertySelected(cache, cpi, instance, actualName);
             var value = cpi.Getter(instance);
 
             var valueType = cpi.Info.Type ?? cpi.Type.Name;
@@ -359,6 +436,8 @@ namespace ParticleEditor {
                     return RenderListProperty(cpi, instance, ref changed, actualName, value, true);
 
                 case "Formula":
+                    return RenderFormula(cpi.Name, actualName, (Formula)value);
+
                 case "FMAParameters`1":
                     List<CachedPropertyInfo> members;
                     if (!CachedMembers.TryGetValue(cpi.Type, out members))
@@ -367,7 +446,7 @@ namespace ParticleEditor {
                     using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, actualName, false)) {
                         if (pGroup.Visible) {
                             foreach (var i in members) 
-                                if (RenderProperty(ref cache, i, value, cpi.Name))
+                                if (RenderProperty(cache, i, value, cpi.Name))
                                     changed = true;
 
                             if (changed)
@@ -416,7 +495,7 @@ namespace ParticleEditor {
 
             Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
             if (Nuklear.SelectableText(cpi.Name, isActive))
-                SelectProperty(ref cache, cpi, instance, actualName);
+                SelectProperty(cpi, instance, actualName);
 
             if (cpi.AllowNull) {
                 var isNull = value == null;
@@ -437,7 +516,7 @@ namespace ParticleEditor {
             }
 
             if (value == null) {
-                Nuklear.SelectableText("null", isActive);
+                Nuklear.Label("null", isActive);
                 return false;
             }
 
@@ -482,12 +561,8 @@ namespace ParticleEditor {
                     return false;
 
                 case "Vector4":
-                    Nuke.nk_layout_row_dynamic(ctx, LineHeight, 4);
                     var v4 = (Vector4)value;
-                    RenderPropertyElement("#x", cpi.Info, ref v4.X, ref changed);
-                    RenderPropertyElement("#y", cpi.Info, ref v4.Y, ref changed);
-                    RenderPropertyElement("#z", cpi.Info, ref v4.Z, ref changed);
-                    RenderPropertyElement("#w", cpi.Info, ref v4.W, ref changed);
+                    RenderVectorProperty(ref v4, ref changed);
                     if (changed) {
                         cpi.Setter(instance, v4);
                         return true;
@@ -495,10 +570,17 @@ namespace ParticleEditor {
                     return false;
 
                 default:
-                    if (Nuklear.SelectableText(value.GetType().Name, isActive))
-                        return true;
+                    Nuklear.Label(value.GetType().Name);
                     return false;
             }
+        }
+
+        private unsafe void RenderVectorProperty (ref Vector4 v4, ref bool changed) {
+            Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 4);
+            RenderPropertyElement("#x", null, ref v4.X, ref changed);
+            RenderPropertyElement("#y", null, ref v4.Y, ref changed);
+            RenderPropertyElement("#z", null, ref v4.Z, ref changed);
+            RenderPropertyElement("#w", null, ref v4.W, ref changed);
         }
 
         private struct MatrixGenerateParameters {
@@ -623,7 +705,7 @@ namespace ParticleEditor {
                 if (pGroup.Visible) {
                     PropertyGridCache pgc;
                     if (!GridCaches.TryGetValue(actualName, out pgc))
-                        pgc = new PropertyGridCache();
+                        GridCaches[actualName] = pgc = new PropertyGridCache();
 
                     Nuke.nk_layout_row_dynamic(ctx, LineHeight, 3);
                     var indexChanged = Nuklear.Property("##", ref pgc.SelectedIndex, 0, list.Count - 1, 1, 1);
@@ -654,23 +736,29 @@ namespace ParticleEditor {
                     if (pgc.SelectedIndex < list.Count) {
                         var item = list[pgc.SelectedIndex];
                         if (item != null) {
-                            pgc.Prepare(item.GetType());
+                            if (pgc.Prepare(item) && itemsAreValues) {
+                                cpi.ElementInfo.Getter = (i) => {
+                                    return list[pgc.SelectedIndex];
+                                };
+                                cpi.ElementInfo.Setter = (i, v) => {
+                                    pgc.Box.Value = v;
+                                    list[pgc.SelectedIndex] = v;
+                                };
+                            }
                             if (itemsAreValues) {
-                                var box = new ElementBox { Value = item };
-                                if (RenderProperty(ref pgc, cpi.ElementInfo, box)) {
-                                    list[pgc.SelectedIndex] = box.Value;
+                                pgc.Box.Value = item;
+                                if (RenderProperty(pgc, cpi.ElementInfo, pgc.Box)) {
+                                    list[pgc.SelectedIndex] = pgc.Box.Value;
                                     changed = true;
                                 }
                             } else {
-                                if (RenderPropertyGridNonScrolling(item, ref pgc)) {
+                                if (RenderPropertyGridNonScrolling(item, pgc)) {
                                     list[pgc.SelectedIndex] = item;
                                     changed = true;
                                 }
                             }
                         }
                     }
-
-                    GridCaches[actualName] = pgc;
                 }
             }
 

@@ -38,7 +38,7 @@ namespace Squared.Illuminant.Particles.Transforms {
         private int     TotalSpawned;
 
         [NonSerialized]
-        private Vector4[] Temp = new Vector4[12];
+        private Vector4[] Temp = new Vector4[8];
         [NonSerialized]
         private float[] Temp2 = new float[3];
         [NonSerialized]
@@ -101,17 +101,14 @@ namespace Squared.Illuminant.Particles.Transforms {
                 (float)(b * 127)
             ));
 
-            Temp[0] = Position.RandomOffset;
-            Temp[1] = Position.RandomScale;
-            Temp[2] = Position.RandomScaleConstant;
-            Temp[3] = Velocity.Constant;
-            Temp[4] = Velocity.RandomOffset;
-            Temp[5] = Velocity.RandomScale;
-            Temp[6] = Velocity.RandomScaleConstant;
-            Temp[7] = Attributes.Constant;
-            Temp[8] = Attributes.RandomOffset;
-            Temp[9] = Attributes.RandomScale;
-            Temp[10] = Attributes.RandomScaleConstant;
+            Temp[0] = Position.RandomScale;
+            Temp[1] = Position.Offset;
+            Temp[2] = Velocity.Constant;
+            Temp[3] = Velocity.RandomScale;
+            Temp[4] = Velocity.Offset;
+            Temp[5] = Attributes.Constant;
+            Temp[6] = Attributes.RandomScale;
+            Temp[7] = Attributes.Offset;
 
             Temp2[0] = Position.Circular   ? 1 : 0;
             Temp2[1] = Velocity.Circular   ? 1 : 0;

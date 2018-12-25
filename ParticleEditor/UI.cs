@@ -130,8 +130,9 @@ namespace ParticleEditor {
             if (Nuklear.Button("Reset"))
                 Controller.QueueReset(s);
 
-            SystemProperties.Prepare(typeof (ParticleSystemConfiguration));
-            RenderPropertyGrid(Controller.SelectedSystem.Model.Configuration, ref SystemProperties, null);
+            var config = Controller.SelectedSystem.Model.Configuration;
+            SystemProperties.Prepare(config);
+            RenderPropertyGrid(config, SystemProperties, null);
         }
 
         private unsafe void RenderTransformList () {
@@ -173,7 +174,7 @@ namespace ParticleEditor {
                 if (Nuklear.ComboBox(ref typeIndex, (i) => TransformTypes[i].Name, TransformTypes.Count)) {
                     Controller.ChangeTransformType(xform, TransformTypes[typeIndex]);
                 } else {
-                    if (TransformProperties.Prepare(xform.Model.Type)) {
+                    if (TransformProperties.Prepare(xform.Model, xform.Model.Type)) {
                         foreach (var m in TransformProperties.Members) {
                             var name = m.Name;
                             var setter = m.Setter;
@@ -184,7 +185,7 @@ namespace ParticleEditor {
                             };
                         }
                     }
-                    RenderPropertyGrid(xform.Instance, ref TransformProperties, null);
+                    RenderPropertyGrid(xform.Instance, TransformProperties, null);
                 }
             }
         }
