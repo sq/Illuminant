@@ -73,16 +73,30 @@ inline float3x3 RotationFromAxisAngle (float3 axis, float angle) {
 }
 
 inline float3 ComputeRotatedCorner(
-    in int cornerIndex, in float angle, in float2 size, in float3 axis
+    in int cornerIndex, in float angle, in float2 size, in float3 axis, in float3 velocity
 ) {
-    float3 computedAxis = cross(float3(0, -1, 0), axis);
+    float3 up = axis;
+    if (length(velocity) < 0.1) {
+        // FIXME
+        velocity = float3(0, 0, -1);
+    } else {
+        velocity = normalize(velocity);
+    }
+    float3 right = cross(velocity, up);
+    float3 orientedUp = cross(velocity, right);
 
     float3 screenCorner = Corners[cornerIndex.x];
     screenCorner.xy *= size;
 
+    float3 orientedX = screenCorner.x * right;
+    float3 orientedY = screenCorner.y * orientedUp;
+
+    /*
     float3x3 rotationMatrix = RotationFromAxisAngle(computedAxis, angle);
 
     float3 rotatedScreenCorner = mul(screenCorner, rotationMatrix);
+    */
+    float3 rotatedScreenCorner = orientedX + orientedY;
     return rotatedScreenCorner.xyz;
 }
 
@@ -100,6 +114,14 @@ float4 getRampedColorForLifeValueAndIndex (float life, float index) {
     return result;
 }
 
+float getRotationForVelocity (float3 velocity) {
+    float2 absvel = abs(velocity.xy + float2(0, velocity.z * -ZToY));
+    if ((absvel.x < 0.01) && (absvel.y < 0.01))
+        return 0;
+    else
+        return (atan2(velocity.y, velocity.x) + PI) * VelocityRotation;
+}
+
 void VS_Core (
     in float4  position,
     in float3  corner,
@@ -108,7 +130,7 @@ void VS_Core (
     out float2 texCoord
 ) {
     // HACK: Discard Z
-    float3 displayXyz = float3(position.x, position.y - (position.z * ZToY), 0);
+    float3 displayXyz = float3(position.x, position.y - (position.z * ZToY), position.z);
 
     float3 screenXyz = displayXyz - float3(Viewport.Position.xy, 0) + corner;
 
@@ -116,6 +138,8 @@ void VS_Core (
     result = TransformPosition(
         float4(screenXyz.xy * Viewport.Scale.xy, screenXyz.z, 1), 0
     );
+
+    result.z = saturate(result.z);
 
     texCoord = (Corners[cornerIndex.x].xy / 2) + 0.5;
     texCoord = lerp(BitmapTextureRegion.xy, BitmapTextureRegion.zw, texCoord);
@@ -143,16 +167,10 @@ void VS_PosVelAttrWhite(
         return;
     }
 
-    float2 absvel = abs(velocity.xy + float2(0, velocity.z * -ZToY));
-    float angle;
-    if ((absvel.x < 0.01) && (absvel.y < 0.01)) {
-        angle = 0;
-    } else {
-        angle = (atan2(velocity.y, velocity.x) + PI) * VelocityRotation;
-    }
+    float angle = getRotationForVelocity(velocity);
     angle += getRotationForLifeAndIndex(position.w, offsetAndIndex.z);
     float2 size = getSizeForLifeValue(position.w);
-    float3 rotatedCorner = ComputeRotatedCorner(cornerIndex.x, angle, size, RotationAxis);
+    float3 rotatedCorner = ComputeRotatedCorner(cornerIndex.x, angle, size, RotationAxis, velocity);
 
     VS_Core(
         position, rotatedCorner, cornerIndex,
@@ -209,7 +227,7 @@ void VS_PosAttr (
 
     float angle = getRotationForLifeAndIndex(position.w, offsetAndIndex.z);
     float2 size = getSizeForLifeValue(position.w);
-    float3 rotatedCorner = ComputeRotatedCorner(cornerIndex.x, angle, size, RotationAxis);
+    float3 rotatedCorner = ComputeRotatedCorner(cornerIndex.x, angle, size, RotationAxis, float3(0, 0, 0));
 
     VS_Core(
         position, rotatedCorner, cornerIndex,
