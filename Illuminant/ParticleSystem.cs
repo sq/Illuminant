@@ -104,6 +104,8 @@ namespace Squared.Illuminant.Particles {
             public readonly int Size, MaximumCount;
             public readonly int ID;
 
+            public long         LastTurnUsed;
+
             public RenderTargetBinding[] Bindings;
             public RenderTarget2D PositionAndLife;
             public RenderTarget2D Velocity;
@@ -166,10 +168,12 @@ namespace Squared.Illuminant.Particles {
 
             public bool IsDisposed { get; private set; }
 
+            private static volatile int NextID;
+
             public Chunk (
-                int id, int size, ParticleSystemConfiguration configuration, GraphicsDevice device
+                int size, ParticleSystemConfiguration configuration, GraphicsDevice device
             ) {
-                ID = id;
+                ID = Interlocked.Increment(ref NextID);
                 Size = size;
                 MaximumCount = size * size;
                 NeedsClear = true;
@@ -197,16 +201,9 @@ namespace Squared.Illuminant.Particles {
         public readonly List<Transforms.ParticleTransform> Transforms = 
             new List<Transforms.ParticleTransform>();
 
-        private readonly List<BufferSet>    AllBuffers             = new List<BufferSet>();
-        private readonly HashSet<BufferSet> PrePreviousPassBuffers = new HashSet<BufferSet>(new ReferenceComparer<BufferSet>());
-        private readonly HashSet<BufferSet> PreviousPassBuffers    = new HashSet<BufferSet>(new ReferenceComparer<BufferSet>());
-        private readonly HashSet<BufferSet> CurrentPassBuffers     = new HashSet<BufferSet>(new ReferenceComparer<BufferSet>());
-        private readonly HashSet<BufferSet> DiscardedBuffers       = new HashSet<BufferSet>(new ReferenceComparer<BufferSet>());
-
         private  readonly List<int> DeadChunkIDs = new List<int>();
         private  readonly List<Chunk> NewChunks = new List<Chunk>();
         internal readonly List<Chunk> Chunks = new List<Chunk>();
-        private  readonly List<Chunk> ClearList = new List<Chunk>();
 
         private readonly Dictionary<int, LivenessInfo> LivenessInfos = new Dictionary<int, LivenessInfo>();
         private readonly Dictionary<int, SpawnState> SpawnStates = new Dictionary<int, SpawnState>();
@@ -262,44 +259,18 @@ namespace Squared.Illuminant.Particles {
             return result;
         }
 
-        private volatile int NextChunkId = 1;
-
         private BufferSet CreateBufferSet (GraphicsDevice device) {
-            lock (Engine.FreeBufferList) {
-                if (Engine.FreeBufferList.Count > 0) {
-                    var result = Engine.FreeBufferList[0];
-                    Engine.FreeBufferList.RemoveAt(0);
-                    return result;
-                }
-            }
-
             lock (Engine.Coordinator.CreateResourceLock) {
                 var result = new BufferSet(Engine.Configuration.ChunkSize, Configuration, device);
-                AllBuffers.Add(result);
+                Engine.AllBuffers.Add(result);
                 return result;
             }
         }
         
-        private Chunk CreateChunk (GraphicsDevice device, int id, List<Chunk> clearList) {
-            lock (Engine.FreeChunkList) {
-                if (Engine.FreeChunkList.Count > 0) {
-                    var result = Engine.FreeChunkList[0];
-                    Engine.FreeChunkList.RemoveAt(0);
-                    result.ID = id;
-                    if (clearList != null) {
-                        result.NeedsClear = true;
-                        clearList.Add(result);
-                    } else {
-                        // If you don't provide a clear list you better know what you're doing.
-                        result.NeedsClear = false;
-                    }
-                    return result;
-                }
-            }
-
+        private Chunk CreateChunk (GraphicsDevice device, List<Chunk> clearList) {
             lock (Engine.Coordinator.CreateResourceLock) {
-                var result = new Chunk(id, Engine.Configuration.ChunkSize, Configuration, device);
-                result.Current = CreateBufferSet(device);
+                var result = new Chunk(Engine.Configuration.ChunkSize, Configuration, device);
+                result.Current = AcquireOrCreateBufferSet();
                 return result;
             }
         }
@@ -319,7 +290,7 @@ namespace Squared.Illuminant.Particles {
             var g = parallel ? Engine.Coordinator.ThreadGroup : null;
 
             for (int i = 0; i < numToSpawn; i++) {
-                var c = CreateChunk(device, Interlocked.Increment(ref NextChunkId), null);
+                var c = CreateChunk(device, null);
                 // Console.WriteLine("Creating new chunk " + c.ID);
                 var offset = i * mc;
                 var curr = c.Current;
@@ -392,12 +363,9 @@ namespace Squared.Illuminant.Particles {
                 }
 
                 if (spawnId == null) {
-                    spawnId = Interlocked.Increment(ref NextChunkId);
-                    SpawnStates[spawnId.Value] = new SpawnState { Offset = 0, Free = ChunkMaximumCount };
-                    lock (container.RenderManager.CreateResourceLock) {
-                        // FIXME
-                        throw new NotImplementedException();
-                    }
+                    var chunk = CreateChunk(device, null);
+                    spawnId = chunk.ID;
+                    SpawnStates[chunk.ID] = new SpawnState { Offset = 0, Free = ChunkMaximumCount };
                 }
             }
 
@@ -655,25 +623,17 @@ namespace Squared.Illuminant.Particles {
             ChunksToReap.Clear();
         }
 
-        private void Reap (Chunk chunk) {
-            lock (Engine.FreeChunkList) {
-                Chunks.Remove(chunk);
-                ClearList.Remove(chunk);
-                /*
-                if (Engine.FreeChunkList.Count < Engine.Configuration.FreeListCapacity)
-                    Engine.FreeChunkList.Add(chunk);
-                else
-                */
-                    Engine.Coordinator.DisposeResource(chunk);
+        private void Reap (BufferSet buffer) {
+            if (buffer == null)
+                return;
+            Engine.DiscardedBuffers.Add(buffer);
+        }
 
-                var bufs = new[] { chunk.Previous, chunk.Current };
-                foreach (var b in bufs) {
-                    PrePreviousPassBuffers.Remove(b);
-                    PreviousPassBuffers.Remove(b);
-                    CurrentPassBuffers.Remove(b);
-                    DiscardedBuffers.Add(b);
-                }
-            }
+        private void Reap (Chunk chunk) {
+            Reap(chunk.Previous);
+            Reap(chunk.Current);
+            Chunks.Remove(chunk);
+            Engine.Coordinator.DisposeResource(chunk);
         }
 
         private void SetSystemUniform (Material m, double deltaTimeSeconds) {
@@ -682,46 +642,32 @@ namespace Squared.Illuminant.Particles {
         }
 
         private BufferSet AcquireOrCreateBufferSet () {
-            foreach (var b in AllBuffers) {
-                if (
-                    CurrentPassBuffers.Contains(b) ||
-                    PreviousPassBuffers.Contains(b) ||
-                    PrePreviousPassBuffers.Contains(b) ||
-                    DiscardedBuffers.Contains(b)
-                )
-                    continue;
-
-                return b;
-            }
-
-            return CreateBufferSet(Engine.Coordinator.Device);
+            BufferSet result;
+            if (!Engine.AvailableBuffers.TryPopFront(out result))
+                result = CreateBufferSet(Engine.Coordinator.Device);
+            result.LastTurnUsed = Engine.CurrentTurn;
+            return result;
         }
 
         private void DiscardBuffers () {
-            PrePreviousPassBuffers.Clear();
-            PreviousPassBuffers.Clear();
-            CurrentPassBuffers.Clear();
+            Engine.NextTurn();
 
-            foreach (var chunk in Chunks)
+            foreach (var chunk in Chunks) {
+                Reap(chunk.Previous);
+                Reap(chunk.Current);
                 chunk.Previous = chunk.Current = null;
+            }
         }
 
         private void RotateBuffers () {
-            PrePreviousPassBuffers.Clear();
-            foreach (var b in PreviousPassBuffers)
-                PrePreviousPassBuffers.Add(b);
-
-            PreviousPassBuffers.Clear();
-            foreach (var b in CurrentPassBuffers)
-                PreviousPassBuffers.Add(b);
-
-            CurrentPassBuffers.Clear();
+            Engine.NextTurn();
 
             foreach (var chunk in Chunks) {
                 var prev = chunk.Previous;
                 chunk.Previous = chunk.Current;
                 chunk.Current = AcquireOrCreateBufferSet();
-                CurrentPassBuffers.Add(chunk.Current);
+                if (prev != null)
+                    Engine.DiscardedBuffers.Add(prev);
             }
         }
 
@@ -750,6 +696,8 @@ namespace Squared.Illuminant.Particles {
             lock (LivenessInfos)
                 UpdateLivenessAndReapDeadChunks();
 
+            var initialTurn = Engine.CurrentTurn;
+
             var pm = Engine.ParticleMaterials;
 
             using (var group = BatchGroup.New(
@@ -775,7 +723,6 @@ namespace Squared.Illuminant.Particles {
                 lock (NewChunks) {
                     foreach (var nc in NewChunks) {
                         SpawnStates[nc.ID] = new SpawnState { Free = 0, Offset = ChunkMaximumCount };
-                        CurrentPassBuffers.Add(nc.Current);
                         Chunks.Add(nc);
                     }
 
@@ -793,7 +740,7 @@ namespace Squared.Illuminant.Particles {
                     UpdatePass(
                         group, i++, it.GetMaterial(Engine.ParticleMaterials),
                         startedWhen, spawner, it.SetParameters, 
-                        false, actualDeltaTimeSeconds, ClearList, false
+                        false, actualDeltaTimeSeconds, null, false
                     );
                 }
 
@@ -807,16 +754,17 @@ namespace Squared.Illuminant.Particles {
                         (Engine, p, frameIndex) => {
                             var dfu = new Uniforms.DistanceField(Configuration.DistanceField, Configuration.DistanceFieldMaximumZ.Value);
                             pm.MaterialSet.TrySetBoundUniform(pm.UpdateWithDistanceField, "DistanceField", ref dfu);
-                        }, true, actualDeltaTimeSeconds, ClearList, true
+                        }, true, actualDeltaTimeSeconds, null, true
                     );
                 } else {
                     UpdatePass(
                         group, i++, pm.UpdatePositions,
                         startedWhen, null,
-                        null, true, actualDeltaTimeSeconds, ClearList, true
+                        null, true, actualDeltaTimeSeconds, null, true
                     );
                 }
 
+                /*
                 // Clear any chunks that were recovered from the freelist this frame, because
                 //  they probably have garbage data in them
                 foreach (var c in ClearList) {
@@ -824,6 +772,7 @@ namespace Squared.Illuminant.Particles {
                         ClearBatch.AddNew(g, 0, Engine.Materials.Clear, clearColor: Color.Transparent);
                 }
                 ClearList.Clear();
+                */
 
                 clears.Dispose();
 
@@ -836,8 +785,6 @@ namespace Squared.Illuminant.Particles {
                     Reap(c);
                 }
                 // ComputeLiveness(group, i++, passSource);
-
-                DiscardedBuffers.Clear();
             }
 
             var ts = Time.Ticks;
@@ -846,6 +793,8 @@ namespace Squared.Illuminant.Particles {
             Engine.Coordinator.AfterPresent(() => {
                 UnlockedEvent.Set();
             });
+
+            Engine.EndOfUpdate(initialTurn);
         }
 
         private void RenderChunk (

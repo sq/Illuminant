@@ -36,10 +36,12 @@ namespace Squared.Illuminant.Particles {
                                         RandomnessTextureHeight = 381;
         internal          Texture2D     RandomnessTexture;
 
-        internal readonly List<ParticleSystem.BufferSet> FreeBufferList
-            = new List<ParticleSystem.BufferSet>();
-        internal readonly List<Chunk> FreeChunkList = 
-            new List<Chunk>();
+        internal readonly List<ParticleSystem.BufferSet> AllBuffers = 
+            new List<ParticleSystem.BufferSet>();
+        internal readonly UnorderedList<ParticleSystem.BufferSet> AvailableBuffers
+            = new UnorderedList<ParticleSystem.BufferSet>();
+        internal readonly UnorderedList<ParticleSystem.BufferSet> DiscardedBuffers
+            = new UnorderedList<ParticleSystem.BufferSet>();
 
         private readonly EmbeddedEffectProvider Effects;
 
@@ -83,6 +85,37 @@ namespace Squared.Illuminant.Particles {
             GenerateRandomnessTexture();
 
             Coordinator.DeviceReset += Coordinator_DeviceReset;
+        }
+
+        public long CurrentTurn { get; private set; }
+
+        public void NextTurn () {
+            CurrentTurn += 1;
+
+            ParticleSystem.BufferSet b;
+            using (var e = DiscardedBuffers.GetEnumerator())
+            while (e.GetNext(out b)) {
+                var age = CurrentTurn - b.LastTurnUsed;
+                if (age >= Configuration.RecycleInterval) {
+                    e.RemoveCurrent();
+                    AvailableBuffers.Add(b);
+                }
+            }
+        }
+
+        internal void EndOfUpdate (long initialTurn) {
+            ParticleSystem.BufferSet b;
+            using (var e = AvailableBuffers.GetEnumerator())
+            while (e.GetNext(out b)) {
+                if (b.LastTurnUsed >= initialTurn)
+                    continue;
+
+                if (AvailableBuffers.Count > Configuration.SpareBufferCount) {
+                    Console.WriteLine("Discarding unused buffer " + b.ID);
+                    Coordinator.DisposeResource(b);
+                    e.RemoveCurrent();
+                }
+            }
         }
 
         private void FillIndexBuffer () {
@@ -182,13 +215,14 @@ namespace Squared.Illuminant.Particles {
 
             IsDisposed = true;
 
-            Effects.Dispose();
+            foreach (var buf in AllBuffers)
+                Coordinator.DisposeResource(buf);
 
-            lock (FreeChunkList) {
-                foreach (var c in FreeChunkList)
-                    Coordinator.DisposeResource(c);
-                FreeChunkList.Clear();
-            }
+            AllBuffers.Clear();
+            AvailableBuffers.Clear();
+            DiscardedBuffers.Clear();
+
+            Effects.Dispose();
 
             Coordinator.DisposeResource(TriIndexBuffer);
             Coordinator.DisposeResource(TriVertexBuffer);
@@ -202,7 +236,15 @@ namespace Squared.Illuminant.Particles {
     public class ParticleEngineConfiguration {
         public readonly int ChunkSize;
 
-        public int FreeListCapacity = 12;
+        /// <summary>
+        /// How long a buffer must remain unused before getting used again.
+        /// </summary>
+        public int RecycleInterval = 1;
+
+        /// <summary>
+        /// The maximum number of spare buffers to keep around.
+        /// </summary>
+        public int SpareBufferCount = 12;
 
         /// <summary>
         /// Used to measure elapsed time automatically for updates
