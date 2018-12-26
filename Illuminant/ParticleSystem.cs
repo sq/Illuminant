@@ -104,7 +104,7 @@ namespace Squared.Illuminant.Particles {
 
         internal class Slice : IDisposable, IEnumerable<Slice.Chunk> {
             public class Chunk : IDisposable {
-                public int Size, MaximumCount;
+                public readonly int Size, MaximumCount;
                 public int ID;
                 public int RefCount;
 
@@ -277,6 +277,11 @@ namespace Squared.Illuminant.Particles {
 
         private double? LastUpdateTimeSeconds = null;
 
+        /// <summary>
+        /// The number of frames a chunk must be dead for before it is reclaimed
+        /// </summary>
+        public int DeadFrameThreshold = 4;
+
         public ParticleSystem (
             ParticleEngine engine, ParticleSystemConfiguration configuration
         ) {
@@ -313,7 +318,7 @@ namespace Squared.Illuminant.Particles {
             LivenessInfos.Add(
                 id, result = new LivenessInfo {
                     ID = id,
-                    Count = 0
+                    Count = null
                 }
             );
             return result;
@@ -366,9 +371,13 @@ namespace Squared.Illuminant.Particles {
                     var result = Engine.FreeList[0];
                     Engine.FreeList.RemoveAt(0);
                     result.ID = id;
-                    result.NeedsClear = true;
-                    if (clearList != null)
+                    if (clearList != null) {
+                        result.NeedsClear = true;
                         clearList.Add(result);
+                    } else {
+                        // If you don't provide a clear list you better know what you're doing.
+                        result.NeedsClear = false;
+                    }
                     return result;
                 }
             }
@@ -393,7 +402,7 @@ namespace Squared.Illuminant.Particles {
 
             for (int i = 0; i < numToSpawn; i++) {
                 var c = CreateChunk(device, Interlocked.Increment(ref NextChunkId), null);
-                c.NeedsClear = false;
+                Console.WriteLine("Creating new chunk " + c.ID);
                 var offset = i * mc;
                 var pos = new BufferInitializer<TElement> { Buffer = c.PositionAndLife, Initializer = positionInitializer, Offset = offset };
                 var vel = new BufferInitializer<TElement> { Buffer = c.Velocity, Initializer = velocityInitializer, Offset = offset };
@@ -440,7 +449,7 @@ namespace Squared.Illuminant.Particles {
             long startedWhen, Transforms.Spawner spawner,
             Transforms.ParameterSetter setParameters,
             bool clearFirst, double deltaTimeSeconds,
-            List<Slice.Chunk> clearList
+            List<Slice.Chunk> clearList, bool runQuery
         ) {
             var _source = passSource;
             var _dest = passDest;
@@ -521,8 +530,6 @@ namespace Squared.Illuminant.Particles {
                     var li = GetLivenessInfo(sourceChunk.ID);
                     UpdateChunkLivenessQuery(li);
 
-                    var runQuery = (li.PendingQuery == null) && (spawner == null) && clearFirst;
-
                     if (runQuery) {
                         li.LastQueryStart = Time.Ticks;
                         li.PendingQuery = destChunk.Query;
@@ -560,6 +567,8 @@ namespace Squared.Illuminant.Particles {
                         runQuery ? li : null,
                         clearFirst, deltaTimeSeconds
                     );
+
+                    Console.WriteLine("{0} -> {1}", sourceChunk.ID, destChunk.ID);
                 }
             }
 
@@ -716,6 +725,7 @@ namespace Squared.Illuminant.Particles {
                     target.DeadFrameCount = 0;
                 } else {
                     target.Count = target.PendingQuery.PixelCount;
+                    Console.WriteLine("Chunk " + target.ID + " " + target.Count);
 
                     if (target.Count > 0)
                         target.DeadFrameCount = 0;
@@ -735,8 +745,10 @@ namespace Squared.Illuminant.Particles {
 
                 if (li.Count.GetValueOrDefault(1) <= 0) {
                     li.DeadFrameCount++;
-                    if (li.DeadFrameCount >= 4)
+                    if (li.DeadFrameCount >= DeadFrameThreshold) {
+                        Console.WriteLine("Chunk " + li.ID + " dead");
                         ChunksToReap.Add(li);
+                    }
                 }
             }
 
@@ -831,6 +843,16 @@ namespace Squared.Illuminant.Particles {
 
                 var clears = BatchGroup.New(container, -1);
 
+                // FIXME: Is this the right place?
+                lock (NewChunks) {
+                    foreach (var nc in NewChunks) {
+                        SpawnStates[nc.ID] = new SpawnState { Free = 0, Offset = ChunkMaximumCount };
+                        source.Add(nc);
+                    }
+
+                    NewChunks.Clear();
+                }
+
                 if (IsClearPending) {
                     IsClearPending = false;
                     // We need to forcibly erase all the position+life data in the system because a clear was requested
@@ -860,18 +882,8 @@ namespace Squared.Illuminant.Particles {
                         group, i++, it.GetMaterial(Engine.ParticleMaterials),
                         source, a, b, ref passSource, ref passDest, 
                         startedWhen, spawner, it.SetParameters, 
-                        false, actualDeltaTimeSeconds, ClearList
+                        false, actualDeltaTimeSeconds, ClearList, false
                     );
-                }
-
-                // FIXME: Is this the right place?
-                lock (NewChunks) {
-                    foreach (var nc in NewChunks) {
-                        SpawnStates[nc.ID] = new SpawnState { Free = 0, Offset = ChunkMaximumCount };
-                        source.Add(nc);
-                    }
-
-                    NewChunks.Clear();
                 }
 
                 if (Configuration.DistanceField != null) {
@@ -885,14 +897,14 @@ namespace Squared.Illuminant.Particles {
                         (Engine, p, frameIndex) => {
                             var dfu = new Uniforms.DistanceField(Configuration.DistanceField, Configuration.DistanceFieldMaximumZ.Value);
                             pm.MaterialSet.TrySetBoundUniform(pm.UpdateWithDistanceField, "DistanceField", ref dfu);
-                        }, true, actualDeltaTimeSeconds, ClearList
+                        }, true, actualDeltaTimeSeconds, ClearList, true
                     );
                 } else {
                     UpdatePass(
                         group, i++, pm.UpdatePositions,
                         source, a, b, ref passSource, ref passDest,
                         startedWhen, null,
-                        null, true, actualDeltaTimeSeconds, ClearList
+                        null, true, actualDeltaTimeSeconds, ClearList, true
                     );
                 }
 
@@ -937,6 +949,8 @@ namespace Squared.Illuminant.Particles {
         ) {
             // TODO: Actual occupied count?
             var quadCount = ChunkMaximumCount;
+
+            Console.WriteLine("Draw {0}", chunk.ID);
 
             using (var batch = NativeBatch.New(
                 group, chunk.ID, m, (dm, _) => {

@@ -28,7 +28,7 @@ namespace TestGame.Scenes {
         ParticleEngine Engine;
         ParticleSystem System;
 
-        Toggle Running, ShowDistanceField, Collisions, SpawnFromTemplate;
+        Toggle Running, ShowDistanceField, Collisions, SpawnFromTemplate, Step;
         Slider EscapeVelocity, Friction, BounceVelocity;
 
         int RandomSeed = 201;
@@ -110,7 +110,7 @@ namespace TestGame.Scenes {
                     Appearance = {
                         Texture = new NullableLazyResource<Texture2D>("spark"),
                     },
-                    Size = Vector2.One * 2.6f,
+                    Size = Vector2.One * 1.5f,
                     /*
                     Texture = fireball,
                     TextureRegion = fireballRect,
@@ -123,6 +123,7 @@ namespace TestGame.Scenes {
                     },
                     MaximumVelocity = 2048,
                     CollisionLifePenalty = 1,
+                    GlobalLifeDecayRate = 2
                 }
             ) {
                 Transforms = {
@@ -288,16 +289,20 @@ namespace TestGame.Scenes {
             System.Configuration.EscapeVelocity = EscapeVelocity;
             System.Configuration.BounceVelocityMultiplier = BounceVelocity;
 
-            if (Running)
+            MaybeSpawnMoreParticles();
+
+            if (Running || Step)
                 System.Update(frame, -2);
+
+            if (Step)
+                Step.Value = false;
 
             ClearBatch.AddNew(frame, 0, Game.Materials.Clear, clearColor: Color.Black);
 
-            // if (Running)
-                System.Render(
-                    frame, 2, 
-                    blendState: RenderStates.AdditiveBlend
-                );
+            System.Render(
+                frame, 2, 
+                blendState: RenderStates.AdditiveBlend
+            );
 
             var lightDir = new Vector3(-0.5f, 0.5f, -1f);
             lightDir.Normalize();
@@ -378,20 +383,21 @@ namespace TestGame.Scenes {
                 var ms = Game.MouseState;
                 Game.IsMouseVisible = true;
             }
-
-            MaybeSpawnMoreParticles();
         }
 
         void MaybeSpawnMoreParticles () {
-            if (!SpawnFromTemplate)
+            if (!SpawnFromTemplate || (!Running && !Step))
                 return;
 
-            if (FramesUntilNextSpawn > 0) {
-                FramesUntilNextSpawn--;
-                return;
+            if (Step) {
+            } else {
+                if (FramesUntilNextSpawn > 0) {
+                    FramesUntilNextSpawn--;
+                    return;
+                }
+
+                FramesUntilNextSpawn = SpawnInterval;
             }
-
-            FramesUntilNextSpawn = SpawnInterval;
 
             int seed = 0;
 

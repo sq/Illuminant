@@ -247,7 +247,7 @@ namespace TestGame {
             base.LoadContent();
 
             Font = new FreeTypeFont(RenderCoordinator, "FiraSans-Medium.otf") {
-                SizePoints = 17f,
+                SizePoints = 16f,
                 GlyphMargin = 2
             };
             Materials = new DefaultMaterialSet(RenderCoordinator);
