@@ -237,5 +237,9 @@ namespace Squared.Illuminant {
                 Constant = Vector4.One
             };
         }
+
+        public Formula Clone () {
+            return (Formula)MemberwiseClone();
+        }
     }
 }

@@ -572,6 +572,7 @@ namespace ParticleEditor {
                     return RenderGenericObjectProperty(cache, cpi, instance, value, actualName);
 
                 case "String":
+                    Nuke.nk_layout_row_dynamic(ctx, LineHeight + 3, 1);
                     var text = value.ToString();
                     if (Nuklear.Textbox(ref text)) {
                         cpi.Setter(instance, text);
@@ -823,7 +824,10 @@ namespace ParticleEditor {
                         if (item != null) {
                             if (pgc.Prepare(item) && itemsAreValues) {
                                 cpi.ElementInfo.Getter = (i) => {
-                                    return list[pgc.SelectedIndex];
+                                    if (pgc.SelectedIndex < list.Count)
+                                        return list[pgc.SelectedIndex];
+                                    else
+                                        return null;
                                 };
                                 cpi.ElementInfo.Setter = (i, v) => {
                                     pgc.Box.Value = v;

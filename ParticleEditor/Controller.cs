@@ -200,6 +200,15 @@ namespace ParticleEditor {
             view.AddNewViewForModel(xformModel);
         }
 
+        public void DuplicateTransform (int index) {
+            var view = SelectedSystem;
+            var model = view.Model;
+            var template = model.Transforms[index];
+            var xformModel = template.Clone();
+            model.Transforms.Add(xformModel);
+            view.AddNewViewForModel(xformModel);
+        }
+
         public void RemoveTransform (int index) {
             var view = SelectedSystem;
             var model = view.Model;

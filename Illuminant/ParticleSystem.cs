@@ -1197,5 +1197,10 @@ namespace Squared.Illuminant.Particles {
 
         public ParticleSystemConfiguration () {
         }
+
+        public ParticleSystemConfiguration Clone () {
+            var result = (ParticleSystemConfiguration)this.MemberwiseClone();
+            return result;
+        }
     }
 }

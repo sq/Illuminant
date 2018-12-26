@@ -45,6 +45,10 @@ namespace Squared.Illuminant.Particles.Transforms {
                 _Falloff = Math.Max(1, value);
             }
         }
+
+        public TransformArea Clone () {
+            return (TransformArea)MemberwiseClone();
+        }
     }
 
     

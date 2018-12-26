@@ -54,7 +54,9 @@ namespace ParticleEditor {
                             Type = "ValueList",
                             GetDefaultValue = (obj) => {
                                 var s = ((Spawner)obj);
-                                return s.Position.Constant;
+                                var c = s.Position.Constant;
+                                c.W = -1;
+                                return c;
                             },
                             MaxCount = Spawner.MaxPositions - 1
                         } }

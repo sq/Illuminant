@@ -117,7 +117,7 @@ namespace ParticleEditor {
             var s = Controller.SelectedSystem;
             var i = s.Instance;
 
-            Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
+            Nuke.nk_layout_row_dynamic(ctx, LineHeight + 3, 1);
 
             Nuklear.Textbox(ref s.Model.Name);
 
@@ -141,11 +141,13 @@ namespace ParticleEditor {
 
             using (var group = Nuklear.CollapsingGroup("Transforms", "Transforms"))
             if (group.Visible && (Controller.SelectedSystem != null)) {
-                Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
+                Nuke.nk_layout_row_dynamic(ctx, LineHeight, 3);
                 if (Nuklear.Button("Add"))
                     Controller.AddTransform();
                 if (Nuklear.Button("Remove", Controller.SelectedSystem.Transforms.Count > 0))
                     Controller.RemoveTransform(state.Transforms.SelectedIndex);
+                if (Nuklear.Button("Duplicate", Controller.SelectedSystem.Transforms.Count > 0))
+                    Controller.DuplicateTransform(state.Transforms.SelectedIndex);
 
                 var view = Controller.View.Systems[state.Systems.SelectedIndex];
                 var model = view.Model;
@@ -155,7 +157,10 @@ namespace ParticleEditor {
                     Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
                     for (int i = 0; i < model.Transforms.Count; i++) {
                         var xform = model.Transforms[i];
-                        if (Nuklear.SelectableText(xform.Name ?? string.Format("{0} {1}", i, xform.Type.Name), state.Transforms.SelectedIndex == i))
+                        string displayName = (xform.Name != null)
+                            ? string.Format("{1}: {0}", xform.Type.Name, xform.Name)
+                            : string.Format("#{1}: {0}", xform.Type.Name, i);
+                        if (Nuklear.SelectableText(displayName, state.Transforms.SelectedIndex == i))
                             state.Transforms.SelectedIndex = i;
                     }
                 }
@@ -169,6 +174,10 @@ namespace ParticleEditor {
 
             using (var group = Nuklear.CollapsingGroup("Transform Properties", "Transform Properties"))
             if (group.Visible && (xform != null)) {
+                Nuke.nk_layout_row_dynamic(ctx, LineHeight + 3, 1);
+
+                Nuklear.Textbox(ref xform.Model.Name);
+
                 int typeIndex = TransformTypes.IndexOf(xform.Model.Type);
 
                 if (Nuklear.ComboBox(ref typeIndex, (i) => TransformTypes[i].Name, TransformTypes.Count)) {

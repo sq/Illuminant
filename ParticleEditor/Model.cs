@@ -9,6 +9,8 @@ using System.IO;
 using Newtonsoft.Json.Linq;
 using Microsoft.Xna.Framework;
 using System.Runtime.Serialization;
+using System.Collections;
+using System.Reflection;
 
 namespace Squared.Illuminant.Modeling {
     public class EngineModel {
@@ -68,6 +70,16 @@ namespace Squared.Illuminant.Modeling {
             foreach (var t in Transforms)
                 t.Normalize(forSave);
         }
+
+        public SystemModel Clone () {
+            var result = new SystemModel {
+                Name = Name,
+                Configuration = Configuration.Clone()
+            };
+            foreach (var tm in Transforms)
+                result.Transforms.Add(tm.Clone());
+            return result;
+        }
     }
 
     public class TransformModel {
@@ -85,6 +97,16 @@ namespace Squared.Illuminant.Modeling {
                 } else
                     Properties[key].Normalize();
             }
+        }
+
+        public TransformModel Clone () {
+            var result = new TransformModel {
+                Name = Name,
+                Type = Type
+            };
+            foreach (var kvp in Properties)
+                result.Properties.Add(kvp.Key, kvp.Value.Clone());
+            return result;
         }
     }
 
@@ -117,6 +139,39 @@ namespace Squared.Illuminant.Modeling {
         internal ModelProperty (object value) {
             Type = value.GetType();
             Value = value;
+        }
+
+        private object CloneValue (object value) {
+            if (value == null)
+                return null;
+
+            var type = value.GetType();
+            var cloneable = value as ICloneable;
+            var list = value as IList;
+            var cloneMethod = type.GetMethod("Clone");
+            var mwc = type.GetMethod("MemberwiseClone", BindingFlags.NonPublic | BindingFlags.Instance);
+            if (cloneable != null)
+                value = cloneable.Clone();
+            else if (type.IsPrimitive)
+                ;
+            else if (cloneMethod != null)
+                value = cloneMethod.Invoke(value, null);
+            else if (list != null) {
+                var newList = (IList)Activator.CreateInstance(type);
+                foreach (var item in list)
+                    newList.Add(CloneValue(item));
+                value = newList;
+            } else if (type.IsValueType && (mwc != null)) {
+                value = mwc.Invoke(value, null);
+            } else
+                throw new NotImplementedException("Cannot clone value of type " + type.FullName);
+
+            return value;
+        }
+
+        public ModelProperty Clone () {
+            var value = CloneValue(Value);
+            return new ModelProperty(Type, value); 
         }
     }
 
