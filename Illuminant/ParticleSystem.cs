@@ -28,8 +28,6 @@ namespace Squared.Illuminant.Particles {
             public OcclusionQuery PendingQuery;
             public long           LastQueryStart;
             public int            DeadFrameCount;
-            public bool           SpawnedParticlesThisFrame;
-            public bool           WasCleared;
         }
 
         internal class ChunkInitializer<TElement>
@@ -37,7 +35,7 @@ namespace Squared.Illuminant.Particles {
             public ParticleSystem System;
             public int Remaining;
             public BufferInitializer<TElement> Position, Velocity, Attributes;
-            public Slice.Chunk Chunk;
+            public Chunk Chunk;
             public bool HasFailed;
 
             public void Run (ThreadGroup g) {
@@ -102,166 +100,113 @@ namespace Squared.Illuminant.Particles {
             }
         }
 
-        internal class Slice : IDisposable, IEnumerable<Slice.Chunk> {
-            public class Chunk : IDisposable {
-                public readonly int Size, MaximumCount;
-                public int ID;
-                public int RefCount;
+        internal class BufferSet : IDisposable {
+            public readonly int Size, MaximumCount;
+            public readonly int ID;
 
-                public RenderTargetBinding[] Bindings;
+            public RenderTargetBinding[] Bindings;
+            public RenderTarget2D PositionAndLife;
+            public RenderTarget2D Velocity;
+            public RenderTarget2D Attributes;
 
-                public RenderTarget2D PositionAndLife;
-                public RenderTarget2D Velocity;
-                public RenderTarget2D Attributes;
+            public bool IsDisposed { get; private set; }
 
-                public OcclusionQuery Query;
-                public bool NeedsClear;
+            private static volatile int NextID;
 
-                public object Lock = new object();
+            public BufferSet (int size, ParticleSystemConfiguration configuration, GraphicsDevice device) {
+                ID = Interlocked.Increment(ref NextID);
+                Size = size;
+                MaximumCount = size * size;
 
-                private bool _IsDisposed = false;
+                Bindings = new RenderTargetBinding[2 + configuration.AttributeCount];
 
-                public Chunk (
-                    int id, int size, ParticleSystemConfiguration configuration, GraphicsDevice device
-                ) {
-                    ID = id;
-                    Size = size;
-                    MaximumCount = size * size;
-                    NeedsClear = true;
+                PositionAndLife = CreateRenderTarget(configuration, device);
+                Velocity = CreateRenderTarget(configuration, device);
+                if (configuration.AttributeCount > 0)
+                    Attributes = CreateRenderTarget(configuration, device);
 
-                    Bindings = new RenderTargetBinding[2 + configuration.AttributeCount];
-                    Bindings[0] = PositionAndLife = CreateRenderTarget(configuration, device);
-                    Bindings[1] = Velocity = CreateRenderTarget(configuration, device);
-                    Query = new OcclusionQuery(device);
-
-                    if (configuration.AttributeCount == 1)
-                        Bindings[2] = Attributes = CreateRenderTarget(configuration, device);
-                }
-
-                private RenderTarget2D CreateRenderTarget (ParticleSystemConfiguration configuration, GraphicsDevice device) {
-                    return new RenderTarget2D(
-                        device, 
-                        Size, Size, false, 
-                        configuration.HighPrecision ? SurfaceFormat.Vector4 : SurfaceFormat.HalfVector4, DepthFormat.None, 
-                        0, RenderTargetUsage.PreserveContents
-                    );
-                }
-
-                public bool IsDisposed {
-                    get {
-                        return _IsDisposed;
-                    }
-                }
-
-                public void Dispose () {
-                    lock (Lock) {
-                        if (_IsDisposed)
-                            return;
-
-                        _IsDisposed = true;
-
-                        PositionAndLife.Dispose();
-                        Velocity.Dispose();
-                        if (Attributes != null)
-                            Attributes.Dispose();
-
-                        PositionAndLife = Velocity = Attributes = null;
-
-                        Query.Dispose();
-                        Query = null;
-                    }
-                }
+                Bindings[0] = new RenderTargetBinding(PositionAndLife);
+                Bindings[1] = new RenderTargetBinding(Velocity);
+                if (configuration.AttributeCount > 0)
+                    Bindings[2] = new RenderTargetBinding(Attributes);
             }
 
-            public readonly int Index;
-            public readonly int AttributeCount;
-            public long Timestamp;
-            public bool IsValid, IsBeingGenerated;
-            public int  InUseCount;
-
-            private readonly Dictionary<int, Chunk> Chunks = new Dictionary<int, Chunk>();
-
-            public Slice (
-                GraphicsDevice device, int index, int attributeCount
-            ) {
-                Index = index;
-                AttributeCount = attributeCount;
-                if ((attributeCount > 1) || (attributeCount < 0))
-                    throw new ArgumentException("Valid attribute counts are 0 and 1");
-                Timestamp = Squared.Util.Time.Ticks;
-            }
-
-            public void Lock (string reason) {
-                // Console.WriteLine("Lock {0} for {1}", Index, reason);
-                lock (this)
-                    InUseCount++;
-            }
-
-            public void Unlock () {
-                // Console.WriteLine("Unlock {0}", Index);
-                lock (this)
-                    InUseCount--;
+            internal RenderTarget2D CreateRenderTarget (ParticleSystemConfiguration configuration, GraphicsDevice device) {
+                return new RenderTarget2D(
+                    device, 
+                    Size, Size, false, 
+                    configuration.HighPrecision ? SurfaceFormat.Vector4 : SurfaceFormat.HalfVector4, DepthFormat.None, 
+                    0, RenderTargetUsage.PreserveContents
+                );
             }
 
             public void Dispose () {
-                IsValid = false;
+                if (IsDisposed)
+                    return;
 
-                foreach (var kvp in Chunks)
-                    kvp.Value.Dispose();
-            }            
+                IsDisposed = true;
+                PositionAndLife.Dispose();
+                Velocity.Dispose();
+                if (Attributes != null)
+                    Attributes.Dispose();
+            }
+        }
 
-            public Chunk RemoveByID (int id) {
-                Chunk result;
-                if (Chunks.TryGetValue(id, out result)) {
-                    Chunks.Remove(id);
-                    result.RefCount--;
-                }
-                return result;
+        public class Chunk : IDisposable {
+            public readonly int Size, MaximumCount;
+            public int ID;
+            public int RefCount;
+
+            internal BufferSet Previous, Current;
+
+            public OcclusionQuery Query;
+            public bool NeedsClear;
+
+            public object Lock = new object();
+
+            public bool IsDisposed { get; private set; }
+
+            public Chunk (
+                int id, int size, ParticleSystemConfiguration configuration, GraphicsDevice device
+            ) {
+                ID = id;
+                Size = size;
+                MaximumCount = size * size;
+                NeedsClear = true;
+
+                Query = new OcclusionQuery(device);
             }
 
-            public void Add (Chunk chunk) {
-                Chunks.Add(chunk.ID, chunk);
-                chunk.RefCount++;
-            }
+            public void Dispose () {
+                lock (Lock) {
+                    if (IsDisposed)
+                        return;
 
-            public Chunk GetByID (int id) {
-                Chunk result;
-                Chunks.TryGetValue(id, out result);
-                return result;
-            }
+                    IsDisposed = true;
 
-            public Dictionary<int, Chunk>.ValueCollection.Enumerator GetEnumerator () {
-                return Chunks.Values.GetEnumerator();
-            }
-
-            IEnumerator<Chunk> IEnumerable<Chunk>.GetEnumerator () {
-                return Chunks.Values.GetEnumerator();
-            }
-
-            IEnumerator IEnumerable.GetEnumerator () {
-                return Chunks.Values.GetEnumerator();
-            }
-
-            public int Count {
-                get {
-                    return Chunks.Count;
+                    Query.Dispose();
+                    Query = null;
                 }
             }
         }
 
-        public          int LiveCount { get; private set; }
+        public int LiveCount { get; private set; }
 
         public readonly ParticleEngine                     Engine;
         public readonly ParticleSystemConfiguration        Configuration;
         public readonly List<Transforms.ParticleTransform> Transforms = 
             new List<Transforms.ParticleTransform>();
 
-        // 3 because we go
-        // old -> a -> b -> a -> ... -> done
-        private const int SliceCount          = 3;
-        private Slice[] Slices;
+        private readonly List<BufferSet>    AllBuffers             = new List<BufferSet>();
+        private readonly HashSet<BufferSet> PrePreviousPassBuffers = new HashSet<BufferSet>(new ReferenceComparer<BufferSet>());
+        private readonly HashSet<BufferSet> PreviousPassBuffers    = new HashSet<BufferSet>(new ReferenceComparer<BufferSet>());
+        private readonly HashSet<BufferSet> CurrentPassBuffers     = new HashSet<BufferSet>(new ReferenceComparer<BufferSet>());
+        private readonly HashSet<BufferSet> DiscardedBuffers       = new HashSet<BufferSet>(new ReferenceComparer<BufferSet>());
 
-        private readonly List<Slice.Chunk> NewChunks = new List<Slice.Chunk>();
+        private  readonly List<int> DeadChunkIDs = new List<int>();
+        private  readonly List<Chunk> NewChunks = new List<Chunk>();
+        internal readonly List<Chunk> Chunks = new List<Chunk>();
+        private  readonly List<Chunk> ClearList = new List<Chunk>();
 
         private readonly Dictionary<int, LivenessInfo> LivenessInfos = new Dictionary<int, LivenessInfo>();
         private readonly Dictionary<int, SpawnState> SpawnStates = new Dictionary<int, SpawnState>();
@@ -280,7 +225,7 @@ namespace Squared.Illuminant.Particles {
         /// <summary>
         /// The number of frames a chunk must be dead for before it is reclaimed
         /// </summary>
-        public int DeadFrameThreshold = 4;
+        public int DeadFrameThreshold = 8;
 
         public ParticleSystem (
             ParticleEngine engine, ParticleSystemConfiguration configuration
@@ -288,13 +233,6 @@ namespace Squared.Illuminant.Particles {
             Engine = engine;
             Configuration = configuration;
             LiveCount = 0;
-
-            lock (engine.Coordinator.CreateResourceLock) {
-                Slices = AllocateSlices();
-
-                Slices[0].Timestamp = Time.Ticks;
-                Slices[0].IsValid = true;
-            }
         }
 
         public ITimeProvider TimeProvider {
@@ -306,7 +244,7 @@ namespace Squared.Illuminant.Particles {
         public int Capacity {
             get {
                 // FIXME
-                return Slices[0].Count * ChunkMaximumCount;
+                return Chunks.Count * ChunkMaximumCount;
             }
         }
 
@@ -324,52 +262,29 @@ namespace Squared.Illuminant.Particles {
             return result;
         }
 
-        private Slice[] AllocateSlices () {
-            var result = new Slice[SliceCount];
-            for (var i = 0; i < result.Length; i++)
-                result[i] = new Slice(Engine.Coordinator.Device, i, Configuration.AttributeCount);
+        private volatile int NextChunkId = 1;
 
-            return result;
-        }
-
-        private Slice GrabWriteSlice () {
-            Slice dest = null;
-
-            lock (Slices) {
-                for (int i = 0; i < 10; i++) {
-                    dest = (
-                        from s in Slices where (!s.IsBeingGenerated && s.InUseCount <= 0)
-                        orderby s.Timestamp select s
-                    ).FirstOrDefault();
-
-                    if (dest == null) {
-                        // Console.WriteLine("Retry lock");
-                        UnlockedEvent.WaitOne(2);
-                    } else
-                        break;
-                }
-
-                if (dest == null)
-                    throw new Exception("Failed to lock any slices for write");
-
-                dest.Lock("write");
-                lock (dest) {
-                    dest.IsValid = false;
-                    dest.IsBeingGenerated = true;
-                    dest.Timestamp = Time.Ticks;
+        private BufferSet CreateBufferSet (GraphicsDevice device) {
+            lock (Engine.FreeBufferList) {
+                if (Engine.FreeBufferList.Count > 0) {
+                    var result = Engine.FreeBufferList[0];
+                    Engine.FreeBufferList.RemoveAt(0);
+                    return result;
                 }
             }
 
-            return dest;
+            lock (Engine.Coordinator.CreateResourceLock) {
+                var result = new BufferSet(Engine.Configuration.ChunkSize, Configuration, device);
+                AllBuffers.Add(result);
+                return result;
+            }
         }
-
-        private volatile int NextChunkId = 1;
         
-        private Slice.Chunk CreateChunk (GraphicsDevice device, int id, List<Slice.Chunk> clearList) {
-            lock (Engine.FreeList) {
-                if (Engine.FreeList.Count > 0) {
-                    var result = Engine.FreeList[0];
-                    Engine.FreeList.RemoveAt(0);
+        private Chunk CreateChunk (GraphicsDevice device, int id, List<Chunk> clearList) {
+            lock (Engine.FreeChunkList) {
+                if (Engine.FreeChunkList.Count > 0) {
+                    var result = Engine.FreeChunkList[0];
+                    Engine.FreeChunkList.RemoveAt(0);
                     result.ID = id;
                     if (clearList != null) {
                         result.NeedsClear = true;
@@ -382,8 +297,11 @@ namespace Squared.Illuminant.Particles {
                 }
             }
 
-            lock (Engine.Coordinator.CreateResourceLock)
-                return new Slice.Chunk(id, Engine.Configuration.ChunkSize, Configuration, device);
+            lock (Engine.Coordinator.CreateResourceLock) {
+                var result = new Chunk(id, Engine.Configuration.ChunkSize, Configuration, device);
+                result.Current = CreateBufferSet(device);
+                return result;
+            }
         }
 
         // Make sure to lock the slice first.
@@ -402,11 +320,12 @@ namespace Squared.Illuminant.Particles {
 
             for (int i = 0; i < numToSpawn; i++) {
                 var c = CreateChunk(device, Interlocked.Increment(ref NextChunkId), null);
-                Console.WriteLine("Creating new chunk " + c.ID);
+                // Console.WriteLine("Creating new chunk " + c.ID);
                 var offset = i * mc;
-                var pos = new BufferInitializer<TElement> { Buffer = c.PositionAndLife, Initializer = positionInitializer, Offset = offset };
-                var vel = new BufferInitializer<TElement> { Buffer = c.Velocity, Initializer = velocityInitializer, Offset = offset };
-                var attr = new BufferInitializer<TElement> { Buffer = c.Attributes, Initializer = attributeInitializer, Offset = offset };
+                var curr = c.Current;
+                var pos = new BufferInitializer<TElement> { Buffer = curr.PositionAndLife, Initializer = positionInitializer, Offset = offset };
+                var vel = new BufferInitializer<TElement> { Buffer = curr.Velocity, Initializer = velocityInitializer, Offset = offset };
+                var attr = new BufferInitializer<TElement> { Buffer = curr.Attributes, Initializer = attributeInitializer, Offset = offset };
                 var job = new ChunkInitializer<TElement> {
                     System = this,
                     Position = pos,
@@ -444,26 +363,12 @@ namespace Squared.Illuminant.Particles {
 
         private void UpdatePass (
             IBatchContainer container, int layer, Material m,
-            Slice source, Slice a, Slice b,
-            ref Slice passSource, ref Slice passDest, 
             long startedWhen, Transforms.Spawner spawner,
             Transforms.ParameterSetter setParameters,
             bool clearFirst, double deltaTimeSeconds,
-            List<Slice.Chunk> clearList, bool runQuery
+            List<Chunk> clearList, bool runQuery
         ) {
-            var _source = passSource;
-            var _dest = passDest;
             var device = container.RenderManager.DeviceManager.Device;
-
-            foreach (var chunk in _source) {
-                var destChunk = _dest.GetByID(chunk.ID);
-                if (destChunk == null) {
-                    lock (container.RenderManager.CreateResourceLock)
-                        destChunk = CreateChunk(device, chunk.ID, clearList);
-
-                    _dest.Add(destChunk);
-                }
-            }
 
             int? spawnId = null;
             int spawnCount = 0;
@@ -490,8 +395,8 @@ namespace Squared.Illuminant.Particles {
                     spawnId = Interlocked.Increment(ref NextChunkId);
                     SpawnStates[spawnId.Value] = new SpawnState { Offset = 0, Free = ChunkMaximumCount };
                     lock (container.RenderManager.CreateResourceLock) {
-                        _source.Add(CreateChunk(device, spawnId.Value, clearList));
-                        _dest.Add(CreateChunk(device, spawnId.Value, clearList));
+                        // FIXME
+                        throw new NotImplementedException();
                     }
                 }
             }
@@ -509,6 +414,8 @@ namespace Squared.Illuminant.Particles {
                         dm.Device.Textures[i] = null;
                 }
             )) {
+                RotateBuffers();
+
                 RenderTrace.Marker(batch, -9999, "Particle transform {0}", m.Effect.CurrentTechnique.Name);
 
                 int i = 0;
@@ -516,28 +423,24 @@ namespace Squared.Illuminant.Particles {
                 // HACK: XNA defers framebuffer clears, which means a clear can get pushed from outside the occlusion query into the query.
                 // We fix this by forcing a clear to happen before we perform any chunk passes (by doing a separate set of clear-only passes).
                 if (clearFirst) {
-                    foreach (var sourceChunk in _source) {
-                        var destChunk = _dest.GetByID(sourceChunk.ID);
-
-                        using (var group = BatchGroup.ForRenderTarget(batch, i++, destChunk.PositionAndLife))
+                    foreach (var chunk in Chunks) {
+                        using (var group = BatchGroup.ForRenderTarget(batch, i++, chunk.Current.PositionAndLife))
                             ClearBatch.AddNew(group, 0, Engine.Materials.Clear, Color.Transparent);
                     }
                 }
 
-                foreach (var sourceChunk in _source) {
-                    var destChunk = _dest.GetByID(sourceChunk.ID);
-
-                    var li = GetLivenessInfo(sourceChunk.ID);
+                foreach (var chunk in Chunks) {
+                    var li = GetLivenessInfo(chunk.ID);
                     UpdateChunkLivenessQuery(li);
 
                     if (runQuery) {
                         li.LastQueryStart = Time.Ticks;
-                        li.PendingQuery = destChunk.Query;
+                        li.PendingQuery = chunk.Query;
                     }
 
                     var chunkMaterial = m;
                     if (spawner != null) {
-                        if (sourceChunk.ID != spawnId) {
+                        if (chunk.ID != spawnId) {
                             chunkMaterial = Engine.ParticleMaterials.NullTransform;
                         } else {
                             chunkMaterial = m;
@@ -562,56 +465,47 @@ namespace Squared.Illuminant.Particles {
 
                     ChunkUpdatePass(
                         batch, i++,
-                        chunkMaterial, sourceChunk, destChunk,
+                        chunkMaterial, chunk,
                         setParameters, 
                         runQuery ? li : null,
                         clearFirst, deltaTimeSeconds
                     );
-
-                    Console.WriteLine("{0} -> {1}", sourceChunk.ID, destChunk.ID);
                 }
-            }
-
-            if (_source == source) {
-                if (_dest == a)
-                    passDest = b;
-                else if (_dest == b)
-                    passDest = a;
-                else
-                    throw new Exception();
-
-                passSource = _dest;
-            } else {
-                passDest = _source;
-                passSource = _dest;
             }
         }
 
         private void ChunkUpdatePass (
             IBatchContainer container, int layer, Material m,
-            Slice.Chunk source, Slice.Chunk dest,
-            Transforms.ParameterSetter setParameters,
+            Chunk chunk, Transforms.ParameterSetter setParameters,
             LivenessInfo li, bool clearFirst, double deltaTimeSeconds
         ) {
-            // Console.WriteLine("{0} -> {1}", passSource.Index, passDest.Index);
+            if (DeadChunkIDs.Contains(chunk.ID))
+                return;
+
+            var prev = chunk.Previous;
+            var curr = chunk.Current;
+
             var e = m.Effect;
             var p = e.Parameters;
             using (var batch = NativeBatch.New(
                 container, layer, m,
                 (dm, _) => {
-                    dm.Device.SetRenderTargets(dest.Bindings);
+                    dm.Device.SetRenderTargets(curr.Bindings);
                     dm.Device.Viewport = new Viewport(0, 0, Engine.Configuration.ChunkSize, Engine.Configuration.ChunkSize);
+
+                    // HACK
+                    dm.Device.Clear(Color.Transparent);
 
                     if (setParameters != null)
                         setParameters(Engine, p, CurrentFrameIndex);
 
-                    if (source != null) {
-                        p["PositionTexture"].SetValue(source.PositionAndLife);
-                        p["VelocityTexture"].SetValue(source.Velocity);
+                    if (prev != null) {
+                        p["PositionTexture"].SetValue(prev.PositionAndLife);
+                        p["VelocityTexture"].SetValue(prev.Velocity);
 
                         var at = p["AttributeTexture"];
                         if (at != null)
-                            at.SetValue(source.Attributes);
+                            at.SetValue(prev.Attributes);
                     }
 
                     var dft = p["DistanceFieldTexture"];
@@ -720,12 +614,12 @@ namespace Squared.Illuminant.Particles {
 
                 target.IsQueryRunning = false;
 
-                if ((target.LastQueryStart <= LastClearTimestamp) || target.WasCleared) {
+                if (target.LastQueryStart <= LastClearTimestamp) {
                     target.Count = null;
                     target.DeadFrameCount = 0;
                 } else {
                     target.Count = target.PendingQuery.PixelCount;
-                    Console.WriteLine("Chunk " + target.ID + " " + target.Count);
+                    // Console.WriteLine("Chunk " + target.ID + " " + target.Count);
 
                     if (target.Count > 0)
                         target.DeadFrameCount = 0;
@@ -753,13 +647,7 @@ namespace Squared.Illuminant.Particles {
             }
 
             foreach (var li in ChunksToReap) {
-                lock (Slices)
-                foreach (var s in Slices) {
-                    var chunk = s.RemoveByID(li.ID);
-                    if (chunk != null)
-                        Reap(chunk);
-                }
-
+                DeadChunkIDs.Add(li.ID);
                 SpawnStates.Remove(li.ID);
                 LivenessInfos.Remove(li.ID);
             }
@@ -767,14 +655,24 @@ namespace Squared.Illuminant.Particles {
             ChunksToReap.Clear();
         }
 
-        private void Reap (Slice.Chunk chunk) {
-            lock (Engine.FreeList) {
+        private void Reap (Chunk chunk) {
+            lock (Engine.FreeChunkList) {
+                Chunks.Remove(chunk);
                 ClearList.Remove(chunk);
-
-                if (Engine.FreeList.Count < Engine.Configuration.FreeListCapacity)
-                    Engine.FreeList.Add(chunk);
+                /*
+                if (Engine.FreeChunkList.Count < Engine.Configuration.FreeListCapacity)
+                    Engine.FreeChunkList.Add(chunk);
                 else
+                */
                     Engine.Coordinator.DisposeResource(chunk);
+
+                var bufs = new[] { chunk.Previous, chunk.Current };
+                foreach (var b in bufs) {
+                    PrePreviousPassBuffers.Remove(b);
+                    PreviousPassBuffers.Remove(b);
+                    CurrentPassBuffers.Remove(b);
+                    DiscardedBuffers.Add(b);
+                }
             }
         }
 
@@ -783,7 +681,49 @@ namespace Squared.Illuminant.Particles {
             Engine.ParticleMaterials.MaterialSet.TrySetBoundUniform(m, "System", ref psu);
         }
 
-        private readonly List<Slice.Chunk> ClearList = new List<Slice.Chunk>();
+        private BufferSet AcquireOrCreateBufferSet () {
+            foreach (var b in AllBuffers) {
+                if (
+                    CurrentPassBuffers.Contains(b) ||
+                    PreviousPassBuffers.Contains(b) ||
+                    PrePreviousPassBuffers.Contains(b) ||
+                    DiscardedBuffers.Contains(b)
+                )
+                    continue;
+
+                return b;
+            }
+
+            return CreateBufferSet(Engine.Coordinator.Device);
+        }
+
+        private void DiscardBuffers () {
+            PrePreviousPassBuffers.Clear();
+            PreviousPassBuffers.Clear();
+            CurrentPassBuffers.Clear();
+
+            foreach (var chunk in Chunks)
+                chunk.Previous = chunk.Current = null;
+        }
+
+        private void RotateBuffers () {
+            PrePreviousPassBuffers.Clear();
+            foreach (var b in PreviousPassBuffers)
+                PrePreviousPassBuffers.Add(b);
+
+            PreviousPassBuffers.Clear();
+            foreach (var b in CurrentPassBuffers)
+                PreviousPassBuffers.Add(b);
+
+            CurrentPassBuffers.Clear();
+
+            foreach (var chunk in Chunks) {
+                var prev = chunk.Previous;
+                chunk.Previous = chunk.Current;
+                chunk.Current = AcquireOrCreateBufferSet();
+                CurrentPassBuffers.Add(chunk.Current);
+            }
+        }
 
         public void Update (IBatchContainer container, int layer, float? deltaTimeSeconds = null) {
             var lastUpdateTimeSeconds = LastUpdateTimeSeconds;
@@ -801,9 +741,6 @@ namespace Squared.Illuminant.Particles {
 
             var startedWhen = Time.Ticks;
 
-            Slice source, a, b;
-            Slice passSource, passDest;
-
             if (LastResetCount != Engine.ResetCount) {
                 if (OnDeviceReset != null)
                     OnDeviceReset(this);
@@ -812,25 +749,6 @@ namespace Squared.Illuminant.Particles {
 
             lock (LivenessInfos)
                 UpdateLivenessAndReapDeadChunks();
-
-            lock (Slices) {
-                source = (
-                    from s in Slices where s.IsValid
-                    orderby s.Timestamp descending select s
-                ).FirstOrDefault();
-
-                if (source == null) {
-                    // A clear occurred
-                    return;
-                }
-
-                source.Lock("update");
-            }
-            
-            a = GrabWriteSlice();
-            b = GrabWriteSlice();
-            passSource = source;
-            passDest = a;
 
             var pm = Engine.ParticleMaterials;
 
@@ -843,31 +761,25 @@ namespace Squared.Illuminant.Particles {
 
                 var clears = BatchGroup.New(container, -1);
 
-                // FIXME: Is this the right place?
-                lock (NewChunks) {
-                    foreach (var nc in NewChunks) {
-                        SpawnStates[nc.ID] = new SpawnState { Free = 0, Offset = ChunkMaximumCount };
-                        source.Add(nc);
-                    }
-
-                    NewChunks.Clear();
-                }
-
                 if (IsClearPending) {
                     IsClearPending = false;
-                    // We need to forcibly erase all the position+life data in the system because a clear was requested
-                    foreach (var s in Slices) {
-                        foreach (var c in s) {
-                            using (var g = BatchGroup.ForRenderTarget(clears, 0, c.PositionAndLife))
-                                ClearBatch.AddNew(g, 0, Engine.Materials.Clear, clearColor: Color.Transparent);
-                        }
-                    }
+                    DiscardBuffers();
                 }
 
                 int numActive = 0;
                 foreach (var t in Transforms) {
                     if (t.IsActive)
                         numActive++;
+                }
+
+                lock (NewChunks) {
+                    foreach (var nc in NewChunks) {
+                        SpawnStates[nc.ID] = new SpawnState { Free = 0, Offset = ChunkMaximumCount };
+                        CurrentPassBuffers.Add(nc.Current);
+                        Chunks.Add(nc);
+                    }
+
+                    NewChunks.Clear();
                 }
 
                 foreach (var t in Transforms) {
@@ -880,7 +792,6 @@ namespace Squared.Illuminant.Particles {
 
                     UpdatePass(
                         group, i++, it.GetMaterial(Engine.ParticleMaterials),
-                        source, a, b, ref passSource, ref passDest, 
                         startedWhen, spawner, it.SetParameters, 
                         false, actualDeltaTimeSeconds, ClearList, false
                     );
@@ -892,7 +803,6 @@ namespace Squared.Illuminant.Particles {
 
                     UpdatePass(
                         group, i++, pm.UpdateWithDistanceField,
-                        source, a, b, ref passSource, ref passDest,
                         startedWhen, null,
                         (Engine, p, frameIndex) => {
                             var dfu = new Uniforms.DistanceField(Configuration.DistanceField, Configuration.DistanceFieldMaximumZ.Value);
@@ -902,7 +812,6 @@ namespace Squared.Illuminant.Particles {
                 } else {
                     UpdatePass(
                         group, i++, pm.UpdatePositions,
-                        source, a, b, ref passSource, ref passDest,
                         startedWhen, null,
                         null, true, actualDeltaTimeSeconds, ClearList, true
                     );
@@ -911,53 +820,55 @@ namespace Squared.Illuminant.Particles {
                 // Clear any chunks that were recovered from the freelist this frame, because
                 //  they probably have garbage data in them
                 foreach (var c in ClearList) {
-                    using (var g = BatchGroup.ForRenderTarget(clears, 0, c.PositionAndLife))
+                    using (var g = BatchGroup.ForRenderTarget(clears, 0, c.Current.PositionAndLife))
                         ClearBatch.AddNew(g, 0, Engine.Materials.Clear, clearColor: Color.Transparent);
                 }
                 ClearList.Clear();
 
                 clears.Dispose();
 
+                for (int j = Chunks.Count - 1; j >= 0; j--) {
+                    var c = Chunks[j];
+                    if (!DeadChunkIDs.Contains(c.ID))
+                        continue;
+
+                    Chunks.RemoveAt(j);
+                    Reap(c);
+                }
                 // ComputeLiveness(group, i++, passSource);
+
+                DiscardedBuffers.Clear();
             }
 
             var ts = Time.Ticks;
 
             // TODO: Do this immediately after issuing the batch instead?
             Engine.Coordinator.AfterPresent(() => {
-                lock (passSource) {
-                    // Console.WriteLine("Validate {0}", passSource.Index);
-                    passSource.Timestamp = ts;
-                    passSource.IsValid = true;
-                    passSource.IsBeingGenerated = false;
-                }
-
-                a.IsBeingGenerated = false;
-                b.IsBeingGenerated = false;
-
-                source.Unlock();
-                a.Unlock();
-                b.Unlock();
-
                 UnlockedEvent.Set();
             });
         }
 
         private void RenderChunk (
-            BatchGroup group, Slice.Chunk chunk,
-            Material m
+            BatchGroup group, Chunk chunk, Material m
         ) {
+            if (DeadChunkIDs.Contains(chunk.ID))
+                return;
+
             // TODO: Actual occupied count?
             var quadCount = ChunkMaximumCount;
+            var curr = chunk.Current;
 
-            Console.WriteLine("Draw {0}", chunk.ID);
+            if (curr == null)
+                return;
+
+            // Console.WriteLine("Draw {0}", chunk.ID);
 
             using (var batch = NativeBatch.New(
                 group, chunk.ID, m, (dm, _) => {
                     var p = m.Effect.Parameters;
-                    p["PositionTexture"].SetValue(chunk.PositionAndLife);
-                    p["VelocityTexture"].SetValue(chunk.Velocity);
-                    p["AttributeTexture"].SetValue(chunk.Attributes);
+                    p["PositionTexture"].SetValue(curr.PositionAndLife);
+                    p["VelocityTexture"].SetValue(curr.Velocity);
+                    p["AttributeTexture"].SetValue(curr.Attributes);
                     m.Flush();
                 }
             )) {
@@ -979,8 +890,6 @@ namespace Squared.Illuminant.Particles {
             BlendState blendState = null,
             float? overrideStippleFactor = null
         ) {
-            Slice source;
-
             var startedWhen = Time.Ticks;
 
             var appearance = Configuration.Appearance;
@@ -989,19 +898,6 @@ namespace Squared.Illuminant.Particles {
                 appearance.Texture.EnsureInitialized(Engine.Configuration.TextureLoader);
             if (lifeRamp != null)
                 lifeRamp.EnsureInitialized(Engine.Configuration.FPTextureLoader);
-
-            lock (Slices) {
-                source = (
-                    from s in Slices where s.IsValid
-                    orderby s.Timestamp descending select s
-                ).FirstOrDefault();
-
-                // A clear occurred
-                if (source == null)
-                    return;
-
-                source.Lock("render");
-            }
 
             if (material == null) {
                 if ((appearance.Texture != null) && (appearance.Texture.Instance != null)) {
@@ -1091,22 +987,22 @@ namespace Squared.Illuminant.Particles {
                         dm.Device.Textures[i] = null;
                 }
             )) {
-                RenderTrace.Marker(group, -9999, "Rasterize {0} particle chunks", source.Count);
+                RenderTrace.Marker(group, -9999, "Rasterize {0} particle chunks", Chunks.Count);
 
-                foreach (var chunk in source)
+                foreach (var chunk in Chunks)
                     RenderChunk(group, chunk, m);
             }
 
             // TODO: Do this immediately after issuing the batch instead?
             Engine.Coordinator.AfterPresent(() => {
-                source.Unlock();
                 UnlockedEvent.Set();
             });
         }
 
         public void Dispose () {
-            foreach (var slice in Slices)
-                Engine.Coordinator.DisposeResource(slice);
+            // FIXME: Release buffers
+            foreach (var chunk in Chunks)
+                Engine.Coordinator.DisposeResource(chunk);
             LivenessInfos.Clear();
         }
     }

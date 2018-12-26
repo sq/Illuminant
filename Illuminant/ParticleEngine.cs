@@ -11,7 +11,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Squared.Illuminant.Util;
 using Squared.Render;
 using Squared.Util;
-using Chunk = Squared.Illuminant.Particles.ParticleSystem.Slice.Chunk;
+using Chunk = Squared.Illuminant.Particles.ParticleSystem.Chunk;
 
 namespace Squared.Illuminant.Particles {
     public partial class ParticleEngine : IDisposable {
@@ -36,7 +36,9 @@ namespace Squared.Illuminant.Particles {
                                         RandomnessTextureHeight = 381;
         internal          Texture2D     RandomnessTexture;
 
-        internal readonly List<Chunk> FreeList = 
+        internal readonly List<ParticleSystem.BufferSet> FreeBufferList
+            = new List<ParticleSystem.BufferSet>();
+        internal readonly List<Chunk> FreeChunkList = 
             new List<Chunk>();
 
         private readonly EmbeddedEffectProvider Effects;
@@ -182,10 +184,10 @@ namespace Squared.Illuminant.Particles {
 
             Effects.Dispose();
 
-            lock (FreeList) {
-                foreach (var c in FreeList)
+            lock (FreeChunkList) {
+                foreach (var c in FreeChunkList)
                     Coordinator.DisposeResource(c);
-                FreeList.Clear();
+                FreeChunkList.Clear();
             }
 
             Coordinator.DisposeResource(TriIndexBuffer);
