@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Graphics.PackedVector;
 using Squared.Game;
 using Squared.Illuminant.Util;
 using Squared.Render;
@@ -530,6 +531,33 @@ namespace Squared.Illuminant.Particles {
             Action<Vector4[], int> positionInitializer,
             Action<Vector4[], int> velocityInitializer,
             Action<Vector4[], int> attributeInitializer,
+            bool parallel = true
+        ) {
+            var result = InitializeNewChunks(
+                particleCount,
+                Engine.Coordinator.Device,
+                parallel,
+                positionInitializer,
+                velocityInitializer,
+                attributeInitializer
+            );
+            return result;
+        }
+
+        public int Spawn (
+            int particleCount,
+            Action<HalfVector4[], int> positionInitializer,
+            Action<HalfVector4[], int> velocityInitializer,
+            bool parallel = true
+        ) {
+            return Spawn(particleCount, positionInitializer, velocityInitializer, null, parallel);
+        }
+
+        public int Spawn (
+            int particleCount,
+            Action<HalfVector4[], int> positionInitializer,
+            Action<HalfVector4[], int> velocityInitializer,
+            Action<HalfVector4[], int> attributeInitializer,
             bool parallel = true
         ) {
             var result = InitializeNewChunks(

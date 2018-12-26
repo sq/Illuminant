@@ -264,6 +264,7 @@ namespace Squared.Illuminant.Particles {
 
         /// <summary>
         /// How long a buffer must remain unused before getting used again.
+        /// Lower values reduce memory usage but can cause performance or correctness issues.
         /// </summary>
         public int RecycleInterval = 2;
 
