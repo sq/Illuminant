@@ -1,18 +1,26 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Squared.Render;
 using Squared.Render.Convenience;
+using Squared.Render.Evil;
 using Squared.Render.Tracing;
 
 namespace Squared.Illuminant {
     public sealed partial class LightingRenderer : IDisposable, INameableGraphicsObject {
         private void DefineMaterial (Material m) {
             Materials.Add(m);
+        }
+
+        private Effect LoadEffect (ContentManager content, string name) {
+            return content.Load<Effect>(name);
         }
 
         private void LoadMaterials (ContentManager content) {
@@ -28,103 +36,103 @@ namespace Squared.Illuminant {
                 Action<DeviceManager>[] dEnd = null;
 
                 DefineMaterial(IlluminantMaterials.SphereLight = new Material(
-                    content.Load<Effect>("SphereLight"), "SphereLight", dBegin, dEnd
+                    LoadEffect(content, "SphereLight"), "SphereLight", dBegin, dEnd
                 ));
 
                 DefineMaterial(IlluminantMaterials.DirectionalLight = new Material(
-                    content.Load<Effect>("DirectionalLight"), "DirectionalLight", dBegin, dEnd
+                    LoadEffect(content, "DirectionalLight"), "DirectionalLight", dBegin, dEnd
                 ));
 
                 DefineMaterial(IlluminantMaterials.ParticleSystemSphereLight = new Material(
-                    content.Load<Effect>("ParticleLight"), "ParticleLight", dBegin, dEnd
+                    LoadEffect(content, "ParticleLight"), "ParticleLight", dBegin, dEnd
                 ));
 
                 DefineMaterial(IlluminantMaterials.LineLight = new Material(
-                    content.Load<Effect>("LineLight"), "LineLight", dBegin, dEnd
+                    LoadEffect(content, "LineLight"), "LineLight", dBegin, dEnd
                 ));
 
                 DefineMaterial(IlluminantMaterials.SphereLightWithDistanceRamp = new Material(
-                    content.Load<Effect>("SphereLight"), "SphereLightWithDistanceRamp", dBegin, dEnd
+                    LoadEffect(content, "SphereLight"), "SphereLightWithDistanceRamp", dBegin, dEnd
                 ));
 
                 DefineMaterial(IlluminantMaterials.SphereLightWithOpacityRamp = new Material(
-                    content.Load<Effect>("SphereLight"), "SphereLightWithOpacityRamp", dBegin, dEnd
+                    LoadEffect(content, "SphereLight"), "SphereLightWithOpacityRamp", dBegin, dEnd
                 ));
 
                 DefineMaterial(IlluminantMaterials.DirectionalLightWithRamp = new Material(
-                    content.Load<Effect>("DirectionalLight"), "DirectionalLightWithRamp", dBegin, dEnd
+                    LoadEffect(content, "DirectionalLight"), "DirectionalLightWithRamp", dBegin, dEnd
                 ));
 
                 DefineMaterial(IlluminantMaterials.LineLightWithDistanceRamp = new Material(
-                    content.Load<Effect>("LineLight"), "LineLightWithDistanceRamp", dBegin, dEnd
+                    LoadEffect(content, "LineLight"), "LineLightWithDistanceRamp", dBegin, dEnd
                 ));
 
                 DefineMaterial(IlluminantMaterials.LineLightWithOpacityRamp = new Material(
-                    content.Load<Effect>("LineLight"), "LineLightWithOpacityRamp", dBegin, dEnd
+                    LoadEffect(content, "LineLight"), "LineLightWithOpacityRamp", dBegin, dEnd
                 ));
 
                 DefineMaterial(IlluminantMaterials.SphereLightProbe = new Material(
-                    content.Load<Effect>("SphereLightProbe"), "SphereLightProbe", dBegin, dEnd
+                    LoadEffect(content, "SphereLightProbe"), "SphereLightProbe", dBegin, dEnd
                 ));
 
                 DefineMaterial(IlluminantMaterials.SphereLightProbeWithDistanceRamp = new Material(
-                    content.Load<Effect>("SphereLightProbe"), "SphereLightProbeWithDistanceRamp", dBegin, dEnd
+                    LoadEffect(content, "SphereLightProbe"), "SphereLightProbeWithDistanceRamp", dBegin, dEnd
                 ));
 
                 DefineMaterial(IlluminantMaterials.SphereLightProbeWithOpacityRamp = new Material(
-                    content.Load<Effect>("SphereLightProbe"), "SphereLightProbeWithOpacityRamp", dBegin, dEnd
+                    LoadEffect(content, "SphereLightProbe"), "SphereLightProbeWithOpacityRamp", dBegin, dEnd
                 ));
 
                 DefineMaterial(IlluminantMaterials.DirectionalLightProbe = new Material(
-                    content.Load<Effect>("DirectionalLight"), "DirectionalLightProbe", dBegin, dEnd
+                    LoadEffect(content, "DirectionalLight"), "DirectionalLightProbe", dBegin, dEnd
                 ));
 
                 DefineMaterial(IlluminantMaterials.DirectionalLightProbeWithRamp = new Material(
-                    content.Load<Effect>("DirectionalLight"), "DirectionalLightProbeWithRamp", dBegin, dEnd
+                    LoadEffect(content, "DirectionalLight"), "DirectionalLightProbeWithRamp", dBegin, dEnd
                 ));
 
                 DefineMaterial(IlluminantMaterials.LineLightProbe = new Material(
-                    content.Load<Effect>("LineLightProbe"), "LineLightProbe", dBegin, dEnd
+                    LoadEffect(content, "LineLightProbe"), "LineLightProbe", dBegin, dEnd
                 ));
 
                 DefineMaterial(IlluminantMaterials.LineLightProbeWithDistanceRamp = new Material(
-                    content.Load<Effect>("LineLightProbe"), "LineLightProbeWithDistanceRamp", dBegin, dEnd
+                    LoadEffect(content, "LineLightProbe"), "LineLightProbeWithDistanceRamp", dBegin, dEnd
                 ));
 
                 DefineMaterial(IlluminantMaterials.LineLightProbeWithOpacityRamp = new Material(
-                    content.Load<Effect>("LineLightProbe"), "LineLightProbeWithOpacityRamp", dBegin, dEnd
+                    LoadEffect(content, "LineLightProbe"), "LineLightProbeWithOpacityRamp", dBegin, dEnd
                 ));
 
                 DefineMaterial(IlluminantMaterials.GIProbeSelector = new Material(
-                    content.Load<Effect>("GIProbe"), "ProbeSelector", dBegin, dEnd
+                    LoadEffect(content, "GIProbe"), "ProbeSelector", dBegin, dEnd
                 ));
 
                 DefineMaterial(IlluminantMaterials.GIProbeSHGenerator = new Material(
-                    content.Load<Effect>("GIProbe"), "SHGenerator", dBegin, dEnd
+                    LoadEffect(content, "GIProbe"), "SHGenerator", dBegin, dEnd
                 ));
 
                 DefineMaterial(IlluminantMaterials.VisualizeGI = new Material(
-                    content.Load<Effect>("GI"), "VisualizeGI", dBegin, dEnd
+                    LoadEffect(content, "GI"), "VisualizeGI", dBegin, dEnd
                 ));
 
                 DefineMaterial(IlluminantMaterials.RenderGI = new Material(
-                    content.Load<Effect>("GI"), "RenderGI", dBegin, dEnd
+                    LoadEffect(content, "GI"), "RenderGI", dBegin, dEnd
                 ));
 
                 DefineMaterial(IlluminantMaterials.RenderLightProbesFromGI = new Material(
-                    content.Load<Effect>("GI"), "RenderLightProbesFromGI", dBegin, dEnd
+                    LoadEffect(content, "GI"), "RenderLightProbesFromGI", dBegin, dEnd
                 ));
 
                 DefineMaterial(IlluminantMaterials.DistanceToPolygon = 
                     new Material(
-                        content.Load<Effect>("DistanceField"), "DistanceToPolygon",
+                        LoadEffect(content, "DistanceField"), "DistanceToPolygon",
                         new[] { MaterialUtil.MakeDelegate(RenderStates.MaxBlendValue) }
                     )
                 );
 
                 DefineMaterial(IlluminantMaterials.ClearDistanceFieldSlice =
                     new Material(
-                        content.Load<Effect>("ClearDistanceField"), "Clear",
+                        LoadEffect(content, "ClearDistanceField"), "Clear",
                         new[] { MaterialUtil.MakeDelegate(BlendState.Opaque) }
                     )
                 );
@@ -139,103 +147,103 @@ namespace Squared.Illuminant {
                     DefineMaterial(
                         IlluminantMaterials.DistanceFunctionTypes[(int)i] = 
                         new Material(
-                            content.Load<Effect>("DistanceFunction"), name,
+                            LoadEffect(content, "DistanceFunction"), name,
                             new[] { MaterialUtil.MakeDelegate(RenderStates.MaxBlendValue) }
                         )
                     );
                 }
 
                 DefineMaterial(IlluminantMaterials.GroundPlane = 
-                    new Squared.Render.Material(content.Load<Effect>("GBuffer"), "GroundPlane"));
+                    new Squared.Render.Material(LoadEffect(content, "GBuffer"), "GroundPlane"));
 
                 DefineMaterial(IlluminantMaterials.HeightVolume = 
-                    new Squared.Render.Material(content.Load<Effect>("GBuffer"), "HeightVolume"));
+                    new Squared.Render.Material(LoadEffect(content, "GBuffer"), "HeightVolume"));
 
                 DefineMaterial(IlluminantMaterials.HeightVolumeFace = 
-                    new Squared.Render.Material(content.Load<Effect>("GBuffer"), "HeightVolumeFace"));
+                    new Squared.Render.Material(LoadEffect(content, "GBuffer"), "HeightVolumeFace"));
 
                 DefineMaterial(IlluminantMaterials.MaskBillboard = 
-                    new Squared.Render.Material(content.Load<Effect>("GBufferBitmap"), "MaskBillboard"));
+                    new Squared.Render.Material(LoadEffect(content, "GBufferBitmap"), "MaskBillboard"));
 
                 DefineMaterial(IlluminantMaterials.GDataBillboard = 
-                    new Squared.Render.Material(content.Load<Effect>("GBufferBitmap"), "GDataBillboard"));
+                    new Squared.Render.Material(LoadEffect(content, "GBufferBitmap"), "GDataBillboard"));
 
                 DefineMaterial(IlluminantMaterials.ScreenSpaceLightingResolve = 
-                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "ScreenSpaceLightingResolve"));
+                    new Squared.Render.Material(LoadEffect(content, "Resolve"), "ScreenSpaceLightingResolve"));
 
                 DefineMaterial(IlluminantMaterials.ScreenSpaceGammaCompressedLightingResolve = 
-                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "ScreenSpaceGammaCompressedLightingResolve"));
+                    new Squared.Render.Material(LoadEffect(content, "Resolve"), "ScreenSpaceGammaCompressedLightingResolve"));
 
                 DefineMaterial(IlluminantMaterials.ScreenSpaceToneMappedLightingResolve = 
-                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "ScreenSpaceToneMappedLightingResolve"));
+                    new Squared.Render.Material(LoadEffect(content, "Resolve"), "ScreenSpaceToneMappedLightingResolve"));
 
                 DefineMaterial(IlluminantMaterials.ScreenSpaceLightingResolveWithAlbedo = 
-                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "ScreenSpaceLightingResolveWithAlbedo"));
+                    new Squared.Render.Material(LoadEffect(content, "Resolve"), "ScreenSpaceLightingResolveWithAlbedo"));
 
                 DefineMaterial(IlluminantMaterials.ScreenSpaceGammaCompressedLightingResolveWithAlbedo = 
-                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "ScreenSpaceGammaCompressedLightingResolveWithAlbedo"));
+                    new Squared.Render.Material(LoadEffect(content, "Resolve"), "ScreenSpaceGammaCompressedLightingResolveWithAlbedo"));
 
                 DefineMaterial(IlluminantMaterials.ScreenSpaceToneMappedLightingResolveWithAlbedo = 
-                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "ScreenSpaceToneMappedLightingResolveWithAlbedo"));
+                    new Squared.Render.Material(LoadEffect(content, "Resolve"), "ScreenSpaceToneMappedLightingResolveWithAlbedo"));
 
                 DefineMaterial(IlluminantMaterials.ScreenSpaceLUTBlendedLightingResolveWithAlbedo = 
-                    new Squared.Render.Material(content.Load<Effect>("LUTResolve"), "ScreenSpaceLUTBlendedLightingResolveWithAlbedo"));
+                    new Squared.Render.Material(LoadEffect(content, "LUTResolve"), "ScreenSpaceLUTBlendedLightingResolveWithAlbedo"));
 
                 DefineMaterial(IlluminantMaterials.WorldSpaceLightingResolve = 
-                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "WorldSpaceLightingResolve"));
+                    new Squared.Render.Material(LoadEffect(content, "Resolve"), "WorldSpaceLightingResolve"));
 
                 DefineMaterial(IlluminantMaterials.WorldSpaceGammaCompressedLightingResolve = 
-                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "WorldSpaceGammaCompressedLightingResolve"));
+                    new Squared.Render.Material(LoadEffect(content, "Resolve"), "WorldSpaceGammaCompressedLightingResolve"));
 
                 DefineMaterial(IlluminantMaterials.WorldSpaceToneMappedLightingResolve = 
-                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "WorldSpaceToneMappedLightingResolve"));
+                    new Squared.Render.Material(LoadEffect(content, "Resolve"), "WorldSpaceToneMappedLightingResolve"));
 
                 DefineMaterial(IlluminantMaterials.WorldSpaceLightingResolveWithAlbedo = 
-                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "WorldSpaceLightingResolveWithAlbedo"));
+                    new Squared.Render.Material(LoadEffect(content, "Resolve"), "WorldSpaceLightingResolveWithAlbedo"));
 
                 DefineMaterial(IlluminantMaterials.WorldSpaceGammaCompressedLightingResolveWithAlbedo = 
-                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "WorldSpaceGammaCompressedLightingResolveWithAlbedo"));
+                    new Squared.Render.Material(LoadEffect(content, "Resolve"), "WorldSpaceGammaCompressedLightingResolveWithAlbedo"));
 
                 DefineMaterial(IlluminantMaterials.WorldSpaceToneMappedLightingResolveWithAlbedo = 
-                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "WorldSpaceToneMappedLightingResolveWithAlbedo"));
+                    new Squared.Render.Material(LoadEffect(content, "Resolve"), "WorldSpaceToneMappedLightingResolveWithAlbedo"));
 
                 DefineMaterial(IlluminantMaterials.WorldSpaceLUTBlendedLightingResolveWithAlbedo = 
-                    new Squared.Render.Material(content.Load<Effect>("LUTResolve"), "WorldSpaceLUTBlendedLightingResolveWithAlbedo"));
+                    new Squared.Render.Material(LoadEffect(content, "LUTResolve"), "WorldSpaceLUTBlendedLightingResolveWithAlbedo"));
 
                 DefineMaterial(IlluminantMaterials.CalculateLuminance = 
-                    new Squared.Render.Material(content.Load<Effect>("Resolve"), "CalculateLuminance"));
+                    new Squared.Render.Material(LoadEffect(content, "Resolve"), "CalculateLuminance"));
 
                 DefineMaterial(IlluminantMaterials.ObjectSurfaces = 
-                    new Squared.Render.Material(content.Load<Effect>("VisualizeDistanceField"), "ObjectSurfaces"));
+                    new Squared.Render.Material(LoadEffect(content, "VisualizeDistanceField"), "ObjectSurfaces"));
 
                 DefineMaterial(IlluminantMaterials.ObjectOutlines = 
-                    new Squared.Render.Material(content.Load<Effect>("VisualizeDistanceField"), "ObjectOutlines"));
+                    new Squared.Render.Material(LoadEffect(content, "VisualizeDistanceField"), "ObjectOutlines"));
 
                 DefineMaterial(IlluminantMaterials.FunctionSurface = 
-                    new Squared.Render.Material(content.Load<Effect>("VisualizeDistanceFunction"), "FunctionSurface"));
+                    new Squared.Render.Material(LoadEffect(content, "VisualizeDistanceFunction"), "FunctionSurface"));
 
                 DefineMaterial(IlluminantMaterials.FunctionOutline = 
-                    new Squared.Render.Material(content.Load<Effect>("VisualizeDistanceFunction"), "FunctionOutline"));
+                    new Squared.Render.Material(LoadEffect(content, "VisualizeDistanceFunction"), "FunctionOutline"));
 
                 DefineMaterial(IlluminantMaterials.ScreenSpaceGammaCompressedBitmap = new Squared.Render.Material(
-                    content.Load<Effect>("HDRBitmap"), "ScreenSpaceGammaCompressedBitmap"
+                    LoadEffect(content, "HDRBitmap"), "ScreenSpaceGammaCompressedBitmap"
                 ));
 
                 DefineMaterial(IlluminantMaterials.WorldSpaceGammaCompressedBitmap = new Squared.Render.Material(
-                    content.Load<Effect>("HDRBitmap"), "WorldSpaceGammaCompressedBitmap"
+                    LoadEffect(content, "HDRBitmap"), "WorldSpaceGammaCompressedBitmap"
                 ));
 
                 DefineMaterial(IlluminantMaterials.ScreenSpaceToneMappedBitmap = new Squared.Render.Material(
-                    content.Load<Effect>("HDRBitmap"), "ScreenSpaceToneMappedBitmap"
+                    LoadEffect(content, "HDRBitmap"), "ScreenSpaceToneMappedBitmap"
                 ));
 
                 DefineMaterial(IlluminantMaterials.WorldSpaceToneMappedBitmap = new Squared.Render.Material(
-                    content.Load<Effect>("HDRBitmap"), "WorldSpaceToneMappedBitmap"
+                    LoadEffect(content, "HDRBitmap"), "WorldSpaceToneMappedBitmap"
                 ));
 
                 DefineMaterial(IlluminantMaterials.ScreenSpaceVectorWarp = 
                     new Squared.Render.Material(
-                        content.Load<Effect>("VectorWarp"), "ScreenSpaceVectorWarp", 
+                        LoadEffect(content, "VectorWarp"), "ScreenSpaceVectorWarp", 
                         new [] { MaterialUtil.MakeDelegate(BlendState.AlphaBlend) }
                     ));
 
@@ -258,6 +266,35 @@ namespace Squared.Illuminant.Particles {
             Materials.Add(m);
         }
 
+        private unsafe Effect LoadEffectFXC (GraphicsDevice device, string path) {
+            var bytes = File.ReadAllBytes(path);
+            var pDev = GraphicsDeviceUtils.GetIDirect3DDevice9(device);
+            void* pEffect, pTemp;
+            fixed (byte* pBytes = bytes) {
+                var hr = EffectUtils.D3DXCreateEffectEx(pDev, pBytes, (uint)bytes.Length, null, null, "", 0, null, out pEffect, out pTemp);
+                if (hr != 0)
+                    throw Marshal.GetExceptionForHR(hr);
+            }
+            var t = typeof(Effect);
+            var ctors = t.GetConstructors(
+                BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance
+            );
+            var ctor = ctors[0];
+            var result = ctor.Invoke(new object[] { new IntPtr(pEffect), device });
+            return (Effect)result;
+        }
+
+        private Effect LoadEffect (ContentManager content, string name) {
+            var probeDir = @"E:\Documents\Projects\Illuminant\Illuminant\IlluminantContent\bin\x86\Debug\shaders";
+            var probePath = Path.Combine(probeDir, name + ".fx.bin");
+            if (File.Exists(probePath)) {
+                var gds = (IGraphicsDeviceService)content.ServiceProvider.GetService(typeof(IGraphicsDeviceService));
+                var device = gds.GraphicsDevice;
+                return LoadEffectFXC(device, probePath);
+            }
+            return content.Load<Effect>(name);
+        }
+
         private void LoadMaterials (ContentManager content) {
             lock (ParticleMaterials) {
                 if (ParticleMaterials.IsLoaded)
@@ -273,44 +310,44 @@ namespace Squared.Illuminant.Particles {
                 Action<DeviceManager>[] dEnd = null;
 
                 DefineMaterial(ParticleMaterials.UpdatePositions = new Material(
-                    content.Load<Effect>("UpdateParticleSystem"), "UpdatePositions", dBegin, dEnd
+                    LoadEffect(content, "UpdateParticleSystem"), "UpdatePositions", dBegin, dEnd
                 ));
 
                 DefineMaterial(ParticleMaterials.UpdateWithDistanceField = new Material(
-                    content.Load<Effect>("UpdateParticleSystemWithDistanceField"), "UpdateWithDistanceField", dBegin, dEnd
+                    LoadEffect(content, "UpdateParticleSystemWithDistanceField"), "UpdateWithDistanceField", dBegin, dEnd
                 ));
 
                 DefineMaterial(ParticleMaterials.FMA = new Material(
-                    content.Load<Effect>("FMA"), "FMA", dBegin, dEnd
+                    LoadEffect(content, "FMA"), "FMA", dBegin, dEnd
                 ));
 
                 DefineMaterial(ParticleMaterials.MatrixMultiply = new Material(
-                    content.Load<Effect>("MatrixMultiply"), "MatrixMultiply", dBegin, dEnd
+                    LoadEffect(content, "MatrixMultiply"), "MatrixMultiply", dBegin, dEnd
                 ));
 
                 DefineMaterial(ParticleMaterials.Gravity = new Material(
-                    content.Load<Effect>("Gravity"), "Gravity", dBegin, dEnd
+                    LoadEffect(content, "Gravity"), "Gravity", dBegin, dEnd
                 ));
 
                 DefineMaterial(ParticleMaterials.Spawn = new Material(
-                    content.Load<Effect>("SpawnParticles"), "SpawnParticles", dBegin, dEnd
+                    LoadEffect(content, "SpawnParticles"), "SpawnParticles", dBegin, dEnd
                 ));
 
                 DefineMaterial(ParticleMaterials.NullTransform = new Material(
-                    content.Load<Effect>("NullTransform"), "NullTransform", dBegin, dEnd
+                    LoadEffect(content, "NullTransform"), "NullTransform", dBegin, dEnd
                 ));
 
                 DefineMaterial(ParticleMaterials.White = new Material(
-                    content.Load<Effect>("RasterizeParticleSystem"), "White"
+                    LoadEffect(content, "RasterizeParticleSystem"), "White"
                 ));
                 DefineMaterial(ParticleMaterials.AttributeColor = new Material(
-                    content.Load<Effect>("RasterizeParticleSystem"), "AttributeColor"
+                    LoadEffect(content, "RasterizeParticleSystem"), "AttributeColor"
                 ));
                 DefineMaterial(ParticleMaterials.WhiteNoTexture = new Material(
-                    content.Load<Effect>("RasterizeParticleSystem"), "WhiteNoTexture"
+                    LoadEffect(content, "RasterizeParticleSystem"), "WhiteNoTexture"
                 ));
                 DefineMaterial(ParticleMaterials.AttributeColorNoTexture = new Material(
-                    content.Load<Effect>("RasterizeParticleSystem"), "AttributeColorNoTexture"
+                    LoadEffect(content, "RasterizeParticleSystem"), "AttributeColorNoTexture"
                 ));
 
                 Materials.ForEachMaterial<object>((m, _) => {
