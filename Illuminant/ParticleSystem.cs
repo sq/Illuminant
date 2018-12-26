@@ -86,11 +86,9 @@ namespace Squared.Illuminant.Particles {
                 Initializer(scratch, Offset);
 
                 try {
-                    lock (Parent.Chunk.Lock) {
-                        if (!Parent.Chunk.IsDisposed)
-                        lock (Parent.System.Engine.Coordinator.UseResourceLock)
-                            Buffer.SetData(scratch);
-                    }
+                    if (!Parent.Chunk.IsDisposed)
+                    lock (Parent.System.Engine.Coordinator.UseResourceLock)
+                        Buffer.SetData(scratch);
                     Parent.OnBufferInitialized(false);
                 } catch (ObjectDisposedException) {
                     // This can happen even if we properly synchronize accesses, 
@@ -162,7 +160,6 @@ namespace Squared.Illuminant.Particles {
             internal BufferSet Previous, Current;
 
             public OcclusionQuery Query;
-            public bool NeedsClear;
 
             public object Lock = new object();
 
@@ -176,7 +173,6 @@ namespace Squared.Illuminant.Particles {
                 ID = Interlocked.Increment(ref NextID);
                 Size = configuration.ChunkSize;
                 MaximumCount = Size * Size;
-                NeedsClear = true;
 
                 Query = new OcclusionQuery(device);
             }
@@ -358,8 +354,10 @@ namespace Squared.Illuminant.Particles {
                     // HACK
                     spawnId = GetSpawnTarget(spawnCount / 2);
 
-                    if (spawnId.HasValue)
+                    if (spawnId.HasValue) {
+                        Console.WriteLine("Partial spawn");
                         spawnCount = Math.Min(SpawnStates[spawnId.Value].Free, spawnCount);
+                    }
                 }
 
                 if (spawnId == null) {
@@ -606,6 +604,7 @@ namespace Squared.Illuminant.Particles {
             LiveCount = 0;
 
             foreach (var kvp in LivenessInfos) {
+                var isDead = false;
                 var li = kvp.Value;
                 UpdateChunkLivenessQuery(li);
                 LiveCount += li.Count.GetValueOrDefault(0);
@@ -614,9 +613,14 @@ namespace Squared.Illuminant.Particles {
                     li.DeadFrameCount++;
                     if (li.DeadFrameCount >= DeadFrameThreshold) {
                         // Console.WriteLine("Chunk " + li.ID + " dead");
-                        ChunksToReap.Add(li);
+                        isDead = true;
                     }
                 }
+                if (IsClearPending)
+                    isDead = true;
+
+                if (isDead)
+                    ChunksToReap.Add(li);
             }
 
             foreach (var li in ChunksToReap) {
@@ -626,6 +630,8 @@ namespace Squared.Illuminant.Particles {
             }
 
             ChunksToReap.Clear();
+
+            IsClearPending = false;
         }
 
         private void Reap (BufferSet buffer) {
@@ -635,8 +641,11 @@ namespace Squared.Illuminant.Particles {
         }
 
         private void Reap (Chunk chunk) {
+            Console.WriteLine("Chunk reaped");
+            DeadChunkIDs.Remove(chunk.ID);
             Reap(chunk.Previous);
             Reap(chunk.Current);
+            chunk.Previous = chunk.Current = null;
             Chunks.Remove(chunk);
             Engine.Coordinator.DisposeResource(chunk);
         }
@@ -652,16 +661,6 @@ namespace Squared.Illuminant.Particles {
                 result = CreateBufferSet(Engine.Coordinator.Device);
             result.LastTurnUsed = Engine.CurrentTurn;
             return result;
-        }
-
-        private void DiscardBuffers () {
-            Engine.NextTurn();
-
-            foreach (var chunk in Chunks) {
-                Reap(chunk.Previous);
-                Reap(chunk.Current);
-                chunk.Previous = chunk.Current = null;
-            }
         }
 
         private void RotateBuffers () {
@@ -713,11 +712,6 @@ namespace Squared.Illuminant.Particles {
                 int i = 0;
 
                 var clears = BatchGroup.New(container, -1);
-
-                if (IsClearPending) {
-                    IsClearPending = false;
-                    DiscardBuffers();
-                }
 
                 int numActive = 0;
                 foreach (var t in Transforms) {

@@ -32,8 +32,6 @@ namespace Squared.Illuminant.Particles.Transforms {
                 return _Size;
             }
             set {
-                if ((value.X == 0) || (value.Y == 0) || (value.Z == 0))
-                    throw new ArgumentOutOfRangeException("value", "Size must be nonzero");
                 _Size = value;
             }
         }
@@ -44,14 +42,8 @@ namespace Squared.Illuminant.Particles.Transforms {
                 return _Falloff;
             }
             set {
-                if (value <= 0)
-                    throw new ArgumentOutOfRangeException("value", "Falloff divisor must be larger than 0");
-                _Falloff = value;
+                _Falloff = Math.Max(1, value);
             }
-        }
-
-        public TransformArea (AreaType type) {
-            Type = type;
         }
     }
 

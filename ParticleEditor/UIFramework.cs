@@ -80,6 +80,7 @@ namespace ParticleEditor {
             public Action<object, object> Setter;
             public bool AllowNull;
             public CachedPropertyInfo ElementInfo;
+            public string[] EnumValueNames;
         }
 
         private class PropertyGridCache {
@@ -175,6 +176,7 @@ namespace ParticleEditor {
                    let mtype = isNullable ? _mtype.GetGenericArguments()[0] : _mtype
                    let info = GetInfoForField(type, m.Name, mtype)
                    let isList = (info.Type == "List") || (info.Type == "ValueList")
+                   let enumValueNames = mtype.IsEnum ? mtype.GetEnumNames() : null
                    let isWritable = ((f != null) && !f.IsInitOnly) || ((p != null) && p.CanWrite)
                    where (f == null) || !f.IsInitOnly || isList
                    where (p == null) || (p.CanWrite && p.CanRead) || isList
@@ -192,7 +194,8 @@ namespace ParticleEditor {
                        Setter = isWritable
                            ? ((f != null) ? (Action<object, object>)f.SetValue : p.SetValue)
                            : (i, v) => { },
-                       ElementInfo = GetElementInfo(mtype)
+                       ElementInfo = GetElementInfo(mtype),
+                       EnumValueNames = enumValueNames
                    };
         }
 
@@ -445,6 +448,28 @@ namespace ParticleEditor {
             return result;
         }
 
+        private unsafe bool RenderGenericObjectProperty (
+            PropertyGridCache cache, CachedPropertyInfo cpi,
+            object instance, object value, string actualName
+        ) {
+            bool changed = false;
+            List<CachedPropertyInfo> members;
+            if (!CachedMembers.TryGetValue(cpi.Type, out members))
+                CachedMembers[cpi.Type] = members = CachePropertyInfo(cpi.Type).ToList();
+
+            using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, actualName, false)) {
+                if (pGroup.Visible) {
+                    foreach (var i in members) 
+                        if (RenderProperty(cache, i, value, cpi.Name))
+                            changed = true;
+
+                    if (changed)
+                        cpi.Setter(instance, value);
+                }
+                return changed;
+            }
+        }
+
         private unsafe bool RenderProperty (
             PropertyGridCache cache,
             CachedPropertyInfo cpi,
@@ -478,21 +503,7 @@ namespace ParticleEditor {
                 case "ParticleAppearance":
                 case "ParticleColor":
                 case "FMAParameters`1":
-                    List<CachedPropertyInfo> members;
-                    if (!CachedMembers.TryGetValue(cpi.Type, out members))
-                        CachedMembers[cpi.Type] = members = CachePropertyInfo(cpi.Type).ToList();
-
-                    using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, actualName, false)) {
-                        if (pGroup.Visible) {
-                            foreach (var i in members) 
-                                if (RenderProperty(cache, i, value, cpi.Name))
-                                    changed = true;
-
-                            if (changed)
-                                cpi.Setter(instance, value);
-                        }
-                        return changed;
-                    }
+                    return RenderGenericObjectProperty(cache, cpi, instance, value, actualName);
 
                 case "Int32":
                 case "Single":
@@ -557,6 +568,9 @@ namespace ParticleEditor {
             }
 
             switch (valueType) {
+                case "TransformArea":
+                    return RenderGenericObjectProperty(cache, cpi, instance, value, actualName);
+
                 case "String":
                     var text = value.ToString();
                     if (Nuklear.Textbox(ref text)) {
@@ -619,9 +633,21 @@ namespace ParticleEditor {
                         return true;
                     }
                     return false;
-
+                
                 default:
-                    Nuklear.Label(value.GetType().Name);
+                    if (cpi.Type.IsEnum) {
+                        var names = cpi.EnumValueNames;
+                        var name = Enum.GetName(cpi.Type, value);
+                        var selectedIndex = Array.IndexOf(names, name);
+                        if (Nuklear.ComboBox(ref selectedIndex, (i) => names[i], names.Length)) {
+                            var newName = names[selectedIndex];
+                            var newValue = Enum.Parse(cpi.Type, newName, true);
+                            cpi.Setter(instance, newValue);
+                            return true;
+                        }
+                    } else {
+                        Nuklear.Label(value.GetType().Name);
+                    }
                     return false;
             }
         }

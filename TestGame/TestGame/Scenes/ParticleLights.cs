@@ -207,8 +207,8 @@ namespace TestGame.Scenes {
 
             Engine = new ParticleEngine(
                 Game.Content, Game.RenderCoordinator, Game.Materials,
-                new ParticleEngineConfiguration (128) {
-                    HighPrecision = false
+                new ParticleEngineConfiguration (64) {
+                    HighPrecision = true
                 }, Game.ParticleMaterials
             );
 
@@ -290,8 +290,8 @@ namespace TestGame.Scenes {
                 Transforms = {
                     new Spawner {
                         IsActive = false,
-                        MinRate = 4096,
-                        MaxRate = 8192,
+                        MinRate = 256,
+                        MaxRate = 512,
                         Position = new Formula {
                             RandomOffset = new Vector4(-0.5f, -0.5f, -0.5f, 1f),
                             RandomScale = new Vector4(15f, 15f, 5f, (MaxLife - OpacityFromLife) / 60f),
