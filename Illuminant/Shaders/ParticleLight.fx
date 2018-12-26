@@ -60,7 +60,7 @@ void ParticleLightVertexShader(
     lightProperties = LightProperties;
     moreLightProperties = MoreLightProperties;
 
-    lightColor = getColorForLifeValue(position.w);
+    lightColor *= getColorForLifeValue(position.w);
 
     if (lightColor.a <= 0) {
         result = float4(0, 0, 0, 0);
