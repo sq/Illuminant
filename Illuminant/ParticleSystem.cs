@@ -1021,13 +1021,12 @@ namespace Squared.Illuminant.Particles {
                             appearance.Region.BottomRight.X, 
                             appearance.Region.BottomRight.Y
                         ));
-                        p["AnimationRate"].SetValue(Configuration.AnimationRate);
-                        p["VelocityRotation"].SetValue(Configuration.RotationFromVelocity ? 1f : 0f);
                     }
 
-                    var zToY = p["ZToY"];
-                    if (zToY != null)
-                        zToY.SetValue(Configuration.ZToY);
+                    p["AnimationRateAndRotationAndZToY"].SetValue(new Vector4(
+                        Configuration.AnimationRate.X, Configuration.AnimationRate.Y,
+                        Configuration.RotationFromVelocity ? 1f : 0f, Configuration.ZToY
+                    ));
 
                     p["StippleFactor"].SetValue(overrideStippleFactor.GetValueOrDefault(Configuration.StippleFactor));
 
@@ -1217,12 +1216,6 @@ namespace Squared.Illuminant.Particles {
         /// Smaller values will result in slower animation. Zero turns off animation.
         /// </summary>
         public Vector2       AnimationRate;
-
-        /// <summary>
-        /// Particle rotations occur around this axis. The default is to rotate clockwise
-        ///  around Z - a 2D on-screen rotation.
-        /// </summary>
-        public Vector3       RotationAxis = Vector3.UnitX;
 
         /// <summary>
         /// If set, particles will rotate based on their direction of movement

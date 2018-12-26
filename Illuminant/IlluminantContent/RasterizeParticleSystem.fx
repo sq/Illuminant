@@ -5,9 +5,7 @@
 #define PI 3.14159265358979323846
 
 uniform float4 GlobalColor;
-uniform float2 AnimationRate;
-uniform float  VelocityRotation;
-uniform float  ZToY;
+uniform float4 AnimationRateAndRotationAndZToY;
 
 Texture2D BitmapTexture;
 sampler BitmapSampler {
@@ -40,11 +38,26 @@ static const float3 Corners[] = {
     { -1, 1, 0 }
 };
 
-inline float3 ComputeRotatedCorner(
+inline float2 getAnimationRate () {
+    return AnimationRateAndRotationAndZToY.xy;
+}
+
+inline float getVelocityRotation () {
+    return AnimationRateAndRotationAndZToY.z;
+}
+
+inline float getZToY () {
+    return AnimationRateAndRotationAndZToY.w;
+}
+
+inline float3 ComputeRotatedCorner (
     in int cornerIndex, in float angle, in float2 size
 ) {    
     float3 corner = Corners[cornerIndex.x] * float3(size, 1), sinCos;
+
+    angle = fmod(angle, 2 * PI);
     sincos(angle, sinCos.x, sinCos.y);
+
     return float3(
         (sinCos.y * corner.x) - (sinCos.x * corner.y),
         (sinCos.x * corner.x) + (sinCos.y * corner.y),
@@ -52,17 +65,31 @@ inline float3 ComputeRotatedCorner(
     );
 }
 
+float getRotationForVelocity (float3 velocity) {
+    float2 absvel = abs(velocity.xy + float2(0, velocity.z * -getZToY()));
+    float angle;
+    if ((absvel.x < 0.01) && (absvel.y < 0.01))
+        return 0;
+    
+    return (atan2(velocity.y, velocity.x) + PI) * getVelocityRotation();
+}
+
+float4 readLifeRamp (float u, float v) {
+    return tex2Dlod(LifeRampSampler, float4(u, v, 0, 0));
+}
+
 float4 getRampedColorForLifeValueAndIndex (float life, float index) {
     float4 result = getColorForLifeValue(life);
+
     [branch]
     if (LifeRampSettings.x != 0) {
         float u = (life - LifeRampSettings.y) / LifeRampSettings.z;
         if (LifeRampSettings.x < 0)
             u = 1 - saturate(u);
         float v = index / LifeRampSettings.w;
-        float4 rampSample = tex2Dlod(LifeRampSampler, float4(u, v, 0, 0));
-        result = lerp(result, rampSample * result, saturate(abs(LifeRampSettings.x)));
+        result = lerp(result, readLifeRamp(u, v) * result, saturate(abs(LifeRampSettings.x)));
     }
+
     return result;
 }
 
@@ -74,7 +101,7 @@ void VS_Core (
     out float2 texCoord
 ) {
     // HACK: Discard Z
-    float3 displayXyz = float3(position.x, position.y - (position.z * ZToY), 0);
+    float3 displayXyz = float3(position.x, position.y - (position.z * getZToY()), 0);
 
     float3 screenXyz = displayXyz - float3(Viewport.Position.xy, 0) + corner;
 
@@ -86,7 +113,7 @@ void VS_Core (
     texCoord = (Corners[cornerIndex.x].xy / 2) + 0.5;
     texCoord = lerp(BitmapTextureRegion.xy, BitmapTextureRegion.zw, texCoord);
 
-    texCoord += (BitmapTextureRegion.zw - BitmapTextureRegion.xy) * floor(AnimationRate * position.w);
+    texCoord += (BitmapTextureRegion.zw - BitmapTextureRegion.xy) * floor(getAnimationRate() * position.w);
 }
 
 void VS_PosVelAttrWhite(
@@ -109,13 +136,7 @@ void VS_PosVelAttrWhite(
         return;
     }
 
-    float2 absvel = abs(velocity.xy + float2(0, velocity.z * -ZToY));
-    float angle;
-    if ((absvel.x < 0.01) && (absvel.y < 0.01)) {
-        angle = 0;
-    } else {
-        angle = (atan2(velocity.y, velocity.x) + PI) * VelocityRotation;
-    }
+    float angle = getRotationForVelocity(velocity.xyz);
     angle += getRotationForLifeAndIndex(position.w, offsetAndIndex.z);
     float2 size = getSizeForLifeValue(position.w);
     float3 rotatedCorner = ComputeRotatedCorner(cornerIndex.x, angle, size);

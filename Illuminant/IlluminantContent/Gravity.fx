@@ -31,7 +31,7 @@ void PS_Gravity (
             attraction = attraction * getDeltaTime() / 1000;
         } else {
             float  distanceSquared = dot(toCenter, toCenter) - ars.x;
-            distanceSquared = max(distanceSquared, 0);
+            distanceSquared = max(distanceSquared, 0.001);
             // FIXME: For some reason time-scaling doesn't work for this version of the formula
             attraction = 1 / distanceSquared;
         }

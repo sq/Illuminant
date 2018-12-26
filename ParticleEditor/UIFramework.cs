@@ -390,7 +390,7 @@ namespace ParticleEditor {
                     }
 
                     var spp = Controller.SelectedPositionProperty;
-                    var isFormulaSelected = (spp != null) && (spp.Instance == value);
+                    var isFormulaSelected = (spp != null) && object.ReferenceEquals(spp.Instance, value);
 
                     Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
                     if (Nuklear.SelectableText("Constant", isFormulaSelected && (spp.Key == "Constant")))
