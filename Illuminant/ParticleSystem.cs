@@ -668,9 +668,6 @@ namespace Squared.Illuminant.Particles {
             } else {
                 colorFromLife = new ClampedBezier4(Configuration.Color._ColorFromLife);
             }
-            var a = colorFromLife.Evaluate(5);
-            var b = colorFromLife.Evaluate(250);
-            var c = colorFromLife.Evaluate(125);
 
             sizeFromLife = new ClampedBezier2(Configuration.SizeFromLife);
 

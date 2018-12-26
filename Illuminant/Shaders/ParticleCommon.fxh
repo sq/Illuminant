@@ -28,7 +28,6 @@ float2 evaluateBezier2 (in ClampedBezier2 bezier, float value) {
 
     float t;
     float count = tForScaledBezier(bezier.RangeAndCount, value, t);
-    return t;
     if (count <= 1.5)
         return a;
 
@@ -49,21 +48,26 @@ float2 evaluateBezier2 (in ClampedBezier2 bezier, float value) {
 }
 
 float4 evaluateBezier4 (in ClampedBezier4 bezier, float value) {
+    float4 a = bezier.A,
+        b = bezier.B,
+        c = bezier.C,
+        d = bezier.D;
+
     float t;
     float count = tForScaledBezier(bezier.RangeAndCount, value, t);
     if (count <= 1.5)
-        return bezier.A;
+        return a;
 
-    float4 ab = lerp(bezier.A, bezier.B, t);
+    float4 ab = lerp(a, b, t);
     if (count <= 2.5)
         return ab;
 
-    float4 bc = lerp(bezier.B, bezier.C, t);
+    float4 bc = lerp(b, c, t);
     float4 abbc = lerp(ab, bc, t);
     if (count <= 3.5)
         return abbc;
 
-    float4 cd = lerp(bezier.C, bezier.D, t);
+    float4 cd = lerp(c, d, t);
     float4 bccd = lerp(bc, cd, t);
 
     float4 result = lerp(abbc, bccd, t);
@@ -124,14 +128,6 @@ float2 getTexel () {
     return System.TexelAndSize.xy;
 }
 
-/*
-    float4 base = saturate(-sign(System.ColorFromLife));
-    // fraction = (x / threshold)
-    float4 fraction = life / (System.ColorFromLife + 0.001);
-    // value = (1 + -x) if multiplier is negative else (0 + x)
-    float4 result = saturate(base + fraction);
-*/
-
 float4 getColorForLifeValue (float life) {
     float4 result = evaluateBezier4(ColorFromLife, life);
     result.rgb *= result.a;
@@ -139,9 +135,8 @@ float4 getColorForLifeValue (float life) {
 }
 
 float2 getSizeForLifeValue (float life) {
-    return 1;
     float2 result = evaluateBezier2(SizeFromLife, life);
-    return result * System.TexelAndSize.zw;
+    return System.TexelAndSize.zw * result;
 }
 
 float getRotationForLifeAndIndex (float life, float index) {

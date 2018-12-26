@@ -87,6 +87,33 @@ namespace Squared.Illuminant.Uniforms {
                 RangeAndCount.Y = value;
             }
         }
+
+        public Vector2 Evaluate (float value) {
+            Vector2 a = new Vector2(AB.X, AB.Y),
+                b = new Vector2(AB.Z, AB.W),
+                c = new Vector2(CD.X, CD.Y),
+                d = new Vector2(CD.Z, CD.W);
+
+            float t;
+            float count = ClampedBezier4.tForScaledBezier(RangeAndCount, value, out t);
+            if (count <= 1.5)
+                return a;
+
+            Vector2 ab = Arithmetic.Lerp(a, b, t);
+            if (count <= 2.5)
+                return ab;
+
+            Vector2 bc = Arithmetic.Lerp(b, c, t);
+            Vector2 abbc = Arithmetic.Lerp(ab, bc, t);
+            if (count <= 3.5)
+                return abbc;
+
+            Vector2 cd = Arithmetic.Lerp(c, d, t);
+            Vector2 bccd = Arithmetic.Lerp(bc, cd, t);
+
+            Vector2 result = Arithmetic.Lerp(abbc, bccd, t);
+            return result;
+        }
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -150,51 +177,21 @@ namespace Squared.Illuminant.Uniforms {
             }
         }
 
-        private int tForScaledBezier (float value, out float t) {
-            float minValue = RangeAndCount.X, 
-                invDivisor = RangeAndCount.Y;
+        internal static int tForScaledBezier (Vector4 rangeAndCount, float value, out float t) {
+            float minValue = rangeAndCount.X, 
+                invDivisor = rangeAndCount.Y;
 
             t = (value - minValue) * Math.Abs(invDivisor);
             if (invDivisor > 0)
                 t = 1 - Arithmetic.Clamp(t, 0, 1);
             else
                 t = Arithmetic.Clamp(t, 0, 1);
-            return (int)RangeAndCount.Z;
+            return (int)rangeAndCount.Z;
         }
-
-        /*
-        public Vector2 Evaluate (float value) {
-            Vector2 a = AB.xy,
-                b = AB.zw,
-                c = CD.xy,
-                d = CD.zw;
-
-            float t;
-            float count = tForScaledBezier(bezier.RangeAndCount, value, t);
-            return t;
-            if (count <= 1.5)
-                return a;
-
-            float2 ab = lerp(a, b, t);
-            if (count <= 2.5)
-                return ab;
-
-            float2 bc = lerp(b, c, t);
-            float2 abbc = lerp(ab, bc, t);
-            if (count <= 3.5)
-                return abbc;
-
-            float2 cd = lerp(c, d, t);
-            float2 bccd = lerp(bc, cd, t);
-
-            float2 result = lerp(abbc, bccd, t);
-            return result;
-        }
-        */
 
         public Vector4 Evaluate (float value) {
             float t;
-            int count = tForScaledBezier(value, out t);
+            int count = tForScaledBezier(RangeAndCount, value, out t);
             if (count <= 1.5)
                 return A;
 
