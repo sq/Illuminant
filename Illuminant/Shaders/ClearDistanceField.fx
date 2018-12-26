@@ -1,5 +1,5 @@
-#include "..\..\..\Fracture\Squared\RenderLib\Content\ViewTransformCommon.fxh"
-#include "..\..\..\Fracture\Squared\RenderLib\Content\GeometryCommon.fxh"
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\GeometryCommon.fxh"
 
 Texture2D ClearTexture : register(t0);
 sampler   ClearSampler : register(s0) {

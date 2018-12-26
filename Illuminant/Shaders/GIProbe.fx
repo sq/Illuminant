@@ -1,6 +1,6 @@
-#include "..\..\..\Fracture\Squared\RenderLib\Content\DitherCommon.fxh"
-#include "..\..\..\Fracture\Squared\RenderLib\Content\ViewTransformCommon.fxh"
-#include "..\..\..\Fracture\Squared\RenderLib\Content\GeometryCommon.fxh"
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\DitherCommon.fxh"
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\GeometryCommon.fxh"
 #include "DistanceFieldCommon.fxh"
 
 #define SAMPLE sampleDistanceField

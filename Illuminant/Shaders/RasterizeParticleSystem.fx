@@ -1,5 +1,5 @@
-#include "..\..\..\Fracture\Squared\RenderLib\Content\ViewTransformCommon.fxh"
-#include "..\..\..\Fracture\Squared\RenderLib\Content\GeometryCommon.fxh"
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\GeometryCommon.fxh"
 #include "ParticleCommon.fxh"
 
 #define PI 3.14159265358979323846

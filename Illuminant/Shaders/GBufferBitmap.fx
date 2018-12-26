@@ -1,5 +1,5 @@
-#include "..\..\..\Fracture\Squared\RenderLib\Content\ViewTransformCommon.fxh"
-#include "..\..\..\Fracture\Squared\RenderLib\Content\GeometryCommon.fxh"
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\GeometryCommon.fxh"
 #include "GBufferShaderCommon.fxh"
 
 Texture2D Mask : register(t0);

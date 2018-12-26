@@ -4,6 +4,7 @@
 uniform float4 LightProperties;
 uniform float4 MoreLightProperties;
 uniform float4 LightColor;
+uniform float4 AnimationRateAndRotationAndZToY;
 
 void ParticleLightVertexShader(
     in int2 cornerIndex              : BLENDINDICES0,
