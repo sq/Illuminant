@@ -250,7 +250,7 @@ namespace TestGame {
                 SizePoints = 17f,
                 GlyphMargin = 2
             };
-            Materials = new DefaultMaterialSet(Services);
+            Materials = new DefaultMaterialSet(RenderCoordinator);
             IlluminantMaterials = new IlluminantMaterials(Materials);
             ParticleMaterials = new ParticleMaterials(Materials);
             RampTexture = Content.Load<Texture2D>("light_ramp");

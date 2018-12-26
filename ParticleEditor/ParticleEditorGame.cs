@@ -161,7 +161,7 @@ namespace ParticleEditor {
                 DPIPercent = 100,
                 Gamma = 0.8f
             };
-            Materials = new DefaultMaterialSet(Services);
+            Materials = new DefaultMaterialSet(RenderCoordinator);
             IlluminantMaterials = new IlluminantMaterials(Materials);
             ParticleMaterials = new ParticleMaterials(Materials);
 

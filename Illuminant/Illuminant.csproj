@@ -123,13 +123,23 @@
     <None Include="Shaders\*.fx" />
     <None Include="Shaders\*.fxh" />
   </ItemGroup>
+  <ItemGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <EmbeddedResource Include="Shaders\bin\Debug\*.fx.bin">
+      <LogicalName>%(Filename)</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup Condition=" '$(Configuration)' == 'Release' ">
+    <EmbeddedResource Include="Shaders\bin\Release\*.fx.bin">
+      <LogicalName>%(Filename)</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\XNA Game Studio\Microsoft.Xna.GameStudio.targets" />
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
-    <PostBuildEvent>"$(ProjectDir)\..\..\Fracture\ShaderCompiler\bin\ShaderCompiler.exe" $(ProjectDir)\..\..\Fracture\ext\fxc $(ProjectDir)\Shaders $(TargetDir)shaders "/O0 /Zi"</PostBuildEvent>
+    <PreBuildEvent>"$(ProjectDir)\..\..\Fracture\ShaderCompiler\bin\ShaderCompiler.exe" $(ProjectDir)\..\..\Fracture\ext\fxc $(ProjectDir)\Shaders $(ProjectDir)\Shaders\bin\Debug "/O0 /Zi"</PreBuildEvent>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <PostBuildEvent>"$(ProjectDir)\..\..\Fracture\ShaderCompiler\bin\ShaderCompiler.exe" $(ProjectDir)\..\..\Fracture\ext\fxc $(ProjectDir)\Shaders $(TargetDir)shaders "/O3 /Zi"</PostBuildEvent>
+    <PreBuildEvent>"$(ProjectDir)\..\..\Fracture\ShaderCompiler\bin\ShaderCompiler.exe" $(ProjectDir)\..\..\Fracture\ext\fxc $(ProjectDir)\Shaders $(ProjectDir)\Shaders\bin\Release "/O3 /Zi"</PreBuildEvent>
   </PropertyGroup>
   <!--
       To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -364,6 +364,8 @@ namespace Squared.Illuminant {
 
         private Uniforms.Environment EnvironmentUniforms;
 
+        private readonly EmbeddedEffectProvider Effects;
+
         private string _Name;
 
         public LightingRenderer (
@@ -374,6 +376,8 @@ namespace Squared.Illuminant {
             Materials = materials;
             Coordinator = coordinator;
             Configuration = configuration;
+
+            Effects = new EmbeddedEffectProvider(coordinator);
 
             IlluminantMaterials = illuminantMaterials ?? new IlluminantMaterials(materials);
 
@@ -472,7 +476,7 @@ namespace Squared.Illuminant {
                 DepthBufferEnable = false
             };
 
-            LoadMaterials(content);
+            LoadMaterials(Effects);
 
             Environment = environment;
             Probes = new LightProbeCollection(Configuration.MaximumLightProbeCount);
@@ -553,6 +557,8 @@ namespace Squared.Illuminant {
         public void Dispose () {
             foreach (var kvp in LightRenderStates)
                 kvp.Value.Dispose();
+
+            Effects.Dispose();
 
             Coordinator.DisposeResource(QuadIndexBuffer);
             Coordinator.DisposeResource(CornerBuffer);

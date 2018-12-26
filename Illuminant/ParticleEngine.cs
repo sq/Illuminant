@@ -39,6 +39,8 @@ namespace Squared.Illuminant.Particles {
         internal readonly List<Chunk> FreeList = 
             new List<Chunk>();
 
+        private readonly EmbeddedEffectProvider Effects;
+
         private static readonly short[] TriIndices = new short[] {
             0, 1, 2
         };
@@ -51,10 +53,12 @@ namespace Squared.Illuminant.Particles {
             Coordinator = coordinator;
             Materials = materials;
 
+            Effects = new EmbeddedEffectProvider(coordinator);
+
             ParticleMaterials = particleMaterials ?? new ParticleMaterials(materials);
             Configuration = configuration;
 
-            LoadMaterials(content);
+            LoadMaterials(Effects);
 
             lock (coordinator.CreateResourceLock) {
                 TriIndexBuffer = new IndexBuffer(coordinator.Device, IndexElementSize.SixteenBits, 3, BufferUsage.WriteOnly);
@@ -175,6 +179,8 @@ namespace Squared.Illuminant.Particles {
                 return;
 
             IsDisposed = true;
+
+            Effects.Dispose();
 
             lock (FreeList) {
                 foreach (var c in FreeList)
