@@ -102,7 +102,6 @@ namespace Squared.Illuminant.Particles {
             public readonly int Size, MaximumCount;
             public readonly int ID;
 
-            public bool NeedsClear;
             public long LastTurnUsed;
 
             public RenderTargetBinding[] Bindings;
@@ -130,8 +129,6 @@ namespace Squared.Illuminant.Particles {
                 Bindings[1] = new RenderTargetBinding(Velocity);
                 if (configuration.AttributeCount > 0)
                     Bindings[2] = new RenderTargetBinding(Attributes);
-
-                NeedsClear = true;
             }
 
             internal RenderTarget2D CreateRenderTarget (ParticleEngineConfiguration configuration, GraphicsDevice device) {
@@ -339,7 +336,7 @@ namespace Squared.Illuminant.Particles {
             IBatchContainer container, int layer, Material m,
             long startedWhen, Transforms.Spawner spawner,
             Transforms.ParameterSetter setParameters,
-            double deltaTimeSeconds
+            double deltaTimeSeconds, bool clearFirst
         ) {
             var device = container.RenderManager.DeviceManager.Device;
 
@@ -427,7 +424,7 @@ namespace Squared.Illuminant.Particles {
                         batch, i++,
                         chunkMaterial, chunk,
                         setParameters,
-                        deltaTimeSeconds
+                        deltaTimeSeconds, clearFirst
                     );
                 }
             }
@@ -436,7 +433,7 @@ namespace Squared.Illuminant.Particles {
         private void ChunkUpdatePass (
             IBatchContainer container, int layer, Material m,
             Chunk chunk, Transforms.ParameterSetter setParameters,
-            double deltaTimeSeconds
+            double deltaTimeSeconds, bool clearFirst
         ) {
             var prev = chunk.Previous;
             var curr = chunk.Current;
@@ -482,7 +479,8 @@ namespace Squared.Illuminant.Particles {
                         m.Flush();
                     }
 
-                    dm.Device.Clear(Color.Transparent);
+                    if (clearFirst)
+                        dm.Device.Clear(Color.Transparent);
                 },
                 (dm, _) => {
                     // XNA effectparameter gets confused about whether a value is set or not, so we do this
@@ -629,11 +627,8 @@ namespace Squared.Illuminant.Particles {
 
         private BufferSet AcquireOrCreateBufferSet () {
             BufferSet result;
-            if (!Engine.AvailableBuffers.TryPopFront(out result)) {
+            if (!Engine.AvailableBuffers.TryPopFront(out result))
                 result = CreateBufferSet(Engine.Coordinator.Device);
-            } else {
-                result.NeedsClear = true;
-            }
             result.LastTurnUsed = Engine.CurrentTurn;
             return result;
         }
@@ -703,6 +698,7 @@ namespace Squared.Illuminant.Particles {
                     NewChunks.Clear();
                 }
 
+                var isFirstXform = true;
                 foreach (var t in Transforms) {
                     var it = (Transforms.IParticleTransform)t;
                     var spawner = t as Transforms.Spawner;
@@ -714,8 +710,9 @@ namespace Squared.Illuminant.Particles {
                     UpdatePass(
                         group, i++, it.GetMaterial(Engine.ParticleMaterials),
                         startedWhen, spawner, it.SetParameters, 
-                        actualDeltaTimeSeconds
+                        actualDeltaTimeSeconds, isFirstXform
                     );
+                    isFirstXform = false;
                 }
 
                 if (IsClearPending) {
@@ -726,7 +723,7 @@ namespace Squared.Illuminant.Particles {
                         UpdatePass(
                             group, i++, pm.Erase,
                             startedWhen, null,
-                            null, actualDeltaTimeSeconds
+                            null, actualDeltaTimeSeconds, true
                         );
                     }
                     IsClearPending = false;
@@ -740,13 +737,13 @@ namespace Squared.Illuminant.Particles {
                         (Engine, p, frameIndex) => {
                             var dfu = new Uniforms.DistanceField(Configuration.DistanceField, Configuration.DistanceFieldMaximumZ.Value);
                             pm.MaterialSet.TrySetBoundUniform(pm.UpdateWithDistanceField, "DistanceField", ref dfu);
-                        }, actualDeltaTimeSeconds
+                        }, actualDeltaTimeSeconds, true
                     );
                 } else {
                     UpdatePass(
                         group, i++, pm.UpdatePositions,
                         startedWhen, null,
-                        null, actualDeltaTimeSeconds
+                        null, actualDeltaTimeSeconds, true
                     );
                 }
 
