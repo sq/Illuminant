@@ -7,9 +7,9 @@ namespace Squared.Illuminant {
     public class ParticleMaterials {
         public readonly DefaultMaterialSet MaterialSet;
 
-        public Material UpdatePositions, UpdateWithDistanceField;
+        public Material Erase, UpdatePositions, UpdateWithDistanceField;
         public Material FMA, Gravity, MatrixMultiply;
-        public Material Spawn, NullTransform;
+        public Material Spawn, NullTransform, CountLiveParticles;
 
         public Material White, AttributeColor, WhiteNoTexture, AttributeColorNoTexture;
 

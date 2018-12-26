@@ -204,7 +204,6 @@ namespace Squared.Illuminant.Particles {
         private readonly Dictionary<int, LivenessInfo> LivenessInfos = new Dictionary<int, LivenessInfo>();
         private readonly Dictionary<int, SpawnState> SpawnStates = new Dictionary<int, SpawnState>();
 
-        private readonly AutoResetEvent UnlockedEvent = new AutoResetEvent(true);
         private int CurrentFrameIndex;
 
         internal long LastClearTimestamp;
@@ -214,6 +213,8 @@ namespace Squared.Illuminant.Particles {
         public event Action<ParticleSystem> OnDeviceReset;
 
         private double? LastUpdateTimeSeconds = null;
+
+        private readonly RenderTarget2D LivenessQueryRT;
 
         /// <summary>
         /// The number of frames a chunk must be dead for before it is reclaimed
@@ -226,6 +227,9 @@ namespace Squared.Illuminant.Particles {
             Engine = engine;
             Configuration = configuration;
             LiveCount = 0;
+
+            lock (engine.Coordinator.CreateResourceLock)
+                LivenessQueryRT = new RenderTarget2D(engine.Coordinator.Device, 1, 1, false, SurfaceFormat.Color, DepthFormat.None);
         }
 
         public ITimeProvider TimeProvider {
@@ -263,7 +267,7 @@ namespace Squared.Illuminant.Particles {
             }
         }
         
-        private Chunk CreateChunk (GraphicsDevice device, List<Chunk> clearList) {
+        private Chunk CreateChunk (GraphicsDevice device) {
             lock (Engine.Coordinator.CreateResourceLock) {
                 var result = new Chunk(Engine.Configuration, device);
                 result.Current = AcquireOrCreateBufferSet();
@@ -286,7 +290,7 @@ namespace Squared.Illuminant.Particles {
             var g = parallel ? Engine.Coordinator.ThreadGroup : null;
 
             for (int i = 0; i < numToSpawn; i++) {
-                var c = CreateChunk(device, null);
+                var c = CreateChunk(device);
                 // Console.WriteLine("Creating new chunk " + c.ID);
                 var offset = i * mc;
                 var curr = c.Current;
@@ -332,8 +336,7 @@ namespace Squared.Illuminant.Particles {
             IBatchContainer container, int layer, Material m,
             long startedWhen, Transforms.Spawner spawner,
             Transforms.ParameterSetter setParameters,
-            bool clearFirst, double deltaTimeSeconds,
-            List<Chunk> clearList, bool runQuery
+            double deltaTimeSeconds
         ) {
             var device = container.RenderManager.DeviceManager.Device;
 
@@ -361,7 +364,7 @@ namespace Squared.Illuminant.Particles {
                 }
 
                 if (spawnId == null) {
-                    var chunk = CreateChunk(device, null);
+                    var chunk = CreateChunk(device);
                     spawnId = chunk.ID;
                     SpawnStates[chunk.ID] = new SpawnState { Offset = 0, Free = ChunkMaximumCount };
                     Chunks.Add(chunk);
@@ -369,7 +372,7 @@ namespace Squared.Illuminant.Particles {
             }
 
             var e = m.Effect;
-            var p = e.Parameters;
+            var p = (e != null) ? e.Parameters : null;
 
             using (var batch = BatchGroup.New(
                 container, layer,
@@ -383,27 +386,14 @@ namespace Squared.Illuminant.Particles {
             )) {
                 RotateBuffers();
 
-                RenderTrace.Marker(batch, -9999, "Particle transform {0}", m.Effect.CurrentTechnique.Name);
+                if (e != null)
+                    RenderTrace.Marker(batch, -9999, "Particle transform {0}", e.CurrentTechnique.Name);
 
                 int i = 0;
-
-                // HACK: XNA defers framebuffer clears, which means a clear can get pushed from outside the occlusion query into the query.
-                // We fix this by forcing a clear to happen before we perform any chunk passes (by doing a separate set of clear-only passes).
-                if (clearFirst) {
-                    foreach (var chunk in Chunks) {
-                        using (var group = BatchGroup.ForRenderTarget(batch, i++, chunk.Current.PositionAndLife))
-                            ClearBatch.AddNew(group, 0, Engine.Materials.Clear, Color.Transparent);
-                    }
-                }
 
                 foreach (var chunk in Chunks) {
                     var li = GetLivenessInfo(chunk.ID);
                     UpdateChunkLivenessQuery(li);
-
-                    if (runQuery) {
-                        li.LastQueryStart = Time.Ticks;
-                        li.PendingQuery = chunk.Query;
-                    }
 
                     var chunkMaterial = m;
                     if (spawner != null) {
@@ -433,9 +423,8 @@ namespace Squared.Illuminant.Particles {
                     ChunkUpdatePass(
                         batch, i++,
                         chunkMaterial, chunk,
-                        setParameters, 
-                        runQuery ? li : null,
-                        clearFirst, deltaTimeSeconds
+                        setParameters,
+                        deltaTimeSeconds
                     );
                 }
             }
@@ -444,7 +433,7 @@ namespace Squared.Illuminant.Particles {
         private void ChunkUpdatePass (
             IBatchContainer container, int layer, Material m,
             Chunk chunk, Transforms.ParameterSetter setParameters,
-            LivenessInfo li, bool clearFirst, double deltaTimeSeconds
+            double deltaTimeSeconds
         ) {
             if (DeadChunkIDs.Contains(chunk.ID))
                 return;
@@ -457,79 +446,68 @@ namespace Squared.Illuminant.Particles {
             curr.LastTurnUsed = Engine.CurrentTurn;
 
             var e = m.Effect;
-            var p = e.Parameters;
+            var p = (e != null) ? e.Parameters : null;
             using (var batch = NativeBatch.New(
                 container, layer, m,
                 (dm, _) => {
+                    var vp = new Viewport(0, 0, Engine.Configuration.ChunkSize, Engine.Configuration.ChunkSize);
                     dm.Device.SetRenderTargets(curr.Bindings);
-                    dm.Device.Viewport = new Viewport(0, 0, Engine.Configuration.ChunkSize, Engine.Configuration.ChunkSize);
+                    dm.Device.Viewport = vp;
 
-                    // HACK
-                    dm.Device.Clear(Color.Transparent);
+                    if (e != null) {
+                        if (setParameters != null)
+                            setParameters(Engine, p, CurrentFrameIndex);
 
-                    if (setParameters != null)
-                        setParameters(Engine, p, CurrentFrameIndex);
+                        if (prev != null) {
+                            p["PositionTexture"].SetValue(prev.PositionAndLife);
+                            p["VelocityTexture"].SetValue(prev.Velocity);
 
-                    if (prev != null) {
-                        p["PositionTexture"].SetValue(prev.PositionAndLife);
-                        p["VelocityTexture"].SetValue(prev.Velocity);
+                            var at = p["AttributeTexture"];
+                            if (at != null)
+                                at.SetValue(prev.Attributes);
+                        }
 
-                        var at = p["AttributeTexture"];
-                        if (at != null)
-                            at.SetValue(prev.Attributes);
-                    }
+                        var dft = p["DistanceFieldTexture"];
+                        if (dft != null)
+                            dft.SetValue(Configuration.DistanceField.Texture);
 
-                    var dft = p["DistanceFieldTexture"];
-                    if (dft != null)
-                        dft.SetValue(Configuration.DistanceField.Texture);
+                        var rt = p["RandomnessTexture"];
+                        if (rt != null) {
+                            p["RandomnessTexel"].SetValue(new Vector2(1.0f / ParticleEngine.RandomnessTextureWidth, 1.0f / ParticleEngine.RandomnessTextureHeight));
+                            rt.SetValue(Engine.RandomnessTexture);
+                        }
 
-                    var rt = p["RandomnessTexture"];
-                    if (rt != null) {
-                        p["RandomnessTexel"].SetValue(new Vector2(1.0f / ParticleEngine.RandomnessTextureWidth, 1.0f / ParticleEngine.RandomnessTextureHeight));
-                        rt.SetValue(Engine.RandomnessTexture);
-                    }
+                        SetSystemUniform(m, deltaTimeSeconds);
 
-                    SetSystemUniform(m, deltaTimeSeconds);
-
-                    m.Flush();
-
-                    if (li != null) {
-                        // HACK: For some reason this is necessary? It shouldn't be.
-                        var temp = li.PendingQuery.IsComplete;
-
-                        Monitor.Enter(li.PendingQuery);
-                        li.PendingQuery.Begin();
+                        m.Flush();
                     }
                 },
                 (dm, _) => {
                     // XNA effectparameter gets confused about whether a value is set or not, so we do this
                     //  to ensure it always re-sets the texture parameter
-                    p["PositionTexture"].SetValue((Texture2D)null);
-                    p["VelocityTexture"].SetValue((Texture2D)null);
+                    if (e != null) {
+                        p["PositionTexture"].SetValue((Texture2D)null);
+                        p["VelocityTexture"].SetValue((Texture2D)null);
 
-                    var rt = p["RandomnessTexture"];
-                    if (rt != null)
-                        rt.SetValue((Texture2D)null);
+                        var rt = p["RandomnessTexture"];
+                        if (rt != null)
+                            rt.SetValue((Texture2D)null);
 
-                    var at = p["AttributeTexture"];
-                    if (at != null)
-                        at.SetValue((Texture2D)null);
+                        var at = p["AttributeTexture"];
+                        if (at != null)
+                            at.SetValue((Texture2D)null);
 
-                    var dft = p["DistanceFieldTexture"];
-                    if (dft != null)
-                        dft.SetValue((Texture2D)null);
-
-                    if (li != null) {
-                        li.PendingQuery.End();
-                        Monitor.Exit(li.PendingQuery);
-                        li.IsQueryRunning = true;
+                        var dft = p["DistanceFieldTexture"];
+                        if (dft != null)
+                            dft.SetValue((Texture2D)null);
                     }
                 }
             )) {
-                batch.Add(new NativeDrawCall(
-                    PrimitiveType.TriangleList, Engine.TriVertexBuffer, 0,
-                    Engine.TriIndexBuffer, 0, 0, Engine.TriVertexBuffer.VertexCount, 0, Engine.TriVertexBuffer.VertexCount / 2
-                ));
+                if (e != null)
+                    batch.Add(new NativeDrawCall(
+                        PrimitiveType.TriangleList, Engine.TriVertexBuffer, 0,
+                        Engine.TriIndexBuffer, 0, 0, Engine.TriVertexBuffer.VertexCount, 0, Engine.TriVertexBuffer.VertexCount / 2
+                    ));
             }
         }
 
@@ -616,8 +594,6 @@ namespace Squared.Illuminant.Particles {
                         isDead = true;
                     }
                 }
-                if (IsClearPending)
-                    isDead = true;
 
                 if (isDead)
                     ChunksToReap.Add(li);
@@ -630,8 +606,6 @@ namespace Squared.Illuminant.Particles {
             }
 
             ChunksToReap.Clear();
-
-            IsClearPending = false;
         }
 
         private void Reap (BufferSet buffer) {
@@ -657,8 +631,9 @@ namespace Squared.Illuminant.Particles {
 
         private BufferSet AcquireOrCreateBufferSet () {
             BufferSet result;
-            if (!Engine.AvailableBuffers.TryPopFront(out result))
+            if (!Engine.AvailableBuffers.TryPopFront(out result)) {
                 result = CreateBufferSet(Engine.Coordinator.Device);
+            }
             result.LastTurnUsed = Engine.CurrentTurn;
             return result;
         }
@@ -673,6 +648,14 @@ namespace Squared.Illuminant.Particles {
                 if (prev != null)
                     Engine.DiscardedBuffers.Add(prev);
             }
+        }
+
+        private void ClearAndDiscard (BatchGroup g, BufferSet set) {
+            if (set == null)
+                return;
+            using (var rtg = BatchGroup.ForRenderTarget(g, 0, set.PositionAndLife))
+                ClearBatch.AddNew(rtg, 0, Engine.Materials.Clear, clearColor: Color.Transparent);
+            Engine.DiscardedBuffers.Add(set);
         }
 
         public void Update (IBatchContainer container, int layer, float? deltaTimeSeconds = null) {
@@ -711,14 +694,6 @@ namespace Squared.Illuminant.Particles {
             )) {
                 int i = 0;
 
-                var clears = BatchGroup.New(container, -1);
-
-                int numActive = 0;
-                foreach (var t in Transforms) {
-                    if (t.IsActive)
-                        numActive++;
-                }
-
                 lock (NewChunks) {
                     foreach (var nc in NewChunks) {
                         SpawnStates[nc.ID] = new SpawnState { Free = 0, Offset = ChunkMaximumCount };
@@ -739,11 +714,23 @@ namespace Squared.Illuminant.Particles {
                     UpdatePass(
                         group, i++, it.GetMaterial(Engine.ParticleMaterials),
                         startedWhen, spawner, it.SetParameters, 
-                        false, actualDeltaTimeSeconds, null, false
+                        actualDeltaTimeSeconds
                     );
                 }
 
-                if (Configuration.DistanceField != null) {
+                if (IsClearPending) {
+                    // occlusion queries suck and never work right, and for some reason
+                    //  the old particle data is a ghost from hell and refuses to disappear
+                    //  even after it is cleared
+                    for (int k = 0; k < 3; k++) {
+                        UpdatePass(
+                            group, i++, pm.Erase,
+                            startedWhen, null,
+                            null, actualDeltaTimeSeconds
+                        );
+                    }
+                    IsClearPending = false;
+                } else if (Configuration.DistanceField != null) {
                     if (Configuration.DistanceFieldMaximumZ == null)
                         throw new InvalidOperationException("If a distance field is active, you must set DistanceFieldMaximumZ");
 
@@ -753,27 +740,15 @@ namespace Squared.Illuminant.Particles {
                         (Engine, p, frameIndex) => {
                             var dfu = new Uniforms.DistanceField(Configuration.DistanceField, Configuration.DistanceFieldMaximumZ.Value);
                             pm.MaterialSet.TrySetBoundUniform(pm.UpdateWithDistanceField, "DistanceField", ref dfu);
-                        }, true, actualDeltaTimeSeconds, null, true
+                        }, actualDeltaTimeSeconds
                     );
                 } else {
                     UpdatePass(
                         group, i++, pm.UpdatePositions,
                         startedWhen, null,
-                        null, true, actualDeltaTimeSeconds, null, true
+                        null, actualDeltaTimeSeconds
                     );
                 }
-
-                /*
-                // Clear any chunks that were recovered from the freelist this frame, because
-                //  they probably have garbage data in them
-                foreach (var c in ClearList) {
-                    using (var g = BatchGroup.ForRenderTarget(clears, 0, c.Current.PositionAndLife))
-                        ClearBatch.AddNew(g, 0, Engine.Materials.Clear, clearColor: Color.Transparent);
-                }
-                ClearList.Clear();
-                */
-
-                clears.Dispose();
 
                 for (int j = Chunks.Count - 1; j >= 0; j--) {
                     var c = Chunks[j];
@@ -783,17 +758,67 @@ namespace Squared.Illuminant.Particles {
                     Chunks.RemoveAt(j);
                     Reap(c);
                 }
-                // ComputeLiveness(group, i++, passSource);
+
+                ComputeLiveness(group, i++);
             }
 
             var ts = Time.Ticks;
 
-            // TODO: Do this immediately after issuing the batch instead?
-            Engine.Coordinator.AfterPresent(() => {
-                UnlockedEvent.Set();
-            });
-
             Engine.EndOfUpdate(initialTurn);
+        }
+
+        private void ComputeLiveness (
+            BatchGroup group, int layer
+        ) {
+            var quadCount = ChunkMaximumCount;
+
+            using (var rtg = BatchGroup.ForRenderTarget(
+                group, layer, LivenessQueryRT, (dm, _) => {
+                    dm.Device.Clear(Color.White);
+                    dm.Device.Clear(Color.Transparent);
+                }
+            )) {
+                RenderTrace.Marker(rtg, -9999, "Perform chunk occlusion queries");
+
+                var m = Engine.ParticleMaterials.CountLiveParticles;
+
+                foreach (var chunk in Chunks) {
+                    var li = GetLivenessInfo(chunk.ID);
+                    if (li == null)
+                        continue;
+
+                    var q = chunk.Query;
+                    using (var chunkBatch = NativeBatch.New(
+                        rtg, chunk.ID, m, (dm, _) => {
+                            SetSystemUniform(m, 0);
+
+                            var p = m.Effect.Parameters;
+                            p["PositionTexture"].SetValue(chunk.Current.PositionAndLife);
+                            m.Flush();
+                            if (!q.IsDisposed) {
+                                li.LastQueryStart = Time.Ticks;
+                                li.PendingQuery = q;
+                                var temp = q.IsComplete;
+                                Monitor.Enter(q);
+                                q.Begin();
+                            }
+                        }, (dm, _) => {
+                            q.End();
+                            Monitor.Exit(q);
+                            li.IsQueryRunning = true;
+                        }
+                    )) {
+                        chunkBatch.Add(new NativeDrawCall(
+                            PrimitiveType.TriangleList, 
+                            Engine.RasterizeVertexBuffer, 0,
+                            Engine.RasterizeOffsetBuffer, 0, 
+                            null, 0,
+                            Engine.RasterizeIndexBuffer, 0, 0, 4, 0, 2,
+                            quadCount
+                        ));
+                    }
+                }
+            }
         }
 
         private void RenderChunk (
@@ -942,17 +967,18 @@ namespace Squared.Illuminant.Particles {
                 foreach (var chunk in Chunks)
                     RenderChunk(group, chunk, m);
             }
-
-            // TODO: Do this immediately after issuing the batch instead?
-            Engine.Coordinator.AfterPresent(() => {
-                UnlockedEvent.Set();
-            });
         }
 
         public void Dispose () {
             // FIXME: Release buffers
-            foreach (var chunk in Chunks)
+            foreach (var chunk in Chunks) {
+                if (chunk.Previous != null)
+                    Engine.DiscardedBuffers.Add(chunk.Previous);
+                if (chunk.Current != null)
+                    Engine.DiscardedBuffers.Add(chunk.Current);
                 Engine.Coordinator.DisposeResource(chunk);
+            }
+            Engine.Coordinator.DisposeResource(LivenessQueryRT);
             LivenessInfos.Clear();
         }
     }

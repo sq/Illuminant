@@ -276,6 +276,20 @@ namespace Squared.Illuminant.Particles {
                 };
                 Action<DeviceManager>[] dEnd = null;
 
+                DefineMaterial(ParticleMaterials.CountLiveParticles = new Material(
+                    effects.Load("CountLiveParticles"), "CountLiveParticles", new[] {
+                        MaterialUtil.MakeDelegate(
+                            rasterizerState: RasterizerState.CullClockwise,
+                            depthStencilState: DepthStencilState.None,
+                            blendState: BlendState.Opaque
+                        )
+                    }, dEnd
+                ));
+
+                DefineMaterial(ParticleMaterials.Erase = new Material(
+                    effects.Load("UpdateParticleSystem"), "Erase", dBegin, dEnd
+                ));
+
                 DefineMaterial(ParticleMaterials.UpdatePositions = new Material(
                     effects.Load("UpdateParticleSystem"), "UpdatePositions", dBegin, dEnd
                 ));
