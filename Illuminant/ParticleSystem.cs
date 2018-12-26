@@ -22,7 +22,7 @@ namespace Squared.Illuminant.Particles {
         }
 
         internal class LivenessInfo {
-            public int            ID;
+            public Chunk          Chunk;
             public int?           Count;
             public bool           IsQueryRunning;
             public OcclusionQuery PendingQuery;
@@ -197,7 +197,6 @@ namespace Squared.Illuminant.Particles {
         public readonly List<Transforms.ParticleTransform> Transforms = 
             new List<Transforms.ParticleTransform>();
 
-        private  readonly List<int> DeadChunkIDs = new List<int>();
         private  readonly List<Chunk> NewChunks = new List<Chunk>();
         internal readonly List<Chunk> Chunks = new List<Chunk>();
 
@@ -212,6 +211,11 @@ namespace Squared.Illuminant.Particles {
         private int LastResetCount = 0;
         public event Action<ParticleSystem> OnDeviceReset;
 
+        // HACK: Performing occlusion queries every frame seems to be super unreliable,
+        //  so just perform them intermittently and accept that our data will be outdated
+        public const int LivenessCheckInterval = 4;
+        private int FramesUntilNextLivenessCheck = LivenessCheckInterval;
+
         private double? LastUpdateTimeSeconds = null;
 
         private readonly RenderTarget2D LivenessQueryRT;
@@ -219,7 +223,7 @@ namespace Squared.Illuminant.Particles {
         /// <summary>
         /// The number of frames a chunk must be dead for before it is reclaimed
         /// </summary>
-        public int DeadFrameThreshold = 8;
+        public int DeadFrameThreshold = LivenessCheckInterval * 3;
 
         public ParticleSystem (
             ParticleEngine engine, ParticleSystemConfiguration configuration
@@ -245,14 +249,14 @@ namespace Squared.Illuminant.Particles {
             }
         }
 
-        private LivenessInfo GetLivenessInfo (int id) {
+        private LivenessInfo GetLivenessInfo (Chunk chunk) {
             LivenessInfo result;
-            if (LivenessInfos.TryGetValue(id, out result))
+            if (LivenessInfos.TryGetValue(chunk.ID, out result))
                 return result;
 
             LivenessInfos.Add(
-                id, result = new LivenessInfo {
-                    ID = id,
+                chunk.ID, result = new LivenessInfo {
+                    Chunk = chunk,
                     Count = null
                 }
             );
@@ -358,7 +362,7 @@ namespace Squared.Illuminant.Particles {
                     spawnId = GetSpawnTarget(spawnCount / 2);
 
                     if (spawnId.HasValue) {
-                        Console.WriteLine("Partial spawn");
+                        // Console.WriteLine("Partial spawn");
                         spawnCount = Math.Min(SpawnStates[spawnId.Value].Free, spawnCount);
                     }
                 }
@@ -392,7 +396,7 @@ namespace Squared.Illuminant.Particles {
                 int i = 0;
 
                 foreach (var chunk in Chunks) {
-                    var li = GetLivenessInfo(chunk.ID);
+                    var li = GetLivenessInfo(chunk);
                     UpdateChunkLivenessQuery(li);
 
                     var chunkMaterial = m;
@@ -435,9 +439,6 @@ namespace Squared.Illuminant.Particles {
             Chunk chunk, Transforms.ParameterSetter setParameters,
             double deltaTimeSeconds
         ) {
-            if (DeadChunkIDs.Contains(chunk.ID))
-                return;
-
             var prev = chunk.Previous;
             var curr = chunk.Current;
 
@@ -550,9 +551,6 @@ namespace Squared.Illuminant.Particles {
                 return;
 
             lock (target.PendingQuery) {
-                if (!target.IsQueryRunning)
-                    return;
-
                 if (!target.PendingQuery.IsComplete)
                     return;
 
@@ -590,7 +588,7 @@ namespace Squared.Illuminant.Particles {
                 if (li.Count.GetValueOrDefault(1) <= 0) {
                     li.DeadFrameCount++;
                     if (li.DeadFrameCount >= DeadFrameThreshold) {
-                        // Console.WriteLine("Chunk " + li.ID + " dead");
+                        // Console.WriteLine("Chunk " + li.Chunk.ID + " dead");
                         isDead = true;
                     }
                 }
@@ -600,9 +598,9 @@ namespace Squared.Illuminant.Particles {
             }
 
             foreach (var li in ChunksToReap) {
-                DeadChunkIDs.Add(li.ID);
-                SpawnStates.Remove(li.ID);
-                LivenessInfos.Remove(li.ID);
+                SpawnStates.Remove(li.Chunk.ID);
+                LivenessInfos.Remove(li.Chunk.ID);
+                Reap(li.Chunk);
             }
 
             ChunksToReap.Clear();
@@ -615,8 +613,7 @@ namespace Squared.Illuminant.Particles {
         }
 
         private void Reap (Chunk chunk) {
-            Console.WriteLine("Chunk reaped");
-            DeadChunkIDs.Remove(chunk.ID);
+            // Console.WriteLine("Chunk reaped");
             Reap(chunk.Previous);
             Reap(chunk.Current);
             chunk.Previous = chunk.Current = null;
@@ -750,16 +747,10 @@ namespace Squared.Illuminant.Particles {
                     );
                 }
 
-                for (int j = Chunks.Count - 1; j >= 0; j--) {
-                    var c = Chunks[j];
-                    if (!DeadChunkIDs.Contains(c.ID))
-                        continue;
-
-                    Chunks.RemoveAt(j);
-                    Reap(c);
+                if (FramesUntilNextLivenessCheck-- <= 0) {
+                    FramesUntilNextLivenessCheck = LivenessCheckInterval;
+                    ComputeLiveness(group, i++);
                 }
-
-                ComputeLiveness(group, i++);
             }
 
             var ts = Time.Ticks;
@@ -783,7 +774,7 @@ namespace Squared.Illuminant.Particles {
                 var m = Engine.ParticleMaterials.CountLiveParticles;
 
                 foreach (var chunk in Chunks) {
-                    var li = GetLivenessInfo(chunk.ID);
+                    var li = GetLivenessInfo(chunk);
                     if (li == null)
                         continue;
 
@@ -824,9 +815,6 @@ namespace Squared.Illuminant.Particles {
         private void RenderChunk (
             BatchGroup group, Chunk chunk, Material m
         ) {
-            if (DeadChunkIDs.Contains(chunk.ID))
-                return;
-
             // TODO: Actual occupied count?
             var quadCount = ChunkMaximumCount;
             var curr = chunk.Current;
