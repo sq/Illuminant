@@ -102,7 +102,8 @@ namespace Squared.Illuminant.Particles {
             public readonly int Size, MaximumCount;
             public readonly int ID;
 
-            public long         LastTurnUsed;
+            public bool NeedsClear;
+            public long LastTurnUsed;
 
             public RenderTargetBinding[] Bindings;
             public RenderTarget2D PositionAndLife;
@@ -129,6 +130,8 @@ namespace Squared.Illuminant.Particles {
                 Bindings[1] = new RenderTargetBinding(Velocity);
                 if (configuration.AttributeCount > 0)
                     Bindings[2] = new RenderTargetBinding(Attributes);
+
+                NeedsClear = true;
             }
 
             internal RenderTarget2D CreateRenderTarget (ParticleEngineConfiguration configuration, GraphicsDevice device) {
@@ -161,8 +164,6 @@ namespace Squared.Illuminant.Particles {
 
             public OcclusionQuery Query;
 
-            public object Lock = new object();
-
             public bool IsDisposed { get; private set; }
 
             private static volatile int NextID;
@@ -178,15 +179,13 @@ namespace Squared.Illuminant.Particles {
             }
 
             public void Dispose () {
-                lock (Lock) {
-                    if (IsDisposed)
-                        return;
+                if (IsDisposed)
+                    return;
 
-                    IsDisposed = true;
+                IsDisposed = true;
 
-                    Query.Dispose();
-                    Query = null;
-                }
+                Query.Dispose();
+                Query = null;
             }
         }
 
@@ -482,6 +481,8 @@ namespace Squared.Illuminant.Particles {
 
                         m.Flush();
                     }
+
+                    dm.Device.Clear(Color.Transparent);
                 },
                 (dm, _) => {
                     // XNA effectparameter gets confused about whether a value is set or not, so we do this
@@ -630,6 +631,8 @@ namespace Squared.Illuminant.Particles {
             BufferSet result;
             if (!Engine.AvailableBuffers.TryPopFront(out result)) {
                 result = CreateBufferSet(Engine.Coordinator.Device);
+            } else {
+                result.NeedsClear = true;
             }
             result.LastTurnUsed = Engine.CurrentTurn;
             return result;

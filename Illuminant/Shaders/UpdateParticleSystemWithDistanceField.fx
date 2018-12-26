@@ -24,6 +24,13 @@ void PS_Update (
     );
 
     float newLife = oldPosition.w - (getLifeDecayRate() * getDeltaTimeSeconds());
+    if (newLife <= 0) {
+        newVelocity = 0;
+        newAttributes = 0;
+        resultPosition = 0;
+        return;
+    }
+
     float3 unitVector = normalize(oldVelocity.xyz);
     float3 velocity = applyFrictionAndMaximum(oldVelocity.xyz);
 
