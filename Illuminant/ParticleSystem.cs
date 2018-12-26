@@ -10,6 +10,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Graphics.PackedVector;
 using Squared.Game;
+using Squared.Illuminant.Uniforms;
 using Squared.Illuminant.Util;
 using Squared.Render;
 using Squared.Render.Tracing;
@@ -475,7 +476,7 @@ namespace Squared.Illuminant.Particles {
                             rt.SetValue(Engine.RandomnessTexture);
                         }
 
-                        SetSystemUniform(m, deltaTimeSeconds);
+                        SetSystemUniforms(m, deltaTimeSeconds);
 
                         m.Flush();
                     }
@@ -648,9 +649,33 @@ namespace Squared.Illuminant.Particles {
             Engine.Coordinator.DisposeResource(chunk);
         }
 
-        private void SetSystemUniform (Material m, double deltaTimeSeconds) {
+        private void SetSystemUniforms (Material m, double deltaTimeSeconds) {
+            ClampedBezier4 colorFromLife;
+            ClampedBezier2 sizeFromLife;
+
             var psu = new Uniforms.ParticleSystem(Engine.Configuration, Configuration, deltaTimeSeconds);
             Engine.ParticleMaterials.MaterialSet.TrySetBoundUniform(m, "System", ref psu);
+
+            var o = Configuration.Color._OpacityFromLife.GetValueOrDefault(0);
+            if (o != 0) {
+                colorFromLife = new ClampedBezier4 {
+                    A = new Vector4(1, 1, 1, 0),
+                    B = Vector4.One,
+                    Count = 2,
+                    MinValue = 0,
+                    InvDivisor = 1.0f / -o
+                };
+            } else {
+                colorFromLife = new ClampedBezier4(Configuration.Color._ColorFromLife);
+            }
+            var a = colorFromLife.Evaluate(5);
+            var b = colorFromLife.Evaluate(250);
+            var c = colorFromLife.Evaluate(125);
+
+            sizeFromLife = new ClampedBezier2(Configuration.SizeFromLife);
+
+            Engine.ParticleMaterials.MaterialSet.TrySetBoundUniform(m, "ColorFromLife", ref colorFromLife);
+            Engine.ParticleMaterials.MaterialSet.TrySetBoundUniform(m, "SizeFromLife", ref sizeFromLife);
         }
 
         private BufferSet AcquireOrCreateBufferSet () {
@@ -809,7 +834,7 @@ namespace Squared.Illuminant.Particles {
                     var q = chunk.Query;
                     using (var chunkBatch = NativeBatch.New(
                         rtg, chunk.ID, m, (dm, _) => {
-                            SetSystemUniform(m, 0);
+                            SetSystemUniforms(m, 0);
 
                             var p = m.Effect.Parameters;
                             p["PositionTexture"].SetValue(chunk.Current.PositionAndLife);
@@ -911,7 +936,7 @@ namespace Squared.Illuminant.Particles {
                 container, layer,
                 (dm, _) => {
                     // FIXME: deltaTime
-                    SetSystemUniform(m, 0);
+                    SetSystemUniforms(m, 0);
 
                     // TODO: transform arg
                     var bt = p["BitmapTexture"];
@@ -1013,9 +1038,8 @@ namespace Squared.Illuminant.Particles {
     }
 
     public class ParticleColor {
-        internal Vector4? _ColorFromLife = null;
-        [NonSerialized]
-        private float?    _OpacityFromLife = null;
+        internal Bezier4  _ColorFromLife = null;
+        internal float?   _OpacityFromLife = null;
 
         /// <summary>
         /// Sets a global multiply color to apply to the white and attributecolor materials
@@ -1056,35 +1080,29 @@ namespace Squared.Illuminant.Particles {
                 if (value == _OpacityFromLife)
                     return;
 
-                if (value != null) {
-                    _OpacityFromLife = value.Value;
-                    _ColorFromLife = new Vector4(0, 0, 0, value.Value);
-                } else {
-                    _OpacityFromLife = null;
+                _OpacityFromLife = value;
+                if (value != null)
                     _ColorFromLife = null;
-                }
             }
             get {
-                if (_OpacityFromLife.HasValue)
-                    return _OpacityFromLife.Value;
-                else
-                    return null;
+                return _OpacityFromLife;
             }
         }
 
         /// <summary>
         /// Multiplies the particle's color, producing a fade-in or fade-out based on the particle's life
         /// </summary>
-        public Vector4? FromLife {
+        public Bezier4 FromLife {
             get {
-                if (_OpacityFromLife.HasValue)
-                    return null;
-                else
-                    return _ColorFromLife;
+                return _ColorFromLife;
             }
             set {
+                if (value == _ColorFromLife)
+                    return;
+
                 _ColorFromLife = value;
-                _OpacityFromLife = null;
+                if (value != null)
+                    _OpacityFromLife = null;
             }
         }
     }
@@ -1125,7 +1143,7 @@ namespace Squared.Illuminant.Particles {
         /// <summary>
         /// Multiplies the particle's size, producing a shrink or grow based on the particle's life
         /// </summary>
-        public Vector2?      SizeFromLife = null;
+        public Bezier2       SizeFromLife = null;
 
         /// <summary>
         /// Life of all particles decreases by this much every update
@@ -1202,5 +1220,17 @@ namespace Squared.Illuminant.Particles {
             var result = (ParticleSystemConfiguration)this.MemberwiseClone();
             return result;
         }
+    }
+
+    public class Bezier2 {
+        public int Count;
+        public float MinValue, MaxValue;
+        public Vector2 A, B, C, D;
+    }
+
+    public class Bezier4 {
+        public int Count;
+        public float MinValue, MaxValue;
+        public Vector4 A, B, C, D;
     }
 }

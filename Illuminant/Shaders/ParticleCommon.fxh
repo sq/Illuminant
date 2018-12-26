@@ -1,15 +1,87 @@
+struct ClampedBezier2 {
+    float4 RangeAndCount;
+    float4 AB, CD;
+};
+
+struct ClampedBezier4 {
+    float4 RangeAndCount;
+    float4 A, B, C, D;
+};
+
+float tForScaledBezier (in float4 rangeAndCount, in float value, out float t) {
+    float minValue = rangeAndCount.x, 
+        invDivisor = rangeAndCount.y;
+
+    t = (value - minValue) * abs(invDivisor);
+    if (invDivisor > 0)
+        t = 1 - saturate(t);
+    else
+        t = saturate(t);
+    return rangeAndCount.z;
+}
+
+float2 evaluateBezier2 (in ClampedBezier2 bezier, float value) {
+    float2 a = bezier.AB.xy,
+        b = bezier.AB.zw,
+        c = bezier.CD.xy,
+        d = bezier.CD.zw;
+
+    float t;
+    float count = tForScaledBezier(bezier.RangeAndCount, value, t);
+    return t;
+    if (count <= 1.5)
+        return a;
+
+    float2 ab = lerp(a, b, t);
+    if (count <= 2.5)
+        return ab;
+
+    float2 bc = lerp(b, c, t);
+    float2 abbc = lerp(ab, bc, t);
+    if (count <= 3.5)
+        return abbc;
+
+    float2 cd = lerp(c, d, t);
+    float2 bccd = lerp(bc, cd, t);
+
+    float2 result = lerp(abbc, bccd, t);
+    return result;
+}
+
+float4 evaluateBezier4 (in ClampedBezier4 bezier, float value) {
+    float t;
+    float count = tForScaledBezier(bezier.RangeAndCount, value, t);
+    if (count <= 1.5)
+        return bezier.A;
+
+    float4 ab = lerp(bezier.A, bezier.B, t);
+    if (count <= 2.5)
+        return ab;
+
+    float4 bc = lerp(bezier.B, bezier.C, t);
+    float4 abbc = lerp(ab, bc, t);
+    if (count <= 3.5)
+        return abbc;
+
+    float4 cd = lerp(bezier.C, bezier.D, t);
+    float4 bccd = lerp(bc, cd, t);
+
+    float4 result = lerp(abbc, bccd, t);
+    return result;
+}
+
 struct ParticleSystemSettings {
     // deltaTimeSeconds, friction, maximumVelocity, lifeDecayRate
     float4 GlobalSettings;
     // escapeVelocity, bounceVelocityMultiplier, collisionDistance, collisionLifePenalty
     float4 CollisionSettings;
-    float4 ColorFromLife;
     float4 TexelAndSize;
-    float2 SizeFromLife;
     float2 RotationFromLifeAndIndex;
 };
 
 uniform ParticleSystemSettings System;
+uniform ClampedBezier2 SizeFromLife;
+uniform ClampedBezier4 ColorFromLife;
 uniform float StippleFactor;
 
 float getDeltaTimeSeconds () {
@@ -52,29 +124,27 @@ float2 getTexel () {
     return System.TexelAndSize.xy;
 }
 
-float4 getColorForLifeValue (float life) {
-    // value = (1 + x) if threshold is negative
+/*
     float4 base = saturate(-sign(System.ColorFromLife));
     // fraction = (x / threshold)
     float4 fraction = life / (System.ColorFromLife + 0.001);
     // value = (1 + -x) if multiplier is negative else (0 + x)
     float4 result = saturate(base + fraction);
-    // premultiply
+*/
+
+float4 getColorForLifeValue (float life) {
+    float4 result = evaluateBezier4(ColorFromLife, life);
     result.rgb *= result.a;
     return result;
 }
 
 float2 getSizeForLifeValue (float life) {
-    // value = (1 + x) if threshold is negative
-    float2 base = saturate(-sign(System.SizeFromLife));
-    // fraction = (x / threshold)
-    float2 fraction = life / (System.SizeFromLife + 0.0001);
-    // value = (1 + -x) if multiplier is negative else (0 + x)
-    float2 result = saturate(base + fraction);
+    return 1;
+    float2 result = evaluateBezier2(SizeFromLife, life);
     return result * System.TexelAndSize.zw;
 }
 
-float2 getRotationForLifeAndIndex (float life, float index) {
+float getRotationForLifeAndIndex (float life, float index) {
     return (life * System.RotationFromLifeAndIndex.x) + 
         (index * System.RotationFromLifeAndIndex.y);
 }
@@ -164,6 +234,7 @@ void readStateOrDiscard (
 }
 
 bool stippleReject (float vertexIndex) {
+    return false;
     float stippleThreshold = thresholdMatrix[vertexIndex % 16];
     return (StippleFactor - stippleThreshold) <= 0;
 }

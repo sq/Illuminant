@@ -9,6 +9,7 @@
     <RootNamespace>Squared.Illuminant</RootNamespace>
     <AssemblyName>Illuminant</AssemblyName>
     <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
+    <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
     <DebugSymbols>true</DebugSymbols>
@@ -114,7 +115,7 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
-    <PreBuildEvent>"$(ProjectDir)\..\..\Fracture\ShaderCompiler\bin\ShaderCompiler.exe" $(ProjectDir)\..\..\Fracture\ext\fxc $(ProjectDir)\Shaders $(ProjectDir)\Shaders\bin\Debug "/O0 /Zi"</PreBuildEvent>
+    <PreBuildEvent>"$(ProjectDir)\..\..\Fracture\ShaderCompiler\bin\ShaderCompiler.exe" $(ProjectDir)\..\..\Fracture\ext\fxc $(ProjectDir)\Shaders $(ProjectDir)\Shaders\bin\Debug "/Od /Zi"</PreBuildEvent>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <PreBuildEvent>"$(ProjectDir)\..\..\Fracture\ShaderCompiler\bin\ShaderCompiler.exe" $(ProjectDir)\..\..\Fracture\ext\fxc $(ProjectDir)\Shaders $(ProjectDir)\Shaders\bin\Release "/O3 /Zi"</PreBuildEvent>

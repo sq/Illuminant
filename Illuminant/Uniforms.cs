@@ -5,9 +5,216 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
+using Squared.Illuminant.Particles;
 using Squared.Util;
 
 namespace Squared.Illuminant.Uniforms {
+    [StructLayout(LayoutKind.Sequential)]
+    public struct ClampedBezier2 {
+        public static readonly ClampedBezier2 Zero = new ClampedBezier2 {
+            Count = 1,
+            MinValue = 0,
+            InvDivisor = 1,
+            A = Vector2.Zero,
+            B = Vector2.Zero
+        };
+
+        public static readonly ClampedBezier2 One = new ClampedBezier2 {
+            Count = 1,
+            MinValue = 0,
+            InvDivisor = 1,
+            A = Vector2.One,
+            B = Vector2.One
+        };
+
+        public Vector4 RangeAndCount;
+        public Vector4 AB, CD;
+
+        public ClampedBezier2 (Bezier2 src) : this() {
+            if (src == null) {
+                this = One;
+                return;
+            }
+
+            var range = src.MaxValue - src.MinValue;
+            if ((range == 0) || (src.Count <= 1))
+                range = 1;
+            RangeAndCount = new Vector4(
+                Math.Min(src.MinValue, src.MaxValue),
+                src.MaxValue < src.MinValue
+                    ? -1.0f / range
+                    : 1.0f / range,
+                src.Count, 0
+            );
+            AB = new Vector4(
+                src.A.X, src.A.Y,
+                src.B.X, src.B.Y
+            );
+            CD = new Vector4(
+                src.C.X, src.C.Y,
+                src.D.X, src.D.Y
+            );
+        }
+
+        public Vector2 A {
+            set {
+                AB.X = value.X;
+                AB.Y = value.Y;
+            }
+        }
+
+        public Vector2 B {
+            set {
+                AB.Z = value.X;
+                AB.W = value.Y;
+            }
+        }
+
+        public float Count {
+            set {
+                RangeAndCount.Z = value;
+            }
+        }
+
+        public float MinValue {
+            set {
+                RangeAndCount.X = value;
+            }
+        }
+
+        public float InvDivisor {
+            set {
+                RangeAndCount.Y = value;
+            }
+        }
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct ClampedBezier4 {
+        public static readonly ClampedBezier4 Zero = new ClampedBezier4 {
+            Count = 1,
+            A = Vector4.Zero,
+            B = Vector4.Zero,
+            C = Vector4.Zero,
+            D = Vector4.Zero
+        };
+
+        public static readonly ClampedBezier4 One = new ClampedBezier4 {
+            Count = 1,
+            A = Vector4.One,
+            B = Vector4.One,
+            C = Vector4.One,
+            D = Vector4.One
+        };
+
+        public Vector4 RangeAndCount;
+        public Vector4 A, B, C, D;
+
+        public ClampedBezier4 (Bezier4 src) : this() {
+            if (src == null) {
+                this = One;
+                return;
+            }
+
+            var range = src.MaxValue - src.MinValue;
+            if ((range == 0) || (src.Count <= 1))
+                range = 1;
+            RangeAndCount = new Vector4(
+                Math.Min(src.MinValue, src.MaxValue),
+                src.MaxValue < src.MinValue
+                    ? -1.0f / range
+                    : 1.0f / range,
+                src.Count, 0
+            );
+            A = src.A;
+            B = src.B;
+            C = src.C;
+            D = src.D;
+        }
+
+        public float Count {
+            set {
+                RangeAndCount.Z = value;
+            }
+        }
+
+        public float MinValue {
+            set {
+                RangeAndCount.X = value;
+            }
+        }
+
+        public float InvDivisor {
+            set {
+                RangeAndCount.Y = value;
+            }
+        }
+
+        private int tForScaledBezier (float value, out float t) {
+            float minValue = RangeAndCount.X, 
+                invDivisor = RangeAndCount.Y;
+
+            t = (value - minValue) * Math.Abs(invDivisor);
+            if (invDivisor > 0)
+                t = 1 - Arithmetic.Clamp(t, 0, 1);
+            else
+                t = Arithmetic.Clamp(t, 0, 1);
+            return (int)RangeAndCount.Z;
+        }
+
+        /*
+        public Vector2 Evaluate (float value) {
+            Vector2 a = AB.xy,
+                b = AB.zw,
+                c = CD.xy,
+                d = CD.zw;
+
+            float t;
+            float count = tForScaledBezier(bezier.RangeAndCount, value, t);
+            return t;
+            if (count <= 1.5)
+                return a;
+
+            float2 ab = lerp(a, b, t);
+            if (count <= 2.5)
+                return ab;
+
+            float2 bc = lerp(b, c, t);
+            float2 abbc = lerp(ab, bc, t);
+            if (count <= 3.5)
+                return abbc;
+
+            float2 cd = lerp(c, d, t);
+            float2 bccd = lerp(bc, cd, t);
+
+            float2 result = lerp(abbc, bccd, t);
+            return result;
+        }
+        */
+
+        public Vector4 Evaluate (float value) {
+            float t;
+            int count = tForScaledBezier(value, out t);
+            if (count <= 1.5)
+                return A;
+
+            var ab = Arithmetic.Lerp(A, B, t);
+            if (count <= 2.5)
+                return ab;
+
+            var bc = Arithmetic.Lerp(B, C, t);
+            var abbc = Arithmetic.Lerp(ab, bc, t);
+            if (count <= 3.5)
+                return abbc;
+
+            var cd = Arithmetic.Lerp(C, D, t);
+            var bccd = Arithmetic.Lerp(bc, cd, t);
+
+            var result = Arithmetic.Lerp(abbc, bccd, t);
+            return result;
+        }
+    }
+
     [StructLayout(LayoutKind.Sequential)]
     public struct Environment {
         // GroundZ, ZToYMultiplier, InvZToYMultiplier
@@ -151,9 +358,7 @@ namespace Squared.Illuminant.Uniforms {
         public Vector4 GlobalSettings;
         // escapeVelocity, bounceVelocityMultiplier, collisionDistance, collisionLifePenalty
         public Vector4 CollisionSettings;
-        public Vector4 ColorFromLife;
         public Vector4 TexelAndSize;
-        public Vector2 SizeFromLife;
         public Vector2 RotationFromLifeAndIndex;
 
         public ParticleSystem (
@@ -175,8 +380,6 @@ namespace Squared.Illuminant.Uniforms {
                 Configuration.CollisionDistance,
                 Configuration.CollisionLifePenalty
             );
-            ColorFromLife = Configuration.Color._ColorFromLife.GetValueOrDefault(Vector4.Zero);
-            SizeFromLife = Configuration.SizeFromLife.GetValueOrDefault(Vector2.Zero);
             RotationFromLifeAndIndex = new Vector2(
                 MathHelper.ToRadians(Configuration.RotationFromLife), 
                 MathHelper.ToRadians(Configuration.RotationFromIndex)

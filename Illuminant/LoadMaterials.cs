@@ -335,6 +335,8 @@ namespace Squared.Illuminant.Particles {
                     Materials.GetUniformBinding<Uniforms.Environment>(m, "Environment");
                     Materials.GetUniformBinding<Uniforms.DistanceField>(m, "DistanceField");
                     Materials.GetUniformBinding<Uniforms.ParticleSystem>(m, "System");
+                    Materials.GetUniformBinding<Uniforms.ClampedBezier4>(m, "ColorFromLife");
+                    Materials.GetUniformBinding<Uniforms.ClampedBezier2>(m, "SizeFromLife");
                 }, null);
 
                 Materials.PreallocateBindings();
