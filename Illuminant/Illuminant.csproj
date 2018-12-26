@@ -106,16 +106,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Shaders\*.fx" />
+    <ShaderText Include="Shaders\*.fx" />
     <None Include="Shaders\*.fxh" />
-  </ItemGroup>
-  <ItemGroup Condition=" '$(Configuration)' == 'Debug' ">
-    <EmbeddedResource Include="Shaders\bin\Debug\*.fx.bin">
-      <LogicalName>%(Filename)</LogicalName>
-    </EmbeddedResource>
-  </ItemGroup>
-  <ItemGroup Condition=" '$(Configuration)' == 'Release' ">
-    <EmbeddedResource Include="Shaders\bin\Release\*.fx.bin">
+    <EmbeddedResource Include="@(ShaderText -> 'Shaders\bin\$(Configuration)\%(Filename).fx.bin')">
       <LogicalName>%(Filename)</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
