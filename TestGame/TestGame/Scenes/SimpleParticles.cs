@@ -104,13 +104,11 @@ namespace TestGame.Scenes {
 
             System = new ParticleSystem(
                 Engine,
-                new ParticleSystemConfiguration(
-                    attributeCount: 1
-                ) {
+                new ParticleSystemConfiguration() {
                     Appearance = {
                         Texture = new NullableLazyResource<Texture2D>("spark"),
                     },
-                    Size = Vector2.One * 1.5f,
+                    Size = Vector2.One * 1.33f,
                     /*
                     Texture = fireball,
                     TextureRegion = fireballRect,
@@ -123,7 +121,7 @@ namespace TestGame.Scenes {
                     },
                     MaximumVelocity = 2048,
                     CollisionLifePenalty = 1,
-                    GlobalLifeDecayRate = 2
+                    GlobalLifeDecayRate = 1.2f
                 }
             ) {
                 Transforms = {
@@ -160,7 +158,8 @@ namespace TestGame.Scenes {
                             new Gravity.Attractor {
                                 Radius = 40,
                             },
-                        }
+                        },
+                        MaximumAcceleration = 1024
                     },
                     /*
                     new FMA {
@@ -317,16 +316,18 @@ namespace TestGame.Scenes {
                     lightDirection: new Vector3(-0.5f, -0.5f, -0.33f)
                 );
 
-                var ir = new ImperativeRenderer(
-                    frame, Game.Materials, 4
-                );
-                var layout = Game.Font.LayoutString(
-                    string.Format(
-                        @"{0:000000} / {1:000000} alive",
-                        System.LiveCount, System.Capacity
-                    ), position: new Vector2(6, 6)
-                );
-                ir.DrawMultiple(layout, material: Game.TextMaterial);
+            var ir = new ImperativeRenderer(
+                frame, Game.Materials, 4
+            );
+            var layout = Game.Font.LayoutString(
+                string.Format(
+                    "{0:000000} / {1:000000} alive\r\n{2:0000.00} MB VRAM",
+                    System.LiveCount, System.Capacity,
+                    Engine.EstimateMemoryUsage() / (1024 * 1024.0)
+                ), position: new Vector2(6, 6)
+            );
+            ir.DrawMultiple(layout, material: Game.TextMaterial);
+
         }
 
         public override void Update (GameTime gameTime) {

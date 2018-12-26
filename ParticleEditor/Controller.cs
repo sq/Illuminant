@@ -79,7 +79,7 @@ namespace ParticleEditor {
         }
 
         public void AddSystem () {
-            var config = new ParticleSystemConfiguration(1) {
+            var config = new ParticleSystemConfiguration() {
                 Color = {
                     OpacityFromLife = 256,
                 },

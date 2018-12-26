@@ -115,10 +115,10 @@ namespace Squared.Illuminant.Particles {
 
             private static volatile int NextID;
 
-            public BufferSet (int size, ParticleSystemConfiguration configuration, GraphicsDevice device) {
+            public BufferSet (ParticleEngineConfiguration configuration, GraphicsDevice device) {
                 ID = Interlocked.Increment(ref NextID);
-                Size = size;
-                MaximumCount = size * size;
+                Size = configuration.ChunkSize;
+                MaximumCount = Size * Size;
 
                 Bindings = new RenderTargetBinding[2 + configuration.AttributeCount];
 
@@ -133,7 +133,7 @@ namespace Squared.Illuminant.Particles {
                     Bindings[2] = new RenderTargetBinding(Attributes);
             }
 
-            internal RenderTarget2D CreateRenderTarget (ParticleSystemConfiguration configuration, GraphicsDevice device) {
+            internal RenderTarget2D CreateRenderTarget (ParticleEngineConfiguration configuration, GraphicsDevice device) {
                 return new RenderTarget2D(
                     device, 
                     Size, Size, false, 
@@ -171,11 +171,11 @@ namespace Squared.Illuminant.Particles {
             private static volatile int NextID;
 
             public Chunk (
-                int size, ParticleSystemConfiguration configuration, GraphicsDevice device
+                ParticleEngineConfiguration configuration, GraphicsDevice device
             ) {
                 ID = Interlocked.Increment(ref NextID);
-                Size = size;
-                MaximumCount = size * size;
+                Size = configuration.ChunkSize;
+                MaximumCount = Size * Size;
                 NeedsClear = true;
 
                 Query = new OcclusionQuery(device);
@@ -261,7 +261,7 @@ namespace Squared.Illuminant.Particles {
 
         private BufferSet CreateBufferSet (GraphicsDevice device) {
             lock (Engine.Coordinator.CreateResourceLock) {
-                var result = new BufferSet(Engine.Configuration.ChunkSize, Configuration, device);
+                var result = new BufferSet(Engine.Configuration, device);
                 Engine.AllBuffers.Add(result);
                 return result;
             }
@@ -269,7 +269,7 @@ namespace Squared.Illuminant.Particles {
         
         private Chunk CreateChunk (GraphicsDevice device, List<Chunk> clearList) {
             lock (Engine.Coordinator.CreateResourceLock) {
-                var result = new Chunk(Engine.Configuration.ChunkSize, Configuration, device);
+                var result = new Chunk(Engine.Configuration, device);
                 result.Current = AcquireOrCreateBufferSet();
                 return result;
             }
@@ -366,6 +366,7 @@ namespace Squared.Illuminant.Particles {
                     var chunk = CreateChunk(device, null);
                     spawnId = chunk.ID;
                     SpawnStates[chunk.ID] = new SpawnState { Offset = 0, Free = ChunkMaximumCount };
+                    Chunks.Add(chunk);
                 }
             }
 
@@ -452,6 +453,10 @@ namespace Squared.Illuminant.Particles {
 
             var prev = chunk.Previous;
             var curr = chunk.Current;
+
+            if (prev != null)
+                prev.LastTurnUsed = Engine.CurrentTurn;
+            curr.LastTurnUsed = Engine.CurrentTurn;
 
             var e = m.Effect;
             var p = e.Parameters;
@@ -608,7 +613,7 @@ namespace Squared.Illuminant.Particles {
                 if (li.Count.GetValueOrDefault(1) <= 0) {
                     li.DeadFrameCount++;
                     if (li.DeadFrameCount >= DeadFrameThreshold) {
-                        Console.WriteLine("Chunk " + li.ID + " dead");
+                        // Console.WriteLine("Chunk " + li.ID + " dead");
                         ChunksToReap.Add(li);
                     }
                 }
@@ -810,6 +815,8 @@ namespace Squared.Illuminant.Particles {
             if (curr == null)
                 return;
 
+            curr.LastTurnUsed = Engine.CurrentTurn;
+
             // Console.WriteLine("Draw {0}", chunk.ID);
 
             using (var batch = NativeBatch.New(
@@ -850,11 +857,11 @@ namespace Squared.Illuminant.Particles {
 
             if (material == null) {
                 if ((appearance.Texture != null) && (appearance.Texture.Instance != null)) {
-                    material = Configuration.AttributeCount > 0
+                    material = Engine.Configuration.AttributeCount > 0
                         ? Engine.ParticleMaterials.AttributeColor
                         : Engine.ParticleMaterials.White;
                 } else {
-                    material = Configuration.AttributeCount > 0
+                    material = Engine.Configuration.AttributeCount > 0
                         ? Engine.ParticleMaterials.AttributeColorNoTexture
                         : Engine.ParticleMaterials.WhiteNoTexture;
                 }
@@ -1047,8 +1054,6 @@ namespace Squared.Illuminant.Particles {
     }
 
     public class ParticleSystemConfiguration {
-        public readonly int  AttributeCount;
-
         /// <summary>
         /// Used to measure elapsed time automatically for updates
         /// </summary>
@@ -1145,12 +1150,6 @@ namespace Squared.Illuminant.Particles {
         public float         StippleFactor = 1.0f;
 
         /// <summary>
-        /// Store system state as 32-bit float instead of 16-bit float
-        /// </summary>
-        [NonSerialized]
-        public bool          HighPrecision = true;
-
-        /// <summary>
         /// Makes particles spin based on their life value
         /// </summary>
         public float         RotationFromLife = 0;
@@ -1160,10 +1159,7 @@ namespace Squared.Illuminant.Particles {
         /// </summary>
         public float         RotationFromIndex = 0;
 
-        public ParticleSystemConfiguration (
-            int attributeCount = 0
-        ) {
-            AttributeCount = attributeCount;
+        public ParticleSystemConfiguration () {
         }
     }
 }

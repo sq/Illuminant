@@ -207,7 +207,9 @@ namespace TestGame.Scenes {
 
             Engine = new ParticleEngine(
                 Game.Content, Game.RenderCoordinator, Game.Materials,
-                new ParticleEngineConfiguration (128), Game.ParticleMaterials
+                new ParticleEngineConfiguration (128) {
+                    HighPrecision = false
+                }, Game.ParticleMaterials
             );
 
             SetupParticleSystem();
@@ -271,9 +273,7 @@ namespace TestGame.Scenes {
 
             System = new ParticleSystem(
                 Engine,
-                new ParticleSystemConfiguration(
-                    attributeCount: 1
-                ) {
+                new ParticleSystemConfiguration() {
                     Appearance = {
                         Texture = fireball,
                         Region = fireballRect,
@@ -285,7 +285,6 @@ namespace TestGame.Scenes {
                     BounceVelocityMultiplier = 1f,
                     MaximumVelocity = 128f,
                     CollisionLifePenalty = 1,
-                    HighPrecision = false
                 }
             ) {
                 Transforms = {

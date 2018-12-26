@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -89,9 +90,7 @@ namespace Squared.Illuminant.Particles {
 
         public long CurrentTurn { get; private set; }
 
-        public void NextTurn () {
-            CurrentTurn += 1;
-
+        private void SiftBuffers () {
             ParticleSystem.BufferSet b;
             using (var e = DiscardedBuffers.GetEnumerator())
             while (e.GetNext(out b)) {
@@ -103,7 +102,15 @@ namespace Squared.Illuminant.Particles {
             }
         }
 
+        internal void NextTurn () {
+            CurrentTurn += 1;
+
+            SiftBuffers();
+        }
+
         internal void EndOfUpdate (long initialTurn) {
+            SiftBuffers();
+
             ParticleSystem.BufferSet b;
             using (var e = AvailableBuffers.GetEnumerator())
             while (e.GetNext(out b)) {
@@ -111,11 +118,24 @@ namespace Squared.Illuminant.Particles {
                     continue;
 
                 if (AvailableBuffers.Count > Configuration.SpareBufferCount) {
-                    Console.WriteLine("Discarding unused buffer " + b.ID);
+                    // Console.WriteLine("Discarding unused buffer " + b.ID);
                     Coordinator.DisposeResource(b);
+                    AllBuffers.Remove(b);
                     e.RemoveCurrent();
                 }
             }
+        }
+
+        public long EstimateMemoryUsage () {
+            var ibSize = RasterizeIndexBuffer.IndexCount * 2;
+            var obSize = RasterizeOffsetBuffer.VertexCount * Marshal.SizeOf(typeof(ParticleOffsetVertex));
+            var vbSize = RasterizeVertexBuffer.VertexCount * Marshal.SizeOf(typeof(ParticleSystemVertex));
+            long bufTotal = 0;
+            foreach (var buf in AllBuffers) {
+                var bufSize = buf.Size * buf.Size * (buf.Attributes != null ? 3 : 2) * (Configuration.HighPrecision ? 4 * 4 : 2 * 4);
+                bufTotal += bufSize;
+            }
+            return (ibSize + obSize + vbSize + bufTotal);
         }
 
         private void FillIndexBuffer () {
@@ -235,16 +255,22 @@ namespace Squared.Illuminant.Particles {
 
     public class ParticleEngineConfiguration {
         public readonly int ChunkSize;
+        public readonly int AttributeCount;
+
+        /// <summary>
+        /// Store system state as 32-bit float instead of 16-bit float
+        /// </summary>
+        public bool HighPrecision = true;
 
         /// <summary>
         /// How long a buffer must remain unused before getting used again.
         /// </summary>
-        public int RecycleInterval = 1;
+        public int RecycleInterval = 2;
 
         /// <summary>
         /// The maximum number of spare buffers to keep around.
         /// </summary>
-        public int SpareBufferCount = 12;
+        public int SpareBufferCount = 24;
 
         /// <summary>
         /// Used to measure elapsed time automatically for updates
@@ -266,7 +292,8 @@ namespace Squared.Illuminant.Particles {
         /// </summary>
         public Func<string, Texture2D> FPTextureLoader = null;
 
-        public ParticleEngineConfiguration (int chunkSize = 256) {
+        public ParticleEngineConfiguration (int chunkSize = 256, int attributeCount = 1) {
+            AttributeCount = attributeCount;
             ChunkSize = chunkSize;
         }
     }

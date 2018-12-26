@@ -84,9 +84,7 @@ namespace TestGame.Scenes {
 
             System = new ParticleSystem(
                 Engine,
-                new ParticleSystemConfiguration(
-                    attributeCount: 1
-                ) {
+                new ParticleSystemConfiguration() {
                     Appearance = {
                         Texture = spark,
                     },
