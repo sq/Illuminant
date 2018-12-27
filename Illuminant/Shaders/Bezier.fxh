@@ -22,14 +22,12 @@ float tForScaledBezier (in float4 rangeAndCount, in float value, out float t) {
     return rangeAndCount.z;
 }
 
-float2 evaluateBezier2 (in ClampedBezier2 bezier, float value) {
+float2 evaluateBezier2AtT (in ClampedBezier2 bezier, in float count, in float t) {
     float2 a = bezier.AB.xy,
         b = bezier.AB.zw,
         c = bezier.CD.xy,
         d = bezier.CD.zw;
 
-    float t;
-    float count = tForScaledBezier(bezier.RangeAndCount, value, t);
     if (count <= 1.5)
         return a;
 
@@ -49,14 +47,18 @@ float2 evaluateBezier2 (in ClampedBezier2 bezier, float value) {
     return result;
 }
 
-float4 evaluateBezier4 (in ClampedBezier4 bezier, float value) {
+float2 evaluateBezier2 (in ClampedBezier2 bezier, float value) {
+    float t;
+    float count = tForScaledBezier(bezier.RangeAndCount, value, t);
+    return evaluateBezier2AtT(bezier, count, t);
+}
+
+float4 evaluateBezier4AtT (in ClampedBezier4 bezier, in float count, in float t) {
     float4 a = bezier.A,
         b = bezier.B,
         c = bezier.C,
         d = bezier.D;
 
-    float t;
-    float count = tForScaledBezier(bezier.RangeAndCount, value, t);
     if (count <= 1.5)
         return a;
 
@@ -74,4 +76,10 @@ float4 evaluateBezier4 (in ClampedBezier4 bezier, float value) {
 
     float4 result = lerp(abbc, bccd, t);
     return result;
+}
+
+float4 evaluateBezier4 (in ClampedBezier4 bezier, float value) {
+    float t;
+    float count = tForScaledBezier(bezier.RangeAndCount, value, t);
+    return evaluateBezier4AtT(bezier, count, t);
 }
