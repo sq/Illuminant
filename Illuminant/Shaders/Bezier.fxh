@@ -75,6 +75,3 @@ float4 evaluateBezier4 (in ClampedBezier4 bezier, float value) {
     float4 result = lerp(abbc, bccd, t);
     return result;
 }
-
-uniform ClampedBezier2 SizeFromLife;
-uniform ClampedBezier4 ColorFromLife;

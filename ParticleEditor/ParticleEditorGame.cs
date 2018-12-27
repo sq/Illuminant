@@ -41,6 +41,7 @@ namespace ParticleEditor {
 
         public Material TextMaterial { get; private set; }
         public Material WorldSpaceTextMaterial { get; private set; }
+        public Material ScreenSpaceBezierVisualizer { get; private set; }
 
         public FreeTypeFont Font;
         public RenderTarget2D UIRenderTarget;
@@ -173,6 +174,12 @@ namespace ParticleEditor {
             WorldSpaceTextMaterial = Materials.Get(Materials.WorldSpaceShadowedBitmap, blendState: BlendState.AlphaBlend);
             WorldSpaceTextMaterial.Parameters.ShadowColor.SetValue(new Vector4(0, 0, 0, 0.9f));
             WorldSpaceTextMaterial.Parameters.ShadowOffset.SetValue(Vector2.One * 0.75f);
+
+            // FIXME: Memory leak
+            var eep = new EmbeddedEffectProvider(typeof(Squared.Illuminant.Particles.ParticleSystem).Assembly, RenderCoordinator);
+            ScreenSpaceBezierVisualizer = new Material(eep.Load("VisualizeBezier"), "ScreenSpaceBezierVisualizer");
+            Materials.Add(ScreenSpaceBezierVisualizer);
+            Materials.GetUniformBinding<Squared.Illuminant.Uniforms.ClampedBezier4>(ScreenSpaceBezierVisualizer, "Bezier");
             
             UIRenderTarget = new RenderTarget2D(
                 GraphicsDevice, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight, 
@@ -307,6 +314,7 @@ namespace ParticleEditor {
 
             UI.KeyboardInputHandler.Buffer.Clear();
 
+            using (UI.KeyboardInputHandler.Deactivate())
             using (var group = BatchGroup.ForRenderTarget(frame, -9990, UIRenderTarget)) {
                 ClearBatch.AddNew(group, -1, Materials.Clear, clearColor: Color.Transparent);
                 Nuklear.Render(gameTime.ElapsedGameTime.Seconds, group, 1);

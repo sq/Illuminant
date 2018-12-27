@@ -226,7 +226,37 @@ namespace Squared.Illuminant.Uniforms {
         public Vector4 RangeAndCount;
         public Vector4 A, B, C, D;
 
-        public ClampedBezier4 (Bezier4 src) : this() {
+        public ClampedBezier4 (IBezier b) {
+            var b2 = (b as Bezier2);
+            var b4 = (b as Bezier4);
+            if (b2 != null)
+                this = new ClampedBezier4(b2);
+            else if (b4 != null)
+                this = new ClampedBezier4(b4);
+            else
+                throw new ArgumentException();
+        }
+
+        public ClampedBezier4 (Bezier2 src, float z = 0, float w =0) {
+            if (src == null) {
+                this = One;
+                return;
+            }
+
+            var range = src.MaxValue - src.MinValue;
+            if ((range == 0) || (src.Count <= 1))
+                range = 1;
+            RangeAndCount = new Vector4(
+                Math.Min(src.MinValue, src.MaxValue),
+                1.0f / range, src.Count, 0
+            );
+            A = new Vector4(src.A, z, w);
+            B = new Vector4(src.B, z, w);
+            C = new Vector4(src.C, z, w);
+            D = new Vector4(src.D, z, w);
+        }
+
+        public ClampedBezier4 (Bezier4 src) {
             if (src == null) {
                 this = One;
                 return;

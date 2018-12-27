@@ -22,6 +22,8 @@ namespace Framework {
         Material TextMaterial { get; }
     }
 
+    public delegate void SceneDelegate ();
+
     public unsafe class NuklearService : IDisposable {
         public struct Generic : IDisposable {
             public nk_context* ctx;
@@ -54,8 +56,8 @@ namespace Framework {
 
         public nk_context* Context;
 
-        private IBatchContainer PendingGroup;
-        private ImperativeRenderer PendingIR;
+        internal IBatchContainer PendingGroup;
+        internal ImperativeRenderer PendingRenderer;
         private int NextTextLayer;
 
         public float VerticalPadding = 0;
@@ -67,7 +69,7 @@ namespace Framework {
 
         private Dictionary<uint, float> TextWidthCache = new Dictionary<uint, float>();
 
-        public Action Scene = null;
+        public SceneDelegate Scene = null;
         public UnorderedList<Func<bool>> Modals = new UnorderedList<Func<bool>>();
 
         public readonly INuklearHost Game;
@@ -185,7 +187,7 @@ namespace Framework {
             if (color.A <= 0)
                 return;
 
-            PendingIR.OutlineRectangle(
+            PendingRenderer.OutlineRectangle(
                 ConvertBounds(c->x, c->y, c->w - 1, c->h - 1), 
                 color
             );
@@ -199,20 +201,20 @@ namespace Framework {
                 return;
 
             if (TextAdvancePending)
-                PendingIR.Layer += 1;
+                PendingRenderer.Layer += 1;
 
             CurrentPaintIndex++;
             // color = new Color((CurrentPaintIndex % 16) * 8, (CurrentPaintIndex / 16) * 8, (CurrentPaintIndex / 128) * 8, 255);
 
             switch (c->header.mtype) {
                 case nk_meta_type.NK_META_TREE_HEADER:
-                    PendingIR.GradientFillRectangle(
+                    PendingRenderer.GradientFillRectangle(
                         ConvertBounds(c->x, c->y, c->w, c->h), 
                         color, colorBright, color, colorBright
                     );
                     break;
                 default:
-                    PendingIR.FillRectangle(
+                    PendingRenderer.FillRectangle(
                         ConvertBounds(c->x, c->y, c->w, c->h), 
                         color
                     );
@@ -241,7 +243,7 @@ namespace Framework {
                         color: color,
                         scale: FontScale, buffer: new ArraySegment<BitmapDrawCall>(layoutBuffer.Data)
                     );
-                    PendingIR.DrawMultiple(
+                    PendingRenderer.DrawMultiple(
                         layout.DrawCalls, material: Game.TextMaterial
                     );
                 }
@@ -251,9 +253,9 @@ namespace Framework {
 
         private void RenderCommand (nk_command_scissor* c) {
             var rect = new Rectangle(c->x, c->y, c->w, c->h);
-            PendingIR.Layer += 1;
-            PendingIR.SetScissor(rect);
-            PendingIR.Layer += 1;
+            PendingRenderer.Layer += 1;
+            PendingRenderer.SetScissor(rect);
+            PendingRenderer.Layer += 1;
             TextAdvancePending = false;
         }
 
@@ -267,11 +269,11 @@ namespace Framework {
             PendingIR.FillRing(bounds.Center, Vector2.Zero, radius - Vector2.One, color, color, quality: 2);
             PendingIR.FillRing(bounds.Center, radius - (Vector2.One * 1.4f), radius + softEdge, color, Color.Transparent, quality: 2);
             */
-            PendingIR.Ellipse(bounds.Center, radius, color);
+            PendingRenderer.Ellipse(bounds.Center, radius, color);
         }
         
         private void RenderCommand (nk_command_line* c) {
-            var gb = PendingIR.GetGeometryBatch(null, null, null);
+            var gb = PendingRenderer.GetGeometryBatch(null, null, null);
             var color = ConvertColor(c->color);
             var v1 = new Vector2(c->begin.x, c->begin.y);
             var v2 = new Vector2(c->end.x, c->end.y);
@@ -279,7 +281,7 @@ namespace Framework {
         }
 
         private void RenderCommand (nk_command_triangle_filled* c) {
-            var gb = PendingIR.GetGeometryBatch(null, null, null);
+            var gb = PendingRenderer.GetGeometryBatch(null, null, null);
             var color = ConvertColor(c->color);
             var v1 = new Vector2(c->a.x, c->a.y);
             var v2 = new Vector2(c->b.x, c->b.y);
@@ -293,8 +295,8 @@ namespace Framework {
 
         private void RenderCommand (nk_command_rect_multi_color* c) {
             if (TextAdvancePending)
-                PendingIR.Layer += 1;
-            PendingIR.GradientFillRectangle(
+                PendingRenderer.Layer += 1;
+            PendingRenderer.GradientFillRectangle(
                 ConvertBounds(c->x, c->y, c->w, c->h),
                 ConvertColor(c->left),
                 ConvertColor(c->top),
@@ -353,37 +355,19 @@ namespace Framework {
                 dm.Device.RasterizerState = RenderStates.ScissorOnly;
             })) {
                 PendingGroup = group;
-                PendingIR = new ImperativeRenderer(group, Game.Materials, 0, autoIncrementSortKey: true, worldSpace: false, blendState: BlendState.AlphaBlend);
+                PendingRenderer = new ImperativeRenderer(group, Game.Materials, 0, autoIncrementSortKey: true, worldSpace: false, blendState: BlendState.AlphaBlend);
 
-                // https://docs.microsoft.com/en-us/dotnet/standard/garbage-collection/fundamentals?view=netframework-4.7.2
-                // Says lowest max size of ephemeral segment is 16mb. However, the GC needs to be able to carve out
-                //  the amount of space we request from the current ephemeral segments. If it can't, it will either
-                //  do a full GC or it will refuse to enter a region. (We're not interested in a full GC here.)
-                // So as a result, we pick a number small enough to increase the odds that there will be enough
-                //  room left in the ephemeral segment.
-                // Suspending GC while talking to nuklear is probably for the best to avoid weird crashes...
-                const int size = 1024 * 1024 * 4;
-                var isGcOff = false; // GC.TryStartNoGCRegion(size, true);
-                if (!isGcOff)
-                    ;
-                    // Console.WriteLine("Failed to start no gc region");
+                Scene();
 
-                try {
-                    Scene();
-
-                    using (var e = Modals.GetEnumerator()) {
-                        while (e.MoveNext()) {
-                            if (!e.Current())
-                                e.RemoveCurrent();
-                        }
+                using (var e = Modals.GetEnumerator()) {
+                    while (e.MoveNext()) {
+                        if (!e.Current())
+                            e.RemoveCurrent();
                     }
-
-                    CurrentPaintIndex = 0;
-                    NuklearAPI.Render(Context, HighLevelRenderCommand);
-                } finally {
-                    if (isGcOff)
-                        GC.EndNoGCRegion();
                 }
+
+                CurrentPaintIndex = 0;
+                NuklearAPI.Render(Context, HighLevelRenderCommand);
             }
         }
 
@@ -596,6 +580,14 @@ namespace Framework {
 
         public void Dispose () {
             // FIXME
+        }
+
+        public bool CustomPanel (float requestedHeight, out Bounds bounds) {
+            Nuklear.nk_layout_row_dynamic(Context, requestedHeight, 1);
+            var rect = new NkRect { W = 9999, H = requestedHeight };
+            var state = Nuklear.nk_widget(&rect, Context);
+            bounds = Bounds.FromPositionAndSize(rect.X, rect.Y, rect.W, rect.H);
+            return state != NuklearDotNet.nk_widget_layout_states.NK_WIDGET_INVALID;
         }
     }
 

@@ -814,6 +814,27 @@ namespace ParticleEditor {
                 if (pGroup.Visible) {
                     var b = (IBezier)value;
 
+                    Bounds panel;
+                    if (Nuklear.CustomPanel(64, out panel)) {
+                        var m = Game.ScreenSpaceBezierVisualizer;
+                        using (var pb = PrimitiveBatch<VertexPositionColorTexture>.New(
+                            Nuklear.PendingGroup, 9999, m, (dm, _) => {
+                                var cb = new Squared.Illuminant.Uniforms.ClampedBezier4(b);
+                                Game.Materials.TrySetBoundUniform(m, "Bezier", ref cb);
+                            }
+                        )) {
+                            var tl = new VertexPositionColorTexture(new Vector3(panel.TopLeft, 0), Color.White, Vector2.Zero);
+                            var tr = new VertexPositionColorTexture(new Vector3(panel.TopRight, 0), Color.White, new Vector2(1, 0));
+                            var bl = new VertexPositionColorTexture(new Vector3(panel.BottomLeft, 0), Color.White, new Vector2(0, 1));
+                            var br = new VertexPositionColorTexture(new Vector3(panel.BottomRight, 0), Color.White, Vector2.One);
+                            var verts = new[] { tl, tr, bl, tr, br, bl };
+                            var pdc = new PrimitiveDrawCall<VertexPositionColorTexture>(
+                                PrimitiveType.TriangleList, verts, 0, 2
+                            );
+                            pb.Add(ref pdc);
+                        }
+                    }
+
                     Nuke.nk_layout_row_dynamic(ctx, LineHeight, 3);
 
                     var cnt = b.Count;

@@ -52,6 +52,9 @@ float2 getTexel () {
 
 #ifdef BEZIERS_DEFINED
 
+uniform ClampedBezier2 SizeFromLife;
+uniform ClampedBezier4 ColorFromLife;
+
 float4 getColorForLifeValue (float life) {
     float4 result = evaluateBezier4(ColorFromLife, life);
     result.rgb *= result.a;
