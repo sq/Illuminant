@@ -4,6 +4,7 @@ _ReSharper.*
 *.cachefile
 *.psess
 *.vspx
+*.vs
 Illuminant/obj
 Illuminant/bin
 Illuminant/Shaders/bin
