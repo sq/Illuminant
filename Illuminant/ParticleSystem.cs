@@ -1218,16 +1218,4 @@ namespace Squared.Illuminant.Particles {
             return result;
         }
     }
-
-    public class Bezier2 {
-        public int Count;
-        public float MinValue, MaxValue;
-        public Vector2 A, B, C, D;
-    }
-
-    public class Bezier4 {
-        public int Count;
-        public float MinValue, MaxValue;
-        public Vector4 A, B, C, D;
-    }
 }

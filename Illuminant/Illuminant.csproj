@@ -58,6 +58,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Bezier.cs" />
     <Compile Include="Billboard.cs" />
     <Compile Include="DistanceField.cs" />
     <Compile Include="GBuffer.cs" />

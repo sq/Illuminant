@@ -1,3 +1,6 @@
 [submodule "Squared.Nuklear"]
 	path = Squared.Nuklear
 	url = https://github.com/kg/Squared.Nuklear.git
+[submodule "Json.NET"]
+	path = Json.NET
+	url = https://github.com/JamesNK/Newtonsoft.Json

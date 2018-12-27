@@ -236,7 +236,8 @@ namespace ParticleEditor {
         }
 
         protected override void Update (GameTime gameTime) {
-            Scheduler.Step();
+            using (UI.KeyboardInputHandler.Deactivate())
+                Scheduler.Step();
 
             PreviousKeyboardState = KeyboardState;
             PreviousMouseState = MouseState;

@@ -25,7 +25,9 @@ namespace ParticleEditor {
                 public KeyboardInput This;
 
                 public void Dispose () {
-                    System.Windows.Forms.Application.AddMessageFilter(This);
+                    This.DeactivateCount--;
+                    if (This.DeactivateCount == 0)
+                        System.Windows.Forms.Application.AddMessageFilter(This);
                 }
             }
 
@@ -39,6 +41,8 @@ namespace ParticleEditor {
             public readonly ParticleEditor Game;
             public readonly List<char> Buffer = new List<char>();
 
+            private int DeactivateCount = 0;
+
             public KeyboardInput (ParticleEditor game) {
                 Game = game;
             }
@@ -48,6 +52,7 @@ namespace ParticleEditor {
             }
 
             public Deactivation Deactivate () {
+                this.DeactivateCount++;
                 System.Windows.Forms.Application.RemoveMessageFilter(this);
                 return new Deactivation { This = this };
             }
