@@ -15,13 +15,26 @@ namespace Squared.Illuminant {
         float MinValue { get; set; }
         float MaxValue { get; set; }
         object this [int index] { get; set; }
+        object Evaluate (float t);
     }
 
-    public class Bezier2 : IBezier {
+    public interface IBezier<T> : IBezier {
+        new T this [int index] { get; set; }
+        T A { get; set; }
+        T B { get; set; }
+        T C { get; set; }
+        T D { get; set; }
+        T Evaluate (float t);
+    }
+
+    public class Bezier2 : IBezier<Vector2> {
         public int Count { get; set; }
         public float MinValue { get; set; }
         public float MaxValue { get; set; }
-        public Vector2 A, B, C, D;
+        public Vector2 A { get; set; }
+        public Vector2 B { get; set; }
+        public Vector2 C { get; set; }
+        public Vector2 D { get; set; }
 
         public Bezier2 ()
             : this (Vector2.One) {
@@ -81,13 +94,25 @@ namespace Squared.Illuminant {
                 this[index] = (Vector2)value;
             }
         }
+
+        public Vector2 Evaluate (float t) {
+            var cb = new Uniforms.ClampedBezier2(this);
+            return cb.Evaluate(t);
+        }
+
+        object IBezier.Evaluate (float t) {
+            return Evaluate(t);
+        }
     }
 
-    public class Bezier4 : IBezier {
+    public class Bezier4 : IBezier<Vector4> {
         public int Count { get; set; }
         public float MinValue { get; set; }
         public float MaxValue { get; set; }
-        public Vector4 A, B, C, D;
+        public Vector4 A { get; set; }
+        public Vector4 B { get; set; }
+        public Vector4 C { get; set; }
+        public Vector4 D { get; set; }
 
         public Bezier4 ()
             : this (Vector4.One) {
@@ -146,6 +171,15 @@ namespace Squared.Illuminant {
             set {
                 this[index] = (Vector4)value;
             }
+        }
+
+        public Vector4 Evaluate (float t) {
+            var cb = new Uniforms.ClampedBezier4(this);
+            return cb.Evaluate(t);
+        }
+
+        object IBezier.Evaluate (float t) {
+            return Evaluate(t);
         }
     }
 }
