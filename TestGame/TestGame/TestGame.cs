@@ -128,7 +128,11 @@ namespace TestGame {
                 var max = slider.Max.GetValueOrDefault(1);
                 float value = slider.Value, newValue = value;
                 if (slider.AsProperty) {
-                    newValue = Nuke.nk_propertyf(ctx, name.pText, min, value, max, slider.Speed, slider.Integral ? 1 : slider.Speed * 0.1f);
+                    if (slider.Integral) {
+                        newValue = Nuke.nk_propertyi(ctx, name.pText, (int)min, (int)value, (int)max, (int)slider.Speed, (int)slider.Speed);
+                    } else {
+                        newValue = Nuke.nk_propertyf(ctx, name.pText, min, value, max, slider.Speed, slider.Integral ? 1 : slider.Speed * 0.1f);
+                    }
                 } else {
                     Nuke.nk_label(ctx, name.pText, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
                     var bounds = Nuke.nk_widget_bounds(ctx);
@@ -139,8 +143,6 @@ namespace TestGame {
                     }
                 }
                 if (newValue != value) {
-                    if (slider.Integral)
-                        newValue = (float)Math.Floor(value);
                     slider.Value = newValue;
                 }
             }

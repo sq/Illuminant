@@ -181,9 +181,6 @@ namespace TestGame.Scenes {
                     }
                 }
             }
-
-            SelectedObject.Max = Environment.Obstructions.Count - 1;
-            SelectedObject.Speed = 1;
         }
 
         private string DirectionToText (Vector3 dir) {
@@ -297,6 +294,10 @@ namespace TestGame.Scenes {
 
         public override void Update (GameTime gameTime) {
             if (Game.IsActive) {
+                SelectedObject.Min = 0;
+                SelectedObject.Max = Environment.Obstructions.Count - 1;
+                SelectedObject.Speed = 1;
+
                 var time = (float)Time.Seconds;
 
                 var ms = Game.MouseState;

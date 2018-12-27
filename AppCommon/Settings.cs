@@ -157,6 +157,9 @@ namespace TestGame {
             if (Max.HasValue)
                 newValue = Math.Min(newValue, Max.Value);
 
+            if (Integral)
+                newValue = (float)Math.Floor(newValue);
+
             if (Value == newValue)
                 return;
 
