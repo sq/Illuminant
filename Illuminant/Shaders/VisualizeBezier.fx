@@ -53,7 +53,7 @@ void BezierVisualizerPixelShader (
     float distanceAboveOne = saturate(((1 - xy.y) - scaledOneAndZero.x) / 0.015);
     float distanceBelowZero = saturate((scaledOneAndZero.y - (1 - xy.y)) / 0.015);
 
-    scaledDistances = pow(scaledDistances, 1.8);
+    scaledDistances = pow(scaledDistances, 2.3);
 
     float4 w = scaledDistances.a * float4(1, 1, 1, 0);
     float  alpha = (scaledDistances.r + scaledDistances.g + scaledDistances.b + scaledDistances.a);
