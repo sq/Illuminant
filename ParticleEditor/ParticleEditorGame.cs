@@ -179,6 +179,7 @@ namespace ParticleEditor {
             var eep = new EmbeddedEffectProvider(typeof(Squared.Illuminant.Particles.ParticleSystem).Assembly, RenderCoordinator);
             ScreenSpaceBezierVisualizer = new Material(eep.Load("VisualizeBezier"), "ScreenSpaceBezierVisualizer");
             Materials.Add(ScreenSpaceBezierVisualizer);
+            ScreenSpaceBezierVisualizer = Materials.Get(ScreenSpaceBezierVisualizer, blendState: BlendState.NonPremultiplied);
             Materials.GetUniformBinding<Squared.Illuminant.Uniforms.ClampedBezier4>(ScreenSpaceBezierVisualizer, "Bezier");
             
             UIRenderTarget = new RenderTarget2D(

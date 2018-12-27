@@ -237,7 +237,7 @@ namespace Squared.Illuminant.Uniforms {
                 throw new ArgumentException();
         }
 
-        public ClampedBezier4 (Bezier2 src, float z = 0, float w =0) {
+        public ClampedBezier4 (Bezier2 src, float z = 0, float w = 0) {
             if (src == null) {
                 this = One;
                 return;
@@ -248,7 +248,7 @@ namespace Squared.Illuminant.Uniforms {
                 range = 1;
             RangeAndCount = new Vector4(
                 Math.Min(src.MinValue, src.MaxValue),
-                1.0f / range, src.Count, 0
+                1.0f / range, src.Count, 2
             );
             A = new Vector4(src.A, z, w);
             B = new Vector4(src.B, z, w);
@@ -267,7 +267,7 @@ namespace Squared.Illuminant.Uniforms {
                 range = 1;
             RangeAndCount = new Vector4(
                 Math.Min(src.MinValue, src.MaxValue),
-                1.0f / range, src.Count, 0
+                1.0f / range, src.Count, 4
             );
             A = src.A;
             B = src.B;

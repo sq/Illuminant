@@ -416,7 +416,7 @@ namespace ParticleEditor {
             return false;
         }
 
-        private unsafe bool RenderFormula (string name, string actualName, Formula value) {
+        private unsafe bool RenderFormula (string name, string actualName, Formula value, bool isColor) {
             var result = false;
 
             using (var pGroup = Nuklear.CollapsingGroup(name, actualName, false)) {
@@ -446,7 +446,7 @@ namespace ParticleEditor {
                             () => new Vector2(value.Constant.X, value.Constant.Y)
                         );
 
-                    RenderVectorProperty(null, ref value.Constant, ref result);
+                    RenderVectorProperty(null, ref value.Constant, ref result, isColor);
 
                     Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
                     if (Nuklear.SelectableText("Scale", isFormulaSelected && (spp.Key == "Scale")))
@@ -456,7 +456,7 @@ namespace ParticleEditor {
                             () => new Vector2(value.RandomScale.X, value.RandomScale.Y)
                         );
 
-                    RenderVectorProperty(null, ref value.RandomScale, ref result);
+                    RenderVectorProperty(null, ref value.RandomScale, ref result, isColor);
 
                     var k = value.Circular ? "Constant Radius" : "Random Offset";
                     Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
@@ -480,7 +480,7 @@ namespace ParticleEditor {
                         );
                     }
 
-                    RenderVectorProperty(null, ref value.Offset, ref result);
+                    RenderVectorProperty(null, ref value.Offset, ref result, isColor);
 
                     Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
                     if (Checkbox("Circular", ref value.Circular))
@@ -540,8 +540,9 @@ namespace ParticleEditor {
                 case "ValueList":
                     return RenderListProperty(cpi, instance, ref changed, actualName, value, true);
 
+                case "ColorFormula":
                 case "Formula":
-                    return RenderFormula(cpi.Name, actualName, (Formula)value);
+                    return RenderFormula(cpi.Name, actualName, (Formula)value, valueType.StartsWith("Color"));
 
                 case "NullableLazyResource`1":
                     return RenderTextureProperty(cpi, instance, ref changed, actualName, value);
@@ -619,7 +620,8 @@ namespace ParticleEditor {
 
                 case "Bezier2":
                 case "Bezier4":
-                    return RenderBezierProperty(cpi, instance, actualName, value);
+                case "ColorBezier4":
+                    return RenderBezierProperty(cpi, instance, actualName, value, valueType.StartsWith("Color"));
 
                 case "String":
                     Nuke.nk_layout_row_dynamic(ctx, LineHeight + 3, 1);
@@ -671,10 +673,10 @@ namespace ParticleEditor {
                         return true;
                     }
                     return false;
-
+                
                 case "Vector4":
                     var v4 = (Vector4)value;
-                    RenderVectorProperty(cpi, ref v4, ref changed);
+                    RenderVectorProperty(cpi, ref v4, ref changed, false);
                     if (changed)
                         cpi.Setter(instance, v4);
                     return changed;
@@ -704,12 +706,12 @@ namespace ParticleEditor {
             return a || b;
         }
 
-        private unsafe bool RenderVectorProperty (CachedPropertyInfo cpi, ref Vector4 v4, ref bool changed) {
+        private unsafe bool RenderVectorProperty (CachedPropertyInfo cpi, ref Vector4 v4, ref bool changed, bool isColor) {
             Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 4);
-            var a = RenderPropertyElement("#x", cpi?.Info, ref v4.X, ref changed);
-            var b = RenderPropertyElement("#y", cpi?.Info, ref v4.Y, ref changed);
-            var c = RenderPropertyElement("#z", cpi?.Info, ref v4.Z, ref changed);
-            var d = RenderPropertyElement("#w", cpi?.Info, ref v4.W, ref changed);
+            var a = RenderPropertyElement(isColor ? "#r" : "#x", cpi?.Info, ref v4.X, ref changed);
+            var b = RenderPropertyElement(isColor ? "#g" : "#y", cpi?.Info, ref v4.Y, ref changed);
+            var c = RenderPropertyElement(isColor ? "#b" : "#z", cpi?.Info, ref v4.Z, ref changed);
+            var d = RenderPropertyElement(isColor ? "#a" : "#w", cpi?.Info, ref v4.W, ref changed);
             return a || b || c || d;
         }
 
@@ -805,7 +807,7 @@ namespace ParticleEditor {
 
         private unsafe bool RenderBezierProperty (
             CachedPropertyInfo cpi, object instance,
-            string actualName, object value
+            string actualName, object value, bool isColor
         ) {
             bool changed = false;
 
@@ -816,7 +818,7 @@ namespace ParticleEditor {
 
                     if (b.Count > 1) {
                         Bounds panel;
-                        if (Nuklear.CustomPanel(120, out panel)) {
+                        if (Nuklear.CustomPanel(180, out panel)) {
                             var m = Game.ScreenSpaceBezierVisualizer;
                             using (var pb = PrimitiveBatch<VertexPositionColorTexture>.New(
                                 Nuklear.PendingGroup, 9999, m, (dm, _) => {
@@ -841,6 +843,9 @@ namespace ParticleEditor {
 
                     var cnt = b.Count;
                     if (Nuklear.Property("Count", ref cnt, 1, 4, 1, 1)) {
+                        // Copy existing row when adding new one
+                        if ((b.Count < cnt) && (cnt > 1))
+                            b[cnt - 1] = b[cnt - 2];
                         b.Count = cnt;
                         changed = true;
                     }
@@ -861,7 +866,7 @@ namespace ParticleEditor {
                                 b[i] = v2;
                         } else if (elt is Vector4) {
                             var v4 = (Vector4)elt;
-                            if (RenderVectorProperty(null, ref v4, ref changed))
+                            if (RenderVectorProperty(null, ref v4, ref changed, isColor))
                                 b[i] = v4;
                         }
                     }

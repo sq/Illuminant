@@ -44,6 +44,7 @@ namespace ParticleEditor {
                     "ParticleColor", new Dictionary<string, ModelTypeInfo> {
                         {"Global", new ModelTypeInfo { Type = "ColorF" } },
                         {"LifeRampStrength", new ModelTypeInfo { Min = 0, Max = 1 } },
+                        {"FromLife", new ModelTypeInfo { Type = "ColorBezier4" } }
                     }
                 },
                 {
@@ -59,7 +60,8 @@ namespace ParticleEditor {
                                 return c;
                             },
                             MaxCount = Spawner.MaxPositions - 1
-                        } }
+                        } },
+                        {"Attributes", new ModelTypeInfo { Type = "ColorFormula" } }
                     }
                 },
                 {
