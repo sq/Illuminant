@@ -1,5 +1,6 @@
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\GeometryCommon.fxh"
+#include "Bezier.fxh"
 #include "ParticleCommon.fxh"
 
 #define PI 3.14159265358979323846

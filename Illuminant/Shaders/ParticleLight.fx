@@ -1,4 +1,5 @@
 #include "SphereLightCore.fxh"
+#include "Bezier.fxh"
 #include "ParticleCommon.fxh"
 
 uniform float4 LightProperties;

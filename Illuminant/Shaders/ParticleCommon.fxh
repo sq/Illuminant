@@ -1,79 +1,3 @@
-struct ClampedBezier2 {
-    float4 RangeAndCount;
-    float4 AB, CD;
-};
-
-struct ClampedBezier4 {
-    float4 RangeAndCount;
-    float4 A, B, C, D;
-};
-
-float tForScaledBezier (in float4 rangeAndCount, in float value, out float t) {
-    float minValue = rangeAndCount.x, 
-        invDivisor = rangeAndCount.y;
-
-    t = (value - minValue) * abs(invDivisor);
-    if (invDivisor < 0)
-        t = 1 - saturate(t);
-    else
-        t = saturate(t);
-    return rangeAndCount.z;
-}
-
-float2 evaluateBezier2 (in ClampedBezier2 bezier, float value) {
-    float2 a = bezier.AB.xy,
-        b = bezier.AB.zw,
-        c = bezier.CD.xy,
-        d = bezier.CD.zw;
-
-    float t;
-    float count = tForScaledBezier(bezier.RangeAndCount, value, t);
-    if (count <= 1.5)
-        return a;
-
-    float2 ab = lerp(a, b, t);
-    if (count <= 2.5)
-        return ab;
-
-    float2 bc = lerp(b, c, t);
-    float2 abbc = lerp(ab, bc, t);
-    if (count <= 3.5)
-        return abbc;
-
-    float2 cd = lerp(c, d, t);
-    float2 bccd = lerp(bc, cd, t);
-
-    float2 result = lerp(abbc, bccd, t);
-    return result;
-}
-
-float4 evaluateBezier4 (in ClampedBezier4 bezier, float value) {
-    float4 a = bezier.A,
-        b = bezier.B,
-        c = bezier.C,
-        d = bezier.D;
-
-    float t;
-    float count = tForScaledBezier(bezier.RangeAndCount, value, t);
-    if (count <= 1.5)
-        return a;
-
-    float4 ab = lerp(a, b, t);
-    if (count <= 2.5)
-        return ab;
-
-    float4 bc = lerp(b, c, t);
-    float4 abbc = lerp(ab, bc, t);
-    if (count <= 3.5)
-        return abbc;
-
-    float4 cd = lerp(c, d, t);
-    float4 bccd = lerp(bc, cd, t);
-
-    float4 result = lerp(abbc, bccd, t);
-    return result;
-}
-
 struct ParticleSystemSettings {
     // deltaTimeSeconds, friction, maximumVelocity, lifeDecayRate
     float4 GlobalSettings;
@@ -84,8 +8,6 @@ struct ParticleSystemSettings {
 };
 
 uniform ParticleSystemSettings System;
-uniform ClampedBezier2 SizeFromLife;
-uniform ClampedBezier4 ColorFromLife;
 uniform float StippleFactor;
 
 float getDeltaTimeSeconds () {
@@ -128,6 +50,8 @@ float2 getTexel () {
     return System.TexelAndSize.xy;
 }
 
+#ifdef BEZIERS_DEFINED
+
 float4 getColorForLifeValue (float life) {
     float4 result = evaluateBezier4(ColorFromLife, life);
     result.rgb *= result.a;
@@ -138,6 +62,8 @@ float2 getSizeForLifeValue (float life) {
     float2 result = evaluateBezier2(SizeFromLife, life);
     return System.TexelAndSize.zw * result;
 }
+
+#endif
 
 float getRotationForLifeAndIndex (float life, float index) {
     return (life * System.RotationFromLifeAndIndex.x) + 
