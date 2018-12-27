@@ -904,7 +904,8 @@ namespace Squared.Illuminant.Particles {
             var startedWhen = Time.Ticks;
 
             var appearance = Configuration.Appearance;
-            var lifeRamp = Configuration.Color.LifeRampTexture;
+            var lr = Configuration.Color.LifeRamp;
+            var lifeRamp = lr?.Texture;
             if (appearance.Texture != null)
                 appearance.Texture.EnsureInitialized(Engine.Configuration.TextureLoader);
             if (lifeRamp != null)
@@ -967,18 +968,21 @@ namespace Squared.Illuminant.Particles {
                                 ? lifeRamp.Instance
                                 : null;
                         rt.SetValue(lifeRampTexture);
-                        var min = Configuration.Color.LifeRampMinimum;
-                        var rangeSize = Math.Max(Configuration.Color.LifeRampMaximum - min, 0.001f);
-                        var strength = lifeRampTexture != null
-                                ? Configuration.Color.LifeRampStrength
-                                : 0;
-                        var indexDivisor = lifeRampTexture != null
-                            ? lifeRampTexture.Height
-                            : 1;
-                        p["LifeRampSettings"].SetValue(new Vector4(
-                            strength * (Configuration.Color.InvertLifeRamp ? -1 : 1),
-                            min, rangeSize, indexDivisor
-                        ));
+
+                        if ((lr != null) && (lifeRampTexture != null)) {
+                            var rangeSize = Math.Max(lr.Maximum - lr.Minimum, 0.001f);
+                            var indexDivisor = lifeRampTexture != null
+                                ? lifeRampTexture.Height
+                                : 1;
+                            p["LifeRampSettings"].SetValue(new Vector4(
+                                lr.Strength * (lr.Invert ? -1 : 1),
+                                lr.Minimum, rangeSize, indexDivisor
+                            ));
+                        } else {
+                            p["LifeRampSettings"].SetValue(new Vector4(
+                                0, 0, 1, 1
+                            ));
+                        }
                     }
                 },
                 (dm, _) => {
@@ -1032,6 +1036,34 @@ namespace Squared.Illuminant.Particles {
         public Bounds Region = Bounds.Unit;
     }
 
+    public class ParticleColorLifeRamp {
+        /// <summary>
+        /// Life values below this are treated as zero
+        /// </summary>
+        public float Minimum = 0.0f;
+
+        /// <summary>
+        /// Life values above this are treated as one
+        /// </summary>
+        public float Maximum = 100f;
+
+        /// <summary>
+        /// Blends between the constant color value for the particle and the color
+        ///  from its life ramp
+        /// </summary>
+        public float Strength = 1.0f;
+
+        /// <summary>
+        /// If set, the life ramp has its maximum value at the left instead of the right.
+        /// </summary>
+        public bool  Invert;
+
+        /// <summary>
+        /// Specifies a color ramp texture
+        /// </summary>
+        public NullableLazyResource<Texture2D> Texture;
+    }
+
     public class ParticleColor {
         internal Bezier4  _ColorFromLife = null;
         internal float?   _OpacityFromLife = null;
@@ -1041,31 +1073,7 @@ namespace Squared.Illuminant.Particles {
         /// </summary>
         public Vector4    Global = Vector4.One;
 
-        /// <summary>
-        /// Specifies a color ramp texture
-        /// </summary>
-        public NullableLazyResource<Texture2D> LifeRampTexture;
-
-        /// <summary>
-        /// Life values below this are treated as zero
-        /// </summary>
-        public float LifeRampMinimum = 0.0f;
-
-        /// <summary>
-        /// Life values above this are treated as one
-        /// </summary>
-        public float LifeRampMaximum = 100f;
-
-        /// <summary>
-        /// Blends between the constant color value for the particle and the color
-        ///  from its life ramp
-        /// </summary>
-        public float LifeRampStrength = 1.0f;
-
-        /// <summary>
-        /// If set, the life ramp has its maximum value at the left instead of the right.
-        /// </summary>
-        public bool  InvertLifeRamp;
+        public ParticleColorLifeRamp LifeRamp;
 
         /// <summary>
         /// Multiplies the particle's opacity, producing a fade-in or fade-out based on the particle's life

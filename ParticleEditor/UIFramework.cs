@@ -546,7 +546,7 @@ namespace ParticleEditor {
 
                 case "NullableLazyResource`1":
                     return RenderTextureProperty(cpi, instance, ref changed, actualName, value);
-
+                
                 case "ParticleAppearance":
                 case "ParticleColor":
                 case "FMAParameters`1":
@@ -616,6 +616,7 @@ namespace ParticleEditor {
 
             switch (valueType) {
                 case "TransformArea":
+                case "ParticleColorLifeRamp":
                     return RenderGenericObjectProperty(cache, cpi, instance, value, actualName);
 
                 case "Bezier2":
@@ -842,7 +843,7 @@ namespace ParticleEditor {
                     Nuke.nk_layout_row_dynamic(ctx, LineHeight, 3);
 
                     var cnt = b.Count;
-                    if (Nuklear.Property("Count", ref cnt, 1, 4, 1, 1)) {
+                    if (Nuklear.Property("#Count", ref cnt, 1, 4, 1, 1)) {
                         // Copy existing row when adding new one
                         if ((b.Count < cnt) && (cnt > 1))
                             b[cnt - 1] = b[cnt - 2];
@@ -851,11 +852,11 @@ namespace ParticleEditor {
                     }
 
                     var val = b.MinValue;
-                    if (RenderPropertyElement("Min", null, ref val, ref changed))
+                    if (RenderPropertyElement("#Min", null, ref val, ref changed))
                         b.MinValue = val;
 
                     val = b.MaxValue;
-                    if (RenderPropertyElement("Max", null, ref val, ref changed))
+                    if (RenderPropertyElement("#Max", null, ref val, ref changed))
                         b.MaxValue = val;
 
                     for (int i = 0; i < cnt; i++) {
