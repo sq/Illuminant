@@ -76,7 +76,7 @@ namespace TestGame.Scenes {
             Engine = new ParticleEngine(
                 Game.Content, Game.RenderCoordinator, Game.Materials, 
                 new ParticleEngineConfiguration {
-                    TextureLoader = Game.Content.Load<Texture2D>
+                    TextureLoader = Game.TextureLoader.Load
                 }, Game.ParticleMaterials
             );
 
@@ -90,11 +90,11 @@ namespace TestGame.Scenes {
 
         void SetupParticleSystem () {
             var sz = new Vector3(Width, Height, 0);
-            var fireball = Game.Content.Load<Texture2D>("fireball");
+            var fireball = Game.TextureLoader.Load("fireball");
             var fireballRect = fireball.BoundsFromRectangle(new Rectangle(0, 0, 34, 21));
-            var spark = Game.Content.Load<Texture2D>("spark");
+            var spark = Game.TextureLoader.Load("spark");
 
-            Pattern = Game.Content.Load<Texture2D>("template");
+            Pattern = Game.TextureLoader.Load("template");
 
             var width = Pattern.Width;
             PatternPixels = new Color[width * Pattern.Height];

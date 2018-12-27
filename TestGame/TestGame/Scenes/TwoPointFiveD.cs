@@ -235,7 +235,7 @@ namespace TestGame.Scenes {
             Environment.MaximumZ = 128;
             Environment.ZToYMultiplier = 2.5f;
             
-            Background = Game.Content.Load<Texture2D>("sc3test");
+            Background = Game.TextureLoader.Load("sc3test");
 
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 

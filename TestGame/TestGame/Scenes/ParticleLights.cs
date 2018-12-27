@@ -268,7 +268,7 @@ namespace TestGame.Scenes {
 
         void SetupParticleSystem () {
             var sz = new Vector3(Width, Height, 0);
-            var fireball = Game.Content.Load<Texture2D>("fireball");
+            var fireball = Game.TextureLoader.Load("fireball");
             var fireballRect = fireball.BoundsFromRectangle(new Rectangle(0, 0, 34, 21));
 
             System = new ParticleSystem(

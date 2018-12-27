@@ -215,21 +215,21 @@ namespace TestGame.Scenes {
             Environment.GroundZ = ForegroundEnvironment.GroundZ = 64;
             Environment.MaximumZ = ForegroundEnvironment.MaximumZ = 200;
 
-            Background = Game.Content.Load<Texture2D>("bg_noshadows");
-            BackgroundData = Game.Content.Load<Texture2D>("bg_data");
-            Foreground = Game.Content.Load<Texture2D>("fg");
+            Background = Game.TextureLoader.Load("bg_noshadows");
+            BackgroundData = Game.TextureLoader.Load("bg_data");
+            Foreground = Game.TextureLoader.Load("fg");
 
             Trees = new[] {
-                Game.Content.Load<Texture2D>("tree1"),
-                Game.Content.Load<Texture2D>("tree2")
+                Game.TextureLoader.Load("tree1"),
+                Game.TextureLoader.Load("tree2")
             };
             Pillars = new[] {
-                Game.Content.Load<Texture2D>("pillar1"),
-                Game.Content.Load<Texture2D>("pillar2"),
-                Game.Content.Load<Texture2D>("pillar3"),
+                Game.TextureLoader.Load("pillar1"),
+                Game.TextureLoader.Load("pillar2"),
+                Game.TextureLoader.Load("pillar3"),
             };
 
-            Spark = Game.Content.Load<Texture2D>("spark");
+            Spark = Game.TextureLoader.Load("spark");
 
             DistanceField = new DistanceField(
                 Game.RenderCoordinator, Width, Height, Environment.MaximumZ,

@@ -64,9 +64,12 @@ namespace TestGame.Scenes {
                 new ParticleEngineConfiguration(), Game.ParticleMaterials
             );
 
-            FieldTexture = Game.Content.Load<Texture2D>("vector-field");
+            FieldTexture = Game.TextureLoader.Load("vector-field", new TextureLoadOptions {
+                Premultiply = false,
+                GenerateMips = true
+            });
             Field = new VectorField(Game.RenderCoordinator, FieldTexture);
-            Background = Game.Content.Load<Texture2D>("vector-field-background");
+            Background = Game.TextureLoader.Load("vector-field-background");
 
             SetupParticleSystem();
 
@@ -76,9 +79,9 @@ namespace TestGame.Scenes {
 
         void SetupParticleSystem () {
             var sz = new Vector3(Width, Height, 0);
-            var fireball = Game.Content.Load<Texture2D>("fireball");
+            var fireball = Game.TextureLoader.Load("fireball");
             var fireballRect = fireball.BoundsFromRectangle(new Rectangle(0, 0, 34, 21));
-            var spark = Game.Content.Load<Texture2D>("spark");
+            var spark = Game.TextureLoader.Load("spark");
 
             const int opacityFromLife = 200;
 

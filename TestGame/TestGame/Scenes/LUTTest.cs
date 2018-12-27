@@ -43,7 +43,7 @@ namespace TestGame.Scenes {
         }
 
         public override void LoadContent () {
-            Background = Game.Content.Load<Texture2D>("test pattern");
+            Background = Game.TextureLoader.Load("test pattern");
 
             var keys = Game.LUTs.Keys.OrderBy(n => n).ToArray();
             LUT1.AddRange(keys);

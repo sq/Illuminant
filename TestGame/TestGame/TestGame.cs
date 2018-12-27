@@ -37,6 +37,8 @@ namespace TestGame {
         public MouseState PreviousMouseState, MouseState;
 
         public Material TextMaterial { get; private set; }
+        public EmbeddedTexture2DProvider TextureLoader { get; private set; }
+        public EmbeddedFreeTypeFontProvider FontLoader { get; private set; }
 
         public FreeTypeFont Font;
         public Texture2D RampTexture;
@@ -248,14 +250,22 @@ namespace TestGame {
         protected override void LoadContent () {
             base.LoadContent();
 
-            Font = new FreeTypeFont(RenderCoordinator, "FiraSans-Medium.otf") {
-                SizePoints = 16f,
-                GlyphMargin = 2
+            TextureLoader = new EmbeddedTexture2DProvider(RenderCoordinator) {
+                DefaultOptions = new TextureLoadOptions {
+                    Premultiply = true,
+                    GenerateMips = true
+                }
             };
+            FontLoader = new EmbeddedFreeTypeFontProvider(RenderCoordinator);
+
+            Font = FontLoader.Load("FiraSans-Medium");
+            Font.SizePoints = 16f;
+            Font.GlyphMargin = 2;
+
             Materials = new DefaultMaterialSet(RenderCoordinator);
             IlluminantMaterials = new IlluminantMaterials(Materials);
             ParticleMaterials = new ParticleMaterials(Materials);
-            RampTexture = Content.Load<Texture2D>("light_ramp");
+            RampTexture = TextureLoader.Load("light_ramp");
 
             TextMaterial = Materials.Get(Materials.ScreenSpaceShadowedBitmap, blendState: BlendState.AlphaBlend);
             TextMaterial.Parameters.ShadowColor.SetValue(new Vector4(0, 0, 0, 0.5f));
@@ -285,22 +295,23 @@ namespace TestGame {
             );
             LUTs.Add("Identity", identity);
 
-            var names = Directory.GetFiles(Content.RootDirectory + "\\LUTs", "*.xnb");
-            foreach (var name in names) {
-                var shortName = Path.GetFileNameWithoutExtension(name);
-                if (LUTs.ContainsKey(shortName))
-                    continue;
-
-                var texture = Content.Load<Texture2D>("LUTs\\" + shortName);
-                var lut = new ColorLUT(texture, true);
-                LUTs.Add(shortName, lut);
-            }
+            var names = TextureLoader.GetNames("LUTs\\");
+            foreach (var name in names)
+                LoadLUT(name);
         }
 
         private void LoadLUT (string name) {
-            var texture = Content.Load<Texture2D>("lut-" + name);
-            var lut = new ColorLUT(texture, false);
-            LUTs.Add(name, lut);
+            var key = Path.GetFileName(name);
+            if (LUTs.ContainsKey(key))
+                return;
+
+            var texture = TextureLoader.Load(name, new TextureLoadOptions {
+                Premultiply = false,
+                GenerateMips = false,
+                FloatingPoint = false
+            });
+            var lut = new ColorLUT(texture, true);
+            LUTs.Add(key, lut);
         }
 
         protected override void Update (GameTime gameTime) {
