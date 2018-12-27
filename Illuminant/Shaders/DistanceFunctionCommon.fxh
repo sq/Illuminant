@@ -25,19 +25,18 @@ float evaluateEllipsoid (
 ) {
     float3 position = worldPosition - center;
 
-    /*
-
     // FIXME: Why is this a sphere???????????
     float3 pl = position / size;
     float l = length(pl) - 1.0;
-    float resultDistance =
-        l * min(min(size.x, size.y), size.z);
+    return l * min(min(size.x, size.y), size.z);
 
-    */
+    /*
     
     float k0 = length(position/size);
     float k1 = length(position/(size*size));
     return k0*(k0-1.0)/k1;
+
+	*/
 }
 
 float evaluateCylinder (

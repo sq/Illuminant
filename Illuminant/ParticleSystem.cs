@@ -355,15 +355,20 @@ namespace Squared.Illuminant.Particles {
 
                 // FIXME: Inefficient. Spawn across two buffers?
                 spawnId = GetSpawnTarget(spawnCount);
+
+                // FIXME: This makes better use of space in buffers but causes
+                //  a draw order glitch when creating a new buffer
+                /*
                 if (spawnId == null) {
                     // HACK
                     spawnId = GetSpawnTarget(spawnCount / 2);
 
                     if (spawnId.HasValue) {
-                        // Console.WriteLine("Partial spawn");
+                        Console.WriteLine("Partial spawn");
                         spawnCount = Math.Min(SpawnStates[spawnId.Value].Free, spawnCount);
                     }
                 }
+                */
 
                 if (spawnId == null) {
                     var chunk = CreateChunk(device);
@@ -861,7 +866,7 @@ namespace Squared.Illuminant.Particles {
         }
 
         private void RenderChunk (
-            BatchGroup group, Chunk chunk, Material m
+            BatchGroup group, Chunk chunk, Material m, int layer
         ) {
             // TODO: Actual occupied count?
             var quadCount = ChunkMaximumCount;
@@ -875,7 +880,7 @@ namespace Squared.Illuminant.Particles {
             // Console.WriteLine("Draw {0}", chunk.ID);
 
             using (var batch = NativeBatch.New(
-                group, chunk.ID, m, (dm, _) => {
+                group, layer, m, (dm, _) => {
                     var p = m.Effect.Parameters;
                     p["PositionTexture"].SetValue(curr.PositionAndLife);
                     p["VelocityTexture"].SetValue(curr.Velocity);
@@ -1004,8 +1009,9 @@ namespace Squared.Illuminant.Particles {
             )) {
                 RenderTrace.Marker(group, -9999, "Rasterize {0} particle chunks", Chunks.Count);
 
+                int i = 1;
                 foreach (var chunk in Chunks)
-                    RenderChunk(group, chunk, m);
+                    RenderChunk(group, chunk, m, i++);
             }
         }
 

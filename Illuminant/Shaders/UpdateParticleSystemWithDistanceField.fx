@@ -116,6 +116,7 @@ void PS_Update (
     if (newLife <= 0) {
         newPosition = 0;
         newVelocity = 0;
+        newAttributes = 0;
     }
     resultPosition = float4(newPosition, newLife);
 }

@@ -242,7 +242,7 @@ namespace TestGame.Scenes {
                     float sz = rng.NextFloat(100f, 200f);
                     Environment.Obstructions.Add(LightObstruction.Ellipsoid(
                         new Vector3(x * tileSize, y * tileSize, 0),
-                        new Vector3(sz, sz, 60f)
+                        new Vector3(sz, sz, 30)
                     ));
                 }
 
