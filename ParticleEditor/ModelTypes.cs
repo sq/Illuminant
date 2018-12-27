@@ -8,7 +8,7 @@ using Squared.Illuminant.Particles.Transforms;
 using Squared.Render;
 
 namespace ParticleEditor {
-    public partial class ParticleEditor : MultithreadedGame, INuklearHost {
+    public partial class PropertyEditor {
         public struct ModelTypeInfo {
             public string               Type;
             public float?               Min, Max;

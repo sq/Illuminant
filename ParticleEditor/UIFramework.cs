@@ -11,6 +11,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Squared.Game;
 using Squared.Illuminant;
+using Squared.Illuminant.Modeling;
 using Squared.Illuminant.Particles;
 using Squared.Illuminant.Particles.Transforms;
 using Squared.Render;
@@ -18,7 +19,7 @@ using Squared.Util;
 using Nuke = NuklearDotNet.Nuklear;
 
 namespace ParticleEditor {
-    public partial class ParticleEditor : MultithreadedGame, INuklearHost {
+    public partial class PropertyEditor {
         internal class KeyboardInput : System.Windows.Forms.IMessageFilter {
             public struct Deactivation : IDisposable {
                 public KeyboardInput This;
@@ -70,19 +71,6 @@ namespace ParticleEditor {
             }
         }
 
-        internal class CachedPropertyInfo {
-            public string Name;
-            public ModelTypeInfo Info;
-            public FieldInfo Field;
-            public PropertyInfo Property;
-            public Type RawType, Type;
-            public Func<object, object> Getter;
-            public Action<object, object> Setter;
-            public bool AllowNull;
-            public CachedPropertyInfo ElementInfo;
-            public string[] EnumValueNames;
-        }
-
         private class PropertyGridCache {
             public Type CachedType;
             public List<CachedPropertyInfo> Members;
@@ -115,6 +103,51 @@ namespace ParticleEditor {
         private List<Type> TransformTypes = GetTransformTypes().ToList();
 
         internal KeyboardInput KeyboardInputHandler;
+
+        public readonly ParticleEditor Game;
+
+        public NuklearService Nuklear {
+            get {
+                return Game.Nuklear;
+            }
+        }
+
+        public EngineModel Model {
+            get {
+                return Game.Model;
+            }
+        }
+
+        public Controller Controller {
+            get {
+                return Game.Controller;
+            }
+        }
+
+        public GraphicsDeviceManager Graphics {
+            get {
+                return Game.Graphics;
+            }
+        }
+
+        public int FrameBufferWidth {
+            get {
+                return Game.Graphics.PreferredBackBufferWidth;
+            }
+        }
+
+        public int FrameBufferHeight {
+            get {
+                return Game.Graphics.PreferredBackBufferHeight;
+            }
+        }
+
+        public PropertyEditor (ParticleEditor game) {
+            Game = game;
+
+            KeyboardInputHandler = new KeyboardInput(game);
+            KeyboardInputHandler.Install();
+        }
 
         private static IEnumerable<Type> GetTransformTypes () {
             var tTransform = typeof(ParticleTransform);
@@ -200,9 +233,9 @@ namespace ParticleEditor {
         }
 
         internal void RunWorkItem (Action workItem) {
-            Scheduler.QueueWorkItemForNextStep(() => {
+            Game.Scheduler.QueueWorkItemForNextStep(() => {
                 using (KeyboardInputHandler.Deactivate()) {
-                    RenderCoordinator.WaitForActiveDraws();
+                    Game.RenderCoordinator.WaitForActiveDraws();
                     workItem();
                 }
             });
@@ -907,5 +940,18 @@ namespace ParticleEditor {
             value = newValue;
             return result;
         }
+    }
+
+    internal class CachedPropertyInfo {
+        public string Name;
+        public PropertyEditor.ModelTypeInfo Info;
+        public FieldInfo Field;
+        public PropertyInfo Property;
+        public Type RawType, Type;
+        public Func<object, object> Getter;
+        public Action<object, object> Setter;
+        public bool AllowNull;
+        public CachedPropertyInfo ElementInfo;
+        public string[] EnumValueNames;
     }
 }

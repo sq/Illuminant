@@ -49,6 +49,12 @@ namespace ParticleEditor {
 
         private GCHandle StatePin;
 
+        public PropertyEditor UI {
+            get {
+                return Game.UI;
+            }
+        }
+
         public ParticleSystemView SelectedSystem {
             get {
                 if (View.Systems.Count == 0)
@@ -156,7 +162,7 @@ namespace ParticleEditor {
                 if (currentPos.HasValue) {
                     drawPos = currentPos.Value;
                     drawPos.X += 4;
-                    drawPos.Y -= Game.LineHeight * scale;
+                    drawPos.Y -= Game.UI.LineHeight * scale;
                     ir.DrawString(Game.Font, SelectedPositionProperty.Key, drawPos, material: Game.WorldSpaceTextMaterial, scale: scale);
                     DrawCross(ref ir, currentPos.Value, 1.0f, 12);
                 }
@@ -237,7 +243,7 @@ namespace ParticleEditor {
         }
 
         public void ShowSaveDialog () {
-            Game.RunWorkItem(() => {
+            Game.UI.RunWorkItem(() => {
                 using (var dlg = new SaveFileDialog {
                     Title = "Save",
                     CreatePrompt = false,
@@ -253,7 +259,7 @@ namespace ParticleEditor {
         }
 
         public void ShowLoadDialog () {
-            Game.RunWorkItem(() => {
+            Game.UI.RunWorkItem(() => {
                 using (var dlg = new OpenFileDialog {
                     Title = "Load"
                 }) {
@@ -279,11 +285,11 @@ namespace ParticleEditor {
             View.Initialize(Game);
         }
 
-        internal void SelectTexture (ParticleEditor.CachedPropertyInfo cpi, object instance, NullableLazyResource<Texture2D> tex) {
+        internal void SelectTexture (CachedPropertyInfo cpi, object instance, NullableLazyResource<Texture2D> tex) {
             if (tex == null)
                 tex = new NullableLazyResource<Texture2D>();
 
-            Game.RunWorkItem(() => {
+            Game.UI.RunWorkItem(() => {
                 using (var dlg = new OpenFileDialog {
                     Title = "Select Texture"
                 }) {

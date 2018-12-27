@@ -14,12 +14,12 @@ using Squared.Render;
 using Nuke = NuklearDotNet.Nuklear;
 
 namespace ParticleEditor {
-    public partial class ParticleEditor : MultithreadedGame, INuklearHost {
+    public partial class PropertyEditor {
         private int NextMatrixIndex;
 
         public int SidePanelWidth {
             get {
-                var w = Graphics.PreferredBackBufferWidth;
+                var w = FrameBufferWidth;
                 if (w >= 2000)
                     return 675;
                 else
@@ -27,15 +27,15 @@ namespace ParticleEditor {
             }
         }
 
-        protected unsafe void UIScene () {
+        internal unsafe void UIScene () {
             var ctx = Nuklear.Context;
             NextMatrixIndex = 0;
             
             using (var wnd = Nuklear.Window(
                 "SidePanel",
                 Bounds.FromPositionAndSize(
-                    Graphics.PreferredBackBufferWidth - SidePanelWidth, 0, 
-                    SidePanelWidth, Graphics.PreferredBackBufferHeight
+                    FrameBufferWidth - SidePanelWidth, 0, 
+                    SidePanelWidth, FrameBufferHeight
                 ),
                 NuklearDotNet.NkPanelFlags.Border
             )) {
@@ -43,9 +43,9 @@ namespace ParticleEditor {
                     RenderSidePanels();
             }
 
-            IsMouseOverUI = Nuke.nk_item_is_any_active(ctx) != 0;
-            if (IsMouseOverUI)
-                LastTimeOverUI = Squared.Util.Time.Ticks;
+            Game.IsMouseOverUI = Nuke.nk_item_is_any_active(ctx) != 0;
+            if (Game.IsMouseOverUI)
+                Game.LastTimeOverUI = Squared.Util.Time.Ticks;
         }
 
         private void RenderSidePanels () {
@@ -58,7 +58,7 @@ namespace ParticleEditor {
 
         public float LineHeight {
             get {
-                return (float)Math.Ceiling(Font.LineSpacing) + 2;
+                return (float)Math.Ceiling(Game.Font.LineSpacing) + 2;
             }
         }
 
@@ -207,20 +207,20 @@ namespace ParticleEditor {
                 var vsync = Graphics.SynchronizeWithVerticalRetrace;
                 if (Checkbox("VSync", ref vsync)) {
                     Graphics.SynchronizeWithVerticalRetrace = vsync;
-                    Graphics.ApplyChangesAfterPresent(RenderCoordinator);
+                    Graphics.ApplyChangesAfterPresent(Game.RenderCoordinator);
                 }
 
                 var fullscreen = Graphics.IsFullScreen;
                 if (Checkbox("Fullscreen", ref fullscreen))
-                    SetFullScreen(fullscreen);
+                    Game.SetFullScreen(fullscreen);
 
-                Checkbox("Statistics", ref ShowPerformanceStats);
+                Checkbox("Statistics", ref Game.ShowPerformanceStats);
 
                 Nuke.nk_label(ctx, "Zoom", (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
-                Zoom = Nuke.nk_slide_float(ctx, MinZoom, Zoom, MaxZoom, 0.025f);
+                Game.Zoom = Nuke.nk_slide_float(ctx, ParticleEditor.MinZoom, Game.Zoom, ParticleEditor.MaxZoom, 0.025f);
 
                 Nuke.nk_label(ctx, "Background Brightness", (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
-                Brightness = Nuke.nk_slide_float(ctx, 0, Brightness, 1, 0.01f);
+                Game.Brightness = Nuke.nk_slide_float(ctx, 0, Game.Brightness, 1, 0.01f);
 
                 Nuke.nk_tree_pop(ctx);
             }

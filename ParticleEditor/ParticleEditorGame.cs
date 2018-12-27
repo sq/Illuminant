@@ -34,6 +34,7 @@ namespace ParticleEditor {
         public NuklearService Nuklear;
         public IlluminantMaterials IlluminantMaterials;
         public ParticleMaterials ParticleMaterials;
+        public PropertyEditor UI;
 
         public KeyboardState PreviousKeyboardState, KeyboardState;
         public MouseState PreviousMouseState, MouseState;
@@ -134,9 +135,6 @@ namespace ParticleEditor {
 
             Window.AllowUserResizing = true;
             Window.ClientSizeChanged += Window_ClientSizeChanged;
-
-            KeyboardInputHandler = new KeyboardInput(this);
-            KeyboardInputHandler.Install();
         }
 
         protected override void UnloadContent () {
@@ -165,6 +163,9 @@ namespace ParticleEditor {
             IlluminantMaterials = new IlluminantMaterials(Materials);
             ParticleMaterials = new ParticleMaterials(Materials);
 
+            if (UI == null)
+                UI = new PropertyEditor(this);
+
             TextMaterial = Materials.Get(Materials.ScreenSpaceShadowedBitmap, blendState: BlendState.AlphaBlend);
             TextMaterial.Parameters.ShadowColor.SetValue(new Vector4(0, 0, 0, 0.6f));
             TextMaterial.Parameters.ShadowOffset.SetValue(Vector2.One * 0.75f);
@@ -181,7 +182,7 @@ namespace ParticleEditor {
             if (Nuklear == null)
                 Nuklear = new NuklearService(this) {
                     Font = Font,
-                    Scene = UIScene
+                    Scene = UI.UIScene
                 };
             else
                 Nuklear.Font = Font;
@@ -281,7 +282,7 @@ namespace ParticleEditor {
         public Vector2 ViewOffset {
             get {
                 return new Vector2(
-                    -(Graphics.PreferredBackBufferWidth - SidePanelWidth) / 2f,
+                    -(Graphics.PreferredBackBufferWidth - UI.SidePanelWidth) / 2f,
                     -Graphics.PreferredBackBufferHeight / 2f
                 ) / Zoom;
             }
@@ -300,10 +301,10 @@ namespace ParticleEditor {
             Nuklear.UpdateInput(
                 PreviousMouseState, MouseState, 
                 PreviousKeyboardState, KeyboardState, 
-                IsMouseOverUI, KeyboardInputHandler.Buffer
+                IsMouseOverUI, UI.KeyboardInputHandler.Buffer
             );
 
-            KeyboardInputHandler.Buffer.Clear();
+            UI.KeyboardInputHandler.Buffer.Clear();
 
             using (var group = BatchGroup.ForRenderTarget(frame, -9990, UIRenderTarget)) {
                 ClearBatch.AddNew(group, -1, Materials.Clear, clearColor: Color.Transparent);
