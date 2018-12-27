@@ -216,6 +216,7 @@ namespace ParticleEditor {
                    let isList = (info.Type == "List") || (info.Type == "ValueList")
                    let enumValueNames = mtype.IsEnum ? mtype.GetEnumNames() : null
                    let isWritable = ((f != null) && !f.IsInitOnly) || ((p != null) && p.CanWrite)
+                   let isGetItem = (p != null) && (p.GetIndexParameters().Length > 0)
                    where (f == null) || !f.IsInitOnly || isList
                    where (p == null) || (p.CanWrite && p.CanRead) || isList
                    where !m.GetCustomAttributes<NonSerializedAttribute>().Any()
@@ -233,7 +234,8 @@ namespace ParticleEditor {
                            ? ((f != null) ? (Action<object, object>)f.SetValue : p.SetValue)
                            : (i, v) => { },
                        ElementInfo = GetElementInfo(mtype),
-                       EnumValueNames = enumValueNames
+                       EnumValueNames = enumValueNames,
+                       IsGetItem = isGetItem
                    };
         }
 
@@ -291,7 +293,7 @@ namespace ParticleEditor {
             return result;
         }
 
-        private unsafe void RenderPropertyElement (
+        private unsafe bool RenderPropertyElement (
             string key, ModelTypeInfo? info, ref float value, ref bool changed, float? min = null, float? max = null
         ) {
             // FIXME
@@ -315,7 +317,10 @@ namespace ParticleEditor {
                 // Mask off tiny decimals when transitioning between small and large
                 if ((newInc > 1) && (inc < 1))
                     value = (float)(Math.Floor(Math.Abs(value)) * Math.Sign(value));
+                return true;
             }
+
+            return false;
         }
 
         private bool IsPropertySelected (
@@ -514,6 +519,9 @@ namespace ParticleEditor {
             object instance,
             string prefix = null
         ) {
+            if (cpi.IsGetItem)
+                return false;
+
             bool changed = false, b;
             var ctx = Nuklear.Context;
             var actualName = cpi.Name;
@@ -608,6 +616,10 @@ namespace ParticleEditor {
             switch (valueType) {
                 case "TransformArea":
                     return RenderGenericObjectProperty(cache, cpi, instance, value, actualName);
+
+                case "Bezier2":
+                case "Bezier4":
+                    return RenderBezierProperty(cpi, instance, actualName, value);
 
                 case "String":
                     Nuke.nk_layout_row_dynamic(ctx, LineHeight + 3, 1);
@@ -789,6 +801,41 @@ namespace ParticleEditor {
             return false;
         }
 
+        private unsafe bool RenderBezierProperty (
+            CachedPropertyInfo cpi, object instance,
+            string actualName, object value
+        ) {
+            bool changed = false;
+
+            var ctx = Nuklear.Context;
+            using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, actualName, false)) {
+                if (pGroup.Visible) {
+                    var b = (IBezier)value;
+
+                    Nuke.nk_layout_row_dynamic(ctx, LineHeight, 3);
+
+                    var cnt = b.Count;
+                    if (Nuklear.Property("Count", ref cnt, 1, 4, 1, 1)) {
+                        b.Count = cnt;
+                        changed = true;
+                    }
+
+                    var val = b.MinValue;
+                    if (RenderPropertyElement("Min", null, ref val, ref changed))
+                        b.MinValue = val;
+
+                    val = b.MaxValue;
+                    if (RenderPropertyElement("Max", null, ref val, ref changed))
+                        b.MaxValue = val;
+                    
+                    if (changed)
+                        cpi.Setter(instance, b);
+                }
+            }
+
+            return changed;
+        }
+
         private unsafe bool RenderTextureProperty (
             CachedPropertyInfo cpi, object instance, ref bool changed, 
             string actualName, object _value
@@ -955,7 +1002,7 @@ namespace ParticleEditor {
         public Type RawType, Type;
         public Func<object, object> Getter;
         public Action<object, object> Setter;
-        public bool AllowNull;
+        public bool AllowNull, IsGetItem;
         public CachedPropertyInfo ElementInfo;
         public string[] EnumValueNames;
     }

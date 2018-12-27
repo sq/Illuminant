@@ -10,69 +10,142 @@ using Microsoft.Xna.Framework;
 using Squared.Util;
 
 namespace Squared.Illuminant {
-    [TypeConverter(typeof(BezierConverter))]
-    public class Bezier2 {
-        public int Count;
-        public float MinValue, MaxValue;
+    public interface IBezier {
+        int Count { get; set; }
+        float MinValue { get; set; }
+        float MaxValue { get; set; }
+        object this [int index] { get; set; }
+    }
+
+    public class Bezier2 : IBezier {
+        public int Count { get; set; }
+        public float MinValue { get; set; }
+        public float MaxValue { get; set; }
         public Vector2 A, B, C, D;
 
-        public Bezier2 (float x, float y) {
+        public Bezier2 ()
+            : this (Vector2.One) {
+        }
+
+        public Bezier2 (float x, float y)
+            : this (new Vector2(x, y)) {
+        }
+
+        public Bezier2 (Vector2 constant) {
             Count = 1;
             MinValue = 0;
             MaxValue = 1;
-            A = B = C = D = new Vector2(x, y);
+            A = B = C = D = constant;
+        }
+
+        public Vector2 this[int index] {
+            get {
+                switch (index) {
+                    case 0:
+                        return A;
+                    case 1:
+                        return B;
+                    case 2:
+                        return C;
+                    case 3:
+                        return D;
+                    default:
+                        throw new IndexOutOfRangeException();
+                }
+            }
+            set {
+                switch (index) {
+                    case 0:
+                        A = value;
+                        return;
+                    case 1:
+                        B = value;
+                        return;
+                    case 2:
+                        C = value;
+                        return;
+                    case 3:
+                        D = value;
+                        return;
+                    default:
+                        throw new IndexOutOfRangeException();
+                }
+            }
+        }
+
+        object IBezier.this[int index] {
+            get {
+                return this[index];
+            }
+            set {
+                this[index] = (Vector2)value;
+            }
         }
     }
 
-    [TypeConverter(typeof(BezierConverter))]
-    public class Bezier4 {
-        public int Count;
-        public float MinValue, MaxValue;
+    public class Bezier4 : IBezier {
+        public int Count { get; set; }
+        public float MinValue { get; set; }
+        public float MaxValue { get; set; }
         public Vector4 A, B, C, D;
 
-        public Bezier4 (float x, float y, float z, float w) {
+        public Bezier4 ()
+            : this (Vector4.One) {
+        }
+
+        public Bezier4 (float x, float y, float z, float w)
+            : this (new Vector4(x, y, z, w)) {
+        }
+
+        public Bezier4 (Vector4 constant) {
             Count = 1;
             MinValue = 0;
             MaxValue = 1;
-            A = B = C = D = new Vector4(x, y, z, w);
-        }
-    }
-
-    public class BezierConverter : TypeConverter {
-        public override bool CanConvertFrom (ITypeDescriptorContext context, Type sourceType) {
-            if (sourceType == typeof(string))
-                return true;
-
-            return base.CanConvertFrom(context, sourceType);
+            A = B = C = D = constant;
         }
 
-        public override object ConvertFrom (ITypeDescriptorContext context, CultureInfo culture, object value) {
-            var s = value as string;
-            if (s != null) {
-                var values = (from p in s.Split(',') select float.Parse(p.Trim())).ToList();
-                if (values.Count == 4)
-                    return new Bezier4(values[0], values[1], values[2], values[3]);
-                else if (values.Count == 2)
-                    return new Bezier2(values[0], values[1]);
+        public Vector4 this[int index] {
+            get {
+                switch (index) {
+                    case 0:
+                        return A;
+                    case 1:
+                        return B;
+                    case 2:
+                        return C;
+                    case 3:
+                        return D;
+                    default:
+                        throw new IndexOutOfRangeException();
+                }
             }
-
-            return base.ConvertFrom(context, culture, value);
+            set {
+                switch (index) {
+                    case 0:
+                        A = value;
+                        return;
+                    case 1:
+                        B = value;
+                        return;
+                    case 2:
+                        C = value;
+                        return;
+                    case 3:
+                        D = value;
+                        return;
+                    default:
+                        throw new IndexOutOfRangeException();
+                }
+            }
         }
 
-        public override bool CanConvertTo (ITypeDescriptorContext context, Type destinationType) {
-            if (
-                (destinationType == typeof(Bezier2)) ||
-                (destinationType == typeof(Bezier4))
-            )
-                return true;
-
-            return base.CanConvertTo(context, destinationType);
-        }
-
-        public override object ConvertTo (ITypeDescriptorContext context, CultureInfo culture, object value, Type destinationType) {
-            throw new Exception("NYI");
-
-            return base.ConvertTo(context, culture, value, destinationType);
+        object IBezier.this[int index] {
+            get {
+                return this[index];
+            }
+            set {
+                this[index] = (Vector4)value;
+            }
         }
     }
 }
@@ -80,20 +153,10 @@ namespace Squared.Illuminant {
 namespace Squared.Illuminant.Uniforms {
     [StructLayout(LayoutKind.Sequential)]
     public struct ClampedBezier2 {
-        public static readonly ClampedBezier2 Zero = new ClampedBezier2 {
-            Count = 1,
-            MinValue = 0,
-            InvDivisor = 1,
-            A = Vector2.Zero,
-            B = Vector2.Zero
-        };
-
         public static readonly ClampedBezier2 One = new ClampedBezier2 {
-            Count = 1,
-            MinValue = 0,
-            InvDivisor = 1,
-            A = Vector2.One,
-            B = Vector2.One
+            RangeAndCount = new Vector4(0, 1, 1, 0),
+            AB = Vector4.One,
+            CD = Vector4.One
         };
 
         public Vector4 RangeAndCount;
@@ -123,38 +186,6 @@ namespace Squared.Illuminant.Uniforms {
                 src.C.X, src.C.Y,
                 src.D.X, src.D.Y
             );
-        }
-
-        public Vector2 A {
-            set {
-                AB.X = value.X;
-                AB.Y = value.Y;
-            }
-        }
-
-        public Vector2 B {
-            set {
-                AB.Z = value.X;
-                AB.W = value.Y;
-            }
-        }
-
-        public float Count {
-            set {
-                RangeAndCount.Z = value;
-            }
-        }
-
-        public float MinValue {
-            set {
-                RangeAndCount.X = value;
-            }
-        }
-
-        public float InvDivisor {
-            set {
-                RangeAndCount.Y = value;
-            }
         }
 
         public Vector2 Evaluate (float value) {
@@ -187,16 +218,8 @@ namespace Squared.Illuminant.Uniforms {
 
     [StructLayout(LayoutKind.Sequential)]
     public struct ClampedBezier4 {
-        public static readonly ClampedBezier4 Zero = new ClampedBezier4 {
-            Count = 1,
-            A = Vector4.Zero,
-            B = Vector4.Zero,
-            C = Vector4.Zero,
-            D = Vector4.Zero
-        };
-
         public static readonly ClampedBezier4 One = new ClampedBezier4 {
-            Count = 1,
+            RangeAndCount = new Vector4(0, 1, 1, 0),
             A = Vector4.One,
             B = Vector4.One,
             C = Vector4.One,
@@ -226,24 +249,6 @@ namespace Squared.Illuminant.Uniforms {
             B = src.B;
             C = src.C;
             D = src.D;
-        }
-
-        public float Count {
-            set {
-                RangeAndCount.Z = value;
-            }
-        }
-
-        public float MinValue {
-            set {
-                RangeAndCount.X = value;
-            }
-        }
-
-        public float InvDivisor {
-            set {
-                RangeAndCount.Y = value;
-            }
         }
 
         internal static int tForScaledBezier (Vector4 rangeAndCount, float value, out float t) {
