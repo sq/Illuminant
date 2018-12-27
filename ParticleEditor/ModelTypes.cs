@@ -41,9 +41,13 @@ namespace ParticleEditor {
                     }
                 },
                 {
+                    "ParticleColorLifeRamp", new Dictionary<string, ModelTypeInfo> {
+                        {"Strength", new ModelTypeInfo { Min = 0, Max = 1 } },
+                    }
+                },
+                {
                     "ParticleColor", new Dictionary<string, ModelTypeInfo> {
                         {"Global", new ModelTypeInfo { Type = "ColorF" } },
-                        {"LifeRampStrength", new ModelTypeInfo { Min = 0, Max = 1 } },
                         {"FromLife", new ModelTypeInfo { Type = "ColorBezier4" } }
                     }
                 },

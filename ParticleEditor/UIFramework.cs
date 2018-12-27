@@ -882,27 +882,27 @@ namespace ParticleEditor {
             string actualName, object _value
         ) {
             var ctx = Nuklear.Context;
-            using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, actualName, false)) {
-                if (pGroup.Visible) {
-                    var value = (NullableLazyResource<Texture2D>)_value;
-                    Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
-                    if (Nuklear.Button("Select")) {
-                        Controller.SelectTexture(cpi, instance, value);
-                        changed = false;
-                        return false;
-                    }
-                    if (Nuklear.Button("Erase")) {
-                        value = new NullableLazyResource<Texture2D>();
-                        cpi.Setter(instance, value);
-                        changed = true;
-                        return true;
-                    }
-                    
-                    Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
-                    Nuke.nk_label_wrap(ctx, (value != null) && (value.Name != null) ? Path.GetFileName(value.Name) : "none");
-                }
+            var value = (NullableLazyResource<Texture2D>)_value;
+            var hasValue = (value != null) && (value.Name != null);
+            Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
+            if (Nuklear.Button("Select Image")) {
+                Controller.SelectTexture(cpi, instance, value);
+                changed = false;
             }
-            return false;
+            if (Nuklear.Button("Erase", hasValue)) {
+                value = new NullableLazyResource<Texture2D>();
+                cpi.Setter(instance, value);
+                changed = true;
+            }
+                    
+            Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
+            Nuke.nk_label_wrap(
+                ctx, string.Format(
+                    "{0}: {1}",
+                    cpi.Name, hasValue ? Path.GetFileName(value.Name) : "none"
+                )
+            );
+            return changed;
         }
 
         private unsafe bool RenderListProperty (

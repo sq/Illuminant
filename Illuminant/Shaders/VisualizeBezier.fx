@@ -42,7 +42,7 @@ void BezierVisualizerPixelShader (
     float4 value = evaluateBezier4AtT(Bezier, count, xy.x);
     float4 scaledValue = saturate((value - minValue) / valueRange);
     float4 distances = abs((1 - xy.y) - scaledValue);
-    float4 scaledDistances = 1 - saturate(distances / 0.0233);
+    float4 scaledDistances = 1 - saturate(distances / 0.016);
 
     if (Bezier.RangeAndCount.w < 2.5)
         scaledDistances.zw = 0;
@@ -53,7 +53,7 @@ void BezierVisualizerPixelShader (
     float distanceAboveOne = saturate(((1 - xy.y) - scaledOneAndZero.x) / 0.015);
     float distanceBelowZero = saturate((scaledOneAndZero.y - (1 - xy.y)) / 0.015);
 
-    scaledDistances = pow(scaledDistances, 2.3);
+    scaledDistances = pow(scaledDistances, 1.8);
 
     float4 w = scaledDistances.a * float4(1, 1, 1, 0);
     float  alpha = (scaledDistances.r + scaledDistances.g + scaledDistances.b + scaledDistances.a);
