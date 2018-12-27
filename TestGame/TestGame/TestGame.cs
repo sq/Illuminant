@@ -33,12 +33,13 @@ namespace TestGame {
         public IlluminantMaterials IlluminantMaterials;
         public ParticleMaterials ParticleMaterials;
 
+        public EmbeddedTexture2DProvider TextureLoader { get; private set; }
+        public EmbeddedFreeTypeFontProvider FontLoader { get; private set; }
+
         public KeyboardState PreviousKeyboardState, KeyboardState;
         public MouseState PreviousMouseState, MouseState;
 
         public Material TextMaterial { get; private set; }
-        public EmbeddedTexture2DProvider TextureLoader { get; private set; }
-        public EmbeddedFreeTypeFontProvider FontLoader { get; private set; }
 
         public FreeTypeFont Font;
         public Texture2D RampTexture;
@@ -59,6 +60,7 @@ namespace TestGame {
             // UniformBinding.ForceCompatibilityMode = true;
 
             Graphics = new GraphicsDeviceManager(this);
+            Graphics.GraphicsProfile = GraphicsProfile.HiDef;
             Graphics.PreferredBackBufferFormat = SurfaceFormat.Color;
             Graphics.PreferredDepthStencilFormat = DepthFormat.Depth24Stencil8;
             Graphics.PreferredBackBufferWidth = 1920;

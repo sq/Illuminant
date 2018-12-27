@@ -36,6 +36,9 @@ namespace ParticleEditor {
         public ParticleMaterials ParticleMaterials;
         public PropertyEditor UI;
 
+        public EmbeddedTexture2DProvider TextureLoader { get; private set; }
+        public EmbeddedFreeTypeFontProvider FontLoader { get; private set; }
+
         public KeyboardState PreviousKeyboardState, KeyboardState;
         public MouseState PreviousMouseState, MouseState;
 
@@ -71,6 +74,7 @@ namespace ParticleEditor {
             // UniformBinding.ForceCompatibilityMode = true;
 
             Graphics = new GraphicsDeviceManager(this);
+            Graphics.GraphicsProfile = GraphicsProfile.HiDef;
             Graphics.PreferredBackBufferFormat = SurfaceFormat.Color;
             Graphics.PreferredDepthStencilFormat = DepthFormat.None;
             Graphics.PreferredBackBufferWidth = 1920;
@@ -155,11 +159,18 @@ namespace ParticleEditor {
 
             base.LoadContent();
 
-            Font = new FreeTypeFont(RenderCoordinator, "Lato-Regular.ttf") {
-                GlyphMargin = 2,
-                DPIPercent = 100,
-                Gamma = 0.8f
+            TextureLoader = new EmbeddedTexture2DProvider(RenderCoordinator) {
+                DefaultOptions = new TextureLoadOptions {
+                    Premultiply = true,
+                    GenerateMips = true
+                }
             };
+            FontLoader = new EmbeddedFreeTypeFontProvider(RenderCoordinator);
+
+            Font = FontLoader.Load("Lato-Regular");
+            Font.GlyphMargin = 2;
+            Font.Gamma = 0.8f;
+
             Materials = new DefaultMaterialSet(RenderCoordinator);
             IlluminantMaterials = new IlluminantMaterials(Materials);
             ParticleMaterials = new ParticleMaterials(Materials);

@@ -58,8 +58,11 @@ namespace ParticleEditor {
                 using (var img = new Squared.Render.STB.Image(name, premultiply: true, asFloatingPoint: floatingPoint))
                     result = img.CreateTexture(Game.RenderCoordinator, !floatingPoint);
             } else {
-                lock (Game.RenderCoordinator.CreateResourceLock)
-                    result = Game.Content.Load<Texture2D>(name);
+                return Game.TextureLoader.Load(name, new TextureLoadOptions {
+                    Premultiply = true,
+                    FloatingPoint = floatingPoint,
+                    GenerateMips = !floatingPoint
+                });
             }
 
             LoadedResources.Add(result);
