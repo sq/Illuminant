@@ -446,7 +446,7 @@ namespace ParticleEditor {
                             () => new Vector2(value.Constant.X, value.Constant.Y)
                         );
 
-                    RenderVectorProperty(ref value.Constant, ref result);
+                    RenderVectorProperty(null, ref value.Constant, ref result);
 
                     Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
                     if (Nuklear.SelectableText("Scale", isFormulaSelected && (spp.Key == "Scale")))
@@ -456,7 +456,7 @@ namespace ParticleEditor {
                             () => new Vector2(value.RandomScale.X, value.RandomScale.Y)
                         );
 
-                    RenderVectorProperty(ref value.RandomScale, ref result);
+                    RenderVectorProperty(null, ref value.RandomScale, ref result);
 
                     var k = value.Circular ? "Constant Radius" : "Random Offset";
                     Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
@@ -480,7 +480,7 @@ namespace ParticleEditor {
                         );
                     }
 
-                    RenderVectorProperty(ref value.Offset, ref result);
+                    RenderVectorProperty(null, ref value.Offset, ref result);
 
                     Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
                     if (Checkbox("Circular", ref value.Circular))
@@ -639,15 +639,11 @@ namespace ParticleEditor {
                     return false;
 
                 case "Vector2":
-                    Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
                     var v2 = (Vector2)value;
-                    RenderPropertyElement("#x", cpi.Info, ref v2.X, ref changed);
-                    RenderPropertyElement("#y", cpi.Info, ref v2.Y, ref changed);
-                    if (changed) {
+                    RenderVectorProperty(cpi, ref v2, ref changed);
+                    if (changed)
                         cpi.Setter(instance, v2);
-                        return true;
-                    }
-                    return false;
+                    return changed;
 
                 case "Normal":
                 case "Vector3":
@@ -678,12 +674,10 @@ namespace ParticleEditor {
 
                 case "Vector4":
                     var v4 = (Vector4)value;
-                    RenderVectorProperty(ref v4, ref changed);
-                    if (changed) {
+                    RenderVectorProperty(cpi, ref v4, ref changed);
+                    if (changed)
                         cpi.Setter(instance, v4);
-                        return true;
-                    }
-                    return false;
+                    return changed;
                 
                 default:
                     if (cpi.Type.IsEnum) {
@@ -703,12 +697,20 @@ namespace ParticleEditor {
             }
         }
 
-        private unsafe void RenderVectorProperty (ref Vector4 v4, ref bool changed) {
+        private unsafe bool RenderVectorProperty (CachedPropertyInfo cpi, ref Vector2 v2, ref bool changed) {
+            Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 2);
+            var a = RenderPropertyElement("#x", cpi?.Info, ref v2.X, ref changed);
+            var b = RenderPropertyElement("#y", cpi?.Info, ref v2.Y, ref changed);
+            return a || b;
+        }
+
+        private unsafe bool RenderVectorProperty (CachedPropertyInfo cpi, ref Vector4 v4, ref bool changed) {
             Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 4);
-            RenderPropertyElement("#x", null, ref v4.X, ref changed);
-            RenderPropertyElement("#y", null, ref v4.Y, ref changed);
-            RenderPropertyElement("#z", null, ref v4.Z, ref changed);
-            RenderPropertyElement("#w", null, ref v4.W, ref changed);
+            var a = RenderPropertyElement("#x", cpi?.Info, ref v4.X, ref changed);
+            var b = RenderPropertyElement("#y", cpi?.Info, ref v4.Y, ref changed);
+            var c = RenderPropertyElement("#z", cpi?.Info, ref v4.Z, ref changed);
+            var d = RenderPropertyElement("#w", cpi?.Info, ref v4.W, ref changed);
+            return a || b || c || d;
         }
 
         private struct MatrixGenerateParameters {
@@ -827,9 +829,19 @@ namespace ParticleEditor {
                     val = b.MaxValue;
                     if (RenderPropertyElement("Max", null, ref val, ref changed))
                         b.MaxValue = val;
-                    
-                    if (changed)
-                        cpi.Setter(instance, b);
+
+                    for (int i = 0; i < cnt; i++) {
+                        var elt = b[i];
+                        if (elt is Vector2) {
+                            var v2 = (Vector2)elt;
+                            if (RenderVectorProperty(null, ref v2, ref changed))
+                                b[i] = v2;
+                        } else if (elt is Vector4) {
+                            var v4 = (Vector4)elt;
+                            if (RenderVectorProperty(null, ref v4, ref changed))
+                                b[i] = v4;
+                        }
+                    }
                 }
             }
 

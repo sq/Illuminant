@@ -13,7 +13,7 @@ float tForScaledBezier (in float4 rangeAndCount, in float value, out float t) {
         invDivisor = rangeAndCount.y;
 
     t = (value - minValue) * abs(invDivisor);
-    if (invDivisor > 0)
+    if (invDivisor < 0)
         t = 1 - saturate(t);
     else
         t = saturate(t);

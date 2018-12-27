@@ -173,10 +173,7 @@ namespace Squared.Illuminant.Uniforms {
                 range = 1;
             RangeAndCount = new Vector4(
                 Math.Min(src.MinValue, src.MaxValue),
-                src.MaxValue < src.MinValue
-                    ? -1.0f / range
-                    : 1.0f / range,
-                src.Count, 0
+                1.0f / range, src.Count, 0
             );
             AB = new Vector4(
                 src.A.X, src.A.Y,
@@ -240,10 +237,7 @@ namespace Squared.Illuminant.Uniforms {
                 range = 1;
             RangeAndCount = new Vector4(
                 Math.Min(src.MinValue, src.MaxValue),
-                src.MaxValue < src.MinValue
-                    ? -1.0f / range
-                    : 1.0f / range,
-                src.Count, 0
+                1.0f / range, src.Count, 0
             );
             A = src.A;
             B = src.B;
@@ -256,7 +250,7 @@ namespace Squared.Illuminant.Uniforms {
                 invDivisor = rangeAndCount.Y;
 
             t = (value - minValue) * Math.Abs(invDivisor);
-            if (invDivisor > 0)
+            if (invDivisor < 0)
                 t = 1 - Arithmetic.Clamp(t, 0, 1);
             else
                 t = Arithmetic.Clamp(t, 0, 1);
