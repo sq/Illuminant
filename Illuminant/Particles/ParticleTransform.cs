@@ -27,15 +27,7 @@ namespace Squared.Illuminant.Particles.Transforms {
         public AreaType Type = AreaType.None;
         public Vector3  Center;
 
-        private Vector3 _Size = Vector3.One;
-        public Vector3 Size {
-            get {
-                return _Size;
-            }
-            set {
-                _Size = value;
-            }
-        }
+        public Vector3 Size = Vector3.One;
 
         private float _Falloff = 1;
         public float Falloff {

@@ -608,7 +608,8 @@ namespace ParticleEditor {
                 case "Matrix":
                 case "Matrix3x4":
                     var m = (Matrix)value;
-                    return RenderMatrixProperty(cpi, instance, ref changed, actualName, ref m, valueType.EndsWith("3x4"));
+                    var temp = false;
+                    return RenderMatrixProperty(cpi, instance, ref changed, actualName, ref m, valueType.EndsWith("3x4"), ref temp);
             }
 
             Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
@@ -724,13 +725,19 @@ namespace ParticleEditor {
             }
         }
 
+        private unsafe bool ShowBezierButton () {
+            return Nuklear.Button("∑");
+        }
+
         private unsafe bool RenderParameter (CachedPropertyInfo cpi, object instance, ref bool changed, string actualName, string parentType, ref IParameter p) {
             var valueType = p.ValueType;
             var isConstant = p.IsConstant;
             var isBezier = p.IsBezier;
+            var isMatrix = valueType.Name.EndsWith("Matrix");
             var now = (float)Game.View.Time.Seconds;
 
             bool isColor = (parentType ?? "").StartsWith("Color");
+            bool doBezierConversion = false;
 
             if (!isBezier && isConstant) {
                 var widths = new float[5];
@@ -759,15 +766,17 @@ namespace ParticleEditor {
                     widths[i] = 0.93f / eltCount;
                 widths[eltCount] = 0.07f;
 
-                if (eltCount > 1) {
+                if ((eltCount > 1) && !isMatrix) {
                     Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
                     Nuklear.Label(actualName, false);
                 }
 
-                Nuke.nk_layout_row(
-                    Nuklear.Context, NuklearDotNet.nk_layout_format.NK_DYNAMIC, LineHeight,
-                    eltCount + 1, widths
-                );
+                if (!isMatrix)
+                    Nuke.nk_layout_row(
+                        Nuklear.Context, NuklearDotNet.nk_layout_format.NK_DYNAMIC, LineHeight,
+                        eltCount + 1, widths
+                    );
+
                 switch (valueType.Name) {
                     case "Single":
                         var fp = (Parameter<float>)p;
@@ -801,9 +810,23 @@ namespace ParticleEditor {
                             p = v4p;
                         }
                         break;
+                    case "DynamicMatrix":
+                        var dmp = (Parameter<DynamicMatrix>)p;
+                        var dmc = dmp.Constant;
+                        doBezierConversion = true;
+                        if (RenderMatrixProperty(cpi, null, ref changed, actualName, ref dmc, false, true, ref doBezierConversion)) {
+                            dmp.Constant = dmc;
+                            p = dmp;
+                        }
+                        break;
+                    default:
+                        throw new Exception();
                 }
 
-                if (Nuklear.Button("∑")) {
+                if (!isMatrix)
+                    doBezierConversion = ShowBezierButton();
+
+                if (doBezierConversion) {
                     p = p.ToBezier();
                     changed = true;
                     // HACK to auto-open
@@ -853,7 +876,7 @@ namespace ParticleEditor {
 
         private unsafe bool RenderMatrixProperty (
             CachedPropertyInfo cpi, object instance, ref bool changed, 
-            string actualName, ref Matrix m, bool is3x4
+            string actualName, ref Matrix m, bool is3x4, ref bool doBezierConversion
         ) {
             MatrixGenerateParameters p;
             var isGenerated = false;
@@ -868,7 +891,7 @@ namespace ParticleEditor {
                 Angle = p.Angle,
                 Scale = p.Scale
             };
-            var result = RenderMatrixProperty(cpi, instance, ref changed, actualName, ref dm, is3x4, false);
+            var result = RenderMatrixProperty(cpi, instance, ref changed, actualName, ref dm, is3x4, false, ref doBezierConversion);
             p.Angle = dm.Angle;
             p.Scale = dm.Scale;
             MatrixGenerateParams[actualName] = p;
@@ -877,7 +900,8 @@ namespace ParticleEditor {
 
         private unsafe bool RenderMatrixProperty (
             CachedPropertyInfo cpi, object instance, ref bool changed, 
-            string actualName, ref DynamicMatrix dm, bool is3x4, bool isDynamic
+            string actualName, ref DynamicMatrix dm, bool is3x4, 
+            bool isDynamic, ref bool doBezierConversion
         ) {
             var ctx = Nuklear.Context;
             using (var pGroup = Nuklear.CollapsingGroup(actualName, actualName, false)) {
@@ -887,7 +911,7 @@ namespace ParticleEditor {
                         grp = Nuklear.CollapsingGroup("Generate", "GenerateMatrix", false, NextMatrixIndex++);
                         dm.IsGenerated = dm.IsGenerated || grp.Value.Visible;
                     } else {
-                        Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
+                        Nuke.nk_layout_row_dynamic(ctx, LineHeight, doBezierConversion ? 3 : 2);
                         if (Checkbox("Generated", ref dm.IsGenerated))
                             changed = true;
                     }
@@ -896,7 +920,7 @@ namespace ParticleEditor {
 
                     if (isGroupOpen || isDynamic) {
                         if (!isDynamic)
-                            Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
+                            Nuke.nk_layout_row_dynamic(ctx, LineHeight, doBezierConversion ? 2 : 1);
 
                         if (Nuklear.Button("Identity")) {
                             dm.Matrix = Matrix.Identity;
@@ -906,6 +930,9 @@ namespace ParticleEditor {
                             changed = true;
                         }
                     }
+
+                    if (doBezierConversion)
+                        doBezierConversion = ShowBezierButton();
 
                     if (isGroupOpen || dm.IsGenerated) {
                         Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
@@ -964,6 +991,8 @@ namespace ParticleEditor {
                             cpi.Setter(instance, dm);
                         return true;
                     }
+                } else {
+                    doBezierConversion = false;
                 }
             }
             return false;
@@ -1068,11 +1097,13 @@ namespace ParticleEditor {
                                 b[i] = v4;
                         } else if (elt is Matrix) {
                             var m = (Matrix)elt;
-                            if (RenderMatrixProperty(cpi, null, ref changed, BezierElementNames[i], ref m, false))
+                            bool temp = false;
+                            if (RenderMatrixProperty(cpi, null, ref changed, BezierElementNames[i], ref m, false, ref temp))
                                 b[i] = m;
                         } else if (elt is DynamicMatrix) {
                             var dm = (DynamicMatrix)elt;
-                            if (RenderMatrixProperty(cpi, null, ref changed, BezierElementNames[i], ref dm, false, true))
+                            bool temp = false;
+                            if (RenderMatrixProperty(cpi, null, ref changed, BezierElementNames[i], ref dm, false, true, ref temp))
                                 b[i] = dm;
                         } else {
                             throw new Exception();
