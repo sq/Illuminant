@@ -60,7 +60,7 @@ namespace ParticleEditor {
 
         public float LineHeight {
             get {
-                return (float)Math.Ceiling(Game.Font.LineSpacing) + 2;
+                return (float)Math.Ceiling(Game.Font.LineSpacing) + 3;
             }
         }
 

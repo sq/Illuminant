@@ -206,7 +206,7 @@ namespace ParticleEditor {
             else
                 Nuklear.Font = Font;
 
-            Nuklear.VerticalPadding = 2;
+            Nuklear.VerticalPadding = 3;
 
             LastTimeOverUI = Time.Ticks;
 

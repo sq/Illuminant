@@ -552,7 +552,8 @@ namespace Framework {
 
         public bool Button (string text, bool enabled = true) {
             if (enabled)
-                return Nuklear.nk_button_label(Context, text) != 0;
+                using (var s = new NString(text))
+                    return Nuklear.nk_button_label(Context, s.pText) != 0;
             else {
                 Label(text, true);
                 return false;

@@ -790,7 +790,7 @@ namespace ParticleEditor {
                         break;
                 }
 
-                if (Nuklear.Button("~")) {
+                if (Nuklear.Button("∑")) {
                     p = p.ToBezier();
                     changed = true;
                     // HACK to auto-open
@@ -860,26 +860,33 @@ namespace ParticleEditor {
             var ctx = Nuklear.Context;
             using (var pGroup = Nuklear.CollapsingGroup(actualName, actualName, false)) {
                 if (pGroup.Visible) {
-                    var grp = default(NuklearService.Tree);
+                    NuklearService.Tree? grp = null;
                     if (!isDynamic) {
                         grp = Nuklear.CollapsingGroup("Generate", "GenerateMatrix", false, NextMatrixIndex++);
-                        dm.IsGenerated = dm.IsGenerated || grp.Visible;
+                        dm.IsGenerated = dm.IsGenerated || grp.Value.Visible;
                     } else {
+                        Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
                         if (Checkbox("Generated", ref dm.IsGenerated))
                             changed = true;
                     }
 
-                    if (dm.IsGenerated) {
-                        Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
+                    var isGroupOpen = (grp != null) && (grp.Value.Visible);
+
+                    if (isGroupOpen || isDynamic) {
+                        if (!isDynamic)
+                            Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
+
                         if (Nuklear.Button("Identity")) {
                             dm.Matrix = Matrix.Identity;
                             dm.Angle = 0;
                             dm.Scale = 1;
-                            dm.IsGenerated = false;
+                            dm.IsGenerated = true;
                             changed = true;
                         }
+                    }
 
-                        Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
+                    if (isGroupOpen || dm.IsGenerated) {
+                        Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
                         if (Nuklear.Property("#Angle", ref dm.Angle, -360, 360, 0.5f, 0.25f)) {
                             changed = true;
                             dm.IsGenerated = true;
@@ -927,8 +934,8 @@ namespace ParticleEditor {
                         dm.Matrix = m;
                     }
 
-                    if (isDynamic)
-                        grp.Dispose();
+                    if (grp != null)
+                        grp.Value.Dispose();
 
                     if (changed) {
                         if (instance != null)
@@ -940,7 +947,8 @@ namespace ParticleEditor {
             return false;
         }
 
-        private readonly string[] BezierElementNames = new[] { "#A", "#B", "#C", "#D" };
+        private readonly string[] PrefixedBezierElementNames = new[] { "#A", "#B", "#C", "#D" };
+        private readonly string[] BezierElementNames = new[] { "A", "B", "C", "D" };
         private readonly Dictionary<BezierM, int> BezierSelectedRows = new Dictionary<BezierM, int>();
 
         private unsafe bool RenderBezierProperty (
@@ -1011,11 +1019,11 @@ namespace ParticleEditor {
                     }
 
                     var val = b.MinValue;
-                    if (RenderPropertyElement("#[", null, ref val, ref changed))
+                    if (RenderPropertyElement("#Min", null, ref val, ref changed))
                         b.MinValue = val;
 
                     val = b.MaxValue;
-                    if (RenderPropertyElement("#]", null, ref val, ref changed))
+                    if (RenderPropertyElement("#Max", null, ref val, ref changed))
                         b.MaxValue = val;
 
                     if ((bm != null) && !fullyDynamic && Nuklear.Property("#Row", ref selectedRow, 0, 3, 1, 1))
@@ -1026,7 +1034,7 @@ namespace ParticleEditor {
                         if (elt is float) {
                             var v = (float)elt;
                             Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
-                            if (RenderPropertyElement(BezierElementNames[i], cpi?.Info, ref v, ref changed))
+                            if (RenderPropertyElement(PrefixedBezierElementNames[i], cpi?.Info, ref v, ref changed))
                                 b[i] = v;
                         } else if (elt is Vector2) {
                             var v2 = (Vector2)elt;
