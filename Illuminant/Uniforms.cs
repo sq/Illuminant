@@ -168,12 +168,15 @@ namespace Squared.Illuminant.Uniforms {
                 (float)(deltaTimeSeconds * 1000), Configuration.Friction, 
                 Configuration.MaximumVelocity, Configuration.GlobalLifeDecayRate
             );
-            CollisionSettings = new Vector4(
-                Configuration.EscapeVelocity,
-                Configuration.BounceVelocityMultiplier,
-                Configuration.CollisionDistance,
-                Configuration.CollisionLifePenalty
-            );
+            if (Configuration.Collision != null)
+                CollisionSettings = new Vector4(
+                    Configuration.Collision.EscapeVelocity,
+                    Configuration.Collision.BounceVelocityMultiplier,
+                    Configuration.Collision.Distance,
+                    Configuration.Collision.LifePenalty
+                );
+            else
+                CollisionSettings = Vector4.Zero;
             RotationFromLifeAndIndex = new Vector2(
                 MathHelper.ToRadians(Configuration.RotationFromLife), 
                 MathHelper.ToRadians(Configuration.RotationFromIndex)

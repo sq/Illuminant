@@ -107,20 +107,22 @@ namespace TestGame.Scenes {
                 new ParticleSystemConfiguration() {
                     Appearance = {
                         Texture = new NullableLazyResource<Texture2D>("spark"),
+                        AnimationRate = new Vector2(1 / 6f, 0),
                     },
                     Size = Vector2.One * 1.33f,
                     /*
                     Texture = fireball,
                     TextureRegion = fireballRect,
                     Size = new Vector2(34, 21) * 0.2f,
-                    AnimationRate = new Vector2(1 / 6f, 0),
                     */
                     RotationFromVelocity = true,
                     Color = {
                         OpacityFromLife = opacityFromLife / 60f,
                     },
+                    Collision = {
+                        LifePenalty = 1,
+                    },
                     MaximumVelocity = 2048,
-                    CollisionLifePenalty = 1,
                     GlobalLifeDecayRate = 1.2f
                 }
             ) {
@@ -273,7 +275,7 @@ namespace TestGame.Scenes {
         }
 
         private void InitializeSystem (ParticleSystem system) {
-            system.Configuration.DistanceFieldMaximumZ = 256;
+            system.Configuration.Collision.DistanceFieldMaximumZ = 256;
             system.Clear();
         }
         
@@ -283,10 +285,10 @@ namespace TestGame.Scenes {
             // This lighting renderer's job is to generate a distance field for collisions
             LightingRenderer.UpdateFields(frame, -3);
 
-            System.Configuration.DistanceField = Collisions ? LightingRenderer.DistanceField : null;
+            System.Configuration.Collision.DistanceField = Collisions ? LightingRenderer.DistanceField : null;
             System.Configuration.Friction = Friction;
-            System.Configuration.EscapeVelocity = EscapeVelocity;
-            System.Configuration.BounceVelocityMultiplier = BounceVelocity;
+            System.Configuration.Collision.EscapeVelocity = EscapeVelocity;
+            System.Configuration.Collision.BounceVelocityMultiplier = BounceVelocity;
 
             MaybeSpawnMoreParticles();
 

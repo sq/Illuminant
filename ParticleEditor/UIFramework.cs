@@ -572,6 +572,7 @@ namespace ParticleEditor {
                 
                 case "ParticleAppearance":
                 case "ParticleColor":
+                case "ParticleCollision":
                 case "FMAParameters`1":
                     return RenderGenericObjectProperty(cache, cpi, instance, value, actualName);
 
@@ -936,7 +937,7 @@ namespace ParticleEditor {
 
                     if (isGroupOpen || dm.IsGenerated) {
                         Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
-                        if (Nuklear.Property("#Angle", ref dm.Angle, -360, 360, 0.5f, 0.25f)) {
+                        if (Nuklear.Property("#Angle", ref dm.Angle, -720, 720, 1f, 0.5f)) {
                             changed = true;
                             dm.IsGenerated = true;
                         }

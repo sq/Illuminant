@@ -277,14 +277,16 @@ namespace TestGame.Scenes {
                     Appearance = {
                         Texture = fireball,
                         Region = fireballRect,
+                        AnimationRate = new Vector2(1 / 3f, 0),
                     },
                     Size = new Vector2(34, 21) * 0.35f,
-                    AnimationRate = new Vector2(1 / 3f, 0),
                     RotationFromVelocity = true,
-                    EscapeVelocity = 128f,
-                    BounceVelocityMultiplier = 1f,
+                    Collision = {
+                        EscapeVelocity = 128f,
+                        BounceVelocityMultiplier = 1f,
+                        LifePenalty = 1,
+                    },
                     MaximumVelocity = 128f,
-                    CollisionLifePenalty = 1,
                 }
             ) {
                 Transforms = {
@@ -331,8 +333,8 @@ namespace TestGame.Scenes {
             pls.Template.CastsShadows = EnableParticleShadows;
             System.Configuration.StippleFactor = StippleFactor.Value;
 
-            System.Configuration.DistanceField = ParticleCollisions ? DistanceField : null;
-            System.Configuration.DistanceFieldMaximumZ = Environment.MaximumZ;
+            System.Configuration.Collision.DistanceField = ParticleCollisions ? DistanceField : null;
+            System.Configuration.Collision.DistanceFieldMaximumZ = Environment.MaximumZ;
             System.Configuration.ZToY = TwoPointFiveD ? Environment.ZToYMultiplier : 0;
             System.Update(frame, -2);
 

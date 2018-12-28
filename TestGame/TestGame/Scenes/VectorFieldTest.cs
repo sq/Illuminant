@@ -96,8 +96,10 @@ namespace TestGame.Scenes {
                     Color = {
                         OpacityFromLife = opacityFromLife / 60f,
                     },
+                    Collision = {
+                        LifePenalty = 1
+                    },
                     MaximumVelocity = 2048,
-                    CollisionLifePenalty = 1,
                 }
             ) {
                 Transforms = {
@@ -112,7 +114,7 @@ namespace TestGame.Scenes {
         }
 
         private void InitializeSystem (ParticleSystem system) {
-            system.Configuration.DistanceFieldMaximumZ = 256;
+            system.Configuration.Collision.DistanceFieldMaximumZ = 256;
             system.Clear();
         }
         

@@ -473,7 +473,7 @@ namespace Squared.Illuminant.Particles {
 
                         var dft = p["DistanceFieldTexture"];
                         if (dft != null)
-                            dft.SetValue(Configuration.DistanceField.Texture);
+                            dft.SetValue(Configuration.Collision?.DistanceField.Texture);
 
                         var rt = p["RandomnessTexture"];
                         if (rt != null) {
@@ -780,15 +780,15 @@ namespace Squared.Illuminant.Particles {
                         );
                     }
                     IsClearPending = false;
-                } else if (Configuration.DistanceField != null) {
-                    if (Configuration.DistanceFieldMaximumZ == null)
+                } else if (Configuration.Collision?.DistanceField != null) {
+                    if (Configuration.Collision.DistanceFieldMaximumZ == null)
                         throw new InvalidOperationException("If a distance field is active, you must set DistanceFieldMaximumZ");
 
                     UpdatePass(
                         group, i++, pm.UpdateWithDistanceField,
                         startedWhen, null,
                         (Engine, p, _now, frameIndex) => {
-                            var dfu = new Uniforms.DistanceField(Configuration.DistanceField, Configuration.DistanceFieldMaximumZ.Value);
+                            var dfu = new Uniforms.DistanceField(Configuration.Collision.DistanceField, Configuration.Collision.DistanceFieldMaximumZ.Value);
                             pm.MaterialSet.TrySetBoundUniform(pm.UpdateWithDistanceField, "DistanceField", ref dfu);
                         }, actualDeltaTimeSeconds, true, now
                     );
@@ -950,8 +950,9 @@ namespace Squared.Illuminant.Particles {
                         ));
                     }
 
+                    var ar = appearance != null ? appearance.AnimationRate : Vector2.Zero;
                     p["AnimationRateAndRotationAndZToY"].SetValue(new Vector4(
-                        Configuration.AnimationRate.X, Configuration.AnimationRate.Y,
+                        ar.X, ar.Y,
                         Configuration.RotationFromVelocity ? 1f : 0f, Configuration.ZToY
                     ));
 
@@ -1029,6 +1030,40 @@ namespace Squared.Illuminant.Particles {
         }
     }
 
+    public class ParticleCollision {
+        /// <summary>
+        /// If set, particles collide with volumes in this distance field
+        /// </summary>
+        [NonSerialized]
+        public DistanceField DistanceField;
+        [NonSerialized]
+        public float?        DistanceFieldMaximumZ;
+
+        /// <summary>
+        /// The distance at which a particle is considered colliding with the field.
+        /// Raise this to make particles 'larger'.
+        /// </summary>
+        public float         Distance = 0.33f;
+
+        /// <summary>
+        /// Life of a particle decreases by this much every frame if it collides
+        ///  with or is inside of a volume
+        /// </summary>
+        public float         LifePenalty = 0;
+
+        /// <summary>
+        /// Particles trapped inside distance field volumes will attempt to escape
+        ///  at this velocity multiplied by their distance from the outside
+        /// </summary>
+        public float         EscapeVelocity = 128.0f;
+
+        /// <summary>
+        /// Particles colliding with distance field volumes will retain this much
+        ///  of their speed and bounce off of the volume
+        /// </summary>
+        public float         BounceVelocityMultiplier = 0.0f;
+    }
+
     public class ParticleAppearance {
         /// <summary>
         /// Configures the sprite used to render each particle.
@@ -1040,6 +1075,11 @@ namespace Squared.Illuminant.Particles {
         ///  will scroll as the particle animates.
         /// </summary>
         public Bounds Region = Bounds.Unit;
+        /// <summary>
+        /// Animates through the sprite texture based on the particle's life value, if set
+        /// Smaller values will result in slower animation. Zero turns off animation.
+        /// </summary>
+        public Vector2 AnimationRate;
     }
 
     public class ParticleColorLifeRamp {
@@ -1139,12 +1179,6 @@ namespace Squared.Illuminant.Particles {
         public Vector2       Size = Vector2.One;
 
         /// <summary>
-        /// Animates through the sprite texture based on the particle's life value, if set
-        /// Smaller values will result in slower animation. Zero turns off animation.
-        /// </summary>
-        public Vector2       AnimationRate;
-
-        /// <summary>
         /// If set, particles will rotate based on their direction of movement
         /// </summary>
         public bool          RotationFromVelocity;
@@ -1160,24 +1194,9 @@ namespace Squared.Illuminant.Particles {
         public float         GlobalLifeDecayRate = 1;
 
         /// <summary>
-        /// If set, particles collide with volumes in this distance field
+        /// Configures collision detection for particles
         /// </summary>
-        [NonSerialized]
-        public DistanceField DistanceField;
-        [NonSerialized]
-        public float?        DistanceFieldMaximumZ;
-
-        /// <summary>
-        /// The distance at which a particle is considered colliding with the field.
-        /// Raise this to make particles 'larger'.
-        /// </summary>
-        public float         CollisionDistance = 0.33f;
-
-        /// <summary>
-        /// Life of a particle decreases by this much every frame if it collides
-        ///  with or is inside of a volume
-        /// </summary>
-        public float         CollisionLifePenalty = 0;
+        public ParticleCollision Collision = new ParticleCollision(); 
 
         /// <summary>
         /// Particles will not be allowed to exceed this velocity
@@ -1188,18 +1207,6 @@ namespace Squared.Illuminant.Particles {
         /// All particles will have their velocity reduced to roughly Velocity * (1.0 - Friction) every second
         /// </summary>
         public float         Friction = 0f;
-
-        /// <summary>
-        /// Particles trapped inside distance field volumes will attempt to escape
-        ///  at this velocity multiplied by their distance from the outside
-        /// </summary>
-        public float         EscapeVelocity = 128.0f;
-
-        /// <summary>
-        /// Particles colliding with distance field volumes will retain this much
-        ///  of their speed and bounce off of the volume
-        /// </summary>
-        public float         BounceVelocityMultiplier = 0.0f;
 
         /// <summary>
         /// Applies the particle's Z coordinate to its Y coordinate at render time for 2.5D effect
