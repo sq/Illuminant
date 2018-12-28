@@ -417,8 +417,11 @@ namespace ParticleEditor {
             return false;
         }
 
-        private unsafe bool RenderFormula (string name, string actualName, Formula value, bool isColor) {
+        private ILookup<string, CachedPropertyInfo> FormulaProperties = CachePropertyInfo(typeof(Formula)).ToLookup(cpi => cpi.Name);
+
+        private unsafe bool RenderFormula (CachedPropertyInfo cpi, string actualName, Formula value, bool isColor) {
             var result = false;
+            var name = cpi.Name;
 
             using (var pGroup = Nuklear.CollapsingGroup(name, actualName, false)) {
                 if (pGroup.Visible) {
@@ -439,8 +442,8 @@ namespace ParticleEditor {
                     var spp = Controller.SelectedPositionProperty;
                     var isFormulaSelected = (spp != null) && object.ReferenceEquals(spp.Instance, value);
 
-                    Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
                     /*
+                    Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
                     if (Nuklear.SelectableText("Constant", isFormulaSelected && (spp.Key == "Constant")))
                         SelectProperty(
                             value, "Constant",
@@ -451,11 +454,11 @@ namespace ParticleEditor {
 
                     bool changed = false;
                     var p = (IParameter)value.Constant;
-                    if (RenderParameter(null, value, ref changed, "Constant", ref p))
+                    if (RenderParameter(null, value, ref changed, "Constant", cpi.Info.Type, ref p))
                         value.Constant = (Parameter<Vector4>)p;
 
-                    Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
                     /*
+                    Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
                     if (Nuklear.SelectableText("Scale", isFormulaSelected && (spp.Key == "Scale")))
                         SelectProperty(
                             value, "Scale",
@@ -465,12 +468,12 @@ namespace ParticleEditor {
                         */
 
                     p = value.RandomScale;
-                    if (RenderParameter(null, value, ref changed, "RandomScale", ref p))
+                    if (RenderParameter(null, value, ref changed, "Scale", cpi.Info.Type, ref p))
                         value.RandomScale = (Parameter<Vector4>)p;
 
                     var k = value.Circular ? "Constant Radius" : "Random Offset";
-                    Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
                     /*
+                    Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
                     if (Nuklear.SelectableText(k, isFormulaSelected && (spp.Key == k))) {
                         float scale = value.Circular ? 10f : 200f;
                         var off = (value.Circular ? 0 : 0.5f);
@@ -493,7 +496,7 @@ namespace ParticleEditor {
                     */
 
                     p = value.Offset;
-                    if (RenderParameter(null, value, ref changed, k, ref p))
+                    if (RenderParameter(null, value, ref changed, k, cpi.Info.Type, ref p))
                         value.Offset = (Parameter<Vector4>)p;
 
                     Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
@@ -517,7 +520,7 @@ namespace ParticleEditor {
             using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, actualName, false)) {
                 if (pGroup.Visible) {
                     foreach (var i in members) 
-                        if (RenderProperty(cache, i, value, cpi.Name))
+                        if (RenderProperty(cache, i, value, cpi.Info.Type, cpi.Name))
                             changed = true;
 
                     if (changed)
@@ -531,6 +534,7 @@ namespace ParticleEditor {
             PropertyGridCache cache,
             CachedPropertyInfo cpi,
             object instance,
+            string parentType = null,
             string prefix = null
         ) {
             if (cpi.IsGetItem)
@@ -556,12 +560,12 @@ namespace ParticleEditor {
 
                 case "Parameter`1": {
                     var p = (IParameter)value;
-                    return RenderParameter(cpi, instance, ref changed, actualName, ref p);
+                    return RenderParameter(cpi, instance, ref changed, actualName, parentType, ref p);
                 }
 
                 case "ColorFormula":
                 case "Formula":
-                    return RenderFormula(cpi.Name, actualName, (Formula)value, valueType.StartsWith("Color"));
+                    return RenderFormula(cpi, actualName, (Formula)value, valueType.StartsWith("Color"));
 
                 case "NullableLazyResource`1":
                     return RenderTextureProperty(cpi, instance, ref changed, actualName, value);
@@ -720,13 +724,18 @@ namespace ParticleEditor {
             }
         }
 
-        private unsafe bool RenderParameter (CachedPropertyInfo cpi, object instance, ref bool changed, string actualName, ref IParameter p) {
+        private unsafe bool RenderParameter (CachedPropertyInfo cpi, object instance, ref bool changed, string actualName, string parentType, ref IParameter p) {
             var valueType = p.ValueType;
             var isConstant = p.IsConstant;
             var isBezier = p.IsBezier;
             var now = (float)Game.View.Time.Seconds;
 
+            bool isColor = (parentType ?? "").StartsWith("Color");
+
             if (!isBezier && isConstant) {
+                Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
+                Nuklear.Label(actualName, false);
+
                 var widths = new float[5];
                 int eltCount;
                 switch (valueType.Name) {
@@ -747,8 +756,8 @@ namespace ParticleEditor {
                         throw new Exception();
                 }
                 for (int i = 0; i < eltCount; i++)
-                    widths[i] = 0.8f / eltCount;
-                widths[eltCount] = 0.2f;
+                    widths[i] = 0.93f / eltCount;
+                widths[eltCount] = 0.07f;
 
                 Nuke.nk_layout_row(
                     Nuklear.Context, NuklearDotNet.nk_layout_format.NK_DYNAMIC, LineHeight,
@@ -766,7 +775,7 @@ namespace ParticleEditor {
                     case "Vector2":
                         var v2p = (Parameter<Vector2>)p;
                         var v2c = v2p.Constant;
-                        if (RenderVectorProperty(cpi, ref v2c, ref changed)) {
+                        if (RenderVectorProperty(cpi, ref v2c, ref changed, false)) {
                             v2p.Constant = v2c;
                             p = v2p;
                         }
@@ -774,21 +783,21 @@ namespace ParticleEditor {
                     case "Vector4":
                         var v4p = (Parameter<Vector4>)p;
                         var v4c = v4p.Constant;
-                        if (RenderVectorProperty(cpi, ref v4c, ref changed, false)) {
+                        if (RenderVectorProperty(cpi, ref v4c, ref changed, isColor, false)) {
                             v4p.Constant = v4c;
                             p = v4p;
                         }
                         break;
                 }
 
-                if (Nuklear.Button("Curve")) {
+                if (Nuklear.Button("~")) {
                     p = p.ToBezier();
                     changed = true;
                     // HACK to auto-open
-                    RenderBezierProperty(cpi, null, actualName, p.Bezier, now, false, true);
+                    RenderBezierProperty(cpi, null, actualName, p.Bezier, now, isColor, true);
                 }
             } else {
-                changed = RenderBezierProperty(cpi, null, actualName, p.Bezier, now, false);
+                changed = RenderBezierProperty(cpi, null, actualName, p.Bezier, now, isColor, false);
             }
 
             if (changed && (cpi != null))
@@ -949,7 +958,7 @@ namespace ParticleEditor {
             }
 
             var ctx = Nuklear.Context;
-            using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, actualName, initiallyOpen)) {
+            using (var pGroup = Nuklear.CollapsingGroup(cpi?.Name ?? actualName, actualName, initiallyOpen)) {
                 if (pGroup.Visible) {
                     var b = (IBezier)value;
 
@@ -1017,7 +1026,7 @@ namespace ParticleEditor {
                         if (elt is float) {
                             var v = (float)elt;
                             Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
-                            if (RenderPropertyElement(BezierElementNames[i], cpi.Info, ref v, ref changed))
+                            if (RenderPropertyElement(BezierElementNames[i], cpi?.Info, ref v, ref changed))
                                 b[i] = v;
                         } else if (elt is Vector2) {
                             var v2 = (Vector2)elt;
@@ -1130,7 +1139,7 @@ namespace ParticleEditor {
                             }
                             if (itemsAreValues) {
                                 pgc.Box.Value = item;
-                                if (RenderProperty(pgc, cpi.ElementInfo, pgc.Box)) {
+                                if (RenderProperty(pgc, cpi.ElementInfo, pgc.Box, cpi.Info.Type)) {
                                     list[pgc.SelectedIndex] = pgc.Box.Value;
                                     changed = true;
                                 }
