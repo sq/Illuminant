@@ -51,21 +51,28 @@ namespace Squared.Illuminant.Modeling {
         public override object ReadJson (JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer) {
             switch (objectType.Name) {
                 case "Parameter`1": {
-                    var obj = JObject.Load(reader);
-                    var typeName = obj["ValueType"].ToString();
-                    var type = ResolveTypeFromShortName(typeName);
-                    if (type == null)
-                        throw new Exception("Could not resolve type " + typeName);
-                    var tResult = typeof(Parameter<>).MakeGenericType(type);
+                    var expectedValueType = objectType.GetGenericArguments()[0];
+                    var tResult = typeof(Parameter<>).MakeGenericType(expectedValueType);
+                    var token = JToken.Load(reader);
+                    var obj = token as JObject;
                     IParameter result;
-                    if (obj.ContainsKey("Constant"))
-                        result = (IParameter)Activator.CreateInstance(tResult, new object[] { obj["Constant"].ToObject(type, serializer) });
-                    else if (obj.ContainsKey("Bezier")) {
-                        var bezierTypeName = obj["BezierType"].ToString();
-                        var bezierType = ResolveTypeFromShortName(bezierTypeName);
-                        result = (IParameter)Activator.CreateInstance(tResult, new object[] { obj["Bezier"].ToObject(bezierType, serializer) });
-                    } else
-                        throw new InvalidDataException();
+                    if (obj != null) {
+                        var typeName = obj["ValueType"].ToString();
+                        var type = ResolveTypeFromShortName(typeName);
+                        if (type == null)
+                            throw new Exception("Could not resolve type " + typeName);
+                        if (obj.ContainsKey("Constant"))
+                            result = (IParameter)Activator.CreateInstance(tResult, new object[] { obj["Constant"].ToObject(type, serializer) });
+                        else if (obj.ContainsKey("Bezier")) {
+                            var bezierTypeName = obj["BezierType"].ToString();
+                            var bezierType = ResolveTypeFromShortName(bezierTypeName);
+                            result = (IParameter)Activator.CreateInstance(tResult, new object[] { obj["Bezier"].ToObject(bezierType, serializer) });
+                        } else
+                            throw new InvalidDataException();
+                    } else {
+                        var rawValue = token.ToObject(expectedValueType, serializer);
+                        result = (IParameter)Activator.CreateInstance(tResult, new object[] { rawValue });
+                    }
                     return result;
                 }
                 case "ModelProperty": {

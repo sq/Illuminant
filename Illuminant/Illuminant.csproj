@@ -61,6 +61,7 @@
     <Compile Include="Bezier.cs" />
     <Compile Include="Billboard.cs" />
     <Compile Include="DistanceField.cs" />
+    <Compile Include="Formula.cs" />
     <Compile Include="GBuffer.cs" />
     <Compile Include="HeightVolume.cs" />
     <Compile Include="Histogram.cs" />

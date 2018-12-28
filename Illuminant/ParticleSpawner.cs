@@ -108,24 +108,25 @@ namespace Squared.Illuminant.Particles.Transforms {
                 (float)(b * 127)
             ));
 
-            Temp[0] = Position.RandomScale;
-            Temp[1] = Position.Offset;
-            Temp[2] = Velocity.Constant;
-            Temp[3] = Velocity.RandomScale;
-            Temp[4] = Velocity.Offset;
-            Temp[5] = Attributes.Constant;
-            Temp[6] = Attributes.RandomScale;
-            Temp[7] = Attributes.Offset;
+            Temp[0] = Position.RandomScale.Evaluate(now);
+            Temp[1] = Position.Offset.Evaluate(now);
+            Temp[2] = Velocity.Constant.Evaluate(now);
+            Temp[3] = Velocity.RandomScale.Evaluate(now);
+            Temp[4] = Velocity.Offset.Evaluate(now);
+            Temp[5] = Attributes.Constant.Evaluate(now);
+            Temp[6] = Attributes.RandomScale.Evaluate(now);
+            Temp[7] = Attributes.Offset.Evaluate(now);
 
             Temp2[0] = Position.Circular   ? 1 : 0;
             Temp2[1] = Velocity.Circular   ? 1 : 0;
             Temp2[2] = Attributes.Circular ? 1 : 0;
 
-            Temp3[0] = Position.Constant;
+            var position = Position.Constant.Evaluate(now);
+            Temp3[0] = position;
             for (var i = 0; (i < AdditionalPositions.Count) && (i < MaxPositions - 1); i++) {
                 var ap = AdditionalPositions[i];
                 if (ap.W <= -0.99)
-                    ap.W = Position.Constant.W;
+                    ap.W = position.W;
                 Temp3[i + 1] = ap;
             }
 

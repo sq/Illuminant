@@ -440,27 +440,37 @@ namespace ParticleEditor {
                     var isFormulaSelected = (spp != null) && object.ReferenceEquals(spp.Instance, value);
 
                     Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
+                    /*
                     if (Nuklear.SelectableText("Constant", isFormulaSelected && (spp.Key == "Constant")))
                         SelectProperty(
                             value, "Constant",
                             (v) => { value.Constant.X = v.X; value.Constant.Y = v.Y; },
                             () => new Vector2(value.Constant.X, value.Constant.Y)
                         );
+                        */
 
-                    RenderVectorProperty(null, ref value.Constant, ref result, isColor);
+                    bool changed = false;
+                    var p = (IParameter)value.Constant;
+                    if (RenderParameter(null, value, ref changed, "Constant", ref p))
+                        value.Constant = (Parameter<Vector4>)p;
 
                     Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
+                    /*
                     if (Nuklear.SelectableText("Scale", isFormulaSelected && (spp.Key == "Scale")))
                         SelectProperty(
                             value, "Scale",
                             (v) => { value.RandomScale.X = v.X; value.RandomScale.Y = v.Y; },
                             () => new Vector2(value.RandomScale.X, value.RandomScale.Y)
                         );
+                        */
 
-                    RenderVectorProperty(null, ref value.RandomScale, ref result, isColor);
+                    p = value.RandomScale;
+                    if (RenderParameter(null, value, ref changed, "RandomScale", ref p))
+                        value.RandomScale = (Parameter<Vector4>)p;
 
                     var k = value.Circular ? "Constant Radius" : "Random Offset";
                     Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
+                    /*
                     if (Nuklear.SelectableText(k, isFormulaSelected && (spp.Key == k))) {
                         float scale = value.Circular ? 10f : 200f;
                         var off = (value.Circular ? 0 : 0.5f);
@@ -480,8 +490,11 @@ namespace ParticleEditor {
                             }
                         );
                     }
+                    */
 
-                    RenderVectorProperty(null, ref value.Offset, ref result, isColor);
+                    p = value.Offset;
+                    if (RenderParameter(null, value, ref changed, k, ref p))
+                        value.Offset = (Parameter<Vector4>)p;
 
                     Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
                     if (Checkbox("Circular", ref value.Circular))
@@ -541,8 +554,10 @@ namespace ParticleEditor {
                 case "ValueList":
                     return RenderListProperty(cpi, instance, ref changed, actualName, value, true);
 
-                case "Parameter`1":
-                    return RenderParameter(cpi, instance, ref changed, actualName, value);
+                case "Parameter`1": {
+                    var p = (IParameter)value;
+                    return RenderParameter(cpi, instance, ref changed, actualName, ref p);
+                }
 
                 case "ColorFormula":
                 case "Formula":
@@ -705,8 +720,7 @@ namespace ParticleEditor {
             }
         }
 
-        private unsafe bool RenderParameter (CachedPropertyInfo cpi, object instance, ref bool changed, string actualName, object value) {
-            var p = (IParameter)value;
+        private unsafe bool RenderParameter (CachedPropertyInfo cpi, object instance, ref bool changed, string actualName, ref IParameter p) {
             var valueType = p.ValueType;
             var isConstant = p.IsConstant;
             var isBezier = p.IsBezier;
@@ -746,7 +760,7 @@ namespace ParticleEditor {
                         var fc = fp.Constant;
                         if (RenderPropertyElement(actualName, cpi.Info, ref fc, ref changed)) {
                             fp.Constant = fc;
-                            value = fp;
+                            p = fp;
                         }
                         break;
                     case "Vector2":
@@ -754,7 +768,7 @@ namespace ParticleEditor {
                         var v2c = v2p.Constant;
                         if (RenderVectorProperty(cpi, ref v2c, ref changed)) {
                             v2p.Constant = v2c;
-                            value = v2p;
+                            p = v2p;
                         }
                         break;
                     case "Vector4":
@@ -762,13 +776,13 @@ namespace ParticleEditor {
                         var v4c = v4p.Constant;
                         if (RenderVectorProperty(cpi, ref v4c, ref changed, false)) {
                             v4p.Constant = v4c;
-                            value = v4p;
+                            p = v4p;
                         }
                         break;
                 }
 
                 if (Nuklear.Button("Curve")) {
-                    value = p = p.ToBezier();
+                    p = p.ToBezier();
                     changed = true;
                     // HACK to auto-open
                     RenderBezierProperty(cpi, null, actualName, p.Bezier, now, false, true);
@@ -777,8 +791,8 @@ namespace ParticleEditor {
                 changed = RenderBezierProperty(cpi, null, actualName, p.Bezier, now, false);
             }
 
-            if (changed)
-                cpi.Setter(instance, value);
+            if (changed && (cpi != null))
+                cpi.Setter(instance, p);
             return changed;
         }
 

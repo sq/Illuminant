@@ -59,7 +59,8 @@ namespace ParticleEditor {
                             Type = "ValueList",
                             GetDefaultValue = (obj) => {
                                 var s = ((Spawner)obj);
-                                var c = s.Position.Constant;
+                                // HACK
+                                var c = s.Position.Constant.Evaluate(0);
                                 c.W = -1;
                                 return c;
                             },
