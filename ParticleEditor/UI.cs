@@ -65,22 +65,36 @@ namespace ParticleEditor {
         private unsafe void RenderFilePanel () {
             var ctx = Nuklear.Context;
 
+            /*
             using (var group = Nuklear.CollapsingGroup("File", "File", true))
             if (group.Visible) {
-                Nuke.nk_layout_row_dynamic(ctx, LineHeight, Model.Filename == null ? 2 : 3);
-                if (Model.Filename != null) {
-                    if (Nuklear.Button("Save")) {
-                        RunWorkItem(() => Model.Save(Model.Filename));
-                    }
-                    if (Nuklear.Button("Save As"))
-                        Controller.ShowSaveDialog();
-                } else {
-                    if (Nuklear.Button("Save"))
-                        Controller.ShowSaveDialog();
+            */
+            Nuke.nk_layout_row_dynamic(ctx, LineHeight, Model.Filename == null ? 2 : 3);
+            if (Model.Filename != null) {
+                if (Nuklear.Button("Save")) {
+                    RunWorkItem(() => Model.Save(Model.Filename));
                 }
-                if (Nuklear.Button("Load"))
-                    Controller.ShowLoadDialog();
+                if (Nuklear.Button("Save As"))
+                    Controller.ShowSaveDialog();
+            } else {
+                if (Nuklear.Button("Save"))
+                    Controller.ShowSaveDialog();
             }
+            if (Nuklear.Button("Load"))
+                Controller.ShowLoadDialog();
+
+            Nuke.nk_layout_row_dynamic(ctx, LineHeight, 3);
+            var time = TimeSpan.FromTicks(Game.View.Time.Ticks);
+            var liveCount = Game.View.Systems.Sum(s => s.Instance.LiveCount);
+            var capacity = Game.View.Systems.Sum(s => s.Instance.Capacity);
+            using (var tCount = new NString(string.Format("{0}/{1}", liveCount, capacity)))
+                Nuke.nk_text(ctx, tCount.pText, tCount.Length, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
+            using (var tCount = new NString(time.ToString("hh\\:mm\\:ss\\.ff")))
+                Nuke.nk_text(ctx, tCount.pText, tCount.Length, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
+            if (Nuklear.Button("Reset"))
+                Controller.QueueReset();
+
+            // }
         }
 
         private unsafe void RenderSystemList () {
@@ -120,15 +134,6 @@ namespace ParticleEditor {
             Nuke.nk_layout_row_dynamic(ctx, LineHeight + 3, 1);
 
             Nuklear.Textbox(ref s.Model.Name);
-
-            Nuke.nk_layout_row_dynamic(ctx, LineHeight, 3);
-            var time = TimeSpan.FromTicks(s.Time.Ticks);
-            using (var tCount = new NString(string.Format("{0}/{1}", i.LiveCount, i.Capacity)))
-                Nuke.nk_text(ctx, tCount.pText, tCount.Length, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
-            using (var tCount = new NString(time.ToString("hh\\:mm\\:ss\\.ff")))
-                Nuke.nk_text(ctx, tCount.pText, tCount.Length, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
-            if (Nuklear.Button("Reset"))
-                Controller.QueueReset(s);
 
             var config = Controller.SelectedSystem.Model.Configuration;
             SystemProperties.Prepare(config);

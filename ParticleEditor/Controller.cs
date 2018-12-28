@@ -107,8 +107,10 @@ namespace ParticleEditor {
             View.Systems.RemoveAt(index);
         }
 
-        public void QueueReset (ParticleSystemView v) {
-            QueuedResets.Add(v);
+        public void QueueReset () {
+            View.Time.CurrentTime = 0;
+            foreach (var s in View.Systems)
+                QueuedResets.Add(s);
         }
 
         public Vector2 GetMouseWorldPosition () {
@@ -119,10 +121,8 @@ namespace ParticleEditor {
         }
 
         public void Update () {
-            foreach (var v in QueuedResets) {
-                v.Time.CurrentTime = 0;
+            foreach (var v in QueuedResets)
                 v.Instance.Clear();
-            }
 
             QueuedResets.Clear();
 

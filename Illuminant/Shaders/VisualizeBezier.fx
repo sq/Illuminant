@@ -3,6 +3,7 @@
 #include "Bezier.fxh"
 
 uniform ClampedBezier4 Bezier;
+uniform float CurrentT;
 
 void ScreenSpaceBezierVisualizerVertexShader (
     in float2 position : POSITION0, // x, y
@@ -39,12 +40,17 @@ void BezierVisualizerPixelShader (
     float valueRange = maxValue - minValue;
     valueRange = max(abs(valueRange), 0.001) * sign(valueRange);
 
+    float scaledT;
+    tForScaledBezier(Bezier.RangeAndCount, CurrentT, scaledT);
+
     float4 value = evaluateBezier4AtT(Bezier, count, xy.x);
     float4 scaledValue = saturate((value - minValue) / valueRange);
     float4 distances = abs((1 - xy.y) - scaledValue);
     float4 scaledDistances = 1 - saturate(distances / 0.016);
 
-    if (Bezier.RangeAndCount.w < 2.5)
+    if (Bezier.RangeAndCount.w < 1.5)
+        scaledDistances.yzw = 0;
+    else if (Bezier.RangeAndCount.w < 2.5)
         scaledDistances.zw = 0;
     else if (Bezier.RangeAndCount.w < 3.5)
         scaledDistances.w = 0;
@@ -52,11 +58,13 @@ void BezierVisualizerPixelShader (
     float2 scaledOneAndZero = saturate((float2(1, 0) - minValue) / valueRange);
     float distanceAboveOne = saturate(((1 - xy.y) - scaledOneAndZero.x) / 0.015);
     float distanceBelowZero = saturate((scaledOneAndZero.y - (1 - xy.y)) / 0.015);
+    float invDistanceToT = (1 - saturate(abs(xy.x - scaledT) / 0.01)) * 0.4;
+    invDistanceToT = pow(invDistanceToT, 1.5);
 
     scaledDistances = pow(scaledDistances, 1.8);
 
-    float4 w = scaledDistances.a * float4(1, 1, 1, 0);
-    float  alpha = (scaledDistances.r + scaledDistances.g + scaledDistances.b + scaledDistances.a);
+    float4 w = (scaledDistances.a + invDistanceToT) * float4(1, 1, 1, 0);
+    float  alpha = (scaledDistances.r + scaledDistances.g + scaledDistances.b + scaledDistances.a) + invDistanceToT;
     float  stipple = (vpos.x % 2) - (vpos.y % 2);
     alpha += pow(distanceAboveOne + distanceBelowZero, 1.25) * ((stipple * 0.08) + 0.4);
     result = float4(scaledDistances.rgb + w, saturate(alpha));

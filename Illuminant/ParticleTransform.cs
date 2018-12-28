@@ -17,10 +17,10 @@ namespace Squared.Illuminant.Particles.Transforms {
 
     internal interface IParticleTransform {
         Material GetMaterial (ParticleMaterials materials);
-        void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, int frameIndex);
+        void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex);
     }
 
-    public delegate void ParameterSetter (ParticleEngine engine, EffectParameterCollection parameters, int frameIndex);
+    public delegate void ParameterSetter (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex);
 
     public class TransformArea {
         public AreaType Type = AreaType.None;
@@ -71,14 +71,14 @@ namespace Squared.Illuminant.Particles.Transforms {
         public event Action ActiveStateChanged;
 
         protected abstract Material GetMaterial (ParticleMaterials materials);
-        protected abstract void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, int frameIndex);
+        protected abstract void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex);
 
         Material IParticleTransform.GetMaterial (ParticleMaterials materials) {
             return GetMaterial(materials);
         }
 
-        void IParticleTransform.SetParameters (ParticleEngine engine, EffectParameterCollection parameters, int frameIndex) {
-            SetParameters(engine, parameters, frameIndex);
+        void IParticleTransform.SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
+            SetParameters(engine, parameters, now, frameIndex);
         }
 
         public virtual void Dispose () {
@@ -89,7 +89,7 @@ namespace Squared.Illuminant.Particles.Transforms {
         public float Strength = 1;
         public TransformArea Area = null;
 
-        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, int frameIndex) {
+        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
             if (Area != null) {
                 parameters["AreaType"].SetValue((int)Area.Type);
                 parameters["AreaCenter"].SetValue(Area.Center);
@@ -128,8 +128,8 @@ namespace Squared.Illuminant.Particles.Transforms {
             };
         }
 
-        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, int frameIndex) {
-            base.SetParameters(engine, parameters, frameIndex);
+        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
+            base.SetParameters(engine, parameters, now, frameIndex);
             parameters["TimeDivisor"].SetValue(CyclesPerSecond.HasValue ? 1000f / CyclesPerSecond.Value : -1);
             parameters["PositionAdd"].SetValue(new Vector4(Position.Add, 0));
             parameters["PositionMultiply"].SetValue(new Vector4(Position.Multiply, 1));
@@ -152,8 +152,8 @@ namespace Squared.Illuminant.Particles.Transforms {
             Position = Velocity = Attribute = Matrix.Identity;
         }
 
-        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, int frameIndex) {
-            base.SetParameters(engine, parameters, frameIndex);
+        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
+            base.SetParameters(engine, parameters, now, frameIndex);
             parameters["TimeDivisor"].SetValue(CyclesPerSecond.HasValue ? 1000f / CyclesPerSecond.Value : -1);
             parameters["PositionMatrix"].SetValue(Position);
             parameters["VelocityMatrix"].SetValue(Velocity);
@@ -187,7 +187,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             return materials.Gravity;
         }
 
-        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, int frameIndex) {
+        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
             if (Attractors.Count > MaxAttractors)
                 throw new Exception("Maximum number of attractors per instance is " + MaxAttractors);
 

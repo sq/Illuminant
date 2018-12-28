@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Squared.Illuminant.Configuration;
 using Squared.Illuminant.Uniforms;
 using Squared.Illuminant.Util;
 using Squared.Render;
@@ -16,7 +17,7 @@ namespace Squared.Illuminant.Particles.Transforms {
         [NonSerialized]
         private static int NextSeed = 1;
 
-        public float    MinRate, MaxRate;
+        public Configuration.Parameter<float> MinRate, MaxRate;
 
         public bool     RatePerPosition;
 
@@ -24,7 +25,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             Velocity = Formula.UnitNormal(), 
             Attributes = Formula.One();
 
-        public Matrix   PositionPostMatrix = Matrix.Identity;
+        public Configuration.Parameter<DynamicMatrix> PositionPostMatrix = DynamicMatrix.Identity;
 
         /// <summary>
         /// You can set the W value of a position to -1 for it to inherit the main position's W value
@@ -64,7 +65,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             Indices = new Vector2(first, last);
         }
 
-        internal void Tick (double deltaTimeSeconds, out int spawnCount) {
+        internal void Tick (float now, double deltaTimeSeconds, out int spawnCount) {
             if (AdditionalPositions.Count >= MaxPositions)
                 throw new Exception("Maximum number of positions for a spawner is " + MaxPositions);
             if (!IsActive) {
@@ -74,7 +75,10 @@ namespace Squared.Illuminant.Particles.Transforms {
             }
 
             var countScaler = RatePerPosition ? AdditionalPositions.Count + 1 : 1;
-            var currentRate = ((RNG.NextDouble() * (MaxRate - MinRate)) + MinRate) * countScaler * deltaTimeSeconds;
+            float minRate = MinRate.Evaluate(now), maxRate = MaxRate.Evaluate(now);
+            if (minRate > maxRate)
+                minRate = maxRate;
+            var currentRate = ((RNG.NextDouble() * (maxRate - minRate)) + minRate) * countScaler * deltaTimeSeconds;
             currentRate += RateError;
             if (currentRate < 1) {
                 RateError = Math.Max(currentRate, 0);
@@ -90,7 +94,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             return materials.Spawn;
         }
 
-        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, int frameIndex) {
+        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
             var secs = (float)Squared.Util.Time.Seconds;
 
             var ro = parameters["RandomnessOffset"];
@@ -135,7 +139,9 @@ namespace Squared.Illuminant.Particles.Transforms {
                 engine.Configuration.ChunkSize, Indices.X, Indices.Y,
                 TotalSpawned % count
             ));
-            parameters["PositionMatrix"].SetValue(PositionPostMatrix);
+            var m = PositionPostMatrix.Evaluate(now);
+            m.Regenerate();
+            parameters["PositionMatrix"].SetValue(m.Matrix);
         }
     }
 }

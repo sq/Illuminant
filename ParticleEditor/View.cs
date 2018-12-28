@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -20,12 +21,14 @@ namespace ParticleEditor {
         public ParticleEditor Game;
         public ParticleEngine Engine;
         public EngineModel Model;
+        public MockTimeProvider Time;
         public readonly List<ParticleSystemView> Systems = new List<ParticleSystemView>();
 
         private readonly List<IDisposable> LoadedResources = new List<IDisposable>();
 
         public View (EngineModel model) {
             Model = model;
+            Time = new MockTimeProvider();
         }
 
         public void Initialize (ParticleEditor editor) {
@@ -76,12 +79,12 @@ namespace ParticleEditor {
         }
 
         public void Update (ParticleEditor editor, IBatchContainer container, int layer, long deltaTimeTicks) {
+            Time.Advance(deltaTimeTicks);
+
             using (var g = BatchGroup.New(container, layer)) {
                 int i = 0;
-                foreach (var s in Systems) {
-                    s.Time.Advance(deltaTimeTicks);
+                foreach (var s in Systems)
                     s.Instance.Update(g, i++);
-                }
             }
         }
 
@@ -109,12 +112,10 @@ namespace ParticleEditor {
     public class ParticleSystemView : IDisposable {
         public ParticleSystem Instance;
         public SystemModel Model;
-        public MockTimeProvider Time;
         public readonly List<ParticleTransformView> Transforms = new List<ParticleTransformView>();
 
         public void Initialize (View view) {
-            Time = new MockTimeProvider();
-            Model.Configuration.TimeProvider = Time;
+            Model.Configuration.TimeProvider = view.Time;
 
             Instance = new ParticleSystem(
                 view.Engine, Model.Configuration
@@ -173,7 +174,22 @@ namespace ParticleEditor {
                     if (jObject != null)
                         value = jObject.ToObject(kvp.Value.Type);
 
-                    value = Convert.ChangeType(value, targetType);
+                    var descA = TypeDescriptor.GetConverter(kvp.Value.Type);
+                    var descB = TypeDescriptor.GetConverter(targetType);
+                    if (
+                        (descA != null) && 
+                        descA.CanConvertTo(targetType) && 
+                        descA.CanConvertFrom(kvp.Value.Type)
+                    )
+                        value = descA.ConvertTo(value, targetType);
+                    else if (
+                        (descB != null) && 
+                        descB.CanConvertTo(targetType) && 
+                        descB.CanConvertFrom(kvp.Value.Type)
+                    )
+                        value = descB.ConvertTo(value, targetType);
+                    else
+                        value = Convert.ChangeType(value, targetType);
                     
                     if (prop != null)
                         prop.SetValue(Instance, value);

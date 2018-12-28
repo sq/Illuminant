@@ -338,7 +338,7 @@ namespace Squared.Illuminant.Particles {
             IBatchContainer container, int layer, Material m,
             long startedWhen, Transforms.Spawner spawner,
             Transforms.ParameterSetter setParameters,
-            double deltaTimeSeconds, bool clearFirst
+            double deltaTimeSeconds, bool clearFirst, float now
         ) {
             var device = container.RenderManager.DeviceManager.Device;
 
@@ -346,7 +346,7 @@ namespace Squared.Illuminant.Particles {
             int spawnCount = 0;
 
             if (spawner != null) {
-                spawner.Tick(deltaTimeSeconds, out spawnCount);
+                spawner.Tick(now, deltaTimeSeconds, out spawnCount);
 
                 if (spawnCount <= 0)
                     return;
@@ -431,7 +431,7 @@ namespace Squared.Illuminant.Particles {
                         batch, i++,
                         chunkMaterial, chunk,
                         setParameters,
-                        deltaTimeSeconds, clearFirst
+                        deltaTimeSeconds, clearFirst, now
                     );
                 }
             }
@@ -440,7 +440,7 @@ namespace Squared.Illuminant.Particles {
         private void ChunkUpdatePass (
             IBatchContainer container, int layer, Material m,
             Chunk chunk, Transforms.ParameterSetter setParameters,
-            double deltaTimeSeconds, bool clearFirst
+            double deltaTimeSeconds, bool clearFirst, float now
         ) {
             var prev = chunk.Previous;
             var curr = chunk.Current;
@@ -460,7 +460,7 @@ namespace Squared.Illuminant.Particles {
 
                     if (e != null) {
                         if (setParameters != null)
-                            setParameters(Engine, p, CurrentFrameIndex);
+                            setParameters(Engine, p, now, CurrentFrameIndex);
 
                         if (prev != null) {
                             p["PositionTexture"].SetValue(prev.PositionAndLife);
@@ -708,7 +708,7 @@ namespace Squared.Illuminant.Particles {
 
         public void Update (IBatchContainer container, int layer, float? deltaTimeSeconds = null) {
             var lastUpdateTimeSeconds = LastUpdateTimeSeconds;
-            LastUpdateTimeSeconds = TimeProvider.Seconds;
+            var now = (float)(LastUpdateTimeSeconds = TimeProvider.Seconds);
             CurrentFrameIndex++;
 
             float actualDeltaTimeSeconds = 1 / 60f;
@@ -763,7 +763,7 @@ namespace Squared.Illuminant.Particles {
                     UpdatePass(
                         group, i++, it.GetMaterial(Engine.ParticleMaterials),
                         startedWhen, spawner, it.SetParameters, 
-                        actualDeltaTimeSeconds, isFirstXform
+                        actualDeltaTimeSeconds, isFirstXform, now
                     );
                     isFirstXform = false;
                 }
@@ -776,7 +776,7 @@ namespace Squared.Illuminant.Particles {
                         UpdatePass(
                             group, i++, pm.Erase,
                             startedWhen, null,
-                            null, actualDeltaTimeSeconds, true
+                            null, actualDeltaTimeSeconds, true, now
                         );
                     }
                     IsClearPending = false;
@@ -787,16 +787,16 @@ namespace Squared.Illuminant.Particles {
                     UpdatePass(
                         group, i++, pm.UpdateWithDistanceField,
                         startedWhen, null,
-                        (Engine, p, frameIndex) => {
+                        (Engine, p, _now, frameIndex) => {
                             var dfu = new Uniforms.DistanceField(Configuration.DistanceField, Configuration.DistanceFieldMaximumZ.Value);
                             pm.MaterialSet.TrySetBoundUniform(pm.UpdateWithDistanceField, "DistanceField", ref dfu);
-                        }, actualDeltaTimeSeconds, true
+                        }, actualDeltaTimeSeconds, true, now
                     );
                 } else {
                     UpdatePass(
                         group, i++, pm.UpdatePositions,
                         startedWhen, null,
-                        null, actualDeltaTimeSeconds, true
+                        null, actualDeltaTimeSeconds, true, now
                     );
                 }
 

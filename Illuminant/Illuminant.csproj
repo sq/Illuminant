@@ -73,6 +73,7 @@
     <Compile Include="LightingRenderer.LightProbes.cs" />
     <Compile Include="LightProbe.cs" />
     <Compile Include="MersenneTwister.cs" />
+    <Compile Include="Parameter.cs" />
     <Compile Include="ParticleMaterials.cs" />
     <Compile Include="LightingRenderer.cs" />
     <Compile Include="LightingEnvironment.cs" />

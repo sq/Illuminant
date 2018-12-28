@@ -11,6 +11,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Squared.Game;
 using Squared.Illuminant;
+using Squared.Illuminant.Configuration;
 using Squared.Illuminant.Modeling;
 using Squared.Illuminant.Particles;
 using Squared.Illuminant.Particles.Transforms;
@@ -540,6 +541,9 @@ namespace ParticleEditor {
                 case "ValueList":
                     return RenderListProperty(cpi, instance, ref changed, actualName, value, true);
 
+                case "Parameter`1":
+                    return RenderParameter(cpi, instance, ref changed, actualName, value);
+
                 case "ColorFormula":
                 case "Formula":
                     return RenderFormula(cpi.Name, actualName, (Formula)value, valueType.StartsWith("Color"));
@@ -581,10 +585,11 @@ namespace ParticleEditor {
 
                 case "ColorF":
                     return RenderColorProperty(cpi, instance, out changed, value);
+
                 case "Matrix":
-                    return RenderMatrixProperty(cpi, instance, ref changed, actualName, value, false);
                 case "Matrix3x4":
-                    return RenderMatrixProperty(cpi, instance, ref changed, actualName, value, true);
+                    var m = (Matrix)value;
+                    return RenderMatrixProperty(cpi, instance, ref changed, actualName, ref m, valueType.EndsWith("3x4"));
             }
 
             Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
@@ -622,7 +627,7 @@ namespace ParticleEditor {
                 case "Bezier2":
                 case "Bezier4":
                 case "ColorBezier4":
-                    return RenderBezierProperty(cpi, instance, actualName, value, valueType.StartsWith("Color"));
+                    return RenderBezierProperty(cpi, instance, actualName, value, null, valueType.StartsWith("Color"));
 
                 case "String":
                     Nuke.nk_layout_row_dynamic(ctx, LineHeight + 3, 1);
@@ -700,15 +705,94 @@ namespace ParticleEditor {
             }
         }
 
-        private unsafe bool RenderVectorProperty (CachedPropertyInfo cpi, ref Vector2 v2, ref bool changed) {
-            Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 2);
+        private unsafe bool RenderParameter (CachedPropertyInfo cpi, object instance, ref bool changed, string actualName, object value) {
+            var p = (IParameter)value;
+            var valueType = p.ValueType;
+            var isConstant = p.IsConstant;
+            var isBezier = p.IsBezier;
+            var now = (float)Game.View.Time.Seconds;
+
+            if (!isBezier && isConstant) {
+                var widths = new float[5];
+                int eltCount;
+                switch (valueType.Name) {
+                    case "Single":
+                        eltCount = 1;
+                        break;
+                    case "Vector2":
+                        eltCount = 2;
+                        break;
+                    case "DynamicMatrix":
+                        eltCount = 2;
+                        break;
+                    case "Vector4":
+                    case "Matrix":
+                        eltCount = 4;
+                        break;
+                    default:
+                        throw new Exception();
+                }
+                for (int i = 0; i < eltCount; i++)
+                    widths[i] = 0.8f / eltCount;
+                widths[eltCount] = 0.2f;
+
+                Nuke.nk_layout_row(
+                    Nuklear.Context, NuklearDotNet.nk_layout_format.NK_DYNAMIC, LineHeight,
+                    eltCount + 1, widths
+                );
+                switch (valueType.Name) {
+                    case "Single":
+                        var fp = (Parameter<float>)p;
+                        var fc = fp.Constant;
+                        if (RenderPropertyElement(actualName, cpi.Info, ref fc, ref changed)) {
+                            fp.Constant = fc;
+                            value = fp;
+                        }
+                        break;
+                    case "Vector2":
+                        var v2p = (Parameter<Vector2>)p;
+                        var v2c = v2p.Constant;
+                        if (RenderVectorProperty(cpi, ref v2c, ref changed)) {
+                            v2p.Constant = v2c;
+                            value = v2p;
+                        }
+                        break;
+                    case "Vector4":
+                        var v4p = (Parameter<Vector4>)p;
+                        var v4c = v4p.Constant;
+                        if (RenderVectorProperty(cpi, ref v4c, ref changed, false)) {
+                            v4p.Constant = v4c;
+                            value = v4p;
+                        }
+                        break;
+                }
+
+                if (Nuklear.Button("Curve")) {
+                    value = p = p.ToBezier();
+                    changed = true;
+                    // HACK to auto-open
+                    RenderBezierProperty(cpi, null, actualName, p.Bezier, now, false, true);
+                }
+            } else {
+                changed = RenderBezierProperty(cpi, null, actualName, p.Bezier, now, false);
+            }
+
+            if (changed)
+                cpi.Setter(instance, value);
+            return changed;
+        }
+
+        private unsafe bool RenderVectorProperty (CachedPropertyInfo cpi, ref Vector2 v2, ref bool changed, bool layout = true) {
+            if (layout)
+                Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 2);
             var a = RenderPropertyElement("#x", cpi?.Info, ref v2.X, ref changed);
             var b = RenderPropertyElement("#y", cpi?.Info, ref v2.Y, ref changed);
             return a || b;
         }
 
-        private unsafe bool RenderVectorProperty (CachedPropertyInfo cpi, ref Vector4 v4, ref bool changed, bool isColor) {
-            Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 4);
+        private unsafe bool RenderVectorProperty (CachedPropertyInfo cpi, ref Vector4 v4, ref bool changed, bool isColor, bool layout = true) {
+            if (layout)
+                Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 4);
             var a = RenderPropertyElement(isColor ? "#r" : "#x", cpi?.Info, ref v4.X, ref changed);
             var b = RenderPropertyElement(isColor ? "#g" : "#y", cpi?.Info, ref v4.Y, ref changed);
             var c = RenderPropertyElement(isColor ? "#b" : "#z", cpi?.Info, ref v4.Z, ref changed);
@@ -724,48 +808,69 @@ namespace ParticleEditor {
 
         private unsafe bool RenderMatrixProperty (
             CachedPropertyInfo cpi, object instance, ref bool changed, 
-            string actualName, object value, bool is3x4
+            string actualName, ref Matrix m, bool is3x4
+        ) {
+            MatrixGenerateParameters p;
+            var isGenerated = false;
+            if (!MatrixGenerateParams.TryGetValue(actualName, out p))
+                p = new MatrixGenerateParameters { Angle = 0, Scale = 1 };
+            else
+                isGenerated = (p.Angle != 0) || (p.Scale != 1);
+
+            var dm = new DynamicMatrix {
+                Matrix = m,
+                IsGenerated = isGenerated,
+                Angle = p.Angle,
+                Scale = p.Scale
+            };
+            var result = RenderMatrixProperty(cpi, instance, ref changed, actualName, ref dm, is3x4, false);
+            p.Angle = dm.Angle;
+            p.Scale = dm.Scale;
+            MatrixGenerateParams[actualName] = p;
+            return result;
+        }
+
+        private unsafe bool RenderMatrixProperty (
+            CachedPropertyInfo cpi, object instance, ref bool changed, 
+            string actualName, ref DynamicMatrix dm, bool is3x4, bool isDynamic
         ) {
             var ctx = Nuklear.Context;
-            using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, actualName, false)) {
+            using (var pGroup = Nuklear.CollapsingGroup(actualName, actualName, false)) {
                 if (pGroup.Visible) {
-                    var m = (Matrix)value;
+                    var grp = default(NuklearService.Tree);
+                    if (!isDynamic) {
+                        grp = Nuklear.CollapsingGroup("Generate", "GenerateMatrix", false, NextMatrixIndex++);
+                        dm.IsGenerated = dm.IsGenerated || grp.Visible;
+                    } else {
+                        if (Checkbox("Generated", ref dm.IsGenerated))
+                            changed = true;
+                    }
 
-                    using (var grp = Nuklear.CollapsingGroup("Generate", "GenerateMatrix", false, NextMatrixIndex++))
-                    if (grp.Visible) {
-                        MatrixGenerateParameters p;
-                        if (!MatrixGenerateParams.TryGetValue(actualName, out p)) {
-                            p = new MatrixGenerateParameters { Angle = 0, Scale = 1 };
-                        }
-
+                    if (dm.IsGenerated) {
                         Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
                         if (Nuklear.Button("Identity")) {
-                            m = Matrix.Identity;
-                            p.Angle = 0;
-                            p.Scale = 1;
+                            dm.Matrix = Matrix.Identity;
+                            dm.Angle = 0;
+                            dm.Scale = 1;
+                            dm.IsGenerated = false;
                             changed = true;
                         }
-
-                        bool regenerate = false;
 
                         Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
-                        if (Nuklear.Property("Rotate", ref p.Angle, -360, 360, 0.5f, 0.25f)) {
-                            regenerate = true;
+                        if (Nuklear.Property("#Angle", ref dm.Angle, -360, 360, 0.5f, 0.25f)) {
                             changed = true;
+                            dm.IsGenerated = true;
                         }
-                        if (Nuklear.Property("Scale", ref p.Scale, -5, 5, 0.05f, 0.01f)) {
-                            regenerate = true;
+                        if (Nuklear.Property("#Scale", ref dm.Scale, -5, 5, 0.05f, 0.01f)) {
                             changed = true;
+                            dm.IsGenerated = true;
                         }
 
-                        if (regenerate) {
-                            m = Matrix.CreateRotationZ(MathHelper.ToRadians(p.Angle)) *
-                                Matrix.CreateScale(p.Scale);
-                        }
-
-                        if (changed || regenerate)
-                            MatrixGenerateParams[actualName] = p;
+                        dm.Regenerate();
                     } else {
+                        dm.Regenerate();
+                        var m = dm.Matrix;
+
                         Nuke.nk_layout_row_dynamic(ctx, LineHeight, is3x4 ? 3 : 4);
                         RenderPropertyElement("#xx", cpi.Info, ref m.M11, ref changed);
                         RenderPropertyElement("#xy", cpi.Info, ref m.M12, ref changed);
@@ -795,10 +900,16 @@ namespace ParticleEditor {
                         RenderPropertyElement("#wx", cpi.Info, ref m.M41, ref changed);
                         RenderPropertyElement("#wy", cpi.Info, ref m.M42, ref changed);
                         RenderPropertyElement("#wz", cpi.Info, ref m.M43, ref changed);
+
+                        dm.Matrix = m;
                     }
 
+                    if (isDynamic)
+                        grp.Dispose();
+
                     if (changed) {
-                        cpi.Setter(instance, m);
+                        if (instance != null)
+                            cpi.Setter(instance, dm);
                         return true;
                     }
                 }
@@ -806,14 +917,22 @@ namespace ParticleEditor {
             return false;
         }
 
+        private readonly string[] BezierElementNames = new[] { "#A", "#B", "#C", "#D" };
+        private readonly Dictionary<BezierM, int> BezierSelectedRows = new Dictionary<BezierM, int>();
+
         private unsafe bool RenderBezierProperty (
             CachedPropertyInfo cpi, object instance,
-            string actualName, object value, bool isColor
+            string actualName, object value, float? currentT,
+            bool isColor, bool initiallyOpen = false
         ) {
             bool changed = false;
+            var bm = value as BezierM;
+            int selectedRow = 0;
+            if (bm != null)
+                BezierSelectedRows.TryGetValue(bm, out selectedRow);
 
             var ctx = Nuklear.Context;
-            using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, actualName, false)) {
+            using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, actualName, initiallyOpen)) {
                 if (pGroup.Visible) {
                     var b = (IBezier)value;
 
@@ -823,8 +942,13 @@ namespace ParticleEditor {
                             var m = Game.ScreenSpaceBezierVisualizer;
                             using (var pb = PrimitiveBatch<VertexPositionColorTexture>.New(
                                 Nuklear.PendingGroup, 9999, m, (dm, _) => {
-                                    var cb = new Squared.Illuminant.Uniforms.ClampedBezier4(b);
+                                    Squared.Illuminant.Uniforms.ClampedBezier4 cb;
+                                    if (bm != null)
+                                        cb = new Squared.Illuminant.Uniforms.ClampedBezier4(bm, selectedRow);
+                                    else
+                                        cb = new Squared.Illuminant.Uniforms.ClampedBezier4(b);
                                     Game.Materials.TrySetBoundUniform(m, "Bezier", ref cb);
+                                    m.Effect.Parameters["CurrentT"].SetValue(currentT.GetValueOrDefault(-99999));
                                 }
                             )) {
                                 var tl = new VertexPositionColorTexture(new Vector3(panel.TopLeft, 0), Color.White, Vector2.Zero);
@@ -840,10 +964,10 @@ namespace ParticleEditor {
                         }
                     }
 
-                    Nuke.nk_layout_row_dynamic(ctx, LineHeight, 3);
+                    Nuke.nk_layout_row_dynamic(ctx, LineHeight, (bm != null) ? 4 : 3);
 
                     var cnt = b.Count;
-                    if (Nuklear.Property("#Count", ref cnt, 1, 4, 1, 1)) {
+                    if (Nuklear.Property("#Size", ref cnt, 1, 4, 1, 1)) {
                         // Copy existing row when adding new one
                         if ((b.Count < cnt) && (cnt > 1))
                             b[cnt - 1] = b[cnt - 2];
@@ -859,9 +983,17 @@ namespace ParticleEditor {
                     if (RenderPropertyElement("#Max", null, ref val, ref changed))
                         b.MaxValue = val;
 
+                    if ((bm != null) && Nuklear.Property("#Row", ref selectedRow, 0, 3, 1, 1))
+                        BezierSelectedRows[bm] = selectedRow;
+
                     for (int i = 0; i < cnt; i++) {
                         var elt = b[i];
-                        if (elt is Vector2) {
+                        if (elt is float) {
+                            var v = (float)elt;
+                            Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
+                            if (RenderPropertyElement(BezierElementNames[i], cpi.Info, ref v, ref changed))
+                                b[i] = v;
+                        } else if (elt is Vector2) {
                             var v2 = (Vector2)elt;
                             if (RenderVectorProperty(null, ref v2, ref changed))
                                 b[i] = v2;
@@ -869,6 +1001,16 @@ namespace ParticleEditor {
                             var v4 = (Vector4)elt;
                             if (RenderVectorProperty(null, ref v4, ref changed, isColor))
                                 b[i] = v4;
+                        } else if (elt is Matrix) {
+                            var m = (Matrix)elt;
+                            if (RenderMatrixProperty(cpi, null, ref changed, BezierElementNames[i], ref m, false))
+                                b[i] = m;
+                        } else if (elt is DynamicMatrix) {
+                            var dm = (DynamicMatrix)elt;
+                            if (RenderMatrixProperty(cpi, null, ref changed, BezierElementNames[i], ref dm, false, true))
+                                b[i] = dm;
+                        } else {
+                            throw new Exception();
                         }
                     }
                 }
@@ -894,7 +1036,7 @@ namespace ParticleEditor {
                 cpi.Setter(instance, value);
                 changed = true;
             }
-                    
+            
             Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
             Nuke.nk_label_wrap(
                 ctx, string.Format(
