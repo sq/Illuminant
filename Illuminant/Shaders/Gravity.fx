@@ -28,6 +28,8 @@ void PS_Gravity (
         if (ars.z >= 0.5) {
             float distance = length(toCenter);
             attraction = 1 - saturate(distance / ars.x);
+            if (ars.z >= 1.5)
+                attraction *= attraction;
             attraction = attraction * getDeltaTime() / VelocityConstantScale;
         } else {
             float  distanceSquared = dot(toCenter, toCenter) - ars.x;

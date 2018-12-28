@@ -158,6 +158,12 @@ namespace Squared.Illuminant.Particles.Transforms {
         }
     }
 
+    public enum AttractorType {
+        Physical = 0,
+        Linear = 1,
+        Exponential = 2
+    }
+
     public class Gravity : ParticleTransform {
         public const int MaxAttractors = 16;
 
@@ -165,7 +171,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             public Parameter<Vector3> Position;
             public Parameter<float>   Radius = 1;
             public Parameter<float>   Strength = 1;
-            public bool    Linear = false;
+            public AttractorType      Type = AttractorType.Linear;
         }
 
         public Parameter<float> MaximumAcceleration = 8;
@@ -191,7 +197,7 @@ namespace Squared.Illuminant.Particles.Transforms {
 
             for (int i = 0; i < Attractors.Count; i++) {
                 _Positions[i] = Attractors[i].Position.Evaluate(now);
-                _RadiusesAndStrengths[i] = new Vector3(Attractors[i].Radius.Evaluate(now), Attractors[i].Strength.Evaluate(now), Attractors[i].Linear ? 1 : 0);
+                _RadiusesAndStrengths[i] = new Vector3(Attractors[i].Radius.Evaluate(now), Attractors[i].Strength.Evaluate(now), (int)Attractors[i].Type);
             }
 
             parameters["AttractorCount"].SetValue(Attractors.Count);

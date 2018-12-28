@@ -27,6 +27,8 @@ float4 evaluateFormula (float4 constant, float4 scale, float4 offset, float rand
     if (randomCircularity >= 0.5) {
         float o = randomness.x * PI * 2;
         float z = (randomness.y - 0.5) * 2;
+        if (ZeroZAxis)
+            z = 0;
         float xyMultiplier = sqrt(1 - (z * z));
         float3 randomNormal = float3(xyMultiplier * cos(o), xyMultiplier * sin(o), z);
         float4 circular = float4(
@@ -68,8 +70,6 @@ void PS_Spawn (
         if (AlignVelocityAndPosition)
             random2.xy = random1.xy;
         // Ensure the z axis of generated circular coordinates is 0, resulting in pure xy normals
-        if (ZeroZAxis)
-            random2.y = random1.y = 0.5;
 
         float relativeIndex = (index - ChunkSizeAndIndices.y) + ChunkSizeAndIndices.w;
         float positionIndex = relativeIndex % PositionConstantCount;

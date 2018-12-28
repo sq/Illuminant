@@ -35,12 +35,12 @@ namespace Squared.Illuminant.Particles.Transforms {
         /// If set, the randomly selected normals for position and velocity will be identical.
         /// If not set, they will have different randomly selected normals.
         /// </summary>
-        public bool AlignVelocityAndPosition = true;
+        public bool AlignVelocityAndPosition = false;
         /// <summary>
         /// If set, the Z axis of position and velocity normals will be zero - producing random XY normals.
         /// If not set, random normals will be 3-dimensional.
         /// </summary>
-        public bool ZeroZAxis = true;
+        public bool ZeroZAxis = false;
 
         public Formula  Position = Formula.UnitNormal(), 
             Velocity = Formula.UnitNormal(), 
