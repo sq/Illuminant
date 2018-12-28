@@ -763,7 +763,7 @@ namespace Squared.Illuminant.Uniforms {
                 range = 1;
             RangeAndCount = new Vector4(
                 Math.Min(src.MinValue, src.MaxValue),
-                1.0f / range, src.Count, 4
+                1.0f / range, src.Count, 2
             );
             A = new Vector4(a, z, w);
             B = new Vector4(b, z, w);

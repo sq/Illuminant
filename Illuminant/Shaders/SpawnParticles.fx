@@ -61,8 +61,9 @@ void PS_Spawn (
         float relativeIndex = (index - ChunkSizeAndIndices.y) + ChunkSizeAndIndices.w;
         float positionIndex = relativeIndex % PositionConstantCount;
         float4 positionConstant = PositionConstants[positionIndex];
-        newPosition   = evaluateFormula(positionConstant, Configuration[0], Configuration[1], RandomCircularity[0], float2(index % 8039, 0 + (index % 57)));
-        newPosition   = mul3(newPosition, PositionMatrix, 1);
+        float4 tempPosition = evaluateFormula(positionConstant, Configuration[0], Configuration[1], RandomCircularity[0], float2(index % 8039, 0 + (index % 57)));
+        newPosition   = mul(tempPosition, PositionMatrix);
+        newPosition.w = tempPosition.w;
         newVelocity   = evaluateFormula(Configuration[2], Configuration[3], Configuration[4], RandomCircularity[1], float2(index % 6180, 1 + (index % 4031)));
         newAttributes = evaluateFormula(Configuration[5], Configuration[6], Configuration[7], RandomCircularity[2], float2(index % 2025, 2 + (index % 65531)));
     }

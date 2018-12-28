@@ -45,13 +45,14 @@ namespace Squared.Illuminant.Configuration {
                 _Bezier = value;
             }
         }
+
         public T Constant {
             get {
                 if (_Bezier != null) {
                     if (_Bezier.IsConstant)
                         return _Bezier.A;
                     else
-                        throw new InvalidOperationException("Parameter is not a constant");
+                        return default(T);
                 } else
                     return _Constant;
             }
@@ -149,6 +150,13 @@ namespace Squared.Illuminant.Configuration {
         public float  Angle;
         public float  Scale;
         public Matrix Matrix;
+
+        public DynamicMatrix (float angle, float scale) {
+            Matrix = default(Matrix);
+            Scale = scale;
+            Angle = angle;
+            IsGenerated = true;
+        }
 
         public DynamicMatrix (Matrix matrix) {
             Matrix = matrix;

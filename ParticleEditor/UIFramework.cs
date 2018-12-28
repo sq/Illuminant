@@ -928,8 +928,11 @@ namespace ParticleEditor {
             bool changed = false;
             var bm = value as BezierM;
             int selectedRow = 0;
-            if (bm != null)
+            bool fullyDynamic = false;
+            if (bm != null) {
                 BezierSelectedRows.TryGetValue(bm, out selectedRow);
+                fullyDynamic = bm.IsFullyDynamic;
+            }
 
             var ctx = Nuklear.Context;
             using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, actualName, initiallyOpen)) {
@@ -944,11 +947,12 @@ namespace ParticleEditor {
                                 Nuklear.PendingGroup, 9999, m, (dm, _) => {
                                     Squared.Illuminant.Uniforms.ClampedBezier4 cb;
                                     if (bm != null) {
-                                        if (bm.IsFullyDynamic) {
-                                            Vector2 va = new Vector2(bm.A.Angle, bm.A.Scale), 
-                                                vb = new Vector2(bm.B.Angle, bm.B.Scale),
-                                                vc = new Vector2(bm.C.Angle, bm.C.Scale), 
-                                                vd = new Vector2(bm.D.Angle, bm.D.Scale);
+                                        if (fullyDynamic) {
+                                            float ss = 360;
+                                            Vector2 va = new Vector2(bm.A.Angle, bm.A.Scale * ss), 
+                                                vb = new Vector2(bm.B.Angle, bm.B.Scale * ss),
+                                                vc = new Vector2(bm.C.Angle, bm.C.Scale * ss), 
+                                                vd = new Vector2(bm.D.Angle, bm.D.Scale * ss);
                                             cb = new Squared.Illuminant.Uniforms.ClampedBezier4(b, ref va, ref vb, ref vc, ref vd, 0, 0);
                                         } else {
                                             cb = new Squared.Illuminant.Uniforms.ClampedBezier4(bm, selectedRow);
@@ -972,10 +976,10 @@ namespace ParticleEditor {
                         }
                     }
 
-                    Nuke.nk_layout_row_dynamic(ctx, LineHeight, (bm != null) ? 4 : 3);
+                    Nuke.nk_layout_row_dynamic(ctx, LineHeight, ((bm != null) && !fullyDynamic) ? 4 : 3);
 
                     var cnt = b.Count;
-                    if (Nuklear.Property("#Size", ref cnt, 1, 4, 1, 1)) {
+                    if (Nuklear.Property("#Num", ref cnt, 1, 4, 1, 1)) {
                         // Copy existing row when adding new one
                         if ((b.Count < cnt) && (cnt > 1))
                             b[cnt - 1] = b[cnt - 2];
@@ -984,14 +988,14 @@ namespace ParticleEditor {
                     }
 
                     var val = b.MinValue;
-                    if (RenderPropertyElement("#Min", null, ref val, ref changed))
+                    if (RenderPropertyElement("#[", null, ref val, ref changed))
                         b.MinValue = val;
 
                     val = b.MaxValue;
-                    if (RenderPropertyElement("#Max", null, ref val, ref changed))
+                    if (RenderPropertyElement("#]", null, ref val, ref changed))
                         b.MaxValue = val;
 
-                    if ((bm != null) && Nuklear.Property("#Row", ref selectedRow, 0, 3, 1, 1))
+                    if ((bm != null) && !fullyDynamic && Nuklear.Property("#Row", ref selectedRow, 0, 3, 1, 1))
                         BezierSelectedRows[bm] = selectedRow;
 
                     for (int i = 0; i < cnt; i++) {

@@ -83,6 +83,7 @@
       <Link>PerformanceStats.cs</Link>
     </Compile>
     <Compile Include="Controller.cs" />
+    <Compile Include="JSON.cs" />
     <Compile Include="Model.cs" />
     <Compile Include="ModelTypes.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

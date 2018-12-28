@@ -50,9 +50,11 @@ namespace ParticleEditor {
 
         private void RenderSidePanels () {
             RenderFilePanel();
-            RenderSystemList();
-            RenderTransformList();
-            RenderTransformProperties();
+            if (Game.View != null) {
+                RenderSystemList();
+                RenderTransformList();
+                RenderTransformProperties();
+            }
             RenderGlobalSettings();
         }
 
@@ -83,16 +85,18 @@ namespace ParticleEditor {
             if (Nuklear.Button("Load"))
                 Controller.ShowLoadDialog();
 
-            Nuke.nk_layout_row_dynamic(ctx, LineHeight, 3);
-            var time = TimeSpan.FromTicks(Game.View.Time.Ticks);
-            var liveCount = Game.View.Systems.Sum(s => s.Instance.LiveCount);
-            var capacity = Game.View.Systems.Sum(s => s.Instance.Capacity);
-            using (var tCount = new NString(string.Format("{0}/{1}", liveCount, capacity)))
-                Nuke.nk_text(ctx, tCount.pText, tCount.Length, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
-            using (var tCount = new NString(time.ToString("hh\\:mm\\:ss\\.ff")))
-                Nuke.nk_text(ctx, tCount.pText, tCount.Length, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
-            if (Nuklear.Button("Reset"))
-                Controller.QueueReset();
+            if (Game.View != null) {
+                Nuke.nk_layout_row_dynamic(ctx, LineHeight, 3);
+                var time = TimeSpan.FromTicks(Game.View.Time.Ticks);
+                var liveCount = Game.View.Systems.Sum(s => s.Instance.LiveCount);
+                var capacity = Game.View.Systems.Sum(s => s.Instance.Capacity);
+                using (var tCount = new NString(string.Format("{0}/{1}", liveCount, capacity)))
+                    Nuke.nk_text(ctx, tCount.pText, tCount.Length, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
+                using (var tCount = new NString(time.ToString("hh\\:mm\\:ss\\.ff")))
+                    Nuke.nk_text(ctx, tCount.pText, tCount.Length, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
+                if (Nuklear.Button("Restart"))
+                    Controller.QueueReset();
+            }
 
             // }
         }

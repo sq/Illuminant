@@ -11,6 +11,7 @@ using Microsoft.Xna.Framework;
 using System.Runtime.Serialization;
 using System.Collections;
 using System.Reflection;
+using Squared.Illuminant.Configuration;
 
 namespace Squared.Illuminant.Modeling {
     public class EngineModel {
@@ -26,14 +27,19 @@ namespace Squared.Illuminant.Modeling {
                 s.Normalize(forSave);
         }
 
+        private static JsonSerializer MakeSerializer () {
+            return new JsonSerializer {
+                Converters = {
+                    new IlluminantJsonConverter()
+                },
+                ContractResolver = new WritablePropertiesOnlyResolver(),
+                Formatting = Formatting.Indented
+            };
+        }
+
         public static EngineModel Load (string fileName) {
             using (var reader = new System.IO.StreamReader(fileName, Encoding.UTF8, false)) {
-                var serializer = new JsonSerializer {
-                    Converters = {
-                        new IlluminantJsonConverter()
-                    },
-                    Formatting = Formatting.Indented
-                };
+                var serializer = MakeSerializer();
                 using (var jreader = new JsonTextReader(reader)) {
                     var result = serializer.Deserialize<EngineModel>(jreader);
                     if (result != null)
@@ -48,12 +54,7 @@ namespace Squared.Illuminant.Modeling {
 
             var tempPath = Path.GetTempFileName();
             using (var writer = new StreamWriter(tempPath, false, Encoding.UTF8)) {
-                var serializer = new JsonSerializer {
-                    Converters = {
-                        new IlluminantJsonConverter()
-                    },
-                    Formatting = Formatting.Indented
-                };
+                var serializer = MakeSerializer();
                 serializer.Serialize(writer, this);
             }
             File.Copy(tempPath, fileName, true);
@@ -122,13 +123,15 @@ namespace Squared.Illuminant.Modeling {
         }
 
         public void Normalize () {
+            /*
             var s = Value as string;
             if (s == null)
                 return;
             if (Type == typeof(string))
                 return;
-
+            
             Value = JsonConvert.DeserializeObject(s, Type, new IlluminantJsonConverter());
+            */
         }
 
         public ModelProperty (Type type, object value) {
@@ -172,80 +175,6 @@ namespace Squared.Illuminant.Modeling {
         public ModelProperty Clone () {
             var value = CloneValue(Value);
             return new ModelProperty(Type, value); 
-        }
-    }
-
-    public class IlluminantJsonConverter : JsonConverter {
-        public override bool CanConvert (Type objectType) {
-            switch (objectType.Name) {
-                case "ModelProperty":
-                case "Matrix":
-                    return true;
-                default:
-                    return false;
-            }
-        }
-
-        private static Type ResolveTypeFromShortName (string name) {
-            return Type.GetType(name, false) ?? typeof(ParticleSystem).Assembly.GetType(name, false);
-        }
-
-        public override object ReadJson (JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer) {
-            switch (objectType.Name) {
-                case "ModelProperty":
-                    var obj = JObject.Load(reader);
-                    var typeName = obj["Type"].ToString();
-                    var type = ResolveTypeFromShortName(typeName);
-                    if (type == null)
-                        throw new Exception("Could not resolve type " + typeName); 
-                    var result = new ModelProperty(
-                        type, obj["Value"].ToObject(type, serializer)
-                    );
-                    return result;
-                case "Matrix":
-                    var arr = serializer.Deserialize<float[]>(reader);
-                    return new Matrix(
-                        arr[0], arr[1], arr[2], arr[3],
-                        arr[4], arr[5], arr[6], arr[7],
-                        arr[8], arr[9], arr[10], arr[11],
-                        arr[12], arr[13], arr[14], arr[15]
-                    );
-                default:
-                    throw new NotImplementedException();
-            }
-        }
-
-        public override void WriteJson (JsonWriter writer, object value, JsonSerializer serializer) {
-            if (value == null)
-                return;
-
-            var type = value.GetType();
-            switch (type.Name) {
-                case "ModelProperty":
-                    var mp = (ModelProperty)value;
-                    string typeName;
-                    if (ResolveTypeFromShortName(mp.Type.FullName) == mp.Type)
-                        typeName = mp.Type.FullName;
-                    else
-                        typeName = mp.Type.AssemblyQualifiedName;
-                    serializer.Serialize(writer, new {
-                        Type = typeName,
-                        Value = mp.Value
-                    });
-                    return;
-                case "Matrix":
-                    var m = (Matrix)value;
-                    var values = new float[] {
-                        m.M11, m.M12, m.M13, m.M14,
-                        m.M21, m.M22, m.M23, m.M24,
-                        m.M31, m.M32, m.M33, m.M34,
-                        m.M41, m.M42, m.M43, m.M44,
-                    };
-                    serializer.Serialize(writer, values);
-                    return;
-                default:
-                    throw new NotImplementedException();
-            }
         }
     }
 }
