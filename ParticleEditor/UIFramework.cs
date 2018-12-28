@@ -733,9 +733,6 @@ namespace ParticleEditor {
             bool isColor = (parentType ?? "").StartsWith("Color");
 
             if (!isBezier && isConstant) {
-                Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
-                Nuklear.Label(actualName, false);
-
                 var widths = new float[5];
                 int eltCount;
                 switch (valueType.Name) {
@@ -745,12 +742,15 @@ namespace ParticleEditor {
                     case "Vector2":
                         eltCount = 2;
                         break;
-                    case "DynamicMatrix":
-                        eltCount = 2;
+                    case "Vector3":
+                        eltCount = 3;
                         break;
                     case "Vector4":
                     case "Matrix":
                         eltCount = 4;
+                        break;
+                    case "DynamicMatrix":
+                        eltCount = 2;
                         break;
                     default:
                         throw new Exception();
@@ -758,6 +758,11 @@ namespace ParticleEditor {
                 for (int i = 0; i < eltCount; i++)
                     widths[i] = 0.93f / eltCount;
                 widths[eltCount] = 0.07f;
+
+                if (eltCount > 1) {
+                    Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
+                    Nuklear.Label(actualName, false);
+                }
 
                 Nuke.nk_layout_row(
                     Nuklear.Context, NuklearDotNet.nk_layout_format.NK_DYNAMIC, LineHeight,
@@ -778,6 +783,14 @@ namespace ParticleEditor {
                         if (RenderVectorProperty(cpi, ref v2c, ref changed, false)) {
                             v2p.Constant = v2c;
                             p = v2p;
+                        }
+                        break;
+                    case "Vector3":
+                        var v3p = (Parameter<Vector3>)p;
+                        var v3c = v3p.Constant;
+                        if (RenderVectorProperty(cpi, ref v3c, ref changed, false)) {
+                            v3p.Constant = v3c;
+                            p = v3p;
                         }
                         break;
                     case "Vector4":
@@ -811,6 +824,15 @@ namespace ParticleEditor {
             var a = RenderPropertyElement("#x", cpi?.Info, ref v2.X, ref changed);
             var b = RenderPropertyElement("#y", cpi?.Info, ref v2.Y, ref changed);
             return a || b;
+        }
+
+        private unsafe bool RenderVectorProperty (CachedPropertyInfo cpi, ref Vector3 v3, ref bool changed, bool layout = true) {
+            if (layout)
+                Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 3);
+            var a = RenderPropertyElement("#x", cpi?.Info, ref v3.X, ref changed);
+            var b = RenderPropertyElement("#y", cpi?.Info, ref v3.Y, ref changed);
+            var c = RenderPropertyElement("#z", cpi?.Info, ref v3.Z, ref changed);
+            return a || b || c;
         }
 
         private unsafe bool RenderVectorProperty (CachedPropertyInfo cpi, ref Vector4 v4, ref bool changed, bool isColor, bool layout = true) {

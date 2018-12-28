@@ -13,6 +13,7 @@ using Squared.Util;
 namespace Squared.Illuminant {
     public interface IBezier {
         bool IsConstant { get; }
+        bool Repeat { get; set; }
         int Count { get; set; }
         float MinValue { get; set; }
         float MaxValue { get; set; }
@@ -30,29 +31,44 @@ namespace Squared.Illuminant {
         void SetConstant (T constant);
     }
 
-    public class BezierF : IBezier<float> {
+    public abstract class Bezier<T> : IBezier {
+        internal T _A, _B, _C, _D;
+
+        public bool Repeat { get; set; }
         public int Count { get; set; }
         public float MinValue { get; set; }
         public float MaxValue { get; set; }
-        public float A { get; set; }
-        public float B { get; set; }
-        public float C { get; set; }
-        public float D { get; set; }
-
-        public BezierF ()
-            : this (1) {
+        public T A {
+            get {
+                return _A;
+            }
+            set {
+                _A = value;
+            }
         }
-
-        public BezierF (float constant) {
-            SetConstant(constant);
+        public T B {
+            get {
+                return _B;
+            }
+            set {
+                _B = value;
+            }
         }
-
-        public void SetConstant (float constant) {
-            Count = 1;
-            MinValue = 0;
-            MaxValue = 1;
-            A = constant;
-            B = C = D = 0;
+        public T C {
+            get {
+                return _C;
+            }
+            set {
+                _C = value;
+            }
+        }
+        public T D {
+            get {
+                return _D;
+            }
+            set {
+                _D = value;
+            }
         }
 
         public bool IsConstant {
@@ -61,17 +77,17 @@ namespace Squared.Illuminant {
             }
         }
 
-        public float this[int index] {
+        public T this[int index] {
             get {
                 switch (index) {
                     case 0:
-                        return A;
+                        return _A;
                     case 1:
-                        return B;
+                        return _B;
                     case 2:
-                        return C;
+                        return _C;
                     case 3:
-                        return D;
+                        return _D;
                     default:
                         throw new IndexOutOfRangeException();
                 }
@@ -79,16 +95,16 @@ namespace Squared.Illuminant {
             set {
                 switch (index) {
                     case 0:
-                        A = value;
+                        _A = value;
                         return;
                     case 1:
-                        B = value;
+                        _B = value;
                         return;
                     case 2:
-                        C = value;
+                        _C = value;
                         return;
                     case 3:
-                        D = value;
+                        _D = value;
                         return;
                     default:
                         throw new IndexOutOfRangeException();
@@ -101,32 +117,48 @@ namespace Squared.Illuminant {
                 return this[index];
             }
             set {
-                this[index] = (float)value;
+                this[index] = (T)value;
             }
+        }
+
+        protected abstract object UntypedEvaluate (float t);
+
+        object IBezier.Evaluate (float t) {
+            return UntypedEvaluate(t);
+        }
+    }
+
+    public class BezierF : Bezier<float>, IBezier<float> {
+        public BezierF ()
+            : this (1) {
+        }
+
+        public BezierF (float constant) {
+            SetConstant(constant);
+        }
+
+        public void SetConstant (float constant) {
+            Count = 1;
+            MinValue = 0;
+            MaxValue = 1;
+            _A = constant;
+            _B = _C = _D = 0;
         }
 
         public float Evaluate (float t) {
             if (Count <= 1)
-                return A;
+                return _A;
 
             var cb = new Uniforms.ClampedBezier1(this);
             return cb.Evaluate(t);
         }
 
-        object IBezier.Evaluate (float t) {
+        protected override object UntypedEvaluate (float t) {
             return Evaluate(t);
         }
     }
 
-    public class Bezier2 : IBezier<Vector2> {
-        public int Count { get; set; }
-        public float MinValue { get; set; }
-        public float MaxValue { get; set; }
-        public Vector2 A { get; set; }
-        public Vector2 B { get; set; }
-        public Vector2 C { get; set; }
-        public Vector2 D { get; set; }
-
+    public class Bezier2 : Bezier<Vector2>, IBezier<Vector2> {
         public Bezier2 ()
             : this (Vector2.One) {
         }
@@ -143,82 +175,24 @@ namespace Squared.Illuminant {
             Count = 1;
             MinValue = 0;
             MaxValue = 1;
-            A = constant;
-            B = C = D = Vector2.Zero;
-        }
-
-        public bool IsConstant {
-            get {
-                return Count == 1;
-            }
-        }
-
-        public Vector2 this[int index] {
-            get {
-                switch (index) {
-                    case 0:
-                        return A;
-                    case 1:
-                        return B;
-                    case 2:
-                        return C;
-                    case 3:
-                        return D;
-                    default:
-                        throw new IndexOutOfRangeException();
-                }
-            }
-            set {
-                switch (index) {
-                    case 0:
-                        A = value;
-                        return;
-                    case 1:
-                        B = value;
-                        return;
-                    case 2:
-                        C = value;
-                        return;
-                    case 3:
-                        D = value;
-                        return;
-                    default:
-                        throw new IndexOutOfRangeException();
-                }
-            }
-        }
-
-        object IBezier.this[int index] {
-            get {
-                return this[index];
-            }
-            set {
-                this[index] = (Vector2)value;
-            }
+            _A = constant;
+            _B = _C = _D = Vector2.Zero;
         }
 
         public Vector2 Evaluate (float t) {
             if (Count <= 1)
-                return A;
+                return _A;
 
             var cb = new Uniforms.ClampedBezier2(this);
             return cb.Evaluate(t);
         }
 
-        object IBezier.Evaluate (float t) {
+        protected override object UntypedEvaluate (float t) {
             return Evaluate(t);
         }
     }
 
-    public class Bezier4 : IBezier<Vector4> {
-        public int Count { get; set; }
-        public float MinValue { get; set; }
-        public float MaxValue { get; set; }
-        public Vector4 A { get; set; }
-        public Vector4 B { get; set; }
-        public Vector4 C { get; set; }
-        public Vector4 D { get; set; }
-
+    public class Bezier4 : Bezier<Vector4>, IBezier<Vector4> {
         public Bezier4 ()
             : this (Vector4.One) {
         }
@@ -235,82 +209,24 @@ namespace Squared.Illuminant {
             Count = 1;
             MinValue = 0;
             MaxValue = 1;
-            A = constant;
-            B = C = D = Vector4.Zero;
-        }
-
-        public bool IsConstant {
-            get {
-                return Count == 1;
-            }
-        }
-
-        public Vector4 this[int index] {
-            get {
-                switch (index) {
-                    case 0:
-                        return A;
-                    case 1:
-                        return B;
-                    case 2:
-                        return C;
-                    case 3:
-                        return D;
-                    default:
-                        throw new IndexOutOfRangeException();
-                }
-            }
-            set {
-                switch (index) {
-                    case 0:
-                        A = value;
-                        return;
-                    case 1:
-                        B = value;
-                        return;
-                    case 2:
-                        C = value;
-                        return;
-                    case 3:
-                        D = value;
-                        return;
-                    default:
-                        throw new IndexOutOfRangeException();
-                }
-            }
-        }
-
-        object IBezier.this[int index] {
-            get {
-                return this[index];
-            }
-            set {
-                this[index] = (Vector4)value;
-            }
+            _A = constant;
+            _B = _C = _D = Vector4.Zero;
         }
 
         public Vector4 Evaluate (float t) {
             if (Count <= 1)
-                return A;
+                return _A;
 
             var cb = new Uniforms.ClampedBezier4(this);
             return cb.Evaluate(t);
         }
 
-        object IBezier.Evaluate (float t) {
+        protected override object UntypedEvaluate (float t) {
             return Evaluate(t);
         }
     }
 
-    public class BezierM : IBezier<DynamicMatrix> {
-        public int Count { get; set; }
-        public float MinValue { get; set; }
-        public float MaxValue { get; set; }
-        public DynamicMatrix A { get; set; }
-        public DynamicMatrix B { get; set; }
-        public DynamicMatrix C { get; set; }
-        public DynamicMatrix D { get; set; }
-
+    public class BezierM : Bezier<DynamicMatrix>, IBezier<DynamicMatrix> {
         public BezierM ()
             : this (DynamicMatrix.Identity) {
         }
@@ -327,58 +243,8 @@ namespace Squared.Illuminant {
             Count = 1;
             MinValue = 0;
             MaxValue = 1;
-            A = constant;
-            B = C = D = DynamicMatrix.Identity;
-        }
-
-        public bool IsConstant {
-            get {
-                return Count == 1;
-            }
-        }
-
-        public DynamicMatrix this[int index] {
-            get {
-                switch (index) {
-                    case 0:
-                        return A;
-                    case 1:
-                        return B;
-                    case 2:
-                        return C;
-                    case 3:
-                        return D;
-                    default:
-                        throw new IndexOutOfRangeException();
-                }
-            }
-            set {
-                switch (index) {
-                    case 0:
-                        A = value;
-                        return;
-                    case 1:
-                        B = value;
-                        return;
-                    case 2:
-                        C = value;
-                        return;
-                    case 3:
-                        D = value;
-                        return;
-                    default:
-                        throw new IndexOutOfRangeException();
-                }
-            }
-        }
-
-        object IBezier.this[int index] {
-            get {
-                return this[index];
-            }
-            set {
-                this[index] = (DynamicMatrix)value;
-            }
+            _A = constant;
+            _B = _C = _D = DynamicMatrix.Identity;
         }
 
         public static void GetRowOfMatrix (int row, Matrix m, out Vector4 result) {
@@ -438,8 +304,7 @@ namespace Squared.Illuminant {
 
         public bool IsFullyDynamic {
             get {
-                DynamicMatrix a = A, b = B, c = C, d = D;
-                return GetIsFullyDynamic(ref a, ref b, ref c, ref d);
+                return GetIsFullyDynamic(ref _A, ref _B, ref _C, ref _D);
             }
         }
 
@@ -456,19 +321,16 @@ namespace Squared.Illuminant {
 
         public DynamicMatrix Evaluate (float t) {
             DynamicMatrix result = default(DynamicMatrix);
-            DynamicMatrix A = this.A;
-            A.Regenerate();
+            _A.Regenerate();
 
             if (Count <= 1)
-                return A;
+                return _A;
 
-            DynamicMatrix B = this.B, C = this.C, D = this.D;
-
-            if (GetIsFullyDynamic(ref A, ref B, ref C, ref D)) {
-                Vector2 a = new Vector2(A.Angle, A.Scale), 
-                    b = new Vector2(B.Angle, B.Scale),
-                    c = new Vector2(C.Angle, C.Scale), 
-                    d = new Vector2(D.Angle, D.Scale);
+            if (GetIsFullyDynamic(ref _A, ref _B, ref _C, ref _D)) {
+                Vector2 a = new Vector2(_A.Angle, _A.Scale), 
+                    b = new Vector2(_B.Angle, _B.Scale),
+                    c = new Vector2(_C.Angle, _C.Scale), 
+                    d = new Vector2(_D.Angle, _D.Scale);
                 var cb = new Uniforms.ClampedBezier2(this, 2, ref a, ref b, ref c, ref d);
                 var p = cb.Evaluate(t);
                 result.IsGenerated = true;
@@ -476,16 +338,16 @@ namespace Squared.Illuminant {
                 result.Scale = p.Y;
                 result.Regenerate();
             } else {
-                B.Regenerate();
-                C.Regenerate();
-                D.Regenerate();
+                _B.Regenerate();
+                _C.Regenerate();
+                _D.Regenerate();
                 Vector4 a, b, c, d;
 
                 for (int i = 0; i < 4; i++) {
-                    GetRowOfMatrix(i, ref A.Matrix, out a);
-                    GetRowOfMatrix(i, ref B.Matrix, out b);
-                    GetRowOfMatrix(i, ref C.Matrix, out c);
-                    GetRowOfMatrix(i, ref D.Matrix, out d);
+                    GetRowOfMatrix(i, ref _A.Matrix, out a);
+                    GetRowOfMatrix(i, ref _B.Matrix, out b);
+                    GetRowOfMatrix(i, ref _C.Matrix, out c);
+                    GetRowOfMatrix(i, ref _D.Matrix, out d);
                     var cb4 = new Uniforms.ClampedBezier4(this, ref a, ref b, ref c, ref d);
                     var evaluated = cb4.Evaluate(t);
                     SetRowOfMatrix(i, ref result.Matrix, ref evaluated);
@@ -495,7 +357,7 @@ namespace Squared.Illuminant {
             return result;
         }
 
-        object IBezier.Evaluate (float t) {
+        protected override object UntypedEvaluate (float t) {
             return Evaluate(t);
         }
     }
