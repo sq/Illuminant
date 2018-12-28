@@ -428,7 +428,7 @@ namespace Squared.Illuminant.Uniforms {
         public Vector4 RangeAndCount;
         public Vector4 AB, CD;
 
-        public ClampedBezier2 (Bezier2 src) : this() {
+        public ClampedBezier2 (Bezier2 src, float timeScale = 1) : this() {
             if (src == null) {
                 this = One;
                 return;
@@ -438,8 +438,8 @@ namespace Squared.Illuminant.Uniforms {
             if ((range == 0) || (src.Count <= 1))
                 range = 1;
             RangeAndCount = new Vector4(
-                Math.Min(src.MinValue, src.MaxValue),
-                1.0f / range, src.Count, 2
+                Math.Min(src.MinValue, src.MaxValue) * timeScale,
+                1.0f / (range / timeScale), src.Count, 2
             );
             AB = new Vector4(
                 src.A.X, src.A.Y,
@@ -571,7 +571,7 @@ namespace Squared.Illuminant.Uniforms {
             D = new Vector4(src.D, z, w);
         }
 
-        public ClampedBezier4 (Bezier4 src) {
+        public ClampedBezier4 (Bezier4 src, float timeScale = 1) {
             if (src == null) {
                 this = One;
                 return;
@@ -581,8 +581,8 @@ namespace Squared.Illuminant.Uniforms {
             if ((range == 0) || (src.Count <= 1))
                 range = 1;
             RangeAndCount = new Vector4(
-                Math.Min(src.MinValue, src.MaxValue),
-                1.0f / range, src.Count, 4
+                Math.Min(src.MinValue, src.MaxValue) * timeScale,
+                1.0f / (range / timeScale), src.Count, 4
             );
             A = src.A;
             B = src.B;

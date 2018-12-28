@@ -79,8 +79,8 @@ float4 readLifeRamp (float u, float v) {
     return tex2Dlod(LifeRampSampler, float4(u, v, 0, 0));
 }
 
-float4 getRampedColorForLifeValueAndIndex (float life, float index) {
-    float4 result = getColorForLifeValue(life);
+float4 getRampedColorForLifeValueAndIndex (float life, float velocity, float index) {
+    float4 result = getColorForLifeAndVelocity(life, velocity);
 
     [branch]
     if (LifeRampSettings.x != 0) {
@@ -143,7 +143,7 @@ void VS_PosVelAttrWhite(
 
     float angle = getRotationForVelocity(velocity.xyz);
     angle += getRotationForLifeAndIndex(position.w, offsetAndIndex.z);
-    float2 size = getSizeForLifeValue(position.w);
+    float2 size = getSizeForLifeAndVelocity(position.w, length(velocity.xyz));
     float3 rotatedCorner = ComputeRotatedCorner(cornerIndex.x, angle, size);
 
     VS_Core(
@@ -151,7 +151,7 @@ void VS_PosVelAttrWhite(
         result, texCoord
     );
 
-    color = getRampedColorForLifeValueAndIndex(position.w, offsetAndIndex.z);
+    color = getRampedColorForLifeValueAndIndex(position.w, length(velocity.xyz), offsetAndIndex.z);
 }
 
 void VS_PosVelAttr(
@@ -177,7 +177,7 @@ void VS_PosVelAttr(
         color
     );
 
-    color = attributes * getRampedColorForLifeValueAndIndex(position.w, offsetAndIndex.z);
+    color = attributes * getRampedColorForLifeValueAndIndex(position.w, length(velocity.xyz), offsetAndIndex.z);
 }
 
 void VS_PosAttr (
@@ -189,9 +189,9 @@ void VS_PosAttr (
     out float4 position    : TEXCOORD1,
     out float4 attributes  : COLOR0
 ) {
-    float2 actualXy = xy + offsetAndIndex.xy;
-    position = tex2Dlod(PositionSampler, float4(actualXy, 0, 0));
-    attributes = tex2Dlod(AttributeSampler, float4(actualXy, 0, 0));
+    float4 velocity;
+    float4 actualXy = float4(xy + offsetAndIndex.xy, 0, 0);
+    readStateUv(actualXy, position, velocity, attributes);
 
     float life = position.w;
     if ((life <= 0) || stippleReject(offsetAndIndex.z)) {
@@ -200,7 +200,7 @@ void VS_PosAttr (
     }
 
     float angle = getRotationForLifeAndIndex(position.w, offsetAndIndex.z);
-    float2 size = getSizeForLifeValue(position.w);
+    float2 size = getSizeForLifeAndVelocity(position.w, length(velocity.xyz));
     float3 rotatedCorner = ComputeRotatedCorner(cornerIndex.x, angle, size);
 
     VS_Core(
@@ -208,7 +208,7 @@ void VS_PosAttr (
         result, texCoord
     );
 
-    attributes *= getRampedColorForLifeValueAndIndex(position.w, offsetAndIndex.z);
+    attributes *= getRampedColorForLifeValueAndIndex(position.w, length(velocity.xyz), offsetAndIndex.z);
 }
 
 void PS_Texture (

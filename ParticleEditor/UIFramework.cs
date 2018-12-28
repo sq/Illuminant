@@ -1128,7 +1128,7 @@ namespace ParticleEditor {
         ) {
             var ctx = Nuklear.Context;
             var value = (NullableLazyResource<Texture2D>)_value;
-            var hasValue = (value != null) && (value.Name != null);
+            var hasValue = (value != null) && (value.Name != null) && (value.Instance != null);
             Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
             if (Nuklear.Button("Select Image")) {
                 Controller.SelectTexture(cpi, instance, value);
@@ -1143,8 +1143,11 @@ namespace ParticleEditor {
             Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
             Nuke.nk_label_wrap(
                 ctx, string.Format(
-                    "{0}: {1}",
-                    cpi.Name, hasValue ? Path.GetFileName(value.Name) : "none"
+                    "{0}: {1} ({2}{3}{4})",
+                    cpi.Name, hasValue ? Path.GetFileName(value.Name) : "none",
+                    hasValue ? value.Instance.Width.ToString() : "", 
+                    hasValue ? "x" : "", 
+                    hasValue ? value.Instance.Height.ToString() : ""
                 )
             );
 

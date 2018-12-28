@@ -27,8 +27,8 @@ void ParticleLightVertexShader(
     float3 corner = LightCorners[cornerIndex.x];
 
     float4 actualXy = float4(xy + offsetAndIndex.xy, 0, 0);
-    float4 position, velocity, attributes;
-    readStateUv(actualXy, position, velocity, attributes);
+    float4 position = tex2Dlod(PositionSampler, actualXy);
+    float4 attributes = tex2Dlod(AttributeSampler, actualXy);
 
     // HACK
     float life = position.w;
@@ -61,7 +61,8 @@ void ParticleLightVertexShader(
     lightProperties = LightProperties;
     moreLightProperties = MoreLightProperties;
 
-    lightColor *= getColorForLifeValue(position.w);
+    // FIXME: Not enough vertex samplers available for velocity data
+    lightColor *= getColorForLifeAndVelocity(position.w, 0);
 
     if (lightColor.a <= 0) {
         result = float4(0, 0, 0, 0);

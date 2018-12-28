@@ -28,7 +28,7 @@ void PS_Gravity (
         if (ars.z >= 0.5) {
             float distance = length(toCenter);
             attraction = 1 - saturate(distance / ars.x);
-            attraction = attraction * getDeltaTime() / 1000;
+            attraction = attraction * getDeltaTime() / VelocityConstantScale;
         } else {
             float  distanceSquared = dot(toCenter, toCenter) - ars.x;
             distanceSquared = max(distanceSquared, 0.001);
@@ -39,7 +39,7 @@ void PS_Gravity (
         acceleration += newAccel;
     }
 
-    float maximumAcceleration = MaximumAcceleration * getDeltaTime() / 1000;
+    float maximumAcceleration = MaximumAcceleration * getDeltaTime() / VelocityConstantScale;
 
     float currentLength = length(acceleration);
     if (currentLength > maximumAcceleration)

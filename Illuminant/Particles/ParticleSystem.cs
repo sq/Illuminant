@@ -655,8 +655,8 @@ namespace Squared.Illuminant.Particles {
         }
 
         private void SetSystemUniforms (Material m, double deltaTimeSeconds) {
-            ClampedBezier4 colorFromLife;
-            ClampedBezier2 sizeFromLife;
+            ClampedBezier4 colorFromLife, colorFromVelocity;
+            ClampedBezier2 sizeFromLife, sizeFromVelocity;
 
             var psu = new Uniforms.ParticleSystem(Engine.Configuration, Configuration, deltaTimeSeconds);
             Engine.ParticleMaterials.MaterialSet.TrySetBoundUniform(m, "System", ref psu);
@@ -671,11 +671,15 @@ namespace Squared.Illuminant.Particles {
             } else {
                 colorFromLife = new ClampedBezier4(Configuration.Color._ColorFromLife);
             }
+            colorFromVelocity = new ClampedBezier4(Configuration.Color.ColorFromVelocity);
 
             sizeFromLife = new ClampedBezier2(Configuration.SizeFromLife);
+            sizeFromVelocity = new ClampedBezier2(Configuration.SizeFromVelocity);
 
             Engine.ParticleMaterials.MaterialSet.TrySetBoundUniform(m, "ColorFromLife", ref colorFromLife);
             Engine.ParticleMaterials.MaterialSet.TrySetBoundUniform(m, "SizeFromLife", ref sizeFromLife);
+            Engine.ParticleMaterials.MaterialSet.TrySetBoundUniform(m, "ColorFromVelocity", ref colorFromVelocity);
+            Engine.ParticleMaterials.MaterialSet.TrySetBoundUniform(m, "SizeFromVelocity", ref sizeFromVelocity);
         }
 
         private BufferSet AcquireOrCreateBufferSet () {
@@ -1160,6 +1164,8 @@ namespace Squared.Illuminant.Particles {
         /// </summary>
         public Vector4    Global = Vector4.One;
 
+        public Bezier4 ColorFromVelocity = null;
+
         public ParticleColorLifeRamp LifeRamp;
 
         /// <summary>
@@ -1228,6 +1234,11 @@ namespace Squared.Illuminant.Particles {
         /// Multiplies the particle's size, producing a shrink or grow based on the particle's life
         /// </summary>
         public Bezier2       SizeFromLife = null;
+
+        /// <summary>
+        /// Multiplies the particle's size, producing a shrink or grow based on the speed of the particle
+        /// </summary>
+        public Bezier2       SizeFromVelocity = null;
 
         /// <summary>
         /// Life of all particles decreases by this much every second

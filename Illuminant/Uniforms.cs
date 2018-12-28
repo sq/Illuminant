@@ -148,6 +148,8 @@ namespace Squared.Illuminant.Uniforms {
     }
 
     public struct ParticleSystem {
+        public const int VelocityConstantScale = 1000;
+
         // deltaTimeMilliseconds, friction, maximumVelocity, lifeDecayRate
         public Vector4 GlobalSettings;
         // escapeVelocity, bounceVelocityMultiplier, collisionDistance, collisionLifePenalty
@@ -165,7 +167,7 @@ namespace Squared.Illuminant.Uniforms {
                 Configuration.Size.X, Configuration.Size.Y
             );
             GlobalSettings = new Vector4(
-                (float)(deltaTimeSeconds * 1000), Configuration.Friction, 
+                (float)(deltaTimeSeconds * VelocityConstantScale), Configuration.Friction, 
                 Configuration.MaximumVelocity, Configuration.LifeDecayPerSecond
             );
             if (Configuration.Collision != null)

@@ -123,7 +123,7 @@ namespace Squared.Illuminant.Particles.Transforms {
 
         protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
             base.SetParameters(engine, parameters, now, frameIndex);
-            parameters["TimeDivisor"].SetValue(CyclesPerSecond.HasValue ? 1000f / CyclesPerSecond.Value : -1);
+            parameters["TimeDivisor"].SetValue(CyclesPerSecond.HasValue ? Uniforms.ParticleSystem.VelocityConstantScale / CyclesPerSecond.Value : -1);
             parameters["PositionAdd"].SetValue(new Vector4(Position.Add.Evaluate(now), 0));
             parameters["PositionMultiply"].SetValue(new Vector4(Position.Multiply.Evaluate(now), 1));
             parameters["VelocityAdd"].SetValue(new Vector4(Velocity.Add.Evaluate(now), 0));
@@ -147,7 +147,7 @@ namespace Squared.Illuminant.Particles.Transforms {
 
         protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
             base.SetParameters(engine, parameters, now, frameIndex);
-            parameters["TimeDivisor"].SetValue(CyclesPerSecond.HasValue ? 1000f / CyclesPerSecond.Value : -1);
+            parameters["TimeDivisor"].SetValue(CyclesPerSecond.HasValue ? Uniforms.ParticleSystem.VelocityConstantScale / CyclesPerSecond.Value : -1);
             parameters["PositionMatrix"].SetValue(Position);
             parameters["VelocityMatrix"].SetValue(Velocity);
             parameters["AttributeMatrix"].SetValue(Attribute);

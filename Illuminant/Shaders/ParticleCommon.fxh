@@ -7,11 +7,13 @@ struct ParticleSystemSettings {
     float2 RotationFromLifeAndIndex;
 };
 
+#define VelocityConstantScale 1000
+
 uniform ParticleSystemSettings System;
 uniform float StippleFactor;
 
 float getDeltaTimeSeconds () {
-    return System.GlobalSettings.x / 1000;
+    return System.GlobalSettings.x / VelocityConstantScale;
 }
 
 float getDeltaTime () {
@@ -53,16 +55,20 @@ float2 getTexel () {
 #ifdef BEZIERS_DEFINED
 
 uniform ClampedBezier2 SizeFromLife;
+uniform ClampedBezier2 SizeFromVelocity;
 uniform ClampedBezier4 ColorFromLife;
+uniform ClampedBezier4 ColorFromVelocity;
 
-float4 getColorForLifeValue (float life) {
+float4 getColorForLifeAndVelocity (float life, float velocity) {
     float4 result = evaluateBezier4(ColorFromLife, life);
+    result *= evaluateBezier4(ColorFromVelocity, velocity);
     result.rgb *= result.a;
     return result;
 }
 
-float2 getSizeForLifeValue (float life) {
+float2 getSizeForLifeAndVelocity (float life, float velocity) {
     float2 result = evaluateBezier2(SizeFromLife, life);
+    result *= evaluateBezier2(SizeFromVelocity, velocity);
     return System.TexelAndSize.zw * result;
 }
 
