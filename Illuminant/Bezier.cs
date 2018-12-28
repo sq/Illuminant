@@ -436,6 +436,24 @@ namespace Squared.Illuminant {
             }
         }
 
+        public bool IsFullyDynamic {
+            get {
+                DynamicMatrix a = A, b = B, c = C, d = D;
+                return GetIsFullyDynamic(ref a, ref b, ref c, ref d);
+            }
+        }
+
+        private bool GetIsFullyDynamic (ref DynamicMatrix a, ref DynamicMatrix b, ref DynamicMatrix c, ref DynamicMatrix d) {
+            var result = a.IsGenerated;
+            if (Count > 1)
+                result = result && b.IsGenerated;
+            if (Count > 2)
+                result = result && c.IsGenerated;
+            if (Count > 3)
+                result = result && d.IsGenerated;
+            return result;
+        }
+
         public DynamicMatrix Evaluate (float t) {
             DynamicMatrix result = default(DynamicMatrix);
             DynamicMatrix A = this.A;
@@ -445,15 +463,8 @@ namespace Squared.Illuminant {
                 return A;
 
             DynamicMatrix B = this.B, C = this.C, D = this.D;
-            var allDynamic = A.IsGenerated;
-            if (Count > 1)
-                allDynamic = allDynamic && B.IsGenerated;
-            if (Count > 2)
-                allDynamic = allDynamic && C.IsGenerated;
-            if (Count > 3)
-                allDynamic = allDynamic && D.IsGenerated;
 
-            if (allDynamic) {
+            if (GetIsFullyDynamic(ref A, ref B, ref C, ref D)) {
                 Vector2 a = new Vector2(A.Angle, A.Scale), 
                     b = new Vector2(B.Angle, B.Scale),
                     c = new Vector2(C.Angle, C.Scale), 
@@ -739,6 +750,25 @@ namespace Squared.Illuminant.Uniforms {
             BezierM.GetRowOfMatrix(row, ref b.Matrix, out B);
             BezierM.GetRowOfMatrix(row, ref c.Matrix, out C);
             BezierM.GetRowOfMatrix(row, ref d.Matrix, out D);
+        }
+
+        public ClampedBezier4 (IBezier src, ref Vector2 a, ref Vector2 b, ref Vector2 c, ref Vector2 d, float z = 0, float w = 0) {
+            if (src == null) {
+                this = One;
+                return;
+            }
+
+            var range = src.MaxValue - src.MinValue;
+            if ((range == 0) || (src.Count <= 1))
+                range = 1;
+            RangeAndCount = new Vector4(
+                Math.Min(src.MinValue, src.MaxValue),
+                1.0f / range, src.Count, 4
+            );
+            A = new Vector4(a, z, w);
+            B = new Vector4(b, z, w);
+            C = new Vector4(c, z, w);
+            D = new Vector4(d, z, w);
         }
 
         public ClampedBezier4 (IBezier src, ref Vector4 a, ref Vector4 b, ref Vector4 c, ref Vector4 d) {

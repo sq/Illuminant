@@ -943,9 +943,17 @@ namespace ParticleEditor {
                             using (var pb = PrimitiveBatch<VertexPositionColorTexture>.New(
                                 Nuklear.PendingGroup, 9999, m, (dm, _) => {
                                     Squared.Illuminant.Uniforms.ClampedBezier4 cb;
-                                    if (bm != null)
-                                        cb = new Squared.Illuminant.Uniforms.ClampedBezier4(bm, selectedRow);
-                                    else
+                                    if (bm != null) {
+                                        if (bm.IsFullyDynamic) {
+                                            Vector2 va = new Vector2(bm.A.Angle, bm.A.Scale), 
+                                                vb = new Vector2(bm.B.Angle, bm.B.Scale),
+                                                vc = new Vector2(bm.C.Angle, bm.C.Scale), 
+                                                vd = new Vector2(bm.D.Angle, bm.D.Scale);
+                                            cb = new Squared.Illuminant.Uniforms.ClampedBezier4(b, ref va, ref vb, ref vc, ref vd, 0, 0);
+                                        } else {
+                                            cb = new Squared.Illuminant.Uniforms.ClampedBezier4(bm, selectedRow);
+                                        }
+                                    } else
                                         cb = new Squared.Illuminant.Uniforms.ClampedBezier4(b);
                                     Game.Materials.TrySetBoundUniform(m, "Bezier", ref cb);
                                     m.Effect.Parameters["CurrentT"].SetValue(currentT.GetValueOrDefault(-99999));
