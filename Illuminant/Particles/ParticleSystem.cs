@@ -951,10 +951,11 @@ namespace Squared.Illuminant.Particles {
                     }
 
                     var ar = appearance != null ? appearance.AnimationRate : Vector2.Zero;
-                    p["AnimationRateAndRotationAndZToY"].SetValue(new Vector4(
-                        ar.X, ar.Y,
+                    var arv = new Vector4(
+                        (ar.X != 0) ? 1.0f / ar.X : 0, (ar.Y != 0) ? 1.0f / ar.Y : 0,
                         Configuration.RotationFromVelocity ? 1f : 0f, Configuration.ZToY
-                    ));
+                    );
+                    p["AnimationRateAndRotationAndZToY"].SetValue(arv);
 
                     p["StippleFactor"].SetValue(overrideStippleFactor.GetValueOrDefault(Configuration.StippleFactor));
 
@@ -1065,6 +1066,8 @@ namespace Squared.Illuminant.Particles {
     }
 
     public class ParticleAppearance {
+        private Bounds _Region = Bounds.Unit;
+
         /// <summary>
         /// Configures the sprite used to render each particle.
         /// If null, the particle will be a solid-color quad
@@ -1074,7 +1077,45 @@ namespace Squared.Illuminant.Particles {
         /// Configures the region of the texture used by the particle. If you specify a subregion the region
         ///  will scroll as the particle animates.
         /// </summary>
-        public Bounds Region = Bounds.Unit;
+        public Bounds Region {
+            get {
+                return _Region;
+            }
+            set {
+                _Region = value;
+            }
+        }
+        /// <summary>
+        /// Equivalent to Region, but in pixel units. A texture must currently be set.
+        /// </summary>
+        public Bounds? RegionPx {
+            get {
+                var tex = Texture?.Instance;
+                if (tex != null) {
+                    var sz = new Vector2(tex.Width, tex.Height);
+                    var result = _Region;
+                    result.TopLeft *= sz;
+                    result.BottomRight *= sz;
+                    return result;
+                } else
+                    return null;
+            }
+            set {
+                var tex = Texture?.Instance;
+                if (tex == null)
+                    return;
+
+                if (value == null)
+                    _Region = Bounds.Unit;
+                else {
+                    var b = value.Value;
+                    var sz = new Vector2(tex.Width, tex.Height);
+                    b.TopLeft /= sz;
+                    b.BottomRight /= sz;
+                    _Region = b;
+                }
+            }
+        }
         /// <summary>
         /// Animates through the sprite texture based on the particle's life value, if set
         /// Smaller values will result in slower animation. Zero turns off animation.
@@ -1189,9 +1230,9 @@ namespace Squared.Illuminant.Particles {
         public Bezier2       SizeFromLife = null;
 
         /// <summary>
-        /// Life of all particles decreases by this much every update
+        /// Life of all particles decreases by this much every second
         /// </summary>
-        public float         GlobalLifeDecayRate = 1;
+        public float         LifeDecayPerSecond = 1;
 
         /// <summary>
         /// Configures collision detection for particles

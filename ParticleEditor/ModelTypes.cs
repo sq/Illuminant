@@ -38,6 +38,7 @@ namespace ParticleEditor {
                 {
                     "ParticleAppearance", new Dictionary<string, ModelTypeInfo> {
                         {"AnimationRate", new ModelTypeInfo { Min = -100, Max = 100 } },
+                        {"Bounds", new ModelTypeInfo { Min = 0, Max = 1 } },
                     }
                 },
                 {

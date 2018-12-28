@@ -569,7 +569,8 @@ namespace ParticleEditor {
 
                 case "NullableLazyResource`1":
                     return RenderTextureProperty(cpi, instance, ref changed, actualName, value);
-                
+
+                case "Bounds":
                 case "ParticleAppearance":
                 case "ParticleColor":
                 case "ParticleCollision":
@@ -988,8 +989,13 @@ namespace ParticleEditor {
                         grp.Value.Dispose();
 
                     if (changed) {
-                        if (instance != null)
-                            cpi.Setter(instance, dm);
+                        if (instance != null) {
+                            if (cpi.Type == typeof(Matrix)) {
+                                dm.Regenerate();
+                                cpi.Setter(instance, dm.Matrix);
+                            } else
+                                cpi.Setter(instance, dm);
+                        }
                         return true;
                     }
                 } else {
@@ -1141,6 +1147,23 @@ namespace ParticleEditor {
                     cpi.Name, hasValue ? Path.GetFileName(value.Name) : "none"
                 )
             );
+
+            if (hasValue && value.Instance != null) {
+                var tex = value.Instance;
+                var height = Math.Min(240, tex.Height);
+                Bounds panel;
+                if (Nuklear.CustomPanel(height, out panel)) {
+                    float scaleF = Math.Min(
+                        height / (float)tex.Height,
+                        panel.Size.X / (float)tex.Width
+                    );
+                    var ss = (tex.Format == SurfaceFormat.Vector4)
+                        ? SamplerState.PointClamp
+                        : SamplerState.LinearClamp;
+                    Nuklear.PendingRenderer.Draw(tex, panel.TopLeft, scale: new Vector2(scaleF), layer: 9999, samplerState: ss);
+                }
+            }
+
             return changed;
         }
 

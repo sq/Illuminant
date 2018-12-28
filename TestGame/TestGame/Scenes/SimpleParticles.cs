@@ -123,7 +123,7 @@ namespace TestGame.Scenes {
                         LifePenalty = 1,
                     },
                     MaximumVelocity = 2048,
-                    GlobalLifeDecayRate = 1.2f
+                    LifeDecayPerSecond = 1.2f
                 }
             ) {
                 Transforms = {

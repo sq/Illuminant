@@ -87,9 +87,9 @@ namespace ParticleEditor {
         public void AddSystem () {
             var config = new ParticleSystemConfiguration() {
                 Color = {
-                    OpacityFromLife = 256,
+                    OpacityFromLife = 64,
                 },
-                GlobalLifeDecayRate = 90,
+                LifeDecayPerSecond = 64,
                 Size = Vector2.One * 1.5f
             };
             var model = new SystemModel {
@@ -180,20 +180,18 @@ namespace ParticleEditor {
             var xformModel = new TransformModel {
                 Type = typeof(Spawner),
                 Properties = {
-                    { "MinRate", ModelProperty.New(240) },
+                    { "MinRate", ModelProperty.New(120) },
                     { "MaxRate", ModelProperty.New(240) },
                     { "Position",
                         ModelProperty.New(new Formula {
-                            Constant = new Vector4(0, 0, 0, 256),
+                            Constant = new Vector4(0, 0, 0, 64),
                             RandomScale = new Vector4(256, 256, 0, 0),
-                            RandomOffset = new Vector4(-0.5f, -0.5f, 0, 0),
                             Circular = true
                         })
                     },
                     { "Velocity",
                         ModelProperty.New(new Formula {
                             RandomScale = new Vector4(32f, 32f, 0, 0),
-                            RandomOffset = new Vector4(-0.5f, -0.5f, 0, 0),
                             Circular = true
                         })
                     },

@@ -166,7 +166,7 @@ namespace Squared.Illuminant.Uniforms {
             );
             GlobalSettings = new Vector4(
                 (float)(deltaTimeSeconds * 1000), Configuration.Friction, 
-                Configuration.MaximumVelocity, Configuration.GlobalLifeDecayRate
+                Configuration.MaximumVelocity, Configuration.LifeDecayPerSecond
             );
             if (Configuration.Collision != null)
                 CollisionSettings = new Vector4(

@@ -95,8 +95,8 @@ float4 getRampedColorForLifeValueAndIndex (float life, float index) {
 }
 
 void VS_Core (
-    in float4  position,
-    in float3  corner,
+    in  float4 position,
+    in  float3 corner,
     in  int2   cornerIndex : BLENDINDICES0, // 0-3
     out float4 result,
     out float2 texCoord
@@ -111,10 +111,14 @@ void VS_Core (
         float4(screenXyz.xy * Viewport.Scale.xy, screenXyz.z, 1), 0
     );
 
-    texCoord = (Corners[cornerIndex.x].xy / 2) + 0.5;
-    texCoord = lerp(BitmapTextureRegion.xy, BitmapTextureRegion.zw, texCoord);
+    float2 cornerCoord = (Corners[cornerIndex.x].xy / 2) + 0.5;
+    texCoord = lerp(BitmapTextureRegion.xy, BitmapTextureRegion.zw, cornerCoord);
 
-    texCoord += (BitmapTextureRegion.zw - BitmapTextureRegion.xy) * floor(getAnimationRate() * position.w);
+    float2 texSize = (BitmapTextureRegion.zw - BitmapTextureRegion.xy);
+    float2 frameCountXy = floor(1.0 / texSize);
+    float2 frameIndexXy = floor((getAnimationRate() * position.w) % frameCountXy);
+
+    texCoord += (frameIndexXy * texSize);
 }
 
 void VS_PosVelAttrWhite(
