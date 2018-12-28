@@ -4,6 +4,7 @@
 #define PI 3.14159265358979323846
 #define MAX_POSITION_CONSTANTS 32
 
+uniform bool   AlignVelocityAndPosition, ZeroZAxis;
 uniform float  PositionConstantCount;
 uniform float4 PositionConstants[MAX_POSITION_CONSTANTS];
 uniform float4 ChunkSizeAndIndices;
@@ -18,21 +19,20 @@ void VS_Spawn (
     result = float4(xy.x, xy.y, 0, 1);
 }
 
-float4 evaluateFormula (float4 constant, float4 scale, float4 offset, float randomCircularity, float2 xy) {
+float4 evaluateFormula (float4 constant, float4 scale, float4 offset, float randomCircularity, float4 randomness) {
     float4 result = constant;
 
-    float4 rs = random(xy);
-    float4 nonCircular = (rs + offset) * scale;
+    float4 nonCircular = (randomness + offset) * scale;
 
     if (randomCircularity >= 0.5) {
-        float o = rs.x * PI * 2;
-        float z = (rs.y - 0.5) * 2;
-        float multiplier = sqrt(1 - (z * z));
-        float3 randomNormal = float3(multiplier * cos(o), multiplier * sin(o), z);
+        float o = randomness.x * PI * 2;
+        float z = (randomness.y - 0.5) * 2;
+        float xyMultiplier = sqrt(1 - (z * z));
+        float3 randomNormal = float3(xyMultiplier * cos(o), xyMultiplier * sin(o), z);
         float4 circular = float4(
-            randomNormal.x * rs.z * scale.x,
-            randomNormal.y * rs.z * scale.y,
-            randomNormal.z * rs.z * scale.z,
+            randomNormal.x * randomness.z * scale.x,
+            randomNormal.y * randomness.z * scale.y,
+            randomNormal.z * randomness.z * scale.z,
             nonCircular.w
         );
         result += circular;
@@ -58,14 +58,28 @@ void PS_Spawn (
             xy, newPosition, newVelocity, newAttributes
         );
     } else {
+        float2 randomOffset1 = float2(index % 8039, 0 + (index % 57));
+        float2 randomOffset2 = float2(index % 6180, 1 + (index % 4031));
+        float2 randomOffset3 = float2(index % 2025, 2 + (index % 65531));
+        float4 random1 = random(randomOffset1);
+        float4 random2 = random(randomOffset2);
+        float4 random3 = random(randomOffset3);
+        // The x and y element of random samples determines the normal
+        if (AlignVelocityAndPosition)
+            random2.xy = random1.xy;
+        // Ensure the z axis of generated circular coordinates is 0, resulting in pure xy normals
+        if (ZeroZAxis)
+            random2.y = random1.y = 0.5;
+
         float relativeIndex = (index - ChunkSizeAndIndices.y) + ChunkSizeAndIndices.w;
         float positionIndex = relativeIndex % PositionConstantCount;
         float4 positionConstant = PositionConstants[positionIndex];
-        float4 tempPosition = evaluateFormula(positionConstant, Configuration[0], Configuration[1], RandomCircularity[0], float2(index % 8039, 0 + (index % 57)));
+        float4 tempPosition = evaluateFormula(positionConstant, Configuration[0], Configuration[1], RandomCircularity[0], random1);
+
         newPosition   = mul(tempPosition, PositionMatrix);
         newPosition.w = tempPosition.w;
-        newVelocity   = evaluateFormula(Configuration[2], Configuration[3], Configuration[4], RandomCircularity[1], float2(index % 6180, 1 + (index % 4031)));
-        newAttributes = evaluateFormula(Configuration[5], Configuration[6], Configuration[7], RandomCircularity[2], float2(index % 2025, 2 + (index % 65531)));
+        newVelocity   = evaluateFormula(Configuration[2], Configuration[3], Configuration[4], RandomCircularity[1], random2);
+        newAttributes = evaluateFormula(Configuration[5], Configuration[6], Configuration[7], RandomCircularity[2], random3);
     }
 }
 

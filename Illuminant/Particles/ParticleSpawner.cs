@@ -17,18 +17,43 @@ namespace Squared.Illuminant.Particles.Transforms {
         [NonSerialized]
         private static int NextSeed = 1;
 
-        public Configuration.Parameter<float> MinRate, MaxRate;
+        /// <summary>
+        /// Minimum number of particles to spawn per second.
+        /// If this value is larger than MaxRate it will be ignored.
+        /// </summary>
+        public Parameter<float> MinRate;
+        /// <summary>
+        /// Maximum number of particles to spawn per second.
+        /// </summary>
+        public Parameter<float> MaxRate;
 
-        public bool     RatePerPosition;
+        /// <summary>
+        /// If set, the MinRate and MaxRate parameters apply to each position instead of the spawner as a whole.
+        /// </summary>
+        public bool RatePerPosition = true;
+        /// <summary>
+        /// If set, the randomly selected normals for position and velocity will be identical.
+        /// If not set, they will have different randomly selected normals.
+        /// </summary>
+        public bool AlignVelocityAndPosition = true;
+        /// <summary>
+        /// If set, the Z axis of position and velocity normals will be zero - producing random XY normals.
+        /// If not set, random normals will be 3-dimensional.
+        /// </summary>
+        public bool ZeroZAxis = true;
 
         public Formula  Position = Formula.UnitNormal(), 
             Velocity = Formula.UnitNormal(), 
             Attributes = Formula.One();
 
-        public Configuration.Parameter<DynamicMatrix> PositionPostMatrix = DynamicMatrix.Identity;
+        /// <summary>
+        /// Applies a matrix transform to particle positions after the position formula has been evaluated.
+        /// </summary>
+        public Parameter<DynamicMatrix> PositionPostMatrix = DynamicMatrix.Identity;
 
         /// <summary>
-        /// You can set the W value of a position to -1 for it to inherit the main position's W value
+        /// A list of additional positions to spawn particles from.
+        /// You can set the W value of a position to -1 for it to inherit the main position's W value.
         /// </summary>
         public readonly List<Vector4> AdditionalPositions = new List<Vector4>();
 
@@ -132,6 +157,10 @@ namespace Squared.Illuminant.Particles.Transforms {
 
             var count = Math.Min(1 + AdditionalPositions.Count, MaxPositions);
 
+            parameters["AlignVelocityAndPosition"].SetValue(
+                AlignVelocityAndPosition && Position.Circular && Velocity.Circular
+            );
+            parameters["ZeroZAxis"].SetValue(ZeroZAxis);
             parameters["PositionConstantCount"].SetValue((float)count);
             parameters["Configuration"].SetValue(Temp);
             parameters["RandomCircularity"].SetValue(Temp2);
