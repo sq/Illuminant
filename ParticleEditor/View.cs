@@ -102,7 +102,7 @@ namespace ParticleEditor {
 
             using (var g = BatchGroup.New(container, layer)) {
                 int i = 0;
-                foreach (var s in Systems)
+                foreach (var s in Systems.OrderBy(s => s.Model.UpdateOrder))
                     s.Instance.Update(g, i++);
             }
         }
@@ -110,7 +110,7 @@ namespace ParticleEditor {
         public void Draw (ParticleEditor editor, IBatchContainer container, int layer) {
             using (var g = BatchGroup.New(container, layer)) {
                 int i = 0;
-                foreach (var s in Systems)
+                foreach (var s in Systems.OrderBy(s => s.Model.DrawOrder))
                     s.Instance.Render(g, i++, blendState: BlendState.AlphaBlend);
             }
         }

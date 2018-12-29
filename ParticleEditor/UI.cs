@@ -147,8 +147,11 @@ namespace ParticleEditor {
             var i = s.Instance;
 
             Nuke.nk_layout_row_dynamic(ctx, LineHeight + 3, 1);
-
             Nuklear.Textbox(ref s.Model.Name);
+
+            Nuke.nk_layout_row_dynamic(ctx, LineHeight + 3, 2);
+            Nuklear.Property("Draw Order", ref s.Model.DrawOrder, -1, Model.Systems.Count + 1, 1, 1);
+            Nuklear.Property("Update Order", ref s.Model.UpdateOrder, -1, Model.Systems.Count + 1, 1, 1);
 
             var config = Controller.SelectedSystem.Model.Configuration;
             SystemProperties.Prepare(config);

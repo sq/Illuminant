@@ -64,6 +64,7 @@ namespace Squared.Illuminant.Modeling {
 
     public class SystemModel {
         public string Name;
+        public int UpdateOrder, DrawOrder;
         public ParticleSystemConfiguration Configuration;
         public readonly List<TransformModel> Transforms = new List<TransformModel>();
 
