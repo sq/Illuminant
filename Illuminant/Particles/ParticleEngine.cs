@@ -134,16 +134,16 @@ namespace Squared.Illuminant.Particles {
             var obSize = RasterizeOffsetBuffer.VertexCount * Marshal.SizeOf(typeof(ParticleOffsetVertex));
             var vbSize = RasterizeVertexBuffer.VertexCount * Marshal.SizeOf(typeof(ParticleSystemVertex));
 
-            // RenderData and RenderColor
+            // Attributes, RenderData and RenderColor
             long chunkTotal = 0;
             foreach (var s in Systems)
                 foreach (var c in s.Chunks)
-                    chunkTotal += (c.Size * c.Size * (Configuration.HighPrecision ? 4 * 4 : 2 * 4) * 2);
+                    chunkTotal += (c.Size * c.Size * (Configuration.HighPrecision ? 4 * 4 : 2 * 4) * 3);
 
-            // Position/Velocity/Attributes buffers
+            // Position/Velocity buffers
             long bufTotal = 0;
             foreach (var buf in AllBuffers) {
-                var bufSize = buf.Size * buf.Size * (buf.Attributes != null ? 3 : 2) * (Configuration.HighPrecision ? 4 * 4 : 2 * 4);
+                var bufSize = buf.Size * buf.Size * 2 * (Configuration.HighPrecision ? 4 * 4 : 2 * 4);
                 bufTotal += bufSize;
             }
 

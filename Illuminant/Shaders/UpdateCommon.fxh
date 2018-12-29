@@ -53,7 +53,6 @@ float2 getSizeForLifeAndVelocity (float life, float velocityLength) {
 
 float4 getRampedColorForLifeValueAndIndex (float life, float velocityLength, float index) {
     float4 result = getColorForLifeAndVelocity(life, velocityLength);
-    return result;
 
     [branch]
     if (LifeRampSettings.x != 0) {
@@ -89,7 +88,7 @@ void computeRenderData (
     }
     // FIXME
     float index = vpos.x + (vpos.y * 256);
-    float velocityLength = length(velocity);
+    float velocityLength = max(length(velocity), 0.001);
     renderColor = attributes * getRampedColorForLifeValueAndIndex(position.w, velocityLength, index);
     renderData.xy = getSizeForLifeAndVelocity(position.w, velocityLength);
     renderData.z = getRotationForVelocity(velocity) +

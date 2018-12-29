@@ -106,10 +106,9 @@ namespace Squared.Illuminant.Particles {
 
             public long LastTurnUsed;
 
-            public RenderTargetBinding[] Bindings3, Bindings4;
+            public RenderTargetBinding[] Bindings2, Bindings3, Bindings4;
             public RenderTarget2D PositionAndLife;
             public RenderTarget2D Velocity;
-            public RenderTarget2D Attributes;
 
             public bool IsDisposed { get; private set; }
 
@@ -120,16 +119,15 @@ namespace Squared.Illuminant.Particles {
                 Size = configuration.ChunkSize;
                 MaximumCount = Size * Size;
 
+                Bindings2 = new RenderTargetBinding[2];
                 Bindings3 = new RenderTargetBinding[3];
                 Bindings4 = new RenderTargetBinding[4];
 
                 PositionAndLife = CreateRenderTarget(configuration, device);
                 Velocity = CreateRenderTarget(configuration, device);
-                Attributes = CreateRenderTarget(configuration, device);
 
-                Bindings4[0] = Bindings3[0] = new RenderTargetBinding(PositionAndLife);
-                Bindings4[1] = Bindings3[1] = new RenderTargetBinding(Velocity);
-                Bindings3[2] = new RenderTargetBinding(Attributes);
+                Bindings4[0] = Bindings3[0] = Bindings2[0] = new RenderTargetBinding(PositionAndLife);
+                Bindings4[1] = Bindings3[1] = Bindings2[1] = new RenderTargetBinding(Velocity);
             }
 
             internal RenderTarget2D CreateRenderTarget (ParticleEngineConfiguration configuration, GraphicsDevice device) {
@@ -148,8 +146,6 @@ namespace Squared.Illuminant.Particles {
                 IsDisposed = true;
                 PositionAndLife.Dispose();
                 Velocity.Dispose();
-                if (Attributes != null)
-                    Attributes.Dispose();
             }
         }
 
@@ -161,7 +157,7 @@ namespace Squared.Illuminant.Particles {
             internal BufferSet Previous, Current;
 
             public OcclusionQuery Query;
-            public RenderTarget2D RenderData, RenderColor;
+            public RenderTarget2D Attributes, RenderData, RenderColor;
 
             public bool IsDisposed { get; private set; }
 
@@ -175,6 +171,10 @@ namespace Squared.Illuminant.Particles {
                 MaximumCount = Size * Size;
 
                 Query = new OcclusionQuery(device);
+                Attributes = new RenderTarget2D(
+                    device, Size, Size, false, SurfaceFormat.Vector4, 
+                    DepthFormat.None, 0, RenderTargetUsage.PreserveContents
+                );
                 RenderData = new RenderTarget2D(
                     device, Size, Size, false, SurfaceFormat.Vector4, 
                     DepthFormat.None, 0, RenderTargetUsage.PreserveContents
@@ -191,6 +191,7 @@ namespace Squared.Illuminant.Particles {
 
                 IsDisposed = true;
 
+                Attributes.Dispose();
                 RenderData.Dispose();
                 RenderColor.Dispose();
                 Query.Dispose();
@@ -308,7 +309,7 @@ namespace Squared.Illuminant.Particles {
                 var curr = c.Current;
                 var pos = new BufferInitializer<TElement> { Buffer = curr.PositionAndLife, Initializer = positionInitializer, Offset = offset };
                 var vel = new BufferInitializer<TElement> { Buffer = curr.Velocity, Initializer = velocityInitializer, Offset = offset };
-                var attr = new BufferInitializer<TElement> { Buffer = curr.Attributes, Initializer = attributeInitializer, Offset = offset };
+                var attr = new BufferInitializer<TElement> { Buffer = c.Attributes, Initializer = attributeInitializer, Offset = offset };
                 var job = new ChunkInitializer<TElement> {
                     System = this,
                     Position = pos,
@@ -443,7 +444,7 @@ namespace Squared.Illuminant.Particles {
                         chunkMaterial, chunk,
                         setParameters,
                         deltaTimeSeconds, clearFirst, 
-                        now, bindRenderDataAsOutput
+                        now, bindRenderDataAsOutput, (spawner != null)
                     );
                 }
             }
@@ -453,7 +454,7 @@ namespace Squared.Illuminant.Particles {
             IBatchContainer container, int layer, Material m,
             Chunk chunk, Transforms.ParameterSetter setParameters,
             double deltaTimeSeconds, bool clearFirst, 
-            float now, bool bindRenderDataAsOutput
+            float now, bool bindRenderDataAsOutput, bool isSpawning
         ) {
             var prev = chunk.Previous;
             var curr = chunk.Current;
@@ -472,8 +473,11 @@ namespace Squared.Illuminant.Particles {
                         curr.Bindings4[2] = new RenderTargetBinding(chunk.RenderColor);
                         curr.Bindings4[3] = new RenderTargetBinding(chunk.RenderData);
                         dm.Device.SetRenderTargets(curr.Bindings4);
-                    } else {
+                    } else if (isSpawning) {
+                        curr.Bindings3[2] = chunk.Attributes;
                         dm.Device.SetRenderTargets(curr.Bindings3);
+                    } else {
+                        dm.Device.SetRenderTargets(curr.Bindings2);
                     }
                     dm.Device.Viewport = vp;
 
@@ -489,7 +493,7 @@ namespace Squared.Illuminant.Particles {
 
                             var at = p["AttributeTexture"];
                             if (at != null)
-                                at.SetValue(prev.Attributes);
+                                at.SetValue(isSpawning ? null : chunk.Attributes);
                         }
 
                         var dft = p["DistanceFieldTexture"];
@@ -790,12 +794,16 @@ namespace Squared.Illuminant.Particles {
                     if (shouldSkip)
                         continue;
 
+                    var clearFirst = isFirstXform && (spawner == null);
+
                     UpdatePass(
                         group, i++, it.GetMaterial(Engine.ParticleMaterials),
                         startedWhen, spawner, it.SetParameters, 
-                        actualDeltaTimeSeconds, isFirstXform, now, false
+                        actualDeltaTimeSeconds, clearFirst, now, false
                     );
-                    isFirstXform = false;
+
+                    if (spawner == null)
+                        isFirstXform = false;
                 }
 
                 if (IsClearPending) {

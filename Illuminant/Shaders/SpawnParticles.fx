@@ -55,9 +55,13 @@ void PS_Spawn (
 
     [branch]
     if ((index < ChunkSizeAndIndices.y) || (index > ChunkSizeAndIndices.z)) {
+        discard;
+        /*
+        // FIXME: We're not actually touching the attributes here
         readStateOrDiscard(
             xy, newPosition, newVelocity, newAttributes
         );
+        */
     } else {
         float2 randomOffset1 = float2(index % 8039, 0 + (index % 57));
         float2 randomOffset2 = float2(index % 6180, 1 + (index % 4031));
