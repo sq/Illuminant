@@ -11,7 +11,7 @@ void PS_Update (
     out float4 renderData  : COLOR3
 ) {
     float4 oldPosition, oldVelocity, attributes;
-    readState(
+    readStateOrDiscard(
         xy, oldPosition, oldVelocity, attributes
     );
 

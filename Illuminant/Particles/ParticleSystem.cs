@@ -241,6 +241,8 @@ namespace Squared.Illuminant.Particles {
             Configuration = configuration;
             LiveCount = 0;
 
+            engine.Systems.Add(this);
+
             lock (engine.Coordinator.CreateResourceLock)
                 LivenessQueryRT = new RenderTarget2D(engine.Coordinator.Device, 1, 1, false, SurfaceFormat.Color, DepthFormat.None);
         }
@@ -345,28 +347,28 @@ namespace Squared.Illuminant.Particles {
             return null;
         }
 
-        private void UpdatePass (
-            IBatchContainer container, int layer, Material m,
+        private void RunSpawner (
+            IBatchContainer container, ref int layer, Material m,
             long startedWhen, Transforms.Spawner spawner,
             Transforms.ParameterSetter setParameters,
-            double deltaTimeSeconds, bool clearFirst, 
-            float now, bool bindRenderDataAsOutput
+            double deltaTimeSeconds, float now
         ) {
             var device = container.RenderManager.DeviceManager.Device;
 
-            int? spawnId = null;
             int spawnCount = 0;
 
-            if (spawner != null) {
-                spawner.Tick(now, deltaTimeSeconds, out spawnCount);
+            spawner.Tick(now, deltaTimeSeconds, out spawnCount);
 
-                if (spawnCount <= 0)
-                    return;
-                else if (spawnCount > ChunkMaximumCount)
-                    throw new Exception("Spawn count too high to fit in a chunk");
+            if (spawnCount <= 0)
+                return;
+            else if (spawnCount > ChunkMaximumCount)
+                throw new Exception("Spawn count too high to fit in a chunk");
 
+            Chunk chunk = null;
+            var state = default(SpawnState);
+            while (chunk == null) {
                 // FIXME: Inefficient. Spawn across two buffers?
-                spawnId = GetSpawnTarget(spawnCount);
+                var chosenTarget = GetSpawnTarget(spawnCount);
 
                 // FIXME: This makes better use of space in buffers but causes
                 //  a draw order glitch when creating a new buffer
@@ -382,81 +384,71 @@ namespace Squared.Illuminant.Particles {
                 }
                 */
 
-                if (spawnId == null) {
-                    var chunk = CreateChunk(device);
-                    spawnId = chunk.ID;
-                    SpawnStates[chunk.ID] = new SpawnState { Offset = 0, Free = ChunkMaximumCount };
+                if (chosenTarget == null) {
+                    chunk = CreateChunk(device);
+                    SpawnStates[chunk.ID] = state = new SpawnState { Offset = 0, Free = ChunkMaximumCount };
                     Chunks.Add(chunk);
+                    break;
+                } else {
+                    chunk = Chunks.FirstOrDefault(c => c.ID == chosenTarget.Value);
+                    if (chunk != null) {
+                        if (!SpawnStates.TryGetValue(chunk.ID, out state))
+                            SpawnStates[chunk.ID] = state = new SpawnState { Offset = ChunkMaximumCount, Free = 0 };
+                        break;
+                    } else {
+                        LivenessInfos.Remove(chosenTarget.Value);
+                        SpawnStates.Remove(chosenTarget.Value);
+                    }
+                    // FIXME
                 }
             }
+
+            if (chunk == null)
+                throw new Exception("Failed to locate or create a chunk to spawn in");
+
+            var first = state.Offset;
+            var last = state.Offset + spawnCount - 1;
+            spawner.SetIndices(first, last);
+            // Console.WriteLine("Spawning {0}-{1} free {2}", first, last, spawnState.Free);
+
+            state.Offset += spawnCount;
+            state.Free -= spawnCount;
+
+            SpawnStates[chunk.ID] = state;
+
+            RunTransform(
+                chunk, container, ref layer, m,
+                startedWhen, true,
+                setParameters, deltaTimeSeconds,
+                false, now, false
+            );
+        }
+
+        private void RunTransform (
+            Chunk chunk,
+            IBatchContainer container, ref int layer, Material m,
+            long startedWhen, bool isSpawning,
+            Transforms.ParameterSetter setParameters,
+            double deltaTimeSeconds, bool isFirstXform,
+            float now, bool isUpdate
+        ) {
+            if (chunk == null)
+                throw new ArgumentNullException();
+
+            var device = container.RenderManager.DeviceManager.Device;
 
             var e = m.Effect;
             var p = (e != null) ? e.Parameters : null;
 
-            using (var batch = BatchGroup.New(
-                container, layer,
-                after: (dm, _) => {
-                    // Incredibly pointless cleanup mandated by XNA's bugs
-                    for (var i = 0; i < 4; i++)
-                        dm.Device.VertexTextures[i] = null;
-                    for (var i = 0; i < 16; i++)
-                        dm.Device.Textures[i] = null;
-                }
-            )) {
-                if (spawner == null)
-                    RotateBuffers();
+            var li = GetLivenessInfo(chunk);
+            UpdateChunkLivenessQuery(li);
 
-                if (e != null)
-                    RenderTrace.Marker(batch, -9999, "Particle transform {0}", e.CurrentTechnique.Name);
+            var chunkMaterial = m;
+            if (isSpawning)
+                li.DeadFrameCount = 0;
+            else
+                RotateBuffers(chunk);
 
-                int i = 0;
-
-                foreach (var chunk in Chunks) {
-                    var li = GetLivenessInfo(chunk);
-                    UpdateChunkLivenessQuery(li);
-
-                    var chunkMaterial = m;
-                    if (spawner != null) {
-                        if (chunk.ID != spawnId) {
-                            chunkMaterial = Engine.ParticleMaterials.NullTransform;
-                        } else {
-                            chunkMaterial = m;
-
-                            SpawnState spawnState;
-                            if (!SpawnStates.TryGetValue(spawnId.Value, out spawnState))
-                                spawnState = new SpawnState { Offset = ChunkMaximumCount, Free = 0 };
-
-                            var first = spawnState.Offset;
-                            var last = spawnState.Offset + spawnCount - 1;
-                            spawner.SetIndices(first, last);
-                            // Console.WriteLine("Spawning {0}-{1} free {2}", first, last, spawnState.Free);
-
-                            spawnState.Offset += spawnCount;
-                            spawnState.Free -= spawnCount;
-
-                            SpawnStates[spawnId.Value] = spawnState;
-
-                            li.DeadFrameCount = 0;
-                        }
-                    }
-
-                    ChunkUpdatePass(
-                        batch, i++,
-                        chunkMaterial, chunk,
-                        setParameters,
-                        deltaTimeSeconds, clearFirst, 
-                        now, bindRenderDataAsOutput, (spawner != null)
-                    );
-                }
-            }
-        }
-
-        private void ChunkUpdatePass (
-            IBatchContainer container, int layer, Material m,
-            Chunk chunk, Transforms.ParameterSetter setParameters,
-            double deltaTimeSeconds, bool clearFirst, 
-            float now, bool bindRenderDataAsOutput, bool isSpawning
-        ) {
             var prev = chunk.Previous;
             var curr = chunk.Current;
 
@@ -464,13 +456,14 @@ namespace Squared.Illuminant.Particles {
                 prev.LastTurnUsed = Engine.CurrentTurn;
             curr.LastTurnUsed = Engine.CurrentTurn;
 
-            var e = m.Effect;
-            var p = (e != null) ? e.Parameters : null;
+            if (e != null)
+                RenderTrace.Marker(container, layer++, "Particle transform {0}", e.CurrentTechnique.Name);
+
             using (var batch = NativeBatch.New(
-                container, layer, m,
+                container, layer++, m,
                 (dm, _) => {
                     var vp = new Viewport(0, 0, Engine.Configuration.ChunkSize, Engine.Configuration.ChunkSize);
-                    if (bindRenderDataAsOutput) {
+                    if (isUpdate) {
                         curr.Bindings4[2] = new RenderTargetBinding(chunk.RenderColor);
                         curr.Bindings4[3] = new RenderTargetBinding(chunk.RenderData);
                         dm.Device.SetRenderTargets(curr.Bindings4);
@@ -513,7 +506,7 @@ namespace Squared.Illuminant.Particles {
                         m.Flush();
                     }
 
-                    if (clearFirst)
+                    if (isFirstXform && !isSpawning)
                         dm.Device.Clear(Color.Transparent);
                 },
                 (dm, _) => {
@@ -540,7 +533,7 @@ namespace Squared.Illuminant.Particles {
                             dft.SetValue((Texture2D)null);
                     }
                 }
-            )) {
+            ))  {
                 if (e != null)
                     batch.Add(new NativeDrawCall(
                         PrimitiveType.TriangleList, Engine.TriVertexBuffer, 0,
@@ -721,16 +714,14 @@ namespace Squared.Illuminant.Particles {
             return result;
         }
 
-        private void RotateBuffers () {
+        private void RotateBuffers (Chunk chunk) {
             Engine.NextTurn();
 
-            foreach (var chunk in Chunks) {
-                var prev = chunk.Previous;
-                chunk.Previous = chunk.Current;
-                chunk.Current = AcquireOrCreateBufferSet();
-                if (prev != null)
-                    Engine.DiscardedBuffers.Add(prev);
-            }
+            var prev = chunk.Previous;
+            chunk.Previous = chunk.Current;
+            chunk.Current = AcquireOrCreateBufferSet();
+            if (prev != null)
+                Engine.DiscardedBuffers.Add(prev);
         }
 
         public void Update (IBatchContainer container, int layer, float? deltaTimeSeconds = null) {
@@ -778,69 +769,95 @@ namespace Squared.Illuminant.Particles {
                     NewChunks.Clear();
                 }
 
-                var isFirstXform = true;
-                foreach (var t in Transforms) {
-                    var it = (Transforms.IParticleTransform)t;
-                    var spawner = t as Transforms.Spawner;
-
-                    var shouldSkip = !t.IsActive;
-                    if (shouldSkip)
-                        continue;
-
-                    // var clearFirst = isFirstXform && (spawner == null);
-                    var clearFirst = spawner == null;
-
-                    UpdatePass(
-                        group, i++, it.GetMaterial(Engine.ParticleMaterials),
-                        startedWhen, spawner, it.SetParameters, 
-                        actualDeltaTimeSeconds, clearFirst, now, false
-                    );
-
-                    if (spawner == null)
-                        isFirstXform = false;
-                }
-
-                if (IsClearPending) {
-                    // occlusion queries suck and never work right, and for some reason
-                    //  the old particle data is a ghost from hell and refuses to disappear
-                    //  even after it is cleared
-                    for (int k = 0; k < 2; k++) {
-                        UpdatePass(
-                            group, i++, pm.Erase,
-                            startedWhen, null,
-                            null, actualDeltaTimeSeconds, true, now, true
-                        );
-                    }
-                    IsClearPending = false;
-                } else if (Configuration.Collision?.DistanceField != null) {
-                    if (Configuration.Collision.DistanceFieldMaximumZ == null)
-                        throw new InvalidOperationException("If a distance field is active, you must set DistanceFieldMaximumZ");
-
-                    UpdatePass(
-                        group, i++, pm.UpdateWithDistanceField,
-                        startedWhen, null,
-                        (Engine, p, _now, frameIndex) => {
-                            var dfu = new Uniforms.DistanceField(Configuration.Collision.DistanceField, Configuration.Collision.DistanceFieldMaximumZ.Value);
-                            pm.MaterialSet.TrySetBoundUniform(pm.UpdateWithDistanceField, "DistanceField", ref dfu);
-                        }, actualDeltaTimeSeconds, true, now, true
-                    );
-                } else {
-                    UpdatePass(
-                        group, i++, pm.UpdatePositions,
-                        startedWhen, null,
-                        null, actualDeltaTimeSeconds, true, now, true
-                    );
-                }
-
+                bool computingLiveness = false;
                 if (FramesUntilNextLivenessCheck-- <= 0) {
                     FramesUntilNextLivenessCheck = LivenessCheckInterval;
-                    ComputeLiveness(group, i++);
+                    computingLiveness = true;
                 }
+
+                foreach (var s in Transforms.OfType<Transforms.Spawner>()) {
+                    if (!s.IsActive)
+                        continue;
+
+                    var it = (Transforms.IParticleTransform)s;
+                    RunSpawner(
+                        group, ref i, it.GetMaterial(Engine.ParticleMaterials),
+                        startedWhen, s,
+                        it.SetParameters, actualDeltaTimeSeconds, now
+                    );
+                }
+
+                foreach (var chunk in Chunks)
+                    UpdateChunk(chunk, now, actualDeltaTimeSeconds, startedWhen, pm, group, ref i, computingLiveness);
+
+                if (computingLiveness)
+                    ComputeLiveness(group, i++);
             }
 
             var ts = Time.Ticks;
 
             Engine.EndOfUpdate(initialTurn);
+        }
+
+        private void UpdateChunk (
+            Chunk chunk, float now, 
+            float actualDeltaTimeSeconds, long startedWhen, 
+            ParticleMaterials pm, BatchGroup group, 
+            ref int i, bool computingLiveness
+        ) {
+            var isFirstXform = true;
+            foreach (var t in Transforms) {
+                var it = (Transforms.IParticleTransform)t;
+                var spawner = t as Transforms.Spawner;
+                if (spawner != null)
+                    continue;
+
+                var shouldSkip = !t.IsActive;
+                if (shouldSkip)
+                    continue;
+
+                RunTransform(
+                    chunk, group, ref i, it.GetMaterial(Engine.ParticleMaterials),
+                    startedWhen, false, it.SetParameters,
+                    actualDeltaTimeSeconds, isFirstXform, now, false
+                );
+
+                if (spawner == null)
+                    isFirstXform = false;
+            }
+
+            if (IsClearPending) {
+                // occlusion queries suck and never work right, and for some reason
+                //  the old particle data is a ghost from hell and refuses to disappear
+                //  even after it is cleared
+                for (int k = 0; k < 2; k++) {
+                    RunTransform(
+                        chunk, group, ref i, pm.Erase,
+                        startedWhen, false,
+                        null, actualDeltaTimeSeconds, 
+                        isFirstXform, now, true
+                    );
+                }
+                IsClearPending = false;
+            } else if (Configuration.Collision?.DistanceField != null) {
+                if (Configuration.Collision.DistanceFieldMaximumZ == null)
+                    throw new InvalidOperationException("If a distance field is active, you must set DistanceFieldMaximumZ");
+
+                RunTransform(
+                    chunk, group, ref i, pm.UpdateWithDistanceField,
+                    startedWhen, false,
+                    (Engine, p, _now, frameIndex) => {
+                        var dfu = new Uniforms.DistanceField(Configuration.Collision.DistanceField, Configuration.Collision.DistanceFieldMaximumZ.Value);
+                        pm.MaterialSet.TrySetBoundUniform(pm.UpdateWithDistanceField, "DistanceField", ref dfu);
+                    }, actualDeltaTimeSeconds, isFirstXform, now, true
+                );
+            } else {
+                RunTransform(
+                    chunk, group, ref i, pm.UpdatePositions,
+                    startedWhen, false,
+                    null, actualDeltaTimeSeconds, isFirstXform, now, true
+                );
+            }
         }
 
         private void ComputeLiveness (
@@ -851,7 +868,6 @@ namespace Squared.Illuminant.Particles {
             using (var rtg = BatchGroup.ForRenderTarget(
                 group, layer, LivenessQueryRT, (dm, _) => {
                     dm.Device.Clear(Color.White);
-                    dm.Device.Clear(Color.Transparent);
                 }
             )) {
                 RenderTrace.Marker(rtg, -9999, "Perform chunk occlusion queries");
@@ -866,6 +882,7 @@ namespace Squared.Illuminant.Particles {
                     var q = chunk.Query;
                     using (var chunkBatch = NativeBatch.New(
                         rtg, chunk.ID, m, (dm, _) => {
+                            dm.Device.Clear(Color.Transparent);
                             SetSystemUniforms(m, 0);
 
                             var p = m.Effect.Parameters;
@@ -1068,6 +1085,7 @@ namespace Squared.Illuminant.Particles {
                     Engine.DiscardedBuffers.Add(chunk.Current);
                 Engine.Coordinator.DisposeResource(chunk);
             }
+            Engine.Systems.Remove(this);
             Engine.Coordinator.DisposeResource(LivenessQueryRT);
             LivenessInfos.Clear();
         }

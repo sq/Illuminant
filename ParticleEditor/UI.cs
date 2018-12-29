@@ -155,7 +155,8 @@ namespace ParticleEditor {
                     Controller.AddTransform();
                 if (Nuklear.Button("Remove", Controller.SelectedSystem.Transforms.Count > 0)) {
                     Controller.RemoveTransform(state.Transforms.SelectedIndex);
-                    state.Transforms.SelectedIndex--;
+                    if (state.Transforms.SelectedIndex > 0)
+                        state.Transforms.SelectedIndex--;
                 }
                 if (Nuklear.Button("Duplicate", Controller.SelectedSystem.Transforms.Count > 0))
                     Controller.DuplicateTransform(state.Transforms.SelectedIndex);

@@ -61,6 +61,8 @@ namespace ParticleEditor {
                     return null;
                 if (CurrentState.Systems.SelectedIndex >= View.Systems.Count)
                     return null;
+                if (CurrentState.Systems.SelectedIndex < 0)
+                    return null;
                 return View.Systems[CurrentState.Systems.SelectedIndex];
             }
         }
@@ -72,6 +74,8 @@ namespace ParticleEditor {
                 if (SelectedSystem.Transforms.Count == 0)
                     return null;
                 if (CurrentState.Transforms.SelectedIndex >= SelectedSystem.Transforms.Count)
+                    return null;
+                if (CurrentState.Transforms.SelectedIndex < 0)
                     return null;
                 return SelectedSystem.Transforms[CurrentState.Transforms.SelectedIndex];
             }
