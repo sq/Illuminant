@@ -153,8 +153,10 @@ namespace ParticleEditor {
                 Nuke.nk_layout_row_dynamic(ctx, LineHeight, 3);
                 if (Nuklear.Button("Add"))
                     Controller.AddTransform();
-                if (Nuklear.Button("Remove", Controller.SelectedSystem.Transforms.Count > 0))
+                if (Nuklear.Button("Remove", Controller.SelectedSystem.Transforms.Count > 0)) {
                     Controller.RemoveTransform(state.Transforms.SelectedIndex);
+                    state.Transforms.SelectedIndex--;
+                }
                 if (Nuklear.Button("Duplicate", Controller.SelectedSystem.Transforms.Count > 0))
                     Controller.DuplicateTransform(state.Transforms.SelectedIndex);
 

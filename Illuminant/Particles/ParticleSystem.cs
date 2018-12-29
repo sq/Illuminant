@@ -403,7 +403,8 @@ namespace Squared.Illuminant.Particles {
                         dm.Device.Textures[i] = null;
                 }
             )) {
-                RotateBuffers();
+                if (spawner == null)
+                    RotateBuffers();
 
                 if (e != null)
                     RenderTrace.Marker(batch, -9999, "Particle transform {0}", e.CurrentTechnique.Name);
@@ -732,14 +733,6 @@ namespace Squared.Illuminant.Particles {
             }
         }
 
-        private void ClearAndDiscard (BatchGroup g, BufferSet set) {
-            if (set == null)
-                return;
-            using (var rtg = BatchGroup.ForRenderTarget(g, 0, set.PositionAndLife))
-                ClearBatch.AddNew(rtg, 0, Engine.Materials.Clear, clearColor: Color.Transparent);
-            Engine.DiscardedBuffers.Add(set);
-        }
-
         public void Update (IBatchContainer container, int layer, float? deltaTimeSeconds = null) {
             var lastUpdateTimeSeconds = LastUpdateTimeSeconds;
             var now = (float)(LastUpdateTimeSeconds = TimeProvider.Seconds);
@@ -794,7 +787,8 @@ namespace Squared.Illuminant.Particles {
                     if (shouldSkip)
                         continue;
 
-                    var clearFirst = isFirstXform && (spawner == null);
+                    // var clearFirst = isFirstXform && (spawner == null);
+                    var clearFirst = spawner == null;
 
                     UpdatePass(
                         group, i++, it.GetMaterial(Engine.ParticleMaterials),
