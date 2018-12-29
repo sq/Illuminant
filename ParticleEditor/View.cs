@@ -45,13 +45,27 @@ namespace ParticleEditor {
                 editor.Content, editor.RenderCoordinator, editor.Materials,
                 new ParticleEngineConfiguration {
                     TextureLoader = (fn) => LoadTexture(fn, false),
-                    FPTextureLoader = (fn) => LoadTexture(fn, true)
+                    FPTextureLoader = (fn) => LoadTexture(fn, true),
+                    SystemResolver = ResolveReference
                 },
                 editor.ParticleMaterials
             );
             Systems.Clear();
             foreach (var systemModel in Model.Systems)
                 AddNewViewForModel(systemModel);
+        }
+
+        internal ParticleSystem ResolveReference (string name, int? index) {
+            ParticleSystemView result = null;
+            if (name != null)
+                result = Systems.FirstOrDefault(s => s.Model.Name == name);
+            if ((result == null) && index.HasValue) {
+                var idx = index.Value;
+                if ((idx >= 0) && (idx < Systems.Count))
+                    result = Systems[idx];
+            }
+
+            return result?.Instance;
         }
 
         internal Texture2D LoadTexture (string name, bool floatingPoint) {

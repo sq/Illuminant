@@ -146,6 +146,7 @@ namespace Squared.Illuminant.Particles {
         }
 
         public class Chunk : IDisposable {
+            public long GlobalIndexOffset;
             public readonly int Size, MaximumCount;
             public int ID;
             public int RefCount;
@@ -155,7 +156,21 @@ namespace Squared.Illuminant.Particles {
             public OcclusionQuery Query;
             public RenderTarget2D Attributes, RenderData, RenderColor;
 
+            public bool IsFeedbackOutput { get; internal set; }
             public bool IsDisposed { get; private set; }
+
+            public int TotalConsumedForFeedback { get; internal set; }
+            public int NextSpawnOffset { get; internal set; }
+            public int AvailableForFeedback {
+                get {
+                    return NextSpawnOffset - TotalConsumedForFeedback;
+                }
+            }
+            public int Free {
+                get {
+                    return MaximumCount - NextSpawnOffset;
+                }
+            }
 
             private static volatile int NextID;
 
@@ -195,6 +210,7 @@ namespace Squared.Illuminant.Particles {
             }
         }
 
+        public bool IsDisposed { get; private set; }
         public int LiveCount { get; private set; }
 
         public readonly ParticleEngine                     Engine;
@@ -207,7 +223,9 @@ namespace Squared.Illuminant.Particles {
 
         private readonly Dictionary<int, LivenessInfo> LivenessInfos = new Dictionary<int, LivenessInfo>();
 
-        private int CurrentSpawnTarget, SpawnTargetFree, SpawnTargetOffset;
+        private int CurrentSpawnTarget;
+        private int CurrentFeedbackSpawnTarget;
+        private int CurrentFeedbackSource;
 
         private int CurrentFrameIndex;
 
@@ -225,6 +243,8 @@ namespace Squared.Illuminant.Particles {
         private double? LastUpdateTimeSeconds = null;
 
         private readonly RenderTarget2D LivenessQueryRT;
+
+        public long TotalSpawnCount { get; private set; }
 
         /// <summary>
         /// The number of frames a chunk must be dead for before it is reclaimed
@@ -257,6 +277,14 @@ namespace Squared.Illuminant.Particles {
             }
         }
 
+        private Chunk ChunkFromID (int id) {
+            foreach (var c in Chunks)
+                if (c.ID == id)
+                    return c;
+
+            return null;
+        }
+
         private LivenessInfo GetLivenessInfo (Chunk chunk) {
             LivenessInfo result;
             if (LivenessInfos.TryGetValue(chunk.ID, out result))
@@ -283,6 +311,7 @@ namespace Squared.Illuminant.Particles {
             lock (Engine.Coordinator.CreateResourceLock) {
                 var result = new Chunk(Engine.Configuration, device);
                 result.Current = AcquireOrCreateBufferSet();
+                result.GlobalIndexOffset = TotalSpawnCount;
                 return result;
             }
         }
@@ -336,52 +365,87 @@ namespace Squared.Illuminant.Particles {
             }
         }
 
+        internal Chunk PickTargetForSpawn (
+            bool feedback, int count, 
+            ref int currentTarget, out bool needClear
+        ) {
+            var chunk = ChunkFromID(currentTarget);
+            // FIXME: Ideally we could split the spawn across this chunk and an old one.
+            if (chunk != null) {
+                if (chunk.Free < count) {
+                    currentTarget = -1;
+                    chunk = null;
+                }
+            }
+
+            if (chunk == null) {
+                var device = Engine.Coordinator.Device;
+                chunk = CreateChunk(device);
+                chunk.IsFeedbackOutput = feedback;
+                currentTarget = chunk.ID;
+                Chunks.Add(chunk);
+                needClear = true;
+            } else {
+                needClear = false;
+            }
+
+            return chunk;
+        }
+
+        internal Chunk PickTargetForSpawn (bool feedback, int count, out bool needClear) {
+            if (feedback)
+                return PickTargetForSpawn(true, count, ref CurrentFeedbackSpawnTarget, out needClear);
+            else
+                return PickTargetForSpawn(false, count, ref CurrentSpawnTarget, out needClear);
+        }
+
+        internal Chunk PickSourceForFeedback (int count) {
+            var cfs = ChunkFromID(CurrentFeedbackSource);
+            if (cfs != null) {
+                if ((cfs.AvailableForFeedback <= 0) && (cfs.Free <= 0))
+                    cfs = null;
+            }
+            var newChunk = Chunks.FirstOrDefault(
+                c => (c.AvailableForFeedback >= count / 2) && !c.IsFeedbackOutput
+            );
+            if (newChunk != null)
+                CurrentFeedbackSource = newChunk.ID;
+            return newChunk;
+        }
+
         private void RunSpawner (
             IBatchContainer container, ref int layer, Material m,
             long startedWhen, Transforms.Spawner spawner,
             Transforms.ParameterSetter setParameters,
             double deltaTimeSeconds, float now
         ) {
-            var device = container.RenderManager.DeviceManager.Device;
-
             int spawnCount = 0;
 
-            spawner.Tick(now, deltaTimeSeconds, out spawnCount);
-
-            if (spawnCount <= 0)
+            if (!spawner.IsValid)
                 return;
-            else if (spawnCount > ChunkMaximumCount)
-                throw new Exception("Spawn count too high to fit in a chunk");
 
-            Chunk chunk = Chunks.FirstOrDefault(c => c.ID == CurrentSpawnTarget);
-            // FIXME: Ideally we could split the spawn across this chunk and an old one.
-            if (chunk != null) {
-                if (SpawnTargetFree < spawnCount) {
-                    CurrentSpawnTarget = -1;
-                    chunk = null;
-                }
+            spawner.Tick(this, now, deltaTimeSeconds, out spawnCount);
+
+            if (spawnCount <= 0) {
+                return;
+            } else if (spawnCount > ChunkMaximumCount) {
+                spawner.AddError(spawnCount - ChunkMaximumCount);
+                spawnCount = ChunkMaximumCount;
             }
 
-            bool needClear = false;
-            if (chunk == null) {
-                chunk = CreateChunk(device);
-                CurrentSpawnTarget = chunk.ID;
-                SpawnTargetOffset = 0;
-                SpawnTargetFree = ChunkMaximumCount;
-                Chunks.Add(chunk);
-                needClear = true;
-            }
+            bool needClear;
+            var chunk = PickTargetForSpawn(spawner is Transforms.FeedbackSpawner, spawnCount, out needClear);
 
             if (chunk == null)
                 throw new Exception("Failed to locate or create a chunk to spawn in");
 
-            var first = SpawnTargetOffset;
-            var last = SpawnTargetOffset + spawnCount - 1;
+            var first = chunk.NextSpawnOffset;
+            var last = chunk.NextSpawnOffset + spawnCount - 1;
             spawner.SetIndices(first, last);
             // Console.WriteLine("Spawning {0}-{1} free {2}", first, last, spawnState.Free);
 
-            SpawnTargetOffset += spawnCount;
-            SpawnTargetFree -= spawnCount;
+            chunk.NextSpawnOffset += spawnCount;
+            TotalSpawnCount += spawnCount;
 
             RunTransform(
                 chunk, container, ref layer, m,
@@ -511,6 +575,7 @@ namespace Squared.Illuminant.Particles {
         public void Clear () {
             LastClearTimestamp = Time.Ticks;
             IsClearPending = true;
+            TotalSpawnCount = 0;
         }
 
         public int Spawn (
@@ -726,8 +791,11 @@ namespace Squared.Illuminant.Particles {
                 int i = 0;
 
                 lock (NewUserChunks) {
-                    foreach (var nc in NewUserChunks)
+                    foreach (var nc in NewUserChunks) {
+                        nc.GlobalIndexOffset = TotalSpawnCount;
+                        TotalSpawnCount += nc.MaximumCount;
                         Chunks.Add(nc);
+                    }
 
                     NewUserChunks.Clear();
                 }
@@ -772,7 +840,7 @@ namespace Squared.Illuminant.Particles {
             foreach (var t in Transforms) {
                 var it = (Transforms.IParticleTransform)t;
 
-                var shouldSkip = !t.IsActive || (t is Transforms.Spawner);
+                var shouldSkip = !t.IsActive || (t is Transforms.Spawner) || !t.IsValid;
                 if (shouldSkip)
                     continue;
 
@@ -1036,6 +1104,11 @@ namespace Squared.Illuminant.Particles {
         }
 
         public void Dispose () {
+            if (IsDisposed)
+                return;
+
+            IsDisposed = true;
+
             // FIXME: Release buffers
             foreach (var chunk in Chunks) {
                 if (chunk.Previous != null)

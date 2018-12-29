@@ -4,6 +4,8 @@
 #define MAX_POSITION_CONSTANTS 32
 
 uniform bool   AlignVelocityAndPosition, ZeroZAxis;
+uniform bool   AlignPositionConstant, MultiplyAttributeConstant;
+uniform float  FeedbackSourceIndex;
 uniform float  PositionConstantCount;
 uniform float4 PositionConstants[MAX_POSITION_CONSTANTS];
 uniform float4 ChunkSizeAndIndices;
@@ -81,10 +83,68 @@ void PS_Spawn (
     newAttributes = evaluateFormula(Configuration[5], Configuration[6], Configuration[7], RandomCircularity[2], random3);
 }
 
+void PS_SpawnFeedback (
+    in  float2 xy            : VPOS,
+    out float4 newPosition   : COLOR0,
+    out float4 newVelocity   : COLOR1,
+    out float4 newAttributes : COLOR2
+) {
+    float index = (xy.x) + (xy.y * ChunkSizeAndIndices.x);
+
+    [branch]
+    if ((index < ChunkSizeAndIndices.y) || (index > ChunkSizeAndIndices.z)) {
+        discard;
+        return;
+    }
+
+    float sourceIndex = index + FeedbackSourceIndex;
+    float2 sourceXy = float2(sourceIndex % ChunkSizeAndIndices.x, floor(sourceIndex / ChunkSizeAndIndices.x));
+
+    float4 sourcePosition, sourceVelocity, sourceAttributes;
+    readStateOrDiscard(
+        sourceXy, sourcePosition, sourceVelocity, sourceAttributes
+    );
+
+    float2 randomOffset1 = float2(index % 8039, 0 + (index % 57));
+    float2 randomOffset2 = float2(index % 6180, 1 + (index % 4031));
+    float2 randomOffset3 = float2(index % 2025, 2 + (index % 65531));
+    float4 random1 = random(randomOffset1);
+    float4 random2 = random(randomOffset2);
+    float4 random3 = random(randomOffset3);
+    // The x and y element of random samples determines the normal
+    if (AlignVelocityAndPosition)
+        random2.xy = random1.xy;
+    // Ensure the z axis of generated circular coordinates is 0, resulting in pure xy normals
+
+    float relativeIndex = (index - ChunkSizeAndIndices.y) + ChunkSizeAndIndices.w;
+    float positionIndex = relativeIndex % PositionConstantCount;
+    float4 positionConstant = PositionConstants[positionIndex];
+    if (AlignPositionConstant)
+        positionConstant += sourcePosition;
+    float4 tempPosition = evaluateFormula(positionConstant, Configuration[0], Configuration[1], RandomCircularity[0], random1);
+
+    float4 attributeConstant = Configuration[5];
+    if (MultiplyAttributeConstant)
+        attributeConstant *= sourceAttributes;
+
+    newPosition = mul(tempPosition, PositionMatrix);
+    newPosition.w = tempPosition.w;
+    newVelocity = evaluateFormula(Configuration[2], Configuration[3], Configuration[4], RandomCircularity[1], random2);
+    newAttributes = evaluateFormula(attributeConstant, Configuration[6], Configuration[7], RandomCircularity[2], random3);
+}
+
 technique SpawnParticles {
     pass P0
     {
         vertexShader = compile vs_3_0 VS_Spawn();
         pixelShader = compile ps_3_0 PS_Spawn();
+    }
+}
+
+technique SpawnFeedbackParticles {
+    pass P0
+    {
+        vertexShader = compile vs_3_0 VS_Spawn();
+        pixelShader = compile ps_3_0 PS_SpawnFeedback();
     }
 }

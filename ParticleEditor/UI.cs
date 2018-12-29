@@ -124,7 +124,10 @@ namespace ParticleEditor {
                     Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
                     for (int i = 0; i < Model.Systems.Count; i++) {
                         var system = Model.Systems[i];
-                        if (Nuklear.SelectableText(system.Name ?? string.Format("{0} Unnamed", i), state.Systems.SelectedIndex == i))
+                        if (Nuklear.SelectableText(
+                            string.IsNullOrWhiteSpace(system.Name) ? string.Format("{0} Unnamed", i) : system.Name, 
+                            state.Systems.SelectedIndex == i
+                        ))
                             state.Systems.SelectedIndex = i;
                     }
                 }
@@ -175,7 +178,7 @@ namespace ParticleEditor {
                     Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
                     for (int i = 0; i < model.Transforms.Count; i++) {
                         var xform = model.Transforms[i];
-                        string displayName = (xform.Name != null)
+                        string displayName = !string.IsNullOrWhiteSpace(xform.Name)
                             ? string.Format("{1}: {0}", xform.Type.Name, xform.Name)
                             : string.Format("#{1}: {0}", xform.Type.Name, i);
                         if (Nuklear.SelectableText(displayName, state.Transforms.SelectedIndex == i))

@@ -247,6 +247,9 @@ namespace Squared.Illuminant.Particles {
 
             IsDisposed = true;
 
+            foreach (var sys in Systems)
+                sys.Dispose();
+
             foreach (var buf in AllBuffers)
                 Coordinator.DisposeResource(buf);
 
@@ -303,6 +306,11 @@ namespace Squared.Illuminant.Particles {
         /// Used to load lazy texture resources in floating-point format.
         /// </summary>
         public Func<string, Texture2D> FPTextureLoader = null;
+
+        /// <summary>
+        /// Used to resolve ParticleSystemReferences for feedback.
+        /// </summary>
+        public Func<string, int?, ParticleSystem> SystemResolver = null;
 
         public ParticleEngineConfiguration (int chunkSize = 256) {
             ChunkSize = chunkSize;

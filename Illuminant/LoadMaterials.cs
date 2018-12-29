@@ -313,6 +313,10 @@ namespace Squared.Illuminant.Particles {
                 DefineMaterial(ParticleMaterials.Spawn = new Material(
                     effects.Load("SpawnParticles"), "SpawnParticles", dBegin, dEnd
                 ));
+
+                DefineMaterial(ParticleMaterials.SpawnFeedback = new Material(
+                    effects.Load("SpawnParticles"), "SpawnFeedbackParticles", dBegin, dEnd
+                ));
                 
                 DefineMaterial(ParticleMaterials.AttributeColor = new Material(
                     effects.Load("RasterizeParticleSystem"), "AttributeColor"

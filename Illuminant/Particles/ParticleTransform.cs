@@ -74,6 +74,8 @@ namespace Squared.Illuminant.Particles.Transforms {
             SetParameters(engine, parameters, now, frameIndex);
         }
 
+        public abstract bool IsValid { get; }
+
         public virtual void Dispose () {
         }
     }
@@ -92,6 +94,12 @@ namespace Squared.Illuminant.Particles.Transforms {
                 parameters["AreaType"].SetValue(0);
             }
             parameters["Strength"].SetValue(Strength);
+        }
+
+        public override bool IsValid {
+            get {
+                return true;
+            }
         }
     }
 
@@ -196,6 +204,12 @@ namespace Squared.Illuminant.Particles.Transforms {
             parameters["AttractorPositions"].SetValue(_Positions);
             parameters["AttractorRadiusesAndStrengths"].SetValue(_RadiusesAndStrengths);
             parameters["MaximumAcceleration"].SetValue(MaximumAcceleration.Evaluate(now));
+        }
+
+        public override bool IsValid {
+            get {
+                return Attractors.Count > 0;
+            }
         }
     }
 }

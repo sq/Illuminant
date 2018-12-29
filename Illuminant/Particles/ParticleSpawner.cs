@@ -14,9 +14,6 @@ namespace Squared.Illuminant.Particles.Transforms {
     public class Spawner : ParticleTransform {
         public const int MaxPositions = 32;
 
-        [NonSerialized]
-        private static int NextSeed = 1;
-
         /// <summary>
         /// Minimum number of particles to spawn per second.
         /// If this value is larger than MaxRate it will be ignored.
@@ -58,6 +55,9 @@ namespace Squared.Illuminant.Particles.Transforms {
         public readonly List<Vector4> AdditionalPositions = new List<Vector4>();
 
         [NonSerialized]
+        private static int NextSeed = 1;
+
+        [NonSerialized]
         private double  RateError;
         [NonSerialized]
         private Vector2 Indices;
@@ -90,7 +90,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             Indices = new Vector2(first, last);
         }
 
-        internal void Tick (float now, double deltaTimeSeconds, out int spawnCount) {
+        internal virtual void Tick (ParticleSystem system, float now, double deltaTimeSeconds, out int spawnCount) {
             if (AdditionalPositions.Count >= MaxPositions)
                 throw new Exception("Maximum number of positions for a spawner is " + MaxPositions);
             if (!IsActive) {
@@ -176,6 +176,70 @@ namespace Squared.Illuminant.Particles.Transforms {
             var m = PositionPostMatrix.Evaluate(now);
             m.Regenerate();
             parameters["PositionMatrix"].SetValue(m.Matrix);
+        }
+
+        public override bool IsValid {
+            get {
+                return true;
+            }
+        }
+    }
+
+    public sealed class FeedbackSpawner : Spawner {
+        /// <summary>
+        /// The feedback spawner uses the particles contained by the source system as input
+        /// </summary>
+        public ParticleSystemReference SourceSystem;
+
+        /// <summary>
+        /// Adds the position of source particles to the position Constant of new particles
+        /// </summary>
+        public bool AlignPositionConstant = true;
+
+        /// <summary>
+        /// Multiplies the attribute Constant of new particles by the attribute of source particles
+        /// </summary>
+        public bool MultiplyAttributeConstant = false;
+
+        /// <summary>
+        /// Each particle from the source system corresponds to (1/Divisor) particles in the destination system
+        /// </summary>
+        public int Divisor = 1;
+
+        internal override void Tick (ParticleSystem system, float now, double deltaTimeSeconds, out int spawnCount) {
+            spawnCount = 0;
+
+            if (!SourceSystem.TryInitialize(system.Engine.Configuration.SystemResolver))
+                return;
+
+            // FIXME: Support using the same system as a feedback input?
+            if (SourceSystem.Instance == system)
+                return;
+
+            base.Tick(system, now, deltaTimeSeconds, out spawnCount);
+
+            var sourceChunk = SourceSystem.Instance.PickSourceForFeedback(spawnCount);
+            if (sourceChunk == null) {
+                spawnCount = 0;
+                return;
+            }
+        }
+
+        protected override Material GetMaterial (ParticleMaterials materials) {
+            return materials.SpawnFeedback;
+        }
+
+        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
+            base.SetParameters(engine, parameters, now, frameIndex);
+
+            parameters["AlignPositionConstant"].SetValue(AlignPositionConstant);
+            parameters["MultiplyAttributeConstant"].SetValue(MultiplyAttributeConstant);
+        }
+
+        public override bool IsValid {
+            get {
+                return true;
+            }
         }
     }
 }

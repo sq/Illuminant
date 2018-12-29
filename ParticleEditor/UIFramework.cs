@@ -567,6 +567,9 @@ namespace ParticleEditor {
                 case "Formula":
                     return RenderFormula(cpi, actualName, (Formula)value, valueType.StartsWith("Color"));
 
+                case "ParticleSystemReference":
+                    return RenderSystemReferenceProperty(cpi, instance, ref changed, actualName, value);
+
                 case "NullableLazyResource`1":
                     return RenderTextureProperty(cpi, instance, ref changed, actualName, value);
 
@@ -1120,6 +1123,45 @@ namespace ParticleEditor {
             }
 
             return changed;
+        }
+
+        private unsafe bool RenderSystemReferenceProperty (
+            CachedPropertyInfo cpi, object instance, ref bool changed, 
+            string actualName, object _value
+        ) {
+            var ctx = Nuklear.Context;
+            var value = (ParticleSystemReference)_value;
+            var hasValue = value.TryInitialize(Game.View.ResolveReference);
+
+            Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
+
+            Nuklear.Label(actualName);
+
+            int index = 0;
+            if (hasValue)
+                index = Game.View.Systems.FindIndex((psv) => psv.Instance == value.Instance) + 1;
+
+            if (Nuklear.ComboBox(ref index, (i) =>
+                (i > 0) && (i <= Game.View.Systems.Count)
+                    ? Game.View.Systems[i - 1].Model.Name
+                    : "none",
+                Game.View.Systems.Count + 1
+            )) {
+                if (index > 0) {
+                    var sys = Game.View.Systems[index - 1];
+                    value.Name = sys.Model.Name;
+                    value.Index = index - 1;
+                    value.TryInitialize(Game.View.ResolveReference);
+                } else {
+                    value.Name = null;
+                    value.Index = null;
+                    value.Instance = null;
+                }
+                cpi.Setter(instance, value);
+                return true;
+            }
+
+            return false;
         }
 
         private unsafe bool RenderTextureProperty (

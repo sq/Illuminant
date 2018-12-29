@@ -174,6 +174,27 @@ namespace Squared.Illuminant.Configuration {
         }
     }
 
+    public struct ParticleSystemReference {
+        public int?   Index;
+        public string Name;
+
+        [NonSerialized]
+        public Particles.ParticleSystem Instance;
+
+        public bool TryInitialize (Func<string, int?, Particles.ParticleSystem> resolver) {
+            if ((Instance != null) && Instance.IsDisposed)
+                Instance = null;
+
+            if (Instance != null)
+                return true;
+
+            if (resolver != null)
+                Instance = resolver(Name, Index);
+
+            return Instance != null;
+        }
+    }
+
     public class ParameterConverter : TypeConverter {
         public override bool CanConvertTo (ITypeDescriptorContext context, Type destinationType) {
             if (typeof(IParameter).IsAssignableFrom(destinationType))
