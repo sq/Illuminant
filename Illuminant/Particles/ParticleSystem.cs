@@ -362,12 +362,14 @@ namespace Squared.Illuminant.Particles {
                 }
             }
 
+            bool needClear = false;
             if (chunk == null) {
                 chunk = CreateChunk(device);
                 CurrentSpawnTarget = chunk.ID;
                 SpawnTargetOffset = 0;
                 SpawnTargetFree = ChunkMaximumCount;
                 Chunks.Add(chunk);
+                needClear = true;
             }
 
             if (chunk == null)
@@ -385,7 +387,7 @@ namespace Squared.Illuminant.Particles {
                 chunk, container, ref layer, m,
                 startedWhen, true,
                 setParameters, deltaTimeSeconds,
-                false, now, false
+                needClear, now, false
             );
         }
 
