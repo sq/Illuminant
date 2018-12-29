@@ -64,8 +64,8 @@ namespace Squared.Illuminant.Particles {
 
                 if (result == 0) {
                     if (!failed)
-                    lock (System.NewChunks)
-                        System.NewChunks.Add(Chunk);
+                    lock (System.NewUserChunks)
+                        System.NewUserChunks.Add(Chunk);
                 }
             }
         }
@@ -206,7 +206,7 @@ namespace Squared.Illuminant.Particles {
         public readonly List<Transforms.ParticleTransform> Transforms = 
             new List<Transforms.ParticleTransform>();
 
-        private  readonly List<Chunk> NewChunks = new List<Chunk>();
+        private  readonly List<Chunk> NewUserChunks = new List<Chunk>();
         internal readonly List<Chunk> Chunks = new List<Chunk>();
 
         private readonly Dictionary<int, LivenessInfo> LivenessInfos = new Dictionary<int, LivenessInfo>();
@@ -425,11 +425,10 @@ namespace Squared.Illuminant.Particles {
         }
 
         private void RunTransform (
-            Chunk chunk,
-            IBatchContainer container, ref int layer, Material m,
+            Chunk chunk, IBatchContainer container, ref int layer, Material m,
             long startedWhen, bool isSpawning,
             Transforms.ParameterSetter setParameters,
-            double deltaTimeSeconds, bool isFirstXform,
+            double deltaTimeSeconds, bool shouldClear,
             float now, bool isUpdate
         ) {
             if (chunk == null)
@@ -506,7 +505,7 @@ namespace Squared.Illuminant.Particles {
                         m.Flush();
                     }
 
-                    if (isFirstXform && !isSpawning)
+                    if (shouldClear)
                         dm.Device.Clear(Color.Transparent);
                 },
                 (dm, _) => {
@@ -760,13 +759,13 @@ namespace Squared.Illuminant.Particles {
             )) {
                 int i = 0;
 
-                lock (NewChunks) {
-                    foreach (var nc in NewChunks) {
+                lock (NewUserChunks) {
+                    foreach (var nc in NewUserChunks) {
                         SpawnStates[nc.ID] = new SpawnState { Free = 0, Offset = ChunkMaximumCount };
                         Chunks.Add(nc);
                     }
 
-                    NewChunks.Clear();
+                    NewUserChunks.Clear();
                 }
 
                 bool computingLiveness = false;
@@ -808,11 +807,8 @@ namespace Squared.Illuminant.Particles {
             var isFirstXform = true;
             foreach (var t in Transforms) {
                 var it = (Transforms.IParticleTransform)t;
-                var spawner = t as Transforms.Spawner;
-                if (spawner != null)
-                    continue;
 
-                var shouldSkip = !t.IsActive;
+                var shouldSkip = !t.IsActive || (t is Transforms.Spawner);
                 if (shouldSkip)
                     continue;
 
@@ -822,8 +818,7 @@ namespace Squared.Illuminant.Particles {
                     actualDeltaTimeSeconds, isFirstXform, now, false
                 );
 
-                if (spawner == null)
-                    isFirstXform = false;
+                isFirstXform = false;
             }
 
             if (IsClearPending) {
@@ -835,7 +830,7 @@ namespace Squared.Illuminant.Particles {
                         chunk, group, ref i, pm.Erase,
                         startedWhen, false,
                         null, actualDeltaTimeSeconds, 
-                        isFirstXform, now, true
+                        true, now, true
                     );
                 }
                 IsClearPending = false;
@@ -849,13 +844,13 @@ namespace Squared.Illuminant.Particles {
                     (Engine, p, _now, frameIndex) => {
                         var dfu = new Uniforms.DistanceField(Configuration.Collision.DistanceField, Configuration.Collision.DistanceFieldMaximumZ.Value);
                         pm.MaterialSet.TrySetBoundUniform(pm.UpdateWithDistanceField, "DistanceField", ref dfu);
-                    }, actualDeltaTimeSeconds, isFirstXform, now, true
+                    }, actualDeltaTimeSeconds, true, now, true
                 );
             } else {
                 RunTransform(
                     chunk, group, ref i, pm.UpdatePositions,
                     startedWhen, false,
-                    null, actualDeltaTimeSeconds, isFirstXform, now, true
+                    null, actualDeltaTimeSeconds, true, now, true
                 );
             }
         }
