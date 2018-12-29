@@ -19,10 +19,6 @@ using Squared.Util;
 
 namespace Squared.Illuminant.Particles {
     public class ParticleSystem : IDisposable {
-        internal struct SpawnState {
-            public int Offset, Free;
-        }
-
         internal class LivenessInfo {
             public Chunk          Chunk;
             public int?           Count;
@@ -210,7 +206,8 @@ namespace Squared.Illuminant.Particles {
         internal readonly List<Chunk> Chunks = new List<Chunk>();
 
         private readonly Dictionary<int, LivenessInfo> LivenessInfos = new Dictionary<int, LivenessInfo>();
-        private readonly Dictionary<int, SpawnState> SpawnStates = new Dictionary<int, SpawnState>();
+
+        private int CurrentSpawnTarget, SpawnTargetFree, SpawnTargetOffset;
 
         private int CurrentFrameIndex;
 
@@ -339,14 +336,6 @@ namespace Squared.Illuminant.Particles {
             }
         }
 
-        private int? GetSpawnTarget (int count) {
-            foreach (var kvp in SpawnStates)
-                if (kvp.Value.Free > count)
-                    return kvp.Key;
-
-            return null;
-        }
-
         private void RunSpawner (
             IBatchContainer container, ref int layer, Material m,
             long startedWhen, Transforms.Spawner spawner,
@@ -364,57 +353,33 @@ namespace Squared.Illuminant.Particles {
             else if (spawnCount > ChunkMaximumCount)
                 throw new Exception("Spawn count too high to fit in a chunk");
 
-            Chunk chunk = null;
-            var state = default(SpawnState);
-            while (chunk == null) {
-                // FIXME: Inefficient. Spawn across two buffers?
-                var chosenTarget = GetSpawnTarget(spawnCount);
-
-                // FIXME: This makes better use of space in buffers but causes
-                //  a draw order glitch when creating a new buffer
-                /*
-                if (spawnId == null) {
-                    // HACK
-                    spawnId = GetSpawnTarget(spawnCount / 2);
-
-                    if (spawnId.HasValue) {
-                        Console.WriteLine("Partial spawn");
-                        spawnCount = Math.Min(SpawnStates[spawnId.Value].Free, spawnCount);
-                    }
+            Chunk chunk = Chunks.FirstOrDefault(c => c.ID == CurrentSpawnTarget);
+            // FIXME: Ideally we could split the spawn across this chunk and an old one.
+            if (chunk != null) {
+                if (SpawnTargetFree < spawnCount) {
+                    CurrentSpawnTarget = -1;
+                    chunk = null;
                 }
-                */
+            }
 
-                if (chosenTarget == null) {
-                    chunk = CreateChunk(device);
-                    SpawnStates[chunk.ID] = state = new SpawnState { Offset = 0, Free = ChunkMaximumCount };
-                    Chunks.Add(chunk);
-                    break;
-                } else {
-                    chunk = Chunks.FirstOrDefault(c => c.ID == chosenTarget.Value);
-                    if (chunk != null) {
-                        if (!SpawnStates.TryGetValue(chunk.ID, out state))
-                            SpawnStates[chunk.ID] = state = new SpawnState { Offset = ChunkMaximumCount, Free = 0 };
-                        break;
-                    } else {
-                        LivenessInfos.Remove(chosenTarget.Value);
-                        SpawnStates.Remove(chosenTarget.Value);
-                    }
-                    // FIXME
-                }
+            if (chunk == null) {
+                chunk = CreateChunk(device);
+                CurrentSpawnTarget = chunk.ID;
+                SpawnTargetOffset = 0;
+                SpawnTargetFree = ChunkMaximumCount;
+                Chunks.Add(chunk);
             }
 
             if (chunk == null)
                 throw new Exception("Failed to locate or create a chunk to spawn in");
 
-            var first = state.Offset;
-            var last = state.Offset + spawnCount - 1;
+            var first = SpawnTargetOffset;
+            var last = SpawnTargetOffset + spawnCount - 1;
             spawner.SetIndices(first, last);
             // Console.WriteLine("Spawning {0}-{1} free {2}", first, last, spawnState.Free);
 
-            state.Offset += spawnCount;
-            state.Free -= spawnCount;
-
-            SpawnStates[chunk.ID] = state;
+            SpawnTargetOffset += spawnCount;
+            SpawnTargetFree -= spawnCount;
 
             RunTransform(
                 chunk, container, ref layer, m,
@@ -654,7 +619,6 @@ namespace Squared.Illuminant.Particles {
             }
 
             foreach (var li in ChunksToReap) {
-                SpawnStates.Remove(li.Chunk.ID);
                 LivenessInfos.Remove(li.Chunk.ID);
                 Reap(li.Chunk);
             }
@@ -760,10 +724,8 @@ namespace Squared.Illuminant.Particles {
                 int i = 0;
 
                 lock (NewUserChunks) {
-                    foreach (var nc in NewUserChunks) {
-                        SpawnStates[nc.ID] = new SpawnState { Free = 0, Offset = ChunkMaximumCount };
+                    foreach (var nc in NewUserChunks)
                         Chunks.Add(nc);
-                    }
 
                     NewUserChunks.Clear();
                 }

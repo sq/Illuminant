@@ -88,14 +88,20 @@ namespace ParticleEditor {
             if (Game.View != null) {
                 Nuke.nk_layout_row_dynamic(ctx, LineHeight, 3);
                 var time = TimeSpan.FromTicks(Game.View.Time.Ticks);
-                var liveCount = Game.View.Systems.Sum(s => s.Instance.LiveCount);
-                var capacity = Game.View.Systems.Sum(s => s.Instance.Capacity);
-                using (var tCount = new NString(string.Format("{0}/{1}", liveCount, capacity)))
-                    Nuke.nk_text(ctx, tCount.pText, tCount.Length, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
                 using (var tCount = new NString(time.ToString("hh\\:mm\\:ss\\.ff")))
                     Nuke.nk_text(ctx, tCount.pText, tCount.Length, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
                 if (Nuklear.Button("Restart"))
                     Controller.QueueReset();
+                if (Nuklear.Button(Controller.Paused ? "Unpause" : "Pause"))
+                    Controller.Paused = !Controller.Paused;
+                Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
+                var liveCount = Game.View.Systems.Sum(s => s.Instance.LiveCount);
+                var capacity = Game.View.Systems.Sum(s => s.Instance.Capacity);
+                var memory = Game.View.Engine.EstimateMemoryUsage();
+                using (var tCount = new NString(string.Format("{0}/{1}", liveCount, capacity)))
+                    Nuke.nk_text(ctx, tCount.pText, tCount.Length, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
+                using (var tMemory = new NString(string.Format("{0:0000.00}MB", memory / (1024 * 1024.0))))
+                    Nuke.nk_text(ctx, tMemory.pText, tMemory.Length, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_RIGHT);
             }
 
             // }

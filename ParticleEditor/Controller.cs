@@ -39,6 +39,7 @@ namespace ParticleEditor {
             public ListState Systems, Transforms;
         }
 
+        public bool Paused;
         public readonly ParticleEditor Game;
         public EngineModel Model;
         public View View;

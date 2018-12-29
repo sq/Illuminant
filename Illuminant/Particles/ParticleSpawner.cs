@@ -115,6 +115,10 @@ namespace Squared.Illuminant.Particles.Transforms {
             }
         }
 
+        internal void AddError (int numUnspawned) {
+            RateError += numUnspawned;
+        }
+
         protected override Material GetMaterial (ParticleMaterials materials) {
             return materials.Spawn;
         }
