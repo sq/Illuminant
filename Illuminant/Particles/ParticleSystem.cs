@@ -106,7 +106,7 @@ namespace Squared.Illuminant.Particles {
 
             public long LastTurnUsed;
 
-            public RenderTargetBinding[] Bindings;
+            public RenderTargetBinding[] Bindings3, Bindings4;
             public RenderTarget2D PositionAndLife;
             public RenderTarget2D Velocity;
             public RenderTarget2D Attributes;
@@ -120,17 +120,16 @@ namespace Squared.Illuminant.Particles {
                 Size = configuration.ChunkSize;
                 MaximumCount = Size * Size;
 
-                Bindings = new RenderTargetBinding[2 + configuration.AttributeCount];
+                Bindings3 = new RenderTargetBinding[3];
+                Bindings4 = new RenderTargetBinding[4];
 
                 PositionAndLife = CreateRenderTarget(configuration, device);
                 Velocity = CreateRenderTarget(configuration, device);
-                if (configuration.AttributeCount > 0)
-                    Attributes = CreateRenderTarget(configuration, device);
+                Attributes = CreateRenderTarget(configuration, device);
 
-                Bindings[0] = new RenderTargetBinding(PositionAndLife);
-                Bindings[1] = new RenderTargetBinding(Velocity);
-                if (configuration.AttributeCount > 0)
-                    Bindings[2] = new RenderTargetBinding(Attributes);
+                Bindings4[0] = Bindings3[0] = new RenderTargetBinding(PositionAndLife);
+                Bindings4[1] = Bindings3[1] = new RenderTargetBinding(Velocity);
+                Bindings3[2] = new RenderTargetBinding(Attributes);
             }
 
             internal RenderTarget2D CreateRenderTarget (ParticleEngineConfiguration configuration, GraphicsDevice device) {
@@ -162,6 +161,7 @@ namespace Squared.Illuminant.Particles {
             internal BufferSet Previous, Current;
 
             public OcclusionQuery Query;
+            public RenderTarget2D RenderData, RenderColor;
 
             public bool IsDisposed { get; private set; }
 
@@ -175,6 +175,14 @@ namespace Squared.Illuminant.Particles {
                 MaximumCount = Size * Size;
 
                 Query = new OcclusionQuery(device);
+                RenderData = new RenderTarget2D(
+                    device, Size, Size, false, SurfaceFormat.Vector4, 
+                    DepthFormat.None, 0, RenderTargetUsage.PreserveContents
+                );
+                RenderColor = new RenderTarget2D(
+                    device, Size, Size, false, SurfaceFormat.Vector4, 
+                    DepthFormat.None, 0, RenderTargetUsage.PreserveContents
+                );
             }
 
             public void Dispose () {
@@ -183,6 +191,8 @@ namespace Squared.Illuminant.Particles {
 
                 IsDisposed = true;
 
+                RenderData.Dispose();
+                RenderColor.Dispose();
                 Query.Dispose();
                 Query = null;
             }
@@ -338,7 +348,8 @@ namespace Squared.Illuminant.Particles {
             IBatchContainer container, int layer, Material m,
             long startedWhen, Transforms.Spawner spawner,
             Transforms.ParameterSetter setParameters,
-            double deltaTimeSeconds, bool clearFirst, float now
+            double deltaTimeSeconds, bool clearFirst, 
+            float now, bool bindRenderDataAsOutput
         ) {
             var device = container.RenderManager.DeviceManager.Device;
 
@@ -431,7 +442,8 @@ namespace Squared.Illuminant.Particles {
                         batch, i++,
                         chunkMaterial, chunk,
                         setParameters,
-                        deltaTimeSeconds, clearFirst, now
+                        deltaTimeSeconds, clearFirst, 
+                        now, bindRenderDataAsOutput
                     );
                 }
             }
@@ -440,7 +452,8 @@ namespace Squared.Illuminant.Particles {
         private void ChunkUpdatePass (
             IBatchContainer container, int layer, Material m,
             Chunk chunk, Transforms.ParameterSetter setParameters,
-            double deltaTimeSeconds, bool clearFirst, float now
+            double deltaTimeSeconds, bool clearFirst, 
+            float now, bool bindRenderDataAsOutput
         ) {
             var prev = chunk.Previous;
             var curr = chunk.Current;
@@ -455,10 +468,18 @@ namespace Squared.Illuminant.Particles {
                 container, layer, m,
                 (dm, _) => {
                     var vp = new Viewport(0, 0, Engine.Configuration.ChunkSize, Engine.Configuration.ChunkSize);
-                    dm.Device.SetRenderTargets(curr.Bindings);
+                    if (bindRenderDataAsOutput) {
+                        curr.Bindings4[2] = new RenderTargetBinding(chunk.RenderColor);
+                        curr.Bindings4[3] = new RenderTargetBinding(chunk.RenderData);
+                        dm.Device.SetRenderTargets(curr.Bindings4);
+                    } else {
+                        dm.Device.SetRenderTargets(curr.Bindings3);
+                    }
                     dm.Device.Viewport = vp;
 
                     if (e != null) {
+                        SetSystemUniforms(m, deltaTimeSeconds);
+
                         if (setParameters != null)
                             setParameters(Engine, p, now, CurrentFrameIndex);
 
@@ -481,7 +502,8 @@ namespace Squared.Illuminant.Particles {
                             rt.SetValue(Engine.RandomnessTexture);
                         }
 
-                        SetSystemUniforms(m, deltaTimeSeconds);
+                        MaybeSetLifeRampParameters(p);
+                        MaybeSetAnimationRateParameter(p, Configuration.Appearance);
 
                         m.Flush();
                     }
@@ -495,6 +517,10 @@ namespace Squared.Illuminant.Particles {
                     if (e != null) {
                         p["PositionTexture"].SetValue((Texture2D)null);
                         p["VelocityTexture"].SetValue((Texture2D)null);
+
+                        var lr = p["LifeRampTexture"];
+                        if (lr != null)
+                            lr.SetValue((Texture2D)null);
 
                         var rt = p["RandomnessTexture"];
                         if (rt != null)
@@ -767,7 +793,7 @@ namespace Squared.Illuminant.Particles {
                     UpdatePass(
                         group, i++, it.GetMaterial(Engine.ParticleMaterials),
                         startedWhen, spawner, it.SetParameters, 
-                        actualDeltaTimeSeconds, isFirstXform, now
+                        actualDeltaTimeSeconds, isFirstXform, now, false
                     );
                     isFirstXform = false;
                 }
@@ -776,11 +802,11 @@ namespace Squared.Illuminant.Particles {
                     // occlusion queries suck and never work right, and for some reason
                     //  the old particle data is a ghost from hell and refuses to disappear
                     //  even after it is cleared
-                    for (int k = 0; k < 3; k++) {
+                    for (int k = 0; k < 2; k++) {
                         UpdatePass(
                             group, i++, pm.Erase,
                             startedWhen, null,
-                            null, actualDeltaTimeSeconds, true, now
+                            null, actualDeltaTimeSeconds, true, now, true
                         );
                     }
                     IsClearPending = false;
@@ -794,13 +820,13 @@ namespace Squared.Illuminant.Particles {
                         (Engine, p, _now, frameIndex) => {
                             var dfu = new Uniforms.DistanceField(Configuration.Collision.DistanceField, Configuration.Collision.DistanceFieldMaximumZ.Value);
                             pm.MaterialSet.TrySetBoundUniform(pm.UpdateWithDistanceField, "DistanceField", ref dfu);
-                        }, actualDeltaTimeSeconds, true, now
+                        }, actualDeltaTimeSeconds, true, now, true
                     );
                 } else {
                     UpdatePass(
                         group, i++, pm.UpdatePositions,
                         startedWhen, null,
-                        null, actualDeltaTimeSeconds, true, now
+                        null, actualDeltaTimeSeconds, true, now, true
                     );
                 }
 
@@ -887,8 +913,9 @@ namespace Squared.Illuminant.Particles {
                 group, layer, m, (dm, _) => {
                     var p = m.Effect.Parameters;
                     p["PositionTexture"].SetValue(curr.PositionAndLife);
-                    p["VelocityTexture"].SetValue(curr.Velocity);
-                    p["AttributeTexture"].SetValue(curr.Attributes);
+                    // HACK
+                    p["VelocityTexture"].SetValue(chunk.RenderData);
+                    p["AttributeTexture"].SetValue(chunk.RenderColor);
                     m.Flush();
                 }
             )) {
@@ -903,6 +930,38 @@ namespace Squared.Illuminant.Particles {
             }
         }
 
+        private void MaybeSetLifeRampParameters (EffectParameterCollection p) {
+            var rt = p["LifeRampTexture"];
+            if (rt == null)
+                return;
+
+            var lr = Configuration.Color.LifeRamp;
+            var lifeRamp = lr?.Texture;
+            if (lifeRamp != null)
+                lifeRamp.EnsureInitialized(Engine.Configuration.FPTextureLoader);
+
+            var lifeRampTexture =
+                (lifeRamp != null)
+                    ? lifeRamp.Instance
+                    : null;
+            rt.SetValue(lifeRampTexture);
+
+            if ((lr != null) && (lifeRampTexture != null)) {
+                var rangeSize = Math.Max(lr.Maximum - lr.Minimum, 0.001f);
+                var indexDivisor = lifeRampTexture != null
+                    ? lifeRampTexture.Height
+                    : 1;
+                p["LifeRampSettings"].SetValue(new Vector4(
+                    lr.Strength * (lr.Invert ? -1 : 1),
+                    lr.Minimum, rangeSize, indexDivisor
+                ));
+            } else {
+                p["LifeRampSettings"].SetValue(new Vector4(
+                    0, 0, 1, 1
+                ));
+            }
+        }
+
         public void Render (
             IBatchContainer container, int layer,
             Material material = null,
@@ -913,22 +972,14 @@ namespace Squared.Illuminant.Particles {
             var startedWhen = Time.Ticks;
 
             var appearance = Configuration.Appearance;
-            var lr = Configuration.Color.LifeRamp;
-            var lifeRamp = lr?.Texture;
             if (appearance.Texture != null)
                 appearance.Texture.EnsureInitialized(Engine.Configuration.TextureLoader);
-            if (lifeRamp != null)
-                lifeRamp.EnsureInitialized(Engine.Configuration.FPTextureLoader);
 
             if (material == null) {
                 if ((appearance.Texture != null) && (appearance.Texture.Instance != null)) {
-                    material = Engine.Configuration.AttributeCount > 0
-                        ? Engine.ParticleMaterials.AttributeColor
-                        : Engine.ParticleMaterials.White;
+                    material = Engine.ParticleMaterials.AttributeColor;
                 } else {
-                    material = Engine.Configuration.AttributeCount > 0
-                        ? Engine.ParticleMaterials.AttributeColorNoTexture
-                        : Engine.ParticleMaterials.WhiteNoTexture;
+                    material = Engine.ParticleMaterials.AttributeColorNoTexture;
                 }
             }
 
@@ -954,12 +1005,7 @@ namespace Squared.Illuminant.Particles {
                         ));
                     }
 
-                    var ar = appearance != null ? appearance.AnimationRate : Vector2.Zero;
-                    var arv = new Vector4(
-                        (ar.X != 0) ? 1.0f / ar.X : 0, (ar.Y != 0) ? 1.0f / ar.Y : 0,
-                        Configuration.RotationFromVelocity ? 1f : 0f, Configuration.ZToY
-                    );
-                    p["AnimationRateAndRotationAndZToY"].SetValue(arv);
+                    MaybeSetAnimationRateParameter(p, appearance);
 
                     p["StippleFactor"].SetValue(overrideStippleFactor.GetValueOrDefault(Configuration.StippleFactor));
 
@@ -972,29 +1018,7 @@ namespace Squared.Illuminant.Particles {
                         gc.SetValue(gcolor);
                     }
 
-                    var rt = p["LifeRampTexture"];
-                    if (rt != null) {
-                        var lifeRampTexture =
-                            (lifeRamp != null)
-                                ? lifeRamp.Instance
-                                : null;
-                        rt.SetValue(lifeRampTexture);
-
-                        if ((lr != null) && (lifeRampTexture != null)) {
-                            var rangeSize = Math.Max(lr.Maximum - lr.Minimum, 0.001f);
-                            var indexDivisor = lifeRampTexture != null
-                                ? lifeRampTexture.Height
-                                : 1;
-                            p["LifeRampSettings"].SetValue(new Vector4(
-                                lr.Strength * (lr.Invert ? -1 : 1),
-                                lr.Minimum, rangeSize, indexDivisor
-                            ));
-                        } else {
-                            p["LifeRampSettings"].SetValue(new Vector4(
-                                0, 0, 1, 1
-                            ));
-                        }
-                    }
+                    MaybeSetLifeRampParameters(p);
                 },
                 (dm, _) => {
                     p["PositionTexture"].SetValue((Texture2D)null);
@@ -1019,6 +1043,18 @@ namespace Squared.Illuminant.Particles {
                 foreach (var chunk in Chunks)
                     RenderChunk(group, chunk, m, i++);
             }
+        }
+
+        private void MaybeSetAnimationRateParameter (EffectParameterCollection p, ParticleAppearance appearance) {
+            var parm = p["AnimationRateAndRotationAndZToY"];
+            if (parm == null)
+                return;
+            var ar = appearance != null ? appearance.AnimationRate : Vector2.Zero;
+            var arv = new Vector4(
+                (ar.X != 0) ? 1.0f / ar.X : 0, (ar.Y != 0) ? 1.0f / ar.Y : 0,
+                Configuration.RotationFromVelocity ? 1f : 0f, Configuration.ZToY
+            );
+            parm.SetValue(arv);
         }
 
         public void Dispose () {

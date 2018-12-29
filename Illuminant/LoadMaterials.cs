@@ -318,14 +318,8 @@ namespace Squared.Illuminant.Particles {
                     effects.Load("NullTransform"), "NullTransform", dBegin, dEnd
                 ));
 
-                DefineMaterial(ParticleMaterials.White = new Material(
-                    effects.Load("RasterizeParticleSystem"), "White"
-                ));
                 DefineMaterial(ParticleMaterials.AttributeColor = new Material(
                     effects.Load("RasterizeParticleSystem"), "AttributeColor"
-                ));
-                DefineMaterial(ParticleMaterials.WhiteNoTexture = new Material(
-                    effects.Load("RasterizeParticleSystem"), "WhiteNoTexture"
                 ));
                 DefineMaterial(ParticleMaterials.AttributeColorNoTexture = new Material(
                     effects.Load("RasterizeParticleSystem"), "AttributeColorNoTexture"

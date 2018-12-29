@@ -1,3 +1,5 @@
+#define INCLUDE_RAMPS
+#include "Bezier.fxh"
 #include "ParticleCommon.fxh"
 #include "DistanceFieldCommon.fxh"
 #include "UpdateCommon.fxh"
@@ -16,18 +18,20 @@ void PS_Update (
     in  float2 xy             : VPOS,
     out float4 resultPosition : COLOR0,
     out float4 newVelocity    : COLOR1,
-    out float4 newAttributes  : COLOR2
+    out float4 renderColor    : COLOR2,
+    out float4 renderData     : COLOR3
 ) {
-    float4 oldPosition, oldVelocity;
+    float4 oldPosition, oldVelocity, attributes;
     readStateOrDiscard(
-        xy, oldPosition, oldVelocity, newAttributes
+        xy, oldPosition, oldVelocity, attributes
     );
 
     float newLife = oldPosition.w - (getLifeDecayRate() * getDeltaTimeSeconds());
     if (newLife <= 0) {
         newVelocity = 0;
-        newAttributes = 0;
         resultPosition = 0;
+        renderColor = 0;
+        renderData = 0;
         return;
     }
 
@@ -116,9 +120,9 @@ void PS_Update (
     if (newLife <= 0) {
         newPosition = 0;
         newVelocity = 0;
-        newAttributes = 0;
     }
     resultPosition = float4(newPosition, newLife);
+    computeRenderData(xy, resultPosition, newVelocity, attributes, renderColor, renderData);
 }
 
 technique UpdateWithDistanceField {

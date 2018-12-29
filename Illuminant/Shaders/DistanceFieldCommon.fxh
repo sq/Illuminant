@@ -1,4 +1,4 @@
-#define PI 3.14159265359
+#define PI 3.14159265358979323846
 
 // This is a distance of 0
 // Moving this value up/down allocates more precision to positive or negative distances

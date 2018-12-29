@@ -5,7 +5,6 @@
 uniform float4 LightProperties;
 uniform float4 MoreLightProperties;
 uniform float4 LightColor;
-uniform float4 AnimationRateAndRotationAndZToY;
 
 void ParticleLightVertexShader(
     in int2 cornerIndex              : BLENDINDICES0,
@@ -27,8 +26,11 @@ void ParticleLightVertexShader(
     float3 corner = LightCorners[cornerIndex.x];
 
     float4 actualXy = float4(xy + offsetAndIndex.xy, 0, 0);
-    float4 position = tex2Dlod(PositionSampler, actualXy);
-    float4 attributes = tex2Dlod(AttributeSampler, actualXy);
+    float4 position, renderData, renderColor;
+    // readStateUv(actualXy, position, renderData, renderColor);
+    position = tex2Dlod(PositionSampler, actualXy);
+    renderData = 0;
+    renderColor = tex2Dlod(AttributeSampler, actualXy);
 
     // HACK
     float life = position.w;
@@ -56,13 +58,10 @@ void ParticleLightVertexShader(
     float4 transformedPosition = mul(mul(float4(screenPosition.xyz, 1), Viewport.ModelView), Viewport.Projection);
     result = float4(transformedPosition.xy, 0, transformedPosition.w);
 
-    lightColor = attributes * LightColor;
+    lightColor = renderColor * LightColor;
 
     lightProperties = LightProperties;
     moreLightProperties = MoreLightProperties;
-
-    // FIXME: Not enough vertex samplers available for velocity data
-    lightColor *= getColorForLifeAndVelocity(position.w, 0);
 
     if (lightColor.a <= 0) {
         result = float4(0, 0, 0, 0);

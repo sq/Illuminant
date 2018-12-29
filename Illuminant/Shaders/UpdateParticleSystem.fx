@@ -1,15 +1,18 @@
+#define INCLUDE_RAMPS
+#include "Bezier.fxh"
 #include "ParticleCommon.fxh"
 #include "UpdateCommon.fxh"
 
 void PS_Update (
-    in  float2 xy            : VPOS,
-    out float4 newPosition   : COLOR0,
-    out float4 newVelocity   : COLOR1,
-    out float4 newAttributes : COLOR2
+    in  float2 xy          : VPOS,
+    out float4 newPosition : COLOR0,
+    out float4 newVelocity : COLOR1,
+    out float4 renderColor : COLOR2,
+    out float4 renderData  : COLOR3
 ) {
-    float4 oldPosition, oldVelocity;
+    float4 oldPosition, oldVelocity, attributes;
     readStateOrDiscard(
-        xy, oldPosition, oldVelocity, newAttributes
+        xy, oldPosition, oldVelocity, attributes
     );
 
     float3 velocity = applyFrictionAndMaximum(oldVelocity.xyz);
@@ -20,20 +23,22 @@ void PS_Update (
     if (newLife <= 0) {
         newPosition = 0;
         newVelocity = 0;
-        newAttributes = 0;
     } else {
         newPosition = float4(oldPosition.xyz + scaledVelocity, newLife);
         newVelocity = float4(velocity, oldVelocity.w);
     }
+
+    computeRenderData(xy, newPosition, newVelocity, attributes, renderColor, renderData);
 }
 
 void PS_Erase (
-    in  float2 xy            : VPOS,
-    out float4 newPosition   : COLOR0,
-    out float4 newVelocity   : COLOR1,
-    out float4 newAttributes : COLOR2
+    in  float2 xy          : VPOS,
+    out float4 newPosition : COLOR0,
+    out float4 newVelocity : COLOR1,
+    out float4 renderColor : COLOR2,
+    out float4 renderData  : COLOR3
 ) {
-    newPosition = newVelocity = newAttributes = 0;
+    newPosition = newVelocity = renderColor = renderData = 0;
 }
 
 technique UpdatePositions {

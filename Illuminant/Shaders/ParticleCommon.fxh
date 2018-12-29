@@ -1,3 +1,6 @@
+#define PI 3.14159265358979323846
+#define VelocityConstantScale 1000
+
 struct ParticleSystemSettings {
     // deltaTimeSeconds, friction, maximumVelocity, lifeDecayRate
     float4 GlobalSettings;
@@ -7,10 +10,22 @@ struct ParticleSystemSettings {
     float2 RotationFromLifeAndIndex;
 };
 
-#define VelocityConstantScale 1000
-
 uniform ParticleSystemSettings System;
 uniform float StippleFactor;
+// rate_x, rate_y, velocityRotation, zToY
+uniform float4 AnimationRateAndRotationAndZToY;
+
+inline float2 getAnimationRate () {
+    return AnimationRateAndRotationAndZToY.xy;
+}
+
+inline float getVelocityRotation () {
+    return AnimationRateAndRotationAndZToY.z;
+}
+
+inline float getZToY () {
+    return AnimationRateAndRotationAndZToY.w;
+}
 
 float getDeltaTimeSeconds () {
     return System.GlobalSettings.x / VelocityConstantScale;
@@ -51,28 +66,6 @@ float getCollisionLifePenalty () {
 float2 getTexel () {
     return System.TexelAndSize.xy;
 }
-
-#ifdef BEZIERS_DEFINED
-
-uniform ClampedBezier2 SizeFromLife;
-uniform ClampedBezier2 SizeFromVelocity;
-uniform ClampedBezier4 ColorFromLife;
-uniform ClampedBezier4 ColorFromVelocity;
-
-float4 getColorForLifeAndVelocity (float life, float velocity) {
-    float4 result = evaluateBezier4(ColorFromLife, life);
-    result *= evaluateBezier4(ColorFromVelocity, velocity);
-    result.rgb *= result.a;
-    return result;
-}
-
-float2 getSizeForLifeAndVelocity (float life, float velocity) {
-    float2 result = evaluateBezier2(SizeFromLife, life);
-    result *= evaluateBezier2(SizeFromVelocity, velocity);
-    return System.TexelAndSize.zw * result;
-}
-
-#endif
 
 float getRotationForLifeAndIndex (float life, float index) {
     return (life * System.RotationFromLifeAndIndex.x) + 

@@ -1138,20 +1138,26 @@ namespace ParticleEditor {
                 value = new NullableLazyResource<Texture2D>();
                 cpi.Setter(instance, value);
                 changed = true;
+                hasValue = false;
             }
             
             Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
-            Nuke.nk_label_wrap(
-                ctx, string.Format(
-                    "{0}: {1} ({2}{3}{4})",
-                    cpi.Name, hasValue ? Path.GetFileName(value.Name) : "none",
-                    hasValue ? value.Instance.Width.ToString() : "", 
-                    hasValue ? "x" : "", 
-                    hasValue ? value.Instance.Height.ToString() : ""
-                )
-            );
+            if (hasValue) {
+                Nuke.nk_label_wrap(
+                    ctx, string.Format(
+                        "{0}: {1} ({2}x{3})",
+                        cpi.Name, Path.GetFileName(value.Name),
+                        value.Instance.Width.ToString(),
+                        value.Instance.Height.ToString()
+                    )
+                );
+            } else {
+                Nuke.nk_label_wrap(
+                    ctx, string.Format("{0}: none", cpi.Name)
+                );
+            }
 
-            if (hasValue && value.Instance != null) {
+            if (hasValue) {
                 var tex = value.Instance;
                 var height = Math.Min(240, tex.Height);
                 Bounds panel;

@@ -1,7 +1,6 @@
 #include "ParticleCommon.fxh"
 #include "RandomCommon.fxh"
 
-#define PI 3.14159265358979323846
 #define MAX_POSITION_CONSTANTS 32
 
 uniform bool   AlignVelocityAndPosition, ZeroZAxis;

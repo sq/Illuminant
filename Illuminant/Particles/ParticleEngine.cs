@@ -44,6 +44,9 @@ namespace Squared.Illuminant.Particles {
         internal readonly UnorderedList<ParticleSystem.BufferSet> DiscardedBuffers
             = new UnorderedList<ParticleSystem.BufferSet>();
 
+        internal readonly HashSet<ParticleSystem> Systems = 
+            new HashSet<ParticleSystem>(new ReferenceComparer<ParticleSystem>());
+
         private readonly EmbeddedEffectProvider Effects;
 
         private static readonly short[] TriIndices = new short[] {
@@ -130,12 +133,21 @@ namespace Squared.Illuminant.Particles {
             var ibSize = RasterizeIndexBuffer.IndexCount * 2;
             var obSize = RasterizeOffsetBuffer.VertexCount * Marshal.SizeOf(typeof(ParticleOffsetVertex));
             var vbSize = RasterizeVertexBuffer.VertexCount * Marshal.SizeOf(typeof(ParticleSystemVertex));
+
+            // RenderData and RenderColor
+            long chunkTotal = 0;
+            foreach (var s in Systems)
+                foreach (var c in s.Chunks)
+                    chunkTotal += (c.Size * c.Size * (Configuration.HighPrecision ? 4 * 4 : 2 * 4) * 2);
+
+            // Position/Velocity/Attributes buffers
             long bufTotal = 0;
             foreach (var buf in AllBuffers) {
                 var bufSize = buf.Size * buf.Size * (buf.Attributes != null ? 3 : 2) * (Configuration.HighPrecision ? 4 * 4 : 2 * 4);
                 bufTotal += bufSize;
             }
-            return (ibSize + obSize + vbSize + bufTotal);
+
+            return (ibSize + obSize + vbSize + chunkTotal + bufTotal);
         }
 
         private void FillIndexBuffer () {
@@ -255,7 +267,6 @@ namespace Squared.Illuminant.Particles {
 
     public class ParticleEngineConfiguration {
         public readonly int ChunkSize;
-        public readonly int AttributeCount;
 
         /// <summary>
         /// Store system state as 32-bit float instead of 16-bit float
@@ -293,8 +304,7 @@ namespace Squared.Illuminant.Particles {
         /// </summary>
         public Func<string, Texture2D> FPTextureLoader = null;
 
-        public ParticleEngineConfiguration (int chunkSize = 256, int attributeCount = 1) {
-            AttributeCount = attributeCount;
+        public ParticleEngineConfiguration (int chunkSize = 256) {
             ChunkSize = chunkSize;
         }
     }
