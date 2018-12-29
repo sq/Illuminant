@@ -134,10 +134,6 @@ void PS_SpawnFeedback (
     newPosition.w = tempPosition.w;
 
     newAttributes = evaluateFormula(attributeConstant, Configuration[6], Configuration[7], RandomCircularity[2], random3);
-
-    // HACK
-    newPosition.w += 100;
-    newAttributes.a = 1;
     newVelocity = evaluateFormula(Configuration[2], Configuration[3], Configuration[4], RandomCircularity[1], random2);
 }
 

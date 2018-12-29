@@ -238,6 +238,12 @@ namespace Squared.Illuminant.Particles {
                 TotalSpawned = 0;
                 IsFeedbackOutput = false;
             }
+
+            internal void SkipFeedbackInput (int skipAmount) {
+                TotalConsumedForFeedback += skipAmount;
+                if (TotalConsumedForFeedback > TotalSpawned)
+                    TotalConsumedForFeedback = TotalSpawned;
+            }
         }
 
         public bool IsDisposed { get; private set; }
@@ -776,7 +782,7 @@ namespace Squared.Illuminant.Particles {
                 colorFromLife = new ClampedBezier4 {
                     A = new Vector4(1, 1, 1, 0),
                     B = Vector4.One,
-                    RangeAndCount = new Vector4(0, 1.0f / o, 2, 0)
+                    RangeAndCount = new Vector4(0, 1.0f / o, 2, 1)
                 };
             } else {
                 colorFromLife = new ClampedBezier4(Configuration.Color._ColorFromLife);

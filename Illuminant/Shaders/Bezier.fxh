@@ -14,12 +14,20 @@ struct ClampedBezier4 {
 float tForScaledBezier (in float4 rangeAndCount, in float value, out float t) {
     float minValue = rangeAndCount.x, 
         invDivisor = rangeAndCount.y;
+    bool repeating = rangeAndCount.w < 0;
 
     t = (value - minValue) * abs(invDivisor);
-    if (invDivisor < 0)
-        t = 1 - saturate(t);
-    else
-        t = saturate(t);
+    if (repeating) {
+        if (invDivisor < 0)
+            t = 1 - (t % 1);
+        else
+            t = t % 1;
+    } else {
+        if (invDivisor < 0)
+            t = 1 - saturate(t);
+        else
+            t = saturate(t);
+    }
     return rangeAndCount.z;
 }
 

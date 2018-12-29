@@ -208,10 +208,20 @@ namespace Squared.Illuminant.Particles.Transforms {
         public bool MultiplyAttributeConstant = false;
 
         /// <summary>
-        /// Each particle from the source system corresponds to (1/Divisor) particles in the destination system
+        /// Only considers the N most recently spawned particles from the source system for feedback.
+        /// Use this for cases where the source system spawns at a much higher rate than your spawner,
+        ///  to avoid performing feedback spawning against particles that are already dead.
+        /// Note that this will have bad interactions with other feedback spawners consuming particles
+        ///  from the same source.
         /// </summary>
-        public int Divisor = 1;
+        public int? SlidingWindowSize = null;
 
+        /// <summary>
+        /// Waits until N additional particles are ready to consume for feedback. This provides a
+        ///  brute force way to wait until particles have aged before using them for feedback.
+        /// </summary>
+        public int SlidingWindowMargin = 0;
+        
         private ParticleSystem.Chunk CurrentFeedbackSource;
         private int CurrentFeedbackSourceIndex;
 
@@ -233,11 +243,18 @@ namespace Squared.Illuminant.Particles.Transforms {
             if (sourceChunk == null) {
                 spawnCount = 0;
                 return;
-            } else {
-                // sourceChunk.IsFeedbackSource = true;
             }
 
-            spawnCount = Math.Min(spawnCount, sourceChunk.AvailableForFeedback);
+            var windowSize = SlidingWindowSize.GetValueOrDefault(999999);
+            var availableForFeedback = sourceChunk.AvailableForFeedback;
+            var windowedAvailable = Math.Min(availableForFeedback, windowSize);
+
+            var skipAmount = Math.Max(0, availableForFeedback - windowedAvailable);
+            sourceChunk.SkipFeedbackInput(skipAmount);
+
+            var availableLessMargin = Math.Max(0, windowedAvailable - SlidingWindowMargin);
+
+            spawnCount = Math.Min(spawnCount, availableLessMargin);
             CurrentFeedbackSource = sourceChunk;
             CurrentFeedbackSourceIndex = sourceChunk.FeedbackSourceIndex;
         }

@@ -385,7 +385,7 @@ namespace Squared.Illuminant.Uniforms {
                 range = 1;
             RangeAndCount = new Vector4(
                 Math.Min(src.MinValue, src.MaxValue),
-                1.0f / range, src.Count, 0
+                1.0f / range, src.Count, (src.Repeat ? -1 : 1)
             );
             ABCD = new Vector4(
                 src.A, src.B, src.C, src.D
@@ -439,7 +439,7 @@ namespace Squared.Illuminant.Uniforms {
                 range = 1;
             RangeAndCount = new Vector4(
                 Math.Min(src.MinValue, src.MaxValue) * timeScale,
-                1.0f / (range / timeScale), src.Count, 2
+                1.0f / (range / timeScale), src.Count, src.Repeat ? -2 : 2
             );
             AB = new Vector4(
                 src.A.X, src.A.Y,
@@ -465,7 +465,7 @@ namespace Squared.Illuminant.Uniforms {
                 range = 1;
             RangeAndCount = new Vector4(
                 Math.Min(src.MinValue, src.MaxValue),
-                1.0f / range, src.Count, elementCount
+                1.0f / range, src.Count, elementCount * (src.Repeat ? -1 : 1)
             );
             AB = new Vector4(
                 a.X, a.Y,
@@ -544,7 +544,7 @@ namespace Squared.Illuminant.Uniforms {
                 range = 1;
             RangeAndCount = new Vector4(
                 Math.Min(src.MinValue, src.MaxValue),
-                1.0f / range, src.Count, 1
+                1.0f / range, src.Count, src.Repeat ? -1 : 1
             );
             A = new Vector4(src.A, y, z, w);
             B = new Vector4(src.B, y, z, w);
@@ -563,7 +563,7 @@ namespace Squared.Illuminant.Uniforms {
                 range = 1;
             RangeAndCount = new Vector4(
                 Math.Min(src.MinValue, src.MaxValue),
-                1.0f / range, src.Count, 2
+                1.0f / range, src.Count, src.Repeat ? -2 : 2
             );
             A = new Vector4(src.A, z, w);
             B = new Vector4(src.B, z, w);
@@ -582,7 +582,7 @@ namespace Squared.Illuminant.Uniforms {
                 range = 1;
             RangeAndCount = new Vector4(
                 Math.Min(src.MinValue, src.MaxValue) * timeScale,
-                1.0f / (range / timeScale), src.Count, 4
+                1.0f / (range / timeScale), src.Count, src.Repeat ? -4 : 4
             );
             A = src.A;
             B = src.B;
@@ -603,7 +603,7 @@ namespace Squared.Illuminant.Uniforms {
             // HACK: Just visualize index?
             RangeAndCount = new Vector4(
                 Math.Min(src.MinValue, src.MaxValue),
-                1.0f / range, src.Count, 4
+                1.0f / range, src.Count, src.Repeat ? -4 : 4
             );
 
             DynamicMatrix a = src.A, b = src.B, c = src.C, d = src.D;
@@ -625,7 +625,7 @@ namespace Squared.Illuminant.Uniforms {
                 range = 1;
             RangeAndCount = new Vector4(
                 Math.Min(src.MinValue, src.MaxValue),
-                1.0f / range, src.Count, 2
+                1.0f / range, src.Count, src.Repeat ? -2 : 2
             );
             A = new Vector4(a, z, w);
             B = new Vector4(b, z, w);
@@ -644,7 +644,7 @@ namespace Squared.Illuminant.Uniforms {
                 range = 1;
             RangeAndCount = new Vector4(
                 Math.Min(src.MinValue, src.MaxValue),
-                1.0f / range, src.Count, 4
+                1.0f / range, src.Count, src.Repeat ? -4 : 4
             );
             A = a;
             B = b;
@@ -655,12 +655,22 @@ namespace Squared.Illuminant.Uniforms {
         internal static int tForScaledBezier (Vector4 rangeAndCount, float value, out float t) {
             float minValue = rangeAndCount.X, 
                 invDivisor = rangeAndCount.Y;
+            var repeating = (rangeAndCount.W < 0);
 
             t = (value - minValue) * Math.Abs(invDivisor);
-            if (invDivisor < 0)
-                t = 1 - Arithmetic.Clamp(t, 0, 1);
-            else
-                t = Arithmetic.Clamp(t, 0, 1);
+
+            if (repeating) {
+                if (invDivisor < 0) {
+                    // FIXME: Not sure this is right
+                    t = 1 - Arithmetic.Wrap(t, 0, 1);
+                } else
+                    t = Arithmetic.Wrap(t, 0, 1);
+            } else {
+                if (invDivisor < 0)
+                    t = 1 - Arithmetic.Clamp(t, 0, 1);
+                else
+                    t = Arithmetic.Clamp(t, 0, 1);
+            }
             return (int)rangeAndCount.Z;
         }
 

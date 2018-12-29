@@ -1068,10 +1068,10 @@ namespace ParticleEditor {
                         }
                     }
 
-                    Nuke.nk_layout_row_dynamic(ctx, LineHeight, ((bm != null) && !fullyDynamic) ? 4 : 3);
+                    Nuke.nk_layout_row_dynamic(ctx, LineHeight, ((bm != null) && !fullyDynamic) ? 5 : 4);
 
                     var cnt = b.Count;
-                    if (Nuklear.Property("#Num", ref cnt, 1, 4, 1, 1)) {
+                    if (Nuklear.Property("##", ref cnt, 1, 4, 1, 1)) {
                         // Copy existing row when adding new one
                         if ((b.Count < cnt) && (cnt > 1))
                             b[cnt - 1] = b[cnt - 2];
@@ -1080,15 +1080,19 @@ namespace ParticleEditor {
                     }
 
                     var val = b.MinValue;
-                    if (RenderPropertyElement("#Min", null, ref val, ref changed))
+                    if (RenderPropertyElement("#≥", null, ref val, ref changed))
                         b.MinValue = val;
 
                     val = b.MaxValue;
-                    if (RenderPropertyElement("#Max", null, ref val, ref changed))
+                    if (RenderPropertyElement("#≤", null, ref val, ref changed))
                         b.MaxValue = val;
 
                     if ((bm != null) && !fullyDynamic && Nuklear.Property("#Row", ref selectedRow, 0, 3, 1, 1))
                         BezierSelectedRows[bm] = selectedRow;
+
+                    var repeat = b.Repeat;
+                    if (Checkbox("Loop", ref repeat))
+                        b.Repeat = repeat;
 
                     for (int i = 0; i < cnt; i++) {
                         var elt = b[i];

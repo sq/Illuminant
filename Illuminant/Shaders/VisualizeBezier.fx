@@ -48,11 +48,12 @@ void BezierVisualizerPixelShader (
     float4 distances = abs((1 - xy.y) - scaledValue);
     float4 scaledDistances = 1 - saturate(distances / 0.016);
 
-    if (Bezier.RangeAndCount.w < 1.5)
+    float elementCount = abs(Bezier.RangeAndCount.w);
+    if (elementCount < 1.5)
         scaledDistances.yzw = 0;
-    else if (Bezier.RangeAndCount.w < 2.5)
+    else if (elementCount < 2.5)
         scaledDistances.zw = 0;
-    else if (Bezier.RangeAndCount.w < 3.5)
+    else if (elementCount < 3.5)
         scaledDistances.w = 0;
 
     float2 scaledOneAndZero = saturate((float2(1, 0) - minValue) / valueRange);
