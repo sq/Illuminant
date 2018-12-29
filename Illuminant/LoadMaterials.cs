@@ -313,11 +313,7 @@ namespace Squared.Illuminant.Particles {
                 DefineMaterial(ParticleMaterials.Spawn = new Material(
                     effects.Load("SpawnParticles"), "SpawnParticles", dBegin, dEnd
                 ));
-
-                DefineMaterial(ParticleMaterials.NullTransform = new Material(
-                    effects.Load("NullTransform"), "NullTransform", dBegin, dEnd
-                ));
-
+                
                 DefineMaterial(ParticleMaterials.AttributeColor = new Material(
                     effects.Load("RasterizeParticleSystem"), "AttributeColor"
                 ));
