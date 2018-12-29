@@ -90,7 +90,9 @@ namespace Squared.Illuminant.Particles.Transforms {
             Indices = new Vector2(first, last);
         }
 
-        internal virtual void Tick (ParticleSystem system, float now, double deltaTimeSeconds, out int spawnCount) {
+        internal virtual void BeginTick (ParticleSystem system, float now, double deltaTimeSeconds, out int spawnCount, out ParticleSystem.Chunk sourceChunk) {
+            sourceChunk = null;
+
             if (AdditionalPositions.Count >= MaxPositions)
                 throw new Exception("Maximum number of positions for a spawner is " + MaxPositions);
             if (!IsActive) {
@@ -111,8 +113,12 @@ namespace Squared.Illuminant.Particles.Transforms {
             } else {
                 spawnCount = (int)currentRate;
                 RateError = currentRate - spawnCount;
-                TotalSpawned += spawnCount;
             }
+        }
+
+        internal virtual void EndTick (int requestedSpawnCount, int actualSpawnCount) {
+            RateError += requestedSpawnCount - actualSpawnCount;
+            TotalSpawned += actualSpawnCount;
         }
 
         internal void AddError (int numUnspawned) {
@@ -206,8 +212,13 @@ namespace Squared.Illuminant.Particles.Transforms {
         /// </summary>
         public int Divisor = 1;
 
-        internal override void Tick (ParticleSystem system, float now, double deltaTimeSeconds, out int spawnCount) {
+        private ParticleSystem.Chunk CurrentFeedbackSource;
+        private int CurrentFeedbackSourceIndex;
+
+        internal override void BeginTick (ParticleSystem system, float now, double deltaTimeSeconds, out int spawnCount, out ParticleSystem.Chunk sourceChunk) {
             spawnCount = 0;
+            sourceChunk = null;
+            CurrentFeedbackSource = null;
 
             if (!SourceSystem.TryInitialize(system.Engine.Configuration.SystemResolver))
                 return;
@@ -216,13 +227,19 @@ namespace Squared.Illuminant.Particles.Transforms {
             if (SourceSystem.Instance == system)
                 return;
 
-            base.Tick(system, now, deltaTimeSeconds, out spawnCount);
+            base.BeginTick(system, now, deltaTimeSeconds, out spawnCount, out sourceChunk);
 
-            var sourceChunk = SourceSystem.Instance.PickSourceForFeedback(spawnCount);
+            sourceChunk = SourceSystem.Instance.PickSourceForFeedback(spawnCount);
             if (sourceChunk == null) {
                 spawnCount = 0;
                 return;
+            } else {
+                // sourceChunk.IsFeedbackSource = true;
             }
+
+            spawnCount = Math.Min(spawnCount, sourceChunk.AvailableForFeedback);
+            CurrentFeedbackSource = sourceChunk;
+            CurrentFeedbackSourceIndex = sourceChunk.FeedbackSourceIndex;
         }
 
         protected override Material GetMaterial (ParticleMaterials materials) {
@@ -234,6 +251,7 @@ namespace Squared.Illuminant.Particles.Transforms {
 
             parameters["AlignPositionConstant"].SetValue(AlignPositionConstant);
             parameters["MultiplyAttributeConstant"].SetValue(MultiplyAttributeConstant);
+            parameters["FeedbackSourceIndex"].SetValue(CurrentFeedbackSourceIndex);
         }
 
         public override bool IsValid {

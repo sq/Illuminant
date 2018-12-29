@@ -93,8 +93,12 @@ namespace ParticleEditor {
         }
 
         public void Update (ParticleEditor editor, IBatchContainer container, int layer, long deltaTimeTicks) {
-            if (!editor.Controller.Paused)
-                Time.Advance(deltaTimeTicks);
+            var doUpdate = !editor.Controller.Paused || editor.Controller.StepPending;
+            if (!doUpdate)
+                return;
+
+            editor.Controller.StepPending = false;
+            Time.Advance(deltaTimeTicks);
 
             using (var g = BatchGroup.New(container, layer)) {
                 int i = 0;

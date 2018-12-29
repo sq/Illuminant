@@ -107,6 +107,7 @@ namespace Squared.Illuminant.Particles {
             public RenderTarget2D Velocity;
 
             public bool IsDisposed { get; private set; }
+            public bool IsUpdateResult;
 
             private static volatile int NextID;
 
@@ -146,6 +147,8 @@ namespace Squared.Illuminant.Particles {
         }
 
         public class Chunk : IDisposable {
+            public readonly ParticleSystem System;
+
             public long GlobalIndexOffset;
             public readonly int Size, MaximumCount;
             public int ID;
@@ -154,16 +157,25 @@ namespace Squared.Illuminant.Particles {
             internal BufferSet Previous, Current;
 
             public OcclusionQuery Query;
-            public RenderTarget2D Attributes, RenderData, RenderColor;
+            public RenderTarget2D Attributes;
+
+            internal RenderTarget2D RenderData, RenderColor;
+            internal BufferSet LastUpdateResult;
 
             public bool IsFeedbackOutput { get; internal set; }
             public bool IsDisposed { get; private set; }
 
+            public int TotalSpawned { get; internal set; }
             public int TotalConsumedForFeedback { get; internal set; }
             public int NextSpawnOffset { get; internal set; }
             public int AvailableForFeedback {
                 get {
-                    return NextSpawnOffset - TotalConsumedForFeedback;
+                    return TotalSpawned - TotalConsumedForFeedback;
+                }
+            }
+            public int FeedbackSourceIndex {
+                get {
+                    return TotalConsumedForFeedback;
                 }
             }
             public int Free {
@@ -175,12 +187,15 @@ namespace Squared.Illuminant.Particles {
             private static volatile int NextID;
 
             public Chunk (
-                ParticleEngineConfiguration configuration, GraphicsDevice device
+                ParticleSystem system
             ) {
+                System = system;
+                var configuration = system.Engine.Configuration;
                 ID = Interlocked.Increment(ref NextID);
                 Size = configuration.ChunkSize;
                 MaximumCount = Size * Size;
 
+                var device = system.Engine.Coordinator.Device;
                 Query = new OcclusionQuery(device);
                 Attributes = new RenderTarget2D(
                     device, Size, Size, false, SurfaceFormat.Vector4, 
@@ -200,13 +215,28 @@ namespace Squared.Illuminant.Particles {
                 if (IsDisposed)
                     return;
 
+                if (LastUpdateResult != null)
+                    LastUpdateResult.IsUpdateResult = false;
+
                 IsDisposed = true;
 
+                LastUpdateResult = null;
                 Attributes.Dispose();
                 RenderData.Dispose();
                 RenderColor.Dispose();
                 Query.Dispose();
                 Query = null;
+            }
+
+            internal void Clear () {
+                if (LastUpdateResult != null)
+                    LastUpdateResult.IsUpdateResult = false;
+
+                LastUpdateResult = null;
+                NextSpawnOffset = 0;
+                TotalConsumedForFeedback = 0;
+                TotalSpawned = 0;
+                IsFeedbackOutput = false;
             }
         }
 
@@ -307,9 +337,9 @@ namespace Squared.Illuminant.Particles {
             }
         }
         
-        private Chunk CreateChunk (GraphicsDevice device) {
+        private Chunk CreateChunk () {
             lock (Engine.Coordinator.CreateResourceLock) {
-                var result = new Chunk(Engine.Configuration, device);
+                var result = new Chunk(this);
                 result.Current = AcquireOrCreateBufferSet();
                 result.GlobalIndexOffset = TotalSpawnCount;
                 return result;
@@ -331,7 +361,7 @@ namespace Squared.Illuminant.Particles {
             var g = parallel ? Engine.Coordinator.ThreadGroup : null;
 
             for (int i = 0; i < numToSpawn; i++) {
-                var c = CreateChunk(device);
+                var c = CreateChunk();
                 // Console.WriteLine("Creating new chunk " + c.ID);
                 var offset = i * mc;
                 var curr = c.Current;
@@ -379,8 +409,7 @@ namespace Squared.Illuminant.Particles {
             }
 
             if (chunk == null) {
-                var device = Engine.Coordinator.Device;
-                chunk = CreateChunk(device);
+                chunk = CreateChunk();
                 chunk.IsFeedbackOutput = feedback;
                 currentTarget = chunk.ID;
                 Chunks.Add(chunk);
@@ -419,19 +448,20 @@ namespace Squared.Illuminant.Particles {
             Transforms.ParameterSetter setParameters,
             double deltaTimeSeconds, float now
         ) {
-            int spawnCount = 0;
+            int spawnCount = 0, requestedSpawnCount;
 
             if (!spawner.IsValid)
                 return;
 
-            spawner.Tick(this, now, deltaTimeSeconds, out spawnCount);
+            Chunk sourceChunk;
+            spawner.BeginTick(this, now, deltaTimeSeconds, out requestedSpawnCount, out sourceChunk);
 
-            if (spawnCount <= 0) {
+            if (requestedSpawnCount <= 0) {
                 return;
-            } else if (spawnCount > ChunkMaximumCount) {
-                spawner.AddError(spawnCount - ChunkMaximumCount);
+            } else if (requestedSpawnCount > ChunkMaximumCount)
                 spawnCount = ChunkMaximumCount;
-            }
+            else
+                spawnCount = requestedSpawnCount;
 
             bool needClear;
             var chunk = PickTargetForSpawn(spawner is Transforms.FeedbackSpawner, spawnCount, out needClear);
@@ -446,12 +476,18 @@ namespace Squared.Illuminant.Particles {
 
             chunk.NextSpawnOffset += spawnCount;
             TotalSpawnCount += spawnCount;
+            if (sourceChunk != null)
+                sourceChunk.TotalConsumedForFeedback += spawnCount;
+
+            spawner.EndTick(requestedSpawnCount, spawnCount);
+            chunk.TotalSpawned += spawnCount;
 
             RunTransform(
                 chunk, container, ref layer, m,
                 startedWhen, true,
                 setParameters, deltaTimeSeconds,
-                needClear, now, false
+                needClear, now, false,
+                sourceChunk
             );
         }
 
@@ -460,7 +496,7 @@ namespace Squared.Illuminant.Particles {
             long startedWhen, bool isSpawning,
             Transforms.ParameterSetter setParameters,
             double deltaTimeSeconds, bool shouldClear,
-            float now, bool isUpdate
+            float now, bool isUpdate, Chunk sourceChunk
         ) {
             if (chunk == null)
                 throw new ArgumentNullException();
@@ -511,13 +547,25 @@ namespace Squared.Illuminant.Particles {
                         if (setParameters != null)
                             setParameters(Engine, p, now, CurrentFrameIndex);
 
-                        if (prev != null) {
-                            p["PositionTexture"].SetValue(prev.PositionAndLife);
-                            p["VelocityTexture"].SetValue(prev.Velocity);
+                        if ((prev != null) || (sourceChunk != null)) {
+                            var src = sourceChunk?.Current ?? prev;
+                            p["PositionTexture"].SetValue(src.PositionAndLife);
+                            p["VelocityTexture"].SetValue(src.Velocity);
 
                             var at = p["AttributeTexture"];
-                            if (at != null)
-                                at.SetValue(isSpawning ? null : chunk.Attributes);
+                            if (at != null) {
+                                if (sourceChunk != null)
+                                    at.SetValue(sourceChunk.RenderColor);
+                                else
+                                    at.SetValue(isSpawning ? null : chunk.Attributes);
+                            }
+
+                        }
+
+                        if (sourceChunk != null) {
+                            p["SourceChunkSizeAndTexel"].SetValue(new Vector3(
+                                sourceChunk.Size, 1.0f / sourceChunk.Size, 1.0f / sourceChunk.Size
+                            ));
                         }
 
                         var dft = p["DistanceFieldTexture"];
@@ -569,6 +617,13 @@ namespace Squared.Illuminant.Particles {
                         PrimitiveType.TriangleList, Engine.TriVertexBuffer, 0,
                         Engine.TriIndexBuffer, 0, 0, Engine.TriVertexBuffer.VertexCount, 0, Engine.TriVertexBuffer.VertexCount / 2
                     ));
+            }
+
+            if (isUpdate) {
+                if (chunk.LastUpdateResult != null)
+                    chunk.LastUpdateResult.IsUpdateResult = false;
+                chunk.LastUpdateResult = curr;
+                curr.IsUpdateResult = true;
             }
         }
 
@@ -705,6 +760,7 @@ namespace Squared.Illuminant.Particles {
             Reap(chunk.Current);
             chunk.Previous = chunk.Current = null;
             Chunks.Remove(chunk);
+            chunk.Clear();
             Engine.Coordinator.DisposeResource(chunk);
         }
 
@@ -847,7 +903,7 @@ namespace Squared.Illuminant.Particles {
                 RunTransform(
                     chunk, group, ref i, it.GetMaterial(Engine.ParticleMaterials),
                     startedWhen, false, it.SetParameters,
-                    actualDeltaTimeSeconds, isFirstXform, now, false
+                    actualDeltaTimeSeconds, isFirstXform, now, false, null
                 );
 
                 isFirstXform = false;
@@ -862,10 +918,13 @@ namespace Squared.Illuminant.Particles {
                         chunk, group, ref i, pm.Erase,
                         startedWhen, false,
                         null, actualDeltaTimeSeconds, 
-                        true, now, true
+                        true, now, true, null
                     );
                 }
                 IsClearPending = false;
+                TotalSpawnCount = 0;
+                foreach (var c in Chunks)
+                    c.Clear();
             } else if (Configuration.Collision?.DistanceField != null) {
                 if (Configuration.Collision.DistanceFieldMaximumZ == null)
                     throw new InvalidOperationException("If a distance field is active, you must set DistanceFieldMaximumZ");
@@ -876,13 +935,13 @@ namespace Squared.Illuminant.Particles {
                     (Engine, p, _now, frameIndex) => {
                         var dfu = new Uniforms.DistanceField(Configuration.Collision.DistanceField, Configuration.Collision.DistanceFieldMaximumZ.Value);
                         pm.MaterialSet.TrySetBoundUniform(pm.UpdateWithDistanceField, "DistanceField", ref dfu);
-                    }, actualDeltaTimeSeconds, true, now, true
+                    }, actualDeltaTimeSeconds, true, now, true, null
                 );
             } else {
                 RunTransform(
                     chunk, group, ref i, pm.UpdatePositions,
-                    startedWhen, false,
-                    null, actualDeltaTimeSeconds, true, now, true
+                    startedWhen, false, null, 
+                    actualDeltaTimeSeconds, true, now, true, null
                 );
             }
         }

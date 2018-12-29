@@ -12,6 +12,7 @@ uniform float4 ChunkSizeAndIndices;
 uniform float4 Configuration[8];
 uniform float  RandomCircularity[3];
 uniform float4x4 PositionMatrix;
+uniform float3 SourceChunkSizeAndTexel;
 
 void VS_Spawn (
     in  float2 xy     : POSITION0,
@@ -97,13 +98,13 @@ void PS_SpawnFeedback (
         return;
     }
 
-    float sourceIndex = index + FeedbackSourceIndex;
-    float2 sourceXy = float2(sourceIndex % ChunkSizeAndIndices.x, floor(sourceIndex / ChunkSizeAndIndices.x));
+    float sourceIndex = (index - ChunkSizeAndIndices.y) + FeedbackSourceIndex;
+    float2 sourceXy = float2(sourceIndex % SourceChunkSizeAndTexel.x, floor(sourceIndex / SourceChunkSizeAndTexel.x) * SourceChunkSizeAndTexel.x);
 
-    float4 sourcePosition, sourceVelocity, sourceAttributes;
-    readStateOrDiscard(
-        sourceXy, sourcePosition, sourceVelocity, sourceAttributes
-    );
+    float4 sourcePosition, sourceAttributes;
+    float4 sourceUv = float4(sourceXy * SourceChunkSizeAndTexel.yz, 0, 0);
+    sourcePosition = tex2Dlod(PositionSampler, sourceUv);
+    sourceAttributes = tex2Dlod(AttributeSampler, sourceUv);
 
     float2 randomOffset1 = float2(index % 8039, 0 + (index % 57));
     float2 randomOffset2 = float2(index % 6180, 1 + (index % 4031));
@@ -111,6 +112,7 @@ void PS_SpawnFeedback (
     float4 random1 = random(randomOffset1);
     float4 random2 = random(randomOffset2);
     float4 random3 = random(randomOffset3);
+
     // The x and y element of random samples determines the normal
     if (AlignVelocityAndPosition)
         random2.xy = random1.xy;
@@ -129,8 +131,13 @@ void PS_SpawnFeedback (
 
     newPosition = mul(tempPosition, PositionMatrix);
     newPosition.w = tempPosition.w;
-    newVelocity = evaluateFormula(Configuration[2], Configuration[3], Configuration[4], RandomCircularity[1], random2);
+
     newAttributes = evaluateFormula(attributeConstant, Configuration[6], Configuration[7], RandomCircularity[2], random3);
+
+    // HACK
+    newPosition.w += 100;
+    newAttributes.a = 1;
+    newVelocity = evaluateFormula(Configuration[2], Configuration[3], Configuration[4], RandomCircularity[1], random2);
 }
 
 technique SpawnParticles {

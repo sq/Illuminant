@@ -39,6 +39,7 @@ namespace ParticleEditor {
             public ListState Systems, Transforms;
         }
 
+        public bool StepPending;
         public bool Paused;
         public readonly ParticleEditor Game;
         public EngineModel Model;
@@ -110,6 +111,10 @@ namespace ParticleEditor {
             view.Dispose();
             Model.Systems.RemoveAt(index);
             View.Systems.RemoveAt(index);
+        }
+
+        public void Step () {
+            StepPending = true;
         }
 
         public void QueueReset () {

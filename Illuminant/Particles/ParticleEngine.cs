@@ -97,6 +97,8 @@ namespace Squared.Illuminant.Particles {
             ParticleSystem.BufferSet b;
             using (var e = DiscardedBuffers.GetEnumerator())
             while (e.GetNext(out b)) {
+                if (b.IsUpdateResult)
+                    continue;
                 var age = CurrentTurn - b.LastTurnUsed;
                 if (age >= Configuration.RecycleInterval) {
                     e.RemoveCurrent();

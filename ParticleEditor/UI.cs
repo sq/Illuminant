@@ -86,14 +86,16 @@ namespace ParticleEditor {
                 Controller.ShowLoadDialog();
 
             if (Game.View != null) {
-                Nuke.nk_layout_row_dynamic(ctx, LineHeight, 3);
+                Nuke.nk_layout_row_dynamic(ctx, LineHeight, 4);
                 var time = TimeSpan.FromTicks(Game.View.Time.Ticks);
-                using (var tCount = new NString(time.ToString("hh\\:mm\\:ss\\.ff")))
+                using (var tCount = new NString(time.ToString("mm\\:ss\\.ff")))
                     Nuke.nk_text(ctx, tCount.pText, tCount.Length, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
                 if (Nuklear.Button("Restart"))
                     Controller.QueueReset();
                 if (Nuklear.Button(Controller.Paused ? "Unpause" : "Pause"))
                     Controller.Paused = !Controller.Paused;
+                if (Nuklear.Button("Step", Controller.Paused))
+                    Controller.Step();
                 Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
                 var liveCount = Game.View.Systems.Sum(s => s.Instance.LiveCount);
                 var capacity = Game.View.Systems.Sum(s => s.Instance.Capacity);
