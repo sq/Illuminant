@@ -42,8 +42,6 @@ float4 getColorForLifeAndVelocity (float life, float velocityLength) {
 }
 
 float2 getSizeForLifeAndVelocity (float life, float velocityLength) {
-    return System.TexelAndSize.zw;
-
     float2 result = evaluateBezier2(SizeFromLife, life);
     result *= evaluateBezier2(SizeFromVelocity, velocityLength);
     return System.TexelAndSize.zw * result;
@@ -67,8 +65,6 @@ float4 getRampedColorForLifeValueAndIndex (float life, float velocityLength, flo
 }
 
 float getRotationForVelocity (float3 velocity) {
-    return 0;
-
     float2 absvel = abs(velocity.xy + float2(0, velocity.z * -getZToY()));
     float angle;
     if ((absvel.x < 0.01) && (absvel.y < 0.01))

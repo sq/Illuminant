@@ -10,12 +10,11 @@ uniform float  MaximumAcceleration;
 void PS_Gravity (
     in  float2 xy                : VPOS,
     out float4 newPosition       : COLOR0,
-    out float4 newVelocity       : COLOR1,
-    out float4 newAttributes     : COLOR2
+    out float4 newVelocity       : COLOR1
 ) {
     float4 oldVelocity;
-    readState(
-        xy, newPosition, oldVelocity, newAttributes
+    readStatePV(
+        xy, newPosition, oldVelocity
     );
 
     float3 acceleration = 0;

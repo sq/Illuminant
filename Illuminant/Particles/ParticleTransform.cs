@@ -104,7 +104,6 @@ namespace Squared.Illuminant.Particles.Transforms {
         public float? CyclesPerSecond = 10;
         public FMAParameters<Vector3> Position;
         public FMAParameters<Vector3> Velocity;
-        public FMAParameters<Vector4> Attribute;
 
         public FMA () {
             Position = new FMAParameters<Vector3> {
@@ -115,10 +114,6 @@ namespace Squared.Illuminant.Particles.Transforms {
                 Add = Vector3.Zero,
                 Multiply = Vector3.One
             };
-            Attribute = new FMAParameters<Vector4> {
-                Add = Vector4.Zero,
-                Multiply = Vector4.One
-            };
         }
 
         protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
@@ -128,8 +123,6 @@ namespace Squared.Illuminant.Particles.Transforms {
             parameters["PositionMultiply"].SetValue(new Vector4(Position.Multiply.Evaluate(now), 1));
             parameters["VelocityAdd"].SetValue(new Vector4(Velocity.Add.Evaluate(now), 0));
             parameters["VelocityMultiply"].SetValue(new Vector4(Velocity.Multiply.Evaluate(now), 1));
-            parameters["AttributeAdd"].SetValue(Attribute.Add.Evaluate(now));
-            parameters["AttributeMultiply"].SetValue(Attribute.Multiply.Evaluate(now));
         }
 
         protected override Material GetMaterial (ParticleMaterials materials) {
@@ -139,10 +132,10 @@ namespace Squared.Illuminant.Particles.Transforms {
 
     public class MatrixMultiply : ParticleAreaTransform {
         public float? CyclesPerSecond = 10;
-        public Matrix Position, Velocity, Attribute;
+        public Matrix Position, Velocity;
 
         public MatrixMultiply () {
-            Position = Velocity = Attribute = Matrix.Identity;
+            Position = Velocity = Matrix.Identity;
         }
 
         protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
@@ -150,7 +143,6 @@ namespace Squared.Illuminant.Particles.Transforms {
             parameters["TimeDivisor"].SetValue(CyclesPerSecond.HasValue ? Uniforms.ParticleSystem.VelocityConstantScale / CyclesPerSecond.Value : -1);
             parameters["PositionMatrix"].SetValue(Position);
             parameters["VelocityMatrix"].SetValue(Velocity);
-            parameters["AttributeMatrix"].SetValue(Attribute);
         }
 
         protected override Material GetMaterial (ParticleMaterials materials) {

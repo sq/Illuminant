@@ -1,7 +1,7 @@
 #include "DistanceFunctionCommon.fxh"
 #include "ParticleCommon.fxh"
 
-uniform float4x4 PositionMatrix, VelocityMatrix, AttributeMatrix;
+uniform float4x4 PositionMatrix, VelocityMatrix;
 
 uniform float  TimeDivisor;
 uniform float  Strength;
@@ -19,12 +19,11 @@ float computeWeight (float3 worldPosition) {
 void PS_MatrixMultiply (
     in  float2 xy            : VPOS,
     out float4 newPosition   : COLOR0,
-    out float4 newVelocity   : COLOR1,
-    out float4 newAttributes : COLOR2
+    out float4 newVelocity   : COLOR1
 ) {
-    float4 oldPosition, oldVelocity, oldAttributes;
-    readState(
-        xy, oldPosition, oldVelocity, oldAttributes
+    float4 oldPosition, oldVelocity;
+    readStatePV(
+        xy, oldPosition, oldVelocity
     );
 
     float timeScale = (TimeDivisor >= 0) ?
@@ -38,10 +37,6 @@ void PS_MatrixMultiply (
     );
     newVelocity = lerp(
         oldVelocity, mul3(oldVelocity, VelocityMatrix, 0),
-        w
-    );
-    newAttributes = lerp(
-        oldAttributes, mul(oldAttributes, AttributeMatrix),
         w
     );
 }

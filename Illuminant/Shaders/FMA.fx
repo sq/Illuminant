@@ -4,7 +4,6 @@
 uniform float TimeDivisor;
 uniform float4 PositionAdd, PositionMultiply;
 uniform float4 VelocityAdd, VelocityMultiply;
-uniform float4 AttributeAdd, AttributeMultiply;
 
 uniform float  Strength;
 uniform int    AreaType;
@@ -30,17 +29,15 @@ float4 computeFMA (
 void PS_FMA (
     in  float2 xy            : VPOS,
     out float4 newPosition   : COLOR0,
-    out float4 newVelocity   : COLOR1,
-    out float4 newAttributes : COLOR2
+    out float4 newVelocity   : COLOR1
 ) {
-    float4 oldPosition, oldVelocity, oldAttributes;
-    readState(
-        xy, oldPosition, oldVelocity, oldAttributes
+    float4 oldPosition, oldVelocity;
+    readStatePV(
+        xy, oldPosition, oldVelocity
     );
 
     newPosition   = computeFMA(oldPosition, oldPosition, PositionMultiply, PositionAdd);
     newVelocity   = computeFMA(oldPosition, oldVelocity, VelocityMultiply, VelocityAdd);
-    newAttributes = computeFMA(oldPosition, oldAttributes, AttributeMultiply, AttributeAdd);
 }
 
 technique FMA {

@@ -10,11 +10,10 @@ void VS_Null (
 void PS_Null (
     in  float2 xy            : VPOS,
     out float4 newPosition   : COLOR0,
-    out float4 newVelocity   : COLOR1,
-    out float4 newAttributes : COLOR2
+    out float4 newVelocity   : COLOR1
 ) {
-    readState(
-        xy, newPosition, newVelocity, newAttributes
+    readStatePV(
+        xy, newPosition, newVelocity
     );
 }
 

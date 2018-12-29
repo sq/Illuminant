@@ -56,34 +56,29 @@ void PS_Spawn (
     [branch]
     if ((index < ChunkSizeAndIndices.y) || (index > ChunkSizeAndIndices.z)) {
         discard;
-        /*
-        // FIXME: We're not actually touching the attributes here
-        readStateOrDiscard(
-            xy, newPosition, newVelocity, newAttributes
-        );
-        */
-    } else {
-        float2 randomOffset1 = float2(index % 8039, 0 + (index % 57));
-        float2 randomOffset2 = float2(index % 6180, 1 + (index % 4031));
-        float2 randomOffset3 = float2(index % 2025, 2 + (index % 65531));
-        float4 random1 = random(randomOffset1);
-        float4 random2 = random(randomOffset2);
-        float4 random3 = random(randomOffset3);
-        // The x and y element of random samples determines the normal
-        if (AlignVelocityAndPosition)
-            random2.xy = random1.xy;
-        // Ensure the z axis of generated circular coordinates is 0, resulting in pure xy normals
-
-        float relativeIndex = (index - ChunkSizeAndIndices.y) + ChunkSizeAndIndices.w;
-        float positionIndex = relativeIndex % PositionConstantCount;
-        float4 positionConstant = PositionConstants[positionIndex];
-        float4 tempPosition = evaluateFormula(positionConstant, Configuration[0], Configuration[1], RandomCircularity[0], random1);
-
-        newPosition   = mul(tempPosition, PositionMatrix);
-        newPosition.w = tempPosition.w;
-        newVelocity   = evaluateFormula(Configuration[2], Configuration[3], Configuration[4], RandomCircularity[1], random2);
-        newAttributes = evaluateFormula(Configuration[5], Configuration[6], Configuration[7], RandomCircularity[2], random3);
+        return;
     }
+
+    float2 randomOffset1 = float2(index % 8039, 0 + (index % 57));
+    float2 randomOffset2 = float2(index % 6180, 1 + (index % 4031));
+    float2 randomOffset3 = float2(index % 2025, 2 + (index % 65531));
+    float4 random1 = random(randomOffset1);
+    float4 random2 = random(randomOffset2);
+    float4 random3 = random(randomOffset3);
+    // The x and y element of random samples determines the normal
+    if (AlignVelocityAndPosition)
+        random2.xy = random1.xy;
+    // Ensure the z axis of generated circular coordinates is 0, resulting in pure xy normals
+
+    float relativeIndex = (index - ChunkSizeAndIndices.y) + ChunkSizeAndIndices.w;
+    float positionIndex = relativeIndex % PositionConstantCount;
+    float4 positionConstant = PositionConstants[positionIndex];
+    float4 tempPosition = evaluateFormula(positionConstant, Configuration[0], Configuration[1], RandomCircularity[0], random1);
+
+    newPosition   = mul(tempPosition, PositionMatrix);
+    newPosition.w = tempPosition.w;
+    newVelocity   = evaluateFormula(Configuration[2], Configuration[3], Configuration[4], RandomCircularity[1], random2);
+    newAttributes = evaluateFormula(Configuration[5], Configuration[6], Configuration[7], RandomCircularity[2], random3);
 }
 
 technique SpawnParticles {

@@ -139,6 +139,16 @@ void readState (
     attributes = tex2Dlod(AttributeSampler, uv);
 }
 
+void readStatePV (
+    in float2 xy,
+    out float4 position,
+    out float4 velocity
+) {
+    float4 uv = float4(xy * getTexel(), 0, 0);
+    position = tex2Dlod(PositionSampler, uv);
+    velocity = tex2Dlod(VelocitySampler, uv);
+}
+
 void readStateOrDiscard (
     in float2 xy,
     out float4 position,
