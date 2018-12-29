@@ -99,7 +99,8 @@ void PS_SpawnFeedback (
     }
 
     float sourceIndex = (index - ChunkSizeAndIndices.y) + FeedbackSourceIndex;
-    float2 sourceXy = float2(sourceIndex % SourceChunkSizeAndTexel.x, floor(sourceIndex / SourceChunkSizeAndTexel.x) * SourceChunkSizeAndTexel.x);
+    float sourceY, sourceX = modf(sourceIndex / SourceChunkSizeAndTexel.x, sourceY) * SourceChunkSizeAndTexel.x;
+    float2 sourceXy = float2(sourceX, sourceY);
 
     float4 sourcePosition, sourceAttributes;
     float4 sourceUv = float4(sourceXy * SourceChunkSizeAndTexel.yz, 0, 0);
