@@ -53,13 +53,20 @@ namespace ParticleEditor {
                     }
                 },
                 {
+                    "FeedbackSpawner", new Dictionary<string, ModelTypeInfo> {
+                        {"MinRate", new ModelTypeInfo { Min = 0, Max = 100000 } },
+                        {"MaxRate", new ModelTypeInfo { Min = 0, Max = 100000 } },
+                        {"Attributes", new ModelTypeInfo { Type = "ColorFormula" } }
+                    }
+                },
+                {
                     "Spawner", new Dictionary<string, ModelTypeInfo> {
                         {"MinRate", new ModelTypeInfo { Min = 0, Max = 100000 } },
                         {"MaxRate", new ModelTypeInfo { Min = 0, Max = 100000 } },
                         {"AdditionalPositions", new ModelTypeInfo {
                             Type = "ValueList",
                             GetDefaultValue = (obj) => {
-                                var s = ((Spawner)obj);
+                                var s = ((SpawnerBase)obj);
                                 // HACK
                                 var c = s.Position.Constant.Evaluate(0);
                                 c.W = -1;

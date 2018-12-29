@@ -5,6 +5,7 @@
 
 uniform bool   AlignVelocityAndPosition, ZeroZAxis;
 uniform bool   AlignPositionConstant, MultiplyAttributeConstant;
+uniform float  PolygonRate;
 uniform float  FeedbackSourceIndex;
 uniform float  PositionConstantCount;
 uniform float4 PositionConstants[MAX_POSITION_CONSTANTS];
@@ -71,11 +72,20 @@ void PS_Spawn (
     // The x and y element of random samples determines the normal
     if (AlignVelocityAndPosition)
         random2.xy = random1.xy;
-    // Ensure the z axis of generated circular coordinates is 0, resulting in pure xy normals
 
-    float relativeIndex = (index - ChunkSizeAndIndices.y) + ChunkSizeAndIndices.w;
-    float positionIndex = relativeIndex % PositionConstantCount;
-    float4 positionConstant = PositionConstants[positionIndex];
+    // Ensure the z axis of generated circular coordinates is 0, resulting in pure xy normals
+    float relativeIndex = (index - ChunkSizeAndIndices.y);
+    float4 positionConstant;
+    if (PolygonRate > 1) {
+        float positionIndexF = (relativeIndex / PolygonRate) + ChunkSizeAndIndices.w;
+        float positionIndexI, positionIndexT = modf(positionIndexF, positionIndexI);
+        float4 position1 = PositionConstants[positionIndexI % PositionConstantCount],
+            position2 = PositionConstants[(positionIndexI + 1) % PositionConstantCount];
+        positionConstant = lerp(position1, position2, positionIndexT);
+    } else {
+        float positionIndex = (relativeIndex + ChunkSizeAndIndices.w) % PositionConstantCount;
+        positionConstant = PositionConstants[positionIndex];
+    }
     float4 tempPosition = evaluateFormula(positionConstant, Configuration[0], Configuration[1], RandomCircularity[0], random1);
 
     newPosition   = mul(tempPosition, PositionMatrix);
@@ -120,8 +130,7 @@ void PS_SpawnFeedback (
     // Ensure the z axis of generated circular coordinates is 0, resulting in pure xy normals
 
     float relativeIndex = (index - ChunkSizeAndIndices.y) + ChunkSizeAndIndices.w;
-    float positionIndex = relativeIndex % PositionConstantCount;
-    float4 positionConstant = PositionConstants[positionIndex];
+    float4 positionConstant = PositionConstants[0];
     if (AlignPositionConstant)
         positionConstant += sourcePosition;
     float4 tempPosition = evaluateFormula(positionConstant, Configuration[0], Configuration[1], RandomCircularity[0], random1);

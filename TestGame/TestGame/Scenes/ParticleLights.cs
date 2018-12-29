@@ -451,7 +451,7 @@ namespace TestGame.Scenes {
                     d.CastsShadows = EnableShadows;
                 }
 
-                var s = System.Transforms.OfType<Spawner>().First();
+                var s = System.Transforms.OfType<SpawnerBase>().First();
                 s.Position.Constant = new Vector4(mousePos, 0);
                 System.Configuration.Color.OpacityFromLife = OpacityFromLife.Value / 60f;
                 s.IsActive = Game.LeftMouse;

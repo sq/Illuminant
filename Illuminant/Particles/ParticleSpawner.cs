@@ -11,9 +11,7 @@ using Squared.Illuminant.Util;
 using Squared.Render;
 
 namespace Squared.Illuminant.Particles.Transforms {
-    public class Spawner : ParticleTransform {
-        public const int MaxPositions = 32;
-
+    public abstract class SpawnerBase : ParticleTransform {
         /// <summary>
         /// Minimum number of particles to spawn per second.
         /// If this value is larger than MaxRate it will be ignored.
@@ -24,10 +22,6 @@ namespace Squared.Illuminant.Particles.Transforms {
         /// </summary>
         public Parameter<float> MaxRate;
 
-        /// <summary>
-        /// If set, the MinRate and MaxRate parameters apply to each position instead of the spawner as a whole.
-        /// </summary>
-        public bool RatePerPosition = true;
         /// <summary>
         /// If set, the randomly selected normals for position and velocity will be identical.
         /// If not set, they will have different randomly selected normals.
@@ -48,36 +42,25 @@ namespace Squared.Illuminant.Particles.Transforms {
         /// </summary>
         public Parameter<DynamicMatrix> PositionPostMatrix = DynamicMatrix.Identity;
 
-        /// <summary>
-        /// A list of additional positions to spawn particles from.
-        /// You can set the W value of a position to -1 for it to inherit the main position's W value.
-        /// </summary>
-        public readonly List<Vector4> AdditionalPositions = new List<Vector4>();
-
         [NonSerialized]
         private static int NextSeed = 1;
 
+        protected double   RateError { get; private set; }
+        protected Vector2  Indices { get; private set; }
+        protected int      TotalSpawned { get; private set; }
         [NonSerialized]
-        private double  RateError;
-        [NonSerialized]
-        private Vector2 Indices;
-        [NonSerialized]
-        private MersenneTwister RNG;
-        [NonSerialized]
-        private int     TotalSpawned;
+        protected readonly MersenneTwister RNG;
 
         [NonSerialized]
-        private Vector4[] Temp = new Vector4[8];
+        protected Vector4[] Temp = new Vector4[8];
         [NonSerialized]
-        private float[] Temp2 = new float[3];
-        [NonSerialized]
-        private Vector4[] Temp3 = new Vector4[MaxPositions];
+        protected float[] Temp2 = new float[3];
 
-        public Spawner ()
+        protected SpawnerBase ()
             : this(null) {
         }
 
-        public Spawner (int? seed) {
+        protected SpawnerBase (int? seed) {
             RNG = new MersenneTwister(seed.GetValueOrDefault(NextSeed++));
             ActiveStateChanged += Spawner_ActiveStateChanged;
         }
@@ -90,18 +73,28 @@ namespace Squared.Illuminant.Particles.Transforms {
             Indices = new Vector2(first, last);
         }
 
-        internal virtual void BeginTick (ParticleSystem system, float now, double deltaTimeSeconds, out int spawnCount, out ParticleSystem.Chunk sourceChunk) {
+        protected virtual int CountScale {
+            get {
+                return 1;
+            }
+        }
+
+        protected virtual Vector4 GetChunkSizeAndIndices (ParticleEngine engine) {
+            return new Vector4(
+                engine.Configuration.ChunkSize, Indices.X, Indices.Y, 0
+            );
+        }
+
+        public virtual void BeginTick (ParticleSystem system, float now, double deltaTimeSeconds, out int spawnCount, out ParticleSystem.Chunk sourceChunk) {
             sourceChunk = null;
 
-            if (AdditionalPositions.Count >= MaxPositions)
-                throw new Exception("Maximum number of positions for a spawner is " + MaxPositions);
             if (!IsActive) {
                 RateError = 0;
                 spawnCount = 0;
                 return;
             }
 
-            var countScaler = RatePerPosition ? AdditionalPositions.Count + 1 : 1;
+            var countScaler = CountScale;
             float minRate = MinRate.Evaluate(now), maxRate = MaxRate.Evaluate(now);
             if (minRate > maxRate)
                 minRate = maxRate;
@@ -116,17 +109,13 @@ namespace Squared.Illuminant.Particles.Transforms {
             }
         }
 
-        internal virtual void EndTick (int requestedSpawnCount, int actualSpawnCount) {
+        public virtual void EndTick (int requestedSpawnCount, int actualSpawnCount) {
             RateError += requestedSpawnCount - actualSpawnCount;
             TotalSpawned += actualSpawnCount;
         }
 
         internal void AddError (int numUnspawned) {
             RateError += numUnspawned;
-        }
-
-        protected override Material GetMaterial (ParticleMaterials materials) {
-            return materials.Spawn;
         }
 
         protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
@@ -156,6 +145,73 @@ namespace Squared.Illuminant.Particles.Transforms {
             Temp2[1] = Velocity.Circular   ? 1 : 0;
             Temp2[2] = Attributes.Circular ? 1 : 0;
 
+            parameters["AlignVelocityAndPosition"].SetValue(
+                AlignVelocityAndPosition && Position.Circular && Velocity.Circular
+            );
+            parameters["ZeroZAxis"].SetValue(ZeroZAxis);
+            parameters["Configuration"].SetValue(Temp);
+            parameters["RandomCircularity"].SetValue(Temp2);
+
+            parameters["ChunkSizeAndIndices"].SetValue(GetChunkSizeAndIndices(engine));
+            var m = PositionPostMatrix.Evaluate(now);
+            m.Regenerate();
+            parameters["PositionMatrix"].SetValue(m.Matrix);
+        }
+    }
+
+    public sealed class Spawner : SpawnerBase {
+        public const int MaxPositions = 32;
+
+        /// <summary>
+        /// If set, the spawn position will trace a linear path between each specified
+        ///  position from the additional positions list at this rate.
+        /// </summary>
+        public float? PolygonRate = null;
+        /// <summary>
+        /// A list of additional positions to spawn particles from.
+        /// You can set the W value of a position to -1 for it to inherit the main position's W value.
+        /// </summary>
+        public readonly List<Vector4> AdditionalPositions = new List<Vector4>();
+        /// <summary>
+        /// If set, the MinRate and MaxRate parameters apply to each position instead of the spawner as a whole.
+        /// </summary>
+        public bool RatePerPosition = true;
+
+        [NonSerialized]
+        private Vector4[] Temp3 = new Vector4[MaxPositions];
+
+        protected override Material GetMaterial (ParticleMaterials materials) {
+            return materials.Spawn;
+        }
+
+        protected override int CountScale {
+            get {
+                return RatePerPosition ? AdditionalPositions.Count + 1 : 1;
+            }
+        }
+
+        public override void BeginTick (ParticleSystem system, float now, double deltaTimeSeconds, out int spawnCount, out ParticleSystem.Chunk sourceChunk) {
+            if (AdditionalPositions.Count >= MaxPositions)
+                throw new Exception("Maximum number of positions for a spawner is " + MaxPositions);
+
+            base.BeginTick(system, now, deltaTimeSeconds, out spawnCount, out sourceChunk);
+        }
+
+        protected override Vector4 GetChunkSizeAndIndices (ParticleEngine engine) {
+            var count = Math.Min(1 + AdditionalPositions.Count, MaxPositions);
+            var result = base.GetChunkSizeAndIndices(engine);
+            var polygonRate = PolygonRate.GetValueOrDefault(0);
+            if (polygonRate >= 1) {
+                result.W = (TotalSpawned / polygonRate) % (float)count;
+            } else {
+                result.W = TotalSpawned % count;
+            }
+            return result;
+        }
+
+        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
+            base.SetParameters(engine, parameters, now, frameIndex);
+            
             var position = Position.Constant.Evaluate(now);
             Temp3[0] = position;
             for (var i = 0; (i < AdditionalPositions.Count) && (i < MaxPositions - 1); i++) {
@@ -166,22 +222,9 @@ namespace Squared.Illuminant.Particles.Transforms {
             }
 
             var count = Math.Min(1 + AdditionalPositions.Count, MaxPositions);
-
-            parameters["AlignVelocityAndPosition"].SetValue(
-                AlignVelocityAndPosition && Position.Circular && Velocity.Circular
-            );
-            parameters["ZeroZAxis"].SetValue(ZeroZAxis);
             parameters["PositionConstantCount"].SetValue((float)count);
-            parameters["Configuration"].SetValue(Temp);
-            parameters["RandomCircularity"].SetValue(Temp2);
             parameters["PositionConstants"].SetValue(Temp3);
-            parameters["ChunkSizeAndIndices"].SetValue(new Vector4(
-                engine.Configuration.ChunkSize, Indices.X, Indices.Y,
-                TotalSpawned % count
-            ));
-            var m = PositionPostMatrix.Evaluate(now);
-            m.Regenerate();
-            parameters["PositionMatrix"].SetValue(m.Matrix);
+            parameters["PolygonRate"].SetValue(PolygonRate.GetValueOrDefault(0));
         }
 
         public override bool IsValid {
@@ -191,7 +234,7 @@ namespace Squared.Illuminant.Particles.Transforms {
         }
     }
 
-    public sealed class FeedbackSpawner : Spawner {
+    public sealed class FeedbackSpawner : SpawnerBase {
         /// <summary>
         /// The feedback spawner uses the particles contained by the source system as input
         /// </summary>
@@ -225,7 +268,9 @@ namespace Squared.Illuminant.Particles.Transforms {
         private ParticleSystem.Chunk CurrentFeedbackSource;
         private int CurrentFeedbackSourceIndex;
 
-        internal override void BeginTick (ParticleSystem system, float now, double deltaTimeSeconds, out int spawnCount, out ParticleSystem.Chunk sourceChunk) {
+        private Vector4[] Temp3 = new Vector4[1];
+
+        public override void BeginTick (ParticleSystem system, float now, double deltaTimeSeconds, out int spawnCount, out ParticleSystem.Chunk sourceChunk) {
             spawnCount = 0;
             sourceChunk = null;
             CurrentFeedbackSource = null;
@@ -266,6 +311,10 @@ namespace Squared.Illuminant.Particles.Transforms {
         protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
             base.SetParameters(engine, parameters, now, frameIndex);
 
+            var position = Position.Constant.Evaluate(now);
+            Temp3[0] = position;
+            parameters["PositionConstantCount"].SetValue((float)1);
+            parameters["PositionConstants"].SetValue(Temp3);
             parameters["AlignPositionConstant"].SetValue(AlignPositionConstant);
             parameters["MultiplyAttributeConstant"].SetValue(MultiplyAttributeConstant);
             parameters["FeedbackSourceIndex"].SetValue(CurrentFeedbackSourceIndex);

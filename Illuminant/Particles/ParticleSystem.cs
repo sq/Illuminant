@@ -450,7 +450,7 @@ namespace Squared.Illuminant.Particles {
 
         private void RunSpawner (
             IBatchContainer container, ref int layer, Material m,
-            long startedWhen, Transforms.Spawner spawner,
+            long startedWhen, Transforms.SpawnerBase spawner,
             Transforms.ParameterSetter setParameters,
             double deltaTimeSeconds, float now
         ) {
@@ -868,7 +868,7 @@ namespace Squared.Illuminant.Particles {
                     computingLiveness = true;
                 }
 
-                foreach (var s in Transforms.OfType<Transforms.Spawner>()) {
+                foreach (var s in Transforms.OfType<Transforms.SpawnerBase>()) {
                     if (!s.IsActive)
                         continue;
 
@@ -902,7 +902,7 @@ namespace Squared.Illuminant.Particles {
             foreach (var t in Transforms) {
                 var it = (Transforms.IParticleTransform)t;
 
-                var shouldSkip = !t.IsActive || (t is Transforms.Spawner) || !t.IsValid;
+                var shouldSkip = !t.IsActive || (t is Transforms.SpawnerBase) || !t.IsValid;
                 if (shouldSkip)
                     continue;
 
