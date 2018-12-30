@@ -64,6 +64,8 @@ namespace ParticleEditor {
         public View View;
         public Controller Controller;
 
+        private WaitCallback GCAfterVsync;
+
         private GCHandle ControllerPin;
         public const float MinZoom = 0.5f, MaxZoom = 3.0f;
         public float Zoom = 1.0f, Brightness = 0.1f;
@@ -72,6 +74,8 @@ namespace ParticleEditor {
 
         public ParticleEditor () {
             // UniformBinding.ForceCompatibilityMode = true;
+
+            GCAfterVsync = _GCAfterVsync;
 
             Graphics = new GraphicsDeviceManager(this);
             Graphics.GraphicsProfile = GraphicsProfile.HiDef;
@@ -370,6 +374,15 @@ namespace ParticleEditor {
                             CreateView();
                     });
             }
+
+            ThreadPool.QueueUserWorkItem(GCAfterVsync, null);
+        }
+
+        private void _GCAfterVsync (object _) {
+            // Attempt to start a GC after we've issued all rendering commands to the GPU.
+            // This should hide most or all of the GC time behind the rendering time.
+            if (RenderCoordinator.TryWaitForPresentToStart(4, 1))
+                GC.Collect(1, GCCollectionMode.Optimized);
         }
 
         private void DrawPerformanceStats (ref ImperativeRenderer ir) {
