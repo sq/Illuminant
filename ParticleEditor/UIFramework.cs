@@ -454,7 +454,7 @@ namespace ParticleEditor {
 
                     bool changed = false;
                     var p = (IParameter)value.Constant;
-                    if (RenderParameter(null, value, ref changed, "Constant", cpi.Info.Type, ref p))
+                    if (RenderParameter(null, value, ref changed, "Constant", cpi.Info.Type, ref p, true))
                         value.Constant = (Parameter<Vector4>)p;
 
                     /*
@@ -468,7 +468,7 @@ namespace ParticleEditor {
                         */
 
                     p = value.RandomScale;
-                    if (RenderParameter(null, value, ref changed, "Scale", cpi.Info.Type, ref p))
+                    if (RenderParameter(null, value, ref changed, "Scale", cpi.Info.Type, ref p, true))
                         value.RandomScale = (Parameter<Vector4>)p;
 
                     var k = (value.Type != FormulaType.Linear) ? "Constant Radius" : "Random Offset";
@@ -496,7 +496,7 @@ namespace ParticleEditor {
                     */
 
                     p = value.Offset;
-                    if (RenderParameter(null, value, ref changed, k, cpi.Info.Type, ref p))
+                    if (RenderParameter(null, value, ref changed, k, cpi.Info.Type, ref p, true))
                         value.Offset = (Parameter<Vector4>)p;
 
                     Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
@@ -563,7 +563,7 @@ namespace ParticleEditor {
 
                 case "Parameter`1": {
                     var p = (IParameter)value;
-                    return RenderParameter(cpi, instance, ref changed, actualName, parentType, ref p);
+                    return RenderParameter(cpi, instance, ref changed, actualName, parentType, ref p, true);
                 }
 
                 case "ColorFormula":
@@ -734,22 +734,60 @@ namespace ParticleEditor {
             return false;
         }
 
+        private unsafe bool ShowConstantButton () {
+            return Nuklear.Button("∅");
+        }
+
+        private unsafe bool ShowNamedConstantButton (bool enabled) {
+            return Nuklear.Button("=", enabled);
+        }
+
         private unsafe bool ShowBezierButton () {
             return Nuklear.Button("∑");
         }
 
-        private unsafe bool RenderParameter (CachedPropertyInfo cpi, object instance, ref bool changed, string actualName, string parentType, ref IParameter p) {
+        private unsafe bool RenderParameter (CachedPropertyInfo cpi, object instance, ref bool changed, string actualName, string parentType, ref IParameter p, bool allowReferences) {
             var valueType = p.ValueType;
             var isConstant = p.IsConstant;
             var isBezier = p.IsBezier;
+            var isReference = p.IsReference;
             var isMatrix = valueType.Name.EndsWith("Matrix");
             var now = (float)Game.View.Time.Seconds;
 
             bool isColor = (parentType ?? "").StartsWith("Color");
-            bool doBezierConversion = false;
+            bool doBezierConversion = false, doReferenceConversion = false;
 
-            if (!isBezier && isConstant) {
-                var widths = new float[5];
+            var canConvertToReference = Model.HasAnyConstantsOfType(valueType) && allowReferences;
+            var widths = stackalloc float[8];
+            const float buttonSize = 0.06f;
+
+            if (isBezier) {
+                var b = p.Bezier;
+                changed = RenderBezierProperty(cpi, null, actualName, b, now, isColor, false, true);
+                if (changed && b.Count == 0)
+                    p = p.ToConstant();
+            } else if (isReference) {
+                var space = 1f - buttonSize;
+                widths[0] = space * 0.4f;
+                widths[1] = space * 0.6f;
+                widths[2] = buttonSize;
+                Nuke.nk_layout_row(
+                    Nuklear.Context, NuklearDotNet.nk_layout_format.NK_DYNAMIC, LineHeight,
+                    3, widths
+                );
+                Nuklear.Label(actualName, false);
+                var names = Model.ConstantNamesOfType(valueType).ToList();
+                int selectedIndex = names.IndexOf(p.Name);
+                if (Nuklear.ComboBox(ref selectedIndex, (i) => (i < 0) ? "" : names[i], names.Count)) {
+                    changed = true;
+                    if ((selectedIndex >= 0) && (selectedIndex < names.Count))
+                        p.Name = names[selectedIndex];
+                }
+                if (ShowConstantButton()) {
+                    changed = true;
+                    p = p.ToConstant();
+                }
+            } else {
                 int eltCount;
                 switch (valueType.Name) {
                     case "Single":
@@ -771,11 +809,14 @@ namespace ParticleEditor {
                     default:
                         throw new Exception();
                 }
+                var buttonCount = canConvertToReference ? 2 : 1;
+                var elementSpace = 1f - (buttonSize * buttonCount);
                 for (int i = 0; i < eltCount; i++)
-                    widths[i] = 0.93f / eltCount;
-                widths[eltCount] = 0.07f;
+                    widths[i] = elementSpace / eltCount;
+                widths[eltCount] = buttonSize;
+                widths[eltCount + 1] = buttonSize;
 
-                if ((eltCount > 1) && !isMatrix) {
+                if ((eltCount > 1) && !isMatrix && allowReferences) {
                     Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
                     Nuklear.Label(actualName, false);
                 }
@@ -783,14 +824,14 @@ namespace ParticleEditor {
                 if (!isMatrix)
                     Nuke.nk_layout_row(
                         Nuklear.Context, NuklearDotNet.nk_layout_format.NK_DYNAMIC, LineHeight,
-                        eltCount + 1, widths
+                        eltCount + buttonCount, widths
                     );
 
                 switch (valueType.Name) {
                     case "Single":
                         var fp = (Parameter<float>)p;
                         var fc = fp.Constant;
-                        if (RenderPropertyElement(actualName, cpi.Info, ref fc, ref changed)) {
+                        if (RenderPropertyElement(actualName, cpi?.Info, ref fc, ref changed)) {
                             fp.Constant = fc;
                             p = fp;
                         }
@@ -832,20 +873,21 @@ namespace ParticleEditor {
                         throw new Exception();
                 }
 
-                if (!isMatrix)
+                if (!isMatrix) {
                     doBezierConversion = ShowBezierButton();
+                    if (canConvertToReference)
+                        doReferenceConversion = ShowNamedConstantButton(true);
+                }
 
                 if (doBezierConversion) {
                     p = p.ToBezier();
                     changed = true;
                     // HACK to auto-open
                     RenderBezierProperty(cpi, null, actualName, p.Bezier, now, isColor, true, false);
+                } else if (doReferenceConversion) {
+                    p = p.ToReference();
+                    changed = true;
                 }
-            } else {
-                var b = p.Bezier;
-                changed = RenderBezierProperty(cpi, null, actualName, b, now, isColor, false, true);
-                if (changed && b.Count == 0)
-                    p = p.ToConstant();
             }
 
             if (changed && (cpi != null))
@@ -963,21 +1005,21 @@ namespace ParticleEditor {
                         var m = dm.Matrix;
 
                         Nuke.nk_layout_row_dynamic(ctx, LineHeight, is3x4 ? 3 : 4);
-                        RenderPropertyElement("#xx", cpi.Info, ref m.M11, ref changed);
-                        RenderPropertyElement("#xy", cpi.Info, ref m.M12, ref changed);
-                        RenderPropertyElement("#xz", cpi.Info, ref m.M13, ref changed);
+                        RenderPropertyElement("#xx", cpi?.Info, ref m.M11, ref changed);
+                        RenderPropertyElement("#xy", cpi?.Info, ref m.M12, ref changed);
+                        RenderPropertyElement("#xz", cpi?.Info, ref m.M13, ref changed);
                         if (!is3x4)
-                            RenderPropertyElement("#xw", cpi.Info, ref m.M14, ref changed);
-                        RenderPropertyElement("#yx", cpi.Info, ref m.M21, ref changed);
-                        RenderPropertyElement("#yy", cpi.Info, ref m.M22, ref changed);
-                        RenderPropertyElement("#yz", cpi.Info, ref m.M23, ref changed);
+                            RenderPropertyElement("#xw", cpi?.Info, ref m.M14, ref changed);
+                        RenderPropertyElement("#yx", cpi?.Info, ref m.M21, ref changed);
+                        RenderPropertyElement("#yy", cpi?.Info, ref m.M22, ref changed);
+                        RenderPropertyElement("#yz", cpi?.Info, ref m.M23, ref changed);
                         if (!is3x4)
-                            RenderPropertyElement("#yw", cpi.Info, ref m.M24, ref changed);
-                        RenderPropertyElement("#zx", cpi.Info, ref m.M31, ref changed);
-                        RenderPropertyElement("#zy", cpi.Info, ref m.M32, ref changed);
-                        RenderPropertyElement("#zz", cpi.Info, ref m.M33, ref changed);
+                            RenderPropertyElement("#yw", cpi?.Info, ref m.M24, ref changed);
+                        RenderPropertyElement("#zx", cpi?.Info, ref m.M31, ref changed);
+                        RenderPropertyElement("#zy", cpi?.Info, ref m.M32, ref changed);
+                        RenderPropertyElement("#zz", cpi?.Info, ref m.M33, ref changed);
                         if (!is3x4)
-                            RenderPropertyElement("#zw", cpi.Info, ref m.M34, ref changed);
+                            RenderPropertyElement("#zw", cpi?.Info, ref m.M34, ref changed);
 
                         var isSelected = IsPropertySelected(instance, "Constant");
                         Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
@@ -988,9 +1030,9 @@ namespace ParticleEditor {
                             changed = true;
                         }
                         Nuke.nk_layout_row_dynamic(ctx, LineHeight, 3);
-                        RenderPropertyElement("#wx", cpi.Info, ref m.M41, ref changed);
-                        RenderPropertyElement("#wy", cpi.Info, ref m.M42, ref changed);
-                        RenderPropertyElement("#wz", cpi.Info, ref m.M43, ref changed);
+                        RenderPropertyElement("#wx", cpi?.Info, ref m.M41, ref changed);
+                        RenderPropertyElement("#wy", cpi?.Info, ref m.M42, ref changed);
+                        RenderPropertyElement("#wz", cpi?.Info, ref m.M43, ref changed);
 
                         dm.Matrix = m;
                     }

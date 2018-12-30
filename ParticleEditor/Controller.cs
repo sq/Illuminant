@@ -36,7 +36,7 @@ namespace ParticleEditor {
 
         [StructLayout(LayoutKind.Sequential)]
         public class State {
-            public ListState Systems, Transforms;
+            public ListState Systems, Transforms, Constants;
         }
 
         public bool StepPending;
@@ -48,7 +48,9 @@ namespace ParticleEditor {
         public readonly List<ParticleSystemView> QueuedResets = new List<ParticleSystemView>();
 
         internal PositionPropertyInfo SelectedPositionProperty;
+        internal string SelectedConstantName;
 
+        private int NextConstantID = 1;
         private GCHandle StatePin;
 
         public PropertyEditor UI {
@@ -83,6 +85,17 @@ namespace ParticleEditor {
             }
         }
 
+        public Squared.Illuminant.Configuration.IParameter SelectedConstant {
+            get {
+                Squared.Illuminant.Configuration.IParameter c;
+                if ((SelectedConstantName == null) ||
+                    !Model.NamedConstants.TryGetValue(SelectedConstantName, out c))
+                    c = null;
+
+                return c;
+            }
+        }
+
         public Controller (ParticleEditor game, EngineModel model, View view) {
             Game = game;
             Model = model;
@@ -111,6 +124,35 @@ namespace ParticleEditor {
             view.Dispose();
             Model.Systems.RemoveAt(index);
             View.Systems.RemoveAt(index);
+        }
+
+        public void AddConstant () {
+            var name = string.Format("Constant#{0}", NextConstantID++);
+            var c = new Squared.Illuminant.Configuration.Parameter<Vector4>();
+            Model.NamedConstants.Add(name, c);
+            SelectedConstantName = name;
+        }
+
+        public void RenameConstant (string from, string to) {
+            if (from == to)
+                return;
+            if ((from == null) || (to == null))
+                return;
+
+            Squared.Illuminant.Configuration.IParameter c;
+            if (!Model.NamedConstants.TryGetValue(from, out c))
+                return;
+            if (Model.NamedConstants.ContainsKey(to))
+                return;
+
+            Model.NamedConstants.Remove(from);
+            Model.NamedConstants.Add(to, c);
+        }
+
+        public void RemoveConstant (string name) {
+            if (name == null)
+                return;
+            Model.NamedConstants.Remove(name);
         }
 
         public void Step () {

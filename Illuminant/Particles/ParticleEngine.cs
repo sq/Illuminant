@@ -107,6 +107,55 @@ namespace Squared.Illuminant.Particles {
             }
         }
 
+        internal bool FindConstant<T> (string name, out Configuration.Parameter<T> result)
+            where T : struct {
+            result = default(Configuration.Parameter<T>);
+            if (Configuration.NamedConstantResolver == null)
+                return false;
+
+            var gen = Configuration.NamedConstantResolver(name);
+            if (gen == null)
+                return false;
+
+            if (gen.ValueType == typeof(T)) {
+                result = (Configuration.Parameter<T>)gen;
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        internal bool ResolveGeneric<T> (string name, float t, out T result)
+            where T : struct {
+            result = default(T);
+            Configuration.Parameter<T> constant;
+            if (!FindConstant(name, out constant))
+                return false;
+
+            result = constant.Evaluate(t, ResolveGeneric);
+            return true;
+        }
+
+        internal bool Resolve (string name, float t, out float result) {
+            return ResolveGeneric(name, t, out result);
+        }
+
+        internal bool Resolve (string name, float t, out Vector3 result) {
+            return ResolveGeneric(name, t, out result);
+        }
+
+        internal bool Resolve (string name, float t, out Vector4 result) {
+            return ResolveGeneric(name, t, out result);
+        }
+
+        internal bool Resolve (string name, float t, out Matrix result) {
+            return ResolveGeneric(name, t, out result);
+        }
+
+        internal bool Resolve (string name, float t, out Configuration.DynamicMatrix result) {
+            return ResolveGeneric(name, t, out result);
+        }
+
         internal void NextTurn () {
             CurrentTurn += 1;
 
@@ -313,6 +362,11 @@ namespace Squared.Illuminant.Particles {
         /// Used to resolve ParticleSystemReferences for feedback.
         /// </summary>
         public Func<string, int?, ParticleSystem> SystemResolver = null;
+
+        /// <summary>
+        /// Used to resolve named constants referenced by parameters.
+        /// </summary>
+        public Func<string, Configuration.IParameter> NamedConstantResolver = null;
 
         public ParticleEngineConfiguration (int chunkSize = 256) {
             ChunkSize = chunkSize;

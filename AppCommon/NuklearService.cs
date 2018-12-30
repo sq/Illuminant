@@ -606,7 +606,7 @@ namespace Framework {
         public void Label (string text, bool centered = false) {
             NkTextAlign flags = NkTextAlign.NK_TEXT_ALIGN_MIDDLE;
             flags |= centered ? NkTextAlign.NK_TEXT_ALIGN_CENTERED : NkTextAlign.NK_TEXT_ALIGN_LEFT;
-            Nuklear.nk_label(Context, text, (uint)flags);
+            Nuklear.nk_label(Context, text ?? "", (uint)flags);
         }
 
         public bool Button (string text, bool enabled = true) {

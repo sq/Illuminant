@@ -46,7 +46,14 @@ namespace ParticleEditor {
                 new ParticleEngineConfiguration {
                     TextureLoader = (fn) => LoadTexture(fn, false),
                     FPTextureLoader = (fn) => LoadTexture(fn, true),
-                    SystemResolver = ResolveReference
+                    SystemResolver = ResolveReference,
+                    NamedConstantResolver = (k) => {
+                        Squared.Illuminant.Configuration.IParameter result;
+                        if (!Model.NamedConstants.TryGetValue(k, out result))
+                            result = null;
+
+                        return result;
+                    }
                 },
                 editor.ParticleMaterials
             );

@@ -93,7 +93,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             }
 
             var countScaler = CountScale;
-            float minRate = MinRate.Evaluate(now), maxRate = MaxRate.Evaluate(now);
+            float minRate = MinRate.Evaluate(now, system.Engine.Resolve), maxRate = MaxRate.Evaluate(now, system.Engine.Resolve);
             if (minRate > maxRate)
                 minRate = maxRate;
             var currentRate = ((RNG.NextDouble() * (maxRate - minRate)) + minRate) * countScaler * deltaTimeSeconds;
@@ -130,14 +130,14 @@ namespace Squared.Illuminant.Particles.Transforms {
                 (float)(b * 127)
             ));
 
-            Temp[0] = Position.RandomScale.Evaluate(now);
-            Temp[1] = Position.Offset.Evaluate(now);
-            Temp[2] = Velocity.Constant.Evaluate(now);
-            Temp[3] = Velocity.RandomScale.Evaluate(now);
-            Temp[4] = Velocity.Offset.Evaluate(now);
-            Temp[5] = Attributes.Constant.Evaluate(now);
-            Temp[6] = Attributes.RandomScale.Evaluate(now);
-            Temp[7] = Attributes.Offset.Evaluate(now);
+            Temp[0] = Position.RandomScale.Evaluate(now, engine.Resolve);
+            Temp[1] = Position.Offset.Evaluate(now, engine.Resolve);
+            Temp[2] = Velocity.Constant.Evaluate(now, engine.Resolve);
+            Temp[3] = Velocity.RandomScale.Evaluate(now, engine.Resolve);
+            Temp[4] = Velocity.Offset.Evaluate(now, engine.Resolve);
+            Temp[5] = Attributes.Constant.Evaluate(now, engine.Resolve);
+            Temp[6] = Attributes.RandomScale.Evaluate(now, engine.Resolve);
+            Temp[7] = Attributes.Offset.Evaluate(now, engine.Resolve);
 
             var ft = new Vector4(
                 (int)Position.Type,
@@ -154,7 +154,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             parameters["FormulaTypes"].SetValue(ft);
 
             parameters["ChunkSizeAndIndices"].SetValue(GetChunkSizeAndIndices(engine));
-            var m = PositionPostMatrix.Evaluate(now);
+            var m = PositionPostMatrix.Evaluate(now, engine.Resolve);
             m.Regenerate();
             parameters["PositionMatrix"].SetValue(m.Matrix);
         }
@@ -213,7 +213,7 @@ namespace Squared.Illuminant.Particles.Transforms {
         protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
             base.SetParameters(engine, parameters, now, frameIndex);
             
-            var position = Position.Constant.Evaluate(now);
+            var position = Position.Constant.Evaluate(now, engine.Resolve);
             Temp3[0] = position;
             for (var i = 0; (i < AdditionalPositions.Count) && (i < MaxPositions - 1); i++) {
                 var ap = AdditionalPositions[i];
@@ -323,7 +323,7 @@ namespace Squared.Illuminant.Particles.Transforms {
         protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
             base.SetParameters(engine, parameters, now, frameIndex);
 
-            var position = Position.Constant.Evaluate(now);
+            var position = Position.Constant.Evaluate(now, engine.Resolve);
             Temp3[0] = position;
             parameters["PositionConstantCount"].SetValue((float)1);
             parameters["PositionConstants"].SetValue(Temp3);

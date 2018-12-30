@@ -12,27 +12,46 @@ namespace Squared.Illuminant.Configuration {
         Type ValueType { get; }
         bool IsConstant { get; }
         bool IsBezier { get; }
+        bool IsReference { get; }
         IParameter ToBezier ();
         IParameter ToConstant ();
+        IParameter ToReference ();
+        string Name { get; set; }
         object Constant { get; }
         IBezier Bezier { get; }
     }
+
+    public delegate bool NamedConstantResolver<T> (string name, float t, out T result);
 
     [TypeConverter(typeof(ParameterConverter))]
     public struct Parameter<T> : IParameter
         where T : struct
     {
+        public const string Unnamed = "<<none>>";
+
+        private string _Name;
         private IBezier<T> _Bezier;
         private T _Constant;
 
         public Parameter (IBezier<T> bezier) {
+            _Name = null;
             _Bezier = bezier;
             _Constant = default(T);
         }
 
         public Parameter (T value) {
+            _Name = null;
             _Bezier = null;
             _Constant = value;
+        }
+
+        public string Name {
+            get {
+                return _Name;
+            }
+            set {
+                _Name = value;
+            }
         }
 
         public IBezier<T> Bezier {
@@ -73,19 +92,29 @@ namespace Squared.Illuminant.Configuration {
 
         public bool IsConstant {
             get {
-                return (_Bezier == null) || _Bezier.IsConstant;
+                return ((_Name == null) && (_Bezier == null)) || 
+                    (_Bezier != null) && _Bezier.IsConstant;
             }
         }
 
         public bool IsBezier {
             get {
-                return (_Bezier != null);
+                return (_Name == null) && (_Bezier != null);
+            }
+        }
+
+        public bool IsReference {
+            get {
+                return _Name != null;
             }
         }
 
         private bool TryConvertToBezier () {
             if (IsBezier)
                 return true;
+
+            if (_Name != null)
+                return false;
 
             switch (ValueType.Name) {
                 case "Single":
@@ -108,19 +137,39 @@ namespace Squared.Illuminant.Configuration {
             }
         }
 
-        public Parameter<T> ToConstant () {
-            if (!IsBezier)
+        public Parameter<T> ToReference () {
+            if (IsReference)
                 return this;
 
-            return new Parameter<T>(_Bezier.A);
+            var result = Clone();
+            result._Name = Unnamed;
+            return result;
+        }
+
+        public Parameter<T> ToConstant () {
+            var result = this;
+            if (IsReference)
+                // TODO: Copy constant/evaluated value from reference?
+                result._Name = null;
+            else if (IsBezier)
+                result.Constant = _Bezier.A;
+
+            return result;
         }
 
         public Parameter<T> ToBezier () {
             var result = this;
+            if (IsReference)
+                result._Name = null;
+
             if (!IsBezier)
                 if (!result.TryConvertToBezier())
                     throw new Exception();
             return result;
+        }
+
+        IParameter IParameter.ToReference () {
+            return ToReference();
         }
 
         IParameter IParameter.ToConstant () {
@@ -143,7 +192,15 @@ namespace Squared.Illuminant.Configuration {
             }
         }
 
-        public T Evaluate (float t) {
+        public T Evaluate (float t, NamedConstantResolver<T> nameResolver) {
+            T resolved;
+            if (
+                (_Name != null) &&
+                (nameResolver != null) &&
+                nameResolver(_Name, t, out resolved)
+            )
+                return resolved;
+
             if (_Bezier != null)
                 return _Bezier.Evaluate(t);
             else
@@ -152,6 +209,14 @@ namespace Squared.Illuminant.Configuration {
 
         public static implicit operator Parameter<T> (T value) {
             return new Parameter<T>(value);
+        }
+
+        public Parameter<T> Clone () {
+            return new Parameter<T> {
+                _Name = _Name,
+                _Bezier = _Bezier,
+                _Constant = _Constant
+            };
         }
     }
 

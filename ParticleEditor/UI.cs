@@ -50,8 +50,10 @@ namespace ParticleEditor {
 
         private void RenderSidePanels () {
             RenderFilePanel();
-            if (Game.View != null) {
+            if (Game.View != null)
                 RenderSystemList();
+            RenderConstantList();
+            if (Game.View != null) {
                 RenderTransformList();
                 RenderTransformProperties();
             }
@@ -107,6 +109,63 @@ namespace ParticleEditor {
             }
 
             // }
+        }
+
+        private static Type[] ValidConstantTypes = new[] {
+            typeof(float),
+            typeof(Vector4),
+            typeof(Squared.Illuminant.Configuration.DynamicMatrix)
+        };
+        private string[] ValidConstantTypeNames = (from ct in ValidConstantTypes select ct.Name).ToArray();
+
+        private unsafe void RenderConstantList () {
+            var ctx = Nuklear.Context;
+            var state = Controller.CurrentState;
+
+            using (var group = Nuklear.CollapsingGroup("Constants", "Constants", false))
+            if (group.Visible) {
+                Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
+                if (Nuklear.Button("Add"))
+                    Controller.AddConstant();
+                if (Nuklear.Button("Remove", Model.NamedConstants.Count > 0))
+                    Controller.RemoveConstant(Controller.SelectedConstantName);
+
+                using (var list = Nuklear.ScrollingGroup(80, "Constant List", ref state.Constants.ScrollX, ref state.Constants.ScrollY))
+                if (list.Visible) {
+                    Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
+                    var names = Model.NamedConstants.Keys.ToArray();
+                    for (int i = 0; i < names.Length; i++) {
+                        var name = names[i];
+                        if (Nuklear.SelectableText(
+                            string.IsNullOrWhiteSpace(name) ? string.Format("{0} Unnamed", i) : name, 
+                            Controller.SelectedConstantName == name
+                        ))
+                            Controller.SelectedConstantName = name;
+                    }
+                }
+
+                var n = Controller.SelectedConstantName;
+                var p = Controller.SelectedConstant;
+                if (p == null)
+                    return;
+
+                bool changed = false;
+
+                var currentTypeName = p.ValueType.Name;
+                var currentTypeIndex = Array.IndexOf(ValidConstantTypeNames, currentTypeName);
+                Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
+                if (Nuklear.ComboBox(ref currentTypeIndex, (i) => (i < 0) ? "" : ValidConstantTypeNames[i], ValidConstantTypeNames.Length)) {
+                    var newType = ValidConstantTypes[currentTypeIndex];
+                    if (newType != p.ValueType) {
+                        var ptype = typeof(Squared.Illuminant.Configuration.Parameter<>).MakeGenericType(newType);
+                        p = (Squared.Illuminant.Configuration.IParameter)Activator.CreateInstance(ptype);
+                        changed = true;
+                    }
+                }
+                RenderParameter(null, null, ref changed, n, null, ref p, false);
+                if (changed)
+                    Model.NamedConstants[n] = p;
+            }
         }
 
         private unsafe void RenderSystemList () {
