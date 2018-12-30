@@ -14,6 +14,7 @@ using Squared.Render.Text;
 using Microsoft.Xna.Framework;
 using Squared.Util;
 using Microsoft.Xna.Framework.Input;
+using System.Threading;
 
 namespace Framework {
     public interface INuklearHost {
@@ -677,6 +678,10 @@ namespace Framework {
     }
 
     public unsafe struct NString : IDisposable {
+        private static ThreadLocal<Encoder> Encoder = new ThreadLocal<Encoder>(
+            () => Encoding.UTF8.GetEncoder()
+        );
+
         private static readonly List<IntPtr> ToFree = new List<IntPtr>();
 
         private static byte[] NullString;
@@ -702,8 +707,9 @@ namespace Framework {
             }
 
             OwnsPointer = true;
-            var encoder = Encoding.UTF8.GetEncoder();
+            var encoder = Encoder.Value;
             fixed (char* pChars = text) {
+                encoder.Reset();
                 Length = encoder.GetByteCount(pChars, text.Length, true);
                 pText = (byte*)NuklearAPI.Malloc((IntPtr)(Length + 2)).ToPointer();
                 int temp;
