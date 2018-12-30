@@ -67,7 +67,12 @@ namespace Framework {
         private nk_query_font_glyph_f QueryFontGlyphF;
         private nk_text_width_f TextWidthF;
 
-        private Dictionary<uint, float> TextWidthCache = new Dictionary<uint, float>();
+        private struct TextCacheKey {
+            public int Length;
+            public uint Hash;
+            public byte FirstByte, LastByte;
+        }
+        private Dictionary<TextCacheKey, float> TextWidthCache = new Dictionary<TextCacheKey, float>();
 
         public SceneDelegate Scene = null;
         public UnorderedList<Func<bool>> Modals = new UnorderedList<Func<bool>>();
@@ -133,6 +138,20 @@ namespace Framework {
             glyph->xadvance = result.Width * FontScale;
         }
 
+        private TextCacheKey KeyForText (byte* s, int len) {
+            if (len == 0)
+                return default(TextCacheKey);
+
+            var lastIdx = Math.Max(len - 1, 0);
+            var hash = Nuklear.nk_murmur_hash((IntPtr)s, len, (uint)len);
+            return new TextCacheKey {
+                FirstByte = s[0],
+                LastByte = s[lastIdx],
+                Hash = hash,
+                Length = len
+            };
+        }
+
         private unsafe float _TextWidthF (NkHandle handle, float h, byte* s, int len) {
             if ((s == null) || (len == 0))
                 return 0;
@@ -158,9 +177,9 @@ namespace Framework {
             if ((len == 1) && (s[0] == 0))
                 return 0;
 
-            var hash = Nuklear.nk_murmur_hash((IntPtr)s, len, 0);
+            var key = KeyForText(s, len);
             float result;
-            if (!TextWidthCache.TryGetValue(hash, out result)) {
+            if (!TextWidthCache.TryGetValue(key, out result)) {
                 using (var buf = BufferPool<char>.Allocate(len + 1))
                 using (var layoutBuf = BufferPool<BitmapDrawCall>.Allocate(len + 1)) {
                     int cnt;
@@ -168,7 +187,7 @@ namespace Framework {
                         cnt = Encoding.UTF8.GetChars(s, len, pResult, buf.Data.Length);
                     var astr = new AbstractString(new ArraySegment<char>(buf.Data, 0, cnt));
                     result = _Font.LayoutString(astr, layoutBuf, scale: FontScale).Size.X;
-                    TextWidthCache[hash] = result;
+                    TextWidthCache[key] = result;
                 }
             }
 
