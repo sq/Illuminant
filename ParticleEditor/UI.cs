@@ -114,13 +114,13 @@ namespace ParticleEditor {
             // }
         }
 
-        private static Type[] ValidConstantTypes = new[] {
+        private static Type[] ValidVariableTypes = new[] {
             typeof(float),
             typeof(Vector3),
             typeof(Vector4),
             typeof(Squared.Illuminant.Configuration.DynamicMatrix)
         };
-        private string[] ValidConstantTypeNames = (from ct in ValidConstantTypes select ct.Name).ToArray();
+        private string[] ValidVariableTypeNames = (from ct in ValidVariableTypes select ct.Name).ToArray();
 
         private unsafe void RenderVariableList () {
             var ctx = Nuklear.Context;
@@ -160,7 +160,7 @@ namespace ParticleEditor {
             if (group.Visible) {
                 Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
                 string newName = n;
-                if (Nuklear.Textbox(ref newName)) {
+                if (Nuklear.Textbox(ref newName, tooltip: "Variable Name")) {
                     if (Controller.RenameVariable(n, newName))
                         n = newName;
                     else
@@ -168,9 +168,9 @@ namespace ParticleEditor {
                 }
 
                 var currentTypeName = p.ValueType.Name;
-                var currentTypeIndex = Array.IndexOf(ValidConstantTypeNames, currentTypeName);
-                if (Nuklear.ComboBox(ref currentTypeIndex, (i) => (i < 0) ? "" : ValidConstantTypeNames[i], ValidConstantTypeNames.Length)) {
-                    var newType = ValidConstantTypes[currentTypeIndex];
+                var currentTypeIndex = Array.IndexOf(ValidVariableTypeNames, currentTypeName);
+                if (Nuklear.ComboBox(ref currentTypeIndex, (i) => (i < 0) ? "" : ValidVariableTypeNames[i], ValidVariableTypeNames.Length, "Variable Type")) {
+                    var newType = ValidVariableTypes[currentTypeIndex];
                     if (newType != p.ValueType) {
                         var ptype = typeof(Squared.Illuminant.Configuration.Parameter<>).MakeGenericType(newType);
                         p = (Squared.Illuminant.Configuration.IParameter)Activator.CreateInstance(ptype);
@@ -221,7 +221,7 @@ namespace ParticleEditor {
             var i = s.Instance;
 
             Nuke.nk_layout_row_dynamic(ctx, LineHeight + 3, 1);
-            Nuklear.Textbox(ref s.Model.Name);
+            Nuklear.Textbox(ref s.Model.Name, "System Name");
             CurrentObjectName = s.Model.Name;
 
             Nuke.nk_layout_row_dynamic(ctx, LineHeight + 3, 2);
@@ -277,12 +277,12 @@ namespace ParticleEditor {
             if (group.Visible && (xform != null)) {
                 Nuke.nk_layout_row_dynamic(ctx, LineHeight + 3, 1);
 
-                Nuklear.Textbox(ref xform.Model.Name);
+                Nuklear.Textbox(ref xform.Model.Name, "Transform Name");
                 CurrentObjectName = xform.Model.Name;
 
                 int typeIndex = TransformTypes.IndexOf(xform.Model.Type);
 
-                if (Nuklear.ComboBox(ref typeIndex, (i) => TransformTypes[i].Name, TransformTypes.Count)) {
+                if (Nuklear.ComboBox(ref typeIndex, (i) => TransformTypes[i].Name, TransformTypes.Count, "Transform Type")) {
                     Controller.ChangeTransformType(xform, TransformTypes[typeIndex]);
                 } else {
                     if (TransformProperties.Prepare(xform.Model, xform.Model.Type)) {

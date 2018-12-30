@@ -549,7 +549,7 @@ namespace ParticleEditor {
 
                     Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
                     var t = (object)value.Type;
-                    if (Nuklear.EnumCombo(ref t)) {
+                    if (Nuklear.EnumCombo(ref t, tooltip: "Formula Type")) {
                         value.Type = (FormulaType)t;
                         result = true;
                     }
@@ -660,7 +660,7 @@ namespace ParticleEditor {
                 case "Matrix3x4":
                     var m = (Matrix)value;
                     var temp = false;
-                    return RenderMatrixProperty(cpi, instance, ref changed, actualName, ref m, valueType.EndsWith("3x4"), ref temp);
+                    return RenderMatrixProperty(cpi, instance, ref changed, actualName, ref m, valueType.EndsWith("3x4"), ref temp, ref temp);
             }
 
             Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
@@ -931,8 +931,13 @@ namespace ParticleEditor {
                         var dmp = (Parameter<DynamicMatrix>)p;
                         var dmc = dmp.Constant;
                         doBezierConversion = true;
-                        if (RenderMatrixProperty(cpi, null, ref changed, actualName, ref dmc, false, true, ref doBezierConversion)) {
-                            dmp.Constant = dmc;
+                        doReferenceConversion = allowReferences;
+                        if (RenderMatrixProperty(cpi, null, ref changed, actualName, ref dmc, false, true, ref doBezierConversion, ref doReferenceConversion)) {
+                            if (doReferenceConversion) {
+                                dmp = dmp.ToReference();
+                            } else {
+                                dmp.Constant = dmc;
+                            }
                             p = dmp;
                         }
                         break;
@@ -1008,7 +1013,8 @@ namespace ParticleEditor {
 
         private unsafe bool RenderMatrixProperty (
             CachedPropertyInfo cpi, object instance, ref bool changed, 
-            string actualName, ref Matrix m, bool is3x4, ref bool doBezierConversion
+            string actualName, ref Matrix m, bool is3x4, 
+            ref bool doBezierConversion, ref bool doReferenceConversion
         ) {
             MatrixGenerateParameters p;
             var isGenerated = false;
@@ -1023,7 +1029,7 @@ namespace ParticleEditor {
                 Angle = p.Angle,
                 Scale = p.Scale
             };
-            var result = RenderMatrixProperty(cpi, instance, ref changed, actualName, ref dm, is3x4, false, ref doBezierConversion);
+            var result = RenderMatrixProperty(cpi, instance, ref changed, actualName, ref dm, is3x4, false, ref doBezierConversion, ref doReferenceConversion);
             p.Angle = dm.Angle;
             p.Scale = dm.Scale;
             MatrixGenerateParams[actualName] = p;
@@ -1033,17 +1039,25 @@ namespace ParticleEditor {
         private unsafe bool RenderMatrixProperty (
             CachedPropertyInfo cpi, object instance, ref bool changed, 
             string actualName, ref DynamicMatrix dm, bool is3x4, 
-            bool isDynamic, ref bool doBezierConversion
+            bool isDynamic, ref bool doBezierConversion, ref bool doReferenceConversion
         ) {
             var ctx = Nuklear.Context;
             using (var pGroup = Nuklear.CollapsingGroup(actualName, actualName, false)) {
                 if (pGroup.Visible) {
+                    var buttonCount = 1;
+                    if (isDynamic)
+                        buttonCount++;
+                    if (doReferenceConversion)
+                        buttonCount++;
+                    if (doBezierConversion)
+                        buttonCount++;
+
                     NuklearService.Tree? grp = null;
                     if (!isDynamic) {
                         grp = Nuklear.CollapsingGroup("Generate", "GenerateMatrix", false, NextMatrixIndex++);
                         dm.IsGenerated = dm.IsGenerated || grp.Value.Visible;
                     } else {
-                        Nuke.nk_layout_row_dynamic(ctx, LineHeight, doBezierConversion ? 3 : 2);
+                        Nuke.nk_layout_row_dynamic(ctx, LineHeight, buttonCount);
                         if (Nuklear.Checkbox("Generated", ref dm.IsGenerated))
                             changed = true;
                     }
@@ -1052,7 +1066,7 @@ namespace ParticleEditor {
 
                     if (isGroupOpen || isDynamic) {
                         if (!isDynamic)
-                            Nuke.nk_layout_row_dynamic(ctx, LineHeight, doBezierConversion ? 2 : 1);
+                            Nuke.nk_layout_row_dynamic(ctx, LineHeight, buttonCount);
 
                         if (Nuklear.Button("Identity")) {
                             dm.Matrix = Matrix.Identity;
@@ -1065,6 +1079,8 @@ namespace ParticleEditor {
 
                     if (doBezierConversion)
                         doBezierConversion = ShowBezierButton();
+                    if (doReferenceConversion)
+                        doReferenceConversion = ShowReferenceButton();
 
                     if (isGroupOpen || dm.IsGenerated) {
                         Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
@@ -1135,6 +1151,7 @@ namespace ParticleEditor {
                     }
                 } else {
                     doBezierConversion = false;
+                    doReferenceConversion = false;
                 }
             }
             return false;
@@ -1248,12 +1265,12 @@ namespace ParticleEditor {
                         } else if (elt is Matrix) {
                             var m = (Matrix)elt;
                             bool temp = false;
-                            if (RenderMatrixProperty(cpi, null, ref changed, BezierElementNames[i], ref m, false, ref temp))
+                            if (RenderMatrixProperty(cpi, null, ref changed, BezierElementNames[i], ref m, false, ref temp, ref temp))
                                 b[i] = m;
                         } else if (elt is DynamicMatrix) {
                             var dm = (DynamicMatrix)elt;
                             bool temp = false;
-                            if (RenderMatrixProperty(cpi, null, ref changed, BezierElementNames[i], ref dm, false, true, ref temp))
+                            if (RenderMatrixProperty(cpi, null, ref changed, BezierElementNames[i], ref dm, false, true, ref temp, ref temp))
                                 b[i] = dm;
                         } else {
                             throw new Exception();

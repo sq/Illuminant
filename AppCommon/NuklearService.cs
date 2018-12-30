@@ -530,20 +530,24 @@ namespace Framework {
             }
         }
 
-        public bool Property (string name, ref int value, int min, int max, int step, float inc_per_pixel) {
+        public bool Property (string name, ref int value, int min, int max, int step, float inc_per_pixel, string tooltip = null) {
             using (var sName = new NString(name)) {
+                var bounds = Nuklear.nk_widget_bounds(Context);
                 var newValue = Nuklear.nk_propertyi(Context, sName.pText, min, value, max, step, inc_per_pixel);
                 var result = newValue != value;
                 value = newValue;
+                Tooltip(bounds, tooltip);
                 return result;
             }
         } 
 
-        public bool Property (string name, ref float value, float min, float max, float step, float inc_per_pixel) {
+        public bool Property (string name, ref float value, float min, float max, float step, float inc_per_pixel, string tooltip = null) {
             using (var sName = new NString(name)) {
+                var bounds = Nuklear.nk_widget_bounds(Context);
                 var newValue = Nuklear.nk_propertyf(Context, sName.pText, min, value, max, step, inc_per_pixel);
                 var result = newValue != value;
                 value = newValue;
+                Tooltip(bounds, tooltip);
                 return result;
             }
         } 
@@ -556,7 +560,7 @@ namespace Framework {
             return (selected != 0) && (state == false);
         }
 
-        public unsafe bool Textbox (ref string text) {
+        public unsafe bool Textbox (ref string text, string tooltip = null) {
             const int bufferSize = 4096;
             if ((text != null) && (text.Length >= bufferSize))
                 throw new ArgumentOutOfRangeException("Text too long");
@@ -573,7 +577,9 @@ namespace Framework {
 
                 fixed (byte* pBuf2 = buf2.Data) {
                     var flags = (uint)NkEditTypes.Field | (uint)NkEditFlags.AutoSelect;
+                    var bounds = Nuklear.nk_widget_bounds(Context);
                     var res = Nuklear.nk_edit_string(Context, flags, pBuf2, &newByteLen, bufferSize - 1, null);
+                    Tooltip(bounds, tooltip);
                     var changed = (newByteLen != byteLen + 1);
                     if (!changed) {
                         for (int i = 0; i < newByteLen; i++) {
@@ -652,7 +658,7 @@ namespace Framework {
             return result;
         }
 
-        public bool ComboBox (ref int selectedIndex, Func<int, string> getter, int count) {
+        public bool ComboBox (ref int selectedIndex, Func<int, string> getter, int count, string tooltip = null) {
             var rect = Nuklear.nk_layout_space_bounds(Context);
             var strings = new List<NString>();
             nk_item_getter_fun wrappedGetter = (user, i, idk) => {
@@ -661,6 +667,7 @@ namespace Framework {
                 *idk = str.pText;
                 strings.Add(str);
             };
+            var bounds = Nuklear.nk_widget_bounds(Context);
             var oldIndex = selectedIndex;
             Nuklear.nk_combobox_callback(
                 Context, wrappedGetter, IntPtr.Zero, 
@@ -668,17 +675,18 @@ namespace Framework {
             );
             foreach (var s in strings)
                 s.Dispose();
+            Tooltip(bounds, tooltip);
             return (oldIndex != selectedIndex);
         }
 
-        public bool EnumCombo (ref object value, Type type = null, string[] names = null) {
+        public bool EnumCombo (ref object value, Type type = null, string[] names = null, string tooltip = null) {
             if (type == null)
                 type = value.GetType();
             if (names == null)
                 names = Enum.GetNames(type);
             var name = Enum.GetName(type, value);
             var selectedIndex = Array.IndexOf(names, name);
-            if (ComboBox(ref selectedIndex, (i) => names[i], names.Length)) {
+            if (ComboBox(ref selectedIndex, (i) => names[i], names.Length, tooltip: tooltip)) {
                 var newName = names[selectedIndex];
                 value = Enum.Parse(type, newName, true);
                 return true;
