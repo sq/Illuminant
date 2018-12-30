@@ -98,12 +98,13 @@ namespace ParticleEditor {
                 },
                 {
                     "NoiseParameters`1", new Dictionary<string, ModelTypeInfo> {
-                        {"Frequency", new ModelTypeInfo { Min = 0, Max = 50000 } },
+                        {"Offset", new ModelTypeInfo { Min = -1, Max = 0 } }
                     }
                 },
                 {
                     "Noise", new Dictionary<string, ModelTypeInfo> {
-                        {"OldVelocityWeight", new ModelTypeInfo { Min = 0, Max = 1 } },
+                        {"Interval", new ModelTypeInfo { Min = 10, Max = 10000 } },
+                        {"Strength", new ModelTypeInfo { Min = 0, Max = 1 } }
                     }
                 },
                 {

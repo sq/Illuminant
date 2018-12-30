@@ -26,19 +26,9 @@ namespace Squared.Illuminant.Particles.Transforms {
 
     public class TransformArea {
         public AreaType Type = AreaType.None;
-        public Vector3  Center;
-
-        public Vector3 Size = Vector3.One;
-
-        private float _Falloff = 1;
-        public float Falloff {
-            get {
-                return _Falloff;
-            }
-            set {
-                _Falloff = Math.Max(1, value);
-            }
-        }
+        public Parameter<Vector3> Center;
+        public Parameter<Vector3> Size = Vector3.One;
+        public Parameter<float> Falloff = 1;
 
         public TransformArea Clone () {
             return (TransformArea)MemberwiseClone();
@@ -114,9 +104,11 @@ namespace Squared.Illuminant.Particles.Transforms {
         protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
             if (Area != null) {
                 parameters["AreaType"].SetValue((int)Area.Type);
-                parameters["AreaCenter"].SetValue(Area.Center);
-                parameters["AreaSize"].SetValue(Area.Size);
-                parameters["AreaFalloff"].SetValue(Area.Falloff);
+                parameters["AreaCenter"].SetValue(Area.Center.Evaluate(now, engine.Resolve));
+                parameters["AreaSize"].SetValue(Area.Size.Evaluate(now, engine.Resolve));
+                var falloff = Area.Falloff.Evaluate(now, engine.Resolve);
+                falloff = Math.Max(1, falloff);
+                parameters["AreaFalloff"].SetValue(falloff);
             } else {
                 parameters["AreaType"].SetValue(0);
             }
@@ -186,17 +178,21 @@ namespace Squared.Illuminant.Particles.Transforms {
     }
 
     public class Noise : ParticleAreaTransform {
-        public const float FrequencyUnit = 50000;
+        public const float IntervalUnit = 1000;
 
         public class NoiseParameters<T> where T : struct {
             public Parameter<T> Offset, Scale;
-            public Parameter<float> Frequency;
         }
 
         public float? CyclesPerSecond = 10;
         public NoiseParameters<Vector4> Position;
         public NoiseParameters<Vector3> Velocity;
-        public float OldVelocityWeight = 0f;
+        public Parameter<float> Interval;
+        public bool ReplaceOldVelocity = true;
+
+        private double LastUChangeWhen;
+        private double CurrentU, CurrentV;
+        private double NextU, NextV;
 
         private static int NextSeed = 1;
 
@@ -210,22 +206,45 @@ namespace Squared.Illuminant.Particles.Transforms {
         public Noise (int? seed) {
             RNG = new MersenneTwister(seed.GetValueOrDefault(NextSeed++));
 
+            Interval = IntervalUnit;
             Position = new NoiseParameters<Vector4> {
                 Offset = Vector4.One * 0.5f,
                 Scale = Vector4.Zero,
-                Frequency = FrequencyUnit / 4
             };
             Velocity = new NoiseParameters<Vector3> {
                 Offset = Vector3.One * 0.5f,
                 Scale = Vector3.One,
-                Frequency = FrequencyUnit / 4
             };
+            LastUChangeWhen = 0;
+            CycleUVs();
+        }
+
+        private void CycleUVs () {
+            CurrentU = NextU;
+            CurrentV = NextV;
+            NextU = RNG.NextDouble();
+            NextV = RNG.NextDouble();
+        }
+
+        private void AutoCycleUV (float now, double intervalSecs, out float t) {
+            var nextChangeWhen = LastUChangeWhen + intervalSecs;
+            if (now >= nextChangeWhen) {
+                var elapsed = now - nextChangeWhen;
+                if (elapsed >= intervalSecs)
+                    LastUChangeWhen = now;
+                else
+                    LastUChangeWhen = nextChangeWhen;
+                nextChangeWhen = LastUChangeWhen + intervalSecs;
+                CycleUVs();
+            }
+
+            t = (float)((now - LastUChangeWhen) / intervalSecs);
         }
 
         protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
             base.SetParameters(engine, parameters, now, frameIndex);
 
-            if (!BindRandomnessTexture(engine, parameters, false))
+            if (!BindRandomnessTexture(engine, parameters, true))
                 return;
 
             parameters["TimeDivisor"].SetValue(CyclesPerSecond.HasValue ? Uniforms.ParticleSystem.VelocityConstantScale / CyclesPerSecond.Value : -1);
@@ -234,22 +253,23 @@ namespace Squared.Illuminant.Particles.Transforms {
             parameters["VelocityOffset"].SetValue(new Vector4(Velocity.Offset.Evaluate(now, engine.Resolve), 0));
             parameters["VelocityScale"].SetValue (new Vector4(Velocity.Scale.Evaluate(now, engine.Resolve), 1));
 
-            var uv = new Vector2(
-                1.0f / engine.RandomnessTexture.Width,
-                1.0f / engine.RandomnessTexture.Height
-            );
-            var pfreq = Position.Frequency.Evaluate(now, engine.Resolve);
-            var vfreq = Velocity.Frequency.Evaluate(now, engine.Resolve);
-            parameters["PositionFrequency"].SetValue(uv * pfreq / FrequencyUnit);
-            parameters["VelocityFrequency"].SetValue(uv * vfreq / FrequencyUnit);
-
-            double a = RNG.NextDouble(), b = RNG.NextDouble();
+            double intervalSecs = Interval.Evaluate(now, engine.Resolve) / (double)IntervalUnit;
+            float t;
+            AutoCycleUV(now, intervalSecs, out t);
 
             var ro = parameters["RandomnessOffset"];
             ro.SetValue(new Vector2(
-                (float)(a * 253),
-                (float)(b * 127)
+                (float)(CurrentU * 253),
+                (float)(CurrentV * 127)
             ));
+            ro = parameters["NextRandomnessOffset"];
+            ro.SetValue(new Vector2(
+                (float)(NextU * 253),
+                (float)(NextV * 127)
+            ));
+
+            parameters["FrequencyLerp"].SetValue(t);
+            parameters["ReplaceOldVelocity"].SetValue(ReplaceOldVelocity);
         }
 
         protected override Material GetMaterial (ParticleMaterials materials) {

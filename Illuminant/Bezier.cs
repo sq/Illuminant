@@ -192,6 +192,41 @@ namespace Squared.Illuminant {
         }
     }
 
+    public class Bezier3 : Bezier<Vector3>, IBezier<Vector3> {
+        public Bezier3 ()
+            : this (Vector3.One) {
+        }
+
+        public Bezier3 (float x, float y, float z)
+            : this (new Vector3(x, y, z)) {
+        }
+
+        public Bezier3 (Vector3 constant) {
+            SetConstant(constant);
+        }
+
+        public void SetConstant (Vector3 constant) {
+            Count = 1;
+            MinValue = 0;
+            MaxValue = 1;
+            _A = constant;
+            _B = _C = _D = Vector3.Zero;
+        }
+
+        public Vector3 Evaluate (float t) {
+            if (Count <= 1)
+                return _A;
+
+            var cb = new Uniforms.ClampedBezier4(this);
+            var result = cb.Evaluate(t);
+            return new Vector3(result.X, result.Y, result.Z);
+        }
+
+        protected override object UntypedEvaluate (float t) {
+            return Evaluate(t);
+        }
+    }
+
     public class Bezier4 : Bezier<Vector4>, IBezier<Vector4> {
         public Bezier4 ()
             : this (Vector4.One) {
@@ -521,12 +556,15 @@ namespace Squared.Illuminant.Uniforms {
         public ClampedBezier4 (IBezier b) {
             var b1 = (b as BezierF);
             var b2 = (b as Bezier2);
+            var b3 = (b as Bezier3);
             var b4 = (b as Bezier4);
             var bm = (b as BezierM);
             if (b1 != null)
                 this = new ClampedBezier4(b1);
             else if (b2 != null)
                 this = new ClampedBezier4(b2);
+            else if (b3 != null)
+                this = new ClampedBezier4(b3);
             else if (b4 != null)
                 this = new ClampedBezier4(b4);
             else
@@ -569,6 +607,25 @@ namespace Squared.Illuminant.Uniforms {
             B = new Vector4(src.B, z, w);
             C = new Vector4(src.C, z, w);
             D = new Vector4(src.D, z, w);
+        }
+
+        public ClampedBezier4 (Bezier3 src, float w = 0) {
+            if (src == null) {
+                this = One;
+                return;
+            }
+
+            var range = src.MaxValue - src.MinValue;
+            if ((range == 0) || (src.Count <= 1))
+                range = 1;
+            RangeAndCount = new Vector4(
+                Math.Min(src.MinValue, src.MaxValue),
+                1.0f / range, src.Count, src.Repeat ? -3 : 3
+            );
+            A = new Vector4(src.A, w);
+            B = new Vector4(src.B, w);
+            C = new Vector4(src.C, w);
+            D = new Vector4(src.D, w);
         }
 
         public ClampedBezier4 (Bezier4 src, float timeScale = 1) {

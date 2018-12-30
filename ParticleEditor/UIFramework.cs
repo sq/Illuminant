@@ -387,8 +387,15 @@ namespace ParticleEditor {
             var canSelect = false;
             string typeName = null;
 
+            if (cpi != null)
+                typeName = cpi.Type.Name;
             if (cpi?.Info != null)
                 typeName = cpi.Info.Type;
+
+            if (typeName == "Parameter`1") {
+                var eleType = cpi.Type.GetGenericArguments()[0];
+                typeName = eleType.Name;
+            }
 
             if (typeName == null) {
                 if (value == null)
@@ -406,10 +413,10 @@ namespace ParticleEditor {
                     break;
             }
 
-            Vector2? _v2;
+            Vector2? _v2 = null;
             if (cpi != null)
                 _v2 = TryGetPropertyPosition(cpi, instance);
-            else
+            if (_v2 == null)
                 _v2 = GetV2FromValue(value, typeName);
             if (!_v2.HasValue)
                 canSelect = false;
@@ -417,10 +424,16 @@ namespace ParticleEditor {
             if (canSelect) {
                 var v2 = _v2.Value;
                 if (TickSelectableProperty(instance, actualName, ref v2)) {
+                    var result = false;
                     if (cpi != null)
-                        return TrySetPropertyPosition(ref value, cpi, instance, v2);
-                    else
-                        return SetV2IntoValue(ref value, typeName, v2);
+                        result = TrySetPropertyPosition(ref value, cpi, instance, v2);
+
+                    if (result == false)
+                        result = SetV2IntoValue(ref value, typeName, v2);
+
+                    // FIXME: Apply min/max clamping
+
+                    return result;
                 }
             } else {
                 Nuklear.Label(actualName ?? cpi?.Name);
@@ -1224,6 +1237,10 @@ namespace ParticleEditor {
                             var v2 = (Vector2)elt;
                             if (RenderVectorProperty(null, ref v2, ref changed))
                                 b[i] = v2;
+                        } else if (elt is Vector3) {
+                            var v3 = (Vector3)elt;
+                            if (RenderVectorProperty(null, ref v3, ref changed))
+                                b[i] = v3;
                         } else if (elt is Vector4) {
                             var v4 = (Vector4)elt;
                             if (RenderVectorProperty(null, ref v4, ref changed, isColor))

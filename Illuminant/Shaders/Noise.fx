@@ -1,14 +1,13 @@
-#define SMOOTH_NOISE
-
 #include "DistanceFunctionCommon.fxh"
 #include "ParticleCommon.fxh"
 #include "RandomCommon.fxh"
 
+uniform float  FrequencyLerp;
+uniform float2 NextRandomnessOffset;
 uniform float  TimeDivisor;
 uniform float4 PositionOffset, PositionScale;
 uniform float4 VelocityOffset, VelocityScale;
-uniform float2 PositionFrequency, VelocityFrequency;
-uniform float  OldVelocityWeight;
+uniform bool   ReplaceOldVelocity;
 
 uniform float  Strength;
 uniform int    AreaType;
@@ -20,15 +19,6 @@ float computeWeight(float3 worldPosition) {
         AreaType, worldPosition, AreaCenter, AreaSize
     );
     return (1 - saturate(distance / AreaFalloff)) * Strength;
-}
-
-float4 computeFMA(
-    float4 oldPosition, float4 oldValue, float4 multiply, float4 add
-) {
-    float weight = computeWeight(oldPosition);
-    return lerp(
-        oldValue, (oldValue * multiply) + add, weight * getDeltaTime() / TimeDivisor
-    );
 }
 
 void PS_Noise(
@@ -46,18 +36,23 @@ void PS_Noise(
 
     float2 randomOffset1 = xy, 
         // FIXME: Correlated in a way that might be noticeable?
-        randomOffset2 = xy + 1;
-    float4 randomP = randomCustomRate(randomOffset1, PositionFrequency);
-    float4 randomV = randomCustomRate(randomOffset2, VelocityFrequency);
+        randomOffset2 = xy + (NextRandomnessOffset - RandomnessOffset);
+    float4 randomP1 = random(randomOffset1);
+    float4 randomP2 = random(randomOffset2);
+    float4 randomV1 = random(randomOffset1 + float2(2, 1));
+    float4 randomV2 = random(randomOffset2 + float2(2, 1));
+
+    float4 randomP = lerp(randomP1, randomP2, FrequencyLerp);
+    float4 randomV = lerp(randomV1, randomV2, FrequencyLerp);
 
     float4 positionDelta = (randomP - PositionOffset) * PositionScale;
     float4 velocityDelta = (randomV - VelocityOffset) * VelocityScale;
 
     newPosition = lerp(oldPosition, oldPosition + positionDelta, t);
-    if (OldVelocityWeight >= 0.01)
-        newVelocity = lerp(oldVelocity, (oldVelocity * OldVelocityWeight) + velocityDelta, t);
+    if (ReplaceOldVelocity)
+        newVelocity = lerp(oldVelocity, velocityDelta, weight);
     else
-        newVelocity = velocityDelta;
+        newVelocity = lerp(oldVelocity, oldVelocity + velocityDelta, t);
 }
 
 technique Noise {

@@ -133,6 +133,9 @@ namespace Squared.Illuminant.Configuration {
                 case "Vector2":
                     _Bezier = (IBezier<T>)new Bezier2((Vector2)Convert.ChangeType(Constant, ValueType));
                     return true;
+                case "Vector3":
+                    _Bezier = (IBezier<T>)new Bezier3((Vector3)Convert.ChangeType(Constant, ValueType));
+                    return true;
                 case "Vector4":
                     _Bezier = (IBezier<T>)new Bezier4((Vector4)Convert.ChangeType(Constant, ValueType));
                     return true;

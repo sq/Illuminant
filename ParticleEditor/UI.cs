@@ -116,6 +116,7 @@ namespace ParticleEditor {
 
         private static Type[] ValidConstantTypes = new[] {
             typeof(float),
+            typeof(Vector3),
             typeof(Vector4),
             typeof(Squared.Illuminant.Configuration.DynamicMatrix)
         };
