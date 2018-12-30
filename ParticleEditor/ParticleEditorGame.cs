@@ -268,6 +268,11 @@ namespace ParticleEditor {
             MouseState = Mouse.GetState();
 
             if (IsActive) {
+                if (!String.IsNullOrWhiteSpace(Model.Filename))
+                    Window.Title = "Particle Editor - " + Path.GetFileName(Model.Filename);
+                else
+                    Window.Title = "Particle Editor";
+
                 var alt = KeyboardState.IsKeyDown(Keys.LeftAlt) || KeyboardState.IsKeyDown(Keys.RightAlt);
                 var wasAlt = PreviousKeyboardState.IsKeyDown(Keys.LeftAlt) || PreviousKeyboardState.IsKeyDown(Keys.RightAlt);
                 

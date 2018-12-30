@@ -163,6 +163,7 @@ namespace Squared.Illuminant.Configuration {
                 result._Name = null;
             else if (IsBezier)
                 result.Constant = _Bezier.A;
+            result.Bezier = null;
 
             return result;
         }
