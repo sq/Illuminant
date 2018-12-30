@@ -133,10 +133,28 @@ namespace Framework {
             glyph->xadvance = result.Width * FontScale;
         }
 
-        private float _TextWidthF (NkHandle handle, float h, byte* s, int len) {
+        private unsafe float _TextWidthF (NkHandle handle, float h, byte* s, int len) {
             if ((s == null) || (len == 0))
                 return 0;
 
+            if (len == 1) {
+                char* temp = stackalloc char[4];
+                var cnt = Encoding.UTF8.GetChars(s, len, temp, 4);
+                var ch = temp[0];
+                if (ch < 32)
+                    return 0;
+
+                Glyph glyph;
+                var isDeadGlyph = !Font.GetGlyph(ch, out glyph);
+                if (isDeadGlyph)
+                    return 0;
+
+                var w = glyph.LeftSideBearing + 
+                    glyph.RightSideBearing + 
+                    glyph.Width + glyph.CharacterSpacing;
+
+                return w;
+            }
             if ((len == 1) && (s[0] == 0))
                 return 0;
 
