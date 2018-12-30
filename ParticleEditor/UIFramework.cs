@@ -296,7 +296,7 @@ namespace ParticleEditor {
         }
 
         private unsafe bool RenderPropertyElement (
-            string key, ModelTypeInfo? info, ref float value, ref bool changed, float? min = null, float? max = null
+            string key, ModelTypeInfo? info, ref float value, ref bool changed, float? min = null, float? max = null, string tooltip = null
         ) {
             // FIXME
             if (Single.IsInfinity(value) || Single.IsNaN(value))
@@ -312,7 +312,7 @@ namespace ParticleEditor {
 
             var _min = min.GetValueOrDefault(_info.Min.GetValueOrDefault(-4096));
             var _max = max.GetValueOrDefault(_info.Max.GetValueOrDefault(4096));
-            if (Nuklear.Property(key, ref value, _min, _max, step, inc)) {
+            if (Nuklear.Property(key, ref value, _min, _max, step, inc, tooltip: tooltip)) {
                 changed = true;
                 float newInc;
                 var newIndex = GetScaleIndex(value, out newInc);
@@ -1220,7 +1220,7 @@ namespace ParticleEditor {
                     Nuke.nk_layout_row_dynamic(ctx, LineHeight, ((bm != null) && !fullyDynamic) ? 5 : 4);
 
                     var cnt = b.Count;
-                    if (Nuklear.Property("##", ref cnt, allowErase ? 0 : 1, 4, 1, 0.5f)) {
+                    if (Nuklear.Property("##", ref cnt, allowErase ? 0 : 1, 4, 1, 0.5f, tooltip: "Control Point Count")) {
                         // Copy existing row when adding new one
                         if ((b.Count < cnt) && (cnt > 1))
                             b[cnt - 1] = b[cnt - 2];
@@ -1229,11 +1229,11 @@ namespace ParticleEditor {
                     }
 
                     var val = b.MinValue;
-                    if (RenderPropertyElement("#≥", null, ref val, ref changed))
+                    if (RenderPropertyElement("#≥", null, ref val, ref changed, tooltip: "Minimum Value"))
                         b.MinValue = val;
 
                     val = b.MaxValue;
-                    if (RenderPropertyElement("#≤", null, ref val, ref changed))
+                    if (RenderPropertyElement("#≤", null, ref val, ref changed, tooltip: "Maximum Value"))
                         b.MaxValue = val;
 
                     if ((bm != null) && !fullyDynamic && Nuklear.Property("#Row", ref selectedRow, 0, 3, 1, 0.5f))
@@ -1265,11 +1265,13 @@ namespace ParticleEditor {
                         } else if (elt is Matrix) {
                             var m = (Matrix)elt;
                             bool temp = false;
+                            // FIXME: Implement reference conversion
                             if (RenderMatrixProperty(cpi, null, ref changed, BezierElementNames[i], ref m, false, ref temp, ref temp))
                                 b[i] = m;
                         } else if (elt is DynamicMatrix) {
                             var dm = (DynamicMatrix)elt;
                             bool temp = false;
+                            // FIXME: Implement reference conversion
                             if (RenderMatrixProperty(cpi, null, ref changed, BezierElementNames[i], ref dm, false, true, ref temp, ref temp))
                                 b[i] = dm;
                         } else {
