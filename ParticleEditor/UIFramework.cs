@@ -471,7 +471,7 @@ namespace ParticleEditor {
                     if (RenderParameter(null, value, ref changed, "Scale", cpi.Info.Type, ref p))
                         value.RandomScale = (Parameter<Vector4>)p;
 
-                    var k = value.Circular ? "Constant Radius" : "Random Offset";
+                    var k = (value.Type != FormulaType.Linear) ? "Constant Radius" : "Random Offset";
                     /*
                     Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
                     if (Nuklear.SelectableText(k, isFormulaSelected && (spp.Key == k))) {

@@ -72,7 +72,22 @@ namespace Framework {
             public uint Hash;
             public byte FirstByte, LastByte;
         }
-        private Dictionary<TextCacheKey, float> TextWidthCache = new Dictionary<TextCacheKey, float>();
+        private class TextCacheKeyComparer : IEqualityComparer<TextCacheKey> {
+            public bool Equals (TextCacheKey x, TextCacheKey y) {
+                return (x.Length == y.Length) &&
+                    (x.Hash == y.Hash) &&
+                    (x.FirstByte == y.FirstByte) &&
+                    (x.LastByte == y.LastByte);
+            }
+
+            public int GetHashCode (TextCacheKey obj) {
+                unchecked {
+                    return (int)obj.Hash;
+                }
+            }
+        }
+        private Dictionary<char, float> CharWidthCache = new Dictionary<char, float>();
+        private Dictionary<TextCacheKey, float> TextWidthCache = new Dictionary<TextCacheKey, float>(new TextCacheKeyComparer());
 
         public SceneDelegate Scene = null;
         public UnorderedList<Func<bool>> Modals = new UnorderedList<Func<bool>>();
@@ -143,7 +158,7 @@ namespace Framework {
                 return default(TextCacheKey);
 
             var lastIdx = Math.Max(len - 1, 0);
-            var hash = Nuklear.nk_murmur_hash((IntPtr)s, len, (uint)len);
+            var hash = Nuklear.nk_murmur_hash((IntPtr)s, len, 0);
             return new TextCacheKey {
                 FirstByte = s[0],
                 LastByte = s[lastIdx],
@@ -153,6 +168,8 @@ namespace Framework {
         }
 
         private unsafe float _TextWidthF (NkHandle handle, float h, byte* s, int len) {
+            float result;
+
             if ((s == null) || (len == 0))
                 return 0;
 
@@ -160,25 +177,27 @@ namespace Framework {
                 char* temp = stackalloc char[4];
                 var cnt = Encoding.UTF8.GetChars(s, len, temp, 4);
                 var ch = temp[0];
-                if (ch < 32)
-                    return 0;
 
-                Glyph glyph;
-                var isDeadGlyph = !Font.GetGlyph(ch, out glyph);
-                if (isDeadGlyph)
-                    return 0;
+                if (!CharWidthCache.TryGetValue(ch, out result)) {
+                    result = 0;
+                    if (ch >= 32) {
+                        Glyph glyph;
+                        if (Font.GetGlyph(ch, out glyph)) {
+                            result = glyph.LeftSideBearing + 
+                                glyph.RightSideBearing + 
+                                glyph.Width + glyph.CharacterSpacing;
+                        }
+                    }
+                    CharWidthCache[ch] = result;
+                }
 
-                var w = glyph.LeftSideBearing + 
-                    glyph.RightSideBearing + 
-                    glyph.Width + glyph.CharacterSpacing;
-
-                return w;
+                return result;
             }
+
             if ((len == 1) && (s[0] == 0))
                 return 0;
 
             var key = KeyForText(s, len);
-            float result;
             if (!TextWidthCache.TryGetValue(key, out result)) {
                 using (var buf = BufferPool<char>.Allocate(len + 1))
                 using (var layoutBuf = BufferPool<BitmapDrawCall>.Allocate(len + 1)) {
