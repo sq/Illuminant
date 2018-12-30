@@ -297,13 +297,13 @@ namespace TestGame.Scenes {
                         Position = new Formula {
                             RandomOffset = new Vector4(-0.5f, -0.5f, -0.5f, 1f),
                             RandomScale = new Vector4(15f, 15f, 5f, (MaxLife - OpacityFromLife) / 60f),
-                            Circular = true
+                            Type = FormulaType.Spherical
                         },
                         Velocity = new Formula {
                             RandomOffset = new Vector4(-0.5f, -0.5f, -0.5f, 0f),
                             RandomScale = new Vector4(4f, 4f, 2f, 0f) * 60,
                             ConstantRadius = new Vector4(3f, 3f, 0f, 0f),
-                            Circular = true
+                            Type = FormulaType.Spherical
                         },
                         Attributes = new Formula {
                             Constant = new Vector4(0.09f, 0.09f, 0.09f, 0.3f),

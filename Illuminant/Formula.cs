@@ -13,7 +13,7 @@ namespace Squared.Illuminant {
         public Parameter<Vector4> Offset;
         public FormulaType Type;
 
-        public bool Circular {
+        internal bool Circular {
             get {
                 return Type == FormulaType.Spherical;
             }
@@ -40,12 +40,6 @@ namespace Squared.Illuminant {
             }
         }
 
-        public static Formula UnitNormal () {
-            var result = new Formula();
-            result.SetToUnitNormal();
-            return result;
-        }
-
         public void SetToUnitNormal () {
             Constant = Vector4.Zero;
             Offset = Vector4.Zero;
@@ -57,6 +51,27 @@ namespace Squared.Illuminant {
             Constant = value;
             Offset = RandomScale = Vector4.Zero;
             Circular = false;
+        }
+
+        public static Formula Towards (Vector3 point, float life, float randomSpeed, float constantSpeed) {
+            var result = new Formula();
+            result.Constant = new Vector4(point, life);
+            result.RandomScale = new Vector4(randomSpeed, randomSpeed, randomSpeed, 0);
+            result.ConstantRadius = new Vector4(constantSpeed, constantSpeed, constantSpeed, 0);
+            result.Type = FormulaType.Towards;
+            return result;
+        }
+
+        public static Formula FromConstant (Vector4 value) {
+            var result = new Formula();
+            result.SetToConstant(value);
+            return result;
+        }
+
+        public static Formula UnitNormal () {
+            var result = new Formula();
+            result.SetToUnitNormal();
+            return result;
         }
 
         public static Formula Zero () {

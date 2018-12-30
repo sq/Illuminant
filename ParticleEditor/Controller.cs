@@ -196,13 +196,13 @@ namespace ParticleEditor {
                         ModelProperty.New(new Formula {
                             Constant = new Vector4(0, 0, 0, 64),
                             RandomScale = new Vector4(256, 256, 0, 0),
-                            Circular = true
+                            Type = FormulaType.Spherical
                         })
                     },
                     { "Velocity",
                         ModelProperty.New(new Formula {
                             RandomScale = new Vector4(32f, 32f, 0, 0),
-                            Circular = true
+                            Type = FormulaType.Spherical
                         })
                     },
                     { "Attributes",
