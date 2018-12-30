@@ -67,7 +67,7 @@ namespace ParticleEditor {
         private WaitCallback GCAfterVsync;
 
         private GCHandle ControllerPin;
-        public const float MinZoom = 0.5f, MaxZoom = 3.0f;
+        public const float MinZoom = 0.25f, MaxZoom = 5.0f;
         public float Zoom = 1.0f, Brightness = 0.1f;
 
         private long LastViewRelease = 0;

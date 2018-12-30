@@ -306,6 +306,8 @@ namespace ParticleEditor {
 
             using (var sGlobalSettings = new NString("Global Settings"))
             if (Nuke.nk_tree_push_hashed(ctx, NuklearDotNet.nk_tree_type.NK_TREE_TAB, sGlobalSettings.pText, NuklearDotNet.nk_collapse_states.NK_MINIMIZED, sGlobalSettings.pText, sGlobalSettings.Length, 256) != 0) {
+                Nuke.nk_layout_row_dynamic(ctx, LineHeight, 3);
+
                 var vsync = Graphics.SynchronizeWithVerticalRetrace;
                 if (Nuklear.Checkbox("VSync", ref vsync)) {
                     Graphics.SynchronizeWithVerticalRetrace = vsync;
@@ -316,13 +318,12 @@ namespace ParticleEditor {
                 if (Nuklear.Checkbox("Fullscreen", ref fullscreen))
                     Game.SetFullScreen(fullscreen);
 
-                Nuklear.Checkbox("Statistics", ref Game.ShowPerformanceStats);
+                Nuklear.Checkbox("Stats", ref Game.ShowPerformanceStats);
 
-                Nuke.nk_label(ctx, "Zoom", (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
-                Game.Zoom = Nuke.nk_slide_float(ctx, ParticleEditor.MinZoom, Game.Zoom, ParticleEditor.MaxZoom, 0.025f);
+                Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
 
-                Nuke.nk_label(ctx, "Background Brightness", (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
-                Game.Brightness = Nuke.nk_slide_float(ctx, 0, Game.Brightness, 1, 0.01f);
+                Nuklear.Property("Zoom", ref Game.Zoom, ParticleEditor.MinZoom, ParticleEditor.MaxZoom, 0.05f, 0.01f);
+                Nuklear.Property("BG Brightness", ref Game.Brightness, 0, 1, 0.05f, 0.005f);
 
                 Nuke.nk_tree_pop(ctx);
             }
