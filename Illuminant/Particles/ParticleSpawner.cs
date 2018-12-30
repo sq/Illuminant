@@ -53,8 +53,6 @@ namespace Squared.Illuminant.Particles.Transforms {
 
         [NonSerialized]
         protected Vector4[] Temp = new Vector4[8];
-        [NonSerialized]
-        protected int[] Temp2 = new int[3];
 
         protected SpawnerBase ()
             : this(null) {
@@ -141,16 +139,19 @@ namespace Squared.Illuminant.Particles.Transforms {
             Temp[6] = Attributes.RandomScale.Evaluate(now);
             Temp[7] = Attributes.Offset.Evaluate(now);
 
-            Temp2[0] = (int)Position.Type;
-            Temp2[1] = (int)Velocity.Type;
-            Temp2[2] = (int)Attributes.Type;
+            var ft = new Vector4(
+                (int)Position.Type,
+                (int)Velocity.Type,
+                (int)Attributes.Type,
+                0
+            );
 
             parameters["AlignVelocityAndPosition"].SetValue(
                 AlignVelocityAndPosition && Position.Circular && Velocity.Circular
             );
             parameters["ZeroZAxis"].SetValue(ZeroZAxis);
             parameters["Configuration"].SetValue(Temp);
-            parameters["FormulaTypes"].SetValue(Temp2);
+            parameters["FormulaTypes"].SetValue(ft);
 
             parameters["ChunkSizeAndIndices"].SetValue(GetChunkSizeAndIndices(engine));
             var m = PositionPostMatrix.Evaluate(now);

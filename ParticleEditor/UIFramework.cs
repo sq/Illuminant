@@ -839,10 +839,13 @@ namespace ParticleEditor {
                     p = p.ToBezier();
                     changed = true;
                     // HACK to auto-open
-                    RenderBezierProperty(cpi, null, actualName, p.Bezier, now, isColor, true);
+                    RenderBezierProperty(cpi, null, actualName, p.Bezier, now, isColor, true, false);
                 }
             } else {
-                changed = RenderBezierProperty(cpi, null, actualName, p.Bezier, now, isColor, false);
+                var b = p.Bezier;
+                changed = RenderBezierProperty(cpi, null, actualName, b, now, isColor, false, true);
+                if (changed && b.Count == 0)
+                    p = p.ToConstant();
             }
 
             if (changed && (cpi != null))
@@ -1019,7 +1022,7 @@ namespace ParticleEditor {
         private unsafe bool RenderBezierProperty (
             CachedPropertyInfo cpi, object instance,
             string actualName, object value, float? currentT,
-            bool isColor, bool initiallyOpen = false
+            bool isColor, bool initiallyOpen = false, bool allowErase = false
         ) {
             bool changed = false;
             var bm = value as BezierM;
@@ -1075,7 +1078,7 @@ namespace ParticleEditor {
                     Nuke.nk_layout_row_dynamic(ctx, LineHeight, ((bm != null) && !fullyDynamic) ? 5 : 4);
 
                     var cnt = b.Count;
-                    if (Nuklear.Property("##", ref cnt, 1, 4, 1, 0.5f)) {
+                    if (Nuklear.Property("##", ref cnt, allowErase ? 0 : 1, 4, 1, 0.5f)) {
                         // Copy existing row when adding new one
                         if ((b.Count < cnt) && (cnt > 1))
                             b[cnt - 1] = b[cnt - 2];

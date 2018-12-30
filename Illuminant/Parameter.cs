@@ -13,6 +13,7 @@ namespace Squared.Illuminant.Configuration {
         bool IsConstant { get; }
         bool IsBezier { get; }
         IParameter ToBezier ();
+        IParameter ToConstant ();
         object Constant { get; }
         IBezier Bezier { get; }
     }
@@ -107,12 +108,23 @@ namespace Squared.Illuminant.Configuration {
             }
         }
 
+        public Parameter<T> ToConstant () {
+            if (!IsBezier)
+                return this;
+
+            return new Parameter<T>(_Bezier.A);
+        }
+
         public Parameter<T> ToBezier () {
             var result = this;
             if (!IsBezier)
                 if (!result.TryConvertToBezier())
                     throw new Exception();
             return result;
+        }
+
+        IParameter IParameter.ToConstant () {
+            return ToConstant();
         }
 
         IParameter IParameter.ToBezier () {
