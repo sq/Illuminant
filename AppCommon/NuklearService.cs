@@ -498,14 +498,16 @@ namespace Framework {
 
             using (var buf1 = BufferPool<byte>.Allocate(bufferSize))
             using (var buf2 = BufferPool<byte>.Allocate(bufferSize)) {
-                int byteLen = Encoding.UTF8.GetBytes(currentText, 0, currentText.Length, buf1.Data, 0);
+                Array.Clear(buf1, 0, bufferSize);
+                Array.Clear(buf2, 0, bufferSize);
+                int byteLen = Encoding.UTF8.GetBytes(currentText, 0, Math.Min(currentText.Length, bufferSize - 1), buf1.Data, 0);
                 Array.Copy(buf1.Data, buf2.Data, byteLen);
                 int newByteLen = byteLen;
 
                 fixed (byte* pBuf2 = buf2.Data) {
                     var flags = (uint)NkEditTypes.Field | (uint)NkEditFlags.AutoSelect;
                     var res = Nuklear.nk_edit_string(Context, flags, pBuf2, &newByteLen, bufferSize - 1, null);
-                    var changed = (newByteLen != byteLen);
+                    var changed = (newByteLen != byteLen + 1);
                     if (!changed) {
                         for (int i = 0; i < newByteLen; i++) {
                             if (buf1.Data[i] != buf2.Data[i]) {
@@ -560,6 +562,17 @@ namespace Framework {
             }
         }
 
+        // Returns true if value changed
+        public unsafe bool Checkbox (string text, ref bool value) {
+            bool newValue;
+            using (var temp = new NString(text))
+                newValue = Nuklear.nk_check_text(Context, temp.pText, temp.Length, value ? 0 : 1) == 0;
+
+            var result = newValue != value;
+            value = newValue;
+            return result;
+        }
+
         public bool ComboBox (ref int selectedIndex, Func<int, string> getter, int count) {
             var rect = Nuklear.nk_layout_space_bounds(Context);
             var strings = new List<NString>();
@@ -577,6 +590,21 @@ namespace Framework {
             foreach (var s in strings)
                 s.Dispose();
             return (oldIndex != selectedIndex);
+        }
+
+        public bool EnumCombo (ref object value, Type type = null, string[] names = null) {
+            if (type == null)
+                type = value.GetType();
+            if (names == null)
+                names = Enum.GetNames(type);
+            var name = Enum.GetName(type, value);
+            var selectedIndex = Array.IndexOf(names, name);
+            if (ComboBox(ref selectedIndex, (i) => names[i], names.Length)) {
+                var newName = names[selectedIndex];
+                value = Enum.Parse(type, newName, true);
+                return true;
+            }
+            return false;
         }
 
         public void Dispose () {

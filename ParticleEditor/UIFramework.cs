@@ -500,8 +500,11 @@ namespace ParticleEditor {
                         value.Offset = (Parameter<Vector4>)p;
 
                     Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
-                    if (Checkbox("Circular", ref value.Circular))
+                    var t = (object)value.Type;
+                    if (Nuklear.EnumCombo(ref t)) {
+                        value.Type = (FormulaType)t;
                         result = true;
+                    }
                 }
             }
 
@@ -665,7 +668,7 @@ namespace ParticleEditor {
 
                 case "Boolean":
                     b = (bool)value;
-                    if (Checkbox(null, ref b)) {
+                    if (Nuklear.Checkbox(null, ref b)) {
                         cpi.Setter(instance, b);
                         return true;
                     }
@@ -714,20 +717,21 @@ namespace ParticleEditor {
                 
                 default:
                     if (cpi.Type.IsEnum) {
-                        var names = cpi.EnumValueNames;
-                        var name = Enum.GetName(cpi.Type, value);
-                        var selectedIndex = Array.IndexOf(names, name);
-                        if (Nuklear.ComboBox(ref selectedIndex, (i) => names[i], names.Length)) {
-                            var newName = names[selectedIndex];
-                            var newValue = Enum.Parse(cpi.Type, newName, true);
-                            cpi.Setter(instance, newValue);
-                            return true;
-                        }
+                        return RenderEnumProperty(cpi, instance, value);
                     } else {
                         Nuklear.Label(value.GetType().Name);
                     }
                     return false;
             }
+        }
+
+        private unsafe bool RenderEnumProperty (CachedPropertyInfo cpi, object instance, object value) {
+            if (Nuklear.EnumCombo(ref value, cpi.Type, cpi.EnumValueNames)) {
+                cpi.Setter(instance, value);
+                return true;
+            }
+
+            return false;
         }
 
         private unsafe bool ShowBezierButton () {
@@ -917,7 +921,7 @@ namespace ParticleEditor {
                         dm.IsGenerated = dm.IsGenerated || grp.Value.Visible;
                     } else {
                         Nuke.nk_layout_row_dynamic(ctx, LineHeight, doBezierConversion ? 3 : 2);
-                        if (Checkbox("Generated", ref dm.IsGenerated))
+                        if (Nuklear.Checkbox("Generated", ref dm.IsGenerated))
                             changed = true;
                     }
 
@@ -1091,7 +1095,7 @@ namespace ParticleEditor {
                         BezierSelectedRows[bm] = selectedRow;
 
                     var repeat = b.Repeat;
-                    if (Checkbox("Loop", ref repeat))
+                    if (Nuklear.Checkbox("Loop", ref repeat))
                         b.Repeat = repeat;
 
                     for (int i = 0; i < cnt; i++) {
@@ -1338,17 +1342,6 @@ namespace ParticleEditor {
                 }
             }
             return false;
-        }
-
-        // Returns true if value changed
-        private unsafe bool Checkbox (string text, ref bool value) {
-            bool newValue;
-            using (var temp = new NString(text))
-                newValue = Nuke.nk_check_text(Nuklear.Context, temp.pText, temp.Length, value ? 0 : 1) == 0;
-
-            var result = newValue != value;
-            value = newValue;
-            return result;
         }
     }
 

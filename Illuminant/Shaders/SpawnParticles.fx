@@ -11,7 +11,7 @@ uniform float  PositionConstantCount;
 uniform float4 PositionConstants[MAX_POSITION_CONSTANTS];
 uniform float4 ChunkSizeAndIndices;
 uniform float4 Configuration[8];
-uniform float  RandomCircularity[3];
+uniform uint   FormulaTypes[3];
 uniform float4x4 PositionMatrix;
 uniform float3 SourceChunkSizeAndTexel;
 
@@ -22,31 +22,36 @@ void VS_Spawn (
     result = float4(xy.x, xy.y, 0, 1);
 }
 
-float4 evaluateFormula (float4 constant, float4 scale, float4 offset, float randomCircularity, float4 randomness) {
-    float4 result = constant;
-
+float4 evaluateFormula (float4 origin, float4 constant, float4 scale, float4 offset, float4 randomness, int type) {
     float4 nonCircular = (randomness + offset) * scale;
 
-    if (randomCircularity >= 0.5) {
-        float o = randomness.x * PI * 2;
-        float z = (randomness.y - 0.5) * 2;
-        if (ZeroZAxis)
-            z = 0;
-        float xyMultiplier = sqrt(1 - (z * z));
-        float3 randomNormal = float3(xyMultiplier * cos(o), xyMultiplier * sin(o), z);
-        float4 circular = float4(
-            randomNormal.x * randomness.z * scale.x,
-            randomNormal.y * randomness.z * scale.y,
-            randomNormal.z * randomness.z * scale.z,
-            nonCircular.w
-        );
-        result += circular;
-        result.xyz += randomNormal * offset.xyz;
-    } else {
-        result += nonCircular;
+    switch (type) {
+        case 1: {
+            float o = randomness.x * PI * 2;
+            float z = (randomness.y - 0.5) * 2;
+            if (ZeroZAxis)
+                z = 0;
+            float xyMultiplier = sqrt(1 - (z * z));
+            float3 randomNormal = float3(xyMultiplier * cos(o), xyMultiplier * sin(o), z);
+            float4 circular = float4(
+                randomNormal.x * randomness.z * scale.x,
+                randomNormal.y * randomness.z * scale.y,
+                randomNormal.z * randomness.z * scale.z,
+                nonCircular.w
+                );
+            float4 result = constant + circular;
+            result.xyz += randomNormal * offset.xyz;
+            return result;
+        }
+        case 2: {
+            float3 distance = constant - origin;
+            float3 direction = normalize(distance);
+            float speed = randomness.x + length(offset);
+            return float4(speed * direction, constant.w);
+        }
     }
 
-    return result;
+    return constant + nonCircular;
 }
 
 void PS_Spawn (
@@ -86,12 +91,12 @@ void PS_Spawn (
         float positionIndex = (relativeIndex + ChunkSizeAndIndices.w) % PositionConstantCount;
         positionConstant = PositionConstants[positionIndex];
     }
-    float4 tempPosition = evaluateFormula(positionConstant, Configuration[0], Configuration[1], RandomCircularity[0], random1);
+    float4 tempPosition = evaluateFormula(0, positionConstant, Configuration[0], Configuration[1], random1, FormulaTypes[0]);
 
     newPosition   = mul(tempPosition, PositionMatrix);
     newPosition.w = tempPosition.w;
-    newVelocity   = evaluateFormula(Configuration[2], Configuration[3], Configuration[4], RandomCircularity[1], random2);
-    newAttributes = evaluateFormula(Configuration[5], Configuration[6], Configuration[7], RandomCircularity[2], random3);
+    newVelocity   = evaluateFormula(newPosition, Configuration[2], Configuration[3], Configuration[4], random2, FormulaTypes[1]);
+    newAttributes = evaluateFormula(newPosition, Configuration[5], Configuration[6], Configuration[7], random3, FormulaTypes[2]);
 }
 
 void PS_SpawnFeedback (
@@ -133,7 +138,7 @@ void PS_SpawnFeedback (
     float4 positionConstant = PositionConstants[0];
     if (AlignPositionConstant)
         positionConstant += sourcePosition;
-    float4 tempPosition = evaluateFormula(positionConstant, Configuration[0], Configuration[1], RandomCircularity[0], random1);
+    float4 tempPosition = evaluateFormula(0, positionConstant, Configuration[0], Configuration[1], random1, FormulaTypes[0]);
 
     float4 attributeConstant = Configuration[5];
     if (MultiplyAttributeConstant)
@@ -142,8 +147,8 @@ void PS_SpawnFeedback (
     newPosition = mul(tempPosition, PositionMatrix);
     newPosition.w = tempPosition.w;
 
-    newAttributes = evaluateFormula(attributeConstant, Configuration[6], Configuration[7], RandomCircularity[2], random3);
-    newVelocity = evaluateFormula(Configuration[2], Configuration[3], Configuration[4], RandomCircularity[1], random2);
+    newVelocity = evaluateFormula(newPosition, Configuration[2], Configuration[3], Configuration[4], random2, FormulaTypes[1]);
+    newAttributes = evaluateFormula(newPosition, attributeConstant, Configuration[6], Configuration[7], random3, FormulaTypes[2]);
 }
 
 technique SpawnParticles {

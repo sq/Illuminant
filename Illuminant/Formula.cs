@@ -11,7 +11,18 @@ namespace Squared.Illuminant {
         public Parameter<Vector4> Constant;
         public Parameter<Vector4> RandomScale;
         public Parameter<Vector4> Offset;
-        public bool Circular;
+        public FormulaType Type;
+
+        public bool Circular {
+            get {
+                return Type == FormulaType.Spherical;
+            }
+            set {
+                if (value == false)
+                    return;
+                Type = FormulaType.Spherical;
+            }
+        }
 
         public Parameter<Vector4> RandomOffset {
             set {
@@ -61,5 +72,11 @@ namespace Squared.Illuminant {
         public Formula Clone () {
             return (Formula)MemberwiseClone();
         }
+    }
+
+    public enum FormulaType : uint {
+        Linear = 0,
+        Spherical = 1,
+        Towards = 2
     }
 }

@@ -231,16 +231,16 @@ namespace ParticleEditor {
             using (var sGlobalSettings = new NString("Global Settings"))
             if (Nuke.nk_tree_push_hashed(ctx, NuklearDotNet.nk_tree_type.NK_TREE_TAB, sGlobalSettings.pText, NuklearDotNet.nk_collapse_states.NK_MINIMIZED, sGlobalSettings.pText, sGlobalSettings.Length, 256) != 0) {
                 var vsync = Graphics.SynchronizeWithVerticalRetrace;
-                if (Checkbox("VSync", ref vsync)) {
+                if (Nuklear.Checkbox("VSync", ref vsync)) {
                     Graphics.SynchronizeWithVerticalRetrace = vsync;
                     Graphics.ApplyChangesAfterPresent(Game.RenderCoordinator);
                 }
 
                 var fullscreen = Graphics.IsFullScreen;
-                if (Checkbox("Fullscreen", ref fullscreen))
+                if (Nuklear.Checkbox("Fullscreen", ref fullscreen))
                     Game.SetFullScreen(fullscreen);
 
-                Checkbox("Statistics", ref Game.ShowPerformanceStats);
+                Nuklear.Checkbox("Statistics", ref Game.ShowPerformanceStats);
 
                 Nuke.nk_label(ctx, "Zoom", (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
                 Game.Zoom = Nuke.nk_slide_float(ctx, ParticleEditor.MinZoom, Game.Zoom, ParticleEditor.MaxZoom, 0.025f);
