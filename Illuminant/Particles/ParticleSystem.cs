@@ -162,6 +162,7 @@ namespace Squared.Illuminant.Particles {
             internal RenderTarget2D RenderData, RenderColor;
             internal BufferSet LastUpdateResult;
 
+            public bool NoLongerASpawnTarget { get; internal set; }
             public bool IsFeedbackOutput { get; internal set; }
             public bool IsDisposed { get; private set; }
 
@@ -237,6 +238,7 @@ namespace Squared.Illuminant.Particles {
                 TotalConsumedForFeedback = 0;
                 TotalSpawned = 0;
                 IsFeedbackOutput = false;
+                NoLongerASpawnTarget = true;
             }
 
             internal void SkipFeedbackInput (int skipAmount) {
@@ -409,6 +411,7 @@ namespace Squared.Illuminant.Particles {
             // FIXME: Ideally we could split the spawn across this chunk and an old one.
             if (chunk != null) {
                 if (chunk.Free < count) {
+                    chunk.NoLongerASpawnTarget = true;
                     currentTarget = -1;
                     chunk = null;
                 }
@@ -425,6 +428,10 @@ namespace Squared.Illuminant.Particles {
             }
 
             return chunk;
+        }
+
+        internal Chunk GetCurrentSpawnTarget (bool feedback) {
+            return ChunkFromID(feedback ? CurrentFeedbackSpawnTarget : CurrentSpawnTarget);
         }
 
         internal Chunk PickTargetForSpawn (bool feedback, int count, out bool needClear) {
@@ -855,6 +862,7 @@ namespace Squared.Illuminant.Particles {
                 lock (NewUserChunks) {
                     foreach (var nc in NewUserChunks) {
                         nc.GlobalIndexOffset = TotalSpawnCount;
+                        nc.NoLongerASpawnTarget = true;
                         TotalSpawnCount += nc.MaximumCount;
                         Chunks.Add(nc);
                     }

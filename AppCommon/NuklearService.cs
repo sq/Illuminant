@@ -463,7 +463,7 @@ namespace Framework {
             }
         }
 
-        public bool Property (string name, ref int value, int min, int max, int step, int inc_per_pixel) {
+        public bool Property (string name, ref int value, int min, int max, int step, float inc_per_pixel) {
             using (var sName = new NString(name)) {
                 var newValue = Nuklear.nk_propertyi(Context, sName.pText, min, value, max, step, inc_per_pixel);
                 var result = newValue != value;

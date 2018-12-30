@@ -597,7 +597,7 @@ namespace ParticleEditor {
                                 cpi.Name, ref v, 
                                 (int)cpi.Info.Min.GetValueOrDefault(0), 
                                 (int)cpi.Info.Min.GetValueOrDefault(40960), 
-                                1, 1
+                                1, 0.5f
                             )) {
                                 cpi.Setter(instance, v);
                                 return true;
@@ -1071,7 +1071,7 @@ namespace ParticleEditor {
                     Nuke.nk_layout_row_dynamic(ctx, LineHeight, ((bm != null) && !fullyDynamic) ? 5 : 4);
 
                     var cnt = b.Count;
-                    if (Nuklear.Property("##", ref cnt, 1, 4, 1, 1)) {
+                    if (Nuklear.Property("##", ref cnt, 1, 4, 1, 0.5f)) {
                         // Copy existing row when adding new one
                         if ((b.Count < cnt) && (cnt > 1))
                             b[cnt - 1] = b[cnt - 2];
@@ -1087,7 +1087,7 @@ namespace ParticleEditor {
                     if (RenderPropertyElement("#≤", null, ref val, ref changed))
                         b.MaxValue = val;
 
-                    if ((bm != null) && !fullyDynamic && Nuklear.Property("#Row", ref selectedRow, 0, 3, 1, 1))
+                    if ((bm != null) && !fullyDynamic && Nuklear.Property("#Row", ref selectedRow, 0, 3, 1, 0.5f))
                         BezierSelectedRows[bm] = selectedRow;
 
                     var repeat = b.Repeat;
@@ -1237,7 +1237,7 @@ namespace ParticleEditor {
                         GridCaches[actualName] = pgc = new PropertyGridCache();
 
                     Nuke.nk_layout_row_dynamic(ctx, LineHeight, 3);
-                    var indexChanged = Nuklear.Property("##", ref pgc.SelectedIndex, 0, list.Count - 1, 1, 1);
+                    var indexChanged = Nuklear.Property("##", ref pgc.SelectedIndex, 0, list.Count - 1, 1, 0.5f);
                     var canAdd = (list.Count < cpi.Info.MaxCount.GetValueOrDefault(999));
                     var canRemove = (list.Count > 0);
                     if (Nuklear.Button("Add", canAdd)) {

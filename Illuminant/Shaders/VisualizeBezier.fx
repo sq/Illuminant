@@ -41,7 +41,10 @@ void BezierVisualizerPixelShader (
     valueRange = max(abs(valueRange), 0.001) * sign(valueRange);
 
     float scaledT;
-    tForScaledBezier(Bezier.RangeAndCount, CurrentT, scaledT);
+    if (CurrentT >= -999)
+        tForScaledBezier(Bezier.RangeAndCount, CurrentT, scaledT);
+    else
+        scaledT = CurrentT;
 
     float4 value = evaluateBezier4AtT(Bezier, count, xy.x);
     float4 scaledValue = saturate((value - minValue) / valueRange);

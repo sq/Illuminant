@@ -292,6 +292,14 @@ namespace Squared.Illuminant.Particles.Transforms {
 
             var windowSize = SlidingWindowSize.GetValueOrDefault(999999);
             var availableForFeedback = sourceChunk.AvailableForFeedback;
+            if (sourceChunk.NoLongerASpawnTarget) {
+                // HACK: While we can't use two chunks as input at once, we want the window and margin
+                //  math to consider the number of particles available in both chunks.
+                // Without doing this, spawning will stop at a chunk transition if a margin is set at all.
+                var currentWriteChunk = SourceSystem.Instance.GetCurrentSpawnTarget(false);
+                if (currentWriteChunk != null)
+                    availableForFeedback += currentWriteChunk.AvailableForFeedback;
+            }
             var windowedAvailable = Math.Min(availableForFeedback, windowSize);
 
             var skipAmount = Math.Max(0, availableForFeedback - windowedAvailable);
@@ -300,6 +308,9 @@ namespace Squared.Illuminant.Particles.Transforms {
             var availableLessMargin = Math.Max(0, windowedAvailable - SlidingWindowMargin);
 
             spawnCount = Math.Min(spawnCount, availableLessMargin);
+            // Now actually clamp it to the amount available after applying the window math that considers
+            //  chunk transitions
+            spawnCount = Math.Min(spawnCount, sourceChunk.AvailableForFeedback);
             CurrentFeedbackSource = sourceChunk;
             CurrentFeedbackSourceIndex = sourceChunk.FeedbackSourceIndex;
         }
