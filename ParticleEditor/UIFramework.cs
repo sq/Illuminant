@@ -109,6 +109,7 @@ namespace ParticleEditor {
         private List<Type> TransformTypes = GetTransformTypes().ToList();
 
         internal KeyboardInput KeyboardInputHandler;
+        internal string CurrentObjectName;
 
         public readonly ParticleEditor Game;
 
@@ -327,49 +328,109 @@ namespace ParticleEditor {
         private bool IsPropertySelected (
             object instance, string actualName
         ) {
-            return (Controller.SelectedPositionProperty != null) &&
-                object.ReferenceEquals(Controller.SelectedPositionProperty.Instance, instance) &&
-                (Controller.SelectedPositionProperty.Key == actualName);
+            return (Controller.SelectedProperty != null) &&
+                object.ReferenceEquals(Controller.SelectedProperty.Instance, instance) &&
+                (Controller.SelectedProperty.Key == actualName);
         }
 
-        private bool SelectProperty (
-            CachedPropertyInfo cpi, object instance, string actualName
+        private Controller.PositionPropertyInfo SelectProperty (object instance, string key, Vector2 value) {
+            var result = new Controller.PositionPropertyInfo {
+                Instance = instance,
+                Key = key,
+                CurrentValue = value
+            };
+            Controller.SelectedProperty = Controller.NewSelectedProperty = result;
+            return result;
+        }
+
+        private bool TickSelectableProperty (
+            object instance, string actualName, ref Vector2 v2
         ) {
-            switch (cpi.Info.Type) {
+            var sp = Controller.SelectedProperty;
+
+            var isSelected = IsPropertySelected(instance, actualName);
+            if (Nuklear.SelectableText(actualName, isSelected)) {
+                isSelected = true;
+                sp = SelectProperty(instance, actualName, v2);
+            }
+
+            if (!isSelected)
+                return false;
+
+            Controller.NewSelectedProperty = sp;
+            if (sp?.NewValue != null) {
+                sp.CurrentValue = v2 = sp.NewValue.Value;
+                sp.NewValue = null;
+                return true;
+            }
+            return false;
+        }
+
+        private bool TickSelectableProperty (
+            CachedPropertyInfo cpi, object instance, string actualName, ref IParameter value
+        ) {
+            if (value.IsConstant) {
+                object v = value.Constant;
+                var result = TickSelectableProperty(cpi, instance, actualName, ref v);
+                if (result)
+                    value.Constant = v;
+                return result;
+            } else {
+                Nuklear.Label(actualName ?? cpi?.Name);
+                return false;
+            }
+        }
+
+        private bool TickSelectableProperty (
+            CachedPropertyInfo cpi, object instance, string actualName, ref object value
+        ) {
+            var canSelect = false;
+            string typeName = null;
+
+            if (cpi?.Info != null)
+                typeName = cpi.Info.Type;
+
+            if (typeName == null) {
+                if (value == null)
+                    typeName = "null";
+                else
+                    typeName = value.GetType().Name;
+            }
+
+            switch (typeName) {
                 case "Vector2":
                 case "Vector3":
                 case "Vector4":
                 case "Matrix":
+                    canSelect = true;
                     break;
-                default:
-                    return false;
             }
 
-            float scale = cpi.Info.DragScale.GetValueOrDefault(1.0f);
-            Controller.SelectedPositionProperty = new Controller.PositionPropertyInfo {
-                Key = actualName,
-                Instance = instance,
-                Set = (xy) =>
-                    TrySetPropertyPosition(cpi, instance, xy * scale),
-                Get = () =>
-                    TryGetPropertyPosition(cpi, instance) / scale
-            };
-            return true;
+            Vector2? _v2;
+            if (cpi != null)
+                _v2 = TryGetPropertyPosition(cpi, instance);
+            else
+                _v2 = GetV2FromValue(value, typeName);
+            if (!_v2.HasValue)
+                canSelect = false;
+
+            if (canSelect) {
+                var v2 = _v2.Value;
+                if (TickSelectableProperty(instance, actualName, ref v2)) {
+                    if (cpi != null)
+                        return TrySetPropertyPosition(ref value, cpi, instance, v2);
+                    else
+                        return SetV2IntoValue(ref value, typeName, v2);
+                }
+            } else {
+                Nuklear.Label(actualName ?? cpi?.Name);
+            }
+
+            return false;
         }
 
-        private void SelectProperty (object instance, string key, Action<Vector2> set, Func<Vector2?> get) {
-            Controller.SelectedPositionProperty = new Controller.PositionPropertyInfo {
-                Instance = instance,
-                Key = key,
-                Set = set,
-                Get = get
-            };
-        }
-
-        private Vector2? TryGetPropertyPosition (CachedPropertyInfo cpi, object instance) {
-            var valueType = cpi.Info.Type ?? cpi.Type.Name;
-            var value = cpi.Getter(instance);
-            switch (valueType) {
+        private Vector2? GetV2FromValue (object value, string typeName) {
+            switch (typeName) {
                 case "Vector2":
                     return (Vector2)value;
                 case "Vector3":
@@ -381,37 +442,53 @@ namespace ParticleEditor {
                 case "Matrix":
                     var m = (Matrix)value;
                     return new Vector2(m.M41, m.M42);
+                default:
+                    return null;
             }
-
-            return null;
         }
 
-        private bool TrySetPropertyPosition (CachedPropertyInfo cpi, object instance, Vector2 xy) {
+        private Vector2? TryGetPropertyPosition (CachedPropertyInfo cpi, object instance) {
             var valueType = cpi.Info.Type ?? cpi.Type.Name;
-
             var value = cpi.Getter(instance);
-            switch (valueType) {
+            return GetV2FromValue(value, valueType);
+        }
+
+        private bool SetV2IntoValue (ref object value, string typeName, Vector2 xy) {
+            switch (typeName) {
                 case "Vector2":
-                    cpi.Setter(instance, xy);
+                    value = xy;
                     return true;
                 case "Vector3":
                     var v3 = (Vector3)value;
                     v3.X = xy.X;
                     v3.Y = xy.Y;
-                    cpi.Setter(instance, v3);
+                    value = v3;
                     return true;
                 case "Vector4":
                     var v4 = (Vector4)value;
                     v4.X = xy.X;
                     v4.Y = xy.Y;
-                    cpi.Setter(instance, v4);
+                    value = v4;
                     return true;
                 case "Matrix":
                     var m = (Matrix)value;
                     m.M41 = xy.X;
                     m.M42 = xy.Y;
-                    cpi.Setter(instance, m);
+                    value = m;
                     return true;
+            }
+
+            return false;
+        }
+
+        private bool TrySetPropertyPosition (ref object value, CachedPropertyInfo cpi, object instance, Vector2 xy) {
+            var valueType = cpi.Info.Type ?? cpi.Type.Name;
+
+            var _value = cpi.Getter(instance);
+            if (SetV2IntoValue(ref _value, valueType, xy)) {
+                cpi.Setter(instance, _value);
+                value = _value;
+                return true;
             }
 
             return false;
@@ -439,61 +516,19 @@ namespace ParticleEditor {
                         result = true;
                     }
 
-                    var spp = Controller.SelectedPositionProperty;
+                    var spp = Controller.SelectedProperty;
                     var isFormulaSelected = (spp != null) && object.ReferenceEquals(spp.Instance, value);
-
-                    /*
-                    Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
-                    if (Nuklear.SelectableText("Constant", isFormulaSelected && (spp.Key == "Constant")))
-                        SelectProperty(
-                            value, "Constant",
-                            (v) => { value.Constant.X = v.X; value.Constant.Y = v.Y; },
-                            () => new Vector2(value.Constant.X, value.Constant.Y)
-                        );
-                        */
 
                     bool changed = false;
                     var p = (IParameter)value.Constant;
                     if (RenderParameter(null, value, ref changed, "Constant", cpi.Info.Type, ref p, true))
                         value.Constant = (Parameter<Vector4>)p;
 
-                    /*
-                    Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
-                    if (Nuklear.SelectableText("Scale", isFormulaSelected && (spp.Key == "Scale")))
-                        SelectProperty(
-                            value, "Scale",
-                            (v) => { value.RandomScale.X = v.X; value.RandomScale.Y = v.Y; },
-                            () => new Vector2(value.RandomScale.X, value.RandomScale.Y)
-                        );
-                        */
-
                     p = value.RandomScale;
                     if (RenderParameter(null, value, ref changed, "Scale", cpi.Info.Type, ref p, true))
                         value.RandomScale = (Parameter<Vector4>)p;
 
                     var k = (value.Type != FormulaType.Linear) ? "Constant Radius" : "Random Offset";
-                    /*
-                    Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
-                    if (Nuklear.SelectableText(k, isFormulaSelected && (spp.Key == k))) {
-                        float scale = value.Circular ? 10f : 200f;
-                        var off = (value.Circular ? 0 : 0.5f);
-                        SelectProperty(
-                            value, k,
-                            (v) => {
-                                value.Offset.X = (v.X / scale) - off;
-                                value.Offset.Y = (v.Y / scale) - off;
-                                if (!value.Circular) {
-                                    value.Offset.X = Arithmetic.Clamp(value.Offset.X, -1, 0);
-                                    value.Offset.Y = Arithmetic.Clamp(value.Offset.Y, -1, 0);
-                                }
-                            },
-                            () => {
-                                var res = new Vector2(value.Offset.X + off, value.Offset.Y + off);
-                                return res * scale;
-                            }
-                        );
-                    }
-                    */
 
                     p = value.Offset;
                     if (RenderParameter(null, value, ref changed, k, cpi.Info.Type, ref p, true))
@@ -549,7 +584,6 @@ namespace ParticleEditor {
             if (!string.IsNullOrEmpty(prefix))
                 actualName = prefix + actualName;
 
-            var isActive = IsPropertySelected(instance, actualName);
             var value = cpi.Getter(instance);
 
             var valueType = cpi.Info.Type ?? cpi.Type.Name;
@@ -621,8 +655,11 @@ namespace ParticleEditor {
             }
 
             Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
-            if (Nuklear.SelectableText(cpi.Name, isActive))
-                SelectProperty(cpi, instance, actualName);
+            if (TickSelectableProperty(cpi, instance, actualName, ref value)) {
+                changed = true;
+                // Do we need to invoke this?
+                cpi.Setter(instance, value);
+            }
 
             if (cpi.AllowNull) {
                 var isNull = value == null;
@@ -643,7 +680,7 @@ namespace ParticleEditor {
             }
 
             if (value == null) {
-                Nuklear.Label("null", isActive);
+                Nuklear.Label("null", false);
                 return false;
             }
 
@@ -734,16 +771,20 @@ namespace ParticleEditor {
             return false;
         }
 
-        private unsafe bool ShowConstantButton () {
-            return Nuklear.Button("×");
+        private unsafe bool ShowNewVariableButton () {
+            return Nuklear.Button("+", tooltip: "Create new variable");
         }
 
-        private unsafe bool ShowReferenceButton (bool enabled) {
-            return Nuklear.Button("=", enabled);
+        private unsafe bool ShowConstantButton () {
+            return Nuklear.Button("×", tooltip: "Remove variable reference");
+        }
+
+        private unsafe bool ShowReferenceButton () {
+            return Nuklear.Button("=", tooltip: "Use variable");
         }
 
         private unsafe bool ShowBezierButton () {
-            return Nuklear.Button("∑");
+            return Nuklear.Button("∑", tooltip: "Use bezier curve");
         }
 
         private unsafe bool RenderParameter (CachedPropertyInfo cpi, object instance, ref bool changed, string actualName, string parentType, ref IParameter p, bool allowReferences) {
@@ -757,7 +798,7 @@ namespace ParticleEditor {
             bool isColor = (parentType ?? "").StartsWith("Color");
             bool doBezierConversion = false, doReferenceConversion = false;
 
-            var canConvertToReference = Model.HasAnyConstantsOfType(valueType) && allowReferences;
+            var hasAvailableReference = Model.HasAnyConstantsOfType(valueType);
             var widths = stackalloc float[8];
             const float buttonSize = 0.06f;
 
@@ -767,21 +808,37 @@ namespace ParticleEditor {
                 if (changed && b.Count == 0)
                     p = p.ToConstant();
             } else if (isReference) {
-                var space = 1f - buttonSize;
+                var space = 1f - (buttonSize * 2);
                 widths[0] = space * 0.4f;
                 widths[1] = space * 0.6f;
                 widths[2] = buttonSize;
+                widths[3] = buttonSize;
                 Nuke.nk_layout_row(
                     Nuklear.Context, NuklearDotNet.nk_layout_format.NK_DYNAMIC, LineHeight,
-                    3, widths
+                    4, widths
                 );
-                Nuklear.Label(actualName, false);
                 var names = Model.ConstantNamesOfType(valueType).ToList();
                 int selectedIndex = names.IndexOf(p.Name);
+                if (selectedIndex >= 0) {
+                    if (Nuklear.SelectableText(actualName, Controller.SelectedVariableName == p.Name))
+                        Controller.SelectedVariableName = p.Name;
+                } else {
+                    Nuklear.Label(actualName, false);
+                }
                 if (Nuklear.ComboBox(ref selectedIndex, (i) => (i < 0) ? "" : names[i], names.Count)) {
                     changed = true;
-                    if ((selectedIndex >= 0) && (selectedIndex < names.Count))
+                    if ((selectedIndex >= 0) && (selectedIndex < names.Count)) {
                         p.Name = names[selectedIndex];
+                        Controller.SelectedVariableName = p.Name;
+                    }
+                }
+                if (ShowNewVariableButton()) {
+                    changed = true;
+                    p.Name = Controller.AddVariable(valueType, CurrentObjectName != null ? CurrentObjectName + "." + actualName : actualName);
+                    // Copy original constant
+                    var v = Model.NamedVariables[p.Name];
+                    v.Constant = p.Constant;
+                    Model.NamedVariables[p.Name] = v;
                 }
                 if (ShowConstantButton()) {
                     changed = true;
@@ -809,16 +866,17 @@ namespace ParticleEditor {
                     default:
                         throw new Exception();
                 }
-                var buttonCount = canConvertToReference ? 2 : 1;
+                var buttonCount = allowReferences ? 2 : 1;
                 var elementSpace = 1f - (buttonSize * buttonCount);
                 for (int i = 0; i < eltCount; i++)
                     widths[i] = elementSpace / eltCount;
                 widths[eltCount] = buttonSize;
                 widths[eltCount + 1] = buttonSize;
 
-                if ((eltCount > 1) && !isMatrix && allowReferences) {
+                if ((eltCount > 1) && !isMatrix) {
                     Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
-                    Nuklear.Label(actualName, false);
+                    if (TickSelectableProperty(cpi, instance, actualName, ref p))
+                        changed = true;
                 }
 
                 if (!isMatrix)
@@ -875,8 +933,19 @@ namespace ParticleEditor {
 
                 if (!isMatrix) {
                     doBezierConversion = ShowBezierButton();
-                    if (canConvertToReference)
-                        doReferenceConversion = ShowReferenceButton(true);
+                    if (hasAvailableReference && allowReferences)
+                        doReferenceConversion = ShowReferenceButton();
+                    else if (allowReferences) {
+                        if (ShowNewVariableButton()) {
+                            changed = true;
+                            p = p.ToReference();
+                            p.Name = Controller.AddVariable(valueType, CurrentObjectName != null ? CurrentObjectName + "." + actualName : actualName);
+                            // Copy original constant
+                            var v = Model.NamedVariables[p.Name];
+                            v.Constant = p.Constant;
+                            Model.NamedVariables[p.Name] = v;
+                        }
+                    }
                 }
 
                 if (doBezierConversion) {
@@ -1023,8 +1092,13 @@ namespace ParticleEditor {
 
                         var isSelected = IsPropertySelected(instance, "Constant");
                         Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
-                        if (Nuklear.SelectableText("Constant", isSelected))
-                            SelectProperty(cpi, instance, "Constant");
+
+                        var xy = new Vector2(m.M41, m.M42);
+                        if (TickSelectableProperty(instance, "Constant", ref xy)) {
+                            m.M41 = xy.X;
+                            m.M42 = xy.Y;
+                            changed = true;
+                        }
                         if (Nuklear.Button("Zero")) {
                             m.M41 = m.M42 = m.M43 = 0;
                             changed = true;

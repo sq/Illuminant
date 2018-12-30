@@ -24,8 +24,8 @@ namespace ParticleEditor {
         internal class PositionPropertyInfo {
             public object Instance;
             public string Key;
-            public Func<Vector2?> Get;
-            public Action<Vector2> Set;
+            public Vector2? CurrentValue;
+            public Vector2? NewValue;
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -47,7 +47,7 @@ namespace ParticleEditor {
         public readonly State CurrentState = new State();
         public readonly List<ParticleSystemView> QueuedResets = new List<ParticleSystemView>();
 
-        internal PositionPropertyInfo SelectedPositionProperty;
+        internal PositionPropertyInfo SelectedProperty = null, NewSelectedProperty = null;
         internal string SelectedVariableName;
 
         private int NextConstantID = 1;
@@ -126,11 +126,17 @@ namespace ParticleEditor {
             View.Systems.RemoveAt(index);
         }
 
-        public void AddVariable () {
-            var name = string.Format("var{0}", NextConstantID++);
-            var c = new Squared.Illuminant.Configuration.Parameter<Vector4>(Vector4.One);
-            Model.NamedVariables.Add(name, c);
+        public string AddVariable (Type valueType = null, string hintName = null) {
+            if (valueType == null)
+                valueType = typeof(Vector4);
+            string name = hintName;
+            if ((name == null) || Model.NamedVariables.ContainsKey(name))
+                name = string.Format("var{0}", NextConstantID++);
+            var tParameter = typeof(Squared.Illuminant.Configuration.Parameter<>).MakeGenericType(valueType);
+            var value = (Squared.Illuminant.Configuration.IParameter)Activator.CreateInstance(tParameter);
+            Model.NamedVariables.Add(name, value);
             SelectedVariableName = name;
+            return name;
         }
 
         public bool RenameVariable (string from, string to) {
@@ -191,11 +197,11 @@ namespace ParticleEditor {
                 Game.Zoom = newZoom;
 
                 if (Game.RightMouse)
-                    SelectedPositionProperty = null;
+                    SelectedProperty = null;
 
-                if ((SelectedPositionProperty != null) && Game.LeftMouse) {
+                if ((SelectedProperty != null) && Game.LeftMouse) {
                     var pos = GetMouseWorldPosition();
-                    SelectedPositionProperty.Set(pos);
+                    SelectedProperty.NewValue = pos;
                 }
             }
         }
@@ -212,16 +218,16 @@ namespace ParticleEditor {
             var ir = new ImperativeRenderer(
                 container, Game.Materials, layer, blendState: BlendState.AlphaBlend, worldSpace: false
             );
-            if (SelectedPositionProperty != null) {
+            if (SelectedProperty != null) {
                 var scale = 0.85f;
                 Vector2 drawPos;
 
-                var currentPos = SelectedPositionProperty.Get();
+                var currentPos = SelectedProperty.CurrentValue;
                 if (currentPos.HasValue) {
                     drawPos = currentPos.Value;
                     drawPos.X += 4;
                     drawPos.Y -= Game.UI.LineHeight * scale;
-                    ir.DrawString(Game.Font, SelectedPositionProperty.Key, drawPos, material: Game.WorldSpaceTextMaterial, scale: scale);
+                    ir.DrawString(Game.Font, SelectedProperty.Key, drawPos, material: Game.WorldSpaceTextMaterial, scale: scale);
                     DrawCross(ref ir, currentPos.Value, 1.0f, 12);
                 }
 

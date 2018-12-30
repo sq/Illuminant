@@ -30,6 +30,7 @@ namespace ParticleEditor {
         internal unsafe void UIScene () {
             var ctx = Nuklear.Context;
             NextMatrixIndex = 0;
+            CurrentObjectName = null;
             
             using (var wnd = Nuklear.Window(
                 "SidePanel",
@@ -41,6 +42,8 @@ namespace ParticleEditor {
             )) {
                 if (wnd.Visible)
                     RenderSidePanels();
+                Controller.SelectedProperty = Controller.NewSelectedProperty;
+                Controller.NewSelectedProperty = null;
             }
 
             Game.IsMouseOverUI = Nuke.nk_item_is_any_active(ctx) != 0;
@@ -143,14 +146,17 @@ namespace ParticleEditor {
                             Controller.SelectedVariableName = name;
                     }
                 }
+            }
 
-                var n = Controller.SelectedVariableName;
-                var p = Controller.SelectedVariable;
-                if (p == null)
-                    return;
+            var n = Controller.SelectedVariableName;
+            var p = Controller.SelectedVariable;
+            if (p == null)
+                return;
 
-                bool changed = false;
+            bool changed = false;
 
+            using (var group = Nuklear.CollapsingGroup("Variable " + n, "Variable", true))
+            if (group.Visible) {
                 Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
                 string newName = n;
                 if (Nuklear.Textbox(ref newName)) {
@@ -170,7 +176,7 @@ namespace ParticleEditor {
                         changed = true;
                     }
                 }
-                RenderParameter(null, null, ref changed, newName, null, ref p, false);
+                RenderParameter(null, Model.NamedVariables, ref changed, newName, null, ref p, false);
                 if (changed)
                     Model.NamedVariables[newName] = p;
             }
@@ -215,6 +221,7 @@ namespace ParticleEditor {
 
             Nuke.nk_layout_row_dynamic(ctx, LineHeight + 3, 1);
             Nuklear.Textbox(ref s.Model.Name);
+            CurrentObjectName = s.Model.Name;
 
             Nuke.nk_layout_row_dynamic(ctx, LineHeight + 3, 2);
             Nuklear.Property("Draw Order", ref s.Model.DrawOrder, -1, Model.Systems.Count + 1, 1, 0.5f);
@@ -270,6 +277,7 @@ namespace ParticleEditor {
                 Nuke.nk_layout_row_dynamic(ctx, LineHeight + 3, 1);
 
                 Nuklear.Textbox(ref xform.Model.Name);
+                CurrentObjectName = xform.Model.Name;
 
                 int typeIndex = TransformTypes.IndexOf(xform.Model.Type);
 

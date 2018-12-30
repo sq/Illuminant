@@ -93,6 +93,8 @@ namespace Framework {
         public SceneDelegate Scene = null;
         public UnorderedList<Func<bool>> Modals = new UnorderedList<Func<bool>>();
 
+        public Bounds? SceneBounds = null;
+
         public readonly INuklearHost Game;
 
         public NuklearService (INuklearHost game) {
@@ -414,6 +416,14 @@ namespace Framework {
                 PendingGroup = group;
                 PendingRenderer = new ImperativeRenderer(group, Game.Materials, 0, autoIncrementSortKey: true, worldSpace: false, blendState: BlendState.AlphaBlend);
 
+                if (SceneBounds.HasValue) {
+                    var sb = SceneBounds.Value;
+                    Nuklear.nk_set_scene_bounds(
+                        Context, sb.TopLeft.X, sb.TopLeft.Y,
+                        sb.Size.X, sb.Size.Y
+                    );
+                }
+
                 Scene();
 
                 using (var e = Modals.GetEnumerator()) {
@@ -609,14 +619,26 @@ namespace Framework {
             Nuklear.nk_label(Context, text ?? "", (uint)flags);
         }
 
-        public bool Button (string text, bool enabled = true) {
+        public void Tooltip (NkRect bounds, string text) {
+            if (text == null)
+                return;
+
+            if (Nuklear.nk_input_is_mouse_hovering_rect(&Context->input, bounds) != 0) {
+                using (var utf8 = new NString(text))
+                    Nuklear.nk_tooltip(Context, utf8.pText);
+            }
+        }
+
+        public bool Button (string text, bool enabled = true, string tooltip = null) {
+            var bounds = Nuklear.nk_widget_bounds(Context);
+            var result = false;
             if (enabled)
                 using (var s = new NString(text))
-                    return Nuklear.nk_button_label(Context, s.pText) != 0;
-            else {
+                    result = Nuklear.nk_button_label(Context, s.pText) != 0;
+            else
                 Label(text, true);
-                return false;
-            }
+            Tooltip(bounds, tooltip);
+            return result;
         }
 
         // Returns true if value changed

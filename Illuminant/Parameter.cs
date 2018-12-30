@@ -17,15 +17,15 @@ namespace Squared.Illuminant.Configuration {
         IParameter ToConstant ();
         IParameter ToReference ();
         string Name { get; set; }
-        object Constant { get; }
-        IBezier Bezier { get; }
+        object Constant { get; set; }
+        IBezier Bezier { get; set; }
     }
 
     internal interface IInternalParameter : IParameter {
         void Set (string name, object bezier, object constant);
     }
 
-    public delegate bool NamedVariableResolver<T> (string name, float t, out T result);
+    public delegate bool NamedConstantResolver<T> (string name, float t, out T result);
 
     [TypeConverter(typeof(ParameterConverter))]
     public struct Parameter<T> : IInternalParameter
@@ -194,15 +194,21 @@ namespace Squared.Illuminant.Configuration {
             get {
                 return _Bezier;
             }
+            set {
+                Bezier = (IBezier<T>)value;
+            }
         }
 
         object IParameter.Constant {
             get {
                 return Constant;
             }
+            set {
+                Constant = (T)value;
+            }
         }
 
-        public T Evaluate (float t, NamedVariableResolver<T> nameResolver) {
+        public T Evaluate (float t, NamedConstantResolver<T> nameResolver) {
             T resolved;
             if (
                 (_Name != null) &&

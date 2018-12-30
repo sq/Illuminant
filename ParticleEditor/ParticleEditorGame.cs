@@ -322,6 +322,7 @@ namespace ParticleEditor {
             lock (this)
                 view = View;
 
+            Nuklear.SceneBounds = Bounds.FromPositionAndSize(0, 0, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight);
             Nuklear.UpdateInput(
                 PreviousMouseState, MouseState, 
                 PreviousKeyboardState, KeyboardState, 
