@@ -42,7 +42,6 @@ namespace Squared.Illuminant.Particles.Transforms {
         /// </summary>
         public Parameter<DynamicMatrix> PositionPostMatrix = DynamicMatrix.Identity;
 
-        [NonSerialized]
         private static int NextSeed = 1;
 
         protected double   RateError { get; private set; }
@@ -123,12 +122,16 @@ namespace Squared.Illuminant.Particles.Transforms {
             if (ro == null)
                 return;
 
+            if (!BindRandomnessTexture(engine, parameters, true))
+                return;
+
             double a = RNG.NextDouble(), b = RNG.NextDouble();
 
             ro.SetValue(new Vector2(
                 (float)(a * 253),
                 (float)(b * 127)
             ));
+            parameters["ChunkSizeAndIndices"].SetValue(GetChunkSizeAndIndices(engine));
 
             Temp[0] = Position.RandomScale.Evaluate(now, engine.Resolve);
             Temp[1] = Position.Offset.Evaluate(now, engine.Resolve);
@@ -153,7 +156,6 @@ namespace Squared.Illuminant.Particles.Transforms {
             parameters["Configuration"].SetValue(Temp);
             parameters["FormulaTypes"].SetValue(ft);
 
-            parameters["ChunkSizeAndIndices"].SetValue(GetChunkSizeAndIndices(engine));
             var m = PositionPostMatrix.Evaluate(now, engine.Resolve);
             m.Regenerate();
             parameters["PositionMatrix"].SetValue(m.Matrix);

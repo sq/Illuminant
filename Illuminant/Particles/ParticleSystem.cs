@@ -585,12 +585,6 @@ namespace Squared.Illuminant.Particles {
                         if (dft != null)
                             dft.SetValue(Configuration.Collision?.DistanceField.Texture);
 
-                        var rt = p["RandomnessTexture"];
-                        if (rt != null) {
-                            p["RandomnessTexel"].SetValue(new Vector2(1.0f / ParticleEngine.RandomnessTextureWidth, 1.0f / ParticleEngine.RandomnessTextureHeight));
-                            rt.SetValue(Engine.RandomnessTexture);
-                        }
-
                         MaybeSetLifeRampParameters(p);
                         MaybeSetAnimationRateParameter(p, Configuration.Appearance);
 
@@ -611,7 +605,11 @@ namespace Squared.Illuminant.Particles {
                         if (lr != null)
                             lr.SetValue((Texture2D)null);
 
-                        var rt = p["RandomnessTexture"];
+                        var rt = p["LowPrecisionRandomnessTexture"];
+                        if (rt != null)
+                            rt.SetValue((Texture2D)null);
+
+                        rt = p["RandomnessTexture"];
                         if (rt != null)
                             rt.SetValue((Texture2D)null);
 

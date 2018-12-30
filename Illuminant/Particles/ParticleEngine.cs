@@ -35,7 +35,8 @@ namespace Squared.Illuminant.Particles {
 
         internal const int              RandomnessTextureWidth = 807,
                                         RandomnessTextureHeight = 381;
-        internal          Texture2D     RandomnessTexture;
+        internal          Texture2D     RandomnessTexture, 
+            LowPrecisionRandomnessTexture;
 
         internal readonly List<ParticleSystem.BufferSet> AllBuffers = 
             new List<ParticleSystem.BufferSet>();
@@ -260,6 +261,12 @@ namespace Squared.Illuminant.Particles {
                     RandomnessTextureWidth, RandomnessTextureHeight, false,
                     SurfaceFormat.Vector4
                 );
+                // TODO: Mip chain?
+                LowPrecisionRandomnessTexture = new Texture2D(
+                    Coordinator.Device,
+                    RandomnessTextureWidth, RandomnessTextureHeight, false,
+                    SurfaceFormat.Color
+                );
 
                 var buffer = new Vector4[RandomnessTextureWidth * RandomnessTextureHeight];
                 int o;
@@ -282,6 +289,12 @@ namespace Squared.Illuminant.Particles {
                 );
 
                 RandomnessTexture.SetData(buffer);
+
+                var buffer2 = new Color[RandomnessTextureWidth * RandomnessTextureHeight];
+                for (int i = 0; i < buffer.Length; i++)
+                    buffer2[i] = new Color(buffer[i]);
+
+                LowPrecisionRandomnessTexture.SetData(buffer2);
             }
 
             // Console.WriteLine(sw.ElapsedMilliseconds);

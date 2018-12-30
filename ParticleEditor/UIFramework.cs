@@ -588,6 +588,9 @@ namespace ParticleEditor {
 
             var valueType = cpi.Info.Type ?? cpi.Type.Name;
 
+            if (GenericObjectTypes.Contains(valueType))
+                return RenderGenericObjectProperty(cache, cpi, instance, value, actualName);
+
             switch (valueType) {
                 case "List":
                     return RenderListProperty(cpi, instance, ref changed, actualName, value, false);
@@ -609,13 +612,6 @@ namespace ParticleEditor {
 
                 case "NullableLazyResource`1":
                     return RenderTextureProperty(cpi, instance, ref changed, actualName, value);
-
-                case "Bounds":
-                case "ParticleAppearance":
-                case "ParticleColor":
-                case "ParticleCollision":
-                case "FMAParameters`1":
-                    return RenderGenericObjectProperty(cache, cpi, instance, value, actualName);
 
                 case "Int32":
                 case "Single":

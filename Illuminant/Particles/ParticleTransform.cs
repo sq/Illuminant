@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Squared.Illuminant.Configuration;
+using Squared.Illuminant.Util;
 using Squared.Render;
 
 namespace Squared.Illuminant.Particles.Transforms {
@@ -72,6 +73,32 @@ namespace Squared.Illuminant.Particles.Transforms {
 
         void IParticleTransform.SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
             SetParameters(engine, parameters, now, frameIndex);
+        }
+
+        protected bool BindRandomnessTexture (ParticleEngine e, EffectParameterCollection p, bool highPrecision) {
+            var result = false;
+
+            var rt = p["RandomnessTexture"];
+            if (rt != null) {
+                rt.SetValue(e.RandomnessTexture);
+                result = true;
+            }
+
+            rt = p["LowPrecisionRandomnessTexture"];
+            if (rt != null) {
+                rt.SetValue(e.LowPrecisionRandomnessTexture);
+                result = true;
+            }
+
+            rt = p["RandomnessTexel"];
+            if (rt != null) {
+                rt.SetValue(new Vector2(
+                    1.0f / ParticleEngine.RandomnessTextureWidth, 
+                    1.0f / ParticleEngine.RandomnessTextureHeight
+                ));
+            }
+
+            return result;
         }
 
         public abstract bool IsValid { get; }
@@ -155,6 +182,78 @@ namespace Squared.Illuminant.Particles.Transforms {
 
         protected override Material GetMaterial (ParticleMaterials materials) {
             return materials.MatrixMultiply;
+        }
+    }
+
+    public class Noise : ParticleAreaTransform {
+        public const float FrequencyUnit = 50000;
+
+        public class NoiseParameters<T> where T : struct {
+            public Parameter<T> Offset, Scale;
+            public Parameter<float> Frequency;
+        }
+
+        public float? CyclesPerSecond = 10;
+        public NoiseParameters<Vector4> Position;
+        public NoiseParameters<Vector3> Velocity;
+        public float OldVelocityWeight = 0f;
+
+        private static int NextSeed = 1;
+
+        [NonSerialized]
+        protected readonly MersenneTwister RNG;
+
+        public Noise ()
+            : this (null) {
+        }
+
+        public Noise (int? seed) {
+            RNG = new MersenneTwister(seed.GetValueOrDefault(NextSeed++));
+
+            Position = new NoiseParameters<Vector4> {
+                Offset = Vector4.One * 0.5f,
+                Scale = Vector4.Zero,
+                Frequency = FrequencyUnit / 4
+            };
+            Velocity = new NoiseParameters<Vector3> {
+                Offset = Vector3.One * 0.5f,
+                Scale = Vector3.One,
+                Frequency = FrequencyUnit / 4
+            };
+        }
+
+        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
+            base.SetParameters(engine, parameters, now, frameIndex);
+
+            if (!BindRandomnessTexture(engine, parameters, false))
+                return;
+
+            parameters["TimeDivisor"].SetValue(CyclesPerSecond.HasValue ? Uniforms.ParticleSystem.VelocityConstantScale / CyclesPerSecond.Value : -1);
+            parameters["PositionOffset"].SetValue(Position.Offset.Evaluate(now, engine.Resolve));
+            parameters["PositionScale"].SetValue (Position.Scale.Evaluate(now, engine.Resolve));
+            parameters["VelocityOffset"].SetValue(new Vector4(Velocity.Offset.Evaluate(now, engine.Resolve), 0));
+            parameters["VelocityScale"].SetValue (new Vector4(Velocity.Scale.Evaluate(now, engine.Resolve), 1));
+
+            var uv = new Vector2(
+                1.0f / engine.RandomnessTexture.Width,
+                1.0f / engine.RandomnessTexture.Height
+            );
+            var pfreq = Position.Frequency.Evaluate(now, engine.Resolve);
+            var vfreq = Velocity.Frequency.Evaluate(now, engine.Resolve);
+            parameters["PositionFrequency"].SetValue(uv * pfreq / FrequencyUnit);
+            parameters["VelocityFrequency"].SetValue(uv * vfreq / FrequencyUnit);
+
+            double a = RNG.NextDouble(), b = RNG.NextDouble();
+
+            var ro = parameters["RandomnessOffset"];
+            ro.SetValue(new Vector2(
+                (float)(a * 253),
+                (float)(b * 127)
+            ));
+        }
+
+        protected override Material GetMaterial (ParticleMaterials materials) {
+            return materials.Noise;
         }
     }
 

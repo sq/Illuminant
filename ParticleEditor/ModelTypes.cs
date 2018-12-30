@@ -18,6 +18,15 @@ namespace ParticleEditor {
             public float?               DragScale;
         }
 
+        public static HashSet<string> GenericObjectTypes = new HashSet<string> {
+            "Bounds",
+            "ParticleAppearance",
+            "ParticleColor",
+            "ParticleCollision",
+            "FMAParameters`1",
+            "NoiseParameters`1"
+        };
+
         public static readonly Dictionary<string, Dictionary<string, ModelTypeInfo>> FieldTypeOverrides =
             new Dictionary<string, Dictionary<string, ModelTypeInfo>> {
                 {
@@ -85,6 +94,16 @@ namespace ParticleEditor {
                 {
                     "FMA", new Dictionary<string, ModelTypeInfo> {
                         {"CyclesPerSecond", new ModelTypeInfo { Min = -1, Max = 60 } },
+                    }
+                },
+                {
+                    "NoiseParameters`1", new Dictionary<string, ModelTypeInfo> {
+                        {"Frequency", new ModelTypeInfo { Min = 0, Max = 50000 } },
+                    }
+                },
+                {
+                    "Noise", new Dictionary<string, ModelTypeInfo> {
+                        {"OldVelocityWeight", new ModelTypeInfo { Min = 0, Max = 1 } },
                     }
                 },
                 {
