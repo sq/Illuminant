@@ -735,10 +735,10 @@ namespace ParticleEditor {
         }
 
         private unsafe bool ShowConstantButton () {
-            return Nuklear.Button("∅");
+            return Nuklear.Button("×");
         }
 
-        private unsafe bool ShowNamedConstantButton (bool enabled) {
+        private unsafe bool ShowReferenceButton (bool enabled) {
             return Nuklear.Button("=", enabled);
         }
 
@@ -876,7 +876,7 @@ namespace ParticleEditor {
                 if (!isMatrix) {
                     doBezierConversion = ShowBezierButton();
                     if (canConvertToReference)
-                        doReferenceConversion = ShowNamedConstantButton(true);
+                        doReferenceConversion = ShowReferenceButton(true);
                 }
 
                 if (doBezierConversion) {

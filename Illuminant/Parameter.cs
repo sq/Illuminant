@@ -21,10 +21,14 @@ namespace Squared.Illuminant.Configuration {
         IBezier Bezier { get; }
     }
 
-    public delegate bool NamedConstantResolver<T> (string name, float t, out T result);
+    internal interface IInternalParameter : IParameter {
+        void Set (string name, object bezier, object constant);
+    }
+
+    public delegate bool NamedVariableResolver<T> (string name, float t, out T result);
 
     [TypeConverter(typeof(ParameterConverter))]
-    public struct Parameter<T> : IParameter
+    public struct Parameter<T> : IInternalParameter
         where T : struct
     {
         public const string Unnamed = "<<none>>";
@@ -43,6 +47,12 @@ namespace Squared.Illuminant.Configuration {
             _Name = null;
             _Bezier = null;
             _Constant = value;
+        }
+
+        public Parameter (string name) {
+            _Name = name;
+            _Bezier = null;
+            _Constant = default(T);
         }
 
         public string Name {
@@ -192,7 +202,7 @@ namespace Squared.Illuminant.Configuration {
             }
         }
 
-        public T Evaluate (float t, NamedConstantResolver<T> nameResolver) {
+        public T Evaluate (float t, NamedVariableResolver<T> nameResolver) {
             T resolved;
             if (
                 (_Name != null) &&
@@ -217,6 +227,15 @@ namespace Squared.Illuminant.Configuration {
                 _Bezier = _Bezier,
                 _Constant = _Constant
             };
+        }
+
+        void IInternalParameter.Set (string name, object bezier, object constant) {
+            _Name = name;
+            _Bezier = (IBezier<T>)bezier;
+            if (constant != null)
+                _Constant = (T)Convert.ChangeType(constant, typeof(T));
+            else
+                _Constant = default(T);
         }
     }
 

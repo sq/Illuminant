@@ -36,7 +36,7 @@ namespace ParticleEditor {
 
         [StructLayout(LayoutKind.Sequential)]
         public class State {
-            public ListState Systems, Transforms, Constants;
+            public ListState Systems, Transforms, Variables;
         }
 
         public bool StepPending;
@@ -48,7 +48,7 @@ namespace ParticleEditor {
         public readonly List<ParticleSystemView> QueuedResets = new List<ParticleSystemView>();
 
         internal PositionPropertyInfo SelectedPositionProperty;
-        internal string SelectedConstantName;
+        internal string SelectedVariableName;
 
         private int NextConstantID = 1;
         private GCHandle StatePin;
@@ -85,11 +85,11 @@ namespace ParticleEditor {
             }
         }
 
-        public Squared.Illuminant.Configuration.IParameter SelectedConstant {
+        public Squared.Illuminant.Configuration.IParameter SelectedVariable {
             get {
                 Squared.Illuminant.Configuration.IParameter c;
-                if ((SelectedConstantName == null) ||
-                    !Model.NamedConstants.TryGetValue(SelectedConstantName, out c))
+                if ((SelectedVariableName == null) ||
+                    !Model.NamedVariables.TryGetValue(SelectedVariableName, out c))
                     c = null;
 
                 return c;
@@ -126,33 +126,39 @@ namespace ParticleEditor {
             View.Systems.RemoveAt(index);
         }
 
-        public void AddConstant () {
-            var name = string.Format("Constant#{0}", NextConstantID++);
-            var c = new Squared.Illuminant.Configuration.Parameter<Vector4>();
-            Model.NamedConstants.Add(name, c);
-            SelectedConstantName = name;
+        public void AddVariable () {
+            var name = string.Format("var{0}", NextConstantID++);
+            var c = new Squared.Illuminant.Configuration.Parameter<Vector4>(Vector4.One);
+            Model.NamedVariables.Add(name, c);
+            SelectedVariableName = name;
         }
 
-        public void RenameConstant (string from, string to) {
+        public bool RenameVariable (string from, string to) {
             if (from == to)
-                return;
+                return false;
             if ((from == null) || (to == null))
-                return;
+                return false;
+            if (string.IsNullOrWhiteSpace(to))
+                return false;
 
             Squared.Illuminant.Configuration.IParameter c;
-            if (!Model.NamedConstants.TryGetValue(from, out c))
-                return;
-            if (Model.NamedConstants.ContainsKey(to))
-                return;
+            if (!Model.NamedVariables.TryGetValue(from, out c))
+                return false;
+            if (Model.NamedVariables.ContainsKey(to))
+                return false;
 
-            Model.NamedConstants.Remove(from);
-            Model.NamedConstants.Add(to, c);
+            Model.NamedVariables.Remove(from);
+            Model.NamedVariables.Add(to, c);
+
+            if (SelectedVariableName == from)
+                SelectedVariableName = to;
+            return true;
         }
 
-        public void RemoveConstant (string name) {
+        public void RemoveVariable (string name) {
             if (name == null)
                 return;
-            Model.NamedConstants.Remove(name);
+            Model.NamedVariables.Remove(name);
         }
 
         public void Step () {

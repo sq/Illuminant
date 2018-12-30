@@ -34,6 +34,8 @@ namespace Squared.Illuminant.Modeling {
     public class IlluminantJsonConverter : JsonConverter {
         public override bool CanConvert (Type objectType) {
             switch (objectType.Name) {
+                case "NamedVariableCollection":
+                case "IParameter":
                 case "Parameter`1":
                 case "ModelProperty":
                 case "DynamicMatrix":
@@ -45,14 +47,30 @@ namespace Squared.Illuminant.Modeling {
         }
 
         private static Type ResolveTypeFromShortName (string name) {
-            return Type.GetType(name, false) ?? typeof(ParticleSystem).Assembly.GetType(name, false);
+            return Type.GetType(name, false) ?? typeof(ParticleSystem).Assembly.GetType(name, false) ?? typeof(Vector4).Assembly.GetType(name, false);
         }
 
         public override object ReadJson (JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer) {
             switch (objectType.Name) {
+                case "NamedVariableCollection": {
+                    var result = (NamedVariableCollection)existingValue ?? new NamedVariableCollection();
+                    var token = JToken.Load(reader);
+                    if (token.Type != JTokenType.Object)
+                        throw new InvalidDataException();
+                    var obj = (JObject)token;
+                    foreach (var prop in obj.Properties()) {
+                        var key = prop.Name.ToString();
+                        var value = prop.Value;
+                        var deserializedValue = value.ToObject<IParameter>(serializer);
+                        result.Add(key, deserializedValue);
+                    };
+                    return result;
+                }
+                case "IParameter":
                 case "Parameter`1": {
-                    var expectedValueType = objectType.GetGenericArguments()[0];
-                    var tResult = typeof(Parameter<>).MakeGenericType(expectedValueType);
+                    Type expectedValueType = objectType.IsGenericType ? objectType.GetGenericArguments()[0] : null;
+                    Type tResult = objectType.IsGenericType ? typeof(Parameter<>).MakeGenericType(expectedValueType) : null;
+
                     var token = JToken.Load(reader);
                     var obj = token as JObject;
                     IParameter result;
@@ -61,7 +79,15 @@ namespace Squared.Illuminant.Modeling {
                         var type = ResolveTypeFromShortName(typeName);
                         if (type == null)
                             throw new Exception("Could not resolve type " + typeName);
-                        if (obj.ContainsKey("Constant"))
+
+                        if (!objectType.IsGenericType) {
+                            expectedValueType = type;
+                            tResult = typeof(Parameter<>).MakeGenericType(type);
+                        }
+
+                        if (obj.ContainsKey("Name"))
+                            result = (IParameter)Activator.CreateInstance(tResult, new object[] { obj["Name"].ToObject(typeof(string), serializer) });
+                        else if (obj.ContainsKey("Constant"))
                             result = (IParameter)Activator.CreateInstance(tResult, new object[] { obj["Constant"].ToObject(type, serializer) });
                         else if (obj.ContainsKey("Bezier")) {
                             var bezierTypeName = obj["BezierType"].ToString();
@@ -69,9 +95,11 @@ namespace Squared.Illuminant.Modeling {
                             result = (IParameter)Activator.CreateInstance(tResult, new object[] { obj["Bezier"].ToObject(bezierType, serializer) });
                         } else
                             throw new InvalidDataException();
-                    } else {
+                    } else if (expectedValueType != null) {
                         var rawValue = token.ToObject(expectedValueType, serializer);
                         result = (IParameter)Activator.CreateInstance(tResult, new object[] { rawValue });
+                    } else {
+                        throw new InvalidDataException();
                     }
                     return result;
                 }
@@ -125,11 +153,22 @@ namespace Squared.Illuminant.Modeling {
 
             var type = value.GetType();
             switch (type.Name) {
+                case "NamedVariableCollection": {
+                    var temp = new Dictionary<string, IParameter>((NamedVariableCollection)value);
+                    serializer.Serialize(writer, temp);
+                    return;
+                }
+                case "IParameter":
                 case "Parameter`1": {
                     var p = (IParameter)value;
                     string typeName = PickTypeName(p.ValueType);
                     object obj;
-                    if (p.IsBezier) {
+                    if (p.Name != null) {
+                        obj = new {
+                            ValueType = typeName,
+                            Name = p.Name
+                        };
+                    } else if (p.IsBezier) {
                         obj = new {
                             ValueType = typeName,
                             Bezier = p.Bezier,

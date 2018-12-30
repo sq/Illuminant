@@ -110,10 +110,10 @@ namespace Squared.Illuminant.Particles {
         internal bool FindConstant<T> (string name, out Configuration.Parameter<T> result)
             where T : struct {
             result = default(Configuration.Parameter<T>);
-            if (Configuration.NamedConstantResolver == null)
+            if (Configuration.NamedVariableResolver == null)
                 return false;
 
-            var gen = Configuration.NamedConstantResolver(name);
+            var gen = Configuration.NamedVariableResolver(name);
             if (gen == null)
                 return false;
 
@@ -366,7 +366,7 @@ namespace Squared.Illuminant.Particles {
         /// <summary>
         /// Used to resolve named constants referenced by parameters.
         /// </summary>
-        public Func<string, Configuration.IParameter> NamedConstantResolver = null;
+        public Func<string, Configuration.IParameter> NamedVariableResolver = null;
 
         public ParticleEngineConfiguration (int chunkSize = 256) {
             ChunkSize = chunkSize;

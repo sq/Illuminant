@@ -47,9 +47,9 @@ namespace ParticleEditor {
                     TextureLoader = (fn) => LoadTexture(fn, false),
                     FPTextureLoader = (fn) => LoadTexture(fn, true),
                     SystemResolver = ResolveReference,
-                    NamedConstantResolver = (k) => {
+                    NamedVariableResolver = (k) => {
                         Squared.Illuminant.Configuration.IParameter result;
-                        if (!Model.NamedConstants.TryGetValue(k, out result))
+                        if (!Model.NamedVariables.TryGetValue(k, out result))
                             result = null;
 
                         return result;

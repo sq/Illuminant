@@ -16,8 +16,7 @@ using Squared.Illuminant.Configuration;
 namespace Squared.Illuminant.Modeling {
     public class EngineModel {
         public string Filename { get; private set; }
-        public readonly Dictionary<string, IParameter> NamedConstants =
-            new Dictionary<string, IParameter>(StringComparer.OrdinalIgnoreCase);
+        public readonly NamedVariableCollection NamedVariables = new NamedVariableCollection();
         public readonly List<SystemModel> Systems = new List<SystemModel>();
 
         public EngineModel () {
@@ -64,11 +63,11 @@ namespace Squared.Illuminant.Modeling {
         }
 
         public IEnumerable<string> ConstantNamesOfType (Type valueType) {
-            return (from kvp in NamedConstants where kvp.Value.ValueType == valueType select kvp.Key);
+            return (from kvp in NamedVariables where kvp.Value.ValueType == valueType select kvp.Key);
         }
 
         public bool HasAnyConstantsOfType (Type valueType) {
-            return NamedConstants.Values.Any(c => c.ValueType == valueType);
+            return NamedVariables.Values.Any(c => c.ValueType == valueType);
         }
     }
 
@@ -186,6 +185,12 @@ namespace Squared.Illuminant.Modeling {
         public ModelProperty Clone () {
             var value = CloneValue(Value);
             return new ModelProperty(Type, value); 
+        }
+    }
+
+    public class NamedVariableCollection : Dictionary<string, IParameter> {
+        public NamedVariableCollection ()
+            : base (StringComparer.OrdinalIgnoreCase) {
         }
     }
 }

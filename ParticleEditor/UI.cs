@@ -50,9 +50,9 @@ namespace ParticleEditor {
 
         private void RenderSidePanels () {
             RenderFilePanel();
+            RenderVariableList();
             if (Game.View != null)
                 RenderSystemList();
-            RenderConstantList();
             if (Game.View != null) {
                 RenderTransformList();
                 RenderTransformProperties();
@@ -118,42 +118,50 @@ namespace ParticleEditor {
         };
         private string[] ValidConstantTypeNames = (from ct in ValidConstantTypes select ct.Name).ToArray();
 
-        private unsafe void RenderConstantList () {
+        private unsafe void RenderVariableList () {
             var ctx = Nuklear.Context;
             var state = Controller.CurrentState;
 
-            using (var group = Nuklear.CollapsingGroup("Constants", "Constants", false))
+            using (var group = Nuklear.CollapsingGroup("Variables", "Variables", false))
             if (group.Visible) {
                 Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
                 if (Nuklear.Button("Add"))
-                    Controller.AddConstant();
-                if (Nuklear.Button("Remove", Model.NamedConstants.Count > 0))
-                    Controller.RemoveConstant(Controller.SelectedConstantName);
+                    Controller.AddVariable();
+                if (Nuklear.Button("Remove", Model.NamedVariables.Count > 0))
+                    Controller.RemoveVariable(Controller.SelectedVariableName);
 
-                using (var list = Nuklear.ScrollingGroup(80, "Constant List", ref state.Constants.ScrollX, ref state.Constants.ScrollY))
+                using (var list = Nuklear.ScrollingGroup(120, "Variable List", ref state.Variables.ScrollX, ref state.Variables.ScrollY))
                 if (list.Visible) {
                     Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
-                    var names = Model.NamedConstants.Keys.ToArray();
+                    var names = Model.NamedVariables.Keys.ToArray();
                     for (int i = 0; i < names.Length; i++) {
                         var name = names[i];
                         if (Nuklear.SelectableText(
                             string.IsNullOrWhiteSpace(name) ? string.Format("{0} Unnamed", i) : name, 
-                            Controller.SelectedConstantName == name
+                            Controller.SelectedVariableName == name
                         ))
-                            Controller.SelectedConstantName = name;
+                            Controller.SelectedVariableName = name;
                     }
                 }
 
-                var n = Controller.SelectedConstantName;
-                var p = Controller.SelectedConstant;
+                var n = Controller.SelectedVariableName;
+                var p = Controller.SelectedVariable;
                 if (p == null)
                     return;
 
                 bool changed = false;
 
+                Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
+                string newName = n;
+                if (Nuklear.Textbox(ref newName)) {
+                    if (Controller.RenameVariable(n, newName))
+                        n = newName;
+                    else
+                        newName = n;
+                }
+
                 var currentTypeName = p.ValueType.Name;
                 var currentTypeIndex = Array.IndexOf(ValidConstantTypeNames, currentTypeName);
-                Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
                 if (Nuklear.ComboBox(ref currentTypeIndex, (i) => (i < 0) ? "" : ValidConstantTypeNames[i], ValidConstantTypeNames.Length)) {
                     var newType = ValidConstantTypes[currentTypeIndex];
                     if (newType != p.ValueType) {
@@ -162,9 +170,9 @@ namespace ParticleEditor {
                         changed = true;
                     }
                 }
-                RenderParameter(null, null, ref changed, n, null, ref p, false);
+                RenderParameter(null, null, ref changed, newName, null, ref p, false);
                 if (changed)
-                    Model.NamedConstants[n] = p;
+                    Model.NamedVariables[newName] = p;
             }
         }
 
@@ -180,7 +188,7 @@ namespace ParticleEditor {
                 if (Nuklear.Button("Remove", Model.Systems.Count > 0))
                     Controller.RemoveSystem(state.Systems.SelectedIndex);
 
-                using (var list = Nuklear.ScrollingGroup(80, "System List", ref state.Systems.ScrollX, ref state.Systems.ScrollY))
+                using (var list = Nuklear.ScrollingGroup(90, "System List", ref state.Systems.ScrollX, ref state.Systems.ScrollY))
                 if (list.Visible) {
                     Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
                     for (int i = 0; i < Model.Systems.Count; i++) {
