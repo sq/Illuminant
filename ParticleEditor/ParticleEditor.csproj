@@ -142,19 +142,25 @@
     <None Include="packages.config" />
     <None Include="Properties\app.manifest" />
   </ItemGroup>
-  <ItemGroup>
+  <ItemGroup Condition=" '$(Configuration)' == 'Debug' ">
     <Content Include="..\Squared.Nuklear\bin_dbg\Nuklear.dll">
       <Link>Nuklear.dll</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
-  <ItemGroup>
-    <Font Include="..\AppCommon\Fonts\*.otf;..\AppCommon\Fonts\*.ttf;..\AppCommon\Fonts\*.ttc">
-      <Visible>false</Visible>
-    </Font>
+  <ItemGroup Condition=" '$(Configuration)' == 'Release' ">
+    <Content Include="..\Squared.Nuklear\bin\Nuklear.dll">
+      <Link>Nuklear.dll</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="@(Font)">
+    <TTF Include="..\AppCommon\Fonts\*.otf;..\AppCommon\Fonts\*.ttf;..\AppCommon\Fonts\*.ttc">
+      <Visible>false</Visible>
+    </TTF>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="@(TTF)">
       <LogicalName>%(Filename)</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="@(Texture)">

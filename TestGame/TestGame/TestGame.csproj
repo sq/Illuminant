@@ -124,9 +124,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Font Include="..\..\AppCommon\Fonts\*.otf;..\..\AppCommon\Fonts\*.ttf;..\..\AppCommon\Fonts\*.ttc">
+    <TTF Include="..\..\AppCommon\Fonts\*.otf;..\..\AppCommon\Fonts\*.ttf;..\..\AppCommon\Fonts\*.ttc">
       <Visible>false</Visible>
-    </Font>
+    </TTF>
     <Texture Include="..\TestGameContent\*.png;..\TestGameContent\*.jpg;..\TestGameContent\*.jpeg">
       <Visible>false</Visible>
     </Texture>
@@ -135,7 +135,7 @@
     </LUT>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="@(Font)">
+    <EmbeddedResource Include="@(TTF)">
       <LogicalName>%(Filename)</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="@(Texture)">

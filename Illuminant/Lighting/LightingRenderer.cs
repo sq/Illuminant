@@ -236,11 +236,11 @@ namespace Squared.Illuminant {
             }
         }
 
-        private class LightObstructionTypeComparer : IComparer<LightObstruction> {
+        private class LightObstructionTypeComparer : IRefComparer<LightObstruction> {
             public static readonly LightObstructionTypeComparer Instance = 
                 new LightObstructionTypeComparer();
 
-            public int Compare (LightObstruction lhs, LightObstruction rhs) {
+            public int Compare (ref LightObstruction lhs, ref LightObstruction rhs) {
                 if (rhs == null) {
                     return (lhs == null) ? 0 : -1;
                 } else if (lhs == null) {
@@ -868,7 +868,7 @@ namespace Squared.Illuminant {
 
                         using (var buffer = BufferPool<LightSource>.Allocate(Environment.Lights.Count)) {
                             Environment.Lights.CopyTo(buffer.Data);
-                            Squared.Util.Sort.FastCLRSort(
+                            Squared.Util.Sort.FastCLRSortRef(
                                 buffer.Data, LightSorter.Instance, 0, Environment.Lights.Count
                             );
 
@@ -1798,7 +1798,7 @@ namespace Squared.Illuminant {
                 Array.Clear(result.PrimCount, 0, result.PrimCount.Length);
 
                 items.CopyTo(buffer.Data);
-                Sort.FastCLRSort(buffer.Data, LightObstructionTypeComparer.Instance, 0, items.Count);
+                Sort.FastCLRSortRef(buffer.Data, LightObstructionTypeComparer.Instance, 0, items.Count);
                 
                 result.IsDirty = true;
                 result.EnsureSize(items.Count);
@@ -1922,10 +1922,10 @@ namespace Squared.Illuminant {
         public Vector3 Up, Right;
     }
 
-    public class LightSorter : IComparer<LightSource> {
+    public class LightSorter : IRefComparer<LightSource> {
         public static readonly LightSorter Instance = new LightSorter();
 
-        public int Compare (LightSource x, LightSource y) {
+        public int Compare (ref LightSource x, ref LightSource y) {
             int result = x.SortKey - y.SortKey;
             if (result != 0)
                 return result;
