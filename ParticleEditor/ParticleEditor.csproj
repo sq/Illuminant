@@ -86,8 +86,6 @@
       <Link>PerformanceStats.cs</Link>
     </Compile>
     <Compile Include="Controller.cs" />
-    <Compile Include="JSON.cs" />
-    <Compile Include="Model.cs" />
     <Compile Include="ModelTypes.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Program.cs" />
@@ -128,6 +126,10 @@
     <ProjectReference Include="..\..\Fracture\Squared\Util\Squared.Util.csproj">
       <Project>{D7F549CF-E0A6-491C-A78C-ECAB590BB2A7}</Project>
       <Name>Squared.Util</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Modeling\Modeling.csproj">
+      <Project>{9c41f780-0084-4f13-a24a-47433d4dcd4c}</Project>
+      <Name>Modeling</Name>
     </ProjectReference>
     <ProjectReference Include="..\Squared.Nuklear\Nuklear\Nuklear.vcxproj">
       <Project>{6ef251c3-0cf3-4e0c-907b-11bd3deba8e6}</Project>

@@ -2,15 +2,16 @@
 <Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
-    <ProjectGuid>{E86544AD-5974-4FEE-B96F-71331EFAB054}</ProjectGuid>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{9C41F780-0084-4F13-A24A-47433D4DCD4C}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Squared.Illuminant</RootNamespace>
-    <AssemblyName>Illuminant</AssemblyName>
+    <RootNamespace>Squared.Illuminant.Modeling</RootNamespace>
+    <AssemblyName>Illuminant.Modeling</AssemblyName>
     <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
-    <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -38,6 +39,10 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.12.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Microsoft.Xna.Framework, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553, processorArchitecture=x86">
       <Private>False</Private>
     </Reference>
@@ -59,72 +64,38 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Bezier.cs" />
-    <Compile Include="Billboard.cs" />
-    <Compile Include="DistanceField.cs" />
-    <Compile Include="Formula.cs" />
-    <Compile Include="GBuffer.cs" />
-    <Compile Include="HeightVolume.cs" />
-    <Compile Include="Histogram.cs" />
-    <Compile Include="Lighting\IlluminantMaterials.cs" />
-    <Compile Include="LazyResource.cs" />
-    <Compile Include="Lighting\LightingRenderer.Configuration.cs" />
-    <Compile Include="Lighting\LightingRenderer.GBuffer.cs" />
-    <Compile Include="Lighting\LightingRenderer.GI.cs" />
-    <Compile Include="Lighting\LightingRenderer.HDR.cs" />
-    <Compile Include="Lighting\LightingRenderer.LightProbes.cs" />
-    <Compile Include="Lighting\LightProbe.cs" />
-    <Compile Include="MersenneTwister.cs" />
-    <Compile Include="Parameter.cs" />
-    <Compile Include="Particles\ParticleMaterials.cs" />
-    <Compile Include="Lighting\LightingRenderer.cs" />
-    <Compile Include="Lighting\LightingEnvironment.cs" />
-    <Compile Include="Lighting\LightObstruction.cs" />
-    <Compile Include="Lighting\LightSource.cs" />
-    <Compile Include="LoadMaterials.cs" />
-    <Compile Include="Particles\ParticleEngine.cs" />
-    <Compile Include="Particles\ParticleSystem.cs" />
-    <Compile Include="Particles\ParticleSpawner.cs" />
-    <Compile Include="Particles\ParticleTransform.cs" />
+    <Compile Include="JSON.cs" />
+    <Compile Include="Model.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="BufferRing.cs" />
-    <Compile Include="Uniforms.cs" />
-    <Compile Include="VectorField.cs" />
-    <Compile Include="Vertices.cs" />
+    <Compile Include="View.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Fracture\Squared\GameLib\Squared.Game.csproj">
-      <Project>{36463AEE-E309-43A6-BCFA-A69944390AF0}</Project>
-      <Name>Squared.Game</Name>
+    <ProjectReference Include="..\..\Fracture\Squared\Render.STB\Squared.Render.STB.csproj">
+      <Project>{cfb603c1-8371-460d-ba60-91e697eae1b4}</Project>
+      <Name>Squared.Render.STB</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\Fracture\Squared\RenderLib\Squared.Render.csproj">
       <Project>{FE871F18-FD35-4124-AF8F-0021C9D4BA29}</Project>
       <Name>Squared.Render</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\Fracture\Squared\Threading\Squared.Threading.csproj">
-      <Project>{eccb8787-0fc6-43b2-abd1-6cbb237916ec}</Project>
-      <Name>Squared.Threading</Name>
-    </ProjectReference>
     <ProjectReference Include="..\..\Fracture\Squared\Util\Squared.Util.csproj">
       <Project>{D7F549CF-E0A6-491C-A78C-ECAB590BB2A7}</Project>
       <Name>Squared.Util</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Illuminant\Illuminant.csproj">
+      <Project>{e86544ad-5974-4fee-b96f-71331efab054}</Project>
+      <Name>Illuminant</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ShaderText Include="Shaders\*.fx" />
-    <None Include="Shaders\*.fxh" />
-    <EmbeddedResource Include="@(ShaderText -> 'Shaders\bin\$(Configuration)\%(Filename).fx.bin')">
-      <LogicalName>%(Filename)</LogicalName>
-    </EmbeddedResource>
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
-    <ShaderOptimizationLevel>d</ShaderOptimizationLevel>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)' != 'Debug' ">
-    <ShaderOptimizationLevel>3</ShaderOptimizationLevel>
-  </PropertyGroup>
-  <PropertyGroup>
-    <PreBuildEvent>"$(ProjectDir)\..\..\Fracture\ShaderCompiler\bin\ShaderCompiler.exe" $(ProjectDir)\..\..\Fracture\ext\fxc $(ProjectDir)\Shaders $(ProjectDir)\Shaders\bin\$(Configuration) "/O$(ShaderOptimizationLevel) /Zi"</PreBuildEvent>
-  </PropertyGroup>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
 </Project>

@@ -206,7 +206,7 @@ namespace TestGame.Scenes {
             CreateDistanceField();
 
             Engine = new ParticleEngine(
-                Game.Content, Game.RenderCoordinator, Game.Materials,
+                Game.RenderCoordinator, Game.Materials,
                 new ParticleEngineConfiguration (64) {
                     HighPrecision = true
                 }, Game.ParticleMaterials

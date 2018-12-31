@@ -64,9 +64,8 @@ namespace Squared.Illuminant.Particles {
         };
 
         public ParticleEngine (
-            ContentManager content, RenderCoordinator coordinator, 
-            DefaultMaterialSet materials, ParticleEngineConfiguration configuration,
-            ParticleMaterials particleMaterials = null
+            RenderCoordinator coordinator, DefaultMaterialSet materials, 
+            ParticleEngineConfiguration configuration, ParticleMaterials particleMaterials = null
         ) {
             Coordinator = coordinator;
             Materials = materials;

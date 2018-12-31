@@ -74,7 +74,7 @@ namespace TestGame.Scenes {
 
         public override void LoadContent () {
             Engine = new ParticleEngine(
-                Game.Content, Game.RenderCoordinator, Game.Materials, 
+                Game.RenderCoordinator, Game.Materials, 
                 new ParticleEngineConfiguration {
                     TextureLoader = Game.TextureLoader.Load
                 }, Game.ParticleMaterials

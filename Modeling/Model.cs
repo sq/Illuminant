@@ -38,15 +38,22 @@ namespace Squared.Illuminant.Modeling {
             };
         }
 
-        public static EngineModel Load (string fileName) {
-            using (var reader = new System.IO.StreamReader(fileName, Encoding.UTF8, false)) {
+        public static EngineModel Load (Stream s) {
+            using (var reader = new StreamReader(s, Encoding.UTF8, false)) {
                 var serializer = MakeSerializer();
                 using (var jreader = new JsonTextReader(reader)) {
                     var result = serializer.Deserialize<EngineModel>(jreader);
-                    if (result != null)
-                        result.Filename = Path.GetFullPath(fileName);
                     return result;
                 }
+            }
+        }
+
+        public static EngineModel Load (string fileName) {
+            using (var stream = File.OpenRead(fileName)) {
+                var result = Load(stream);
+                if (result != null)
+                    result.Filename = Path.GetFullPath(fileName);
+                return result;
             }
         }
 

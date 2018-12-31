@@ -24,3 +24,5 @@ TestGame/TestGameContent/bin
 *.opendb
 /packages
 /AppCommon/Fonts
+Modeling/bin
+Modeling/obj
