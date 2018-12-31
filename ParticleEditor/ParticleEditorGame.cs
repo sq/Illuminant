@@ -321,7 +321,11 @@ namespace ParticleEditor {
             if ((Window.ClientBounds.Width != Graphics.PreferredBackBufferWidth) || (Window.ClientBounds.Height != Graphics.PreferredBackBufferHeight))
                 return;
 
-            Font.SizePoints = Graphics.PreferredBackBufferWidth > 2000 ? 15f : 13.5f;
+            var newSize = Graphics.PreferredBackBufferWidth > 2000 ? 15f : 13.5f;
+            if (Font.SizePoints != newSize) {
+                Font.SizePoints = newSize;
+                Nuklear.InvalidateFontCache();
+            }
 
             View view;
             lock (this)

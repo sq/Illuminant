@@ -138,6 +138,11 @@ namespace Framework {
             }
         }
 
+        public void InvalidateFontCache () {
+            CharWidthCache.Clear();
+            TextWidthCache.Clear();
+        }
+
         private bool TextAdvancePending = false;
 
         private void _QueryFontGlyphF (NkHandle handle, float font_height, nk_user_font_glyph* glyph, uint codepoint, uint next_codepoint) {
@@ -217,6 +222,8 @@ namespace Framework {
         }
 
         private void SetNewFont (IGlyphSource newFont) {
+            InvalidateFontCache();
+
             var userFont = NuklearAPI.AllocUserFont();
 
             float estimatedHeight = 0;
