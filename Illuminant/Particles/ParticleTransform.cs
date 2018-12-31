@@ -104,9 +104,9 @@ namespace Squared.Illuminant.Particles.Transforms {
         protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
             if (Area != null) {
                 parameters["AreaType"].SetValue((int)Area.Type);
-                parameters["AreaCenter"].SetValue(Area.Center.Evaluate(now, engine.Resolve));
-                parameters["AreaSize"].SetValue(Area.Size.Evaluate(now, engine.Resolve));
-                var falloff = Area.Falloff.Evaluate(now, engine.Resolve);
+                parameters["AreaCenter"].SetValue(Area.Center.Evaluate(now, engine.ResolveVector3));
+                parameters["AreaSize"].SetValue(Area.Size.Evaluate(now, engine.ResolveVector3));
+                var falloff = Area.Falloff.Evaluate(now, engine.ResolveSingle);
                 falloff = Math.Max(1, falloff);
                 parameters["AreaFalloff"].SetValue(falloff);
             } else {
@@ -146,10 +146,10 @@ namespace Squared.Illuminant.Particles.Transforms {
         protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
             base.SetParameters(engine, parameters, now, frameIndex);
             parameters["TimeDivisor"].SetValue(CyclesPerSecond.HasValue ? Uniforms.ParticleSystem.VelocityConstantScale / CyclesPerSecond.Value : -1);
-            parameters["PositionAdd"].SetValue(new Vector4(Position.Add.Evaluate(now, engine.Resolve), 0));
-            parameters["PositionMultiply"].SetValue(new Vector4(Position.Multiply.Evaluate(now, engine.Resolve), 1));
-            parameters["VelocityAdd"].SetValue(new Vector4(Velocity.Add.Evaluate(now, engine.Resolve), 0));
-            parameters["VelocityMultiply"].SetValue(new Vector4(Velocity.Multiply.Evaluate(now, engine.Resolve), 1));
+            parameters["PositionAdd"].SetValue(new Vector4(Position.Add.Evaluate(now, engine.ResolveVector3), 0));
+            parameters["PositionMultiply"].SetValue(new Vector4(Position.Multiply.Evaluate(now, engine.ResolveVector3), 1));
+            parameters["VelocityAdd"].SetValue(new Vector4(Velocity.Add.Evaluate(now, engine.ResolveVector3), 0));
+            parameters["VelocityMultiply"].SetValue(new Vector4(Velocity.Multiply.Evaluate(now, engine.ResolveVector3), 1));
         }
 
         protected override Material GetMaterial (ParticleMaterials materials) {
@@ -248,12 +248,12 @@ namespace Squared.Illuminant.Particles.Transforms {
                 return;
 
             parameters["TimeDivisor"].SetValue(CyclesPerSecond.HasValue ? Uniforms.ParticleSystem.VelocityConstantScale / CyclesPerSecond.Value : -1);
-            parameters["PositionOffset"].SetValue(Position.Offset.Evaluate(now, engine.Resolve));
-            parameters["PositionScale"].SetValue (Position.Scale.Evaluate(now, engine.Resolve));
-            parameters["VelocityOffset"].SetValue(new Vector4(Velocity.Offset.Evaluate(now, engine.Resolve), 0));
-            parameters["VelocityScale"].SetValue (new Vector4(Velocity.Scale.Evaluate(now, engine.Resolve), 1));
+            parameters["PositionOffset"].SetValue(Position.Offset.Evaluate(now, engine.ResolveVector4));
+            parameters["PositionScale"].SetValue (Position.Scale.Evaluate(now, engine.ResolveVector4));
+            parameters["VelocityOffset"].SetValue(new Vector4(Velocity.Offset.Evaluate(now, engine.ResolveVector3), 0));
+            parameters["VelocityScale"].SetValue (new Vector4(Velocity.Scale.Evaluate(now, engine.ResolveVector3), 1));
 
-            double intervalSecs = Interval.Evaluate(now, engine.Resolve) / (double)IntervalUnit;
+            double intervalSecs = Interval.Evaluate(now, engine.ResolveSingle) / (double)IntervalUnit;
             float t;
             AutoCycleUV(now, intervalSecs, out t);
 
@@ -315,14 +315,14 @@ namespace Squared.Illuminant.Particles.Transforms {
                 _RadiusesAndStrengths = new Vector3[Attractors.Count];
 
             for (int i = 0; i < Attractors.Count; i++) {
-                _Positions[i] = Attractors[i].Position.Evaluate(now, engine.Resolve);
-                _RadiusesAndStrengths[i] = new Vector3(Attractors[i].Radius.Evaluate(now, engine.Resolve), Attractors[i].Strength.Evaluate(now, engine.Resolve), (int)Attractors[i].Type);
+                _Positions[i] = Attractors[i].Position.Evaluate(now, engine.ResolveVector3);
+                _RadiusesAndStrengths[i] = new Vector3(Attractors[i].Radius.Evaluate(now, engine.ResolveSingle), Attractors[i].Strength.Evaluate(now, engine.ResolveSingle), (int)Attractors[i].Type);
             }
 
             parameters["AttractorCount"].SetValue(Attractors.Count);
             parameters["AttractorPositions"].SetValue(_Positions);
             parameters["AttractorRadiusesAndStrengths"].SetValue(_RadiusesAndStrengths);
-            parameters["MaximumAcceleration"].SetValue(MaximumAcceleration.Evaluate(now, engine.Resolve));
+            parameters["MaximumAcceleration"].SetValue(MaximumAcceleration.Evaluate(now, engine.ResolveSingle));
         }
 
         public override bool IsValid {

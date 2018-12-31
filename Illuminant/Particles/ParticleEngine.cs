@@ -52,6 +52,13 @@ namespace Squared.Illuminant.Particles {
         private readonly Dictionary<Type, Delegate> GenericResolvers = 
             new Dictionary<Type, Delegate>(new ReferenceComparer<Type>());
 
+        public readonly Configuration.NamedConstantResolver<float>   ResolveSingle;
+        public readonly Configuration.NamedConstantResolver<Vector2> ResolveVector2;
+        public readonly Configuration.NamedConstantResolver<Vector3> ResolveVector3;
+        public readonly Configuration.NamedConstantResolver<Vector4> ResolveVector4;
+        public readonly Configuration.NamedConstantResolver<Matrix>  ResolveMatrix;
+        public readonly Configuration.NamedConstantResolver<Configuration.DynamicMatrix> ResolveDynamicMatrix;
+
         private static readonly short[] TriIndices = new short[] {
             0, 1, 2
         };
@@ -69,14 +76,18 @@ namespace Squared.Illuminant.Particles {
             ParticleMaterials = particleMaterials ?? new ParticleMaterials(materials);
             Configuration = configuration;
 
-            foreach (var m in GetType().GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)) {
-                if (m.Name != "Resolve")
+            var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public;
+            var resolveGeneric = GetType().GetMethod("ResolveGeneric", flags);
+            foreach (var f in GetType().GetFields(flags)) {
+                if (!f.Name.StartsWith("Resolve"))
                     continue;
 
-                var valueType = m.GetParameters()[2].ParameterType.GetElementType();
+                var valueType = f.FieldType.GetGenericArguments()[0];
                 var delegateType = typeof(Configuration.NamedConstantResolver<>).MakeGenericType(valueType);
-                var resolver = Delegate.CreateDelegate(delegateType, this, m, true);
+                var typedResolveGeneric = resolveGeneric.MakeGenericMethod(valueType);
+                var resolver = Delegate.CreateDelegate(delegateType, this, typedResolveGeneric, true);
                 GenericResolvers[valueType] = resolver;
+                f.SetValue(this, resolver);
             }
 
             LoadMaterials(Effects);
@@ -138,7 +149,7 @@ namespace Squared.Illuminant.Particles {
             }
         }
 
-        internal bool ResolveGeneric<T> (string name, float t, out T result)
+        public bool ResolveGeneric<T> (string name, float t, out T result)
             where T : struct {
             result = default(T);
             Configuration.Parameter<T> constant;
@@ -148,26 +159,6 @@ namespace Squared.Illuminant.Particles {
             var resolver = GenericResolvers[typeof(T)];
             result = constant.Evaluate(t, (Configuration.NamedConstantResolver<T>)resolver);
             return true;
-        }
-
-        internal bool Resolve (string name, float t, out float result) {
-            return ResolveGeneric(name, t, out result);
-        }
-
-        internal bool Resolve (string name, float t, out Vector3 result) {
-            return ResolveGeneric(name, t, out result);
-        }
-
-        internal bool Resolve (string name, float t, out Vector4 result) {
-            return ResolveGeneric(name, t, out result);
-        }
-
-        internal bool Resolve (string name, float t, out Matrix result) {
-            return ResolveGeneric(name, t, out result);
-        }
-
-        internal bool Resolve (string name, float t, out Configuration.DynamicMatrix result) {
-            return ResolveGeneric(name, t, out result);
         }
 
         internal void NextTurn () {
