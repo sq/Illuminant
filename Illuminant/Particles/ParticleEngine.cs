@@ -49,6 +49,8 @@ namespace Squared.Illuminant.Particles {
             new HashSet<ParticleSystem>(new ReferenceComparer<ParticleSystem>());
 
         private readonly EmbeddedEffectProvider Effects;
+        private readonly Dictionary<Type, Delegate> GenericResolvers = 
+            new Dictionary<Type, Delegate>(new ReferenceComparer<Type>());
 
         private static readonly short[] TriIndices = new short[] {
             0, 1, 2
@@ -66,6 +68,16 @@ namespace Squared.Illuminant.Particles {
 
             ParticleMaterials = particleMaterials ?? new ParticleMaterials(materials);
             Configuration = configuration;
+
+            foreach (var m in GetType().GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)) {
+                if (m.Name != "Resolve")
+                    continue;
+
+                var valueType = m.GetParameters()[2].ParameterType.GetElementType();
+                var delegateType = typeof(Configuration.NamedConstantResolver<>).MakeGenericType(valueType);
+                var resolver = Delegate.CreateDelegate(delegateType, this, m, true);
+                GenericResolvers[valueType] = resolver;
+            }
 
             LoadMaterials(Effects);
 
@@ -133,7 +145,8 @@ namespace Squared.Illuminant.Particles {
             if (!FindConstant(name, out constant))
                 return false;
 
-            result = constant.Evaluate(t, ResolveGeneric);
+            var resolver = GenericResolvers[typeof(T)];
+            result = constant.Evaluate(t, (Configuration.NamedConstantResolver<T>)resolver);
             return true;
         }
 
