@@ -3,6 +3,8 @@
 // #include "Bezier.fxh"
 #include "ParticleCommon.fxh"
 
+uniform bool   Rounded;
+uniform float  RoundingPower;
 uniform float4 GlobalColor;
 uniform float4 BitmapTextureRegion;
 
@@ -44,11 +46,12 @@ void VS_PosVelAttr(
     in  int2   cornerIndex    : BLENDINDICES0, // 0-3
     out float4 result         : POSITION0,
     out float2 texCoord       : TEXCOORD0,
-    out float4 position       : TEXCOORD1,
+    out float2 positionXy     : TEXCOORD1,
     out float4 renderData     : TEXCOORD2,
     out float4 color          : COLOR0
 ) {
     float4 actualXy = float4(xy + offsetAndIndex.xy, 0, 0);
+    float4 position;
     readStateUv(actualXy, position, renderData, color);
 
     float life = position.w;
@@ -60,6 +63,7 @@ void VS_PosVelAttr(
     float angle = renderData.z;
     float2 size = renderData.xy;
     float3 rotatedCorner = ComputeRotatedCorner(cornerIndex.x, angle, size);
+    positionXy = Corners[cornerIndex.x];
 
     // HACK: Discard Z
     float3 displayXyz = float3(position.x, position.y - (position.z * getZToY()), 0);
@@ -81,30 +85,44 @@ void VS_PosVelAttr(
     texCoord += (frameIndexXy * texSize);
 }
 
+float computeCircularAlpha (float2 position) {
+    if (Rounded) {
+        float distance = length(position);
+        float power = max(RoundingPower, 0.01);
+        float divisor = saturate(1 - power);
+        float distanceFromEdge = saturate(distance - power) / divisor;
+        float powDistanceFromEdge = pow(distanceFromEdge, power);
+        return saturate(1 - powDistanceFromEdge);
+    } else
+        return 1;
+}
+
 void PS_Texture (
-    in  float4 color    : COLOR0,
-    in  float2 texCoord : TEXCOORD0,
-    in  float4 position : TEXCOORD1,
-    out float4 result   : COLOR0
+    in  float4 color      : COLOR0,
+    in  float2 texCoord   : TEXCOORD0,
+    in  float2 positionXy : TEXCOORD1,
+    out float4 result     : COLOR0
 ) {
     // FIXME
-    result = color;
+    result = color;    
     if (color.a > (1 / 512)) {
         float4 texColor = tex2D(BitmapSampler, texCoord);
         result *= texColor;
         result *= GlobalColor;
     }
+    result *= computeCircularAlpha(positionXy);
     if (result.a <= (1 / 512))
         discard;
 }
 
 void PS_NoTexture (
-    in  float4 color    : COLOR0,
-    in  float4 position : TEXCOORD1,
-    out float4 result   : COLOR0
+    in  float4 color      : COLOR0,
+    in  float2 positionXy : TEXCOORD1,
+    out float4 result     : COLOR0
 ) {
     result = color;
     result *= GlobalColor;
+    result *= computeCircularAlpha(positionXy);
     if (result.a <= (1 / 512))
         discard;
 }

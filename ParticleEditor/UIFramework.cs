@@ -594,8 +594,6 @@ namespace ParticleEditor {
             bool changed = false, b;
             var ctx = Nuklear.Context;
             var actualName = cpi.Name;
-            if (!string.IsNullOrEmpty(prefix))
-                actualName = prefix + actualName;
 
             var value = cpi.Getter(instance);
 

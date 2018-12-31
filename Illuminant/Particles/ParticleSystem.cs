@@ -1124,7 +1124,17 @@ namespace Squared.Illuminant.Particles {
 
                     MaybeSetAnimationRateParameter(p, appearance);
 
-                    p["StippleFactor"].SetValue(overrideStippleFactor.GetValueOrDefault(Configuration.StippleFactor));
+                    var sf = p["StippleFactor"];
+                    if (sf != null)
+                        sf.SetValue(overrideStippleFactor.GetValueOrDefault(Configuration.StippleFactor));
+
+                    var pc = p["Rounded"];
+                    if (pc != null)
+                        pc.SetValue((Configuration.Appearance?.Rounded).GetValueOrDefault(false));
+
+                    var cp = p["RoundingPower"];
+                    if (cp != null)
+                        cp.SetValue((Configuration.Appearance?.RoundingPower).GetValueOrDefault(2));
 
                     var gc = p["GlobalColor"];
                     if (gc != null) {
@@ -1284,6 +1294,16 @@ namespace Squared.Illuminant.Particles {
         /// Smaller values will result in slower animation. Zero turns off animation.
         /// </summary>
         public Vector2 AnimationRate;
+
+        /// <summary>
+        /// Rounds the corners of the displayed particle (regardless of whether it has a texture).
+        /// </summary>
+        public bool Rounded;
+
+        /// <summary>
+        /// Applies a gamma curve to the opacity of circular particles
+        /// </summary>
+        public float RoundingPower = 1.9f;
     }
 
     public class ParticleColorLifeRamp {
