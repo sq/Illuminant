@@ -194,7 +194,7 @@ void PS_SpawnPattern (
     float2 patternXy = InitialPatternXY;
     patternXy.x += (relativeIndex % rowSizeInParticles) * invResolution;
     patternXy.y += floor(relativeIndex / rowSizeInParticles) * invResolution;
-    float4 patternUv = float4((patternXy - 0.5) / patternSize, 0, 0);
+    float4 patternUv = float4((patternXy - 0.5) / patternSize, 0, max(log2(invResolution), 0));
     float4 patternColor = tex2Dlod(PatternSampler, patternUv);
 
     float4 random1, random2, random3;

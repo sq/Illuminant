@@ -36,7 +36,7 @@ namespace Squared.Illuminant.Particles.Transforms {
         /// <summary>
         /// If a new particle's attribute has an alpha (w) less than this value the particle is discarded.
         /// </summary>
-        public float AttributeDiscardThreshold = 0;
+        public float AttributeDiscardThreshold = 1.0f / 256;
 
         public Formula  Position = Formula.UnitNormal(), 
             Velocity = Formula.UnitNormal(), 
