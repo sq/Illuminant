@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
+using Squared.Illuminant.Configuration;
 using Squared.Illuminant.Util;
 using Squared.Render;
 using Squared.Util;
@@ -52,12 +53,12 @@ namespace Squared.Illuminant.Particles {
         private readonly Dictionary<Type, Delegate> GenericResolvers = 
             new Dictionary<Type, Delegate>(new ReferenceComparer<Type>());
 
-        public readonly Configuration.NamedConstantResolver<float>   ResolveSingle;
-        public readonly Configuration.NamedConstantResolver<Vector2> ResolveVector2;
-        public readonly Configuration.NamedConstantResolver<Vector3> ResolveVector3;
-        public readonly Configuration.NamedConstantResolver<Vector4> ResolveVector4;
-        public readonly Configuration.NamedConstantResolver<Matrix>  ResolveMatrix;
-        public readonly Configuration.NamedConstantResolver<Configuration.DynamicMatrix> ResolveDynamicMatrix;
+        public readonly NamedConstantResolver<float>   ResolveSingle;
+        public readonly NamedConstantResolver<Vector2> ResolveVector2;
+        public readonly NamedConstantResolver<Vector3> ResolveVector3;
+        public readonly NamedConstantResolver<Vector4> ResolveVector4;
+        public readonly NamedConstantResolver<Matrix>  ResolveMatrix;
+        public readonly NamedConstantResolver<DynamicMatrix> ResolveDynamicMatrix;
 
         private static readonly short[] TriIndices = new short[] {
             0, 1, 2
@@ -82,7 +83,7 @@ namespace Squared.Illuminant.Particles {
                     continue;
 
                 var valueType = f.FieldType.GetGenericArguments()[0];
-                var delegateType = typeof(Configuration.NamedConstantResolver<>).MakeGenericType(valueType);
+                var delegateType = typeof(NamedConstantResolver<>).MakeGenericType(valueType);
                 var typedResolveGeneric = resolveGeneric.MakeGenericMethod(valueType);
                 var resolver = Delegate.CreateDelegate(delegateType, this, typedResolveGeneric, true);
                 GenericResolvers[valueType] = resolver;
@@ -130,9 +131,9 @@ namespace Squared.Illuminant.Particles {
             }
         }
 
-        internal bool FindConstant<T> (string name, out Configuration.Parameter<T> result)
+        internal bool FindConstant<T> (string name, out Parameter<T> result)
             where T : struct {
-            result = default(Configuration.Parameter<T>);
+            result = default(Parameter<T>);
             if (Configuration.NamedVariableResolver == null)
                 return false;
 
@@ -141,7 +142,7 @@ namespace Squared.Illuminant.Particles {
                 return false;
 
             if (gen.ValueType == typeof(T)) {
-                result = (Configuration.Parameter<T>)gen;
+                result = (Parameter<T>)gen;
                 return true;
             } else {
                 return false;
@@ -151,12 +152,12 @@ namespace Squared.Illuminant.Particles {
         public bool ResolveGeneric<T> (string name, float t, out T result)
             where T : struct {
             result = default(T);
-            Configuration.Parameter<T> constant;
+            Parameter<T> constant;
             if (!FindConstant(name, out constant))
                 return false;
 
             var resolver = GenericResolvers[typeof(T)];
-            result = constant.Evaluate(t, (Configuration.NamedConstantResolver<T>)resolver);
+            result = constant.Evaluate(t, (NamedConstantResolver<T>)resolver);
             return true;
         }
 
@@ -382,7 +383,7 @@ namespace Squared.Illuminant.Particles {
         /// <summary>
         /// Used to resolve named constants referenced by parameters.
         /// </summary>
-        public Func<string, Configuration.IParameter> NamedVariableResolver = null;
+        public Func<string, IParameter> NamedVariableResolver = null;
 
         public ParticleEngineConfiguration (int chunkSize = 256) {
             ChunkSize = chunkSize;
