@@ -286,9 +286,15 @@ namespace Squared.Illuminant.Particles.Transforms {
             }
         }
 
+        private int RowsPerInstance {
+            get {
+                return (int)Math.Ceiling(Texture.Instance.Height * EffectiveResolution);
+            }
+        }
+
         private int ParticlesPerInstance {
             get {
-                return ParticlesPerRow * (int)Math.Ceiling(Texture.Instance.Height * EffectiveResolution);
+                return ParticlesPerRow * RowsPerInstance;
             }
         }
 
@@ -332,7 +338,8 @@ namespace Squared.Illuminant.Particles.Transforms {
             if (WholeSpawn) {
                 parameters["InitialPatternXY"].SetValue(Vector2.Zero);
             } else {
-                var xyInCurrentInstance = new Vector2(0, (RowsSpawned++) % Texture.Instance.Height);
+                var currentRow = ((RowsSpawned++) % RowsPerInstance);
+                var xyInCurrentInstance = new Vector2(0, currentRow / EffectiveResolution);
                 parameters["InitialPatternXY"].SetValue(xyInCurrentInstance);
             }
         }
