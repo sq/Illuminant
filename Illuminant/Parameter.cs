@@ -252,15 +252,17 @@ namespace Squared.Illuminant.Configuration {
     public struct DynamicMatrix {
         public static readonly DynamicMatrix Identity = new DynamicMatrix(Matrix.Identity);
 
-        public bool   IsGenerated;
-        public float  Angle;
-        public float  Scale;
-        public Matrix Matrix;
+        public bool    IsGenerated;
+        public float   Angle;
+        public float   Scale;
+        public Vector3 Translation;
+        public Matrix  Matrix;
 
-        public DynamicMatrix (float angle, float scale) {
+        public DynamicMatrix (float angle, float scale, Vector3 translation) {
             Matrix = default(Matrix);
             Scale = scale;
             Angle = angle;
+            Translation = translation;
             IsGenerated = true;
         }
 
@@ -268,6 +270,7 @@ namespace Squared.Illuminant.Configuration {
             Matrix = matrix;
             Scale = 1;
             Angle = 0;
+            Translation = Vector3.Zero;
             IsGenerated = false;
         }
 
@@ -277,6 +280,7 @@ namespace Squared.Illuminant.Configuration {
 
             var rot = Matrix.CreateRotationZ(MathHelper.ToRadians(Angle));
             Matrix.Multiply(ref rot, Scale, out Matrix);
+            Matrix *= Matrix.CreateTranslation(Translation);
         }
     }
 

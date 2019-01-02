@@ -113,8 +113,9 @@ void PS_Spawn (
     }
     float4 tempPosition = evaluateFormula(0, positionConstant, Configuration[0], Configuration[1], random1, FormulaTypes.x);
 
-    newPosition   = mul(tempPosition, PositionMatrix);
+    newPosition = mul(float4(tempPosition.xyz, 1), PositionMatrix);
     newPosition.w = tempPosition.w;
+
     newVelocity   = evaluateFormula(newPosition, Configuration[2], Configuration[3], Configuration[4], random2, FormulaTypes.y);
     newAttributes = evaluateFormula(newPosition, Configuration[5], Configuration[6], Configuration[7], random3, FormulaTypes.z);
 
@@ -158,7 +159,7 @@ void PS_SpawnFeedback (
     if (MultiplyAttributeConstant)
         attributeConstant *= sourceAttributes;
 
-    newPosition = mul(tempPosition, PositionMatrix);
+    newPosition = mul(float4(tempPosition.xyz, 1), PositionMatrix);
     newPosition.w = tempPosition.w;
 
     float4 velocityConstant = Configuration[2];
@@ -210,7 +211,7 @@ void PS_SpawnPattern (
     else
         attributeConstant += Configuration[5];
 
-    newPosition = mul(tempPosition, PositionMatrix);
+    newPosition = mul(float4(tempPosition.xyz, 1), PositionMatrix);
     newPosition.w = tempPosition.w;
 
     float4 velocityConstant = Configuration[2];

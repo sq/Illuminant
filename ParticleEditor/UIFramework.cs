@@ -1038,6 +1038,7 @@ namespace ParticleEditor {
 
         private struct MatrixGenerateParameters {
             public float Angle, Scale;
+            public Vector3 Translation;
         }
 
         private readonly Dictionary<string, MatrixGenerateParameters> MatrixGenerateParams = new Dictionary<string, MatrixGenerateParameters>();
@@ -1050,19 +1051,21 @@ namespace ParticleEditor {
             MatrixGenerateParameters p;
             var isGenerated = false;
             if (!MatrixGenerateParams.TryGetValue(actualName, out p))
-                p = new MatrixGenerateParameters { Angle = 0, Scale = 1 };
+                p = new MatrixGenerateParameters { Scale = 1 };
             else
-                isGenerated = (p.Angle != 0) || (p.Scale != 1);
+                isGenerated = (p.Angle != 0) || (p.Scale != 1) || (p.Translation.Length() >= 0.5f);
 
             var dm = new DynamicMatrix {
                 Matrix = m,
                 IsGenerated = isGenerated,
                 Angle = p.Angle,
-                Scale = p.Scale
+                Scale = p.Scale,
+                Translation = p.Translation
             };
             var result = RenderMatrixProperty(cpi, instance, ref changed, actualName, ref dm, is3x4, false, ref doBezierConversion, ref doReferenceConversion);
             p.Angle = dm.Angle;
             p.Scale = dm.Scale;
+            p.Translation = dm.Translation;
             MatrixGenerateParams[actualName] = p;
             return result;
         }
@@ -1103,6 +1106,7 @@ namespace ParticleEditor {
                             dm.Matrix = Matrix.Identity;
                             dm.Angle = 0;
                             dm.Scale = 1;
+                            dm.Translation = Vector3.Zero;
                             dm.IsGenerated = true;
                             changed = true;
                         }
@@ -1123,6 +1127,8 @@ namespace ParticleEditor {
                             changed = true;
                             dm.IsGenerated = true;
                         }
+                        if (RenderVectorProperty(null, ref dm.Translation, ref changed, true))
+                            dm.IsGenerated = true;
 
                         dm.Regenerate();
                     } else {

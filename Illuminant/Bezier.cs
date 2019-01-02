@@ -368,9 +368,18 @@ namespace Squared.Illuminant {
                     d = new Vector2(_D.Angle, _D.Scale);
                 var cb = new Uniforms.ClampedBezier2(this, 2, ref a, ref b, ref c, ref d);
                 var p = cb.Evaluate(t);
+                Vector4 ta = new Vector4(_A.Translation, 1),
+                    tb = new Vector4(_B.Translation, 1),
+                    tc = new Vector4(_C.Translation, 1),
+                    td = new Vector4(_D.Translation, 1);
+                var cbt = new Uniforms.ClampedBezier4(
+                    this, ref ta, ref tb, ref tc, ref td
+                );
+                var tr = cbt.Evaluate(t);
                 result.IsGenerated = true;
                 result.Angle = p.X;
                 result.Scale = p.Y;
+                result.Translation = new Vector3(tr.X, tr.Y, tr.Z);
                 result.Regenerate();
             } else {
                 _B.Regenerate();

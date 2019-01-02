@@ -118,11 +118,15 @@ namespace Squared.Illuminant.Modeling {
                     var obj = JObject.Load(reader);
                     if (obj.ContainsKey("Matrix"))
                         return new DynamicMatrix((Matrix)obj["Matrix"].ToObject(typeof(Matrix), serializer));
-                    else
-                        return new DynamicMatrix(
-                            (float)obj["Angle"],
-                            (float)obj["Scale"]
-                        );
+                    else {
+                        var a = obj["Angle"];
+                        var s = obj["Scale"];
+                        var t = obj["Translation"];
+                        var _a = (a != null) ? (float)a : 0;
+                        var _s = (s != null) ? (float)s : 1;
+                        var _t = (t != null) ? t.ToObject<Vector3>(serializer) : Vector3.Zero;
+                        return new DynamicMatrix(_a, _s, _t);
+                    }
                 }
                 case "Matrix":
                     var arr = serializer.Deserialize<float[]>(reader);
