@@ -276,12 +276,28 @@ namespace Squared.Illuminant.Particles {
                 };
                 Action<DeviceManager>[] dEnd = null;
 
+                // Set null color write mask to attempt to prevent live particles' fragments
+                //  from actually writing anything to the RT. This probably still will pass the
+                //  occlusion test, assuming drivers aren't Really Bad...
+                var noopBlendState = new BlendState {
+                    AlphaBlendFunction = BlendFunction.Add,
+                    ColorBlendFunction = BlendFunction.Add,
+                    AlphaDestinationBlend = Blend.Zero,
+                    ColorDestinationBlend = Blend.Zero,
+                    AlphaSourceBlend = Blend.One,
+                    ColorSourceBlend = Blend.One,
+                    ColorWriteChannels = ColorWriteChannels.None,
+                    ColorWriteChannels1 = ColorWriteChannels.None,
+                    ColorWriteChannels2 = ColorWriteChannels.None,
+                    ColorWriteChannels3 = ColorWriteChannels.None
+                };
+
                 DefineMaterial(ParticleMaterials.CountLiveParticles = new Material(
                     effects.Load("CountLiveParticles"), "CountLiveParticles", new[] {
                         MaterialUtil.MakeDelegate(
-                            rasterizerState: RasterizerState.CullClockwise,
+                            rasterizerState: RasterizerState.CullNone,
                             depthStencilState: DepthStencilState.None,
-                            blendState: BlendState.Opaque
+                            blendState: noopBlendState
                         )
                     }, dEnd
                 ));

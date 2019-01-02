@@ -254,6 +254,12 @@ namespace Squared.Illuminant.Particles.Transforms {
         public bool MultiplyAttributeConstant = false;
 
         /// <summary>
+        /// The new particles inherit the source particles' velocities as a velocity constant, multiplied
+        ///  by this factor
+        /// </summary>
+        public float SourceVelocityFactor = 0.0f;
+
+        /// <summary>
         /// Only considers the N most recently spawned particles from the source system for feedback.
         /// Use this for cases where the source system spawns at a much higher rate than your spawner,
         ///  to avoid performing feedback spawning against particles that are already dead.
@@ -332,6 +338,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             parameters["AlignPositionConstant"].SetValue(AlignPositionConstant);
             parameters["MultiplyAttributeConstant"].SetValue(MultiplyAttributeConstant);
             parameters["FeedbackSourceIndex"].SetValue(CurrentFeedbackSourceIndex);
+            parameters["SourceVelocityFactor"].SetValue(SourceVelocityFactor);
         }
 
         public override bool IsValid {

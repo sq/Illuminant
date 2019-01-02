@@ -5,9 +5,7 @@
 
 uniform bool   AlignVelocityAndPosition, ZeroZAxis;
 uniform bool   AlignPositionConstant, MultiplyAttributeConstant;
-uniform float  PolygonRate;
-uniform float  FeedbackSourceIndex;
-uniform float  PositionConstantCount;
+uniform float  PolygonRate, SourceVelocityFactor, FeedbackSourceIndex, PositionConstantCount;
 uniform float4 PositionConstants[MAX_POSITION_CONSTANTS];
 uniform float4 ChunkSizeAndIndices;
 uniform float4 Configuration[8];
@@ -58,6 +56,19 @@ float4 evaluateFormula (float4 origin, float4 constant, float4 scale, float4 off
     return constant + nonCircular;
 }
 
+void evaluateRandomForIndex(in float index, out float4 random1, out float4 random2, out float4 random3) {
+    float2 randomOffset1 = float2(index % 8039, 0 + (index % 57));
+    float2 randomOffset2 = float2(index % 6180, 1 + (index % 4031));
+    float2 randomOffset3 = float2(index % 2025, 2 + (index % 65531));
+    random1 = random(randomOffset1);
+    random2 = random(randomOffset2);
+    random3 = random(randomOffset3);
+
+    // The x and y element of random samples determines the normal
+    if (AlignVelocityAndPosition)
+        random2.xy = random1.xy;
+}
+
 void PS_Spawn (
     in  float2 xy            : VPOS,
     out float4 newPosition   : COLOR0,
@@ -72,15 +83,8 @@ void PS_Spawn (
         return;
     }
 
-    float2 randomOffset1 = float2(index % 8039, 0 + (index % 57));
-    float2 randomOffset2 = float2(index % 6180, 1 + (index % 4031));
-    float2 randomOffset3 = float2(index % 2025, 2 + (index % 65531));
-    float4 random1 = random(randomOffset1);
-    float4 random2 = random(randomOffset2);
-    float4 random3 = random(randomOffset3);
-    // The x and y element of random samples determines the normal
-    if (AlignVelocityAndPosition)
-        random2.xy = random1.xy;
+    float4 random1, random2, random3;
+    evaluateRandomForIndex(index, random1, random2, random3);
 
     // Ensure the z axis of generated circular coordinates is 0, resulting in pure xy normals
     float relativeIndex = (index - ChunkSizeAndIndices.y);
@@ -121,22 +125,13 @@ void PS_SpawnFeedback (
     float sourceY, sourceX = modf(sourceIndex / SourceChunkSizeAndTexel.x, sourceY) * SourceChunkSizeAndTexel.x;
     float2 sourceXy = float2(sourceX, sourceY);
 
-    float4 sourcePosition, sourceAttributes;
+    float4 sourcePosition, sourceVelocity, sourceAttributes;
     float4 sourceUv = float4(sourceXy * SourceChunkSizeAndTexel.yz, 0, 0);
-    sourcePosition = tex2Dlod(PositionSampler, sourceUv);
-    sourceAttributes = tex2Dlod(AttributeSampler, sourceUv);
 
-    float2 randomOffset1 = float2(index % 8039, 0 + (index % 57));
-    float2 randomOffset2 = float2(index % 6180, 1 + (index % 4031));
-    float2 randomOffset3 = float2(index % 2025, 2 + (index % 65531));
-    float4 random1 = random(randomOffset1);
-    float4 random2 = random(randomOffset2);
-    float4 random3 = random(randomOffset3);
+    readStateUv(sourceUv, sourcePosition, sourceVelocity, sourceAttributes);
 
-    // The x and y element of random samples determines the normal
-    if (AlignVelocityAndPosition)
-        random2.xy = random1.xy;
-    // Ensure the z axis of generated circular coordinates is 0, resulting in pure xy normals
+    float4 random1, random2, random3;
+    evaluateRandomForIndex(index, random1, random2, random3);
 
     float relativeIndex = (index - ChunkSizeAndIndices.y) + ChunkSizeAndIndices.w;
     float4 positionConstant = PositionConstants[0];
@@ -151,7 +146,10 @@ void PS_SpawnFeedback (
     newPosition = mul(tempPosition, PositionMatrix);
     newPosition.w = tempPosition.w;
 
-    newVelocity = evaluateFormula(newPosition, Configuration[2], Configuration[3], Configuration[4], random2, FormulaTypes.y);
+    float4 velocityConstant = Configuration[2];
+    newVelocity = evaluateFormula(newPosition, velocityConstant, Configuration[3], Configuration[4], random2, FormulaTypes.y);
+    newVelocity += sourceVelocity * SourceVelocityFactor;
+
     newAttributes = evaluateFormula(newPosition, attributeConstant, Configuration[6], Configuration[7], random3, FormulaTypes.z);
 }
 

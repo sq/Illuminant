@@ -348,7 +348,7 @@ namespace ParticleEditor {
 
             Controller.Update();
 
-            if (IsActive && View != null)
+            if (View != null)
                 View.Update(this, frame, -2, gameTime.ElapsedGameTime.Ticks);
 
             ClearBatch.AddNew(frame, -1, Materials.Clear, new Color(0.3f * Brightness, 0.6f * Brightness, 0.8f * Brightness, 1f));
