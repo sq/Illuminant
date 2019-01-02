@@ -9,6 +9,7 @@ using Squared.Illuminant.Configuration;
 using Squared.Illuminant.Uniforms;
 using Squared.Illuminant.Util;
 using Squared.Render;
+using Squared.Util;
 
 namespace Squared.Illuminant.Particles.Transforms {
     public abstract class SpawnerBase : ParticleTransform {
@@ -252,9 +253,9 @@ namespace Squared.Illuminant.Particles.Transforms {
         public NullableLazyResource<Texture2D> Texture = new NullableLazyResource<Texture2D>();
 
         /// <summary>
-        /// Adjusts the speed at which the spawner walks across the source texture while creating particles.
+        /// Adjusts the number of particles created per pixel.
         /// </summary>
-        public Vector2 Increment = Vector2.One;
+        public float Resolution = 1;
 
         /// <summary>
         /// If false, particles for the pattern can be spawned incrementally across frames. If true, only an entire set of particles will be spawned.
@@ -273,15 +274,21 @@ namespace Squared.Illuminant.Particles.Transforms {
             return materials.SpawnPattern;
         }
 
+        private float EffectiveResolution {
+            get {
+                return (float)Arithmetic.Clamp(Math.Round(Resolution, 2), 0.2, 1.0);
+            }
+        }
+
         private int ParticlesPerRow {
             get {
-                return (int)Math.Ceiling(Texture.Instance.Width / Increment.X);
+                return (int)Math.Ceiling(Texture.Instance.Width * EffectiveResolution);
             }
         }
 
         private int ParticlesPerInstance {
             get {
-                return ParticlesPerRow * (int)Math.Ceiling(Texture.Instance.Height / Increment.Y);
+                return ParticlesPerRow * (int)Math.Ceiling(Texture.Instance.Height * EffectiveResolution);
             }
         }
 
@@ -317,9 +324,9 @@ namespace Squared.Illuminant.Particles.Transforms {
             parameters["PositionConstants"].SetValue(Temp3);
             parameters["MultiplyAttributeConstant"].SetValue(MultiplyAttributeConstant);
             parameters["PatternTexture"].SetValue(Texture.Instance);
-            parameters["PatternSizeAndIncrement"].SetValue(new Vector4(
+            parameters["PatternSizeRowSizeAndResolution"].SetValue(new Vector4(
                 Texture.Instance.Width, Texture.Instance.Height,
-                Increment.X, Increment.Y
+                ParticlesPerRow, EffectiveResolution
             ));
 
             if (WholeSpawn) {

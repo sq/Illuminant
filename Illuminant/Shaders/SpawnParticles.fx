@@ -12,7 +12,7 @@ uniform float4 Configuration[8];
 uniform float4 FormulaTypes;
 uniform float4x4 PositionMatrix;
 uniform float3 SourceChunkSizeAndTexel;
-uniform float4 PatternSizeAndIncrement;
+uniform float4 PatternSizeRowSizeAndResolution;
 uniform float2 InitialPatternXY;
 
 Texture2D PatternTexture;
@@ -185,20 +185,23 @@ void PS_SpawnPattern (
         return;
     }
 
+    float2 patternSize = PatternSizeRowSizeAndResolution.xy;
+    float  rowSizeInParticles = PatternSizeRowSizeAndResolution.z;
+    float  resolution = PatternSizeRowSizeAndResolution.w;
+    float  invResolution = 1.0 / resolution;
+
     float relativeIndex = (index - ChunkSizeAndIndices.y) + ChunkSizeAndIndices.w;
     float2 patternXy = InitialPatternXY;
-    patternXy.x += (relativeIndex * PatternSizeAndIncrement.z);
-    float row = floor(patternXy.x / PatternSizeAndIncrement.y);
-    patternXy.y += row * PatternSizeAndIncrement.w;
-    patternXy.x = floor(patternXy.x % PatternSizeAndIncrement.x);
-    float4 patternUv = float4((patternXy - 0.5) / PatternSizeAndIncrement.xy, 0, 0);
+    patternXy.x += (relativeIndex % rowSizeInParticles) * invResolution;
+    patternXy.y += floor(relativeIndex / rowSizeInParticles) * invResolution;
+    float4 patternUv = float4((patternXy - 0.5) / patternSize, 0, 0);
     float4 patternColor = tex2Dlod(PatternSampler, patternUv);
 
     float4 random1, random2, random3;
     evaluateRandomForIndex(index, random1, random2, random3);
 
     float4 positionConstant = PositionConstants[0];
-    float4 pixelAlignment = float4(patternXy - (PatternSizeAndIncrement.xy * 0.5), 0, 0);
+    float4 pixelAlignment = float4(patternXy - (patternSize * 0.5), 0, 0);
     float4 tempPosition = evaluateFormula(0, positionConstant + pixelAlignment, Configuration[0], Configuration[1], random1, FormulaTypes.x);
 
     float4 attributeConstant = patternColor;
