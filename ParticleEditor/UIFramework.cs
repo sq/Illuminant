@@ -5,7 +5,9 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Xml;
 using Framework;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -100,6 +102,8 @@ namespace ParticleEditor {
             }
         }
 
+        private static XmlDocument IlluminantXml;
+        private static readonly Dictionary<string, string> SummaryCache = new Dictionary<string, string>();
         private readonly Dictionary<Type, List<CachedPropertyInfo>> CachedMembers =
             new Dictionary<Type, List<CachedPropertyInfo>>(new ReferenceComparer<Type>());
         private readonly Dictionary<string, PropertyGridCache> GridCaches = 
@@ -205,6 +209,31 @@ namespace ParticleEditor {
             }
         }
 
+        private static string GetSummaryForMember (MemberInfo m) {
+            var key = string.Format("{0}:{1}.{2}", m is FieldInfo ? "F" : "P", m.DeclaringType.FullName, m.Name);
+            string result;
+            if (SummaryCache.TryGetValue(key, out result))
+                return result;
+
+            if (IlluminantXml == null) {
+                IlluminantXml = new XmlDocument();
+                if (File.Exists("Illuminant.xml"))
+                using (var s = File.OpenRead("Illuminant.xml"))
+                    IlluminantXml.Load(s);
+            }
+
+            var node = IlluminantXml.SelectSingleNode(string.Format(
+                "//member[starts-with(@name, '{0}')]/summary", key
+            ));
+            if (node != null) {
+                var text = Regex.Replace(node.InnerText, "[\r\n \t]+", " ").Trim();
+                result = text;
+            } else
+                result = null;
+            SummaryCache[key] = result;
+            return result;
+        }
+
         private static IEnumerable<CachedPropertyInfo> CachePropertyInfo (Type type) {
             return from m in type.GetMembers(BindingFlags.Instance | BindingFlags.Public)
                    where (m.MemberType == MemberTypes.Field) || (m.MemberType == MemberTypes.Property)
@@ -219,6 +248,7 @@ namespace ParticleEditor {
                    let enumValueNames = mtype.IsEnum ? mtype.GetEnumNames() : null
                    let isWritable = ((f != null) && !f.IsInitOnly) || ((p != null) && p.CanWrite)
                    let isGetItem = (p != null) && (p.GetIndexParameters().Length > 0)
+                   let summary = GetSummaryForMember(m)
                    where (f == null) || !f.IsInitOnly || isList
                    where (p == null) || (p.CanWrite && p.CanRead) || isList
                    where !m.GetCustomAttributes<NonSerializedAttribute>().Any()
@@ -237,7 +267,8 @@ namespace ParticleEditor {
                            : (i, v) => { },
                        ElementInfo = GetElementInfo(mtype),
                        EnumValueNames = enumValueNames,
-                       IsGetItem = isGetItem
+                       IsGetItem = isGetItem,
+                       Summary = summary
                    };
         }
 
@@ -568,6 +599,8 @@ namespace ParticleEditor {
             if (!CachedMembers.TryGetValue(cpi.Type, out members))
                 CachedMembers[cpi.Type] = members = CachePropertyInfo(cpi.Type).ToList();
 
+            if ((instance == null) || (value == null))
+                return false;
             using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, actualName, false)) {
                 if (pGroup.Visible) {
                     foreach (var i in members) 
@@ -630,7 +663,7 @@ namespace ParticleEditor {
                         Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
                         if (cpi.Type == typeof(float)) {
                             var v = (float)value;
-                            RenderPropertyElement(cpi.Name, cpi.Info, ref v, ref changed);
+                            RenderPropertyElement(cpi.Name, cpi.Info, ref v, ref changed, tooltip: cpi.Summary);
                             if (changed) {
                                 cpi.Setter(instance, v);
                                 return true;
@@ -641,7 +674,7 @@ namespace ParticleEditor {
                                 cpi.Name, ref v, 
                                 (int)cpi.Info.Min.GetValueOrDefault(0), 
                                 (int)cpi.Info.Min.GetValueOrDefault(40960), 
-                                1, 0.5f
+                                1, 0.5f, tooltip: cpi.Summary
                             )) {
                                 cpi.Setter(instance, v);
                                 return true;
@@ -671,14 +704,14 @@ namespace ParticleEditor {
             if (cpi.AllowNull) {
                 var isNull = value == null;
                 if (isNull) {
-                    if (Nuklear.Button("Create")) {
+                    if (Nuklear.Button("Create", tooltip: cpi.Summary)) {
                         value = Activator.CreateInstance(cpi.Type);
                         cpi.Setter(instance, value);
                         changed = true;
                     }
                     return changed;
                 } else {
-                    if (Nuklear.Button("Erase")) {
+                    if (Nuklear.Button("Erase", tooltip: cpi.Summary)) {
                         cpi.Setter(instance, value = null);
                         changed = true;
                         return changed;
@@ -704,7 +737,7 @@ namespace ParticleEditor {
                 case "String":
                     Nuke.nk_layout_row_dynamic(ctx, LineHeight + 3, 1);
                     var text = value.ToString();
-                    if (Nuklear.Textbox(ref text)) {
+                    if (Nuklear.Textbox(ref text, tooltip: cpi.Summary)) {
                         cpi.Setter(instance, text);
                         return true;
                     }
@@ -712,7 +745,7 @@ namespace ParticleEditor {
 
                 case "Boolean":
                     b = (bool)value;
-                    if (Nuklear.Checkbox(null, ref b)) {
+                    if (Nuklear.Checkbox(null, ref b, tooltip: cpi.Summary)) {
                         cpi.Setter(instance, b);
                         return true;
                     }
@@ -1505,5 +1538,6 @@ namespace ParticleEditor {
         public bool AllowNull, IsGetItem;
         public CachedPropertyInfo ElementInfo;
         public string[] EnumValueNames;
+        public string Summary;
     }
 }

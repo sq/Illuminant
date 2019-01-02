@@ -655,13 +655,15 @@ namespace Framework {
         }
 
         // Returns true if value changed
-        public unsafe bool Checkbox (string text, ref bool value) {
+        public unsafe bool Checkbox (string text, ref bool value, string tooltip = null) {
+            var bounds = Nuklear.nk_widget_bounds(Context);
             bool newValue;
             using (var temp = new NString(text))
                 newValue = Nuklear.nk_check_text(Context, temp.pText, temp.Length, value ? 0 : 1) == 0;
 
             var result = newValue != value;
             value = newValue;
+            Tooltip(bounds, tooltip);
             return result;
         }
 
