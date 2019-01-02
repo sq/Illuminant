@@ -63,6 +63,13 @@ namespace ParticleEditor {
                     }
                 },
                 {
+                    "PatternSpawner", new Dictionary<string, ModelTypeInfo> {
+                        {"MinRate", new ModelTypeInfo { Min = 0, Max = 100000 } },
+                        {"MaxRate", new ModelTypeInfo { Min = 0, Max = 100000 } },
+                        {"Attributes", new ModelTypeInfo { Type = "ColorFormula" } }
+                    }
+                },
+                {
                     "FeedbackSpawner", new Dictionary<string, ModelTypeInfo> {
                         {"MinRate", new ModelTypeInfo { Min = 0, Max = 100000 } },
                         {"MaxRate", new ModelTypeInfo { Min = 0, Max = 100000 } },

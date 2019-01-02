@@ -32,6 +32,10 @@ namespace Squared.Illuminant.Particles.Transforms {
         /// If not set, random normals will be 3-dimensional.
         /// </summary>
         public bool ZeroZAxis = false;
+        /// <summary>
+        /// If a new particle's attribute has an alpha (w) less than this value the particle is discarded.
+        /// </summary>
+        public float AttributeDiscardThreshold = 0;
 
         public Formula  Position = Formula.UnitNormal(), 
             Velocity = Formula.UnitNormal(), 
@@ -159,6 +163,8 @@ namespace Squared.Illuminant.Particles.Transforms {
             var m = PositionPostMatrix.Evaluate(now, engine.ResolveDynamicMatrix);
             m.Regenerate();
             parameters["PositionMatrix"].SetValue(m.Matrix);
+
+            parameters["AttributeDiscardThreshold"].SetValue(AttributeDiscardThreshold);
         }
     }
 
@@ -233,6 +239,100 @@ namespace Squared.Illuminant.Particles.Transforms {
         public override bool IsValid {
             get {
                 return true;
+            }
+        }
+    }
+
+    public sealed class PatternSpawner : SpawnerBase {
+        private int RowsSpawned = 0;
+
+        /// <summary>
+        /// The pattern spawner generates particles corresponding to the pixels of this texture.
+        /// </summary>
+        public NullableLazyResource<Texture2D> Texture = new NullableLazyResource<Texture2D>();
+
+        /// <summary>
+        /// Adjusts the speed at which the spawner walks across the source texture while creating particles.
+        /// </summary>
+        public Vector2 Increment = Vector2.One;
+
+        /// <summary>
+        /// If false, particles for the pattern can be spawned incrementally across frames. If true, only an entire set of particles will be spawned.
+        /// </summary>
+        public bool WholeSpawn = false;
+
+        /// <summary>
+        /// Multiplies the attribute Constant of new particles by the color of the source pixel instead of adding to it.
+        /// </summary>
+        public bool MultiplyAttributeConstant = true;
+
+        [NonSerialized]
+        private Vector4[] Temp3 = new Vector4[1];
+
+        protected override Material GetMaterial (ParticleMaterials materials) {
+            return materials.SpawnPattern;
+        }
+
+        private int ParticlesPerRow {
+            get {
+                return (int)Math.Ceiling(Texture.Instance.Width / Increment.X);
+            }
+        }
+
+        private int ParticlesPerInstance {
+            get {
+                return ParticlesPerRow * (int)Math.Ceiling(Texture.Instance.Height / Increment.Y);
+            }
+        }
+
+        public override void BeginTick (ParticleSystem system, float now, double deltaTimeSeconds, out int spawnCount, out ParticleSystem.Chunk sourceChunk) {
+            if (Texture != null)
+                Texture.EnsureInitialized(system.Engine.Configuration.TextureLoader);
+
+            if ((Texture == null) || (Texture.Instance == null)) {
+                spawnCount = 0;
+                sourceChunk = null;
+                return;
+            }
+
+            base.BeginTick(system, now, deltaTimeSeconds, out spawnCount, out sourceChunk);
+
+            var minCount = WholeSpawn ? ParticlesPerInstance : ParticlesPerRow;
+            var requestedSpawnCount = spawnCount;
+            if (spawnCount < minCount) {
+                AddError(spawnCount);
+                spawnCount = 0;
+            } else {
+                spawnCount = (spawnCount / minCount) * minCount;
+                AddError(requestedSpawnCount - spawnCount);
+            }
+        }
+
+        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
+            base.SetParameters(engine, parameters, now, frameIndex);
+
+            var position = Position.Constant.Evaluate(now, engine.ResolveVector4);
+            Temp3[0] = position;
+            parameters["PositionConstantCount"].SetValue((float)1);
+            parameters["PositionConstants"].SetValue(Temp3);
+            parameters["MultiplyAttributeConstant"].SetValue(MultiplyAttributeConstant);
+            parameters["PatternTexture"].SetValue(Texture.Instance);
+            parameters["PatternSizeAndIncrement"].SetValue(new Vector4(
+                Texture.Instance.Width, Texture.Instance.Height,
+                Increment.X, Increment.Y
+            ));
+
+            if (WholeSpawn) {
+                parameters["InitialPatternXY"].SetValue(Vector2.Zero);
+            } else {
+                var xyInCurrentInstance = new Vector2(0, (RowsSpawned++) % Texture.Instance.Height);
+                parameters["InitialPatternXY"].SetValue(xyInCurrentInstance);
+            }
+        }
+
+        public override bool IsValid {
+            get {
+                return (Texture != null) && ((Texture.Name != null) || (Texture.Instance != null));
             }
         }
     }

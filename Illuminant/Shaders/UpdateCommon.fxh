@@ -37,7 +37,6 @@ uniform ClampedBezier4 ColorFromVelocity;
 float4 getColorForLifeAndVelocity (float life, float velocityLength) {
     float4 result = evaluateBezier4(ColorFromLife, life);
     result *= evaluateBezier4(ColorFromVelocity, velocityLength);
-    result.rgb *= result.a;
     return result;
 }
 
@@ -86,6 +85,8 @@ void computeRenderData (
     float index = vpos.x + (vpos.y * 256);
     float velocityLength = max(length(velocity), 0.001);
     renderColor = attributes * getRampedColorForLifeValueAndIndex(position.w, velocityLength, index);
+    renderColor.a = saturate(renderColor.a);
+    renderColor.rgb *= renderColor.a;
     renderData.xy = getSizeForLifeAndVelocity(position.w, velocityLength);
     renderData.z = getRotationForVelocity(velocity) +
         getRotationForLifeAndIndex(position.w, index);

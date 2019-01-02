@@ -1303,7 +1303,7 @@ namespace Squared.Illuminant.Particles {
         /// <summary>
         /// Applies a gamma curve to the opacity of circular particles
         /// </summary>
-        public float RoundingPower = 1.9f;
+        public float RoundingPower = 0.8f;
     }
 
     public class ParticleColorLifeRamp {

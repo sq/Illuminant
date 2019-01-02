@@ -5,13 +5,25 @@
 
 uniform bool   AlignVelocityAndPosition, ZeroZAxis;
 uniform bool   AlignPositionConstant, MultiplyAttributeConstant;
-uniform float  PolygonRate, SourceVelocityFactor, FeedbackSourceIndex, PositionConstantCount;
+uniform float  PolygonRate, SourceVelocityFactor, FeedbackSourceIndex, PositionConstantCount, AttributeDiscardThreshold;
 uniform float4 PositionConstants[MAX_POSITION_CONSTANTS];
 uniform float4 ChunkSizeAndIndices;
 uniform float4 Configuration[8];
 uniform float4 FormulaTypes;
 uniform float4x4 PositionMatrix;
 uniform float3 SourceChunkSizeAndTexel;
+uniform float4 PatternSizeAndIncrement;
+uniform float2 InitialPatternXY;
+
+Texture2D PatternTexture;
+sampler PatternSampler {
+    Texture = (PatternTexture);
+    AddressU = CLAMP;
+    AddressV = CLAMP;
+    MipFilter = LINEAR;
+    MinFilter = LINEAR;
+    MagFilter = LINEAR;
+};
 
 void VS_Spawn (
     in  float2 xy     : POSITION0,
@@ -105,6 +117,9 @@ void PS_Spawn (
     newPosition.w = tempPosition.w;
     newVelocity   = evaluateFormula(newPosition, Configuration[2], Configuration[3], Configuration[4], random2, FormulaTypes.y);
     newAttributes = evaluateFormula(newPosition, Configuration[5], Configuration[6], Configuration[7], random3, FormulaTypes.z);
+
+    if (newAttributes.w < AttributeDiscardThreshold)
+        discard;
 }
 
 void PS_SpawnFeedback (
@@ -151,6 +166,57 @@ void PS_SpawnFeedback (
     newVelocity += sourceVelocity * SourceVelocityFactor;
 
     newAttributes = evaluateFormula(newPosition, attributeConstant, Configuration[6], Configuration[7], random3, FormulaTypes.z);
+
+    if (newAttributes.w < AttributeDiscardThreshold)
+        discard;
+}
+
+void PS_SpawnPattern (
+    in  float2 xy            : VPOS,
+    out float4 newPosition   : COLOR0,
+    out float4 newVelocity   : COLOR1,
+    out float4 newAttributes : COLOR2
+) {
+    float index = (xy.x) + (xy.y * ChunkSizeAndIndices.x);
+
+    [branch]
+    if ((index < ChunkSizeAndIndices.y) || (index > ChunkSizeAndIndices.z)) {
+        discard;
+        return;
+    }
+
+    float relativeIndex = (index - ChunkSizeAndIndices.y) + ChunkSizeAndIndices.w;
+    float2 patternXy = InitialPatternXY;
+    patternXy.x += (relativeIndex * PatternSizeAndIncrement.z);
+    float row = floor(patternXy.x / PatternSizeAndIncrement.y);
+    patternXy.y += row * PatternSizeAndIncrement.w;
+    patternXy.x = floor(patternXy.x % PatternSizeAndIncrement.x);
+    float4 patternUv = float4((patternXy - 0.5) / PatternSizeAndIncrement.xy, 0, 0);
+    float4 patternColor = tex2Dlod(PatternSampler, patternUv);
+
+    float4 random1, random2, random3;
+    evaluateRandomForIndex(index, random1, random2, random3);
+
+    float4 positionConstant = PositionConstants[0];
+    float4 pixelAlignment = float4(patternXy - (PatternSizeAndIncrement.xy * 0.5), 0, 0);
+    float4 tempPosition = evaluateFormula(0, positionConstant + pixelAlignment, Configuration[0], Configuration[1], random1, FormulaTypes.x);
+
+    float4 attributeConstant = patternColor;
+    if (MultiplyAttributeConstant)
+        attributeConstant *= Configuration[5];
+    else
+        attributeConstant += Configuration[5];
+
+    newPosition = mul(tempPosition, PositionMatrix);
+    newPosition.w = tempPosition.w;
+
+    float4 velocityConstant = Configuration[2];
+    newVelocity = evaluateFormula(newPosition, velocityConstant, Configuration[3], Configuration[4], random2, FormulaTypes.y);
+
+    newAttributes = evaluateFormula(newPosition, attributeConstant, Configuration[6], Configuration[7], random3, FormulaTypes.z);
+
+    if (newAttributes.w < AttributeDiscardThreshold)
+        discard;
 }
 
 technique SpawnParticles {
@@ -166,5 +232,13 @@ technique SpawnFeedbackParticles {
     {
         vertexShader = compile vs_3_0 VS_Spawn();
         pixelShader = compile ps_3_0 PS_SpawnFeedback();
+    }
+}
+
+technique SpawnPatternParticles {
+    pass P0
+    {
+        vertexShader = compile vs_3_0 VS_Spawn();
+        pixelShader = compile ps_3_0 PS_SpawnPattern();
     }
 }
