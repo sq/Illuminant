@@ -109,7 +109,7 @@ namespace ParticleEditor {
                     OpacityFromLife = 64,
                 },
                 LifeDecayPerSecond = 64,
-                Size = Vector2.One * 1.5f
+                Size = Vector2.One
             };
             var model = new SystemModel {
                 Configuration = config

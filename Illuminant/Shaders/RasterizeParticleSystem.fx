@@ -3,7 +3,8 @@
 // #include "Bezier.fxh"
 #include "ParticleCommon.fxh"
 
-uniform bool   Rounded;
+uniform bool   Rounded, BitmapBilinear;
+uniform float2 SizeFactor;
 uniform float  RoundingPower;
 uniform float4 GlobalColor;
 uniform float4 BitmapTextureRegion;
@@ -16,6 +17,14 @@ sampler BitmapSampler {
     MipFilter = LINEAR;
     MinFilter = LINEAR;
     MagFilter = LINEAR;
+};
+sampler BitmapPointSampler {
+    Texture = (BitmapTexture);
+    AddressU = CLAMP;
+    AddressV = CLAMP;
+    MipFilter = POINT;
+    MinFilter = POINT;
+    MagFilter = POINT;
 };
 
 static const float3 Corners[] = {
@@ -61,7 +70,7 @@ void VS_PosVelAttr(
     }
 
     float angle = renderData.z;
-    float2 size = renderData.xy;
+    float2 size = renderData.xy * SizeFactor;
     float3 rotatedCorner = ComputeRotatedCorner(cornerIndex.x, angle, size);
     positionXy = Corners[cornerIndex.x];
 
@@ -97,6 +106,14 @@ float computeCircularAlpha (float2 position) {
         return 1;
 }
 
+float4 readBitmap (float2 texCoord) {
+    [branch]
+    if (BitmapBilinear)
+        return tex2D(BitmapSampler, texCoord);
+    else
+        return tex2D(BitmapPointSampler, texCoord);
+}
+
 void PS_Texture (
     in  float4 color      : COLOR0,
     in  float2 texCoord   : TEXCOORD0,
@@ -106,7 +123,7 @@ void PS_Texture (
     // FIXME
     result = color;    
     if (color.a > (1 / 512)) {
-        float4 texColor = tex2D(BitmapSampler, texCoord);
+        float4 texColor = readBitmap(texCoord);
         result *= texColor;
         result *= GlobalColor;
     }

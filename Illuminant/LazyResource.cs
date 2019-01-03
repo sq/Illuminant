@@ -8,7 +8,7 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace Squared.Illuminant {
     [Serializable]
-    public class LazyResource<T> : ISerializable 
+    public class LazyResource<T> : ISerializable, ICloneable 
         where T : GraphicsResource {
 
         public string Name;
@@ -61,6 +61,11 @@ namespace Squared.Illuminant {
             info.AddValue("Name", Name);
         }
 
+        public virtual object Clone () {
+            var result = new LazyResource<T>(this.Name, this.Instance);
+            return result;
+        }
+
         public static implicit operator LazyResource<T> (T instance) {
             return new LazyResource<T>(instance);
         }
@@ -105,6 +110,11 @@ namespace Squared.Illuminant {
 
         internal NullableLazyResource (SerializationInfo info, StreamingContext context) {
             Name = (string)info.GetValue("Name", typeof(string));
+        }
+
+        public override object Clone () {
+            var result = new NullableLazyResource<T>(this.Name, this.Instance);
+            return result;
         }
 
         public static implicit operator NullableLazyResource<T> (T instance) {

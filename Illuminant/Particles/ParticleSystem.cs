@@ -1111,20 +1111,41 @@ namespace Squared.Illuminant.Particles {
                     // FIXME: deltaTime
                     SetSystemUniforms(m, 0);
 
+                    var tex = appearance?.Texture?.Instance;
+                    var texSize = (tex != null)
+                        ? new Vector2(tex.Width, tex.Height)
+                        : Vector2.One;
+
                     // TODO: transform arg
                     var bt = p["BitmapTexture"];
                     if (bt != null) {
-                        bt.SetValue(appearance.Texture);
-                        p["BitmapTextureRegion"].SetValue(new Vector4(
-                            appearance.Region.TopLeft, 
-                            appearance.Region.BottomRight.X, 
-                            appearance.Region.BottomRight.Y
-                        ));
+                        bt.SetValue(tex);
+                        if (tex != null) {
+                            // var offset = new Vector2(-0.5f) / texSize;
+                            var offset = Vector2.Zero;
+                            p["BitmapTextureRegion"].SetValue(new Vector4(
+                                appearance.Region.TopLeft + offset, 
+                                appearance.Region.BottomRight.X + offset.X, 
+                                appearance.Region.BottomRight.Y + offset.Y
+                            ));
+                        }
+                    }
+
+                    var f = p["BitmapBilinear"];
+                    if (f != null)
+                        f.SetValue(appearance.Bilinear);
+
+                    var sf = p["SizeFactor"];
+                    if (sf != null) {
+                        if (tex != null)
+                            sf.SetValue(texSize * 0.5f);
+                        else
+                            sf.SetValue(Vector2.One);
                     }
 
                     MaybeSetAnimationRateParameter(p, appearance);
 
-                    var sf = p["StippleFactor"];
+                    sf = p["StippleFactor"];
                     if (sf != null)
                         sf.SetValue(overrideStippleFactor.GetValueOrDefault(Configuration.StippleFactor));
 
@@ -1304,6 +1325,16 @@ namespace Squared.Illuminant.Particles {
         /// Applies a gamma curve to the opacity of circular particles
         /// </summary>
         public float RoundingPower = 0.8f;
+
+        /// <summary>
+        /// Renders textured particles with bilinear filtering.
+        /// </summary>
+        public bool Bilinear = true;
+
+        /// <summary>
+        /// If true, the size of particles is relative to the size of their sprite texture.
+        /// </summary>
+        public bool RelativeSize = true;
     }
 
     public class ParticleColorLifeRamp {
