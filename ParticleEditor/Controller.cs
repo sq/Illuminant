@@ -23,7 +23,7 @@ namespace ParticleEditor {
     public class Controller {
         internal class PositionPropertyInfo {
             public object Instance;
-            public string Key;
+            public string Key, DisplayName;
             public Vector2? CurrentValue;
             public Vector2? NewValue;
         }
@@ -244,7 +244,7 @@ namespace ParticleEditor {
                     drawPos = currentPos.Value;
                     drawPos.X += 4;
                     drawPos.Y -= Game.UI.LineHeight * scale;
-                    ir.DrawString(Game.Font, SelectedProperty.Key, drawPos, material: Game.WorldSpaceTextMaterial, scale: scale);
+                    ir.DrawString(Game.Font, SelectedProperty.DisplayName, drawPos, material: Game.WorldSpaceTextMaterial, scale: scale);
                     DrawCross(ref ir, currentPos.Value, 1.0f, 12);
                 }
 

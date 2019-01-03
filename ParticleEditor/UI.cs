@@ -17,6 +17,15 @@ namespace ParticleEditor {
     public partial class PropertyEditor {
         private int NextMatrixIndex;
 
+        private static Type[] ValidVariableTypes = new[] {
+            typeof(float),
+            typeof(Vector2),
+            typeof(Vector3),
+            typeof(Vector4),
+            typeof(Squared.Illuminant.Configuration.DynamicMatrix)
+        };
+        private string[] ValidVariableTypeNames = (from ct in ValidVariableTypes select ct.Name).ToArray();
+
         public int SidePanelWidth {
             get {
                 var w = FrameBufferWidth;
@@ -30,7 +39,7 @@ namespace ParticleEditor {
         internal unsafe void UIScene () {
             var ctx = Nuklear.Context;
             NextMatrixIndex = 0;
-            CurrentObjectName = null;
+            NameStack.Clear();
             
             using (var wnd = Nuklear.Window(
                 "SidePanel",
@@ -114,14 +123,6 @@ namespace ParticleEditor {
             // }
         }
 
-        private static Type[] ValidVariableTypes = new[] {
-            typeof(float),
-            typeof(Vector3),
-            typeof(Vector4),
-            typeof(Squared.Illuminant.Configuration.DynamicMatrix)
-        };
-        private string[] ValidVariableTypeNames = (from ct in ValidVariableTypes select ct.Name).ToArray();
-
         private unsafe void RenderVariableList () {
             var ctx = Nuklear.Context;
             var state = Controller.CurrentState;
@@ -177,9 +178,16 @@ namespace ParticleEditor {
                         changed = true;
                     }
                 }
+
+                NameStack.Clear();
+                if (p.ValueType.Name.Contains("Matrix"))
+                    NameStack.Push(newName);
+
                 RenderParameter(null, Model.NamedVariables, ref changed, newName, null, ref p, false);
                 if (changed)
                     Model.NamedVariables[newName] = p;
+
+                NameStack.Clear();
             }
         }
 
@@ -222,7 +230,8 @@ namespace ParticleEditor {
 
             Nuke.nk_layout_row_dynamic(ctx, LineHeight + 3, 1);
             Nuklear.Textbox(ref s.Model.Name, "System Name");
-            CurrentObjectName = s.Model.Name;
+            NameStack.Clear();
+            NameStack.Push(s.Model.Name);
 
             Nuke.nk_layout_row_dynamic(ctx, LineHeight + 3, 2);
             Nuklear.Property("#Draw Order", ref s.Model.DrawOrder, -1, Model.Systems.Count + 1, 1, 0.5f);
@@ -278,7 +287,9 @@ namespace ParticleEditor {
                 Nuke.nk_layout_row_dynamic(ctx, LineHeight + 3, 2);
 
                 Nuklear.Textbox(ref xform.Model.Name, "Transform Name");
-                CurrentObjectName = xform.Model.Name;
+                NameStack.Clear();
+                NameStack.Push(Controller.SelectedSystem.Model.Name);
+                NameStack.Push(xform.Model.Name);
 
                 if (Nuklear.Property("#Update Order", ref xform.Model.UpdateOrder, -1, Controller.SelectedSystem.Transforms.Count + 1, 1, 0.5f))
                     TransformSortRequired = true;
@@ -302,6 +313,8 @@ namespace ParticleEditor {
                     }
                     RenderPropertyGrid(xform.Instance, TransformProperties, null);
                 }
+
+                NameStack.Pop();
             }
         }
 

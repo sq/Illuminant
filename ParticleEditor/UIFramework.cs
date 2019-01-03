@@ -113,7 +113,7 @@ namespace ParticleEditor {
         private List<Type> TransformTypes = GetTransformTypes().ToList();
 
         internal KeyboardInput KeyboardInputHandler;
-        internal string CurrentObjectName;
+        internal Stack<string> NameStack = new Stack<string>();
 
         public readonly ParticleEditor Game;
 
@@ -378,7 +378,8 @@ namespace ParticleEditor {
             var result = new Controller.PositionPropertyInfo {
                 Instance = instance,
                 Key = key,
-                CurrentValue = value
+                CurrentValue = value,
+                DisplayName = PickName(key)
             };
             Controller.SelectedProperty = Controller.NewSelectedProperty = result;
             return result;
@@ -719,13 +720,32 @@ namespace ParticleEditor {
             if (cpi.IsGetItem)
                 return false;
 
-            bool changed = false, b;
-            var ctx = Nuklear.Context;
             var actualName = cpi.Name;
 
             var value = cpi.Getter(instance);
-
             var valueType = cpi.Info.Type ?? cpi.Type.Name;
+
+            try {
+                NameStack.Push(actualName);
+
+                return RenderPropertyInner(
+                    cache, cpi, instance, parentType, prefix,
+                    valueType, actualName, value
+                );
+            } finally {
+                NameStack.Pop();
+            }
+        }
+
+
+        private unsafe bool RenderPropertyInner (
+            PropertyGridCache cache,
+            CachedPropertyInfo cpi,
+            object instance, string parentType, string prefix,
+            string valueType, string actualName, object value
+        ) {
+            var ctx = Nuklear.Context;
+            bool changed = false, b;
 
             if (GenericObjectTypes.Contains(valueType))
                 return RenderGenericObjectProperty(cache, cpi, instance, value, actualName);
@@ -930,6 +950,10 @@ namespace ParticleEditor {
             return Nuklear.Button("∑", tooltip: "Use bezier curve");
         }
 
+        private string PickName (string suffix) {
+            return string.Join(".", NameStack.Where(n => !string.IsNullOrWhiteSpace(n)).Reverse().Concat(new[] { suffix }).ToArray());
+        }
+
         private unsafe bool RenderParameter (CachedPropertyInfo cpi, object instance, ref bool changed, string actualName, string parentType, ref IParameter p, bool allowReferences) {
             var valueType = p.ValueType;
             var isConstant = p.IsConstant;
@@ -977,7 +1001,7 @@ namespace ParticleEditor {
                 }
                 if (ShowNewVariableButton()) {
                     changed = true;
-                    p.Name = Controller.AddVariable(valueType, CurrentObjectName != null ? CurrentObjectName + "." + actualName : actualName);
+                    p.Name = Controller.AddVariable(valueType, PickName(actualName));
                     // Copy original constant
                     var v = Model.NamedVariables[p.Name];
                     v.Constant = p.Constant;
@@ -1087,7 +1111,7 @@ namespace ParticleEditor {
                         if (ShowNewVariableButton()) {
                             changed = true;
                             p = p.ToReference();
-                            p.Name = Controller.AddVariable(valueType, CurrentObjectName != null ? CurrentObjectName + "." + actualName : actualName);
+                            p.Name = Controller.AddVariable(valueType, PickName(actualName));
                             // Copy original constant
                             var v = Model.NamedVariables[p.Name];
                             v.Constant = p.Constant;
