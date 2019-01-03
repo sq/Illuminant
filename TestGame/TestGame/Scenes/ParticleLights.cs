@@ -268,14 +268,14 @@ namespace TestGame.Scenes {
         void SetupParticleSystem () {
             var sz = new Vector3(Width, Height, 0);
             var fireball = Game.TextureLoader.Load("fireball");
-            var fireballRect = fireball.BoundsFromRectangle(new Rectangle(0, 0, 34, 21));
+            var fireballRect = new Rectangle(0, 0, 34, 21);
 
             System = new ParticleSystem(
                 Engine,
                 new ParticleSystemConfiguration() {
                     Appearance = {
                         Texture = fireball,
-                        Region = fireballRect,
+                        Rectangle = fireballRect,
                         AnimationRate = new Vector2(1 / 3f, 0),
                         RelativeSize = false
                     },

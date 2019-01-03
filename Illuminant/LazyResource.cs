@@ -53,6 +53,12 @@ namespace Squared.Illuminant {
                 throw new ResourceNotLoadedException("No resource loader for type " + typeof(T).Name);
         }
 
+        public bool IsInitialized {
+            get {
+                return (Instance != null) && !Instance.IsDisposed;
+            }
+        }
+
         internal LazyResource (SerializationInfo info, StreamingContext context) {
             Name = (string)info.GetValue("Name", typeof(string));
         }

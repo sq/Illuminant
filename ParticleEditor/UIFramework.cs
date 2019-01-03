@@ -457,8 +457,10 @@ namespace ParticleEditor {
                 if (!_v2.HasValue)
                     canSelect = false;
 
-                if (!canSelect)
+                if (!canSelect) {
+                    Nuklear.Label(actualName ?? cpi?.Name);
                     return false;
+                }
 
                 var v2 = _v2.Value;
 
@@ -494,6 +496,9 @@ namespace ParticleEditor {
         }
 
         private Vector2? GetV2FromValue (object value, string typeName) {
+            if (value == null)
+                return null;
+
             switch (typeName) {
                 case "Vector2":
                     return (Vector2)value;
@@ -828,7 +833,11 @@ namespace ParticleEditor {
                 var isNull = value == null;
                 if (isNull) {
                     if (Nuklear.Button("Create", tooltip: cpi.Summary)) {
-                        value = Activator.CreateInstance(cpi.Type);
+                        var gdv = cpi?.Info.GetDefaultValue;
+                        if (gdv != null)
+                            value = gdv(instance);
+                        else
+                            value = Activator.CreateInstance(cpi.Type);
                         cpi.Setter(instance, value);
                         changed = true;
                     }
@@ -1489,7 +1498,7 @@ namespace ParticleEditor {
         ) {
             var ctx = Nuklear.Context;
             var value = (NullableLazyResource<Texture2D>)_value;
-            var hasValue = (value != null) && (value.Name != null) && (value.Instance != null);
+            var hasValue = (value != null) && value.IsInitialized;
             Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
             if (Nuklear.Button("Select Image")) {
                 Controller.SelectTexture(cpi, instance, value);

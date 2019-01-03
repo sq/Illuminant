@@ -270,6 +270,8 @@ namespace Squared.Illuminant.Particles {
                 var appearance = System.Configuration.Appearance;
 
                 var tex = appearance?.Texture?.Instance;
+                if (tex.IsDisposed)
+                    tex = null;
                 var texSize = (tex != null)
                     ? new Vector2(tex.Width, tex.Height)
                     : Vector2.One;
@@ -280,11 +282,11 @@ namespace Squared.Illuminant.Particles {
                     bt.SetValue(tex);
                     if (tex != null) {
                         // var offset = new Vector2(-0.5f) / texSize;
-                        var offset = Vector2.Zero;
+                        var offset = appearance.OffsetPx / texSize;
+                        var size = appearance.SizePx.GetValueOrDefault(texSize) / texSize;
                         p["BitmapTextureRegion"].SetValue(new Vector4(
-                            appearance.Region.TopLeft + offset, 
-                            appearance.Region.BottomRight.X + offset.X, 
-                            appearance.Region.BottomRight.Y + offset.Y
+                            offset.X, offset.Y, 
+                            offset.X + size.X, offset.Y + size.Y
                         ));
                     }
                 }
@@ -295,9 +297,10 @@ namespace Squared.Illuminant.Particles {
 
                 var sf = p["SizeFactor"];
                 if (sf != null) {
-                    if ((tex != null) && appearance.RelativeSize)
-                        sf.SetValue(texSize * 0.5f);
-                    else
+                    if ((tex != null) && appearance.RelativeSize) {
+                        var frameTexSize = appearance.SizePx.GetValueOrDefault(texSize) * 0.5f;
+                        sf.SetValue(frameTexSize);
+                    } else
                         sf.SetValue(Vector2.One);
                 }
 
@@ -1233,56 +1236,22 @@ namespace Squared.Illuminant.Particles {
     }
 
     public class ParticleAppearance {
-        private Bounds _Region = Bounds.Unit;
-
         /// <summary>
         /// Configures the sprite used to render each particle.
         /// If null, the particle will be a solid-color quad
         /// </summary>
         public NullableLazyResource<Texture2D> Texture = new NullableLazyResource<Texture2D>();
-        /// <summary>
-        /// Configures the region of the texture used by the particle. If you specify a subregion the region
-        ///  will scroll as the particle animates.
-        /// </summary>
-        public Bounds Region {
-            get {
-                return _Region;
-            }
-            set {
-                _Region = value;
-            }
-        }
-        /// <summary>
-        /// Equivalent to Region, but in pixel units. A texture must currently be set.
-        /// </summary>
-        public Bounds? RegionPx {
-            get {
-                var tex = Texture?.Instance;
-                if (tex != null) {
-                    var sz = new Vector2(tex.Width, tex.Height);
-                    var result = _Region;
-                    result.TopLeft *= sz;
-                    result.BottomRight *= sz;
-                    return result;
-                } else
-                    return null;
-            }
-            set {
-                var tex = Texture?.Instance;
-                if (tex == null)
-                    return;
 
-                if (value == null)
-                    _Region = Bounds.Unit;
-                else {
-                    var b = value.Value;
-                    var sz = new Vector2(tex.Width, tex.Height);
-                    b.TopLeft /= sz;
-                    b.BottomRight /= sz;
-                    _Region = b;
-                }
-            }
-        }
+        /// <summary>
+        /// The offset into the texture at which the first frame of the sprite's animation begins.
+        /// </summary>
+        public Vector2 OffsetPx;
+
+        /// <summary>
+        /// The size of the section of the texture used by the particle (the whole texture is used by default).
+        /// </summary>
+        public Vector2? SizePx;
+
         /// <summary>
         /// Animates through the sprite texture based on the particle's life value, if set
         /// Smaller values will result in slower animation. Zero turns off animation.
@@ -1308,6 +1277,13 @@ namespace Squared.Illuminant.Particles {
         /// If true, the size of particles is relative to the size of their sprite texture.
         /// </summary>
         public bool RelativeSize = true;
+
+        public Rectangle Rectangle {
+            set {
+                OffsetPx = new Vector2(value.X, value.Y);
+                SizePx = new Vector2(value.Width, value.Height);
+            }
+        }
     }
 
     public class ParticleColorLifeRamp {

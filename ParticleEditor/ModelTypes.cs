@@ -49,7 +49,14 @@ namespace ParticleEditor {
                     "ParticleAppearance", new Dictionary<string, ModelTypeInfo> {
                         {"AnimationRate", new ModelTypeInfo { Min = -100, Max = 100 } },
                         {"Bounds", new ModelTypeInfo { Min = 0, Max = 1 } },
-                        {"RoundingPower", new ModelTypeInfo { Min = 0.05f, Max = 1.25f } }
+                        {"RoundingPower", new ModelTypeInfo { Min = 0.05f, Max = 1.25f } },
+                        {"SizePx", new ModelTypeInfo { Min = 0, GetDefaultValue = (o) => {
+                            var pa = (Squared.Illuminant.Particles.ParticleAppearance)o;
+                            if (pa.Texture.IsInitialized)
+                                return new Vector2(pa.Texture.Instance.Width, pa.Texture.Instance.Height);
+                            else
+                                return null;
+                        } } }
                     }
                 },
                 {
