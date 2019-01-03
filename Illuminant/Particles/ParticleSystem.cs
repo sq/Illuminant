@@ -291,6 +291,12 @@ namespace Squared.Illuminant.Particles {
                     }
                 }
 
+                var cfr = p["ColumnFromVelocity"];
+                if (cfr != null) {
+                    cfr.SetValue(appearance.ColumnFromVelocity);
+                    p["RowFromVelocity"].SetValue(appearance.RowFromVelocity);
+                }
+
                 var f = p["BitmapBilinear"];
                 if (f != null)
                     f.SetValue(appearance.Bilinear);
@@ -1278,6 +1284,15 @@ namespace Squared.Illuminant.Particles {
         /// </summary>
         public bool RelativeSize = true;
 
+        /// <summary>
+        /// If true, the texture is treated as a spritesheet with each row representing a different angle of rotation.
+        /// </summary>
+        public bool RowFromVelocity = false;
+        /// <summary>
+        /// If true, the texture is treated as a spritesheet with each column representing a different angle of rotation.
+        /// </summary>
+        public bool ColumnFromVelocity = false;
+
         public Rectangle Rectangle {
             set {
                 OffsetPx = new Vector2(value.X, value.Y);
@@ -1385,11 +1400,6 @@ namespace Squared.Illuminant.Particles {
         public Vector2       Size = Vector2.One;
 
         /// <summary>
-        /// If set, particles will rotate based on their direction of movement
-        /// </summary>
-        public bool          RotationFromVelocity;
-
-        /// <summary>
         /// Multiplies the particle's size, producing a shrink or grow based on the particle's life
         /// </summary>
         public BezierF       SizeFromLife = null;
@@ -1429,6 +1439,11 @@ namespace Squared.Illuminant.Particles {
         /// </summary>
         [NonSerialized]
         public float         StippleFactor = 1.0f;
+
+        /// <summary>
+        /// If set, particles will rotate based on their direction of movement
+        /// </summary>
+        public bool          RotationFromVelocity;
 
         /// <summary>
         /// Makes particles spin based on their life value

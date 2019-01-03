@@ -3,7 +3,7 @@
 // #include "Bezier.fxh"
 #include "ParticleCommon.fxh"
 
-uniform bool   Rounded, BitmapBilinear;
+uniform bool   Rounded, BitmapBilinear, ColumnFromVelocity, RowFromVelocity;
 uniform float2 SizeFactor;
 uniform float  RoundingPower;
 uniform float4 GlobalColor;
@@ -39,7 +39,6 @@ inline float3 ComputeRotatedCorner (
 ) {    
     float3 corner = Corners[cornerIndex.x] * float3(size, 1), sinCos;
 
-    angle = fmod(angle, 2 * PI);
     sincos(angle, sinCos.x, sinCos.y);
 
     return float3(
@@ -70,8 +69,10 @@ void VS_PosVelAttr(
     }
 
     float angle = renderData.y;
+    angle = fmod(angle, 2 * PI);
+
     float2 size = renderData.x * System.TexelAndSize.zw * SizeFactor;
-    float3 rotatedCorner = ComputeRotatedCorner(cornerIndex.x, angle, size);
+    float3 rotatedCorner = ComputeRotatedCorner(cornerIndex.x, angle * getVelocityRotation(), size);
     positionXy = Corners[cornerIndex.x];
 
     // HACK: Discard Z
@@ -89,12 +90,23 @@ void VS_PosVelAttr(
 
     float2 texSize = (BitmapTextureRegion.zw - BitmapTextureRegion.xy);
     float2 frameCountXy = floor(1.0 / texSize);
-    float2 frameIndexXy = floor(
-        (getAnimationRate() * position.w) % frameCountXy
-    );
-    frameIndexXy.y = clamp(frameIndexXy.y + floor(renderData.w), 0, frameCountXy.y - 1);
+    float2 frameIndexXy = floor(getAnimationRate() * position.w);
 
-    texCoord += (frameIndexXy * texSize);
+    float  frameAngle = angle;
+    float2 maxAngleXy = (2 * PI) / frameCountXy;
+    float2 frameFromVelocity = round(frameAngle / maxAngleXy);
+
+    frameIndexXy.y += floor(renderData.w);
+    if (ColumnFromVelocity)
+        frameIndexXy.x += frameFromVelocity.x;
+    if (RowFromVelocity)
+        frameIndexXy.y += frameFromVelocity.y;
+
+    frameIndexXy.x = max(frameIndexXy.x, 0) % frameCountXy.x;
+    frameIndexXy.y = clamp(frameIndexXy.y, 0, frameCountXy.y - 1);
+
+    float2 frameTexCoord = frameIndexXy * texSize;
+    texCoord += frameTexCoord;
 }
 
 float computeCircularAlpha (float2 position) {

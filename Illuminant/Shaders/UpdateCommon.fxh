@@ -65,11 +65,15 @@ float4 getRampedColorForLifeValueAndIndex (float life, float velocityLength, flo
 
 float getRotationForVelocity (float3 velocity) {
     float2 absvel = abs(velocity.xy + float2(0, velocity.z * -getZToY()));
+
     float angle;
     if ((absvel.x < 0.01) && (absvel.y < 0.01))
         return 0;
     
-    return (atan2(velocity.y, velocity.x) + PI) * getVelocityRotation();
+    float result = atan2(velocity.y, velocity.x);
+    if (result < 0)
+        result += 2 * PI;
+    return result;
 }
 
 void computeRenderData (
