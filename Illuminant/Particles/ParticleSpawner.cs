@@ -38,10 +38,13 @@ namespace Squared.Illuminant.Particles.Transforms {
         /// </summary>
         public float AlphaDiscardThreshold = 1;
 
-        public Formula3 Position = Formula3.UnitNormal(),
-            Velocity = Formula3.UnitNormal();
-        public Formula1 Life = Formula1.One(),
-            Category = Formula1.Zero();
+        public Formula3 Position = Formula3.UnitNormal();
+        public Formula3 Velocity = Formula3.UnitNormal();
+        public Formula1 Life = Formula1.One();
+        /// <summary>
+        /// The category of the particle (controls which row of the texture is used, if applicable)
+        /// </summary>
+        public Formula1 Category = Formula1.Zero();
         public Formula4 Color = Formula4.One();
 
         /// <summary>
