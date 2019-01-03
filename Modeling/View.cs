@@ -101,16 +101,16 @@ namespace Squared.Illuminant.Modeling {
         protected void Update (IBatchContainer container, int layer, long deltaTimeTicks) {
             using (var g = BatchGroup.New(container, layer)) {
                 int i = 0;
-                foreach (var s in Systems.OrderBy(s => s.Model.UpdateOrder))
-                    s.Instance.Update(g, i++);
+                foreach (var s in Systems)
+                    s.Instance.Update(g, (s.Model.UpdateOrder << 16) + i++);
             }
         }
 
         protected void Draw (IBatchContainer container, int layer) {
             using (var g = BatchGroup.New(container, layer)) {
                 int i = 0;
-                foreach (var s in Systems.OrderBy(s => s.Model.DrawOrder))
-                    s.Instance.Render(g, i++, blendState: BlendState.AlphaBlend);
+                foreach (var s in Systems)
+                    s.Instance.Render(g, (s.Model.DrawOrder << 16) + i++, blendState: s.Model.BlendState ?? BlendState.AlphaBlend);
             }
         }
 

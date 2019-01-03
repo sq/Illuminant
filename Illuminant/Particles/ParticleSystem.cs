@@ -248,6 +248,106 @@ namespace Squared.Illuminant.Particles {
             }
         }
 
+        private class RenderHandler {
+            public readonly ParticleSystem System;
+            public readonly Action<DeviceManager, object> BeforeDraw, AfterDraw;
+
+            public float? OverrideStippleFactor { get; internal set; }
+
+            public RenderHandler (ParticleSystem system) {
+                System = system;
+                BeforeDraw = _BeforeDraw;
+                AfterDraw = _AfterDraw;
+            }
+
+            private void _BeforeDraw (DeviceManager dm, object _m) {
+                var m = (Material)_m;
+                var e = m.Effect;
+                var p = e.Parameters;
+
+                // FIXME: deltaTime
+                System.SetSystemUniforms(m, 0);
+                var appearance = System.Configuration.Appearance;
+
+                var tex = appearance?.Texture?.Instance;
+                var texSize = (tex != null)
+                    ? new Vector2(tex.Width, tex.Height)
+                    : Vector2.One;
+
+                // TODO: transform arg
+                var bt = p["BitmapTexture"];
+                if (bt != null) {
+                    bt.SetValue(tex);
+                    if (tex != null) {
+                        // var offset = new Vector2(-0.5f) / texSize;
+                        var offset = Vector2.Zero;
+                        p["BitmapTextureRegion"].SetValue(new Vector4(
+                            appearance.Region.TopLeft + offset, 
+                            appearance.Region.BottomRight.X + offset.X, 
+                            appearance.Region.BottomRight.Y + offset.Y
+                        ));
+                    }
+                }
+
+                var f = p["BitmapBilinear"];
+                if (f != null)
+                    f.SetValue(appearance.Bilinear);
+
+                var sf = p["SizeFactor"];
+                if (sf != null) {
+                    if ((tex != null) && appearance.RelativeSize)
+                        sf.SetValue(texSize * 0.5f);
+                    else
+                        sf.SetValue(Vector2.One);
+                }
+
+                System.MaybeSetAnimationRateParameter(p, appearance);
+
+                sf = p["StippleFactor"];
+                if (sf != null)
+                    sf.SetValue(OverrideStippleFactor.GetValueOrDefault(System.Configuration.StippleFactor));
+
+                var pc = p["Rounded"];
+                if (pc != null)
+                    pc.SetValue((appearance?.Rounded).GetValueOrDefault(false));
+
+                var cp = p["RoundingPower"];
+                if (cp != null)
+                    cp.SetValue((appearance?.RoundingPower).GetValueOrDefault(2));
+
+                var gc = p["GlobalColor"];
+                if (gc != null) {
+                    var gcolor = System.Configuration.Color.Global;
+                    gcolor.X *= gcolor.W;
+                    gcolor.Y *= gcolor.W;
+                    gcolor.Z *= gcolor.W;
+                    gc.SetValue(gcolor);
+                }
+
+                System.MaybeSetLifeRampParameters(p);
+            }
+
+            private void _AfterDraw (DeviceManager dm, object _m) {
+                var m = (Material)_m;
+                var e = m.Effect;
+                var p = e.Parameters;
+                p["PositionTexture"].SetValue((Texture2D)null);
+                p["VelocityTexture"].SetValue((Texture2D)null);
+                p["AttributeTexture"].SetValue((Texture2D)null);
+                var rt = p["LifeRampTexture"];
+                if (rt != null)
+                    rt.SetValue((Texture2D)null);
+                var bt = p["BitmapTexture"];
+                if (bt != null)
+                    bt.SetValue((Texture2D)null);
+                // ughhhhhhhhhh
+                for (var i = 0; i < 4; i++)
+                    dm.Device.VertexTextures[i] = null;
+                for (var i = 0; i < 16; i++)
+                    dm.Device.Textures[i] = null;
+            }
+        }
+
         public bool IsDisposed { get; private set; }
         public int LiveCount { get; private set; }
 
@@ -255,6 +355,8 @@ namespace Squared.Illuminant.Particles {
         public readonly ParticleSystemConfiguration        Configuration;
         public readonly List<Transforms.ParticleTransform> Transforms = 
             new List<Transforms.ParticleTransform>();
+
+        private readonly RenderHandler Renderer;
 
         private  readonly List<Chunk> NewUserChunks = new List<Chunk>();
         internal readonly List<Chunk> Chunks = new List<Chunk>();
@@ -295,6 +397,7 @@ namespace Squared.Illuminant.Particles {
             Engine = engine;
             Configuration = configuration;
             LiveCount = 0;
+            Renderer = new RenderHandler(this);
 
             engine.Systems.Add(this);
 
@@ -498,8 +601,8 @@ namespace Squared.Illuminant.Particles {
             RunTransform(
                 chunk, container, ref layer, m,
                 startedWhen, true,
-                setParameters, deltaTimeSeconds,
-                needClear, now, false,
+                spawner.Handler.BeforeDraw, spawner.Handler.AfterDraw, 
+                deltaTimeSeconds, needClear, now, false,
                 sourceChunk
             );
         }
@@ -507,7 +610,8 @@ namespace Squared.Illuminant.Particles {
         private void RunTransform (
             Chunk chunk, IBatchContainer container, ref int layer, Material m,
             long startedWhen, bool isSpawning,
-            Transforms.ParameterSetter setParameters,
+            Action<DeviceManager, object> beforeDraw,
+            Action<DeviceManager, object> afterDraw,
             double deltaTimeSeconds, bool shouldClear,
             float now, bool isUpdate, Chunk sourceChunk
         ) {
@@ -538,90 +642,25 @@ namespace Squared.Illuminant.Particles {
             if (e != null)
                 RenderTrace.Marker(container, layer++, "Particle transform {0}", e.CurrentTechnique.Name);
 
+            var up = new Transforms.ParticleTransformUpdateParameters {
+                System = this,
+                Material = m,
+                Prev = prev,
+                Curr = curr,
+                IsUpdate = isUpdate,
+                IsSpawning = isSpawning,
+                ShouldClear = shouldClear,
+                Chunk = chunk,
+                SourceChunk = sourceChunk,
+                Now = now,
+                DeltaTimeSeconds = deltaTimeSeconds,
+                CurrentFrameIndex = CurrentFrameIndex
+            };
+
             using (var batch = NativeBatch.New(
                 container, layer++, m,
-                (dm, _) => {
-                    var vp = new Viewport(0, 0, Engine.Configuration.ChunkSize, Engine.Configuration.ChunkSize);
-                    if (isUpdate) {
-                        curr.Bindings4[2] = new RenderTargetBinding(chunk.RenderColor);
-                        curr.Bindings4[3] = new RenderTargetBinding(chunk.RenderData);
-                        dm.Device.SetRenderTargets(curr.Bindings4);
-                    } else if (isSpawning) {
-                        curr.Bindings3[2] = chunk.Attributes;
-                        dm.Device.SetRenderTargets(curr.Bindings3);
-                    } else {
-                        dm.Device.SetRenderTargets(curr.Bindings2);
-                    }
-                    dm.Device.Viewport = vp;
-
-                    if (e != null) {
-                        SetSystemUniforms(m, deltaTimeSeconds);
-
-                        if (setParameters != null)
-                            setParameters(Engine, p, now, CurrentFrameIndex);
-
-                        if ((prev != null) || (sourceChunk != null)) {
-                            var src = sourceChunk?.Current ?? prev;
-                            p["PositionTexture"].SetValue(src.PositionAndLife);
-                            p["VelocityTexture"].SetValue(src.Velocity);
-
-                            var at = p["AttributeTexture"];
-                            if (at != null) {
-                                if (sourceChunk != null)
-                                    at.SetValue(sourceChunk.RenderColor);
-                                else
-                                    at.SetValue(isSpawning ? null : chunk.Attributes);
-                            }
-
-                        }
-
-                        if (sourceChunk != null) {
-                            p["SourceChunkSizeAndTexel"].SetValue(new Vector3(
-                                sourceChunk.Size, 1.0f / sourceChunk.Size, 1.0f / sourceChunk.Size
-                            ));
-                        }
-
-                        var dft = p["DistanceFieldTexture"];
-                        if (dft != null)
-                            dft.SetValue(Configuration.Collision?.DistanceField.Texture);
-
-                        MaybeSetLifeRampParameters(p);
-                        MaybeSetAnimationRateParameter(p, Configuration.Appearance);
-
-                        m.Flush();
-                    }
-
-                    if (shouldClear)
-                        dm.Device.Clear(Color.Transparent);
-                },
-                (dm, _) => {
-                    // XNA effectparameter gets confused about whether a value is set or not, so we do this
-                    //  to ensure it always re-sets the texture parameter
-                    if (e != null) {
-                        p["PositionTexture"].SetValue((Texture2D)null);
-                        p["VelocityTexture"].SetValue((Texture2D)null);
-
-                        var lr = p["LifeRampTexture"];
-                        if (lr != null)
-                            lr.SetValue((Texture2D)null);
-
-                        var rt = p["LowPrecisionRandomnessTexture"];
-                        if (rt != null)
-                            rt.SetValue((Texture2D)null);
-
-                        rt = p["RandomnessTexture"];
-                        if (rt != null)
-                            rt.SetValue((Texture2D)null);
-
-                        var at = p["AttributeTexture"];
-                        if (at != null)
-                            at.SetValue((Texture2D)null);
-
-                        var dft = p["DistanceFieldTexture"];
-                        if (dft != null)
-                            dft.SetValue((Texture2D)null);
-                    }
-                }
+                beforeDraw,
+                afterDraw, up
             ))  {
                 if (e != null)
                     batch.Add(new NativeDrawCall(
@@ -775,7 +814,7 @@ namespace Squared.Illuminant.Particles {
             Engine.Coordinator.DisposeResource(chunk);
         }
 
-        private void SetSystemUniforms (Material m, double deltaTimeSeconds) {
+        internal void SetSystemUniforms (Material m, double deltaTimeSeconds) {
             ClampedBezier4 colorFromLife, colorFromVelocity;
             ClampedBezier2 sizeFromLife, sizeFromVelocity;
 
@@ -914,7 +953,7 @@ namespace Squared.Illuminant.Particles {
 
                 RunTransform(
                     chunk, group, ref i, it.GetMaterial(Engine.ParticleMaterials),
-                    startedWhen, false, it.SetParameters,
+                    startedWhen, false, it.BeforeDraw, it.AfterDraw,
                     actualDeltaTimeSeconds, isFirstXform, now, false, null
                 );
 
@@ -929,7 +968,7 @@ namespace Squared.Illuminant.Particles {
                     RunTransform(
                         chunk, group, ref i, pm.Erase,
                         startedWhen, false,
-                        null, actualDeltaTimeSeconds, 
+                        null, null, actualDeltaTimeSeconds, 
                         true, now, true, null
                     );
                 }
@@ -944,15 +983,15 @@ namespace Squared.Illuminant.Particles {
                 RunTransform(
                     chunk, group, ref i, pm.UpdateWithDistanceField,
                     startedWhen, false,
-                    (Engine, p, _now, frameIndex) => {
+                    (dm, _) => {
                         var dfu = new Uniforms.DistanceField(Configuration.Collision.DistanceField, Configuration.Collision.DistanceFieldMaximumZ.Value);
                         pm.MaterialSet.TrySetBoundUniform(pm.UpdateWithDistanceField, "DistanceField", ref dfu);
-                    }, actualDeltaTimeSeconds, true, now, true, null
+                    }, null, actualDeltaTimeSeconds, true, now, true, null
                 );
             } else {
                 RunTransform(
                     chunk, group, ref i, pm.UpdatePositions,
-                    startedWhen, false, null, 
+                    startedWhen, false, null, null,
                     actualDeltaTimeSeconds, true, now, true, null
                 );
             }
@@ -1047,7 +1086,7 @@ namespace Squared.Illuminant.Particles {
             }
         }
 
-        private void MaybeSetLifeRampParameters (EffectParameterCollection p) {
+        internal void MaybeSetLifeRampParameters (EffectParameterCollection p) {
             var rt = p["LifeRampTexture"];
             if (rt == null)
                 return;
@@ -1102,6 +1141,8 @@ namespace Squared.Illuminant.Particles {
                 }
             }
 
+            // FIXME: Race condition
+            Renderer.OverrideStippleFactor = overrideStippleFactor;
             var m = Engine.Materials.Get(
                 material, blendState: blendState
             );
@@ -1109,83 +1150,7 @@ namespace Squared.Illuminant.Particles {
             var p = e.Parameters;
             using (var group = BatchGroup.New(
                 container, layer,
-                (dm, _) => {
-                    // FIXME: deltaTime
-                    SetSystemUniforms(m, 0);
-
-                    var tex = appearance?.Texture?.Instance;
-                    var texSize = (tex != null)
-                        ? new Vector2(tex.Width, tex.Height)
-                        : Vector2.One;
-
-                    // TODO: transform arg
-                    var bt = p["BitmapTexture"];
-                    if (bt != null) {
-                        bt.SetValue(tex);
-                        if (tex != null) {
-                            // var offset = new Vector2(-0.5f) / texSize;
-                            var offset = Vector2.Zero;
-                            p["BitmapTextureRegion"].SetValue(new Vector4(
-                                appearance.Region.TopLeft + offset, 
-                                appearance.Region.BottomRight.X + offset.X, 
-                                appearance.Region.BottomRight.Y + offset.Y
-                            ));
-                        }
-                    }
-
-                    var f = p["BitmapBilinear"];
-                    if (f != null)
-                        f.SetValue(appearance.Bilinear);
-
-                    var sf = p["SizeFactor"];
-                    if (sf != null) {
-                        if ((tex != null) && appearance.RelativeSize)
-                            sf.SetValue(texSize * 0.5f);
-                        else
-                            sf.SetValue(Vector2.One);
-                    }
-
-                    MaybeSetAnimationRateParameter(p, appearance);
-
-                    sf = p["StippleFactor"];
-                    if (sf != null)
-                        sf.SetValue(overrideStippleFactor.GetValueOrDefault(Configuration.StippleFactor));
-
-                    var pc = p["Rounded"];
-                    if (pc != null)
-                        pc.SetValue((Configuration.Appearance?.Rounded).GetValueOrDefault(false));
-
-                    var cp = p["RoundingPower"];
-                    if (cp != null)
-                        cp.SetValue((Configuration.Appearance?.RoundingPower).GetValueOrDefault(2));
-
-                    var gc = p["GlobalColor"];
-                    if (gc != null) {
-                        var gcolor = Configuration.Color.Global;
-                        gcolor.X *= gcolor.W;
-                        gcolor.Y *= gcolor.W;
-                        gcolor.Z *= gcolor.W;
-                        gc.SetValue(gcolor);
-                    }
-
-                    MaybeSetLifeRampParameters(p);
-                },
-                (dm, _) => {
-                    p["PositionTexture"].SetValue((Texture2D)null);
-                    p["VelocityTexture"].SetValue((Texture2D)null);
-                    p["AttributeTexture"].SetValue((Texture2D)null);
-                    var rt = p["LifeRampTexture"];
-                    if (rt != null)
-                        rt.SetValue((Texture2D)null);
-                    var bt = p["BitmapTexture"];
-                    if (bt != null)
-                        bt.SetValue((Texture2D)null);
-                    // ughhhhhhhhhh
-                    for (var i = 0; i < 4; i++)
-                        dm.Device.VertexTextures[i] = null;
-                    for (var i = 0; i < 16; i++)
-                        dm.Device.Textures[i] = null;
-                }
+                Renderer.BeforeDraw, Renderer.AfterDraw, m
             )) {
                 RenderTrace.Marker(group, -9999, "Rasterize {0} particle chunks", Chunks.Count);
 
@@ -1195,7 +1160,7 @@ namespace Squared.Illuminant.Particles {
             }
         }
 
-        private void MaybeSetAnimationRateParameter (EffectParameterCollection p, ParticleAppearance appearance) {
+        internal void MaybeSetAnimationRateParameter (EffectParameterCollection p, ParticleAppearance appearance) {
             var parm = p["AnimationRateAndRotationAndZToY"];
             if (parm == null)
                 return;

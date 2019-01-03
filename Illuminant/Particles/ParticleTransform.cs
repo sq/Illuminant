@@ -20,6 +20,8 @@ namespace Squared.Illuminant.Particles.Transforms {
     internal interface IParticleTransform {
         Material GetMaterial (ParticleMaterials materials);
         void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex);
+        Action<DeviceManager, object> BeforeDraw { get; }
+        Action<DeviceManager, object> AfterDraw { get; }
     }
 
     public delegate void ParameterSetter (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex);
@@ -35,8 +37,126 @@ namespace Squared.Illuminant.Particles.Transforms {
         }
     }
 
+    public class ParticleTransformUpdateParameters {
+        public ParticleSystem System;
+        public ParticleSystem.Chunk Chunk, SourceChunk;
+        internal ParticleSystem.BufferSet Prev, Curr;
+        public Material Material;
+        public bool IsUpdate, IsSpawning, ShouldClear;
+        public double DeltaTimeSeconds;
+        public float Now;
+        public int CurrentFrameIndex;
+    }
     
     public abstract class ParticleTransform : IDisposable, IParticleTransform {
+        internal class UpdateHandler {
+            public readonly ParticleTransform Transform;
+            public readonly Action<DeviceManager, object> BeforeDraw, AfterDraw;
+
+            public UpdateHandler (ParticleTransform transform) {
+                Transform = transform;
+                BeforeDraw = _BeforeDraw;
+                AfterDraw = _AfterDraw;
+            }
+
+            private void _BeforeDraw (DeviceManager dm, object _up) {
+                var up = (ParticleTransformUpdateParameters)_up;
+                var system = up.System;
+                var engine = system.Engine;
+                var m = up.Material;
+                var e = m.Effect;
+                var p = e.Parameters;
+
+                var vp = new Viewport(0, 0, engine.Configuration.ChunkSize, engine.Configuration.ChunkSize);
+                if (up.IsUpdate) {
+                    up.Curr.Bindings4[2] = new RenderTargetBinding(up.Chunk.RenderColor);
+                    up.Curr.Bindings4[3] = new RenderTargetBinding(up.Chunk.RenderData);
+                    dm.Device.SetRenderTargets(up.Curr.Bindings4);
+                } else if (up.IsSpawning) {
+                    up.Curr.Bindings3[2] = up.Chunk.Attributes;
+                    dm.Device.SetRenderTargets(up.Curr.Bindings3);
+                } else {
+                    dm.Device.SetRenderTargets(up.Curr.Bindings2);
+                }
+                dm.Device.Viewport = vp;
+
+                if (e != null) {
+                    system.SetSystemUniforms(m, up.DeltaTimeSeconds);
+
+                    Transform.SetParameters(engine, p, up.Now, up.CurrentFrameIndex);
+
+                    if ((up.Prev != null) || (up.SourceChunk != null)) {
+                        var src = up.SourceChunk?.Current ?? up.Prev;
+                        p["PositionTexture"].SetValue(src.PositionAndLife);
+                        p["VelocityTexture"].SetValue(src.Velocity);
+
+                        var at = p["AttributeTexture"];
+                        if (at != null) {
+                            if (up.SourceChunk != null)
+                                at.SetValue(up.SourceChunk.RenderColor);
+                            else
+                                at.SetValue(up.IsSpawning ? null : up.Chunk.Attributes);
+                        }
+
+                    }
+
+                    if (up.SourceChunk != null) {
+                        p["SourceChunkSizeAndTexel"].SetValue(new Vector3(
+                            up.SourceChunk.Size, 1.0f / up.SourceChunk.Size, 1.0f / up.SourceChunk.Size
+                        ));
+                    }
+
+                    var dft = p["DistanceFieldTexture"];
+                    if (dft != null)
+                        dft.SetValue(system.Configuration.Collision?.DistanceField.Texture);
+
+                    system.MaybeSetLifeRampParameters(p);
+                    system.MaybeSetAnimationRateParameter(p, system.Configuration.Appearance);
+
+                    m.Flush();
+                }
+
+                if (up.ShouldClear)
+                    dm.Device.Clear(Color.Transparent);
+            }
+
+            private void _AfterDraw (DeviceManager dm, object _up) {
+                var up = (ParticleTransformUpdateParameters)_up;
+                var system = up.System;
+                var engine = system.Engine;
+                var m = up.Material;
+                var e = m.Effect;
+                var p = e.Parameters;
+
+                // XNA effectparameter gets confused about whether a value is set or not, so we do this
+                //  to ensure it always re-sets the texture parameter
+                if (e != null) {
+                    p["PositionTexture"].SetValue((Texture2D)null);
+                    p["VelocityTexture"].SetValue((Texture2D)null);
+
+                    var lr = p["LifeRampTexture"];
+                    if (lr != null)
+                        lr.SetValue((Texture2D)null);
+
+                    var rt = p["LowPrecisionRandomnessTexture"];
+                    if (rt != null)
+                        rt.SetValue((Texture2D)null);
+
+                    rt = p["RandomnessTexture"];
+                    if (rt != null)
+                        rt.SetValue((Texture2D)null);
+
+                    var at = p["AttributeTexture"];
+                    if (at != null)
+                        at.SetValue((Texture2D)null);
+
+                    var dft = p["DistanceFieldTexture"];
+                    if (dft != null)
+                        dft.SetValue((Texture2D)null);
+                }
+            }
+        }
+
         private bool _IsActive;
 
         public bool IsActive {
@@ -53,9 +173,14 @@ namespace Squared.Illuminant.Particles.Transforms {
         }
 
         public event Action ActiveStateChanged;
+        internal readonly UpdateHandler Handler;
 
         protected abstract Material GetMaterial (ParticleMaterials materials);
         protected abstract void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex);
+
+        protected ParticleTransform () {
+            Handler = new UpdateHandler(this);
+        }
 
         Material IParticleTransform.GetMaterial (ParticleMaterials materials) {
             return GetMaterial(materials);
@@ -89,6 +214,18 @@ namespace Squared.Illuminant.Particles.Transforms {
             }
 
             return result;
+        }
+
+        Action<DeviceManager, object> IParticleTransform.BeforeDraw {
+            get {
+                return Handler.BeforeDraw;
+            }
+        }
+
+        Action<DeviceManager, object> IParticleTransform.AfterDraw {
+            get {
+                return Handler.AfterDraw;
+            }
         }
 
         public abstract bool IsValid { get; }
@@ -132,7 +269,8 @@ namespace Squared.Illuminant.Particles.Transforms {
         public FMAParameters<Vector3> Position;
         public FMAParameters<Vector3> Velocity;
 
-        public FMA () {
+        public FMA ()
+            : base () {
             Position = new FMAParameters<Vector3> {
                 Add = Vector3.Zero,
                 Multiply = Vector3.One
@@ -161,7 +299,8 @@ namespace Squared.Illuminant.Particles.Transforms {
         public float? CyclesPerSecond = 10;
         public Matrix Position, Velocity;
 
-        public MatrixMultiply () {
+        public MatrixMultiply ()
+            : base () {
             Position = Velocity = Matrix.Identity;
         }
 
@@ -203,7 +342,8 @@ namespace Squared.Illuminant.Particles.Transforms {
             : this (null) {
         }
 
-        public Noise (int? seed) {
+        public Noise (int? seed)
+            : base () {
             RNG = new MersenneTwister(seed.GetValueOrDefault(NextSeed++));
 
             Interval = IntervalUnit;

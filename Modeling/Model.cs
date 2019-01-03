@@ -12,6 +12,7 @@ using System.Runtime.Serialization;
 using System.Collections;
 using System.Reflection;
 using Squared.Illuminant.Configuration;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace Squared.Illuminant.Modeling {
     public class EngineModel {
@@ -81,6 +82,7 @@ namespace Squared.Illuminant.Modeling {
     public class SystemModel {
         public string Name;
         public int UpdateOrder, DrawOrder;
+        public BlendState BlendState;
         public ParticleSystemConfiguration Configuration;
         public readonly List<TransformModel> Transforms = new List<TransformModel>();
 
