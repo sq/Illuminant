@@ -131,7 +131,7 @@ namespace Squared.Illuminant.Particles {
                 return new RenderTarget2D(
                     device, 
                     Size, Size, false, 
-                    configuration.HighPrecision ? SurfaceFormat.Vector4 : SurfaceFormat.HalfVector4, DepthFormat.None, 
+                    SurfaceFormat.Vector4, DepthFormat.None, 
                     0, RenderTargetUsage.PreserveContents
                 );
             }
@@ -1094,7 +1094,9 @@ namespace Squared.Illuminant.Particles {
 
             if (material == null) {
                 if ((appearance.Texture != null) && (appearance.Texture.Instance != null)) {
-                    material = Engine.ParticleMaterials.AttributeColor;
+                    material = appearance.Bilinear
+                        ? Engine.ParticleMaterials.AttributeColor
+                        : Engine.ParticleMaterials.AttributeColorPoint;
                 } else {
                     material = Engine.ParticleMaterials.AttributeColorNoTexture;
                 }
@@ -1137,7 +1139,7 @@ namespace Squared.Illuminant.Particles {
 
                     var sf = p["SizeFactor"];
                     if (sf != null) {
-                        if (tex != null)
+                        if ((tex != null) && appearance.RelativeSize)
                             sf.SetValue(texSize * 0.5f);
                         else
                             sf.SetValue(Vector2.One);

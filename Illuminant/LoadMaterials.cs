@@ -345,6 +345,9 @@ namespace Squared.Illuminant.Particles {
                 DefineMaterial(ParticleMaterials.AttributeColor = new Material(
                     effects.Load("RasterizeParticleSystem"), "AttributeColor"
                 ));
+                DefineMaterial(ParticleMaterials.AttributeColorPoint = new Material(
+                    effects.Load("RasterizeParticleSystem"), "AttributeColorPoint"
+                ));
                 DefineMaterial(ParticleMaterials.AttributeColorNoTexture = new Material(
                     effects.Load("RasterizeParticleSystem"), "AttributeColorNoTexture"
                 ));

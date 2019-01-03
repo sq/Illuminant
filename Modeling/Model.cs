@@ -199,5 +199,25 @@ namespace Squared.Illuminant.Modeling {
         public NamedVariableCollection ()
             : base (StringComparer.OrdinalIgnoreCase) {
         }
+
+        public bool Set<T> (string name, ref T value)
+            where T: struct {
+            IParameter p;
+            if (!TryGetValue(name, out p))
+                return false;
+
+            if (!(p is Parameter<T>))
+                return false;
+
+            var pv = (Parameter<T>)p;
+            pv.Constant = value;
+            this[name] = pv;
+            return true;
+        }
+
+        public bool Set<T> (string name, T value)
+            where T: struct {
+            return Set(name, ref value);
+        }
     }
 }

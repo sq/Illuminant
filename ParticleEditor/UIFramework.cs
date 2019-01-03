@@ -435,25 +435,22 @@ namespace ParticleEditor {
                     typeName = value.GetType().Name;
             }
 
-            switch (typeName) {
-                case "Vector2":
-                case "Vector3":
-                case "Vector4":
-                case "Matrix":
-                    canSelect = true;
-                    break;
-            }
-
-            Vector2? _v2 = null;
-            if (cpi != null)
-                _v2 = TryGetPropertyPosition(cpi, instance);
-            if (_v2 == null)
-                _v2 = GetV2FromValue(value, typeName);
-            if (!_v2.HasValue)
-                canSelect = false;
+            canSelect = CanGetV2FromType(typeName);
 
             if (canSelect) {
+                Vector2? _v2 = null;
+                if (cpi != null)
+                    _v2 = TryGetPropertyPosition(cpi, instance);
+                if (_v2 == null)
+                    _v2 = GetV2FromValue(value, typeName);
+                if (!_v2.HasValue)
+                    canSelect = false;
+
+                if (!canSelect)
+                    return false;
+
                 var v2 = _v2.Value;
+
                 if (TickSelectableProperty(instance, actualName, ref v2)) {
                     var result = false;
                     if (cpi != null)
@@ -471,6 +468,18 @@ namespace ParticleEditor {
             }
 
             return false;
+        }
+
+        private bool CanGetV2FromType (string typeName) {
+            switch (typeName) {
+                case "Vector2":
+                case "Vector3":
+                case "Vector4":
+                case "Matrix":
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         private Vector2? GetV2FromValue (object value, string typeName) {

@@ -11,7 +11,7 @@ namespace Squared.Illuminant {
         public Material FMA, Gravity, MatrixMultiply, Noise;
         public Material Spawn, SpawnFeedback, SpawnPattern, CountLiveParticles;
 
-        public Material AttributeColor, AttributeColorNoTexture;
+        public Material AttributeColor, AttributeColorPoint, AttributeColorNoTexture;
 
         public bool IsLoaded { get; internal set; }
 

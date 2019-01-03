@@ -194,12 +194,12 @@ namespace Squared.Illuminant.Particles {
             long chunkTotal = 0;
             foreach (var s in Systems)
                 foreach (var c in s.Chunks)
-                    chunkTotal += (c.Size * c.Size * (Configuration.HighPrecision ? 4 * 4 : 2 * 4) * 3);
+                    chunkTotal += (c.Size * c.Size * (4 * 4) * 3);
 
             // Position/Velocity buffers
             long bufTotal = 0;
             foreach (var buf in AllBuffers) {
-                var bufSize = buf.Size * buf.Size * 2 * (Configuration.HighPrecision ? 4 * 4 : 2 * 4);
+                var bufSize = buf.Size * buf.Size * 2 * (4 * 4);
                 bufTotal += bufSize;
             }
 
@@ -338,11 +338,6 @@ namespace Squared.Illuminant.Particles {
 
     public class ParticleEngineConfiguration {
         public readonly int ChunkSize;
-
-        /// <summary>
-        /// Store system state as 32-bit float instead of 16-bit float
-        /// </summary>
-        public bool HighPrecision = true;
 
         /// <summary>
         /// How long a buffer must remain unused before getting used again.

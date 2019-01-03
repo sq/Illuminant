@@ -106,14 +106,6 @@ float computeCircularAlpha (float2 position) {
         return 1;
 }
 
-float4 readBitmap (float2 texCoord) {
-    [branch]
-    if (BitmapBilinear)
-        return tex2D(BitmapSampler, texCoord);
-    else
-        return tex2D(BitmapPointSampler, texCoord);
-}
-
 void PS_Texture (
     in  float4 color      : COLOR0,
     in  float2 texCoord   : TEXCOORD0,
@@ -123,7 +115,25 @@ void PS_Texture (
     // FIXME
     result = color;    
     if (color.a > (1 / 512)) {
-        float4 texColor = readBitmap(texCoord);
+        float4 texColor = tex2D(BitmapSampler, texCoord);
+        result *= texColor;
+        result *= GlobalColor;
+    }
+    result *= computeCircularAlpha(positionXy);
+    if (result.a <= (1 / 512))
+        discard;
+}
+
+void PS_TexturePoint(
+    in  float4 color      : COLOR0,
+    in  float2 texCoord : TEXCOORD0,
+    in  float2 positionXy : TEXCOORD1,
+    out float4 result : COLOR0
+) {
+    // FIXME
+    result = color;
+    if (color.a > (1 / 512)) {
+        float4 texColor = tex2D(BitmapPointSampler, texCoord);
         result *= texColor;
         result *= GlobalColor;
     }
@@ -149,6 +159,14 @@ technique AttributeColor {
     {
         vertexShader = compile vs_3_0 VS_PosVelAttr();
         pixelShader = compile ps_3_0 PS_Texture();
+    }
+}
+
+technique AttributeColorPoint {
+    pass P0
+    {
+        vertexShader = compile vs_3_0 VS_PosVelAttr();
+        pixelShader = compile ps_3_0 PS_TexturePoint();
     }
 }
 

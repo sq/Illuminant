@@ -90,6 +90,7 @@ namespace TestGame.Scenes {
                 new ParticleSystemConfiguration() {
                     Appearance = {
                         Texture = spark,
+                        RelativeSize = false
                     },
                     Size = Vector2.One * 2.6f,
                     RotationFromVelocity = true,

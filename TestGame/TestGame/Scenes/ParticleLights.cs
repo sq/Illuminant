@@ -208,7 +208,6 @@ namespace TestGame.Scenes {
             Engine = new ParticleEngine(
                 Game.RenderCoordinator, Game.Materials,
                 new ParticleEngineConfiguration (64) {
-                    HighPrecision = true
                 }, Game.ParticleMaterials
             );
 
@@ -278,6 +277,7 @@ namespace TestGame.Scenes {
                         Texture = fireball,
                         Region = fireballRect,
                         AnimationRate = new Vector2(1 / 3f, 0),
+                        RelativeSize = false
                     },
                     Size = new Vector2(34, 21) * 0.35f,
                     RotationFromVelocity = true,

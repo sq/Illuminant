@@ -108,6 +108,7 @@ namespace TestGame.Scenes {
                     Appearance = {
                         Texture = new NullableLazyResource<Texture2D>("spark"),
                         AnimationRate = new Vector2(1 / 6f, 0),
+                        RelativeSize = false
                     },
                     Size = Vector2.One * 1.33f,
                     /*

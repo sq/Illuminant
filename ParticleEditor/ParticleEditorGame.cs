@@ -391,7 +391,9 @@ namespace ParticleEditor {
         private void _GCAfterVsync (object _) {
             // Attempt to start a GC after we've issued all rendering commands to the GPU.
             // This should hide most or all of the GC time behind the rendering time.
-            if (RenderCoordinator.TryWaitForPresentToStart(4, 1))
+            if (!Graphics.SynchronizeWithVerticalRetrace)
+                return;
+            if (RenderCoordinator.TryWaitForPresentToStart(3, 1))
                 GC.Collect(1, GCCollectionMode.Optimized);
         }
 

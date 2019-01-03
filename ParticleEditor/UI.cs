@@ -306,7 +306,7 @@ namespace ParticleEditor {
 
             using (var sGlobalSettings = new NString("Global Settings"))
             if (Nuke.nk_tree_push_hashed(ctx, NuklearDotNet.nk_tree_type.NK_TREE_TAB, sGlobalSettings.pText, NuklearDotNet.nk_collapse_states.NK_MINIMIZED, sGlobalSettings.pText, sGlobalSettings.Length, 256) != 0) {
-                Nuke.nk_layout_row_dynamic(ctx, LineHeight, 3);
+                Nuke.nk_layout_row_dynamic(ctx, LineHeight, 4);
 
                 var vsync = Graphics.SynchronizeWithVerticalRetrace;
                 if (Nuklear.Checkbox("VSync", ref vsync)) {
@@ -317,6 +317,12 @@ namespace ParticleEditor {
                 var fullscreen = Graphics.IsFullScreen;
                 if (Nuklear.Checkbox("Fullscreen", ref fullscreen))
                     Game.SetFullScreen(fullscreen);
+
+                var msaa = Graphics.PreferMultiSampling;
+                if (Nuklear.Checkbox("MSAA", ref msaa)) {
+                    Graphics.PreferMultiSampling = msaa;
+                    Graphics.ApplyChangesAfterPresent(Game.RenderCoordinator);
+                }
 
                 Nuklear.Checkbox("Stats", ref Game.ShowPerformanceStats);
 
