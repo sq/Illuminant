@@ -356,6 +356,7 @@ namespace Squared.Illuminant.Particles {
         public readonly List<Transforms.ParticleTransform> Transforms = 
             new List<Transforms.ParticleTransform>();
 
+        private readonly Transforms.ParticleTransform.UpdateHandler Updater;
         private readonly RenderHandler Renderer;
 
         private  readonly List<Chunk> NewUserChunks = new List<Chunk>();
@@ -398,6 +399,7 @@ namespace Squared.Illuminant.Particles {
             Configuration = configuration;
             LiveCount = 0;
             Renderer = new RenderHandler(this);
+            Updater = new Transforms.ParticleTransform.UpdateHandler(null);
 
             engine.Systems.Add(this);
 
@@ -976,6 +978,7 @@ namespace Squared.Illuminant.Particles {
                 TotalSpawnCount = 0;
                 foreach (var c in Chunks)
                     c.Clear();
+                // FIXME: Still fucked
             } else if (Configuration.Collision?.DistanceField != null) {
                 if (Configuration.Collision.DistanceFieldMaximumZ == null)
                     throw new InvalidOperationException("If a distance field is active, you must set DistanceFieldMaximumZ");
@@ -983,15 +986,12 @@ namespace Squared.Illuminant.Particles {
                 RunTransform(
                     chunk, group, ref i, pm.UpdateWithDistanceField,
                     startedWhen, false,
-                    (dm, _) => {
-                        var dfu = new Uniforms.DistanceField(Configuration.Collision.DistanceField, Configuration.Collision.DistanceFieldMaximumZ.Value);
-                        pm.MaterialSet.TrySetBoundUniform(pm.UpdateWithDistanceField, "DistanceField", ref dfu);
-                    }, null, actualDeltaTimeSeconds, true, now, true, null
+                    Updater.BeforeDraw, Updater.AfterDraw, actualDeltaTimeSeconds, true, now, true, null
                 );
             } else {
                 RunTransform(
                     chunk, group, ref i, pm.UpdatePositions,
-                    startedWhen, false, null, null,
+                    startedWhen, false, Updater.BeforeDraw, Updater.AfterDraw,
                     actualDeltaTimeSeconds, true, now, true, null
                 );
             }

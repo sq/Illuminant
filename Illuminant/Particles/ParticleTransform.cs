@@ -83,7 +83,8 @@ namespace Squared.Illuminant.Particles.Transforms {
                 if (e != null) {
                     system.SetSystemUniforms(m, up.DeltaTimeSeconds);
 
-                    Transform.SetParameters(engine, p, up.Now, up.CurrentFrameIndex);
+                    if (Transform != null)
+                        Transform.SetParameters(engine, p, up.Now, up.CurrentFrameIndex);
 
                     if ((up.Prev != null) || (up.SourceChunk != null)) {
                         var src = up.SourceChunk?.Current ?? up.Prev;
@@ -107,12 +108,18 @@ namespace Squared.Illuminant.Particles.Transforms {
                     }
 
                     var dft = p["DistanceFieldTexture"];
-                    if (dft != null)
+                    if (dft != null) {
                         dft.SetValue(system.Configuration.Collision?.DistanceField.Texture);
+
+                        var dfu = new Uniforms.DistanceField(
+                            system.Configuration.Collision.DistanceField, 
+                            system.Configuration.Collision.DistanceFieldMaximumZ.Value
+                        );
+                        engine.ParticleMaterials.MaterialSet.TrySetBoundUniform(m, "DistanceField", ref dfu);
+                    }
 
                     system.MaybeSetLifeRampParameters(p);
                     system.MaybeSetAnimationRateParameter(p, system.Configuration.Appearance);
-
                     m.Flush();
                 }
 
