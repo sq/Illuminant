@@ -34,6 +34,7 @@ void VS_Spawn (
 
 float4 evaluateFormula (float4 origin, float4 constant, float4 scale, float4 offset, float4 randomness, float type) {
     float4 nonCircular = (randomness + offset) * scale;
+    float4 type0 = constant + nonCircular;
 
     uint itype = (uint)abs(floor(type));
     switch (itype) {
@@ -52,6 +53,7 @@ float4 evaluateFormula (float4 origin, float4 constant, float4 scale, float4 off
                 );
             float4 result = constant + circular;
             result.xyz += randomNormal * offset.xyz;
+            result.w = type0.w;
             return result;
         }
         case 2: {
@@ -61,11 +63,11 @@ float4 evaluateFormula (float4 origin, float4 constant, float4 scale, float4 off
             float3 direction = normalize(distance);
             float3 randomSpeed = (randomness.x * scale.xyz * direction.xyz);
             float3 fixedSpeed = (offset.xyz * direction);
-            return float4(randomSpeed + fixedSpeed, constant.w);
+            return float4(randomSpeed + fixedSpeed, type0.w);
         }
     }
 
-    return constant + nonCircular;
+    return type0;
 }
 
 void evaluateRandomForIndex(in float index, out float4 random1, out float4 random2, out float4 random3) {

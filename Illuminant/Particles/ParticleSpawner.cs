@@ -38,9 +38,10 @@ namespace Squared.Illuminant.Particles.Transforms {
         /// </summary>
         public float AttributeDiscardThreshold = 1.0f / 256;
 
-        public Formula  Position = Formula.UnitNormal(), 
-            Velocity = Formula.UnitNormal(), 
-            Attributes = Formula.One();
+        public Formula3 Position = Formula3.UnitNormal(),
+            Velocity = Formula3.UnitNormal();
+        public Formula1 Life = Formula1.One();
+        public Formula4 Attributes = Formula4.One();
 
         /// <summary>
         /// Applies a matrix transform to particle positions after the position formula has been evaluated.
@@ -138,11 +139,13 @@ namespace Squared.Illuminant.Particles.Transforms {
             ));
             parameters["ChunkSizeAndIndices"].SetValue(GetChunkSizeAndIndices(engine));
 
-            Temp[0] = Position.RandomScale.Evaluate(now, engine.ResolveVector4);
-            Temp[1] = Position.Offset.Evaluate(now, engine.ResolveVector4);
-            Temp[2] = Velocity.Constant.Evaluate(now, engine.ResolveVector4);
-            Temp[3] = Velocity.RandomScale.Evaluate(now, engine.ResolveVector4);
-            Temp[4] = Velocity.Offset.Evaluate(now, engine.ResolveVector4);
+            var lifeScale = Life.RandomScale.Evaluate(now, engine.ResolveSingle);
+            var lifeOffset = Life.Offset.Evaluate(now, engine.ResolveSingle);
+            Temp[0] = new Vector4(Position.RandomScale.Evaluate(now, engine.ResolveVector3), lifeScale);
+            Temp[1] = new Vector4(Position.Offset.Evaluate(now, engine.ResolveVector3), lifeOffset);
+            Temp[2] = new Vector4(Velocity.Constant.Evaluate(now, engine.ResolveVector3), 0);
+            Temp[3] = new Vector4(Velocity.RandomScale.Evaluate(now, engine.ResolveVector3), 0);
+            Temp[4] = new Vector4(Velocity.Offset.Evaluate(now, engine.ResolveVector3), 0);
             Temp[5] = Attributes.Constant.Evaluate(now, engine.ResolveVector4);
             Temp[6] = Attributes.RandomScale.Evaluate(now, engine.ResolveVector4);
             Temp[7] = Attributes.Offset.Evaluate(now, engine.ResolveVector4);
@@ -150,7 +153,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             var ft = new Vector4(
                 (int)Position.Type,
                 (int)Velocity.Type,
-                (int)Attributes.Type,
+                0,
                 0
             );
 
@@ -221,13 +224,14 @@ namespace Squared.Illuminant.Particles.Transforms {
 
         protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
             base.SetParameters(engine, parameters, now, frameIndex);
-            
-            var position = Position.Constant.Evaluate(now, engine.ResolveVector4);
-            Temp3[0] = position;
+
+            var life = Life.Constant.Evaluate(now, engine.ResolveSingle);
+            var position = Position.Constant.Evaluate(now, engine.ResolveVector3);
+            Temp3[0] = new Vector4(position, life);
             for (var i = 0; (i < AdditionalPositions.Count) && (i < MaxPositions - 1); i++) {
                 var ap = AdditionalPositions[i];
                 if (ap.W <= -0.99)
-                    ap.W = position.W;
+                    ap.W = life;
                 Temp3[i + 1] = ap;
             }
 
@@ -324,8 +328,9 @@ namespace Squared.Illuminant.Particles.Transforms {
         protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
             base.SetParameters(engine, parameters, now, frameIndex);
 
-            var position = Position.Constant.Evaluate(now, engine.ResolveVector4);
-            Temp3[0] = position;
+            var life = Life.Constant.Evaluate(now, engine.ResolveSingle);
+            var position = Position.Constant.Evaluate(now, engine.ResolveVector3);
+            Temp3[0] = new Vector4(position, life);
             parameters["PositionConstantCount"].SetValue((float)1);
             parameters["PositionConstants"].SetValue(Temp3);
             parameters["MultiplyAttributeConstant"].SetValue(MultiplyAttributeConstant);
@@ -445,8 +450,9 @@ namespace Squared.Illuminant.Particles.Transforms {
         protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
             base.SetParameters(engine, parameters, now, frameIndex);
 
-            var position = Position.Constant.Evaluate(now, engine.ResolveVector4);
-            Temp3[0] = position;
+            var life = Life.Constant.Evaluate(now, engine.ResolveSingle);
+            var position = Position.Constant.Evaluate(now, engine.ResolveVector3);
+            Temp3[0] = new Vector4(position, life);
             parameters["PositionConstantCount"].SetValue((float)1);
             parameters["PositionConstants"].SetValue(Temp3);
             parameters["AlignPositionConstant"].SetValue(AlignPositionConstant);

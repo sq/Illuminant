@@ -547,9 +547,50 @@ namespace ParticleEditor {
             return false;
         }
 
-        private ILookup<string, CachedPropertyInfo> FormulaProperties = CachePropertyInfo(typeof(Formula)).ToLookup(cpi => cpi.Name);
+        private ILookup<string, CachedPropertyInfo> Formula1Properties = CachePropertyInfo(typeof(Formula1)).ToLookup(cpi => cpi.Name);
+        private ILookup<string, CachedPropertyInfo> Formula3Properties = CachePropertyInfo(typeof(Formula3)).ToLookup(cpi => cpi.Name);
+        private ILookup<string, CachedPropertyInfo> Formula4Properties = CachePropertyInfo(typeof(Formula4)).ToLookup(cpi => cpi.Name);
 
-        private unsafe bool RenderFormula (CachedPropertyInfo cpi, string actualName, Formula value, bool isColor) {
+        private unsafe bool RenderFormula (CachedPropertyInfo cpi, string actualName, Formula1 value, bool isColor) {
+            var result = false;
+            var name = cpi.Name;
+
+            using (var pGroup = Nuklear.CollapsingGroup(name, actualName, false)) {
+                if (pGroup.Visible) {
+                    Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 2);
+                    if (Nuklear.Button("Zero")) {
+                        value.SetToConstant(0);
+                        result = true;
+                    }
+                    if (Nuklear.Button("One")) {
+                        value.SetToConstant(1);
+                        result = true;
+                    }
+
+                    var spp = Controller.SelectedProperty;
+                    var isFormulaSelected = (spp != null) && object.ReferenceEquals(spp.Instance, value);
+
+                    bool changed = false;
+                    var p = (IParameter)value.Constant;
+                    if (RenderParameter(null, value, ref changed, "Constant", cpi.Info.Type, ref p, true))
+                        value.Constant = (Parameter<float>)p;
+
+                    p = value.RandomScale;
+                    if (RenderParameter(null, value, ref changed, "Scale", cpi.Info.Type, ref p, true))
+                        value.RandomScale = (Parameter<float>)p;
+
+                    var k = "Random Offset";
+
+                    p = value.Offset;
+                    if (RenderParameter(null, value, ref changed, k, cpi.Info.Type, ref p, true))
+                        value.Offset = (Parameter<float>)p;
+                }
+            }
+
+            return result;
+        }
+
+        private unsafe bool RenderFormula (CachedPropertyInfo cpi, string actualName, Formula3 value, bool isColor) {
             var result = false;
             var name = cpi.Name;
 
@@ -557,15 +598,61 @@ namespace ParticleEditor {
                 if (pGroup.Visible) {
                     Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 3);
                     if (Nuklear.Button("Zero")) {
+                        value.SetToConstant(Vector3.Zero);
+                        result = true;
+                    }
+                    if (Nuklear.Button("One")) {
+                        value.SetToConstant(Vector3.One);
+                        result = true;
+                    }
+                    if (Nuklear.Button("Unit Normal")) {
+                        value.SetToUnitNormal();
+                        result = true;
+                    }
+
+                    var spp = Controller.SelectedProperty;
+                    var isFormulaSelected = (spp != null) && object.ReferenceEquals(spp.Instance, value);
+
+                    bool changed = false;
+                    var p = (IParameter)value.Constant;
+                    if (RenderParameter(null, value, ref changed, "Constant", cpi.Info.Type, ref p, true))
+                        value.Constant = (Parameter<Vector3>)p;
+
+                    p = value.RandomScale;
+                    if (RenderParameter(null, value, ref changed, "Scale", cpi.Info.Type, ref p, true))
+                        value.RandomScale = (Parameter<Vector3>)p;
+
+                    var k = (value.Type != FormulaType.Linear) ? "Constant Radius" : "Random Offset";
+
+                    p = value.Offset;
+                    if (RenderParameter(null, value, ref changed, k, cpi.Info.Type, ref p, true))
+                        value.Offset = (Parameter<Vector3>)p;
+
+                    Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
+                    var t = (object)value.Type;
+                    if (Nuklear.EnumCombo(ref t, tooltip: "Formula Type")) {
+                        value.Type = (FormulaType)t;
+                        result = true;
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        private unsafe bool RenderFormula (CachedPropertyInfo cpi, string actualName, Formula4 value, bool isColor) {
+            var result = false;
+            var name = cpi.Name;
+
+            using (var pGroup = Nuklear.CollapsingGroup(name, actualName, false)) {
+                if (pGroup.Visible) {
+                    Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 2);
+                    if (Nuklear.Button("Zero")) {
                         value.SetToConstant(Vector4.Zero);
                         result = true;
                     }
                     if (Nuklear.Button("One")) {
                         value.SetToConstant(Vector4.One);
-                        result = true;
-                    }
-                    if (Nuklear.Button("Unit Normal")) {
-                        value.SetToUnitNormal();
                         result = true;
                     }
 
@@ -581,18 +668,11 @@ namespace ParticleEditor {
                     if (RenderParameter(null, value, ref changed, "Scale", cpi.Info.Type, ref p, true))
                         value.RandomScale = (Parameter<Vector4>)p;
 
-                    var k = (value.Type != FormulaType.Linear) ? "Constant Radius" : "Random Offset";
+                    var k = "Random Offset";
 
                     p = value.Offset;
                     if (RenderParameter(null, value, ref changed, k, cpi.Info.Type, ref p, true))
                         value.Offset = (Parameter<Vector4>)p;
-
-                    Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
-                    var t = (object)value.Type;
-                    if (Nuklear.EnumCombo(ref t, tooltip: "Formula Type")) {
-                        value.Type = (FormulaType)t;
-                        result = true;
-                    }
                 }
             }
 
@@ -657,8 +737,16 @@ namespace ParticleEditor {
                 }
 
                 case "ColorFormula":
-                case "Formula":
-                    return RenderFormula(cpi, actualName, (Formula)value, valueType.StartsWith("Color"));
+                    return RenderFormula(cpi, actualName, (Formula4)value, true);
+
+                case "Formula1":
+                    return RenderFormula(cpi, actualName, (Formula1)value, true);
+
+                case "Formula3":
+                    return RenderFormula(cpi, actualName, (Formula3)value, true);
+
+                case "Formula4":
+                    return RenderFormula(cpi, actualName, (Formula4)value, true);
 
                 case "ParticleSystemReference":
                     return RenderSystemReferenceProperty(cpi, instance, ref changed, actualName, value);

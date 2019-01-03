@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Framework;
+using Microsoft.Xna.Framework;
 using Squared.Illuminant.Particles.Transforms;
 using Squared.Render;
 
@@ -88,8 +89,7 @@ namespace ParticleEditor {
                                 var s = ((SpawnerBase)obj);
                                 // FIXME: Parameter references?
                                 var c = s.Position.Constant.Evaluate(0, null);
-                                c.W = -1;
-                                return c;
+                                return new Vector4(c, -1);
                             },
                             MaxCount = Spawner.MaxPositions - 1
                         } },

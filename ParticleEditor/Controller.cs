@@ -246,21 +246,24 @@ namespace ParticleEditor {
                 Properties = {
                     { "MinRate", ModelProperty.New(120) },
                     { "MaxRate", ModelProperty.New(240) },
+                    { "Life",
+                        ModelProperty.New(new Formula1 { Constant = 64 })
+                    },
                     { "Position",
-                        ModelProperty.New(new Formula {
-                            Constant = new Vector4(0, 0, 0, 64),
-                            RandomScale = new Vector4(256, 256, 0, 0),
+                        ModelProperty.New(new Formula3 {
+                            Constant = new Vector3(0, 0, 0),
+                            RandomScale = new Vector3(256, 256, 0),
                             Type = FormulaType.Spherical
                         })
                     },
                     { "Velocity",
-                        ModelProperty.New(new Formula {
-                            RandomScale = new Vector4(32f, 32f, 0, 0),
+                        ModelProperty.New(new Formula3 {
+                            RandomScale = new Vector3(32f, 32f, 0),
                             Type = FormulaType.Spherical
                         })
                     },
                     { "Attributes",
-                        ModelProperty.New(Formula.One())
+                        ModelProperty.New(Formula4.One())
                     }
                 }
             };

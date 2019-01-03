@@ -294,18 +294,22 @@ namespace TestGame.Scenes {
                         IsActive = false,
                         MinRate = 256,
                         MaxRate = 512,
-                        Position = new Formula {
-                            RandomOffset = new Vector4(-0.5f, -0.5f, -0.5f, 1f),
-                            RandomScale = new Vector4(15f, 15f, 5f, (MaxLife - OpacityFromLife) / 60f),
+                        Life = new Formula1 {
+                            Offset = 1f,
+                            RandomScale = (MaxLife - OpacityFromLife) / 60f
+                        },
+                        Position = new Formula3 {
+                            RandomOffset = new Vector3(-0.5f, -0.5f, -0.5f),
+                            RandomScale = new Vector3(15f, 15f, 5f),
                             Type = FormulaType.Spherical
                         },
-                        Velocity = new Formula {
-                            RandomOffset = new Vector4(-0.5f, -0.5f, -0.5f, 0f),
-                            RandomScale = new Vector4(4f, 4f, 2f, 0f) * 60,
-                            ConstantRadius = new Vector4(3f, 3f, 0f, 0f),
+                        Velocity = new Formula3 {
+                            RandomOffset = new Vector3(-0.5f, -0.5f, -0.5f),
+                            RandomScale = new Vector3(4f, 4f, 2f) * 60,
+                            ConstantRadius = new Vector3(3f, 3f, 0f),
                             Type = FormulaType.Spherical
                         },
-                        Attributes = new Formula {
+                        Attributes = new Formula4 {
                             Constant = new Vector4(0.09f, 0.09f, 0.09f, 0.3f),
                             RandomScale = new Vector4(0.2f, 0.2f, 0.2f, 0.1f)
                         }
@@ -452,7 +456,7 @@ namespace TestGame.Scenes {
                 }
 
                 var s = System.Transforms.OfType<SpawnerBase>().First();
-                s.Position.Constant = new Vector4(mousePos, 0);
+                s.Position.Constant = mousePos;
                 System.Configuration.Color.OpacityFromLife = OpacityFromLife.Value / 60f;
                 s.IsActive = Game.LeftMouse;
             }

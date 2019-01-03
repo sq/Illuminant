@@ -133,17 +133,21 @@ namespace TestGame.Scenes {
                         MinRate = 102400,
                         MaxRate = 409600,
                         ZeroZAxis = true,
-                        Position = new Formula {
-                            Constant = new Vector4(Pattern.Width / 2f, Pattern.Height / 2f, 0, (opacityFromLife) / 60f),
-                            RandomOffset = new Vector4(-0.5f, -0.5f, 0f, 0f),
-                            RandomScale = new Vector4(900f * 2f, 450f * 2f, 0f, (MaxLife - opacityFromLife) / 60f),
+                        Life = new Formula1 {
+                            Constant = (opacityFromLife) / 60f,
+                            RandomScale = (MaxLife - opacityFromLife) / 60f
                         },
-                        Velocity = new Formula {
-                            RandomOffset = new Vector4(-0.5f, -0.5f, 0f, 0f),
-                            RandomScale = new Vector4(60f, 60f, 0f, 0f),
+                        Position = new Formula3 {
+                            Constant = new Vector3(Pattern.Width / 2f, Pattern.Height / 2f, 0),
+                            RandomOffset = new Vector3(-0.5f, -0.5f, 0f),
+                            RandomScale = new Vector3(900f * 2f, 450f * 2f, 0f),
+                        },
+                        Velocity = new Formula3 {
+                            RandomOffset = new Vector3(-0.5f, -0.5f, 0f),
+                            RandomScale = new Vector3(60f, 60f, 0f),
                             Type = FormulaType.Spherical
                         },
-                        Attributes = new Formula {
+                        Attributes = new Formula4 {
                             Constant = new Vector4(0.09f, 0.09f, 0.09f, 1f),
                             RandomScale = new Vector4(0.3f, 0.3f, 0.3f, 0f)
                         }

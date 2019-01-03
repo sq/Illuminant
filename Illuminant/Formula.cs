@@ -7,10 +7,53 @@ using Microsoft.Xna.Framework;
 using Squared.Illuminant.Configuration;
 
 namespace Squared.Illuminant {
-    public class Formula {
-        public Parameter<Vector4> Constant;
-        public Parameter<Vector4> RandomScale;
-        public Parameter<Vector4> Offset;
+    public class Formula1 {
+        public Parameter<float> Constant;
+        public Parameter<float> RandomScale;
+        public Parameter<float> Offset;
+
+        public void SetToUnitNormal () {
+            Constant = 0;
+            Offset = -0.5f;
+            RandomScale = 1f;
+        }
+
+        public void SetToConstant (float value) {
+            Constant = value;
+            Offset = RandomScale = 0;
+        }
+
+        public static Formula1 FromConstant (float value) {
+            var result = new Formula1();
+            result.SetToConstant(value);
+            return result;
+        }
+
+        public static Formula1 UnitNormal () {
+            var result = new Formula1();
+            result.SetToUnitNormal();
+            return result;
+        }
+
+        public static Formula1 Zero () {
+            return new Formula1();
+        }
+
+        public static Formula1 One () {
+            return new Formula1 {
+                Constant = 1
+            };
+        }
+
+        public Formula1 Clone () {
+            return (Formula1)MemberwiseClone();
+        }
+    }
+
+    public class Formula3 {
+        public Parameter<Vector3> Constant;
+        public Parameter<Vector3> RandomScale;
+        public Parameter<Vector3> Offset;
         public FormulaType Type;
 
         internal bool Circular {
@@ -24,7 +67,7 @@ namespace Squared.Illuminant {
             }
         }
 
-        public Parameter<Vector4> RandomOffset {
+        public Parameter<Vector3> RandomOffset {
             set {
                 if (Circular)
                     return;
@@ -32,7 +75,7 @@ namespace Squared.Illuminant {
             }
         }
 
-        public Parameter<Vector4> ConstantRadius {
+        public Parameter<Vector3> ConstantRadius {
             set {
                 if (!Circular)
                     return;
@@ -41,51 +84,82 @@ namespace Squared.Illuminant {
         }
 
         public void SetToUnitNormal () {
-            Constant = Vector4.Zero;
-            Offset = Vector4.Zero;
-            RandomScale = Vector4.One;
+            Constant = Vector3.Zero;
+            Offset = Vector3.Zero;
+            RandomScale = Vector3.One;
             Circular = true;
         }
 
-        public void SetToConstant (Vector4 value) {
+        public void SetToConstant (Vector3 value) {
             Constant = value;
-            Offset = RandomScale = Vector4.Zero;
+            Offset = RandomScale = Vector3.Zero;
             Circular = false;
         }
 
-        public static Formula Towards (Vector3 point, float life, float randomSpeed, float constantSpeed) {
-            var result = new Formula();
-            result.Constant = new Vector4(point, life);
-            result.RandomScale = new Vector4(randomSpeed, randomSpeed, randomSpeed, 0);
-            result.ConstantRadius = new Vector4(constantSpeed, constantSpeed, constantSpeed, 0);
+        public static Formula3 Towards (Vector3 point, float randomSpeed, float constantSpeed) {
+            var result = new Formula3();
+            result.Constant = point;
+            result.RandomScale = new Vector3(randomSpeed);
+            result.ConstantRadius = new Vector3(constantSpeed);
             result.Type = FormulaType.Towards;
             return result;
         }
 
-        public static Formula FromConstant (Vector4 value) {
-            var result = new Formula();
+        public static Formula3 FromConstant (Vector3 value) {
+            var result = new Formula3();
             result.SetToConstant(value);
             return result;
         }
 
-        public static Formula UnitNormal () {
-            var result = new Formula();
+        public static Formula3 UnitNormal () {
+            var result = new Formula3();
             result.SetToUnitNormal();
             return result;
         }
 
-        public static Formula Zero () {
-            return new Formula();
+        public static Formula3 Zero () {
+            return new Formula3();
         }
 
-        public static Formula One () {
-            return new Formula {
+        public static Formula3 One () {
+            return new Formula3 {
+                Constant = Vector3.One
+            };
+        }
+
+        public Formula3 Clone () {
+            return (Formula3)MemberwiseClone();
+        }
+    }
+
+    public class Formula4 {
+        public Parameter<Vector4> Constant;
+        public Parameter<Vector4> RandomScale;
+        public Parameter<Vector4> Offset;
+
+        public void SetToConstant (Vector4 value) {
+            Constant = value;
+            Offset = RandomScale = Vector4.Zero;
+        }
+
+        public static Formula4 FromConstant (Vector4 value) {
+            var result = new Formula4();
+            result.SetToConstant(value);
+            return result;
+        }
+
+        public static Formula4 Zero () {
+            return new Formula4();
+        }
+
+        public static Formula4 One () {
+            return new Formula4 {
                 Constant = Vector4.One
             };
         }
 
-        public Formula Clone () {
-            return (Formula)MemberwiseClone();
+        public Formula4 Clone () {
+            return (Formula4)MemberwiseClone();
         }
     }
 
