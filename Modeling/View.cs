@@ -128,6 +128,14 @@ namespace Squared.Illuminant.Modeling {
     }
 
     public class ParticleSystemView : IDisposable {
+        internal class TransformSorter : IComparer<ParticleTransformView> {
+            public int Compare (ParticleTransformView x, ParticleTransformView y) {
+                return (x.Model.UpdateOrder - y.Model.UpdateOrder);
+            }
+        }
+
+        internal static readonly TransformSorter Comparer = new TransformSorter();
+
         public ParticleSystem Instance;
         public SystemModel Model;
         public readonly List<ParticleTransformView> Transforms = new List<ParticleTransformView>();
@@ -141,6 +149,12 @@ namespace Squared.Illuminant.Modeling {
 
             foreach (var transform in Model.Transforms)
                 AddNewViewForModel(transform);
+
+            Sort();
+        }
+
+        public void Sort () {
+            Transforms.Sort(Comparer);
         }
 
         public void AddNewViewForModel (TransformModel model) {

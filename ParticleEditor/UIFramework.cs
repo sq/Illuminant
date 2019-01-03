@@ -117,6 +117,16 @@ namespace ParticleEditor {
 
         public readonly ParticleEditor Game;
 
+        private ILookup<string, CachedPropertyInfo> Formula1Properties = CachePropertyInfo(typeof(Formula1)).ToLookup(cpi => cpi.Name);
+        private ILookup<string, CachedPropertyInfo> Formula3Properties = CachePropertyInfo(typeof(Formula3)).ToLookup(cpi => cpi.Name);
+        private ILookup<string, CachedPropertyInfo> Formula4Properties = CachePropertyInfo(typeof(Formula4)).ToLookup(cpi => cpi.Name);
+
+        private readonly string[] PrefixedBezierElementNames = new[] { "#A", "#B", "#C", "#D" };
+        private readonly string[] BezierElementNames = new[] { "A", "B", "C", "D" };
+        private readonly Dictionary<BezierM, int> BezierSelectedRows = new Dictionary<BezierM, int>();
+
+        internal bool TransformSortRequired = false;
+
         public NuklearService Nuklear {
             get {
                 return Game.Nuklear;
@@ -546,10 +556,6 @@ namespace ParticleEditor {
 
             return false;
         }
-
-        private ILookup<string, CachedPropertyInfo> Formula1Properties = CachePropertyInfo(typeof(Formula1)).ToLookup(cpi => cpi.Name);
-        private ILookup<string, CachedPropertyInfo> Formula3Properties = CachePropertyInfo(typeof(Formula3)).ToLookup(cpi => cpi.Name);
-        private ILookup<string, CachedPropertyInfo> Formula4Properties = CachePropertyInfo(typeof(Formula4)).ToLookup(cpi => cpi.Name);
 
         private unsafe bool RenderFormula (CachedPropertyInfo cpi, string actualName, Formula1 value, bool isColor) {
             var result = false;
@@ -1290,10 +1296,6 @@ namespace ParticleEditor {
             }
             return false;
         }
-
-        private readonly string[] PrefixedBezierElementNames = new[] { "#A", "#B", "#C", "#D" };
-        private readonly string[] BezierElementNames = new[] { "A", "B", "C", "D" };
-        private readonly Dictionary<BezierM, int> BezierSelectedRows = new Dictionary<BezierM, int>();
 
         private unsafe bool RenderBezierProperty (
             CachedPropertyInfo cpi, object instance,

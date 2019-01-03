@@ -68,7 +68,8 @@ namespace ParticleEditor {
                         {"MinRate", new ModelTypeInfo { Min = 0, Max = 100000 } },
                         {"MaxRate", new ModelTypeInfo { Min = 0, Max = 100000 } },
                         {"Color", new ModelTypeInfo { Type = "ColorFormula" } },
-                        {"Resolution", new ModelTypeInfo { Min = 0.2f, Max = 1f } }
+                        {"Resolution", new ModelTypeInfo { Min = 0.2f, Max = 1f } },
+                        {"AlphaDiscardThreshold", new ModelTypeInfo { Min = 0, Max = 255 } }
                     }
                 },
                 {
@@ -76,7 +77,8 @@ namespace ParticleEditor {
                         {"MinRate", new ModelTypeInfo { Min = 0, Max = 100000 } },
                         {"MaxRate", new ModelTypeInfo { Min = 0, Max = 100000 } },
                         {"Color", new ModelTypeInfo { Type = "ColorFormula" } },
-                        {"SourceVelocityFactor", new ModelTypeInfo { Min = -2f, Max = 2f } }
+                        {"SourceVelocityFactor", new ModelTypeInfo { Min = -2f, Max = 2f } },
+                        {"AlphaDiscardThreshold", new ModelTypeInfo { Min = 0, Max = 255 } }
                     }
                 },
                 {
@@ -93,7 +95,8 @@ namespace ParticleEditor {
                             },
                             MaxCount = Spawner.MaxPositions - 1
                         } },
-                        {"Color", new ModelTypeInfo { Type = "ColorFormula" } }
+                        {"Color", new ModelTypeInfo { Type = "ColorFormula" } },
+                        {"AlphaDiscardThreshold", new ModelTypeInfo { Min = 0, Max = 255 } }
                     }
                 },
                 {

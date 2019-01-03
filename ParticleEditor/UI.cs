@@ -225,8 +225,8 @@ namespace ParticleEditor {
             CurrentObjectName = s.Model.Name;
 
             Nuke.nk_layout_row_dynamic(ctx, LineHeight + 3, 2);
-            Nuklear.Property("Draw Order", ref s.Model.DrawOrder, -1, Model.Systems.Count + 1, 1, 0.5f);
-            Nuklear.Property("Update Order", ref s.Model.UpdateOrder, -1, Model.Systems.Count + 1, 1, 0.5f);
+            Nuklear.Property("#Draw Order", ref s.Model.DrawOrder, -1, Model.Systems.Count + 1, 1, 0.5f);
+            Nuklear.Property("#Update Order", ref s.Model.UpdateOrder, -1, Model.Systems.Count + 1, 1, 0.5f);
 
             var config = Controller.SelectedSystem.Model.Configuration;
             SystemProperties.Prepare(config);
@@ -275,11 +275,15 @@ namespace ParticleEditor {
 
             using (var group = Nuklear.CollapsingGroup("Transform Properties", "Transform Properties"))
             if (group.Visible && (xform != null)) {
-                Nuke.nk_layout_row_dynamic(ctx, LineHeight + 3, 1);
+                Nuke.nk_layout_row_dynamic(ctx, LineHeight + 3, 2);
 
                 Nuklear.Textbox(ref xform.Model.Name, "Transform Name");
                 CurrentObjectName = xform.Model.Name;
 
+                if (Nuklear.Property("#Update Order", ref xform.Model.UpdateOrder, -1, Controller.SelectedSystem.Transforms.Count + 1, 1, 0.5f))
+                    TransformSortRequired = true;
+
+                Nuke.nk_layout_row_dynamic(ctx, LineHeight + 3, 1);
                 int typeIndex = TransformTypes.IndexOf(xform.Model.Type);
 
                 if (Nuklear.ComboBox(ref typeIndex, (i) => TransformTypes[i].Name, TransformTypes.Count, "Transform Type")) {

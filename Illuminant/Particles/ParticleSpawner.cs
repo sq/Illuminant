@@ -36,7 +36,7 @@ namespace Squared.Illuminant.Particles.Transforms {
         /// <summary>
         /// If a new particle's color has an alpha (w) less than this value the particle is discarded.
         /// </summary>
-        public float AlphaDiscardThreshold = 1.0f / 256;
+        public float AlphaDiscardThreshold = 1;
 
         public Formula3 Position = Formula3.UnitNormal(),
             Velocity = Formula3.UnitNormal();
@@ -168,7 +168,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             m.Regenerate();
             parameters["PositionMatrix"].SetValue(m.Matrix);
 
-            parameters["AttributeDiscardThreshold"].SetValue(AlphaDiscardThreshold);
+            parameters["AttributeDiscardThreshold"].SetValue(AlphaDiscardThreshold / 255f);
         }
     }
 

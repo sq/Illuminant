@@ -204,6 +204,23 @@ namespace ParticleEditor {
                     SelectedProperty.NewValue = pos;
                 }
             }
+
+            if (UI.TransformSortRequired) {
+                UI.TransformSortRequired = false;
+                var ss = SelectedSystem;
+                var st = SelectedTransform;
+
+                foreach (var s in View.Systems) {
+                    s.Model.Sort();
+                    s.Sort();
+
+                    if (SelectedSystem != s)
+                        continue;
+                    var newIndex = s.Transforms.IndexOf(st);
+                    if (newIndex >= 0)
+                        CurrentState.Transforms.SelectedIndex = newIndex;
+                }
+            }
         }
 
         private void DrawCross (ref ImperativeRenderer ir, Vector2 pos, float alpha, float len) {

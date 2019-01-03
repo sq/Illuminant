@@ -44,6 +44,8 @@ namespace Squared.Illuminant.Modeling {
                 var serializer = MakeSerializer();
                 using (var jreader = new JsonTextReader(reader)) {
                     var result = serializer.Deserialize<EngineModel>(jreader);
+                    if (result != null)
+                        result.Sort();
                     return result;
                 }
             }
@@ -52,10 +54,17 @@ namespace Squared.Illuminant.Modeling {
         public static EngineModel Load (string fileName) {
             using (var stream = File.OpenRead(fileName)) {
                 var result = Load(stream);
-                if (result != null)
+                if (result != null) {
                     result.Filename = Path.GetFullPath(fileName);
+                    result.Sort();
+                }
                 return result;
             }
+        }
+
+        internal void Sort () {
+            foreach (var s in Systems)
+                s.Sort();
         }
 
         public void Save (string fileName) {
@@ -80,15 +89,30 @@ namespace Squared.Illuminant.Modeling {
     }
 
     public class SystemModel {
+        internal class TransformSorter : IComparer<TransformModel> {
+            public int Compare (TransformModel x, TransformModel y) {
+                return (x.UpdateOrder - y.UpdateOrder);
+            }
+        }
+
+        internal static readonly TransformSorter Comparer = new TransformSorter();
+
         public string Name;
         public int UpdateOrder, DrawOrder;
         public BlendState BlendState;
         public ParticleSystemConfiguration Configuration;
         public readonly List<TransformModel> Transforms = new List<TransformModel>();
 
+        public void Sort () {
+            Transforms.Sort(Comparer);
+        }
+
         public void Normalize (bool forSave) {
             foreach (var t in Transforms)
                 t.Normalize(forSave);
+
+            if (forSave)
+                Sort();
         }
 
         public SystemModel Clone () {
@@ -105,6 +129,7 @@ namespace Squared.Illuminant.Modeling {
     public class TransformModel {
         public string Name;
         public Type Type;
+        public int UpdateOrder;
         public readonly Dictionary<string, ModelProperty> Properties = new Dictionary<string, ModelProperty>();
 
         public void Normalize (bool forSave) {
