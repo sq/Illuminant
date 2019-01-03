@@ -34,14 +34,14 @@ namespace Squared.Illuminant.Particles.Transforms {
         /// </summary>
         public bool ZeroZAxis = false;
         /// <summary>
-        /// If a new particle's attribute has an alpha (w) less than this value the particle is discarded.
+        /// If a new particle's color has an alpha (w) less than this value the particle is discarded.
         /// </summary>
-        public float AttributeDiscardThreshold = 1.0f / 256;
+        public float AlphaDiscardThreshold = 1.0f / 256;
 
         public Formula3 Position = Formula3.UnitNormal(),
             Velocity = Formula3.UnitNormal();
         public Formula1 Life = Formula1.One();
-        public Formula4 Attributes = Formula4.One();
+        public Formula4 Color = Formula4.One();
 
         /// <summary>
         /// Applies a matrix transform to particle positions after the position formula has been evaluated.
@@ -146,9 +146,9 @@ namespace Squared.Illuminant.Particles.Transforms {
             Temp[2] = new Vector4(Velocity.Constant.Evaluate(now, engine.ResolveVector3), 0);
             Temp[3] = new Vector4(Velocity.RandomScale.Evaluate(now, engine.ResolveVector3), 0);
             Temp[4] = new Vector4(Velocity.Offset.Evaluate(now, engine.ResolveVector3), 0);
-            Temp[5] = Attributes.Constant.Evaluate(now, engine.ResolveVector4);
-            Temp[6] = Attributes.RandomScale.Evaluate(now, engine.ResolveVector4);
-            Temp[7] = Attributes.Offset.Evaluate(now, engine.ResolveVector4);
+            Temp[5] = Color.Constant.Evaluate(now, engine.ResolveVector4);
+            Temp[6] = Color.RandomScale.Evaluate(now, engine.ResolveVector4);
+            Temp[7] = Color.Offset.Evaluate(now, engine.ResolveVector4);
 
             var ft = new Vector4(
                 (int)Position.Type,
@@ -168,7 +168,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             m.Regenerate();
             parameters["PositionMatrix"].SetValue(m.Matrix);
 
-            parameters["AttributeDiscardThreshold"].SetValue(AttributeDiscardThreshold);
+            parameters["AttributeDiscardThreshold"].SetValue(AlphaDiscardThreshold);
         }
     }
 
@@ -267,9 +267,9 @@ namespace Squared.Illuminant.Particles.Transforms {
         public bool WholeSpawn = false;
 
         /// <summary>
-        /// Multiplies the attribute Constant of new particles by the color of the source pixel instead of adding to it.
+        /// Multiplies the color Constant of new particles by the color of the source pixel instead of adding to it.
         /// </summary>
-        public bool MultiplyAttributeConstant = true;
+        public bool MultiplyColorConstant = true;
 
         [NonSerialized]
         private Vector4[] Temp3 = new Vector4[1];
@@ -333,7 +333,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             Temp3[0] = new Vector4(position, life);
             parameters["PositionConstantCount"].SetValue((float)1);
             parameters["PositionConstants"].SetValue(Temp3);
-            parameters["MultiplyAttributeConstant"].SetValue(MultiplyAttributeConstant);
+            parameters["MultiplyAttributeConstant"].SetValue(MultiplyColorConstant);
             parameters["PatternTexture"].SetValue(Texture.Instance);
             parameters["PatternSizeRowSizeAndResolution"].SetValue(new Vector4(
                 Texture.Instance.Width, Texture.Instance.Height,
@@ -368,9 +368,9 @@ namespace Squared.Illuminant.Particles.Transforms {
         public bool AlignPositionConstant = true;
 
         /// <summary>
-        /// Multiplies the attribute Constant of new particles by the attribute of source particles
+        /// Multiplies the color Constant of new particles by the attribute of source particles
         /// </summary>
-        public bool MultiplyAttributeConstant = false;
+        public bool MultiplyColorConstant = false;
 
         /// <summary>
         /// The new particles inherit the source particles' velocities as a velocity constant, multiplied
@@ -456,7 +456,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             parameters["PositionConstantCount"].SetValue((float)1);
             parameters["PositionConstants"].SetValue(Temp3);
             parameters["AlignPositionConstant"].SetValue(AlignPositionConstant);
-            parameters["MultiplyAttributeConstant"].SetValue(MultiplyAttributeConstant);
+            parameters["MultiplyAttributeConstant"].SetValue(MultiplyColorConstant);
             parameters["FeedbackSourceIndex"].SetValue(CurrentFeedbackSourceIndex);
             parameters["SourceVelocityFactor"].SetValue(SourceVelocityFactor);
         }

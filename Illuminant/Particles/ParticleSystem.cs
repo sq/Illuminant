@@ -32,24 +32,24 @@ namespace Squared.Illuminant.Particles {
             where TElement : struct {
             public ParticleSystem System;
             public int Remaining;
-            public BufferInitializer<TElement> Position, Velocity, Attributes;
+            public BufferInitializer<TElement> Position, Velocity, Color;
             public Chunk Chunk;
             public bool HasFailed;
 
             public void Run (ThreadGroup g) {
                 if (g != null) {
                     var q = g.GetQueueForType<BufferInitializer<TElement>>();
-                    Position.Parent = Velocity.Parent = Attributes.Parent = this;
+                    Position.Parent = Velocity.Parent = Color.Parent = this;
 
                     q.Enqueue(ref Position);
                     q.Enqueue(ref Velocity);
-                    if (Attributes.Initializer != null)
-                        q.Enqueue(ref Attributes);
+                    if (Color.Initializer != null)
+                        q.Enqueue(ref Color);
                 } else {
                     Position.Execute();
                     Velocity.Execute();
-                    if (Attributes.Initializer != null)
-                        Attributes.Execute();
+                    if (Color.Initializer != null)
+                        Color.Execute();
                 }
             }
 
@@ -157,7 +157,7 @@ namespace Squared.Illuminant.Particles {
             internal BufferSet Previous, Current;
 
             public OcclusionQuery Query;
-            public RenderTarget2D Attributes;
+            public RenderTarget2D Color;
 
             internal RenderTarget2D RenderData, RenderColor;
             internal BufferSet LastUpdateResult;
@@ -198,7 +198,7 @@ namespace Squared.Illuminant.Particles {
 
                 var device = system.Engine.Coordinator.Device;
                 Query = new OcclusionQuery(device);
-                Attributes = new RenderTarget2D(
+                Color = new RenderTarget2D(
                     device, Size, Size, false, SurfaceFormat.Vector4, 
                     DepthFormat.None, 0, RenderTargetUsage.PreserveContents
                 );
@@ -222,7 +222,7 @@ namespace Squared.Illuminant.Particles {
                 IsDisposed = true;
 
                 LastUpdateResult = null;
-                Attributes.Dispose();
+                Color.Dispose();
                 RenderData.Dispose();
                 RenderColor.Dispose();
                 Query.Dispose();
@@ -466,7 +466,7 @@ namespace Squared.Illuminant.Particles {
             bool parallel,
             Action<TElement[], int> positionInitializer,
             Action<TElement[], int> velocityInitializer,
-            Action<TElement[], int> attributeInitializer
+            Action<TElement[], int> colorInitializer
         ) where TElement : struct {
             var mc = ChunkMaximumCount;
             int numToSpawn = (int)Math.Ceiling((double)particleCount / mc);
@@ -480,14 +480,14 @@ namespace Squared.Illuminant.Particles {
                 var curr = c.Current;
                 var pos = new BufferInitializer<TElement> { Buffer = curr.PositionAndLife, Initializer = positionInitializer, Offset = offset };
                 var vel = new BufferInitializer<TElement> { Buffer = curr.Velocity, Initializer = velocityInitializer, Offset = offset };
-                var attr = new BufferInitializer<TElement> { Buffer = c.Attributes, Initializer = attributeInitializer, Offset = offset };
+                var attr = new BufferInitializer<TElement> { Buffer = c.Color, Initializer = colorInitializer, Offset = offset };
                 var job = new ChunkInitializer<TElement> {
                     System = this,
                     Position = pos,
                     Velocity = vel,
-                    Attributes = attr,
+                    Color = attr,
                     Chunk = c,
-                    Remaining = (attributeInitializer != null) ? 3 : 2
+                    Remaining = (colorInitializer != null) ? 3 : 2
                 };
 
                 job.Run(g);
@@ -698,7 +698,7 @@ namespace Squared.Illuminant.Particles {
             int particleCount,
             Action<Vector4[], int> positionInitializer,
             Action<Vector4[], int> velocityInitializer,
-            Action<Vector4[], int> attributeInitializer,
+            Action<Vector4[], int> colorInitializer,
             bool parallel = true
         ) {
             var result = InitializeNewChunks(
@@ -707,7 +707,7 @@ namespace Squared.Illuminant.Particles {
                 parallel,
                 positionInitializer,
                 velocityInitializer,
-                attributeInitializer
+                colorInitializer
             );
             return result;
         }
@@ -725,7 +725,7 @@ namespace Squared.Illuminant.Particles {
             int particleCount,
             Action<HalfVector4[], int> positionInitializer,
             Action<HalfVector4[], int> velocityInitializer,
-            Action<HalfVector4[], int> attributeInitializer,
+            Action<HalfVector4[], int> colorInitializer,
             bool parallel = true
         ) {
             var result = InitializeNewChunks(
@@ -734,7 +734,7 @@ namespace Squared.Illuminant.Particles {
                 parallel,
                 positionInitializer,
                 velocityInitializer,
-                attributeInitializer
+                colorInitializer
             );
             return result;
         }
@@ -1140,10 +1140,10 @@ namespace Squared.Illuminant.Particles {
             if (material == null) {
                 if ((appearance.Texture != null) && (appearance.Texture.Instance != null)) {
                     material = appearance.Bilinear
-                        ? Engine.ParticleMaterials.AttributeColor
-                        : Engine.ParticleMaterials.AttributeColorPoint;
+                        ? Engine.ParticleMaterials.TextureLinear
+                        : Engine.ParticleMaterials.TexturePoint;
                 } else {
-                    material = Engine.ParticleMaterials.AttributeColorNoTexture;
+                    material = Engine.ParticleMaterials.NoTexture;
                 }
             }
 
@@ -1343,7 +1343,7 @@ namespace Squared.Illuminant.Particles {
         internal float?   _OpacityFromLife = null;
 
         /// <summary>
-        /// Sets a global multiply color to apply to the white and attributecolor materials
+        /// Sets a global multiply color to apply to the particles
         /// </summary>
         public Vector4    Global = Vector4.One;
 

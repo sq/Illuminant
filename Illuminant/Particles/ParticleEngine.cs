@@ -190,7 +190,7 @@ namespace Squared.Illuminant.Particles {
             var obSize = RasterizeOffsetBuffer.VertexCount * Marshal.SizeOf(typeof(ParticleOffsetVertex));
             var vbSize = RasterizeVertexBuffer.VertexCount * Marshal.SizeOf(typeof(ParticleSystemVertex));
 
-            // Attributes, RenderData and RenderColor
+            // Color, RenderData and RenderColor
             long chunkTotal = 0;
             foreach (var s in Systems)
                 foreach (var c in s.Chunks)

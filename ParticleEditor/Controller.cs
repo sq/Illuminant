@@ -262,7 +262,7 @@ namespace ParticleEditor {
                             Type = FormulaType.Spherical
                         })
                     },
-                    { "Attributes",
+                    { "Color",
                         ModelProperty.New(Formula4.One())
                     }
                 }

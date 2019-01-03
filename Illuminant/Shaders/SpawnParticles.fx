@@ -45,16 +45,14 @@ float4 evaluateFormula (float4 origin, float4 constant, float4 scale, float4 off
                 z = 0;
             float xyMultiplier = sqrt(1 - (z * z));
             float3 randomNormal = float3(xyMultiplier * cos(o), xyMultiplier * sin(o), z);
-            float4 circular = float4(
+            float3 circular = float3(
                 randomNormal.x * randomness.z * scale.x,
                 randomNormal.y * randomness.z * scale.y,
-                randomNormal.z * randomness.z * scale.z,
-                nonCircular.w
-                );
-            float4 result = constant + circular;
-            result.xyz += randomNormal * offset.xyz;
-            result.w = type0.w;
-            return result;
+                randomNormal.z * randomness.z * scale.z
+            );
+            float3 result = constant.xyz + circular.xyz;
+            result += randomNormal * offset.xyz;
+            return float4(result, type0.w);
         }
         case 2: {
             float3 distance = constant - origin;

@@ -73,7 +73,7 @@ namespace Squared.Illuminant.Particles.Transforms {
                     up.Curr.Bindings4[3] = new RenderTargetBinding(up.Chunk.RenderData);
                     dm.Device.SetRenderTargets(up.Curr.Bindings4);
                 } else if (up.IsSpawning) {
-                    up.Curr.Bindings3[2] = up.Chunk.Attributes;
+                    up.Curr.Bindings3[2] = up.Chunk.Color;
                     dm.Device.SetRenderTargets(up.Curr.Bindings3);
                 } else {
                     dm.Device.SetRenderTargets(up.Curr.Bindings2);
@@ -96,7 +96,7 @@ namespace Squared.Illuminant.Particles.Transforms {
                             if (up.SourceChunk != null)
                                 at.SetValue(up.SourceChunk.RenderColor);
                             else
-                                at.SetValue(up.IsSpawning ? null : up.Chunk.Attributes);
+                                at.SetValue(up.IsSpawning ? null : up.Chunk.Color);
                         }
 
                     }

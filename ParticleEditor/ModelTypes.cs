@@ -67,7 +67,7 @@ namespace ParticleEditor {
                     "PatternSpawner", new Dictionary<string, ModelTypeInfo> {
                         {"MinRate", new ModelTypeInfo { Min = 0, Max = 100000 } },
                         {"MaxRate", new ModelTypeInfo { Min = 0, Max = 100000 } },
-                        {"Attributes", new ModelTypeInfo { Type = "ColorFormula" } },
+                        {"Color", new ModelTypeInfo { Type = "ColorFormula" } },
                         {"Resolution", new ModelTypeInfo { Min = 0.2f, Max = 1f } }
                     }
                 },
@@ -75,7 +75,7 @@ namespace ParticleEditor {
                     "FeedbackSpawner", new Dictionary<string, ModelTypeInfo> {
                         {"MinRate", new ModelTypeInfo { Min = 0, Max = 100000 } },
                         {"MaxRate", new ModelTypeInfo { Min = 0, Max = 100000 } },
-                        {"Attributes", new ModelTypeInfo { Type = "ColorFormula" } },
+                        {"Color", new ModelTypeInfo { Type = "ColorFormula" } },
                         {"SourceVelocityFactor", new ModelTypeInfo { Min = -2f, Max = 2f } }
                     }
                 },
@@ -93,7 +93,7 @@ namespace ParticleEditor {
                             },
                             MaxCount = Spawner.MaxPositions - 1
                         } },
-                        {"Attributes", new ModelTypeInfo { Type = "ColorFormula" } }
+                        {"Color", new ModelTypeInfo { Type = "ColorFormula" } }
                     }
                 },
                 {

@@ -309,7 +309,7 @@ namespace TestGame.Scenes {
                             ConstantRadius = new Vector3(3f, 3f, 0f),
                             Type = FormulaType.Spherical
                         },
-                        Attributes = new Formula4 {
+                        Color = new Formula4 {
                             Constant = new Vector4(0.09f, 0.09f, 0.09f, 0.3f),
                             RandomScale = new Vector4(0.2f, 0.2f, 0.2f, 0.1f)
                         }

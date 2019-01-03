@@ -154,7 +154,7 @@ void PS_NoTexture (
         discard;
 }
 
-technique AttributeColor {
+technique TextureLinear {
     pass P0
     {
         vertexShader = compile vs_3_0 VS_PosVelAttr();
@@ -162,7 +162,7 @@ technique AttributeColor {
     }
 }
 
-technique AttributeColorPoint {
+technique TexturePoint {
     pass P0
     {
         vertexShader = compile vs_3_0 VS_PosVelAttr();
@@ -170,7 +170,7 @@ technique AttributeColorPoint {
     }
 }
 
-technique AttributeColorNoTexture {
+technique NoTexture {
     pass P0
     {
         vertexShader = compile vs_3_0 VS_PosVelAttr();

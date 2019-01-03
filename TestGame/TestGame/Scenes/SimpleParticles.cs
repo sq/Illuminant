@@ -147,7 +147,7 @@ namespace TestGame.Scenes {
                             RandomScale = new Vector3(60f, 60f, 0f),
                             Type = FormulaType.Spherical
                         },
-                        Attributes = new Formula4 {
+                        Color = new Formula4 {
                             Constant = new Vector4(0.09f, 0.09f, 0.09f, 1f),
                             RandomScale = new Vector4(0.3f, 0.3f, 0.3f, 0f)
                         }

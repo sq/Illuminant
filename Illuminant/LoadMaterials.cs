@@ -342,14 +342,14 @@ namespace Squared.Illuminant.Particles {
                     effects.Load("SpawnParticles"), "SpawnPatternParticles", dBegin, dEnd
                 ));
                 
-                DefineMaterial(ParticleMaterials.AttributeColor = new Material(
-                    effects.Load("RasterizeParticleSystem"), "AttributeColor"
+                DefineMaterial(ParticleMaterials.TextureLinear = new Material(
+                    effects.Load("RasterizeParticleSystem"), "TextureLinear"
                 ));
-                DefineMaterial(ParticleMaterials.AttributeColorPoint = new Material(
-                    effects.Load("RasterizeParticleSystem"), "AttributeColorPoint"
+                DefineMaterial(ParticleMaterials.TexturePoint = new Material(
+                    effects.Load("RasterizeParticleSystem"), "TexturePoint"
                 ));
-                DefineMaterial(ParticleMaterials.AttributeColorNoTexture = new Material(
-                    effects.Load("RasterizeParticleSystem"), "AttributeColorNoTexture"
+                DefineMaterial(ParticleMaterials.NoTexture = new Material(
+                    effects.Load("RasterizeParticleSystem"), "NoTexture"
                 ));
 
                 Materials.ForEachMaterial<object>((m, _) => {
