@@ -52,11 +52,16 @@ namespace Squared.Illuminant.Particles.Transforms {
         /// </summary>
         public Parameter<DynamicMatrix> PositionPostMatrix = DynamicMatrix.Identity;
 
+        /// <summary>
+        /// If set, the spawner will only be allowed to produce this many particles in total.
+        /// </summary>
+        public int? MaximumTotal = null;
+
         private static int NextSeed = 1;
 
-        protected double   RateError { get; private set; }
-        protected Vector2  Indices { get; private set; }
-        protected int      TotalSpawned { get; private set; }
+        protected double  RateError    { get; private set; }
+        protected Vector2 Indices      { get; private set; }
+        public    int     TotalSpawned { get; private set; }
         [NonSerialized]
         protected readonly MersenneTwister RNG;
 
@@ -74,6 +79,11 @@ namespace Squared.Illuminant.Particles.Transforms {
 
         private void Spawner_ActiveStateChanged () {
             RateError = 0;
+        }
+
+        public override void Reset () {
+            RateError = 0;
+            TotalSpawned = 0;
         }
 
         internal void SetIndices (int first, int last) {
@@ -113,6 +123,14 @@ namespace Squared.Illuminant.Particles.Transforms {
             } else {
                 spawnCount = (int)currentRate;
                 RateError = currentRate - spawnCount;
+            }
+
+            if (MaximumTotal.HasValue) {
+                var remaining = MaximumTotal.Value - TotalSpawned;
+                if (spawnCount > remaining) {
+                    spawnCount = remaining;
+                    RateError = 0;
+                }
             }
         }
 
@@ -256,6 +274,7 @@ namespace Squared.Illuminant.Particles.Transforms {
     }
 
     public sealed class PatternSpawner : SpawnerBase {
+        [NonSerialized]
         private int RowsSpawned = 0;
 
         /// <summary>
@@ -307,6 +326,10 @@ namespace Squared.Illuminant.Particles.Transforms {
             get {
                 return ParticlesPerRow * RowsPerInstance;
             }
+        }
+
+        public override void Reset () {
+            RowsSpawned = 0;
         }
 
         public override void BeginTick (ParticleSystem system, float now, double deltaTimeSeconds, out int spawnCount, out ParticleSystem.Chunk sourceChunk) {
@@ -400,10 +423,17 @@ namespace Squared.Illuminant.Particles.Transforms {
         /// </summary>
         public int SlidingWindowMargin = 0;
         
+        [NonSerialized]
         private ParticleSystem.Chunk CurrentFeedbackSource;
+        [NonSerialized]
         private int CurrentFeedbackSourceIndex;
 
         private Vector4[] Temp3 = new Vector4[1];
+
+        public override void Reset () {
+            CurrentFeedbackSourceIndex = 0;
+            CurrentFeedbackSource = null;
+        }
 
         public override void BeginTick (ParticleSystem system, float now, double deltaTimeSeconds, out int spawnCount, out ParticleSystem.Chunk sourceChunk) {
             spawnCount = 0;

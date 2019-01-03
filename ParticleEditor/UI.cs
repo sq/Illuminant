@@ -85,7 +85,12 @@ namespace ParticleEditor {
             using (var group = Nuklear.CollapsingGroup("File", "File", true))
             if (group.Visible) {
             */
-            Nuke.nk_layout_row_dynamic(ctx, LineHeight, Model.Filename == null ? 2 : 3);
+            var buttonCount = Model.Filename == null ? 3 : 4;
+            var enableNew = (Model.Systems.Count > 0) || (Model.NamedVariables.Count > 0);
+            Nuke.nk_layout_row_dynamic(ctx, LineHeight, buttonCount);
+            if (Nuklear.Button("New", enableNew)) {
+                Controller.SetModel(new EngineModel());
+            }
             if (Model.Filename != null) {
                 if (Nuklear.Button("Save")) {
                     RunWorkItem(() => Model.Save(Model.Filename));
@@ -284,22 +289,22 @@ namespace ParticleEditor {
 
             using (var group = Nuklear.CollapsingGroup("Transform Properties", "Transform Properties"))
             if (group.Visible && (xform != null)) {
-                Nuke.nk_layout_row_dynamic(ctx, LineHeight + 3, 2);
+                Nuke.nk_layout_row_dynamic(ctx, LineHeight + 3, 1);
 
                 Nuklear.Textbox(ref xform.Model.Name, "Transform Name");
                 NameStack.Clear();
                 NameStack.Push(Controller.SelectedSystem.Model.Name);
                 NameStack.Push(xform.Model.Name);
 
-                if (Nuklear.Property("#Update Order", ref xform.Model.UpdateOrder, -1, Controller.SelectedSystem.Transforms.Count + 1, 1, 0.5f))
-                    TransformSortRequired = true;
-
-                Nuke.nk_layout_row_dynamic(ctx, LineHeight + 3, 1);
+                Nuke.nk_layout_row_dynamic(ctx, LineHeight + 3, 2);
                 int typeIndex = TransformTypes.IndexOf(xform.Model.Type);
 
                 if (Nuklear.ComboBox(ref typeIndex, (i) => TransformTypes[i].Name, TransformTypes.Count, "Transform Type")) {
                     Controller.ChangeTransformType(xform, TransformTypes[typeIndex]);
                 } else {
+                    if (Nuklear.Property("#Update Order", ref xform.Model.UpdateOrder, -1, Controller.SelectedSystem.Transforms.Count + 1, 1, 0.5f))
+                        TransformSortRequired = true;
+
                     if (TransformProperties.Prepare(xform.Model, xform.Model.Type)) {
                         foreach (var m in TransformProperties.Members) {
                             var name = m.Name;

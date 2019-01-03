@@ -320,7 +320,7 @@ namespace TestGame.Scenes {
                 }
             };
 
-            System.OnDeviceReset += (_) => System.Clear();
+            System.OnDeviceReset += (_) => System.Reset();
         }
         
         public override void Draw (Squared.Render.Frame frame) {

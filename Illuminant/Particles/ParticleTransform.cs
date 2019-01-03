@@ -237,6 +237,9 @@ namespace Squared.Illuminant.Particles.Transforms {
 
         public abstract bool IsValid { get; }
 
+        public virtual void Reset () {
+        }
+
         public virtual void Dispose () {
         }
     }

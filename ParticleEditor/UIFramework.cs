@@ -352,7 +352,7 @@ namespace ParticleEditor {
             int scaleIndex = GetScaleIndex(value, out inc);
 
             var _min = min.GetValueOrDefault(_info.Min.GetValueOrDefault(-4096));
-            var _max = max.GetValueOrDefault(_info.Max.GetValueOrDefault(4096));
+            var _max = max.GetValueOrDefault(_info.Max.GetValueOrDefault(81920));
             if (Nuklear.Property(key, ref value, _min, _max, step, inc, tooltip: tooltip)) {
                 changed = true;
                 float newInc;
@@ -810,7 +810,7 @@ namespace ParticleEditor {
                             if (Nuklear.Property(
                                 cpi.Name, ref v, 
                                 (int)cpi.Info.Min.GetValueOrDefault(0), 
-                                (int)cpi.Info.Min.GetValueOrDefault(40960), 
+                                (int)cpi.Info.Max.GetValueOrDefault(81920), 
                                 1, 0.5f, tooltip: cpi.Summary
                             )) {
                                 cpi.Setter(instance, v);
@@ -1513,7 +1513,9 @@ namespace ParticleEditor {
                 Controller.SelectTexture(cpi, instance, value);
                 changed = false;
             }
-            if (Nuklear.Button("Erase", hasValue)) {
+            if (Nuklear.Button("Remove Image", hasValue)) {
+                if (value.Instance != null)
+                    Game.RenderCoordinator.DisposeResource(value.Instance);
                 value = new NullableLazyResource<Texture2D>();
                 cpi.Setter(instance, value);
                 changed = true;

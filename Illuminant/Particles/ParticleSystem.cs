@@ -270,7 +270,7 @@ namespace Squared.Illuminant.Particles {
                 var appearance = System.Configuration.Appearance;
 
                 var tex = appearance?.Texture?.Instance;
-                if (tex.IsDisposed)
+                if ((tex != null) && tex.IsDisposed)
                     tex = null;
                 var texSize = (tex != null)
                     ? new Vector2(tex.Width, tex.Height)
@@ -688,10 +688,12 @@ namespace Squared.Illuminant.Particles {
             }
         }
 
-        public void Clear () {
+        public void Reset () {
             LastClearTimestamp = Time.Ticks;
             IsClearPending = true;
             TotalSpawnCount = 0;
+            foreach (var xform in Transforms)
+                xform.Reset();
         }
 
         public int Spawn (

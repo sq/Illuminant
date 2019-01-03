@@ -186,7 +186,7 @@ namespace ParticleEditor {
 
         public void Update () {
             foreach (var v in QueuedResets)
-                v.Instance.Clear();
+                v.Instance.Reset();
 
             QueuedResets.Clear();
 

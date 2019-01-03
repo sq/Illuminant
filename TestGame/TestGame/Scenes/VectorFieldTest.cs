@@ -116,7 +116,7 @@ namespace TestGame.Scenes {
 
         private void InitializeSystem (ParticleSystem system) {
             system.Configuration.Collision.DistanceFieldMaximumZ = 256;
-            system.Clear();
+            system.Reset();
         }
         
         public override void Draw (Squared.Render.Frame frame) {
