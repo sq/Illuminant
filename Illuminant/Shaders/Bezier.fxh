@@ -1,6 +1,11 @@
 #define PI 3.14159265358979323846
 #define BEZIERS_DEFINED
 
+struct ClampedBezier1 {
+    float4 RangeAndCount;
+    float4 ABCD;
+};
+
 struct ClampedBezier2 {
     float4 RangeAndCount;
     float4 AB, CD;
@@ -29,6 +34,37 @@ float tForScaledBezier (in float4 rangeAndCount, in float value, out float t) {
             t = saturate(t);
     }
     return rangeAndCount.z;
+}
+
+float evaluateBezier1AtT (in ClampedBezier1 bezier, in float count, in float t) {
+    float a = bezier.ABCD.x,
+        b = bezier.ABCD.y,
+        c = bezier.ABCD.z,
+        d = bezier.ABCD.w;
+
+    if (count <= 1.5)
+        return a;
+
+    float ab = lerp(a, b, t);
+    if (count <= 2.5)
+        return ab;
+
+    float bc = lerp(b, c, t);
+    float abbc = lerp(ab, bc, t);
+    if (count <= 3.5)
+        return abbc;
+
+    float cd = lerp(c, d, t);
+    float bccd = lerp(bc, cd, t);
+
+    float result = lerp(abbc, bccd, t);
+    return result;
+}
+
+float evaluateBezier1 (in ClampedBezier1 bezier, float value) {
+    float t;
+    float count = tForScaledBezier(bezier.RangeAndCount, value, t);
+    return evaluateBezier1AtT(bezier, count, t);
 }
 
 float2 evaluateBezier2AtT (in ClampedBezier2 bezier, in float count, in float t) {

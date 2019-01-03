@@ -821,7 +821,7 @@ namespace Squared.Illuminant.Particles {
 
         internal void SetSystemUniforms (Material m, double deltaTimeSeconds) {
             ClampedBezier4 colorFromLife, colorFromVelocity;
-            ClampedBezier2 sizeFromLife, sizeFromVelocity;
+            ClampedBezier1 sizeFromLife, sizeFromVelocity;
 
             var psu = new Uniforms.ParticleSystem(Engine.Configuration, Configuration, deltaTimeSeconds);
             Engine.ParticleMaterials.MaterialSet.TrySetBoundUniform(m, "System", ref psu);
@@ -838,8 +838,8 @@ namespace Squared.Illuminant.Particles {
             }
             colorFromVelocity = new ClampedBezier4(Configuration.Color.ColorFromVelocity);
 
-            sizeFromLife = new ClampedBezier2(Configuration.SizeFromLife);
-            sizeFromVelocity = new ClampedBezier2(Configuration.SizeFromVelocity);
+            sizeFromLife = new ClampedBezier1(Configuration.SizeFromLife);
+            sizeFromVelocity = new ClampedBezier1(Configuration.SizeFromVelocity);
 
             Engine.ParticleMaterials.MaterialSet.TrySetBoundUniform(m, "ColorFromLife", ref colorFromLife);
             Engine.ParticleMaterials.MaterialSet.TrySetBoundUniform(m, "SizeFromLife", ref sizeFromLife);
@@ -1392,12 +1392,12 @@ namespace Squared.Illuminant.Particles {
         /// <summary>
         /// Multiplies the particle's size, producing a shrink or grow based on the particle's life
         /// </summary>
-        public Bezier2       SizeFromLife = null;
+        public BezierF       SizeFromLife = null;
 
         /// <summary>
         /// Multiplies the particle's size, producing a shrink or grow based on the speed of the particle
         /// </summary>
-        public Bezier2       SizeFromVelocity = null;
+        public BezierF       SizeFromVelocity = null;
 
         /// <summary>
         /// Life of all particles decreases by this much every second

@@ -41,7 +41,7 @@ namespace Squared.Illuminant.Particles.Transforms {
         public Formula3 Position = Formula3.UnitNormal(),
             Velocity = Formula3.UnitNormal();
         public Formula1 Life = Formula1.One(),
-            Type = Formula1.Zero();
+            Category = Formula1.Zero();
         public Formula4 Color = Formula4.One();
 
         /// <summary>
@@ -142,9 +142,9 @@ namespace Squared.Illuminant.Particles.Transforms {
 
             var lifeScale = Life.RandomScale.Evaluate(now, engine.ResolveSingle);
             var lifeOffset = Life.Offset.Evaluate(now, engine.ResolveSingle);
-            var typeConstant = Type.Constant.Evaluate(now, engine.ResolveSingle);
-            var typeScale = Type.RandomScale.Evaluate(now, engine.ResolveSingle);
-            var typeOffset = Type.Offset.Evaluate(now, engine.ResolveSingle);
+            var typeConstant = Category.Constant.Evaluate(now, engine.ResolveSingle);
+            var typeScale = Category.RandomScale.Evaluate(now, engine.ResolveSingle);
+            var typeOffset = Category.Offset.Evaluate(now, engine.ResolveSingle);
             Temp[0] = new Vector4(Position.RandomScale.Evaluate(now, engine.ResolveVector3), lifeScale);
             Temp[1] = new Vector4(Position.Offset.Evaluate(now, engine.ResolveVector3), lifeOffset);
             Temp[2] = new Vector4(Velocity.Constant.Evaluate(now, engine.ResolveVector3), typeConstant);

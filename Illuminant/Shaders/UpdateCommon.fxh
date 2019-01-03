@@ -29,8 +29,8 @@ float4 readLifeRamp (float u, float v) {
 
 #ifdef INCLUDE_RAMPS
 
-uniform ClampedBezier2 SizeFromLife;
-uniform ClampedBezier2 SizeFromVelocity;
+uniform ClampedBezier1 SizeFromLife;
+uniform ClampedBezier1 SizeFromVelocity;
 uniform ClampedBezier4 ColorFromLife;
 uniform ClampedBezier4 ColorFromVelocity;
 
@@ -40,10 +40,10 @@ float4 getColorForLifeAndVelocity (float life, float velocityLength) {
     return result;
 }
 
-float2 getSizeForLifeAndVelocity (float life, float velocityLength) {
-    float2 result = evaluateBezier2(SizeFromLife, life);
-    result *= evaluateBezier2(SizeFromVelocity, velocityLength);
-    return System.TexelAndSize.zw * result;
+float getSizeForLifeAndVelocity (float life, float velocityLength) {
+    float result = evaluateBezier1(SizeFromLife, life);
+    result *= evaluateBezier1(SizeFromVelocity, velocityLength);
+    return result;
 }
 
 #endif
@@ -87,8 +87,9 @@ void computeRenderData (
     renderColor = attributes * getRampedColorForLifeValueAndIndex(position.w, velocityLength, index);
     renderColor.a = saturate(renderColor.a);
     renderColor.rgb *= renderColor.a;
-    renderData.xy = getSizeForLifeAndVelocity(position.w, velocityLength);
-    renderData.z = getRotationForVelocity(velocity) +
+    renderData.x = getSizeForLifeAndVelocity(position.w, velocityLength);
+    renderData.y = getRotationForVelocity(velocity) +
         getRotationForLifeAndIndex(position.w, index);
-    renderData.w = velocityLength;
+    renderData.z = velocityLength;
+    renderData.w = velocity.w;
 }

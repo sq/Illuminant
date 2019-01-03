@@ -69,8 +69,8 @@ void VS_PosVelAttr(
         return;
     }
 
-    float angle = renderData.z;
-    float2 size = renderData.xy * SizeFactor;
+    float angle = renderData.y;
+    float2 size = renderData.x * System.TexelAndSize.zw * SizeFactor;
     float3 rotatedCorner = ComputeRotatedCorner(cornerIndex.x, angle, size);
     positionXy = Corners[cornerIndex.x];
 
@@ -89,7 +89,10 @@ void VS_PosVelAttr(
 
     float2 texSize = (BitmapTextureRegion.zw - BitmapTextureRegion.xy);
     float2 frameCountXy = floor(1.0 / texSize);
-    float2 frameIndexXy = floor((getAnimationRate() * position.w) % frameCountXy);
+    float2 frameIndexXy = floor(
+        (getAnimationRate() * position.w) % frameCountXy
+    );
+    frameIndexXy.y = clamp(frameIndexXy.y + floor(renderData.w), 0, frameCountXy.y - 1);
 
     texCoord += (frameIndexXy * texSize);
 }

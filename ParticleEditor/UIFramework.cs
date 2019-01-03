@@ -563,7 +563,7 @@ namespace ParticleEditor {
             return false;
         }
 
-        private unsafe bool RenderFormula (CachedPropertyInfo cpi, string actualName, Formula1 value, bool isColor) {
+        private unsafe bool RenderFormula (CachedPropertyInfo cpi, object instance, string actualName, Formula1 value, bool isColor) {
             var result = false;
             var name = cpi.Name;
 
@@ -596,13 +596,16 @@ namespace ParticleEditor {
                     p = value.Offset;
                     if (RenderParameter(null, value, ref changed, k, cpi.Info.Type, ref p, true))
                         value.Offset = (Parameter<float>)p;
+
+                    if (changed)
+                        cpi.Setter(instance, value);
                 }
             }
 
             return result;
         }
 
-        private unsafe bool RenderFormula (CachedPropertyInfo cpi, string actualName, Formula3 value, bool isColor) {
+        private unsafe bool RenderFormula (CachedPropertyInfo cpi, object instance, string actualName, Formula3 value, bool isColor) {
             var result = false;
             var name = cpi.Name;
 
@@ -646,13 +649,16 @@ namespace ParticleEditor {
                         value.Type = (FormulaType)t;
                         result = true;
                     }
+
+                    if (changed)
+                        cpi.Setter(instance, value);
                 }
             }
 
             return result;
         }
 
-        private unsafe bool RenderFormula (CachedPropertyInfo cpi, string actualName, Formula4 value, bool isColor) {
+        private unsafe bool RenderFormula (CachedPropertyInfo cpi, object instance, string actualName, Formula4 value, bool isColor) {
             var result = false;
             var name = cpi.Name;
 
@@ -685,6 +691,9 @@ namespace ParticleEditor {
                     p = value.Offset;
                     if (RenderParameter(null, value, ref changed, k, cpi.Info.Type, ref p, true))
                         value.Offset = (Parameter<Vector4>)p;
+
+                    if (changed)
+                        cpi.Setter(instance, value);
                 }
             }
 
@@ -768,16 +777,16 @@ namespace ParticleEditor {
                 }
 
                 case "ColorFormula":
-                    return RenderFormula(cpi, actualName, (Formula4)value, true);
+                    return RenderFormula(cpi, instance, actualName, (Formula4)value, true);
 
                 case "Formula1":
-                    return RenderFormula(cpi, actualName, (Formula1)value, true);
+                    return RenderFormula(cpi, instance, actualName, (Formula1)value, true);
 
                 case "Formula3":
-                    return RenderFormula(cpi, actualName, (Formula3)value, true);
+                    return RenderFormula(cpi, instance, actualName, (Formula3)value, true);
 
                 case "Formula4":
-                    return RenderFormula(cpi, actualName, (Formula4)value, true);
+                    return RenderFormula(cpi, instance, actualName, (Formula4)value, true);
 
                 case "ParticleSystemReference":
                     return RenderSystemReferenceProperty(cpi, instance, ref changed, actualName, value);
