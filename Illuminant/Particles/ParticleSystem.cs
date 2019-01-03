@@ -909,6 +909,16 @@ namespace Squared.Illuminant.Particles {
                     NewUserChunks.Clear();
                 }
 
+                if (IsClearPending) {
+                    foreach (var c in Chunks.ToList()) {
+                        c.Clear();
+                        Reap(c);
+                    }
+                    IsClearPending = false;
+                    TotalSpawnCount = 0;
+                    LivenessInfos.Clear();
+                }
+
                 bool computingLiveness = false;
                 if (FramesUntilNextLivenessCheck-- <= 0) {
                     FramesUntilNextLivenessCheck = LivenessCheckInterval;
@@ -974,10 +984,6 @@ namespace Squared.Illuminant.Particles {
                         true, now, true, null
                     );
                 }
-                IsClearPending = false;
-                TotalSpawnCount = 0;
-                foreach (var c in Chunks)
-                    c.Clear();
                 // FIXME: Still fucked
             } else if (Configuration.Collision?.DistanceField != null) {
                 if (Configuration.Collision.DistanceFieldMaximumZ == null)
