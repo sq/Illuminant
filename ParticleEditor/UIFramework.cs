@@ -709,9 +709,11 @@ namespace ParticleEditor {
             if (!CachedMembers.TryGetValue(cpi.Type, out members))
                 CachedMembers[cpi.Type] = members = CachePropertyInfo(cpi.Type).ToList();
 
+            var groupKey = PickName(actualName);
+
             if ((instance == null) || (value == null))
                 return false;
-            using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, actualName, false)) {
+            using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, groupKey, false)) {
                 if (pGroup.Visible) {
                     foreach (var i in members) 
                         if (RenderProperty(cache, i, value, cpi.Info.Type, cpi.Name))
