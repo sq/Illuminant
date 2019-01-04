@@ -870,6 +870,7 @@ namespace ParticleEditor {
                 case "ParticleColorLifeRamp":
                     return RenderGenericObjectProperty(cache, cpi, instance, value, actualName);
 
+                case "BezierF":
                 case "Bezier2":
                 case "Bezier4":
                 case "ColorBezier4":
