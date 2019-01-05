@@ -243,8 +243,6 @@ namespace Squared.Illuminant {
                         new [] { MaterialUtil.MakeDelegate(BlendState.AlphaBlend) }
                     ));
 
-                Materials.PreallocateBindings();
-
                 IlluminantMaterials.IsLoaded = true;
             }
         }
@@ -346,8 +344,6 @@ namespace Squared.Illuminant.Particles {
                 DefineMaterial(ParticleMaterials.NoTexture = new Material(
                     effects.Load("RasterizeParticleSystem"), "NoTexture"
                 ));
-
-                Materials.PreallocateBindings();
 
                 ParticleMaterials.IsLoaded = true;
             }
