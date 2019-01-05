@@ -391,6 +391,7 @@ namespace Squared.Illuminant.Particles {
         private int FramesUntilNextLivenessCheck = LivenessCheckInterval;
 
         private double? LastUpdateTimeSeconds = null;
+        private double  UpdateErrorAccumulator = 0;
 
         private readonly RenderTarget2D LivenessQueryRT;
 
@@ -692,6 +693,7 @@ namespace Squared.Illuminant.Particles {
             LastClearTimestamp = Time.Ticks;
             IsClearPending = true;
             TotalSpawnCount = 0;
+            UpdateErrorAccumulator = 0;
             foreach (var xform in Transforms)
                 xform.Reset();
         }
@@ -875,17 +877,35 @@ namespace Squared.Illuminant.Particles {
 
         public void Update (IBatchContainer container, int layer, float? deltaTimeSeconds = null) {
             var lastUpdateTimeSeconds = LastUpdateTimeSeconds;
+            var updateError = UpdateErrorAccumulator;
+            UpdateErrorAccumulator = 0;
             var now = (float)(LastUpdateTimeSeconds = TimeProvider.Seconds);
             CurrentFrameIndex++;
 
-            float actualDeltaTimeSeconds = 1 / 60f;
+            var ups = Engine.Configuration.UpdatesPerSecond;
+
+            var tickUnit = 1.0 / ups.GetValueOrDefault(60);
+            var actualDeltaTimeSeconds = tickUnit;
             if (deltaTimeSeconds.HasValue)
                 actualDeltaTimeSeconds = deltaTimeSeconds.Value;
             else if (lastUpdateTimeSeconds.HasValue)
-                actualDeltaTimeSeconds = (float)Math.Min(
+                actualDeltaTimeSeconds = Math.Min(
                     LastUpdateTimeSeconds.Value - lastUpdateTimeSeconds.Value, 
                     Engine.Configuration.MaximumUpdateDeltaTimeSeconds
                 );
+
+            if (ups.HasValue) {
+                actualDeltaTimeSeconds += updateError;
+                var tickCount = (int)Math.Floor(actualDeltaTimeSeconds / tickUnit);
+                var adjustedDeltaTime = tickCount * tickUnit;
+                var newError = actualDeltaTimeSeconds - adjustedDeltaTime;
+                UpdateErrorAccumulator = newError;
+                actualDeltaTimeSeconds = adjustedDeltaTime;
+            }
+
+            actualDeltaTimeSeconds = Math.Min(
+                actualDeltaTimeSeconds, Engine.Configuration.MaximumUpdateDeltaTimeSeconds
+            );
 
             var startedWhen = Time.Ticks;
 
@@ -949,7 +969,7 @@ namespace Squared.Illuminant.Particles {
                 }
 
                 foreach (var chunk in Chunks)
-                    UpdateChunk(chunk, now, actualDeltaTimeSeconds, startedWhen, pm, group, ref i, computingLiveness);
+                    UpdateChunk(chunk, now, (float)actualDeltaTimeSeconds, startedWhen, pm, group, ref i, computingLiveness);
 
                 if (computingLiveness)
                     ComputeLiveness(group, i++);

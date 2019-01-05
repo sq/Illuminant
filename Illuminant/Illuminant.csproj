@@ -87,6 +87,8 @@
     <Compile Include="Particles\ParticleSystem.cs" />
     <Compile Include="Particles\ParticleSpawner.cs" />
     <Compile Include="Particles\ParticleTransform.cs" />
+    <Compile Include="Particles\SpecialSpawners.cs" />
+    <Compile Include="Particles\Transforms.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="BufferRing.cs" />
     <Compile Include="Uniforms.cs" />

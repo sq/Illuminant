@@ -356,9 +356,16 @@ namespace Squared.Illuminant.Particles {
         public ITimeProvider TimeProvider = null;
 
         /// <summary>
+        /// If set, updates occur at a fixed time step for consistent behavior.
+        /// A single Update call will still only perform one update pass, but the elapsed time
+        ///  will be an integer multiple of the time step.
+        /// </summary>
+        public int? UpdatesPerSecond = null;
+
+        /// <summary>
         /// Any update's elapsed time will be limited to at most this long
         /// </summary>
-        public float MaximumUpdateDeltaTimeSeconds = 1 / 20f;
+        public double MaximumUpdateDeltaTimeSeconds = 1.0 / 20;
 
         /// <summary>
         /// Used to load lazy texture resources.
