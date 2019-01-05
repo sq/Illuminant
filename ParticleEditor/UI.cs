@@ -162,6 +162,9 @@ namespace ParticleEditor {
 
             bool changed = false;
 
+            if (Game.View == null)
+                return;
+
             using (var group = Nuklear.CollapsingGroup("Variable " + n, "Variable", true))
             if (group.Visible) {
                 Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);

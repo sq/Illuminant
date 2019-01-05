@@ -320,10 +320,6 @@ namespace Squared.Illuminant.Particles {
                 if (pc != null)
                     pc.SetValue((appearance?.Rounded).GetValueOrDefault(false));
 
-                var cp = p["RoundingPower"];
-                if (cp != null)
-                    cp.SetValue((appearance?.RoundingPower).GetValueOrDefault(2));
-
                 var gc = p["GlobalColor"];
                 if (gc != null) {
                     var gcolor = System.Configuration.Color.Global;
@@ -831,7 +827,7 @@ namespace Squared.Illuminant.Particles {
 
         internal void SetSystemUniforms (Material m, double deltaTimeSeconds) {
             ClampedBezier4 colorFromLife, colorFromVelocity;
-            ClampedBezier1 sizeFromLife, sizeFromVelocity;
+            ClampedBezier1 sizeFromLife, sizeFromVelocity, roundingFromLife;
 
             var psu = new Uniforms.ParticleSystem(Engine.Configuration, Configuration, deltaTimeSeconds);
             Engine.ParticleMaterials.MaterialSet.TrySetBoundUniform(m, "System", ref psu);
@@ -850,9 +846,11 @@ namespace Squared.Illuminant.Particles {
 
             sizeFromLife = new ClampedBezier1(Configuration.SizeFromLife);
             sizeFromVelocity = new ClampedBezier1(Configuration.SizeFromVelocity);
+            roundingFromLife = new ClampedBezier1(Configuration.Appearance.RoundingPowerFromLife);
 
             Engine.ParticleMaterials.MaterialSet.TrySetBoundUniform(m, "ColorFromLife", ref colorFromLife);
             Engine.ParticleMaterials.MaterialSet.TrySetBoundUniform(m, "SizeFromLife", ref sizeFromLife);
+            Engine.ParticleMaterials.MaterialSet.TrySetBoundUniform(m, "RoundingPowerFromLife", ref roundingFromLife);
             Engine.ParticleMaterials.MaterialSet.TrySetBoundUniform(m, "ColorFromVelocity", ref colorFromVelocity);
             Engine.ParticleMaterials.MaterialSet.TrySetBoundUniform(m, "SizeFromVelocity", ref sizeFromVelocity);
         }
@@ -1294,7 +1292,7 @@ namespace Squared.Illuminant.Particles {
         /// <summary>
         /// Applies a gamma curve to the opacity of circular particles
         /// </summary>
-        public float RoundingPower = 0.8f;
+        public BezierF RoundingPowerFromLife = new BezierF(0.8f);
 
         /// <summary>
         /// Renders textured particles with bilinear filtering.
