@@ -312,14 +312,13 @@ namespace Squared.Illuminant {
 
                     p["Brightness"].SetValue(1.0f);
 
-                    p["GBuffer"].SetValue((Texture2D)null);
+                    p.ClearTextures("GBuffer", "SphericalHarmonics", "ProbeNormals");
+
                     p["GBuffer"].SetValue(_SelectedGIProbePositions);
                     p["GBufferTexelSize"].SetValue(new Vector2(1.0f / _SelectedGIProbePositions.Width, 1.0f / GIProbeSampleCount));
-                    p["ProbeNormals"].SetValue((Texture2D)null);
                     p["ProbeNormals"].SetValue(_SelectedGIProbeNormals);
 
                     p["SphericalHarmonicsTexelSize"].SetValue(new Vector2(1.0f / source.Width, 1.0f / source.Height));
-                    p["SphericalHarmonics"].SetValue((Texture2D)null);
                     p["SphericalHarmonics"].SetValue(source);
 
                     m.Flush();
@@ -358,17 +357,17 @@ namespace Squared.Illuminant {
 
                     p["Brightness"].SetValue(1.0f + (Configuration.GIBounceBrightnessAmplification * bounceIndex));
 
+                    p.ClearTextures("ProbeValues", "PreviousBounce");
+
                     p["InverseScaleFactor"].SetValue(1.0f / intensityScale);
                     p["NormalCount"].SetValue(GIProbeSampleCount);
                     p["ProbeValuesTexelSize"].SetValue(new Vector2(1.0f / _GIProbeValues.Width, 1.0f / _GIProbeValues.Height));
-                    p["ProbeValues"].SetValue((Texture2D)null);
                     p["ProbeValues"].SetValue(_GIProbeValues);
                     p["PreviousBounceTexelSize"].SetValue(
                         (previousBounce != null)
                             ? new Vector2(1.0f / previousBounce.Width, 1.0f / previousBounce.Height)
                             : Vector2.Zero
                     );
-                    p["PreviousBounce"].SetValue((Texture2D)null);
                     p["PreviousBounce"].SetValue(previousBounce);
 
                     m.Flush();
@@ -417,7 +416,7 @@ namespace Squared.Illuminant {
                 (dm, _) => {
                     p["Brightness"].SetValue(brightness);
                     p["SphericalHarmonicsTexelSize"].SetValue(new Vector2(1.0f / source.Width, 1.0f / source.Height));
-                    p["SphericalHarmonics"].SetValue((Texture2D)null);
+                    p.ClearTexture("SphericalHarmonics");
                     p["SphericalHarmonics"].SetValue(source);
 
                     m.Flush();

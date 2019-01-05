@@ -8,6 +8,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Squared.Illuminant.Configuration;
 using Squared.Illuminant.Util;
 using Squared.Render;
+using Squared.Render.Convenience;
 
 namespace Squared.Illuminant.Particles.Transforms {
     public enum AreaType : int {
@@ -138,28 +139,7 @@ namespace Squared.Illuminant.Particles.Transforms {
                 // XNA effectparameter gets confused about whether a value is set or not, so we do this
                 //  to ensure it always re-sets the texture parameter
                 if (e != null) {
-                    p["PositionTexture"].SetValue((Texture2D)null);
-                    p["VelocityTexture"].SetValue((Texture2D)null);
-
-                    var lr = p["LifeRampTexture"];
-                    if (lr != null)
-                        lr.SetValue((Texture2D)null);
-
-                    var rt = p["LowPrecisionRandomnessTexture"];
-                    if (rt != null)
-                        rt.SetValue((Texture2D)null);
-
-                    rt = p["RandomnessTexture"];
-                    if (rt != null)
-                        rt.SetValue((Texture2D)null);
-
-                    var at = p["AttributeTexture"];
-                    if (at != null)
-                        at.SetValue((Texture2D)null);
-
-                    var dft = p["DistanceFieldTexture"];
-                    if (dft != null)
-                        dft.SetValue((Texture2D)null);
+                    p.ClearTextures(ParticleSystem.ClearTextureList);
                 }
             }
         }

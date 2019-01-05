@@ -115,7 +115,8 @@ namespace ParticleEditor {
                 Configuration = config
             };
             Model.Systems.Add(model);
-            View.AddNewViewForModel(model);
+            if (View.Engine != null)
+                View.AddNewViewForModel(model);
         }
 
         public void RemoveSystem (int index) {
@@ -189,6 +190,12 @@ namespace ParticleEditor {
                 v.Instance.Reset();
 
             QueuedResets.Clear();
+
+            var data = View.GetData();
+            if (data != null) {
+                View.Engine.Configuration.UpdatesPerSecond = data.FrameRate;
+                View.Engine.Configuration.MaximumUpdateDeltaTimeSeconds = data.MaximumDeltaTimeMS / 1000f;
+            }
 
             if (Game.IsActive && !Game.IsMouseOverUI) {
                 var wheelDelta = Game.MouseState.ScrollWheelValue - Game.PreviousMouseState.ScrollWheelValue;
@@ -359,6 +366,8 @@ namespace ParticleEditor {
         }
 
         public void SetModel (EngineModel model) {
+            if (!model.UserData.ContainsKey("EditorData"))
+                model.UserData["EditorData"] = new EditorData();
             model.Normalize(false);
             Game.Model = model;
             Model = model;

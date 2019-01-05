@@ -19,6 +19,7 @@ namespace Squared.Illuminant.Modeling {
         public string Filename { get; private set; }
         public readonly NamedVariableCollection NamedVariables = new NamedVariableCollection();
         public readonly List<SystemModel> Systems = new List<SystemModel>();
+        public readonly Dictionary<string, object> UserData = new Dictionary<string, object>();
 
         public EngineModel () {
             Filename = null;

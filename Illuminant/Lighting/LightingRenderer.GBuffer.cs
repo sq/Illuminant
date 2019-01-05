@@ -407,8 +407,8 @@ namespace Squared.Illuminant {
                 p["GBufferTexelSize"].SetValue(_GBuffer.InverseSize);
                 p["GBuffer"].SetValue(_GBuffer.Texture);
             } else {
+                p.ClearTexture("GBuffer");
                 p["GBufferTexelSize"].SetValue(Vector2.Zero);
-                p["GBuffer"].SetValue((Texture2D)null);
             }
         }
     }

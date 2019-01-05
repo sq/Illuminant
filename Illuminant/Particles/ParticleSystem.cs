@@ -13,6 +13,7 @@ using Squared.Game;
 using Squared.Illuminant.Uniforms;
 using Squared.Illuminant.Util;
 using Squared.Render;
+using Squared.Render.Convenience;
 using Squared.Render.Tracing;
 using Squared.Threading;
 using Squared.Util;
@@ -336,15 +337,7 @@ namespace Squared.Illuminant.Particles {
                 var m = (Material)_m;
                 var e = m.Effect;
                 var p = e.Parameters;
-                p["PositionTexture"].SetValue((Texture2D)null);
-                p["VelocityTexture"].SetValue((Texture2D)null);
-                p["AttributeTexture"].SetValue((Texture2D)null);
-                var rt = p["LifeRampTexture"];
-                if (rt != null)
-                    rt.SetValue((Texture2D)null);
-                var bt = p["BitmapTexture"];
-                if (bt != null)
-                    bt.SetValue((Texture2D)null);
+                p.ClearTextures(ClearTextureList);
                 // ughhhhhhhhhh
                 for (var i = 0; i < 4; i++)
                     dm.Device.VertexTextures[i] = null;
@@ -352,6 +345,13 @@ namespace Squared.Illuminant.Particles {
                     dm.Device.Textures[i] = null;
             }
         }
+
+        internal static readonly string[] ClearTextureList = new[] {
+            "PositionTexture", "VelocityTexture", "AttributeTexture",
+            "LifeRampTexture", "BitmapTexture", "RampTexture",
+            "RandomnessTexture", "LowPrecisionRandomnessTexture",
+            "PatternTexture", "DistanceFieldTexture"
+        };
 
         public bool IsDisposed { get; private set; }
         public int LiveCount { get; private set; }
@@ -401,6 +401,9 @@ namespace Squared.Illuminant.Particles {
         public ParticleSystem (
             ParticleEngine engine, ParticleSystemConfiguration configuration
         ) {
+            if (engine == null)
+                throw new ArgumentNullException("engine");
+
             Engine = engine;
             Configuration = configuration;
             LiveCount = 0;
@@ -883,14 +886,12 @@ namespace Squared.Illuminant.Particles {
             CurrentFrameIndex++;
 
             var ups = Engine.Configuration.UpdatesPerSecond;
+            var maxDeltaTime = Arithmetic.Clamp(Engine.Configuration.MaximumUpdateDeltaTimeSeconds, 1 / 200f, 10f);
 
-            var tickUnit = 1.0 / ups.GetValueOrDefault(60);
+            var tickUnit = 1.0 / Arithmetic.Clamp(ups.GetValueOrDefault(60), 5, 200);
             var actualDeltaTimeSeconds = tickUnit;
             if (lastUpdateTimeSeconds.HasValue)
-                actualDeltaTimeSeconds = Math.Min(
-                    now - lastUpdateTimeSeconds.Value, 
-                    Engine.Configuration.MaximumUpdateDeltaTimeSeconds
-                );
+                actualDeltaTimeSeconds = Math.Min(now - lastUpdateTimeSeconds.Value, maxDeltaTime);
 
             if (ups.HasValue && lastUpdateTimeSeconds.HasValue) {
                 actualDeltaTimeSeconds += updateError;
@@ -907,9 +908,7 @@ namespace Squared.Illuminant.Particles {
                 LastUpdateTimeSeconds = now;
             }
 
-            actualDeltaTimeSeconds = Math.Min(
-                actualDeltaTimeSeconds, Engine.Configuration.MaximumUpdateDeltaTimeSeconds
-            );
+            actualDeltaTimeSeconds = Math.Min(actualDeltaTimeSeconds, maxDeltaTime);
 
             // Console.WriteLine(actualDeltaTimeSeconds);
 

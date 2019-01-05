@@ -62,6 +62,7 @@ namespace ParticleEditor {
 
         private void RenderSidePanels () {
             RenderFilePanel();
+            RenderDocumentProperties();
             RenderVariableList();
             if (Game.View != null)
                 RenderSystemList();
@@ -89,7 +90,8 @@ namespace ParticleEditor {
             var enableNew = (Model.Systems.Count > 0) || (Model.NamedVariables.Count > 0);
             Nuke.nk_layout_row_dynamic(ctx, LineHeight, buttonCount);
             if (Nuklear.Button("New", enableNew)) {
-                Controller.SetModel(new EngineModel());
+                Controller.SetModel(Game.CreateNewModel());
+                Controller.AddSystem();
             }
             if (Model.Filename != null) {
                 if (Nuklear.Button("Save")) {
@@ -126,6 +128,18 @@ namespace ParticleEditor {
             }
 
             // }
+        }
+
+        private unsafe void RenderDocumentProperties () {
+            var ctx = Nuklear.Context;
+            var state = Controller.CurrentState;
+
+            using (var group = Nuklear.CollapsingGroup("Document", "Document", false))
+            if (group.Visible) {
+                var data = Game.View.GetData();
+                DocumentProperties.Prepare(data);
+                RenderPropertyGrid(data, DocumentProperties, null);
+            }
         }
 
         private unsafe void RenderVariableList () {
@@ -203,7 +217,7 @@ namespace ParticleEditor {
             var ctx = Nuklear.Context;
             var state = Controller.CurrentState;
 
-            using (var group = Nuklear.CollapsingGroup("Systems", "Systems"))
+            using (var group = Nuklear.CollapsingGroup("Systems", "Systems", false))
             if (group.Visible) {
                 Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
                 if (Nuklear.Button("Add"))
@@ -254,7 +268,7 @@ namespace ParticleEditor {
             var ctx = Nuklear.Context;
             var state = Controller.CurrentState;
 
-            using (var group = Nuklear.CollapsingGroup("Transforms", "Transforms"))
+            using (var group = Nuklear.CollapsingGroup("Transforms", "Transforms", true))
             if (group.Visible && (Controller.SelectedSystem != null)) {
                 Nuke.nk_layout_row_dynamic(ctx, LineHeight, 3);
                 if (Nuklear.Button("Add"))
@@ -354,7 +368,6 @@ namespace ParticleEditor {
                 Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
 
                 Nuklear.Property("Zoom", ref Game.Zoom, ParticleEditor.MinZoom, ParticleEditor.MaxZoom, 0.05f, 0.01f);
-                Nuklear.Property("BG Brightness", ref Game.Brightness, 0, 1, 0.05f, 0.005f);
 
                 Nuke.nk_tree_pop(ctx);
             }

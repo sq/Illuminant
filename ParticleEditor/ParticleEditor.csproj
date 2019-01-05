@@ -87,6 +87,7 @@
       <Link>PerformanceStats.cs</Link>
     </Compile>
     <Compile Include="Controller.cs" />
+    <Compile Include="Model.cs" />
     <Compile Include="ModelTypes.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Program.cs" />

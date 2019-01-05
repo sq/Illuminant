@@ -109,7 +109,8 @@ namespace ParticleEditor {
         private readonly Dictionary<string, PropertyGridCache> GridCaches = 
             new Dictionary<string, PropertyGridCache>();
         private PropertyGridCache SystemProperties = new PropertyGridCache(), 
-            TransformProperties = new PropertyGridCache();
+            TransformProperties = new PropertyGridCache(),
+            DocumentProperties = new PropertyGridCache();
         private List<Type> TransformTypes = GetTransformTypes().ToList();
 
         internal KeyboardInput KeyboardInputHandler;
@@ -823,6 +824,7 @@ namespace ParticleEditor {
                     }
                     break;
 
+                case "Color":
                 case "ColorF":
                     return RenderColorProperty(cpi, instance, out changed, value);
 
@@ -1657,7 +1659,13 @@ namespace ParticleEditor {
             var ctx = Nuklear.Context;
             using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, cpi.Name, false)) {
                 if (pGroup.Visible) {
-                    var c = (Vector4)value;
+                    Vector4 c;
+                    if (value is Vector4)
+                        c = (Vector4)value;
+                    else if (value is Color)
+                        c = ((Color)value).ToVector4();
+                    else
+                        throw new Exception();
                     var oldColor = new NuklearDotNet.nk_colorf {
                         r = c.X,
                         g = c.Y,
@@ -1682,7 +1690,11 @@ namespace ParticleEditor {
                     RenderPropertyElement("#B", null, ref newColor.Z, ref changed, 0, 1);
                     RenderPropertyElement("#A", null, ref newColor.W, ref changed, 0, 1);
                     if (changed) {
-                        cpi.Setter(instance, newColor);
+                        if (value is Vector4)
+                            value = newColor;
+                        else if (value is Color)
+                            value = new Color(newColor.X, newColor.Y, newColor.Z, newColor.W);
+                        cpi.Setter(instance, value);
                         return true;
                     }
                 }

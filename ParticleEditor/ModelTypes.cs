@@ -31,6 +31,12 @@ namespace ParticleEditor {
         public static readonly Dictionary<string, Dictionary<string, ModelTypeInfo>> FieldTypeOverrides =
             new Dictionary<string, Dictionary<string, ModelTypeInfo>> {
                 {
+                    "EditorData", new Dictionary<string, ModelTypeInfo> {
+                        {"FrameRate", new ModelTypeInfo { Min = 10, Max = 120 } },
+                        {"MaximumDeltaTimeMS", new ModelTypeInfo { Min = 5, Max = 2000 } }
+                    }
+                },
+                {
                     "ParticleSystemConfiguration", new Dictionary<string, ModelTypeInfo> {
                         {"BounceVelocityMultiplier", new ModelTypeInfo { Min = 0, Max = 3 } },
                         {"StippleFactor", new ModelTypeInfo { Min = 0, Max = 1 } },

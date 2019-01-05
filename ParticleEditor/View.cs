@@ -26,6 +26,16 @@ namespace ParticleEditor {
             Time = (MockTimeProvider)base.Time;
         }
 
+        public EditorData GetData () {
+            var ud = Model.UserData["EditorData"];
+            var jud = ud as JObject;
+            if (jud != null) {
+                ud = jud.ToObject<EditorData>();
+                Model.UserData["EditorData"] = ud;
+            }
+            return (EditorData)ud;
+        }
+
         public void Initialize (ParticleEditor editor) {
             Game = editor;
             base.Initialize(Game.RenderCoordinator, Game.Materials, Game.ParticleMaterials);

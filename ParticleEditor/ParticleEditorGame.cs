@@ -70,7 +70,7 @@ namespace ParticleEditor {
 
         private GCHandle ControllerPin;
         public const float MinZoom = 0.25f, MaxZoom = 5.0f;
-        public float Zoom = 1.0f, Brightness = 0.1f;
+        public float Zoom = 1.0f;
 
         private long LastViewRelease = 0;
 
@@ -218,10 +218,11 @@ namespace ParticleEditor {
             LastTimeOverUI = Time.Ticks;
 
             if (Model == null)
-                Model = new EngineModel();
+                Model = CreateNewModel();
 
             if (View != null)
                 View.Dispose();
+
             CreateView();
         }
 
@@ -231,10 +232,21 @@ namespace ParticleEditor {
             if (Controller == null) {
                 Controller = new Controller(this, Model, View);
                 ControllerPin = GCHandle.Alloc(Controller, GCHandleType.Normal);
+                if (Model.Systems.Count == 0)
+                    Controller.AddSystem();
             } else
                 Controller.View = View;
 
             View.Initialize(this);
+        }
+
+        public EngineModel CreateNewModel () {
+            var result = new EngineModel {
+                UserData = {
+                    { "EditorData", new EditorData() }
+                }
+            };
+            return result;
         }
 
         private void Window_ClientSizeChanged (object sender, EventArgs e) {
@@ -351,10 +363,12 @@ namespace ParticleEditor {
 
             Controller.Update();
 
-            if (View != null)
-                View.Update(this, frame, -2, gameTime.ElapsedGameTime.Ticks);
-
-            ClearBatch.AddNew(frame, -1, Materials.Clear, new Color(0.3f * Brightness, 0.6f * Brightness, 0.8f * Brightness, 1f));
+            if (View != null) {
+                View.Update(this, frame, -3, gameTime.ElapsedGameTime.Ticks);
+                ClearBatch.AddNew(frame, -2, Materials.Clear, View.GetData().BackgroundColor);
+            } else {
+                ClearBatch.AddNew(frame, -2, Materials.Clear, Color.Black);
+            }
 
             var ir = new ImperativeRenderer(
                 frame, Materials, 
@@ -363,6 +377,15 @@ namespace ParticleEditor {
                 worldSpace: false,
                 layer: 9999
             );
+
+            if (View != null) {
+                var bg = View.GetData().Background;
+                if (bg != null) {
+                    bg.EnsureInitialized(View.Engine.Configuration.TextureLoader);
+                    if (bg.IsInitialized)
+                        ir.Draw(bg.Instance, Vector2.Zero, origin: Vector2.One * 0.5f, layer: -1, worldSpace: true);
+                }
+            }
 
             var elapsedSeconds = TimeSpan.FromTicks(Time.Ticks - LastTimeOverUI).TotalSeconds;
             float uiOpacity = Arithmetic.Lerp(1.0f, 0.4f, (float)((elapsedSeconds - 0.66) * 2.25f));
