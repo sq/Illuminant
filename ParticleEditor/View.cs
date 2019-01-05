@@ -29,7 +29,7 @@ namespace ParticleEditor {
         public void Initialize (ParticleEditor editor) {
             Game = editor;
             base.Initialize(Game.RenderCoordinator, Game.Materials, Game.ParticleMaterials);
-            Engine.Configuration.UpdatesPerSecond = 120;
+            // Engine.Configuration.UpdatesPerSecond = 120;
         }
         
         public void Update (ParticleEditor editor, IBatchContainer container, int layer, long deltaTimeTicks) {

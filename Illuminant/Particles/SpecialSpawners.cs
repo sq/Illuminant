@@ -71,7 +71,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             RowsSpawned = 0;
         }
 
-        public override void BeginTick (ParticleSystem system, float now, double deltaTimeSeconds, out int spawnCount, out ParticleSystem.Chunk sourceChunk) {
+        public override void BeginTick (ParticleSystem system, double now, double deltaTimeSeconds, out int spawnCount, out ParticleSystem.Chunk sourceChunk) {
             if (Texture != null)
                 Texture.EnsureInitialized(system.Engine.Configuration.TextureLoader);
 
@@ -174,7 +174,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             CurrentFeedbackSource = null;
         }
 
-        public override void BeginTick (ParticleSystem system, float now, double deltaTimeSeconds, out int spawnCount, out ParticleSystem.Chunk sourceChunk) {
+        public override void BeginTick (ParticleSystem system, double now, double deltaTimeSeconds, out int spawnCount, out ParticleSystem.Chunk sourceChunk) {
             spawnCount = 0;
             sourceChunk = null;
             CurrentFeedbackSource = null;

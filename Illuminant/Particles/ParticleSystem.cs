@@ -570,7 +570,7 @@ namespace Squared.Illuminant.Particles {
             IBatchContainer container, ref int layer, Material m,
             long startedWhen, Transforms.SpawnerBase spawner,
             Transforms.ParameterSetter setParameters,
-            double deltaTimeSeconds, float now
+            double deltaTimeSeconds, double now
         ) {
             int spawnCount = 0, requestedSpawnCount;
 
@@ -621,7 +621,7 @@ namespace Squared.Illuminant.Particles {
             Action<DeviceManager, object> beforeDraw,
             Action<DeviceManager, object> afterDraw,
             double deltaTimeSeconds, bool shouldClear,
-            float now, bool isUpdate, Chunk sourceChunk
+            double now, bool isUpdate, Chunk sourceChunk
         ) {
             if (chunk == null)
                 throw new ArgumentNullException();
@@ -660,7 +660,7 @@ namespace Squared.Illuminant.Particles {
                 ShouldClear = shouldClear,
                 Chunk = chunk,
                 SourceChunk = sourceChunk,
-                Now = now,
+                Now = (float)now,
                 DeltaTimeSeconds = deltaTimeSeconds,
                 CurrentFrameIndex = CurrentFrameIndex
             };
@@ -690,6 +690,8 @@ namespace Squared.Illuminant.Particles {
             IsClearPending = true;
             TotalSpawnCount = 0;
             UpdateErrorAccumulator = 0;
+            CurrentFrameIndex = 0;
+            LastUpdateTimeSeconds = null;
             foreach (var xform in Transforms)
                 xform.Reset();
         }
@@ -873,37 +875,43 @@ namespace Squared.Illuminant.Particles {
                 Engine.DiscardedBuffers.Add(prev);
         }
 
-        public void Update (IBatchContainer container, int layer, float? deltaTimeSeconds = null) {
+        public bool Update (IBatchContainer container, int layer) {
             var lastUpdateTimeSeconds = LastUpdateTimeSeconds;
             var updateError = UpdateErrorAccumulator;
             UpdateErrorAccumulator = 0;
-            var now = (float)(LastUpdateTimeSeconds = TimeProvider.Seconds);
+            var now = TimeProvider.Seconds;
             CurrentFrameIndex++;
 
             var ups = Engine.Configuration.UpdatesPerSecond;
 
             var tickUnit = 1.0 / ups.GetValueOrDefault(60);
             var actualDeltaTimeSeconds = tickUnit;
-            if (deltaTimeSeconds.HasValue)
-                actualDeltaTimeSeconds = deltaTimeSeconds.Value;
-            else if (lastUpdateTimeSeconds.HasValue)
+            if (lastUpdateTimeSeconds.HasValue)
                 actualDeltaTimeSeconds = Math.Min(
-                    LastUpdateTimeSeconds.Value - lastUpdateTimeSeconds.Value, 
+                    now - lastUpdateTimeSeconds.Value, 
                     Engine.Configuration.MaximumUpdateDeltaTimeSeconds
                 );
 
-            if (ups.HasValue) {
+            if (ups.HasValue && lastUpdateTimeSeconds.HasValue) {
                 actualDeltaTimeSeconds += updateError;
                 var tickCount = (int)Math.Floor(actualDeltaTimeSeconds / tickUnit);
+                if (tickCount < 0)
+                    tickCount = 0;
                 var adjustedDeltaTime = tickCount * tickUnit;
-                var newError = actualDeltaTimeSeconds - adjustedDeltaTime;
-                UpdateErrorAccumulator = newError;
+                UpdateErrorAccumulator = actualDeltaTimeSeconds - adjustedDeltaTime;
                 actualDeltaTimeSeconds = adjustedDeltaTime;
+                if ((actualDeltaTimeSeconds <= 0) && (CurrentFrameIndex > 1))
+                    return false;
+                LastUpdateTimeSeconds = now = lastUpdateTimeSeconds.Value + adjustedDeltaTime;
+            } else {
+                LastUpdateTimeSeconds = now;
             }
 
             actualDeltaTimeSeconds = Math.Min(
                 actualDeltaTimeSeconds, Engine.Configuration.MaximumUpdateDeltaTimeSeconds
             );
+
+            // Console.WriteLine(actualDeltaTimeSeconds);
 
             var startedWhen = Time.Ticks;
 
@@ -976,10 +984,11 @@ namespace Squared.Illuminant.Particles {
             var ts = Time.Ticks;
 
             Engine.EndOfUpdate(initialTurn);
+            return true;
         }
 
         private void UpdateChunk (
-            Chunk chunk, float now, 
+            Chunk chunk, double now, 
             float actualDeltaTimeSeconds, long startedWhen, 
             ParticleMaterials pm, BatchGroup group, 
             ref int i, bool computingLiveness

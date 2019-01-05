@@ -102,7 +102,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             );
         }
 
-        public virtual void BeginTick (ParticleSystem system, float now, double deltaTimeSeconds, out int spawnCount, out ParticleSystem.Chunk sourceChunk) {
+        public virtual void BeginTick (ParticleSystem system, double now, double deltaTimeSeconds, out int spawnCount, out ParticleSystem.Chunk sourceChunk) {
             sourceChunk = null;
 
             if (!IsActive) {
@@ -112,7 +112,8 @@ namespace Squared.Illuminant.Particles.Transforms {
             }
 
             var countScaler = CountScale;
-            float minRate = MinRate.Evaluate(now, system.Engine.ResolveSingle), maxRate = MaxRate.Evaluate(now, system.Engine.ResolveSingle);
+            float minRate = MinRate.Evaluate((float)now, system.Engine.ResolveSingle), 
+                maxRate = MaxRate.Evaluate((float)now, system.Engine.ResolveSingle);
             if (minRate > maxRate)
                 minRate = maxRate;
             var currentRate = ((RNG.NextDouble() * (maxRate - minRate)) + minRate) * countScaler * deltaTimeSeconds;
@@ -144,8 +145,6 @@ namespace Squared.Illuminant.Particles.Transforms {
         }
 
         protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
-            var secs = (float)Squared.Util.Time.Seconds;
-
             var ro = parameters["RandomnessOffset"];
             if (ro == null)
                 return;
@@ -228,7 +227,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             }
         }
 
-        public override void BeginTick (ParticleSystem system, float now, double deltaTimeSeconds, out int spawnCount, out ParticleSystem.Chunk sourceChunk) {
+        public override void BeginTick (ParticleSystem system, double now, double deltaTimeSeconds, out int spawnCount, out ParticleSystem.Chunk sourceChunk) {
             if (AdditionalPositions.Count >= MaxPositions)
                 throw new Exception("Maximum number of positions for a spawner is " + MaxPositions);
 
