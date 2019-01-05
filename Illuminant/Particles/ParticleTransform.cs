@@ -115,7 +115,7 @@ namespace Squared.Illuminant.Particles.Transforms {
                             system.Configuration.Collision.DistanceField, 
                             system.Configuration.Collision.DistanceFieldMaximumZ.Value
                         );
-                        engine.ParticleMaterials.MaterialSet.TrySetBoundUniform(m, "DistanceField", ref dfu);
+                        engine.uDistanceField.Set(m, ref dfu);
                     }
 
                     system.MaybeSetLifeRampParameters(p);

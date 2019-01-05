@@ -245,11 +245,6 @@ namespace Squared.Illuminant {
 
                 Materials.PreallocateBindings();
 
-                Materials.ForEachMaterial<object>((m, _) => {
-                    Materials.GetUniformBinding<Uniforms.Environment>(m, "Environment");
-                    Materials.GetUniformBinding<Uniforms.DistanceField>(m, "DistanceField");
-                }, null);
-
                 IlluminantMaterials.IsLoaded = true;
             }
         }
@@ -351,17 +346,6 @@ namespace Squared.Illuminant.Particles {
                 DefineMaterial(ParticleMaterials.NoTexture = new Material(
                     effects.Load("RasterizeParticleSystem"), "NoTexture"
                 ));
-
-                Materials.ForEachMaterial<object>((m, _) => {
-                    Materials.GetUniformBinding<Uniforms.Environment>(m, "Environment");
-                    Materials.GetUniformBinding<Uniforms.DistanceField>(m, "DistanceField");
-                    Materials.GetUniformBinding<Uniforms.ParticleSystem>(m, "System");
-                    Materials.GetUniformBinding<Uniforms.ClampedBezier4>(m, "ColorFromLife");
-                    Materials.GetUniformBinding<Uniforms.ClampedBezier4>(m, "ColorFromVelocity");
-                    Materials.GetUniformBinding<Uniforms.ClampedBezier1>(m, "RoundingPowerFromLife");
-                    Materials.GetUniformBinding<Uniforms.ClampedBezier1>(m, "SizeFromLife");
-                    Materials.GetUniformBinding<Uniforms.ClampedBezier1>(m, "SizeFromVelocity");
-                }, null);
 
                 Materials.PreallocateBindings();
 

@@ -366,6 +366,10 @@ namespace Squared.Illuminant {
 
         private readonly EmbeddedEffectProvider Effects;
 
+        private readonly TypedUniform<Uniforms.Environment> uEnvironment;
+        private readonly TypedUniform<Uniforms.DistanceField> uDistanceField;
+        private readonly TypedUniform<Render.DitheringSettings> uDithering;
+
         private string _Name;
 
         public LightingRenderer (
@@ -376,6 +380,10 @@ namespace Squared.Illuminant {
             Materials = materials;
             Coordinator = coordinator;
             Configuration = configuration;
+
+            uEnvironment = materials.NewTypedUniform<Uniforms.Environment>("Environment");
+            uDistanceField = materials.NewTypedUniform<Uniforms.DistanceField>("DistanceField");
+            uDithering = materials.NewTypedUniform<Render.DitheringSettings>("Dithering");
 
             Effects = new EmbeddedEffectProvider(coordinator);
 
@@ -689,8 +697,7 @@ namespace Squared.Illuminant {
 
             SetGBufferParameters(p);
 
-            var ub = Materials.GetUniformBinding<Uniforms.Environment>(material, "Environment");
-            ub.Value.Current = EnvironmentUniforms;
+            uEnvironment.Set(material, ref EnvironmentUniforms);
 
             SetDistanceFieldParameters(material, true, q);
         }
@@ -1155,11 +1162,8 @@ namespace Squared.Illuminant {
                     };
                 ds.FrameIndex = dm.FrameIndex;
 
-                var ubd = Materials.GetUniformBinding<Render.DitheringSettings>(m, "Dithering");
-                ubd.Value.Current = ds;
-
-                var ub = Materials.GetUniformBinding<Uniforms.Environment>(m, "Environment");
-                ub.Value.Current = EnvironmentUniforms;
+                uDithering.Set(m, ref ds);
+                uEnvironment.Set(m, ref EnvironmentUniforms);
 
                 if (hdr.HasValue) {
                     if (hdr.Value.Mode == HDRMode.GammaCompress)
@@ -1427,12 +1431,12 @@ namespace Squared.Illuminant {
             Uniforms.DistanceField dfu;
             var p = m.Effect.Parameters;
 
-            Materials.TrySetBoundUniform(m, "Environment", ref EnvironmentUniforms);
+            uEnvironment.TrySet(m, ref EnvironmentUniforms);
 
             if (_DistanceField == null) {
                 dfu = new Uniforms.DistanceField();
                 dfu.Extent.Z = Environment.MaximumZ;
-                Materials.TrySetBoundUniform(m, "DistanceField", ref dfu);
+                uDistanceField.TrySet(m, ref dfu);
                 if (setDistanceTexture)
                     p["DistanceFieldTexture"].SetValue((Texture2D)null);
                 return;
@@ -1450,7 +1454,7 @@ namespace Squared.Illuminant {
                 LongStepFactor = q.LongStepFactor
             };
 
-            Materials.TrySetBoundUniform(m, "DistanceField", ref dfu);
+            uDistanceField.TrySet(m, ref dfu);
 
             if (setDistanceTexture)
                 p["DistanceFieldTexture"].SetValue(_DistanceField.Texture);

@@ -66,6 +66,8 @@ namespace ParticleEditor {
 
         private WaitCallback GCAfterVsync;
 
+        internal TypedUniform<Squared.Illuminant.Uniforms.ClampedBezier4> uBezier;
+
         private GCHandle ControllerPin;
         public const float MinZoom = 0.25f, MaxZoom = 5.0f;
         public float Zoom = 1.0f, Brightness = 0.1f;
@@ -195,7 +197,8 @@ namespace ParticleEditor {
             ScreenSpaceBezierVisualizer = new Material(eep.Load("VisualizeBezier"), "ScreenSpaceBezierVisualizer");
             Materials.Add(ScreenSpaceBezierVisualizer);
             ScreenSpaceBezierVisualizer = Materials.Get(ScreenSpaceBezierVisualizer, blendState: BlendState.AlphaBlend);
-            Materials.GetUniformBinding<Squared.Illuminant.Uniforms.ClampedBezier4>(ScreenSpaceBezierVisualizer, "Bezier");
+
+            uBezier = Materials.NewTypedUniform<Squared.Illuminant.Uniforms.ClampedBezier4>("Bezier");
             
             UIRenderTarget = new RenderTarget2D(
                 GraphicsDevice, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight, 

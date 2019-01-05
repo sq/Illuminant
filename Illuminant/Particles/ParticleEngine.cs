@@ -53,6 +53,11 @@ namespace Squared.Illuminant.Particles {
         private readonly Dictionary<Type, Delegate> GenericResolvers = 
             new Dictionary<Type, Delegate>(new ReferenceComparer<Type>());
 
+        internal readonly TypedUniform<Uniforms.ParticleSystem> uSystem;
+        internal readonly TypedUniform<Uniforms.DistanceField> uDistanceField;
+        internal readonly TypedUniform<Uniforms.ClampedBezier4> uColorFromLife, uColorFromVelocity;
+        internal readonly TypedUniform<Uniforms.ClampedBezier1> uSizeFromLife, uSizeFromVelocity, uRoundingPowerFromLife;
+
         public readonly NamedConstantResolver<float>   ResolveSingle;
         public readonly NamedConstantResolver<Vector2> ResolveVector2;
         public readonly NamedConstantResolver<Vector3> ResolveVector3;
@@ -75,6 +80,16 @@ namespace Squared.Illuminant.Particles {
 
             ParticleMaterials = particleMaterials ?? new ParticleMaterials(materials);
             Configuration = configuration;
+
+            uSystem = materials.NewTypedUniform<Uniforms.ParticleSystem>("System");
+            uDistanceField = materials.NewTypedUniform<Uniforms.DistanceField>("DistanceField");
+
+            uColorFromLife = materials.NewTypedUniform<Uniforms.ClampedBezier4>("ColorFromLife");
+            uColorFromVelocity = materials.NewTypedUniform<Uniforms.ClampedBezier4>("ColorFromVelocity");
+
+            uSizeFromLife = materials.NewTypedUniform<Uniforms.ClampedBezier1>("SizeFromLife");
+            uSizeFromVelocity = materials.NewTypedUniform<Uniforms.ClampedBezier1>("SizeFromVelocity");
+            uRoundingPowerFromLife = materials.NewTypedUniform<Uniforms.ClampedBezier1>("RoundingPowerFromLife");
 
             var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public;
             var resolveGeneric = GetType().GetMethod("ResolveGeneric", flags);
