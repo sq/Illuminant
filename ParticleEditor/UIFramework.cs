@@ -1356,6 +1356,16 @@ namespace ParticleEditor {
                 fullyDynamic = bm.IsFullyDynamic;
             }
 
+            int elementCount;
+            if (value is BezierF)
+                elementCount = 1;
+            else if (value is Bezier2)
+                elementCount = 2;
+            else if (value is Bezier3)
+                elementCount = 3;
+            else
+                elementCount = 4;
+
             var ctx = Nuklear.Context;
             using (var pGroup = Nuklear.CollapsingGroup(cpi?.Name ?? actualName, actualName, initiallyOpen)) {
                 if (pGroup.Visible) {
@@ -1383,6 +1393,7 @@ namespace ParticleEditor {
                                         cb = new Squared.Illuminant.Uniforms.ClampedBezier4(b);
                                     Game.Materials.TrySetBoundUniform(m, "Bezier", ref cb);
                                     m.Effect.Parameters["CurrentT"].SetValue(currentT.GetValueOrDefault(-99999));
+                                    m.Effect.Parameters["ElementCount"].SetValue(elementCount);
                                 }
                             )) {
                                 var tl = new VertexPositionColorTexture(new Vector3(panel.TopLeft, 0), Color.White, Vector2.Zero);
@@ -1420,9 +1431,10 @@ namespace ParticleEditor {
                     if ((bm != null) && !fullyDynamic && Nuklear.Property("#Row", ref selectedRow, 0, 3, 1, 0.5f))
                         BezierSelectedRows[bm] = selectedRow;
 
-                    var repeat = b.Repeat;
-                    if (Nuklear.Checkbox("Loop", ref repeat))
-                        b.Repeat = repeat;
+                    object mode = b.Mode;
+                    if (Nuklear.EnumCombo(ref mode, tooltip: "Time Mode")) {
+                        b.Mode = (BezierTimeMode)mode;
+                    }
 
                     for (int i = 0; i < cnt; i++) {
                         var elt = b[i];

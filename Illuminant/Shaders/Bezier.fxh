@@ -19,10 +19,22 @@ struct ClampedBezier4 {
 float tForScaledBezier (in float4 rangeAndCount, in float value, out float t) {
     float minValue = rangeAndCount.x, 
         invDivisor = rangeAndCount.y;
-    bool repeating = rangeAndCount.w < 0;
+    uint mode = (uint)abs(rangeAndCount.w);
+    bool repeating = mode > 255, bouncing = mode > 511;
 
     t = (value - minValue) * abs(invDivisor);
-    if (repeating) {
+
+    if (bouncing) {
+        t *= 2;
+
+        if (invDivisor < 0)
+            t = 2 - (t % 2);
+        else
+            t = t % 2;
+
+        if (t > 1)
+            t = 1 - (t - 1);
+    } else if (repeating) {
         if (invDivisor < 0)
             t = 1 - (t % 1);
         else
@@ -33,6 +45,18 @@ float tForScaledBezier (in float4 rangeAndCount, in float value, out float t) {
         else
             t = saturate(t);
     }
+
+    switch (mode % 256) {
+        default:
+            break;
+        case 1:
+            t = sin(t * PI * 0.5);
+            break;
+        case 2:
+            t = t * t;
+            break;
+    }
+
     return rangeAndCount.z;
 }
 

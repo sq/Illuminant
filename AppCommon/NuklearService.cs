@@ -695,7 +695,14 @@ namespace Framework {
                 names = Enum.GetNames(type);
             var name = Enum.GetName(type, value);
             var selectedIndex = Array.IndexOf(names, name);
-            if (ComboBox(ref selectedIndex, (i) => names[i], names.Length, tooltip: tooltip)) {
+            if (ComboBox(
+                ref selectedIndex, 
+                (i) =>
+                    (i >= 0) && (i < names.Length)
+                        ? names[i]
+                        : "",
+                names.Length, tooltip: tooltip
+            )) {
                 var newName = names[selectedIndex];
                 value = Enum.Parse(type, newName, true);
                 return true;

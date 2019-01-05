@@ -3,6 +3,7 @@
 #include "Bezier.fxh"
 
 uniform ClampedBezier4 Bezier;
+uniform int   ElementCount;
 uniform float CurrentT;
 
 void ScreenSpaceBezierVisualizerVertexShader (
@@ -51,7 +52,7 @@ void BezierVisualizerPixelShader (
     float4 distances = abs((1 - xy.y) - scaledValue);
     float4 scaledDistances = 1 - saturate(distances / 0.016);
 
-    float elementCount = abs(Bezier.RangeAndCount.w);
+    float elementCount = abs(ElementCount);
     if (elementCount < 1.5)
         scaledDistances.yzw = 0;
     else if (elementCount < 2.5)

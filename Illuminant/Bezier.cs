@@ -11,9 +11,21 @@ using Squared.Illuminant.Configuration;
 using Squared.Util;
 
 namespace Squared.Illuminant {
+    public enum BezierTimeMode : int {
+        Once = 0,
+        Sine = 1,
+        Exp = 2,
+        Loop = Once | 256,
+        LoopSin = Sine | 256,
+        LoopExp = Exp | 256,
+        Bounce = Once | 512,
+        BounceSin = Sine | 512,
+        BounceExp = Exp | 512,
+    }
+
     public interface IBezier {
         bool IsConstant { get; }
-        bool Repeat { get; set; }
+        BezierTimeMode Mode { get; set; }
         int Count { get; set; }
         float MinValue { get; set; }
         float MaxValue { get; set; }
@@ -34,7 +46,17 @@ namespace Squared.Illuminant {
     public abstract class Bezier<T> : IBezier {
         internal T _A, _B, _C, _D;
 
-        public bool Repeat { get; set; }
+        public BezierTimeMode Mode { get; set; }
+        public bool Repeat {
+            set {
+                var masked = (int)Mode & ~256;
+                if (value)
+                    Mode = (BezierTimeMode)(masked | 256);
+                else
+                    Mode = (BezierTimeMode)masked;
+            }
+        }
+        
         public int Count { get; set; }
         public float MinValue { get; set; }
         public float MaxValue { get; set; }
@@ -411,7 +433,7 @@ namespace Squared.Illuminant.Uniforms {
     [StructLayout(LayoutKind.Sequential)]
     public struct ClampedBezier1 {
         public static readonly ClampedBezier1 One = new ClampedBezier1 {
-            RangeAndCount = new Vector4(0, 1, 1, 1),
+            RangeAndCount = new Vector4(0, 1, 1, 0),
             ABCD = Vector4.One
         };
 
@@ -429,7 +451,7 @@ namespace Squared.Illuminant.Uniforms {
                 range = 1;
             RangeAndCount = new Vector4(
                 Math.Min(src.MinValue, src.MaxValue),
-                1.0f / range, src.Count, (src.Repeat ? -1 : 1)
+                1.0f / range, src.Count, (int)src.Mode
             );
             ABCD = new Vector4(
                 src.A, src.B, src.C, src.D
@@ -464,7 +486,7 @@ namespace Squared.Illuminant.Uniforms {
     [StructLayout(LayoutKind.Sequential)]
     public struct ClampedBezier2 {
         public static readonly ClampedBezier2 One = new ClampedBezier2 {
-            RangeAndCount = new Vector4(0, 1, 1, 2),
+            RangeAndCount = new Vector4(0, 1, 1, 0),
             AB = Vector4.One,
             CD = Vector4.One
         };
@@ -483,7 +505,7 @@ namespace Squared.Illuminant.Uniforms {
                 range = 1;
             RangeAndCount = new Vector4(
                 Math.Min(src.MinValue, src.MaxValue) * timeScale,
-                1.0f / (range / timeScale), src.Count, src.Repeat ? -2 : 2
+                1.0f / (range / timeScale), src.Count, (int)src.Mode
             );
             AB = new Vector4(
                 src.A.X, src.A.Y,
@@ -509,7 +531,7 @@ namespace Squared.Illuminant.Uniforms {
                 range = 1;
             RangeAndCount = new Vector4(
                 Math.Min(src.MinValue, src.MaxValue),
-                1.0f / range, src.Count, elementCount * (src.Repeat ? -1 : 1)
+                1.0f / range, src.Count, (int)src.Mode
             );
             AB = new Vector4(
                 a.X, a.Y,
@@ -552,7 +574,7 @@ namespace Squared.Illuminant.Uniforms {
     [StructLayout(LayoutKind.Sequential)]
     public struct ClampedBezier4 {
         public static readonly ClampedBezier4 One = new ClampedBezier4 {
-            RangeAndCount = new Vector4(0, 1, 1, 4),
+            RangeAndCount = new Vector4(0, 1, 1, 0),
             A = Vector4.One,
             B = Vector4.One,
             C = Vector4.One,
@@ -591,7 +613,7 @@ namespace Squared.Illuminant.Uniforms {
                 range = 1;
             RangeAndCount = new Vector4(
                 Math.Min(src.MinValue, src.MaxValue),
-                1.0f / range, src.Count, src.Repeat ? -1 : 1
+                1.0f / range, src.Count, (int)src.Mode
             );
             A = new Vector4(src.A, y, z, w);
             B = new Vector4(src.B, y, z, w);
@@ -610,7 +632,7 @@ namespace Squared.Illuminant.Uniforms {
                 range = 1;
             RangeAndCount = new Vector4(
                 Math.Min(src.MinValue, src.MaxValue),
-                1.0f / range, src.Count, src.Repeat ? -2 : 2
+                1.0f / range, src.Count, (int)src.Mode
             );
             A = new Vector4(src.A, z, w);
             B = new Vector4(src.B, z, w);
@@ -629,7 +651,7 @@ namespace Squared.Illuminant.Uniforms {
                 range = 1;
             RangeAndCount = new Vector4(
                 Math.Min(src.MinValue, src.MaxValue),
-                1.0f / range, src.Count, src.Repeat ? -3 : 3
+                1.0f / range, src.Count, (int)src.Mode
             );
             A = new Vector4(src.A, w);
             B = new Vector4(src.B, w);
@@ -648,7 +670,7 @@ namespace Squared.Illuminant.Uniforms {
                 range = 1;
             RangeAndCount = new Vector4(
                 Math.Min(src.MinValue, src.MaxValue) * timeScale,
-                1.0f / (range / timeScale), src.Count, src.Repeat ? -4 : 4
+                1.0f / (range / timeScale), src.Count, (int)src.Mode
             );
             A = src.A;
             B = src.B;
@@ -669,7 +691,7 @@ namespace Squared.Illuminant.Uniforms {
             // HACK: Just visualize index?
             RangeAndCount = new Vector4(
                 Math.Min(src.MinValue, src.MaxValue),
-                1.0f / range, src.Count, src.Repeat ? -4 : 4
+                1.0f / range, src.Count, (int)src.Mode
             );
 
             DynamicMatrix a = src.A, b = src.B, c = src.C, d = src.D;
@@ -686,12 +708,14 @@ namespace Squared.Illuminant.Uniforms {
                 return;
             }
 
+            var repeat = ((int)src.Mode & 256) != 0;
+
             var range = src.MaxValue - src.MinValue;
             if ((range == 0) || (src.Count <= 1))
                 range = 1;
             RangeAndCount = new Vector4(
                 Math.Min(src.MinValue, src.MaxValue),
-                1.0f / range, src.Count, src.Repeat ? -2 : 2
+                1.0f / range, src.Count, (int)src.Mode
             );
             A = new Vector4(a, z, w);
             B = new Vector4(b, z, w);
@@ -710,7 +734,7 @@ namespace Squared.Illuminant.Uniforms {
                 range = 1;
             RangeAndCount = new Vector4(
                 Math.Min(src.MinValue, src.MaxValue),
-                1.0f / range, src.Count, src.Repeat ? -4 : 4
+                1.0f / range, src.Count, (int)src.Mode
             );
             A = a;
             B = b;
@@ -721,11 +745,23 @@ namespace Squared.Illuminant.Uniforms {
         internal static int tForScaledBezier (Vector4 rangeAndCount, float value, out float t) {
             float minValue = rangeAndCount.X, 
                 invDivisor = rangeAndCount.Y;
-            var repeating = (rangeAndCount.W < 0);
+            var mode = (int)(rangeAndCount.W);
+            bool repeating = mode > 255, bouncing = mode > 511;
 
             t = (value - minValue) * Math.Abs(invDivisor);
 
-            if (repeating) {
+            if (bouncing) {
+                t *= 2;
+
+                if (invDivisor < 0) {
+                    // FIXME: Not sure this is right
+                    t = 2 - Arithmetic.Wrap(t, 0, 2);
+                } else
+                    t = Arithmetic.Wrap(t, 0, 2);
+
+                if (t > 1)
+                    t = 1 - (t - 1);
+            } else if (repeating) {
                 if (invDivisor < 0) {
                     // FIXME: Not sure this is right
                     t = 1 - Arithmetic.Wrap(t, 0, 1);
@@ -737,6 +773,18 @@ namespace Squared.Illuminant.Uniforms {
                 else
                     t = Arithmetic.Clamp(t, 0, 1);
             }
+
+            switch (mode % 256) {
+                default:
+                    break;
+                case (int)BezierTimeMode.Sine:
+                    t = (float)Math.Sin(t * Math.PI * 0.5);
+                    break;
+                case (int)BezierTimeMode.Exp:
+                    t = t * t;
+                    break;
+            }
+
             return (int)rangeAndCount.Z;
         }
 
