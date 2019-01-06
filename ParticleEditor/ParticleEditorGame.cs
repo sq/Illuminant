@@ -279,6 +279,11 @@ namespace ParticleEditor {
         }
 
         protected override void Update (GameTime gameTime) {
+            if (View == null) {
+                if ((Time.Ticks - LastViewRelease) > Time.MillisecondInTicks * 1000)
+                    CreateView();
+            }
+
             using (UI.KeyboardInputHandler.Deactivate())
                 Scheduler.Step();
 
@@ -446,14 +451,6 @@ namespace ParticleEditor {
             if (ShowPerformanceStats)
                 DrawPerformanceStats(ref ir);
 
-            if (View == null) {
-                if ((Time.Ticks - LastViewRelease) > Time.MillisecondInTicks * 1000)
-                    RenderCoordinator.AfterPresent(() => {
-                        lock (this)
-                            CreateView();
-                    });
-            }
-
             ThreadPool.QueueUserWorkItem(GCAfterVsync, null);
         }
 
@@ -488,7 +485,7 @@ namespace ParticleEditor {
 
             var futures = new List<Future<ArraySegment<BitmapDrawCall>>>(results.Length);
             foreach (var ur in results)
-                futures.Add(ur.PerformReadback());
+                futures.Add(ur.ReadbackResult);
 
             for (int i = 0; i < results.Length; i++) {
                 var f = futures[i];

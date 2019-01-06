@@ -31,12 +31,14 @@ namespace Squared.Illuminant.Particles {
                 Timestamp = timestamp;
             }
 
-            public Future<ArraySegment<BitmapDrawCall>> PerformReadback () {
-                if (!System.Configuration.AutoReadback)
-                    return new Future<ArraySegment<BitmapDrawCall>>(new ArraySegment<BitmapDrawCall>());
+            public Future<ArraySegment<BitmapDrawCall>> ReadbackResult {
+                get {
+                    if (!System.Configuration.AutoReadback)
+                        return new Future<ArraySegment<BitmapDrawCall>>(new ArraySegment<BitmapDrawCall>());
 
-                lock (System.ReadbackLock)
-                    return System.ReadbackFuture;
+                    lock (System.ReadbackLock)
+                        return System.ReadbackFuture;
+                }
             }
         }
 
