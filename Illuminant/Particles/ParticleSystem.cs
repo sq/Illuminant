@@ -1159,39 +1159,69 @@ namespace Squared.Illuminant.Particles {
             dc.Texture = Configuration.Appearance?.Texture?.Instance;
             dc.Origin = Vector2.One * 0.5f;
 
+            var animRate = Configuration.Appearance?.AnimationRate ?? Vector2.Zero;
+            var cfv = Configuration.Appearance?.ColumnFromVelocity ?? false;
+            var rfv = Configuration.Appearance?.RowFromVelocity ?? false;
+
+            var region = Bounds.Unit;
+
             if (dc.Texture != null) {
                 var sizeF = new Vector2(dc.Texture.Width, dc.Texture.Height);
-                dc.TextureRegion = Bounds.FromPositionAndSize(
+                dc.TextureRegion = region = Bounds.FromPositionAndSize(
                     Configuration.Appearance.OffsetPx / sizeF,
                     Configuration.Appearance.SizePx.GetValueOrDefault(sizeF) / sizeF
                 );
                 if (Configuration.Appearance.RelativeSize)
-                    pSize = Vector2.One;
+                    pSize = Configuration.Size;
                 else
-                    pSize = Vector2.One / sizeF;
+                    pSize = Configuration.Size / sizeF;
             } else {
-                pSize = Vector2.One;
+                pSize = Configuration.Size;
             }
+
+            var texSize = region.Size;
+            var frameCountX = Math.Max((int)(1.0f / texSize.X), 1);
+            var frameCountY = Math.Max((int)(1.0f / texSize.Y), 1);
+            var maxAngleX = (2 * Math.PI) / frameCountX;
+            var maxAngleY = (2 * Math.PI) / frameCountY;
+            var velRotation = Configuration.RotationFromVelocity ? 1.0 : 0.0f;
 
             int result = 0;
             for (int i = 0, l = count; i < l; i++) {
                 var pAndL = positionAndLife[i];
-                if (pAndL.W <= 0)
+                var life = pAndL.W;
+                if (life <= 0)
                     continue;
 
                 var rd = renderData[i];
                 var rc = renderColor[i];
 
                 var sz = rd.X;
-                var rot = rd.Y;
+                var rot = rd.Y % (float)(2 * Math.PI);
 
-                // FIXME: Implement frame-by-type bounds logic
+                if ((frameCountX > 1) || (frameCountY > 1)) {
+                    var frameIndexXy = animRate * life;
+
+                    frameIndexXy.Y += (float)Math.Floor(rd.W);
+                    if (cfv)
+                        frameIndexXy.X += (float)Math.Round(rot / maxAngleX);
+                    if (rfv)
+                        frameIndexXy.Y += (float)Math.Round(rot / maxAngleY);
+
+                    frameIndexXy.X = Math.Max(0, frameIndexXy.X) % frameCountX;
+                    frameIndexXy.Y = Arithmetic.Clamp(frameIndexXy.Y, 0, frameCountY - 1);
+                    var texOffset = frameIndexXy * texSize;
+
+                    dc.TextureRegion = region;
+                    dc.TextureRegion.TopLeft += texOffset;
+                    dc.TextureRegion.BottomRight += texOffset;
+                }
 
                 dc.Position = new Vector2(pAndL.X, pAndL.Y);
-                dc.SortKey.Order = pAndL.Z;
+                dc.SortKey.Order = pAndL.Z + i;
                 dc.Scale = pSize * sz;
                 dc.MultiplyColor = new Color(rc.X, rc.Y, rc.Z, rc.W);
-                dc.Rotation = rot;
+                dc.Rotation = (float)(velRotation * rot);
 
                 buffer[result + offset] = dc;
                 result++;

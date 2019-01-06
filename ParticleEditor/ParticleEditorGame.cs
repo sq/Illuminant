@@ -465,22 +465,38 @@ namespace ParticleEditor {
             if (ur == null)
                 return;
 
-            var batch = BitmapBatch.New(container, layer, Materials.ScreenSpaceBitmap);
-            batch.Suspend();
-            DrawPreviousBitmapsAsync(batch, ur);
+            DrawPreviousBitmapsAsync(container, layer, ur);
         }
 
-        private async System.Threading.Tasks.Task DrawPreviousBitmapsAsync (BitmapBatch batch, Squared.Illuminant.Particles.ParticleSystem.UpdateResult[] results) {
-            var futures = new List<Future<ArraySegment<BitmapDrawCall>>>();
+        private async System.Threading.Tasks.Task DrawPreviousBitmapsAsync (
+            IBatchContainer container, int layer, 
+            Squared.Illuminant.Particles.ParticleSystem.UpdateResult[] results
+        ) {
+            var batches = new List<BitmapBatch>(results.Length);
+            for (int i = 0; i < results.Length; i++) {
+                var ur = results[i];
+                var batch = BitmapBatch.New(
+                    container, layer,
+                    Materials.GetBitmapMaterial(true, blendState: BlendState.AlphaBlend),
+                    samplerState: (ur.System.Configuration.Appearance?.Bilinear ?? true)
+                        ? SamplerState.LinearClamp
+                        : SamplerState.PointClamp
+                );
+                batch.Suspend();
+                batches.Add(batch);
+            }
+
+            var futures = new List<Future<ArraySegment<BitmapDrawCall>>>(results.Length);
             foreach (var ur in results)
                 futures.Add(ur.PerformReadback());
 
-            foreach (var f in futures) {
+            for (int i = 0; i < results.Length; i++) {
+                var f = futures[i];
                 await f;
+                var batch = batches[i];
                 batch.AddRange(f.Result);
+                batch.Dispose();
             }
-
-            batch.Dispose();
         }
 
         private void _GCAfterVsync (object _) {
