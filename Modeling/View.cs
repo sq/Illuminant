@@ -43,23 +43,27 @@ namespace Squared.Illuminant.Modeling {
             Coordinator = coordinator;
             Engine = new ParticleEngine(
                 coordinator, materials,
-                new ParticleEngineConfiguration {
-                    TextureLoader = (fn) => LoadTexture(fn, false),
-                    FPTextureLoader = (fn) => LoadTexture(fn, true),
-                    SystemResolver = ResolveReference,
-                    NamedVariableResolver = (k) => {
-                        Configuration.IParameter result;
-                        if (!Model.NamedVariables.TryGetValue(k, out result))
-                            result = null;
-
-                        return result;
-                    }
-                }, particleMaterials
+                MakeConfiguration(), particleMaterials
             );
 
             Systems.Clear();
             foreach (var systemModel in Model.Systems)
                 AddNewViewForModel(systemModel);
+        }
+
+        protected virtual ParticleEngineConfiguration MakeConfiguration () {
+            return new ParticleEngineConfiguration {
+                TextureLoader = (fn) => LoadTexture(fn, false),
+                FPTextureLoader = (fn) => LoadTexture(fn, true),
+                SystemResolver = ResolveReference,
+                NamedVariableResolver = (k) => {
+                    Configuration.IParameter result;
+                    if (!Model.NamedVariables.TryGetValue(k, out result))
+                        result = null;
+
+                    return result;
+                }
+            };
         }
 
         public ParticleSystem ResolveReference (string name, int? index) {

@@ -69,15 +69,18 @@ namespace Squared.Illuminant.Particles.Transforms {
                 var p = e.Parameters;
 
                 var vp = new Viewport(0, 0, engine.Configuration.ChunkSize, engine.Configuration.ChunkSize);
+                var curr = up.Curr;
+                if (curr.IsDisposed)
+                    return;
                 if (up.IsUpdate) {
-                    up.Curr.Bindings4[2] = new RenderTargetBinding(up.Chunk.RenderColor);
-                    up.Curr.Bindings4[3] = new RenderTargetBinding(up.Chunk.RenderData);
-                    dm.Device.SetRenderTargets(up.Curr.Bindings4);
+                    curr.Bindings4[2] = new RenderTargetBinding(up.Chunk.RenderColor);
+                    curr.Bindings4[3] = new RenderTargetBinding(up.Chunk.RenderData);
+                    dm.Device.SetRenderTargets(curr.Bindings4);
                 } else if (up.IsSpawning) {
-                    up.Curr.Bindings3[2] = up.Chunk.Color;
-                    dm.Device.SetRenderTargets(up.Curr.Bindings3);
+                    curr.Bindings3[2] = up.Chunk.Color;
+                    dm.Device.SetRenderTargets(curr.Bindings3);
                 } else {
-                    dm.Device.SetRenderTargets(up.Curr.Bindings2);
+                    dm.Device.SetRenderTargets(curr.Bindings2);
                 }
                 dm.Device.Viewport = vp;
 

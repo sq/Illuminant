@@ -195,6 +195,8 @@ namespace ParticleEditor {
             if (data != null) {
                 View.Engine.Configuration.UpdatesPerSecond = data.FrameRate;
                 View.Engine.Configuration.MaximumUpdateDeltaTimeSeconds = data.MaximumDeltaTimeMS / 1000f;
+                if ((int)data.ChunkSize != View.Engine.Configuration.ChunkSize)
+                    View.Engine.ChangeChunkSizeAndReset((int)data.ChunkSize);
             }
 
             if (Game.IsActive && !Game.IsMouseOverUI) {

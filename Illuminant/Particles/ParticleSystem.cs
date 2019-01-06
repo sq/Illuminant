@@ -108,6 +108,7 @@ namespace Squared.Illuminant.Particles {
             public RenderTarget2D Velocity;
 
             public bool IsDisposed { get; private set; }
+            public bool IsReadbackTarget;
             public bool IsUpdateResult;
 
             private static volatile int NextID;
@@ -164,7 +165,7 @@ namespace Squared.Illuminant.Particles {
             internal BufferSet LastUpdateResult;
 
             public bool NoLongerASpawnTarget { get; internal set; }
-            public bool IsFeedbackOutput { get; internal set; }
+            public bool IsFeedbackSource { get; internal set; }
             public bool IsDisposed { get; private set; }
 
             public int TotalSpawned { get; internal set; }
@@ -238,7 +239,7 @@ namespace Squared.Illuminant.Particles {
                 NextSpawnOffset = 0;
                 TotalConsumedForFeedback = 0;
                 TotalSpawned = 0;
-                IsFeedbackOutput = false;
+                IsFeedbackSource = false;
                 NoLongerASpawnTarget = true;
             }
 
@@ -533,7 +534,7 @@ namespace Squared.Illuminant.Particles {
 
             if (chunk == null) {
                 chunk = CreateChunk();
-                chunk.IsFeedbackOutput = feedback;
+                chunk.IsFeedbackSource = feedback;
                 currentTarget = chunk.ID;
                 Chunks.Add(chunk);
                 needClear = true;
@@ -562,7 +563,7 @@ namespace Squared.Illuminant.Particles {
                     cfs = null;
             }
             var newChunk = Chunks.FirstOrDefault(
-                c => (c.AvailableForFeedback >= count / 2) && !c.IsFeedbackOutput
+                c => (c.AvailableForFeedback >= count / 2) && !c.IsFeedbackSource
             );
             if (newChunk != null)
                 CurrentFeedbackSource = newChunk.ID;
@@ -817,7 +818,10 @@ namespace Squared.Illuminant.Particles {
         private void Reap (BufferSet buffer) {
             if (buffer == null)
                 return;
-            Engine.DiscardedBuffers.Add(buffer);
+            if (buffer.Size != Engine.Configuration.ChunkSize)
+                Engine.Coordinator.DisposeResource(buffer);
+            else
+                Engine.DiscardedBuffers.Add(buffer);
         }
 
         private void Reap (Chunk chunk) {
@@ -947,7 +951,8 @@ namespace Squared.Illuminant.Particles {
 
                 if (IsClearPending) {
                     foreach (var c in Chunks.ToList()) {
-                        c.Clear();
+                        if (c.Size == Engine.Configuration.ChunkSize)
+                            c.Clear();
                         Reap(c);
                     }
                     IsClearPending = false;

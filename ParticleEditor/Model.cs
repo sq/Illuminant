@@ -35,6 +35,13 @@ namespace ParticleEditor {
         /// A list of sprites to draw on top of the scene background.
         /// </summary>
         public readonly List<EditorSprite> Sprites = new List<EditorSprite>();
+
+        /// <summary>
+        /// Determines the size of the particle buffers used by the particle systems.
+        /// A small size is ideal for scenarios where you are not spawning many particles,
+        ///  or where you need to read particle state from the GPU.
+        /// </summary>
+        public PresetChunkSize ChunkSize = PresetChunkSize.Large;
     }
 
     public class EditorSprite {
@@ -59,5 +66,11 @@ namespace ParticleEditor {
         public Vector2? TextureSizePx;
 
         public float Scale = 1;
+    }
+
+    public enum PresetChunkSize : int {
+        Small = 32,
+        Medium = 128,
+        Large = 256
     }
 }

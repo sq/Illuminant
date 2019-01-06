@@ -1525,12 +1525,13 @@ namespace ParticleEditor {
             var ctx = Nuklear.Context;
             var value = (NullableLazyResource<Texture2D>)_value;
             var hasValue = (value != null) && value.IsInitialized;
-            Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
-            if (Nuklear.Button("Select Image")) {
+            Nuke.nk_layout_row_dynamic(ctx, LineHeight, 3);
+            Nuklear.Label(cpi.Name);
+            if (Nuklear.Button("Select")) {
                 Controller.SelectTexture(cpi, instance, value);
                 changed = false;
             }
-            if (Nuklear.Button("Remove Image", hasValue)) {
+            if (Nuklear.Button("Remove", hasValue)) {
                 if (value.Instance != null)
                     Game.RenderCoordinator.DisposeResource(value.Instance);
                 value = new NullableLazyResource<Texture2D>();
@@ -1538,36 +1539,36 @@ namespace ParticleEditor {
                 changed = true;
                 hasValue = false;
             }
-            
-            Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
-            if (hasValue) {
-                Nuke.nk_label_wrap(
-                    ctx, string.Format(
-                        "{0}: {1} ({2}x{3})",
-                        cpi.Name, Path.GetFileName(value.Name),
-                        value.Instance.Width.ToString(),
-                        value.Instance.Height.ToString()
-                    )
-                );
-            } else {
-                Nuke.nk_label_wrap(
-                    ctx, string.Format("{0}: none", cpi.Name)
-                );
-            }
 
             if (hasValue) {
                 var tex = value.Instance;
-                var height = Math.Min(240, tex.Height);
+                var height = Math.Min(200, tex.Height);
                 Bounds panel;
                 if (Nuklear.CustomPanel(height, out panel)) {
                     float scaleF = Math.Min(
                         height / (float)tex.Height,
                         panel.Size.X / (float)tex.Width
                     );
+                    var scaledW = tex.Width * scaleF;
+                    var xOffset = Math.Max(0, (panel.Size.X - scaledW) / 2f);
                     var ss = (tex.Format == SurfaceFormat.Vector4)
                         ? SamplerState.PointClamp
                         : SamplerState.LinearClamp;
-                    Nuklear.PendingRenderer.Draw(tex, panel.TopLeft, scale: new Vector2(scaleF), layer: 9999, samplerState: ss);
+                    Nuklear.PendingRenderer.Draw(tex, panel.TopLeft + new Vector2(xOffset, 0), scale: new Vector2(scaleF), layer: 9999, samplerState: ss);
+
+                    var nameText = Path.GetFileName(value.Name);
+                    using (var buffer = BufferPool<BitmapDrawCall>.Allocate(nameText.Length * 2)) {
+                        var layout = Game.Font.LayoutString(
+                            nameText, buffer, panel.TopLeft,
+                            lineBreakAtX: panel.Size.X, alignToPixels: true, wordWrap: true,
+                            horizontalAlignment: Squared.Render.Text.HorizontalAlignment.Center,
+                            reverseOrder: true
+                        );
+                        Nuklear.PendingRenderer.DrawMultiple(
+                            layout.DrawCalls,
+                            layer: 10000, material: Game.TextMaterial
+                        );
+                    }
                 }
             }
 

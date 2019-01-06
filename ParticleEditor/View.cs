@@ -36,9 +36,15 @@ namespace ParticleEditor {
             return (EditorData)ud;
         }
 
+        protected override ParticleEngineConfiguration MakeConfiguration () {
+            var result = base.MakeConfiguration();
+            return result;
+        }
+
         public void Initialize (ParticleEditor editor) {
             Game = editor;
             base.Initialize(Game.RenderCoordinator, Game.Materials, Game.ParticleMaterials);
+            Engine.ChangeChunkSizeAndReset((int)GetData().ChunkSize);
             // Engine.Configuration.UpdatesPerSecond = 120;
         }
         

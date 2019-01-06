@@ -233,6 +233,7 @@ namespace Squared.Illuminant.Particles {
         }
 
         private void FillVertexBuffer () {
+            if (RasterizeVertexBuffer == null)
             {
                 var buf = new ParticleSystemVertex[4];
                 int i = 0;
@@ -252,6 +253,9 @@ namespace Squared.Illuminant.Particles {
                 RasterizeVertexBuffer.SetData(buf);
             }
 
+            if (RasterizeOffsetBuffer != null)
+                Coordinator.DisposeResource(RasterizeOffsetBuffer);
+
             {
                 var buf = new ParticleOffsetVertex[Configuration.ChunkSize * Configuration.ChunkSize];
                 RasterizeOffsetBuffer = new VertexBuffer(
@@ -270,6 +274,25 @@ namespace Squared.Illuminant.Particles {
                 RasterizeOffsetBuffer.SetData(buf);
             }
         }
+
+        public void ChangeChunkSizeAndReset (int newSize) {
+            if (Configuration.ChunkSize == newSize)
+                return;
+
+            Coordinator.WaitForActiveDraws();
+
+            Configuration.ChunkSize = newSize;
+            foreach (var s in Systems)
+                s.Reset();
+
+            foreach (var buf in AllBuffers)
+                Coordinator.DisposeResource(buf);
+
+            AllBuffers.Clear();
+            AvailableBuffers.Clear();
+            DiscardedBuffers.Clear();
+        }
+
 
         private void GenerateRandomnessTexture (int? seed = null) {
             var sw = Stopwatch.StartNew();
@@ -352,7 +375,7 @@ namespace Squared.Illuminant.Particles {
     }
 
     public class ParticleEngineConfiguration {
-        public readonly int ChunkSize;
+        public int ChunkSize { get; internal set; }
 
         /// <summary>
         /// How long a buffer must remain unused before getting used again.
