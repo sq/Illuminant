@@ -1126,7 +1126,8 @@ namespace Squared.Illuminant.Particles {
             AutoGrowBuffer(ref ReadbackBuffer3, chunkCount);
             AutoGrowBuffer(ref ReadbackResultBuffer, maxTotalCount);
 
-            Array.Clear(ReadbackResultBuffer, 0, ReadbackResultBuffer.Length);
+            // FIXME: This is too slow
+            // Array.Clear(ReadbackResultBuffer, 0, ReadbackResultBuffer.Length);
 
             Configuration.Appearance?.Texture?.EnsureInitialized(Engine.Configuration.TextureLoader);
 
@@ -1136,12 +1137,13 @@ namespace Squared.Illuminant.Particles {
                 var curr = c.Current;
                 if (curr.IsDisposed)
                     continue;
-                curr.PositionAndLife.GetData(ReadbackBuffer1, 0, c.MaximumCount);
-                c.RenderData.GetData(ReadbackBuffer2, 0, c.MaximumCount);
-                c.RenderColor.GetData(ReadbackBuffer3, 0, c.MaximumCount);
+                var count = c.TotalSpawned;
+                curr.PositionAndLife.GetData(ReadbackBuffer1, 0, count);
+                c.RenderData.GetData(ReadbackBuffer2, 0, count);
+                c.RenderColor.GetData(ReadbackBuffer3, 0, count);
                 totalCount += FillReadbackResult(
                     ReadbackResultBuffer, ReadbackBuffer1, ReadbackBuffer2, ReadbackBuffer3,
-                    totalCount, c.MaximumCount, ReadbackTimestamp
+                    totalCount, count, ReadbackTimestamp
                 );
             }
 
@@ -1164,6 +1166,7 @@ namespace Squared.Illuminant.Particles {
             var animRate = Configuration.Appearance?.AnimationRate ?? Vector2.Zero;
             var cfv = Configuration.Appearance?.ColumnFromVelocity ?? false;
             var rfv = Configuration.Appearance?.RowFromVelocity ?? false;
+            var c = Color.White;
 
             var region = Bounds.Unit;
 
@@ -1222,7 +1225,11 @@ namespace Squared.Illuminant.Particles {
                 dc.Position = new Vector2(pAndL.X, pAndL.Y);
                 dc.SortKey.Order = pAndL.Z + i;
                 dc.Scale = pSize * sz;
-                dc.MultiplyColor = new Color(rc.X, rc.Y, rc.Z, rc.W);
+                c.R = (byte)(rc.X * 255);
+                c.G = (byte)(rc.Y * 255);
+                c.B = (byte)(rc.Z * 255);
+                c.A = (byte)(rc.W * 255);
+                dc.MultiplyColor = c;
                 dc.Rotation = (float)(velRotation * rot);
 
                 buffer[result + offset] = dc;
