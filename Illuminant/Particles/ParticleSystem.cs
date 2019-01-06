@@ -1137,13 +1137,15 @@ namespace Squared.Illuminant.Particles {
                 var curr = c.Current;
                 if (curr.IsDisposed)
                     continue;
-                var count = c.TotalSpawned;
-                curr.PositionAndLife.GetData(ReadbackBuffer1, 0, count);
-                c.RenderData.GetData(ReadbackBuffer2, 0, count);
-                c.RenderColor.GetData(ReadbackBuffer3, 0, count);
+                var rowCount = (int)Math.Ceiling(c.TotalSpawned / (float)Engine.Configuration.ChunkSize);
+                var eleCount = rowCount * Engine.Configuration.ChunkSize;
+                var rect = new Rectangle(0, 0, Engine.Configuration.ChunkSize, rowCount);
+                curr.PositionAndLife.GetData(0, rect, ReadbackBuffer1, 0, eleCount);
+                c.RenderData.GetData(0, rect, ReadbackBuffer2, 0, eleCount);
+                c.RenderColor.GetData(0, rect, ReadbackBuffer3, 0, eleCount);
                 totalCount += FillReadbackResult(
                     ReadbackResultBuffer, ReadbackBuffer1, ReadbackBuffer2, ReadbackBuffer3,
-                    totalCount, count, ReadbackTimestamp
+                    totalCount, eleCount, ReadbackTimestamp
                 );
             }
 
