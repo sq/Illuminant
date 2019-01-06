@@ -42,6 +42,12 @@ namespace ParticleEditor {
         ///  or where you need to read particle state from the GPU.
         /// </summary>
         public PresetChunkSize ChunkSize = PresetChunkSize.Large;
+
+        /// <summary>
+        /// If true, particles are drawn as bitmaps that are configured on-CPU.
+        /// The bitmaps can be sorted into lists of other bitmaps and can use custom materials.
+        /// </summary>
+        public bool DrawAsBitmaps = false;
     }
 
     public class EditorSprite {

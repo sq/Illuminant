@@ -135,7 +135,7 @@ namespace ParticleEditor {
             var state = Controller.CurrentState;
 
             using (var group = Nuklear.CollapsingGroup("Document", "Document", false))
-            if (group.Visible) {
+            if (group.Visible && (Game.View != null)) {
                 var data = Game.View.GetData();
                 DocumentProperties.Prepare(data);
                 RenderPropertyGrid(data, DocumentProperties, null);

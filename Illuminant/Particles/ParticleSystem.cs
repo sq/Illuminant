@@ -20,6 +20,26 @@ using Squared.Util;
 
 namespace Squared.Illuminant.Particles {
     public class ParticleSystem : IDisposable {
+        public class UpdateResult {
+            public ParticleSystem System { get; private set; }
+            public bool PerformedUpdate { get; private set; }
+            public float Timestamp { get; private set; }
+
+            internal UpdateResult (ParticleSystem system, bool performedUpdate, float timestamp) {
+                System = system;
+                PerformedUpdate = performedUpdate;
+                Timestamp = timestamp;
+            }
+
+            public Future<ArraySegment<BitmapDrawCall>> PerformReadback () {
+                if (!System.Configuration.AutoReadback)
+                    return new Future<ArraySegment<BitmapDrawCall>>(new ArraySegment<BitmapDrawCall>());
+
+                lock (System.ReadbackLock)
+                    return System.ReadbackFuture;
+            }
+        }
+
         internal class LivenessInfo {
             public Chunk          Chunk;
             public int?           Count;
@@ -108,7 +128,6 @@ namespace Squared.Illuminant.Particles {
             public RenderTarget2D Velocity;
 
             public bool IsDisposed { get; private set; }
-            public bool IsReadbackTarget;
             public bool IsUpdateResult;
 
             private static volatile int NextID;
@@ -361,6 +380,12 @@ namespace Squared.Illuminant.Particles {
         public readonly ParticleSystemConfiguration        Configuration;
         public readonly List<Transforms.ParticleTransform> Transforms = 
             new List<Transforms.ParticleTransform>();
+
+        private object ReadbackLock = new object();
+        private float  ReadbackTimestamp;
+        private Future<ArraySegment<BitmapDrawCall>> ReadbackFuture = new Future<ArraySegment<BitmapDrawCall>>();
+        private BitmapDrawCall[] ReadbackResultBuffer;
+        private Vector4[] ReadbackBuffer1, ReadbackBuffer2, ReadbackBuffer3;
 
         private readonly Transforms.ParticleTransform.UpdateHandler Updater;
         private readonly RenderHandler Renderer;
@@ -896,7 +921,7 @@ namespace Squared.Illuminant.Particles {
                 Engine.DiscardedBuffers.Add(prev);
         }
 
-        public bool Update (IBatchContainer container, int layer) {
+        public UpdateResult Update (IBatchContainer container, int layer) {
             var lastUpdateTimeSeconds = LastUpdateTimeSeconds;
             var updateError = UpdateErrorAccumulator;
             UpdateErrorAccumulator = 0;
@@ -920,7 +945,7 @@ namespace Squared.Illuminant.Particles {
                 UpdateErrorAccumulator = actualDeltaTimeSeconds - adjustedDeltaTime;
                 actualDeltaTimeSeconds = adjustedDeltaTime;
                 if ((actualDeltaTimeSeconds <= 0) && (CurrentFrameIndex > 1))
-                    return false;
+                    return new UpdateResult(this, false, (float)now);
                 LastUpdateTimeSeconds = now = lastUpdateTimeSeconds.Value + adjustedDeltaTime;
             } else {
                 LastUpdateTimeSeconds = now;
@@ -947,8 +972,16 @@ namespace Squared.Illuminant.Particles {
 
             using (var group = BatchGroup.New(
                 container, layer,
-                (dm, _) => dm.PushRenderTarget(null),
-                (dm, _) => dm.PopRenderTarget()
+                (dm, _) => {
+                    dm.PushRenderTarget(null);
+                    lock (ReadbackLock)
+                    if (Configuration.AutoReadback)
+                        ReadbackFuture = new Future<ArraySegment<BitmapDrawCall>>();
+                },
+                (dm, _) => {
+                    dm.PopRenderTarget();
+                    MaybePerformReadback((float)now);
+                }
             )) {
                 int i = 0;
 
@@ -1008,7 +1041,7 @@ namespace Squared.Illuminant.Particles {
             var ts = Time.Ticks;
 
             Engine.EndOfUpdate(initialTurn);
-            return true;
+            return new UpdateResult(this, true, (float)now);
         }
 
         private void UpdateChunk (
@@ -1063,6 +1096,108 @@ namespace Squared.Illuminant.Particles {
                     actualDeltaTimeSeconds, true, now, true, null
                 );
             }
+        }
+
+        private void AutoGrowBuffer<T> (ref T[] buffer, int size) {
+            if ((buffer == null) || (buffer.Length < size))
+                buffer = new T[size];
+        }
+
+        private void MaybePerformReadback (float timestamp) {
+            Future<ArraySegment<BitmapDrawCall>> f;
+
+            lock (ReadbackLock) {
+                if (!Configuration.AutoReadback)
+                    return;
+
+                f = ReadbackFuture;
+                if (f == null)
+                    return;
+            }
+
+            ReadbackTimestamp = timestamp;
+            var chunkCount = Engine.Configuration.ChunkSize * Engine.Configuration.ChunkSize;
+            var maxTotalCount = Chunks.Count * chunkCount;
+            var bufferSize = (int)Math.Ceiling(maxTotalCount / 4096.0) * 4096;
+            AutoGrowBuffer(ref ReadbackBuffer1, chunkCount);
+            AutoGrowBuffer(ref ReadbackBuffer2, chunkCount);
+            AutoGrowBuffer(ref ReadbackBuffer3, chunkCount);
+            AutoGrowBuffer(ref ReadbackResultBuffer, maxTotalCount);
+
+            Array.Clear(ReadbackResultBuffer, 0, ReadbackResultBuffer.Length);
+
+            Configuration.Appearance?.Texture?.EnsureInitialized(Engine.Configuration.TextureLoader);
+
+            int totalCount = 0;
+            // FIXME: Do this in parallel
+            foreach (var c in Chunks) {
+                var curr = c.Current;
+                if (curr.IsDisposed)
+                    continue;
+                curr.PositionAndLife.GetData(ReadbackBuffer1, 0, c.MaximumCount);
+                c.RenderData.GetData(ReadbackBuffer2, 0, c.MaximumCount);
+                c.RenderColor.GetData(ReadbackBuffer3, 0, c.MaximumCount);
+                totalCount += FillReadbackResult(
+                    ReadbackResultBuffer, ReadbackBuffer1, ReadbackBuffer2, ReadbackBuffer3,
+                    totalCount, c.MaximumCount, ReadbackTimestamp
+                );
+            }
+
+            f.SetResult(new ArraySegment<BitmapDrawCall>(
+                ReadbackResultBuffer, 0, totalCount
+            ), null);
+        }
+
+        private int FillReadbackResult (
+            BitmapDrawCall[] buffer, Vector4[] positionAndLife, Vector4[] renderData, Vector4[] renderColor,
+            int offset, int count, float now
+        ) {
+            // var sfl = new ClampedBezier1(Configuration.SizeFromLife);
+
+            Vector2 pSize;
+            BitmapDrawCall dc = default(BitmapDrawCall);
+            dc.Texture = Configuration.Appearance?.Texture?.Instance;
+            dc.Origin = Vector2.One * 0.5f;
+
+            if (dc.Texture != null) {
+                var sizeF = new Vector2(dc.Texture.Width, dc.Texture.Height);
+                dc.TextureRegion = Bounds.FromPositionAndSize(
+                    Configuration.Appearance.OffsetPx / sizeF,
+                    Configuration.Appearance.SizePx.GetValueOrDefault(sizeF) / sizeF
+                );
+                if (Configuration.Appearance.RelativeSize)
+                    pSize = Vector2.One;
+                else
+                    pSize = Vector2.One / sizeF;
+            } else {
+                pSize = Vector2.One;
+            }
+
+            int result = 0;
+            for (int i = 0, l = count; i < l; i++) {
+                var pAndL = positionAndLife[i];
+                if (pAndL.W <= 0)
+                    continue;
+
+                var rd = renderData[i];
+                var rc = renderColor[i];
+
+                var sz = rd.X;
+                var rot = rd.Y;
+
+                // FIXME: Implement frame-by-type bounds logic
+
+                dc.Position = new Vector2(pAndL.X, pAndL.Y);
+                dc.SortKey.Order = pAndL.Z;
+                dc.Scale = pSize * sz;
+                dc.MultiplyColor = new Color(rc.X, rc.Y, rc.Z, rc.W);
+                dc.Rotation = rot;
+
+                buffer[result + offset] = dc;
+                result++;
+            }
+
+            return result;
         }
 
         private void ComputeLiveness (
@@ -1507,6 +1642,13 @@ namespace Squared.Illuminant.Particles {
         /// Gives particles a constant rotation based on their index (pseudorandom-ish)
         /// </summary>
         public float         RotationFromIndex = 0;
+
+        /// <summary>
+        /// If set, the system's state will automatically be read into system memory after
+        ///  every update
+        /// </summary>
+        [NonSerialized]
+        public bool          AutoReadback = false;
 
         public ParticleSystemConfiguration () {
         }

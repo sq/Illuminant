@@ -21,6 +21,8 @@ namespace Squared.Illuminant.Modeling {
         public ITimeProvider Time;
         public readonly List<ParticleSystemView> Systems = new List<ParticleSystemView>();
 
+        public ParticleSystem.UpdateResult[] UpdateResults { get; private set; }
+
         private readonly List<IDisposable> LoadedResources = new List<IDisposable>();
 
         protected ParticleEngineView (EngineModel model, ITimeProvider time) {
@@ -103,10 +105,16 @@ namespace Squared.Illuminant.Modeling {
         }
 
         protected void Update (IBatchContainer container, int layer, long deltaTimeTicks) {
+            if ((UpdateResults == null) || (UpdateResults.Length != Systems.Count))
+                UpdateResults = new ParticleSystem.UpdateResult[Systems.Count];
+
             using (var g = BatchGroup.New(container, layer)) {
                 int i = 0;
-                foreach (var s in Systems)
-                    s.Instance.Update(g, (s.Model.UpdateOrder << 16) + i++);
+
+                foreach (var s in Systems) {
+                    UpdateResults[i] = s.Instance.Update(g, (s.Model.UpdateOrder << 16) + i);
+                    i++;
+                }
             }
         }
 

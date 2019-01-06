@@ -53,6 +53,9 @@ namespace ParticleEditor {
             if (!doUpdate)
                 return;
 
+            foreach (var system in Systems)
+                system.Instance.Configuration.AutoReadback = GetData().DrawAsBitmaps;
+
             editor.Controller.StepPending = false;
             Time.Advance(deltaTimeTicks);
 

@@ -23,6 +23,7 @@ using Squared.Render;
 using Squared.Render.Convenience;
 using Squared.Render.Text;
 using Squared.Util;
+using Squared.Threading;
 using ThreefoldTrials.Framework;
 using Nuke = NuklearDotNet.Nuklear;
 
@@ -73,6 +74,8 @@ namespace ParticleEditor {
         public float Zoom = 1.0f;
         public Vector2 CameraPosition;
         public Vector2 CameraDragInitialPosition, CameraDragStart;
+
+        private Future<ArraySegment<BitmapDrawCall>> LastReadbackResult = null;
 
         private long LastViewRelease = 0;
 
@@ -381,6 +384,7 @@ namespace ParticleEditor {
             Controller.Update();
 
             if (View != null) {
+                MaybeDrawPreviousBitmaps(frame, 3);
                 View.Update(this, frame, -3, gameTime.ElapsedGameTime.Ticks);
                 ClearBatch.AddNew(frame, -2, Materials.Clear, View.GetData().BackgroundColor);
             } else {
@@ -432,8 +436,10 @@ namespace ParticleEditor {
 
             ir.Draw(UIRenderTarget, Vector2.Zero, multiplyColor: Color.White * uiOpacity);
 
-            if (View != null)
-                View.Draw(this, frame, 3);
+            if (View != null) {
+                if (!View.GetData().DrawAsBitmaps)
+                    View.Draw(this, frame, 3);
+            }
 
             Controller.Draw(this, frame, 4);
 
@@ -449,6 +455,32 @@ namespace ParticleEditor {
             }
 
             ThreadPool.QueueUserWorkItem(GCAfterVsync, null);
+        }
+
+        private void MaybeDrawPreviousBitmaps (IBatchContainer container, int layer) {
+            if (!View.GetData().DrawAsBitmaps)
+                return;
+
+            var ur = View.UpdateResults;
+            if (ur == null)
+                return;
+
+            var batch = BitmapBatch.New(container, layer, Materials.ScreenSpaceBitmap);
+            batch.Suspend();
+            DrawPreviousBitmapsAsync(batch, ur);
+        }
+
+        private async System.Threading.Tasks.Task DrawPreviousBitmapsAsync (BitmapBatch batch, Squared.Illuminant.Particles.ParticleSystem.UpdateResult[] results) {
+            var futures = new List<Future<ArraySegment<BitmapDrawCall>>>();
+            foreach (var ur in results)
+                futures.Add(ur.PerformReadback());
+
+            foreach (var f in futures) {
+                await f;
+                batch.AddRange(f.Result);
+            }
+
+            batch.Dispose();
         }
 
         private void _GCAfterVsync (object _) {
