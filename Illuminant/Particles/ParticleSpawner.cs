@@ -68,6 +68,9 @@ namespace Squared.Illuminant.Particles.Transforms {
         [NonSerialized]
         protected Vector4[] Temp = new Vector4[8];
 
+        [NonSerialized]
+        internal readonly UpdateHandler Handler2;
+
         protected SpawnerBase ()
             : this(null) {
         }
@@ -75,6 +78,7 @@ namespace Squared.Illuminant.Particles.Transforms {
         protected SpawnerBase (int? seed) {
             RNG = new MersenneTwister(seed.GetValueOrDefault(NextSeed++));
             ActiveStateChanged += Spawner_ActiveStateChanged;
+            Handler2 = new UpdateHandler(this);
         }
 
         private void Spawner_ActiveStateChanged () {

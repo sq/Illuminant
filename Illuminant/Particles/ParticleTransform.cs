@@ -163,14 +163,14 @@ namespace Squared.Illuminant.Particles.Transforms {
         }
 
         public event Action ActiveStateChanged;
-        internal readonly UpdateHandler Handler, Handler2;
+        [NonSerialized]
+        internal readonly UpdateHandler Handler;
 
         protected abstract Material GetMaterial (ParticleMaterials materials);
         protected abstract void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex);
 
         protected ParticleTransform () {
             Handler = new UpdateHandler(this);
-            Handler2 = new UpdateHandler(this);
         }
 
         Material IParticleTransform.GetMaterial (ParticleMaterials materials) {

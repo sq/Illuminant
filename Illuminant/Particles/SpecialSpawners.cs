@@ -167,6 +167,7 @@ namespace Squared.Illuminant.Particles.Transforms {
         [NonSerialized]
         private int CurrentFeedbackSourceIndex;
 
+        [NonSerialized]
         private Vector4[] Temp3 = new Vector4[1];
 
         public override void Reset () {
