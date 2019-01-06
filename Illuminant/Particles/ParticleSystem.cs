@@ -525,7 +525,7 @@ namespace Squared.Illuminant.Particles {
             var chunk = ChunkFromID(currentTarget);
             // FIXME: Ideally we could split the spawn across this chunk and an old one.
             if (chunk != null) {
-                if (chunk.Free < count) {
+                if (chunk.Free < 16) {
                     chunk.NoLongerASpawnTarget = true;
                     currentTarget = -1;
                     chunk = null;
@@ -570,22 +570,22 @@ namespace Squared.Illuminant.Particles {
             return newChunk;
         }
 
-        private void RunSpawner (
+        private bool RunSpawner (
             IBatchContainer container, ref int layer, Material m,
             long startedWhen, Transforms.SpawnerBase spawner,
             Transforms.ParameterSetter setParameters,
-            double deltaTimeSeconds, double now
+            double deltaTimeSeconds, double now, bool isSecondPass
         ) {
             int spawnCount = 0, requestedSpawnCount;
 
             if (!spawner.IsValid)
-                return;
+                return false;
 
             Chunk sourceChunk;
             spawner.BeginTick(this, now, deltaTimeSeconds, out requestedSpawnCount, out sourceChunk);
 
             if (requestedSpawnCount <= 0) {
-                return;
+                return false;
             } else if (requestedSpawnCount > ChunkMaximumCount)
                 spawnCount = ChunkMaximumCount;
             else
@@ -594,29 +594,43 @@ namespace Squared.Illuminant.Particles {
             bool needClear;
             var chunk = PickTargetForSpawn(spawner is Transforms.FeedbackSpawner, spawnCount, out needClear);
 
+            if (spawnCount > chunk.Free)
+                spawnCount = chunk.Free;
+
             if (chunk == null)
                 throw new Exception("Failed to locate or create a chunk to spawn in");
 
             var first = chunk.NextSpawnOffset;
             var last = chunk.NextSpawnOffset + spawnCount - 1;
             spawner.SetIndices(first, last);
-            // Console.WriteLine("Spawning {0}-{1} free {2}", first, last, spawnState.Free);
 
             chunk.NextSpawnOffset += spawnCount;
             TotalSpawnCount += spawnCount;
             if (sourceChunk != null)
                 sourceChunk.TotalConsumedForFeedback += spawnCount;
 
+            // Console.WriteLine("Spawning {0} into {1} (w/{2} free)", spawnCount, chunk.ID, chunk.Free);
             spawner.EndTick(requestedSpawnCount, spawnCount);
             chunk.TotalSpawned += spawnCount;
 
-            RunTransform(
-                chunk, container, ref layer, m,
-                startedWhen, true,
-                spawner.Handler.BeforeDraw, spawner.Handler.AfterDraw, 
-                deltaTimeSeconds, needClear, now, false,
-                sourceChunk
-            );
+            if (spawnCount > 0) {
+                var h = isSecondPass ? spawner.Handler2 : spawner.Handler;
+
+                RunTransform(
+                    chunk, container, ref layer, m,
+                    startedWhen, true,
+                    h.BeforeDraw, h.AfterDraw, 
+                    deltaTimeSeconds, needClear, now, false,
+                    sourceChunk
+                );
+            }
+
+            var isPartialSpawn = (requestedSpawnCount > spawnCount);
+            /*
+            if (isPartialSpawn)
+                Console.WriteLine("Partial spawn");
+            */
+            return isPartialSpawn;
         }
 
         private void RunTransform (
@@ -971,11 +985,17 @@ namespace Squared.Illuminant.Particles {
                         continue;
 
                     var it = (Transforms.IParticleTransform)s;
-                    RunSpawner(
+                    var isPartialSpawn = RunSpawner(
                         group, ref i, it.GetMaterial(Engine.ParticleMaterials),
                         startedWhen, s,
-                        it.SetParameters, actualDeltaTimeSeconds, now
+                        it.SetParameters, actualDeltaTimeSeconds, now, false
                     );
+                    if (isPartialSpawn)
+                        RunSpawner(
+                            group, ref i, it.GetMaterial(Engine.ParticleMaterials),
+                            startedWhen, s,
+                            it.SetParameters, actualDeltaTimeSeconds, now, true
+                        );
                 }
 
                 foreach (var chunk in Chunks)

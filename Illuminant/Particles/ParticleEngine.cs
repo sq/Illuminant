@@ -291,6 +291,8 @@ namespace Squared.Illuminant.Particles {
             AllBuffers.Clear();
             AvailableBuffers.Clear();
             DiscardedBuffers.Clear();
+
+            FillVertexBuffer();
         }
 
 
