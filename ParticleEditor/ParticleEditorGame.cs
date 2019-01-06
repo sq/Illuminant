@@ -71,6 +71,8 @@ namespace ParticleEditor {
         private GCHandle ControllerPin;
         public const float MinZoom = 0.25f, MaxZoom = 5.0f;
         public float Zoom = 1.0f;
+        public Vector2 CameraPosition;
+        public Vector2 CameraDragInitialPosition, CameraDragStart;
 
         private long LastViewRelease = 0;
 
@@ -290,6 +292,19 @@ namespace ParticleEditor {
 
                 var alt = KeyboardState.IsKeyDown(Keys.LeftAlt) || KeyboardState.IsKeyDown(Keys.RightAlt);
                 var wasAlt = PreviousKeyboardState.IsKeyDown(Keys.LeftAlt) || PreviousKeyboardState.IsKeyDown(Keys.RightAlt);
+
+                var isDraggingCamera = MouseState.MiddleButton == ButtonState.Pressed;
+                var wasDraggingCamera = PreviousMouseState.MiddleButton == ButtonState.Pressed;
+
+                if (isDraggingCamera) {
+                    if (wasDraggingCamera) {
+                        var delta = new Vector2(MouseState.X, MouseState.Y) - CameraDragStart;
+                        CameraPosition = CameraDragInitialPosition - (delta / Zoom);
+                    } else {
+                        CameraDragInitialPosition = CameraPosition;
+                        CameraDragStart = new Vector2(MouseState.X, MouseState.Y);
+                    }
+                }
                 
                 if (KeyboardState.IsKeyDown(Keys.OemTilde) && !PreviousKeyboardState.IsKeyDown(Keys.OemTilde)) {
                     Graphics.SynchronizeWithVerticalRetrace = !Graphics.SynchronizeWithVerticalRetrace;
@@ -325,10 +340,12 @@ namespace ParticleEditor {
 
         public Vector2 ViewOffset {
             get {
-                return new Vector2(
+                var result = new Vector2(
                     -(Graphics.PreferredBackBufferWidth - UI.SidePanelWidth) / 2f,
                     -Graphics.PreferredBackBufferHeight / 2f
                 ) / Zoom;
+
+                return result + CameraPosition;
             }
         }
 
@@ -377,6 +394,9 @@ namespace ParticleEditor {
                 worldSpace: false,
                 layer: 9999
             );
+            
+            Materials.ViewportPosition = ViewOffset;
+            Materials.ViewportScale = Zoom * Vector2.One;
 
             if (View != null) {
                 var bg = View.GetData().Background;
@@ -411,9 +431,6 @@ namespace ParticleEditor {
             float uiOpacity = Arithmetic.Lerp(1.0f, 0.4f, (float)((elapsedSeconds - 0.66) * 2.25f));
 
             ir.Draw(UIRenderTarget, Vector2.Zero, multiplyColor: Color.White * uiOpacity);
-
-            Materials.ViewportPosition = ViewOffset;
-            Materials.ViewportScale = Zoom * Vector2.One;
 
             if (View != null)
                 View.Draw(this, frame, 3);
