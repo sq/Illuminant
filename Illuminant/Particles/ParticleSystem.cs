@@ -1193,6 +1193,9 @@ namespace Squared.Illuminant.Particles {
             var maxAngleY = (2 * Math.PI) / frameCountY;
             var velRotation = Configuration.RotationFromVelocity ? 1.0 : 0.0f;
 
+            var sr = Configuration.SortedReadback;
+            var zToY = Configuration.ZToY;
+
             int result = 0;
             for (int i = 0, l = count; i < l; i++) {
                 var pAndL = positionAndLife[i];
@@ -1225,7 +1228,8 @@ namespace Squared.Illuminant.Particles {
                 }
 
                 dc.Position = new Vector2(pAndL.X, pAndL.Y);
-                dc.SortKey.Order = pAndL.Z + i;
+                if (sr)
+                    dc.SortKey.Order = pAndL.Y + zToY;
                 dc.Scale = pSize * sz;
                 c.R = (byte)(rc.X * 255);
                 c.G = (byte)(rc.Y * 255);
@@ -1690,6 +1694,11 @@ namespace Squared.Illuminant.Particles {
         /// </summary>
         [NonSerialized]
         public bool          AutoReadback = false;
+
+        /// <summary>
+        /// If set, the bitmap list created by readback will be sorted by particle's Z and Y values
+        /// </summary>
+        public bool          SortedReadback = true;
 
         public ParticleSystemConfiguration () {
         }
