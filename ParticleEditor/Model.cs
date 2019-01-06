@@ -5,7 +5,9 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Squared.Game;
 using Squared.Illuminant;
+using Squared.Illuminant.Configuration;
 
 namespace ParticleEditor {
     public class EditorData {
@@ -28,5 +30,34 @@ namespace ParticleEditor {
         /// Sets a background color for the scene.
         /// </summary>
         public Color BackgroundColor = Color.Black;
+
+        /// <summary>
+        /// A list of sprites to draw on top of the scene background.
+        /// </summary>
+        public readonly List<EditorSprite> Sprites = new List<EditorSprite>();
+    }
+
+    public class EditorSprite {
+        /// <summary>
+        /// The sprite image.
+        /// </summary>
+        public NullableLazyResource<Texture2D> Texture;
+
+        /// <summary>
+        /// The center point of the sprite in the scene.
+        /// </summary>
+        public Parameter<Vector3> Location;
+
+        /// <summary>
+        /// The top left corner of the sprite's region in the texture.
+        /// </summary>
+        public Vector2? TextureTopLeftPx;
+
+        /// <summary>
+        /// The size of the sprite's region in the texture.
+        /// </summary>
+        public Vector2? TextureSizePx;
+
+        public float Scale = 1;
     }
 }

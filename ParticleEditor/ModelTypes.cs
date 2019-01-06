@@ -33,7 +33,10 @@ namespace ParticleEditor {
                 {
                     "EditorData", new Dictionary<string, ModelTypeInfo> {
                         {"FrameRate", new ModelTypeInfo { Min = 10, Max = 120 } },
-                        {"MaximumDeltaTimeMS", new ModelTypeInfo { Min = 5, Max = 2000 } }
+                        {"MaximumDeltaTimeMS", new ModelTypeInfo { Min = 5, Max = 2000 } },
+                        {"Sprites", new ModelTypeInfo {
+                            Type = "List"
+                        } },
                     }
                 },
                 {

@@ -385,6 +385,26 @@ namespace ParticleEditor {
                     if (bg.IsInitialized)
                         ir.Draw(bg.Instance, Vector2.Zero, origin: Vector2.One * 0.5f, layer: -1, worldSpace: true);
                 }
+
+                foreach (var spr in View.GetData().Sprites) {
+                    if (spr.Texture == null)
+                        continue;
+                    spr.Texture.EnsureInitialized(View.Engine.Configuration.TextureLoader);
+                    if (!spr.Texture.IsInitialized)
+                        continue;
+                    var tex = spr.Texture.Instance;
+                    var loc = spr.Location.Evaluate((float)View.Time.Seconds, View.Engine.ResolveVector3);
+                    var tlPx = spr.TextureTopLeftPx.GetValueOrDefault(Vector2.Zero);
+                    var szPx = spr.TextureSizePx.GetValueOrDefault(new Vector2(tex.Width, tex.Height));
+                    var dc = new BitmapDrawCall(
+                        tex, new Vector2(loc.X, loc.Y),
+                        Bounds.FromPositionAndSize(
+                            tlPx / new Vector2(tex.Width, tex.Height),
+                            szPx / new Vector2(tex.Width, tex.Height)
+                        ), Color.White, Vector2.One * spr.Scale, Vector2.One * 0.5f
+                    );
+                    ir.Draw(dc, layer: 0, worldSpace: true);
+                }
             }
 
             var elapsedSeconds = TimeSpan.FromTicks(Time.Ticks - LastTimeOverUI).TotalSeconds;
