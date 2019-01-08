@@ -54,6 +54,7 @@ namespace Squared.Illuminant.Particles {
             new Dictionary<Type, Delegate>(new ReferenceComparer<Type>());
 
         internal readonly TypedUniform<Uniforms.ParticleSystem> uSystem;
+        internal readonly TypedUniform<Uniforms.RasterizeParticleSystem> uRasterize;
         internal readonly TypedUniform<Uniforms.DistanceField> uDistanceField;
         internal readonly TypedUniform<Uniforms.ClampedBezier4> uColorFromLife, uColorFromVelocity;
         internal readonly TypedUniform<Uniforms.ClampedBezier1> uSizeFromLife, uSizeFromVelocity, uRoundingPowerFromLife;
@@ -82,6 +83,7 @@ namespace Squared.Illuminant.Particles {
             Configuration = configuration;
 
             uSystem = materials.NewTypedUniform<Uniforms.ParticleSystem>("System");
+            uRasterize = materials.NewTypedUniform<Uniforms.RasterizeParticleSystem>("RasterizeSettings");
             uDistanceField = materials.NewTypedUniform<Uniforms.DistanceField>("DistanceField");
 
             uColorFromLife = materials.NewTypedUniform<Uniforms.ClampedBezier4>("ColorFromLife");

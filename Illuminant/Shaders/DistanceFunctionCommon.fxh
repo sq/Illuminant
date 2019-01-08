@@ -1,3 +1,6 @@
+#ifndef DISTANCE_FUNCTION_DEFINED
+#define DISTANCE_FUNCTION_DEFINED
+
 float evaluateNone (
     float3 worldPosition, float3 center, float3 size
 ) {
@@ -64,3 +67,5 @@ float evaluateByTypeId (
             return evaluateNone(worldPosition, center, size);
     }
 }
+
+#endif

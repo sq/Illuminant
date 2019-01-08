@@ -1,3 +1,6 @@
+#ifndef ENVIRONMENT_DEFINED
+#define ENVIRONMENT_DEFINED
+
 struct EnvironmentSettings {
     float3 _Z;
     float2 RenderScale;
@@ -16,3 +19,5 @@ float getZToYMultiplier () {
 float getInvZToYMultiplier () {
     return Environment._Z.z;
 }
+
+#endif

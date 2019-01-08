@@ -313,44 +313,18 @@ namespace Squared.Illuminant.Particles {
                         ));
                     }
                 }
-
-                var cfr = p["ColumnFromVelocity"];
-                if (cfr != null) {
-                    cfr.SetValue(appearance.ColumnFromVelocity);
-                    p["RowFromVelocity"].SetValue(appearance.RowFromVelocity);
-                }
-
-                var f = p["BitmapBilinear"];
-                if (f != null)
-                    f.SetValue(appearance.Bilinear);
-
-                var sf = p["SizeFactor"];
-                if (sf != null) {
-                    if ((tex != null) && appearance.RelativeSize) {
-                        var frameTexSize = appearance.SizePx.GetValueOrDefault(texSize) * 0.5f;
-                        sf.SetValue(frameTexSize);
-                    } else
-                        sf.SetValue(Vector2.One);
-                }
-
-                System.MaybeSetAnimationRateParameter(p, appearance);
-
-                sf = p["StippleFactor"];
+                
+                var sf = p["StippleFactor"];
                 if (sf != null)
                     sf.SetValue(OverrideStippleFactor.GetValueOrDefault(System.Configuration.StippleFactor));
 
-                var pc = p["Rounded"];
-                if (pc != null)
-                    pc.SetValue((appearance?.Rounded).GetValueOrDefault(false));
+                var u = new RasterizeParticleSystem(System.Engine.Configuration, System.Configuration);
+                System.Engine.uRasterize.Set(m, ref u);
 
-                var gc = p["GlobalColor"];
-                if (gc != null) {
-                    var gcolor = System.Configuration.Color.Global;
-                    gcolor.X *= gcolor.W;
-                    gcolor.Y *= gcolor.W;
-                    gcolor.Z *= gcolor.W;
-                    gc.SetValue(gcolor);
-                }
+                p["ColumnFromVelocity"].SetValue(appearance?.ColumnFromVelocity ?? false);
+                p["RowFromVelocity"].SetValue(appearance?.RowFromVelocity ?? false);
+                p["BitmapBilinear"].SetValue(appearance?.Bilinear ?? true);
+                p["Rounded"].SetValue(appearance?.Rounded ?? false);
 
                 System.MaybeSetLifeRampParameters(p);
             }
@@ -1406,18 +1380,6 @@ namespace Squared.Illuminant.Particles {
                 foreach (var chunk in Chunks)
                     RenderChunk(group, chunk, m, i++);
             }
-        }
-
-        internal void MaybeSetAnimationRateParameter (EffectParameterCollection p, ParticleAppearance appearance) {
-            var parm = p["AnimationRateAndRotationAndZToY"];
-            if (parm == null)
-                return;
-            var ar = appearance != null ? appearance.AnimationRate : Vector2.Zero;
-            var arv = new Vector4(
-                (ar.X != 0) ? 1.0f / ar.X : 0, (ar.Y != 0) ? 1.0f / ar.Y : 0,
-                Configuration.RotationFromVelocity ? 1f : 0f, Configuration.ZToY
-            );
-            parm.SetValue(arv);
         }
 
         public void Dispose () {

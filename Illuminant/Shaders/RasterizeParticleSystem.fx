@@ -3,11 +3,15 @@
 #include "Bezier.fxh"
 #include "ParticleCommon.fxh"
 
-uniform bool   Rounded, BitmapBilinear, ColumnFromVelocity, RowFromVelocity;
+struct RasterizeParticleSystemSettings {
+    float4 GlobalColor;
+    float4 BitmapTextureRegion;
+    float2 SizeFactor;
+};
+
+uniform RasterizeParticleSystemSettings RasterizeSettings;
 uniform ClampedBezier1 RoundingPowerFromLife;
-uniform float2 SizeFactor;
-uniform float4 GlobalColor;
-uniform float4 BitmapTextureRegion;
+uniform bool Rounded, BitmapBilinear, ColumnFromVelocity, RowFromVelocity;
 
 Texture2D BitmapTexture;
 sampler BitmapSampler {
@@ -71,7 +75,7 @@ void VS_PosVelAttr(
     float angle = renderData.y;
     angle = fmod(angle, 2 * PI);
 
-    float2 size = renderData.x * System.TexelAndSize.zw * SizeFactor;
+    float2 size = renderData.x * System.TexelAndSize.zw * RasterizeSettings.SizeFactor;
     float3 rotatedCorner = ComputeRotatedCorner(cornerIndex.x, angle * getVelocityRotation(), size);
     float2 positionXy = Corners[cornerIndex.x];
 
@@ -86,9 +90,9 @@ void VS_PosVelAttr(
     );
 
     float2 cornerCoord = (Corners[cornerIndex.x].xy / 2) + 0.5;
-    texCoord = lerp(BitmapTextureRegion.xy, BitmapTextureRegion.zw, cornerCoord);
+    texCoord = lerp(RasterizeSettings.BitmapTextureRegion.xy, RasterizeSettings.BitmapTextureRegion.zw, cornerCoord);
 
-    float2 texSize = (BitmapTextureRegion.zw - BitmapTextureRegion.xy);
+    float2 texSize = (RasterizeSettings.BitmapTextureRegion.zw - RasterizeSettings.BitmapTextureRegion.xy);
     float2 frameCountXy = floor(1.0 / texSize);
     float2 frameIndexXy = floor(getAnimationRate() * position.w);
 
@@ -137,7 +141,7 @@ void PS_Texture (
     if (color.a > (1 / 512)) {
         float4 texColor = tex2D(BitmapSampler, texCoord);
         result *= texColor;
-        result *= GlobalColor;
+        result *= RasterizeSettings.GlobalColor;
     }
     result *= computeCircularAlpha(positionXyAndRounding);
     if (result.a <= (1 / 512))
@@ -155,7 +159,7 @@ void PS_TexturePoint(
     if (color.a > (1 / 512)) {
         float4 texColor = tex2D(BitmapPointSampler, texCoord);
         result *= texColor;
-        result *= GlobalColor;
+        result *= RasterizeSettings.GlobalColor;
     }
     result *= computeCircularAlpha(positionXyAndRounding);
     if (result.a <= (1 / 512))
@@ -168,7 +172,7 @@ void PS_NoTexture (
     out float4 result                : COLOR0
 ) {
     result = color;
-    result *= GlobalColor;
+    result *= RasterizeSettings.GlobalColor;
     result *= computeCircularAlpha(positionXyAndRounding);
     if (result.a <= (1 / 512))
         discard;

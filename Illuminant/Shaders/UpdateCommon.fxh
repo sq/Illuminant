@@ -1,3 +1,6 @@
+#ifndef UPDATE_DEFINED
+#define UPDATE_DEFINED
+
 Texture2D LifeRampTexture;
 sampler LifeRampSampler {
     Texture = (LifeRampTexture);
@@ -97,3 +100,5 @@ void computeRenderData (
     renderData.z = velocityLength;
     renderData.w = velocity.w;
 }
+
+#endif

@@ -147,6 +147,7 @@ namespace Squared.Illuminant.Uniforms {
         }
     }
 
+    [StructLayout(LayoutKind.Sequential)]
     public struct ParticleSystem {
         public const int VelocityConstantScale = 1000;
 
@@ -155,6 +156,7 @@ namespace Squared.Illuminant.Uniforms {
         // escapeVelocity, bounceVelocityMultiplier, collisionDistance, collisionLifePenalty
         public Vector4 CollisionSettings;
         public Vector4 TexelAndSize;
+        public Vector4 AnimationRateAndRotationAndZToY;
         public Vector2 RotationFromLifeAndIndex;
 
         public ParticleSystem (
@@ -183,6 +185,55 @@ namespace Squared.Illuminant.Uniforms {
                 MathHelper.ToRadians(Configuration.RotationFromLife), 
                 MathHelper.ToRadians(Configuration.RotationFromIndex)
             );
+            var ar = Configuration.Appearance != null ? Configuration.Appearance.AnimationRate : Vector2.Zero;
+            AnimationRateAndRotationAndZToY = new Vector4(
+                (ar.X != 0) ? 1.0f / ar.X : 0, (ar.Y != 0) ? 1.0f / ar.Y : 0,
+                Configuration.RotationFromVelocity ? 1f : 0f, Configuration.ZToY
+            );            
+        }
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RasterizeParticleSystem {
+        Vector4 GlobalColor;
+        Vector4 BitmapTextureRegion;
+        Vector2 SizeFactor;
+
+        public RasterizeParticleSystem (
+            Particles.ParticleEngineConfiguration Engine,
+            Particles.ParticleSystemConfiguration Configuration
+        ) {
+            var appearance = Configuration.Appearance;
+
+            var tex = appearance?.Texture?.Instance;
+            if ((tex != null) && tex.IsDisposed)
+                tex = null;
+            var texSize = (tex != null)
+                ? new Vector2(tex.Width, tex.Height)
+                : Vector2.One;
+
+            // TODO: transform arg
+            if (tex != null) {
+                // var offset = new Vector2(-0.5f) / texSize;
+                var offset = appearance.OffsetPx / texSize;
+                var size = appearance.SizePx.GetValueOrDefault(texSize) / texSize;
+                BitmapTextureRegion = new Vector4(
+                    offset.X, offset.Y, 
+                    offset.X + size.X, offset.Y + size.Y
+                );
+            } else {
+                BitmapTextureRegion = new Vector4(0, 0, 1, 1);
+            }
+            if ((tex != null) && appearance.RelativeSize)
+                SizeFactor = appearance.SizePx.GetValueOrDefault(texSize) * 0.5f;
+            else
+                SizeFactor = Vector2.One;
+
+            var gcolor = Configuration.Color.Global;
+            gcolor.X *= gcolor.W;
+            gcolor.Y *= gcolor.W;
+            gcolor.Z *= gcolor.W;
+            GlobalColor = gcolor;
         }
     }
 }

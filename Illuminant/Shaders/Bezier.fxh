@@ -1,4 +1,6 @@
 #define PI 3.14159265358979323846
+
+#ifndef BEZIERS_DEFINED
 #define BEZIERS_DEFINED
 
 struct ClampedBezier1 {
@@ -152,3 +154,5 @@ float4 evaluateBezier4 (in ClampedBezier4 bezier, float value) {
     float count = tForScaledBezier(bezier.RangeAndCount, value, t);
     return evaluateBezier4AtT(bezier, count, t);
 }
+
+#endif

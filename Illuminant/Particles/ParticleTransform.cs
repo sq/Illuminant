@@ -123,7 +123,6 @@ namespace Squared.Illuminant.Particles.Transforms {
                     }
 
                     system.MaybeSetLifeRampParameters(p);
-                    system.MaybeSetAnimationRateParameter(p, system.Configuration.Appearance);
                     m.Flush();
                 }
 

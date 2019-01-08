@@ -1,5 +1,8 @@
 #define PI 3.14159265358979323846
 
+#ifndef DISTANCE_FIELD_DEFINED
+#define DISTANCE_FIELD_DEFINED
+
 // This is a distance of 0
 // Moving this value up/down allocates more precision to positive or negative distances
 #define DISTANCE_ZERO (192.0 / 255.0)
@@ -318,3 +321,5 @@ float sampleDistanceField (
 
     return sampleDistanceFieldEx(position, vars);
 }
+
+#endif

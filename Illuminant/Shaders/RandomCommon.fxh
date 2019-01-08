@@ -1,3 +1,6 @@
+#ifndef RANDOM_DEFINED
+#define RANDOM_DEFINED
+
 uniform float2 RandomnessTexel;
 uniform float2 RandomnessOffset;
 
@@ -31,3 +34,5 @@ float4 randomCustomRate (float2 xy, float2 rate) {
 float4 random (float2 xy) {
     return randomCustomRate(xy, RandomnessTexel);
 }
+
+#endif

@@ -1,30 +1,33 @@
 #define PI 3.14159265358979323846
 #define VelocityConstantScale 1000
 
+#ifndef PARTICLE_SYSTEM_DEFINED
+#define PARTICLE_SYSTEM_DEFINED
+
 struct ParticleSystemSettings {
     // deltaTimeSeconds, friction, maximumVelocity, lifeDecayRate
     float4 GlobalSettings;
     // escapeVelocity, bounceVelocityMultiplier, collisionDistance, collisionLifePenalty
     float4 CollisionSettings;
     float4 TexelAndSize;
+    // rate_x, rate_y, velocityRotation, zToY
+    float4 AnimationRateAndRotationAndZToY;
     float2 RotationFromLifeAndIndex;
 };
 
 uniform ParticleSystemSettings System;
 uniform float StippleFactor;
-// rate_x, rate_y, velocityRotation, zToY
-uniform float4 AnimationRateAndRotationAndZToY;
 
 inline float2 getAnimationRate () {
-    return AnimationRateAndRotationAndZToY.xy;
+    return System.AnimationRateAndRotationAndZToY.xy;
 }
 
 inline float getVelocityRotation () {
-    return AnimationRateAndRotationAndZToY.z;
+    return System.AnimationRateAndRotationAndZToY.z;
 }
 
 inline float getZToY () {
-    return AnimationRateAndRotationAndZToY.w;
+    return System.AnimationRateAndRotationAndZToY.w;
 }
 
 float getDeltaTimeSeconds () {
@@ -167,7 +170,6 @@ void readStateOrDiscard (
 }
 
 bool stippleReject (float vertexIndex) {
-    return false;
     float stippleThreshold = thresholdMatrix[vertexIndex % 16];
     return (StippleFactor - stippleThreshold) <= 0;
 }
@@ -186,3 +188,5 @@ float4 mul3 (float4 oldValue, float4x4 mat, float w) {
         divided = temp.xyz;
     return float4(divided, oldValue.w);
 }
+
+#endif
