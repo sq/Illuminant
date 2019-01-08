@@ -195,13 +195,10 @@ namespace Squared.Illuminant.Particles.Transforms {
                 result = true;
             }
 
-            rt = p["RandomnessTexel"];
-            if (rt != null) {
-                rt.SetValue(new Vector2(
-                    1.0f / ParticleEngine.RandomnessTextureWidth, 
-                    1.0f / ParticleEngine.RandomnessTextureHeight
-                ));
-            }
+            p["RandomnessTexel"]?.SetValue(new Vector2(
+                1.0f / ParticleEngine.RandomnessTextureWidth, 
+                1.0f / ParticleEngine.RandomnessTextureHeight
+            ));
 
             return result;
         }

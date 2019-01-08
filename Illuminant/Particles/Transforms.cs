@@ -148,13 +148,11 @@ namespace Squared.Illuminant.Particles.Transforms {
             float t;
             AutoCycleUV(now, intervalSecs, out t);
 
-            var ro = parameters["RandomnessOffset"];
-            ro.SetValue(new Vector2(
+            parameters["RandomnessOffset"]?.SetValue(new Vector2(
                 (float)(CurrentU * 253),
                 (float)(CurrentV * 127)
             ));
-            ro = parameters["NextRandomnessOffset"];
-            ro.SetValue(new Vector2(
+            parameters["NextRandomnessOffset"]?.SetValue(new Vector2(
                 (float)(NextU * 253),
                 (float)(NextV * 127)
             ));

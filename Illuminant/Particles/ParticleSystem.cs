@@ -307,24 +307,22 @@ namespace Squared.Illuminant.Particles {
                         // var offset = new Vector2(-0.5f) / texSize;
                         var offset = appearance.OffsetPx / texSize;
                         var size = appearance.SizePx.GetValueOrDefault(texSize) / texSize;
-                        p["BitmapTextureRegion"].SetValue(new Vector4(
+                        p["BitmapTextureRegion"]?.SetValue(new Vector4(
                             offset.X, offset.Y, 
                             offset.X + size.X, offset.Y + size.Y
                         ));
                     }
                 }
                 
-                var sf = p["StippleFactor"];
-                if (sf != null)
-                    sf.SetValue(OverrideStippleFactor.GetValueOrDefault(System.Configuration.StippleFactor));
+                p["StippleFactor"]?.SetValue(OverrideStippleFactor.GetValueOrDefault(System.Configuration.StippleFactor));
 
                 var u = new RasterizeParticleSystem(System.Engine.Configuration, System.Configuration);
-                System.Engine.uRasterize.Set(m, ref u);
+                System.Engine.uRasterize.TrySet(m, ref u);
 
-                p["ColumnFromVelocity"].SetValue(appearance?.ColumnFromVelocity ?? false);
-                p["RowFromVelocity"].SetValue(appearance?.RowFromVelocity ?? false);
-                p["BitmapBilinear"].SetValue(appearance?.Bilinear ?? true);
-                p["Rounded"].SetValue(appearance?.Rounded ?? false);
+                p["ColumnFromVelocity"]?.SetValue(appearance?.ColumnFromVelocity ?? false);
+                p["RowFromVelocity"]?.SetValue(appearance?.RowFromVelocity ?? false);
+                p["BitmapBilinear"]?.SetValue(appearance?.Bilinear ?? true);
+                p["Rounded"]?.SetValue(appearance?.Rounded ?? false);
 
                 System.MaybeSetLifeRampParameters(p);
             }
