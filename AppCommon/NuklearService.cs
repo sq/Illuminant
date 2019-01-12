@@ -15,6 +15,7 @@ using Microsoft.Xna.Framework;
 using Squared.Util;
 using Microsoft.Xna.Framework.Input;
 using System.Threading;
+using System.Collections;
 
 namespace Framework {
     public interface INuklearHost {
@@ -24,6 +25,64 @@ namespace Framework {
     }
 
     public delegate void SceneDelegate ();
+
+    public struct RowLayout : IEnumerable<float> {
+        public struct ColumnSpec {
+            public bool IsFractional;
+            public float Value;
+        }
+
+        private int Count;
+        private ColumnSpec[] Buffer;
+
+        private void Add (ref ColumnSpec value) {
+            if ((Buffer != null) && (Buffer.Length <= Count))
+                Buffer = null;
+            if (Buffer == null)
+                Buffer = new ColumnSpec[Math.Max(Count + 4, 8)];
+
+            Buffer[Count] = value;
+            Count++;
+        }
+
+        public void Add (float value, bool fractional = true) {
+            var cs = new ColumnSpec {
+                IsFractional = fractional,
+                Value = value
+            };
+            Add(ref cs);
+        }
+
+        public unsafe void Apply (NuklearService service, float rowHeight) {
+            var rect = Nuklear.nk_window_get_bounds(service.Context);
+            var availableWidth = rect.W;
+
+            for (int i = 0; i < Count; i++)
+                if (!Buffer[i].IsFractional)
+                    availableWidth -= Buffer[i].Value;
+
+            var ratios = new float[Count + 1];
+            for (int i = 0; i < Count; i++) {
+                if (Buffer[i].IsFractional)
+                    ratios[i] = (Buffer[i].Value * availableWidth) / rect.W;
+                else
+                    ratios[i] = Buffer[i].Value / rect.W;
+            }
+
+            var p = service.PinForOneFrame(ratios);
+            Nuklear.nk_layout_row(service.Context, nk_layout_format.NK_DYNAMIC, rowHeight, Count, (float*)p);
+        }
+
+        IEnumerator<float> IEnumerable<float>.GetEnumerator () {
+            for (int i = 0; i < Count; i++)
+                yield return Buffer[i].Value;
+        }
+
+        IEnumerator IEnumerable.GetEnumerator () {
+            for (int i = 0; i < Count; i++)
+                yield return Buffer[i].Value;
+        }
+    }
 
     public unsafe class NuklearService : IDisposable {
         public struct Generic : IDisposable {
@@ -469,6 +528,13 @@ namespace Framework {
         ) {
             if (TextWidthCache.Count > 16 * 1024)
                 TextWidthCache.Clear();
+
+            foreach (var p in Pins)
+                p.Free();
+
+            Pins.Clear();
+            PinnedObjects.Clear();
+
             NString.GC();
 
             var ctx = Context;
@@ -714,12 +780,14 @@ namespace Framework {
             Nuklear.nk_layout_row_dynamic(Context, lineHeight, columnCount);
         }
 
-        public unsafe void NewRow (float lineHeight, params float[] ratios) {
-            fixed (float * pRatios = ratios)
-                Nuklear.nk_layout_row(
-                    Context, nk_layout_format.NK_DYNAMIC, lineHeight,
-                    ratios.Length, pRatios
-                );
+        private readonly List<GCHandle> Pins = new List<GCHandle>();
+        private readonly List<object> PinnedObjects = new List<object>();
+
+        public unsafe void* PinForOneFrame (object obj) {
+            var handle = GCHandle.Alloc(obj, GCHandleType.Pinned);
+            Pins.Add(handle);
+            PinnedObjects.Add(obj);
+            return handle.AddrOfPinnedObject().ToPointer();
         }
 
         public void Dispose () {

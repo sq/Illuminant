@@ -841,7 +841,7 @@ namespace Lumined {
                 case "Int32":
                 case "Single":
                     if (!cpi.AllowNull || (value != null)) {
-                        Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
+                        Nuklear.NewRow(LineHeight, 1);
                         if (cpi.Type == typeof(float)) {
                             var v = (float)value;
                             RenderPropertyElement(cpi.Name, cpi.Info, ref v, ref changed, tooltip: cpi.Summary);
@@ -896,7 +896,7 @@ namespace Lumined {
                     return RenderBezierProperty(cpi, instance, actualName, value, null, valueType.StartsWith("Color"));
 
                 case "String":
-                    Nuke.nk_layout_row_dynamic(ctx, LineHeight + 3, 1);
+                    Nuklear.NewRow(LineHeight + 3, 1);
                     var text = value.ToString();
                     if (Nuklear.Textbox(ref text, tooltip: cpi.Summary)) {
                         cpi.Setter(instance, text);
@@ -921,7 +921,7 @@ namespace Lumined {
 
                 case "Normal":
                 case "Vector3":
-                    Nuke.nk_layout_row_dynamic(ctx, LineHeight, 3);
+                    Nuklear.NewRow(LineHeight, 3);
                     var v3 = (Vector3)value;
                     if (valueType == "Normal") {
                         if (Nuklear.Button("X")) {
@@ -1004,8 +1004,8 @@ namespace Lumined {
             bool doBezierConversion = false, doReferenceConversion = false;
 
             var hasAvailableReference = Model.HasAnyConstantsOfType(valueType);
-            var widths = stackalloc float[8];
-            const float buttonSize = 0.06f;
+            var widths = new float[8];
+            const float buttonSizePx = 26f;
 
             if (isBezier) {
                 var b = p.Bezier;
@@ -1013,15 +1013,13 @@ namespace Lumined {
                 if (changed && b.Count == 0)
                     p = p.ToConstant();
             } else if (isReference) {
-                var space = 1f - (buttonSize * 2);
-                widths[0] = space * 0.4f;
-                widths[1] = space * 0.6f;
-                widths[2] = buttonSize;
-                widths[3] = buttonSize;
-                Nuke.nk_layout_row(
-                    Nuklear.Context, NuklearDotNet.nk_layout_format.NK_DYNAMIC, LineHeight,
-                    4, widths
-                );
+                var layout = new RowLayout {
+                    {0.4f },
+                    {0.6f },
+                    {buttonSizePx, false },
+                    {buttonSizePx, false }
+                };
+                layout.Apply(Nuklear, LineHeight);
                 var names = Model.ConstantNamesOfType(valueType).ToList();
                 int selectedIndex = names.IndexOf(p.Name);
                 if (selectedIndex >= 0) {
@@ -1071,12 +1069,12 @@ namespace Lumined {
                     default:
                         throw new Exception();
                 }
-                var buttonCount = allowReferences ? 2 : 1;
-                var elementSpace = 1f - (buttonSize * buttonCount);
+                var row = new RowLayout();
                 for (int i = 0; i < eltCount; i++)
-                    widths[i] = elementSpace / eltCount;
-                widths[eltCount] = buttonSize;
-                widths[eltCount + 1] = buttonSize;
+                    row.Add(1.0f / eltCount);
+                row.Add(buttonSizePx, false);
+                if (allowReferences)
+                    row.Add(buttonSizePx, false);
 
                 if ((eltCount > 1) && !isMatrix) {
                     Nuklear.NewRow(LineHeight, 1);
@@ -1085,10 +1083,7 @@ namespace Lumined {
                 }
 
                 if (!isMatrix)
-                    Nuke.nk_layout_row(
-                        Nuklear.Context, NuklearDotNet.nk_layout_format.NK_DYNAMIC, LineHeight,
-                        eltCount + buttonCount, widths
-                    );
+                    row.Apply(Nuklear, LineHeight);
 
                 switch (valueType.Name) {
                     case "Single":
@@ -1256,7 +1251,7 @@ namespace Lumined {
                         grp = Nuklear.CollapsingGroup("Generate", "GenerateMatrix", false, NextMatrixIndex++);
                         dm.IsGenerated = dm.IsGenerated || grp.Value.Visible;
                     } else {
-                        Nuke.nk_layout_row_dynamic(ctx, LineHeight, buttonCount);
+                        Nuklear.NewRow(LineHeight, buttonCount);
                         if (Nuklear.Checkbox("Generated", ref dm.IsGenerated))
                             changed = true;
                     }
@@ -1265,7 +1260,7 @@ namespace Lumined {
 
                     if (isGroupOpen || isDynamic) {
                         if (!isDynamic)
-                            Nuke.nk_layout_row_dynamic(ctx, LineHeight, buttonCount);
+                            Nuklear.NewRow(LineHeight, buttonCount);
 
                         if (Nuklear.Button("Identity")) {
                             dm.Matrix = Matrix.Identity;
@@ -1283,7 +1278,7 @@ namespace Lumined {
                         doReferenceConversion = ShowReferenceButton();
 
                     if (isGroupOpen || dm.IsGenerated) {
-                        Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
+                        Nuklear.NewRow(LineHeight, 2);
                         if (Nuklear.Property("#Angle", ref dm.Angle, -720, 720, 1f, 0.5f)) {
                             changed = true;
                             dm.IsGenerated = true;
@@ -1300,7 +1295,7 @@ namespace Lumined {
                         dm.Regenerate();
                         var m = dm.Matrix;
 
-                        Nuke.nk_layout_row_dynamic(ctx, LineHeight, is3x4 ? 3 : 4);
+                        Nuklear.NewRow(LineHeight, is3x4 ? 3 : 4);
                         RenderPropertyElement("#xx", cpi?.Info, ref m.M11, ref changed);
                         RenderPropertyElement("#xy", cpi?.Info, ref m.M12, ref changed);
                         RenderPropertyElement("#xz", cpi?.Info, ref m.M13, ref changed);
@@ -1318,7 +1313,7 @@ namespace Lumined {
                             RenderPropertyElement("#zw", cpi?.Info, ref m.M34, ref changed);
 
                         var isSelected = IsPropertySelected(instance, "Constant");
-                        Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
+                        Nuklear.NewRow(LineHeight, 2);
 
                         var xy = new Vector2(m.M41, m.M42);
                         if (TickSelectableProperty(instance, "Constant", ref xy)) {
@@ -1330,7 +1325,7 @@ namespace Lumined {
                             m.M41 = m.M42 = m.M43 = 0;
                             changed = true;
                         }
-                        Nuke.nk_layout_row_dynamic(ctx, LineHeight, 3);
+                        Nuklear.NewRow(LineHeight, 3);
                         RenderPropertyElement("#wx", cpi?.Info, ref m.M41, ref changed);
                         RenderPropertyElement("#wy", cpi?.Info, ref m.M42, ref changed);
                         RenderPropertyElement("#wz", cpi?.Info, ref m.M43, ref changed);
@@ -1426,7 +1421,7 @@ namespace Lumined {
                         }
                     }
 
-                    Nuke.nk_layout_row_dynamic(ctx, LineHeight, ((bm != null) && !fullyDynamic) ? 5 : 4);
+                    Nuklear.NewRow(LineHeight, ((bm != null) && !fullyDynamic) ? 5 : 4);
 
                     var cnt = b.Count;
                     if (Nuklear.Property("##", ref cnt, allowErase ? 0 : 1, 4, 1, 0.5f, tooltip: "Control Point Count")) {
@@ -1457,7 +1452,7 @@ namespace Lumined {
                         var elt = b[i];
                         if (elt is float) {
                             var v = (float)elt;
-                            Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
+                            Nuklear.NewRow(LineHeight, 1);
                             if (RenderPropertyElement(PrefixedBezierElementNames[i], cpi?.Info, ref v, ref changed))
                                 b[i] = v;
                         } else if (elt is Vector2) {
@@ -1502,7 +1497,7 @@ namespace Lumined {
             var value = (ParticleSystemReference)_value;
             var hasValue = value.TryInitialize(Game.View.ResolveReference);
 
-            Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
+            Nuklear.NewRow(LineHeight, 2);
 
             Nuklear.Label(actualName);
 
@@ -1540,7 +1535,7 @@ namespace Lumined {
             var ctx = Nuklear.Context;
             var value = (NullableLazyResource<Texture2D>)_value;
             var hasValue = (value != null) && value.IsInitialized;
-            Nuke.nk_layout_row_dynamic(ctx, LineHeight, 3);
+            Nuklear.NewRow(LineHeight, 3);
             Nuklear.Label(cpi.Name);
             if (Nuklear.Button("Select")) {
                 Controller.SelectTexture(cpi, instance, value);
@@ -1604,7 +1599,7 @@ namespace Lumined {
                     if (!GridCaches.TryGetValue(actualName, out pgc))
                         GridCaches[actualName] = pgc = new PropertyGridCache();
 
-                    Nuke.nk_layout_row_dynamic(ctx, LineHeight, 3);
+                    Nuklear.NewRow(LineHeight, 3);
                     var indexChanged = Nuklear.Property("##", ref pgc.SelectedIndex, 0, list.Count - 1, 1, 0.5f);
                     var canAdd = (list.Count < cpi.Info.MaxCount.GetValueOrDefault(999));
                     var canRemove = (list.Count > 0);
@@ -1688,10 +1683,10 @@ namespace Lumined {
                         b = c.Z,
                         a = c.W,
                     };
-                    Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
+                    Nuklear.NewRow(LineHeight, 2);
                     var resetToTransparent = Nuklear.Button("Transparent");
                     var resetToWhite = Nuklear.Button("White");
-                    Nuke.nk_layout_row_dynamic(ctx, 96, 1);
+                    Nuklear.NewRow(96, 1);
                     var temp = Nuke.nk_color_picker(ctx, oldColor, NuklearDotNet.nk_color_format.NK_RGBA);
                     var newColor = resetToWhite 
                         ? Vector4.One 
@@ -1700,7 +1695,7 @@ namespace Lumined {
                             : new Vector4(temp.r, temp.g, temp.b, temp.a);
                     if (newColor != c)
                         changed = true;
-                    Nuke.nk_layout_row_dynamic(ctx, LineHeight, 4);
+                    Nuklear.NewRow(LineHeight, 4);
                     RenderPropertyElement("#R", null, ref newColor.X, ref changed, 0, 1);
                     RenderPropertyElement("#G", null, ref newColor.Y, ref changed, 0, 1);
                     RenderPropertyElement("#B", null, ref newColor.Z, ref changed, 0, 1);
