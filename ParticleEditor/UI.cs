@@ -13,7 +13,7 @@ using Squared.Illuminant.Particles;
 using Squared.Render;
 using Nuke = NuklearDotNet.Nuklear;
 
-namespace ParticleEditor {
+namespace Lumined {
     public partial class PropertyEditor {
         private int NextMatrixIndex;
 
@@ -367,7 +367,7 @@ namespace ParticleEditor {
 
                 Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
 
-                Nuklear.Property("Zoom", ref Game.Zoom, ParticleEditor.MinZoom, ParticleEditor.MaxZoom, 0.05f, 0.01f);
+                Nuklear.Property("Zoom", ref Game.Zoom, EditorGame.MinZoom, EditorGame.MaxZoom, 0.05f, 0.01f);
 
                 Nuke.nk_tree_pop(ctx);
             }

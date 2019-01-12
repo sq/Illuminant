@@ -8,7 +8,7 @@ using Microsoft.Xna.Framework;
 using Squared.Illuminant.Particles.Transforms;
 using Squared.Render;
 
-namespace ParticleEditor {
+namespace Lumined {
     public partial class PropertyEditor {
         public struct ModelTypeInfo {
             public string               Type;

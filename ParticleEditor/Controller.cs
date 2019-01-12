@@ -19,7 +19,7 @@ using Squared.Render;
 using Squared.Render.Convenience;
 using Squared.Util;
 
-namespace ParticleEditor {
+namespace Lumined {
     public class Controller {
         internal class PositionPropertyInfo {
             public object Instance;
@@ -41,7 +41,7 @@ namespace ParticleEditor {
 
         public bool StepPending;
         public bool Paused;
-        public readonly ParticleEditor Game;
+        public readonly EditorGame Game;
         public EngineModel Model;
         public View View;
         public readonly State CurrentState = new State();
@@ -96,7 +96,7 @@ namespace ParticleEditor {
             }
         }
 
-        public Controller (ParticleEditor game, EngineModel model, View view) {
+        public Controller (EditorGame game, EngineModel model, View view) {
             Game = game;
             Model = model;
             View = view;
@@ -202,7 +202,7 @@ namespace ParticleEditor {
             if (Game.IsActive && !Game.IsMouseOverUI) {
                 var wheelDelta = Game.MouseState.ScrollWheelValue - Game.PreviousMouseState.ScrollWheelValue;
                 var zoomDelta = wheelDelta * 0.1f / 160;
-                var newZoom = Arithmetic.Clamp((float)Math.Round(Game.Zoom + zoomDelta, 2), ParticleEditor.MinZoom, ParticleEditor.MaxZoom);
+                var newZoom = Arithmetic.Clamp((float)Math.Round(Game.Zoom + zoomDelta, 2), EditorGame.MinZoom, EditorGame.MaxZoom);
                 Game.Zoom = newZoom;
 
                 if (Game.RightMouse)
@@ -240,7 +240,7 @@ namespace ParticleEditor {
             ir.DrawLine(new Vector2(pos.X, pos.Y - len), new Vector2(pos.X, pos.Y + len), Color.White * alpha, worldSpace: true);
         }
 
-        public void Draw (ParticleEditor editor, IBatchContainer container, int layer) {
+        public void Draw (EditorGame editor, IBatchContainer container, int layer) {
             var ir = new ImperativeRenderer(
                 container, Game.Materials, layer, blendState: BlendState.AlphaBlend, worldSpace: false
             );
@@ -323,8 +323,8 @@ namespace ParticleEditor {
         private void InitSystemDialog (FileDialog dlg) {
             InitFileDialog(dlg);
             dlg.Filter =
-                "Particle Systems|*.particlesystem|All Files|*.*";
-            dlg.DefaultExt = ".particlesystem";
+                "Lumined Documents|*.lumined;*.particlesystem|All Files|*.*";
+            dlg.DefaultExt = ".lumined";
         }
 
         private void InitFileDialog (FileDialog dlg) {

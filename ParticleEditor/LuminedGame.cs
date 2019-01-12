@@ -27,8 +27,8 @@ using Squared.Threading;
 using ThreefoldTrials.Framework;
 using Nuke = NuklearDotNet.Nuklear;
 
-namespace ParticleEditor {
-    public partial class ParticleEditor : MultithreadedGame, INuklearHost {
+namespace Lumined {
+    public partial class EditorGame : MultithreadedGame, INuklearHost {
         public Squared.Task.TaskScheduler Scheduler;
         public GraphicsDeviceManager Graphics;
         public DefaultMaterialSet Materials { get; private set; }
@@ -79,7 +79,7 @@ namespace ParticleEditor {
 
         private long LastViewRelease = 0;
 
-        public ParticleEditor () {
+        public EditorGame () {
             // UniformBinding.ForceCompatibilityMode = true;
 
             GCAfterVsync = _GCAfterVsync;
@@ -294,9 +294,9 @@ namespace ParticleEditor {
 
             if (IsActive) {
                 if (!String.IsNullOrWhiteSpace(Model.Filename))
-                    Window.Title = "Particle Editor - " + Path.GetFileName(Model.Filename);
+                    Window.Title = "LuminEd - " + Path.GetFileName(Model.Filename);
                 else
-                    Window.Title = "Particle Editor";
+                    Window.Title = "LuminEd - untitled";
 
                 var alt = KeyboardState.IsKeyDown(Keys.LeftAlt) || KeyboardState.IsKeyDown(Keys.RightAlt);
                 var wasAlt = PreviousKeyboardState.IsKeyDown(Keys.LeftAlt) || PreviousKeyboardState.IsKeyDown(Keys.RightAlt);

@@ -1,6 +1,6 @@
 using System;
 
-namespace ParticleEditor {
+namespace Lumined {
 #if WINDOWS || XBOX
     static class Program
     {
@@ -10,7 +10,7 @@ namespace ParticleEditor {
         [STAThread]
         static void Main(string[] args)
         {
-            using (ParticleEditor game = new ParticleEditor())
+            using (EditorGame game = new EditorGame())
             {
                 game.Run();
             }

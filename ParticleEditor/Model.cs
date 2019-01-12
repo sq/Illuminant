@@ -9,7 +9,7 @@ using Squared.Game;
 using Squared.Illuminant;
 using Squared.Illuminant.Configuration;
 
-namespace ParticleEditor {
+namespace Lumined {
     public class EditorData {
         /// <summary>
         /// Sets a fixed framerate for all systems in the scene.

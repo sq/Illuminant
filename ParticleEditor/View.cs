@@ -16,9 +16,9 @@ using Squared.Illuminant.Particles.Transforms;
 using Squared.Render;
 using Squared.Util;
 
-namespace ParticleEditor {
+namespace Lumined {
     public class View : ParticleEngineView {
-        public ParticleEditor Game { get; private set; }
+        public EditorGame Game { get; private set; }
         new public MockTimeProvider Time { get; private set; }
 
         public View (EngineModel model) 
@@ -41,14 +41,14 @@ namespace ParticleEditor {
             return result;
         }
 
-        public void Initialize (ParticleEditor editor) {
+        public void Initialize (EditorGame editor) {
             Game = editor;
             base.Initialize(Game.RenderCoordinator, Game.Materials, Game.ParticleMaterials);
             Engine.ChangeChunkSizeAndReset((int)GetData().ChunkSize);
             // Engine.Configuration.UpdatesPerSecond = 120;
         }
         
-        public void Update (ParticleEditor editor, IBatchContainer container, int layer, long deltaTimeTicks) {
+        public void Update (EditorGame editor, IBatchContainer container, int layer, long deltaTimeTicks) {
             var doUpdate = !editor.Controller.Paused || editor.Controller.StepPending;
             if (!doUpdate)
                 return;
@@ -62,7 +62,7 @@ namespace ParticleEditor {
             base.Update(container, layer, deltaTimeTicks);
         }
 
-        public void Draw (ParticleEditor editor, IBatchContainer container, int layer) {
+        public void Draw (EditorGame editor, IBatchContainer container, int layer) {
             base.Draw(container, layer);
         }
     }

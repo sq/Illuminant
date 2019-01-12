@@ -21,7 +21,7 @@ using Squared.Render;
 using Squared.Util;
 using Nuke = NuklearDotNet.Nuklear;
 
-namespace ParticleEditor {
+namespace Lumined {
     public partial class PropertyEditor {
         internal class KeyboardInput : System.Windows.Forms.IMessageFilter {
             public struct Deactivation : IDisposable {
@@ -41,12 +41,12 @@ namespace ParticleEditor {
             const int WM_KEYUP = 0x101;
             const int WM_CHAR = 0x102;
 
-            public readonly ParticleEditor Game;
+            public readonly EditorGame Game;
             public readonly List<char> Buffer = new List<char>();
 
             private int DeactivateCount = 0;
 
-            public KeyboardInput (ParticleEditor game) {
+            public KeyboardInput (EditorGame game) {
                 Game = game;
             }
 
@@ -116,7 +116,7 @@ namespace ParticleEditor {
         internal KeyboardInput KeyboardInputHandler;
         internal Stack<string> NameStack = new Stack<string>();
 
-        public readonly ParticleEditor Game;
+        public readonly EditorGame Game;
 
         private ILookup<string, CachedPropertyInfo> Formula1Properties = CachePropertyInfo(typeof(Formula1)).ToLookup(cpi => cpi.Name);
         private ILookup<string, CachedPropertyInfo> Formula3Properties = CachePropertyInfo(typeof(Formula3)).ToLookup(cpi => cpi.Name);
@@ -164,7 +164,7 @@ namespace ParticleEditor {
             }
         }
 
-        public PropertyEditor (ParticleEditor game) {
+        public PropertyEditor (EditorGame game) {
             Game = game;
 
             KeyboardInputHandler = new KeyboardInput(game);
