@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
@@ -11,22 +12,22 @@ using Squared.Render;
 
 namespace Squared.Illuminant.Particles.Transforms {
     public class FMA : ParticleAreaTransform {
-        public class FMAParameters<T> where T : struct {
-            public Parameter<T> Add;
-            public Parameter<T> Multiply;
+        public class FMAParameters {
+            public Parameter<Vector3> Add;
+            public Parameter<Vector3> Multiply;
         }
 
         public float? CyclesPerSecond = 10;
-        public FMAParameters<Vector3> Position;
-        public FMAParameters<Vector3> Velocity;
+        public FMAParameters Position;
+        public FMAParameters Velocity;
 
         public FMA ()
             : base () {
-            Position = new FMAParameters<Vector3> {
+            Position = new FMAParameters {
                 Add = Vector3.Zero,
                 Multiply = Vector3.One
             };
-            Velocity = new FMAParameters<Vector3> {
+            Velocity = new FMAParameters {
                 Add = Vector3.Zero,
                 Multiply = Vector3.One
             };
@@ -60,6 +61,66 @@ namespace Squared.Illuminant.Particles.Transforms {
             parameters["TimeDivisor"].SetValue(CyclesPerSecond.HasValue ? Uniforms.ParticleSystem.VelocityConstantScale / CyclesPerSecond.Value : -1);
             parameters["PositionMatrix"].SetValue(Position);
             parameters["VelocityMatrix"].SetValue(Velocity);
+        }
+
+        protected override Material GetMaterial (ParticleMaterials materials) {
+            return materials.MatrixMultiply;
+        }
+    }
+
+    public class GeometricTransform : ParticleAreaTransform {
+        public class GTParameters {
+            public Parameter<float> PreScale = 1;
+            public Parameter<Vector3> PreTranslate;
+            public Parameter<float> RotationX, RotationY, RotationZ;
+            public Parameter<Vector3> PostTranslate;
+            public Parameter<float> PostScale = 1;
+
+            public Matrix GetMatrix (ParticleEngine engine, float now) {
+                var preScale = PreScale.Evaluate(now, engine.ResolveSingle);
+                var postScale = PostScale.Evaluate(now, engine.ResolveSingle);
+                var preTranslate = PreTranslate.Evaluate(now, engine.ResolveVector3);
+                var postTranslate = PostTranslate.Evaluate(now, engine.ResolveVector3);
+                var rotation = new Vector3(
+                    MathHelper.ToRadians(RotationX.Evaluate(now, engine.ResolveSingle)),
+                    MathHelper.ToRadians(RotationY.Evaluate(now, engine.ResolveSingle)),
+                    MathHelper.ToRadians(RotationZ.Evaluate(now, engine.ResolveSingle))
+                );
+
+                var result = Matrix.CreateTranslation(preTranslate) *
+                    Matrix.CreateScale(preScale);
+
+                if (rotation != Vector3.Zero) {
+                    Quaternion quat;
+                    Quaternion.CreateFromYawPitchRoll(rotation.Y, rotation.X, rotation.Z, out quat);
+                    quat.Normalize();
+                    result *= Matrix.CreateFromQuaternion(quat);
+                }
+
+                result *= Matrix.CreateScale(postScale);
+                result *= Matrix.CreateTranslation(postTranslate);
+
+                return result;
+            }
+        }
+
+        public float? CyclesPerSecond = 10;
+        public GTParameters Position;
+        public GTParameters Velocity;
+
+        public GeometricTransform ()
+            : base () {
+            Position = new GTParameters();
+            Velocity = new GTParameters();
+        }
+
+        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
+            base.SetParameters(engine, parameters, now, frameIndex);
+            parameters["TimeDivisor"].SetValue(CyclesPerSecond.HasValue ? Uniforms.ParticleSystem.VelocityConstantScale / CyclesPerSecond.Value : -1);
+            var position = Position.GetMatrix(engine, now);
+            var velocity = Velocity.GetMatrix(engine, now);
+            parameters["PositionMatrix"].SetValue(position);
+            parameters["VelocityMatrix"].SetValue(velocity);
         }
 
         protected override Material GetMaterial (ParticleMaterials materials) {

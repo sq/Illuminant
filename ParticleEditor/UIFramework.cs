@@ -754,6 +754,40 @@ namespace ParticleEditor {
             }
         }
 
+        private unsafe bool HandleNullable (
+            CachedPropertyInfo cpi, object instance, string actualName, ref object value, ref bool changed
+        ) {
+            Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 2);
+            if (TickSelectableProperty(cpi, instance, actualName, ref value)) {
+                changed = true;
+                // Do we need to invoke this?
+                cpi.Setter(instance, value);
+            }
+
+            if (cpi.AllowNull) {
+                var isNull = value == null;
+                if (isNull) {
+                    if (Nuklear.Button("Create", tooltip: cpi.Summary)) {
+                        var gdv = cpi?.Info.GetDefaultValue;
+                        if (gdv != null)
+                            value = gdv(instance);
+                        else
+                            value = Activator.CreateInstance(cpi.Type);
+                        cpi.Setter(instance, value);
+                        changed = true;
+                    }
+                    return true;
+                } else {
+                    if (Nuklear.Button("Erase", tooltip: cpi.Summary)) {
+                        cpi.Setter(instance, value = null);
+                        changed = true;
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
 
         private unsafe bool RenderPropertyInner (
             PropertyGridCache cache,
@@ -764,8 +798,15 @@ namespace ParticleEditor {
             var ctx = Nuklear.Context;
             bool changed = false, b;
 
-            if (GenericObjectTypes.Contains(valueType))
+            if (GenericNullableObjectTypes.Contains(valueType)) {
+                if (HandleNullable(cpi, instance, actualName, ref value, ref changed))
+                    return changed;
                 return RenderGenericObjectProperty(cache, cpi, instance, value, actualName);
+            }
+
+            if (GenericObjectTypes.Contains(valueType)) {
+                return RenderGenericObjectProperty(cache, cpi, instance, value, actualName);
+            }
 
             switch (valueType) {
                 case "List":
@@ -835,34 +876,8 @@ namespace ParticleEditor {
                     return RenderMatrixProperty(cpi, instance, ref changed, actualName, ref m, valueType.EndsWith("3x4"), ref temp, ref temp);
             }
 
-            Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
-            if (TickSelectableProperty(cpi, instance, actualName, ref value)) {
-                changed = true;
-                // Do we need to invoke this?
-                cpi.Setter(instance, value);
-            }
-
-            if (cpi.AllowNull) {
-                var isNull = value == null;
-                if (isNull) {
-                    if (Nuklear.Button("Create", tooltip: cpi.Summary)) {
-                        var gdv = cpi?.Info.GetDefaultValue;
-                        if (gdv != null)
-                            value = gdv(instance);
-                        else
-                            value = Activator.CreateInstance(cpi.Type);
-                        cpi.Setter(instance, value);
-                        changed = true;
-                    }
-                    return changed;
-                } else {
-                    if (Nuklear.Button("Erase", tooltip: cpi.Summary)) {
-                        cpi.Setter(instance, value = null);
-                        changed = true;
-                        return changed;
-                    }
-                }
-            }
+            if (HandleNullable(cpi, instance, actualName, ref value, ref changed))
+                return changed;
 
             if (value == null) {
                 Nuklear.Label("null", false);

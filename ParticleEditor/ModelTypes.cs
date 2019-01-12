@@ -24,8 +24,14 @@ namespace ParticleEditor {
             "ParticleAppearance",
             "ParticleColor",
             "ParticleCollision",
-            "FMAParameters`1",
-            "NoiseParameters`1"
+            "FMAParameters",
+            "GTParameters",
+            "NoiseParameters`1",
+        };
+
+        public static HashSet<string> GenericNullableObjectTypes = new HashSet<string> {
+            "TransformArea",
+            "ParticleColorLifeRamp"
         };
 
         public static readonly Dictionary<string, Dictionary<string, ModelTypeInfo>> FieldTypeOverrides =
