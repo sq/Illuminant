@@ -616,7 +616,7 @@ namespace Framework {
         public GroupScrolled ScrollingGroup (float heightPx, string name, ref uint scrollX, ref uint scrollY) {
             using (var tName = new NString(name)) {
                 uint flags = 0;
-                Nuklear.nk_layout_row(Context, nk_layout_format.NK_DYNAMIC, heightPx, 1, new[] { 1.0f });
+                NewRow(heightPx);
                 var result = Nuklear.nk_group_scrolled_offset_begin(Context, ref scrollX, ref scrollY, tName.pText, flags);
 
                 return new GroupScrolled {
@@ -710,12 +710,24 @@ namespace Framework {
             return false;
         }
 
+        public void NewRow (float lineHeight, int columnCount = 1) {
+            Nuklear.nk_layout_row_dynamic(Context, lineHeight, columnCount);
+        }
+
+        public unsafe void NewRow (float lineHeight, params float[] ratios) {
+            fixed (float * pRatios = ratios)
+                Nuklear.nk_layout_row(
+                    Context, nk_layout_format.NK_DYNAMIC, lineHeight,
+                    ratios.Length, pRatios
+                );
+        }
+
         public void Dispose () {
             // FIXME
         }
 
         public bool CustomPanel (float requestedHeight, out Bounds bounds) {
-            Nuklear.nk_layout_row_dynamic(Context, requestedHeight, 1);
+            NewRow(requestedHeight);
             var rect = new NkRect { W = 9999, H = requestedHeight };
             var state = Nuklear.nk_widget(&rect, Context);
             bounds = Bounds.FromPositionAndSize(rect.X, rect.Y, rect.W, rect.H);

@@ -112,7 +112,7 @@ namespace TestGame {
         protected unsafe void RenderSetting (ISetting s) {
             var ctx = Nuklear.Context;
 
-            Nuke.nk_layout_row_dynamic(ctx, settingRowHeight, 1);
+            Nuklear.NewRow(settingRowHeight);
             var name = s.GetLabelUTF8();
             var dropdown = s as IDropdown;
             var toggle = s as Toggle;
@@ -187,7 +187,7 @@ namespace TestGame {
                             RenderSetting(s);
                         Nuke.nk_tree_state_pop(ctx);
                         // Padding
-                        Nuke.nk_layout_row_dynamic(ctx, 3, 1);
+                        Nuklear.NewRow(3);
                         g.Visible = (state == NuklearDotNet.nk_collapse_states.NK_MAXIMIZED);
                     }
                     i++;

@@ -88,7 +88,7 @@ namespace Lumined {
             */
             var buttonCount = Model.Filename == null ? 3 : 4;
             var enableNew = (Model.Systems.Count > 0) || (Model.NamedVariables.Count > 0);
-            Nuke.nk_layout_row_dynamic(ctx, LineHeight, buttonCount);
+            Nuklear.NewRow(LineHeight, buttonCount);
             if (Nuklear.Button("New", enableNew)) {
                 Controller.SetModel(Game.CreateNewModel());
                 Controller.AddSystem();
@@ -107,7 +107,7 @@ namespace Lumined {
                 Controller.ShowLoadDialog();
 
             if (Game.View != null) {
-                Nuke.nk_layout_row_dynamic(ctx, LineHeight, 4);
+                Nuklear.NewRow(LineHeight, 4);
                 var time = TimeSpan.FromTicks(Game.View.Time.Ticks);
                 using (var tCount = new NString(time.ToString("mm\\:ss\\.ff")))
                     Nuke.nk_text(ctx, tCount.pText, tCount.Length, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
@@ -117,7 +117,7 @@ namespace Lumined {
                     Controller.Paused = !Controller.Paused;
                 if (Nuklear.Button("Step", Controller.Paused))
                     Controller.Step();
-                Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
+                Nuklear.NewRow(LineHeight, 2);
                 var liveCount = Game.View.Systems.Sum(s => s.Instance.LiveCount);
                 var capacity = Game.View.Systems.Sum(s => s.Instance.Capacity);
                 var memory = Game.View.Engine.EstimateMemoryUsage();
@@ -148,7 +148,7 @@ namespace Lumined {
 
             using (var group = Nuklear.CollapsingGroup("Variables", "Variables", false))
             if (group.Visible) {
-                Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
+                Nuklear.NewRow(LineHeight, 2);
                 if (Nuklear.Button("Add"))
                     Controller.AddVariable();
                 if (Nuklear.Button("Remove", Model.NamedVariables.Count > 0))
@@ -156,7 +156,7 @@ namespace Lumined {
 
                 using (var list = Nuklear.ScrollingGroup(120, "Variable List", ref state.Variables.ScrollX, ref state.Variables.ScrollY))
                 if (list.Visible) {
-                    Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
+                    Nuklear.NewRow(LineHeight, 1);
                     var names = Model.NamedVariables.Keys.ToArray();
                     for (int i = 0; i < names.Length; i++) {
                         var name = names[i];
@@ -181,7 +181,7 @@ namespace Lumined {
 
             using (var group = Nuklear.CollapsingGroup("Variable " + n, "Variable", true))
             if (group.Visible) {
-                Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
+                Nuklear.NewRow(LineHeight, 1);
                 string newName = n;
                 if (Nuklear.Textbox(ref newName, tooltip: "Variable Name")) {
                     if (Controller.RenameVariable(n, newName))
@@ -219,7 +219,7 @@ namespace Lumined {
 
             using (var group = Nuklear.CollapsingGroup("Systems", "Systems", false))
             if (group.Visible) {
-                Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
+                Nuklear.NewRow(LineHeight, 2);
                 if (Nuklear.Button("Add"))
                     Controller.AddSystem();
                 if (Nuklear.Button("Remove", Model.Systems.Count > 0))
@@ -227,7 +227,7 @@ namespace Lumined {
 
                 using (var list = Nuklear.ScrollingGroup(90, "System List", ref state.Systems.ScrollX, ref state.Systems.ScrollY))
                 if (list.Visible) {
-                    Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
+                    Nuklear.NewRow(LineHeight, 1);
                     for (int i = 0; i < Model.Systems.Count; i++) {
                         var system = Model.Systems[i];
                         if (Nuklear.SelectableText(
@@ -250,12 +250,12 @@ namespace Lumined {
             var s = Controller.SelectedSystem;
             var i = s.Instance;
 
-            Nuke.nk_layout_row_dynamic(ctx, LineHeight + 3, 1);
+            Nuklear.NewRow(LineHeight + 3, 1);
             Nuklear.Textbox(ref s.Model.Name, "System Name");
             NameStack.Clear();
             NameStack.Push(s.Model.Name);
 
-            Nuke.nk_layout_row_dynamic(ctx, LineHeight + 3, 2);
+            Nuklear.NewRow(LineHeight + 3, 2);
             Nuklear.Property("#Draw Order", ref s.Model.DrawOrder, -1, Model.Systems.Count + 1, 1, 0.5f);
             Nuklear.Property("#Update Order", ref s.Model.UpdateOrder, -1, Model.Systems.Count + 1, 1, 0.5f);
 
@@ -270,7 +270,7 @@ namespace Lumined {
 
             using (var group = Nuklear.CollapsingGroup("Transforms", "Transforms", true))
             if (group.Visible && (Controller.SelectedSystem != null)) {
-                Nuke.nk_layout_row_dynamic(ctx, LineHeight, 3);
+                Nuklear.NewRow(LineHeight, 3);
                 if (Nuklear.Button("Add"))
                     Controller.AddTransform();
                 if (Nuklear.Button("Remove", Controller.SelectedSystem.Transforms.Count > 0)) {
@@ -286,7 +286,7 @@ namespace Lumined {
 
                 using (var list = Nuklear.ScrollingGroup(140, "Transform List", ref state.Transforms.ScrollX, ref state.Transforms.ScrollY))
                 if (list.Visible) {
-                    Nuke.nk_layout_row_dynamic(ctx, LineHeight, 1);
+                    Nuklear.NewRow(LineHeight, 1);
                     for (int i = 0; i < model.Transforms.Count; i++) {
                         var xform = model.Transforms[i];
                         string displayName = !string.IsNullOrWhiteSpace(xform.Name)
@@ -306,14 +306,14 @@ namespace Lumined {
 
             using (var group = Nuklear.CollapsingGroup("Transform Properties", "Transform Properties"))
             if (group.Visible && (xform != null)) {
-                Nuke.nk_layout_row_dynamic(ctx, LineHeight + 3, 1);
+                Nuklear.NewRow(LineHeight + 3, 1);
 
                 Nuklear.Textbox(ref xform.Model.Name, "Transform Name");
                 NameStack.Clear();
                 NameStack.Push(Controller.SelectedSystem.Model.Name);
                 NameStack.Push(xform.Model.Name);
 
-                Nuke.nk_layout_row_dynamic(ctx, LineHeight + 3, 2);
+                Nuklear.NewRow(LineHeight + 3, 2);
                 int typeIndex = TransformTypes.IndexOf(xform.Model.Type);
 
                 if (Nuklear.ComboBox(ref typeIndex, (i) => TransformTypes[i].Name, TransformTypes.Count, "Transform Type")) {
@@ -345,7 +345,7 @@ namespace Lumined {
 
             using (var sGlobalSettings = new NString("Global Settings"))
             if (Nuke.nk_tree_push_hashed(ctx, NuklearDotNet.nk_tree_type.NK_TREE_TAB, sGlobalSettings.pText, NuklearDotNet.nk_collapse_states.NK_MINIMIZED, sGlobalSettings.pText, sGlobalSettings.Length, 256) != 0) {
-                Nuke.nk_layout_row_dynamic(ctx, LineHeight, 4);
+                Nuklear.NewRow(LineHeight, 4);
 
                 var vsync = Graphics.SynchronizeWithVerticalRetrace;
                 if (Nuklear.Checkbox("VSync", ref vsync)) {
@@ -365,7 +365,7 @@ namespace Lumined {
 
                 Nuklear.Checkbox("Stats", ref Game.ShowPerformanceStats);
 
-                Nuke.nk_layout_row_dynamic(ctx, LineHeight, 2);
+                Nuklear.NewRow(LineHeight, 2);
 
                 Nuklear.Property("Zoom", ref Game.Zoom, EditorGame.MinZoom, EditorGame.MaxZoom, 0.05f, 0.01f);
 

@@ -570,7 +570,7 @@ namespace Lumined {
 
             using (var pGroup = Nuklear.CollapsingGroup(name, actualName, false)) {
                 if (pGroup.Visible) {
-                    Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 2);
+                    Nuklear.NewRow(LineHeight, 2);
                     if (Nuklear.Button("Zero")) {
                         value.SetToConstant(0);
                         result = true;
@@ -612,7 +612,7 @@ namespace Lumined {
 
             using (var pGroup = Nuklear.CollapsingGroup(name, actualName, false)) {
                 if (pGroup.Visible) {
-                    Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 3);
+                    Nuklear.NewRow(LineHeight, 3);
                     if (Nuklear.Button("Zero")) {
                         value.SetToConstant(Vector3.Zero);
                         result = true;
@@ -644,7 +644,7 @@ namespace Lumined {
                     if (RenderParameter(null, value, ref changed, k, cpi.Info.Type, ref p, true))
                         value.Offset = (Parameter<Vector3>)p;
 
-                    Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
+                    Nuklear.NewRow(LineHeight, 1);
                     var t = (object)value.Type;
                     if (Nuklear.EnumCombo(ref t, tooltip: "Formula Type")) {
                         value.Type = (FormulaType)t;
@@ -665,7 +665,7 @@ namespace Lumined {
 
             using (var pGroup = Nuklear.CollapsingGroup(name, actualName, false)) {
                 if (pGroup.Visible) {
-                    Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 2);
+                    Nuklear.NewRow(LineHeight, 2);
                     if (Nuklear.Button("Zero")) {
                         value.SetToConstant(Vector4.Zero);
                         result = true;
@@ -757,7 +757,7 @@ namespace Lumined {
         private unsafe bool HandleNullable (
             CachedPropertyInfo cpi, object instance, string actualName, ref object value, ref bool changed
         ) {
-            Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 2);
+            Nuklear.NewRow(LineHeight, 2);
             if (TickSelectableProperty(cpi, instance, actualName, ref value)) {
                 changed = true;
                 // Do we need to invoke this?
@@ -1079,7 +1079,7 @@ namespace Lumined {
                 widths[eltCount + 1] = buttonSize;
 
                 if ((eltCount > 1) && !isMatrix) {
-                    Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 1);
+                    Nuklear.NewRow(LineHeight, 1);
                     if (TickSelectableProperty(cpi, instance, actualName, ref p))
                         changed = true;
                 }
@@ -1176,7 +1176,7 @@ namespace Lumined {
 
         private unsafe bool RenderVectorProperty (CachedPropertyInfo cpi, ref Vector2 v2, ref bool changed, bool layout = true) {
             if (layout)
-                Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 2);
+                Nuklear.NewRow(LineHeight, 2);
             var a = RenderPropertyElement("#x", cpi?.Info, ref v2.X, ref changed);
             var b = RenderPropertyElement("#y", cpi?.Info, ref v2.Y, ref changed);
             return a || b;
@@ -1184,7 +1184,7 @@ namespace Lumined {
 
         private unsafe bool RenderVectorProperty (CachedPropertyInfo cpi, ref Vector3 v3, ref bool changed, bool layout = true) {
             if (layout)
-                Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 3);
+                Nuklear.NewRow(LineHeight, 3);
             var a = RenderPropertyElement("#x", cpi?.Info, ref v3.X, ref changed);
             var b = RenderPropertyElement("#y", cpi?.Info, ref v3.Y, ref changed);
             var c = RenderPropertyElement("#z", cpi?.Info, ref v3.Z, ref changed);
@@ -1193,7 +1193,7 @@ namespace Lumined {
 
         private unsafe bool RenderVectorProperty (CachedPropertyInfo cpi, ref Vector4 v4, ref bool changed, bool isColor, bool layout = true) {
             if (layout)
-                Nuke.nk_layout_row_dynamic(Nuklear.Context, LineHeight, 4);
+                Nuklear.NewRow(LineHeight, 4);
             var a = RenderPropertyElement(isColor ? "#r" : "#x", cpi?.Info, ref v4.X, ref changed);
             var b = RenderPropertyElement(isColor ? "#g" : "#y", cpi?.Info, ref v4.Y, ref changed);
             var c = RenderPropertyElement(isColor ? "#b" : "#z", cpi?.Info, ref v4.Z, ref changed);
