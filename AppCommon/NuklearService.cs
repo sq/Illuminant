@@ -695,7 +695,8 @@ namespace Framework {
         public void Label (string text, bool centered = false) {
             NkTextAlign flags = NkTextAlign.NK_TEXT_ALIGN_MIDDLE;
             flags |= centered ? NkTextAlign.NK_TEXT_ALIGN_CENTERED : NkTextAlign.NK_TEXT_ALIGN_LEFT;
-            Nuklear.nk_label(Context, text ?? "", (uint)flags);
+            using (var s = new NString(text))
+                Nuklear.nk_label(Context, s.pText, (uint)flags);
         }
 
         public void Tooltip (NkRect bounds, string text) {
