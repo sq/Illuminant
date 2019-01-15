@@ -50,7 +50,7 @@ namespace TestGame {
 
         private int LastPerformanceStatPrimCount = 0;
 
-        public bool IsMouseOverUI = false;
+        public bool IsMouseOverUI = false, TearingTest = false;
         public long LastTimeOverUI;
 
         public readonly Dictionary<string, ColorLUT> LUTs = 
@@ -213,25 +213,21 @@ namespace TestGame {
             var ctx = Nuklear.Context;
 
             if (Nuke.nk_tree_push_hashed(ctx, NuklearDotNet.nk_tree_type.NK_TREE_TAB, sSystem.pText, NuklearDotNet.nk_collapse_states.NK_MAXIMIZED, sSystem.pText, sSystem.Length, 256) != 0) {
-                using (var temp = new NString("VSync")) {
-                    var newVsync = Nuke.nk_check_text(ctx, temp.pText, temp.Length, Graphics.SynchronizeWithVerticalRetrace ? 0 : 1) == 0;
-                    if (newVsync != Graphics.SynchronizeWithVerticalRetrace) {
-                        Graphics.SynchronizeWithVerticalRetrace = newVsync;
-                        Graphics.ApplyChangesAfterPresent(RenderCoordinator);
-                    }
+                Nuklear.NewRow(Font.LineSpacing, 3);
+
+                bool vsync = Graphics.SynchronizeWithVerticalRetrace;
+                if (Nuklear.Checkbox("VSync", ref vsync)) {
+                    Graphics.SynchronizeWithVerticalRetrace = vsync;
+                    Graphics.ApplyChangesAfterPresent(RenderCoordinator);
                 }
 
-                using (var temp = new NString("Fullscreen")) {
-                    var newFS = Nuke.nk_check_text(ctx, temp.pText, temp.Length, Graphics.IsFullScreen ? 0 : 1) == 0;
-                    if (newFS != Graphics.IsFullScreen) {
-                        Graphics.IsFullScreen = newFS;
-                        Graphics.ApplyChangesAfterPresent(RenderCoordinator);
-                    }
+                bool fs = Graphics.IsFullScreen;
+                if (Nuklear.Checkbox("Fullscreen", ref fs)) {
+                    Graphics.IsFullScreen = fs;
+                    Graphics.ApplyChangesAfterPresent(RenderCoordinator);
                 }
 
-                using (var temp = new NString("Lazy Transform Changes")) {
-                    // Materials.LazyViewTransformChanges = Nuke.nk_check_text(ctx, temp.pText, temp.Length, Materials.LazyViewTransformChanges ? 0 : 1) == 0;
-                }
+                Nuklear.Checkbox("TearingTest", ref TearingTest);
 
                 Nuke.nk_tree_pop(ctx);
             }
@@ -382,6 +378,13 @@ namespace TestGame {
             ir.Draw(UIRenderTarget, Vector2.Zero, multiplyColor: Color.White * uiOpacity);
 
             DrawPerformanceStats(ref ir);
+
+            if (TearingTest) {
+                var x = (Time.Ticks / 20000) % Graphics.PreferredBackBufferWidth;
+                ir.FillRectangle(Bounds.FromPositionAndSize(
+                    x, 0, 6, Graphics.PreferredBackBufferHeight
+                ), Color.Red);
+            }
         }
 
         private void DrawPerformanceStats (ref ImperativeRenderer ir) {
