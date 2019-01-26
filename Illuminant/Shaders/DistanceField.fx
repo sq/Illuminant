@@ -47,22 +47,28 @@ float computeSquaredDistanceZ (float sliceZ, float2 zRange) {
     }
 }
 
-void computeDistanceStep (float2 xy, inout float resultDistanceSq, inout int intersectionCount, in float4 uv) {
+void computeDistanceStep (float2 xy, inout float resultDistanceSq, inout int intersectionCountDown, inout int intersectionCountRight, in float4 uv, inout bool badDown, inout bool badRight) {
     float2 a, b, temp;
     loadEdge(uv, a, b);
-    if (doesRightRayIntersectLine(xy, a, b))
-        intersectionCount += 1;
+    bool down = doesDownRayIntersectLine(xy, a, b, badDown);
+    bool right = doesRightRayIntersectLine(xy, a, b, badRight);
+    if (down)
+        intersectionCountDown += 1;
+    if (right)
+        intersectionCountRight += 1;
     float distanceSq = distanceSquaredToEdge(xy, a, b);
     resultDistanceSq = min(resultDistanceSq, distanceSq);
 }
 
-float finalEval (float2 z, float2 zRange, float resultDistanceSq, int intersectionCount) {
+float finalEval (float2 z, float2 zRange, float resultDistanceSq, int intersectionCountDown, int intersectionCountRight) {
     float distanceZSq = computeSquaredDistanceZ(z, zRange);
     float sqrtDistance = sqrt(resultDistanceSq + distanceZSq);
     float aboveBelow = min(abs(z - zRange.x), abs(z - zRange.y));
 
     bool isInsideZ = (z >= zRange.x) && (z <= zRange.y);
-    bool isInsideXy = (intersectionCount % 2) == 1;
+    bool isInsideDown = (intersectionCountDown % 2) == 1;
+    bool isInsideRight = (intersectionCountRight % 2) == 1;
+    bool isInsideXy = isInsideDown || isInsideRight;
 
     if (isInsideXy) {
         if (isInsideZ)
@@ -77,13 +83,19 @@ float finalEval (float2 z, float2 zRange, float resultDistanceSq, int intersecti
 float4 computeSliceDistances (float2 xy, float2 zRange, float4 SliceZ) {
     float resultDistanceSq = 999999;
     float4 uv = float4(Uv.x, Uv.y, 0, 0);
-    int intersectionCount = 0;
+    int intersectionCountDown = 0, intersectionCountRight = 0;
+    bool badDown = false, badRight = false;
 
     [loop]
     while (uv.x <= 1) {
-        computeDistanceStep(xy, resultDistanceSq, intersectionCount, uv);
+        computeDistanceStep(xy, resultDistanceSq, intersectionCountDown, intersectionCountRight, uv, badDown, badRight);
         uv.xy += Uv.zw;
     }
+
+    if (badDown)
+        intersectionCountDown = 0;
+    if (badRight)
+        intersectionCountRight = 0;
 
     if (
         (xy.x < Bounds.x) ||
@@ -91,13 +103,13 @@ float4 computeSliceDistances (float2 xy, float2 zRange, float4 SliceZ) {
         (xy.x > Bounds.z) ||
         (xy.y > Bounds.w)
     )
-        intersectionCount = 0;
+        intersectionCountDown = intersectionCountRight = 0;
 
     float4 result = float4(
-        finalEval(SliceZ.x, zRange, resultDistanceSq, intersectionCount),
-        finalEval(SliceZ.y, zRange, resultDistanceSq, intersectionCount),
-        finalEval(SliceZ.z, zRange, resultDistanceSq, intersectionCount),
-        finalEval(SliceZ.w, zRange, resultDistanceSq, intersectionCount)
+        finalEval(SliceZ.x, zRange, resultDistanceSq, intersectionCountDown, intersectionCountRight),
+        finalEval(SliceZ.y, zRange, resultDistanceSq, intersectionCountDown, intersectionCountRight),
+        finalEval(SliceZ.z, zRange, resultDistanceSq, intersectionCountDown, intersectionCountRight),
+        finalEval(SliceZ.w, zRange, resultDistanceSq, intersectionCountDown, intersectionCountRight)
     );
     return result;
 }

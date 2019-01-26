@@ -53,10 +53,26 @@ bool doesRightRayIntersectLine (float2 rayOrigin, float2 a1, float2 a2) {
 }
 */
 
-bool doesRightRayIntersectLine (float2 p, float2 a1, float2 a2) {
+#define intersectEpsilon 0.03
+
+bool doesDownRayIntersectLine (float2 p, float2 a1, float2 a2, inout bool bad) {
+    float divisor = (a1.x-a2.x);
+    bool crossesX = ((a2.x>p.x) != (a1.x>p.x));
+    bool isClose = (abs(a1.x - p.x) < intersectEpsilon) || (abs(a2.x - p.x) < intersectEpsilon);
+    if (isClose)
+        bad = true;
+    bool result = crossesX &&
+        (p.y < (a1.y-a2.y) * (p.x-a2.x) / divisor + a2.y);
+    return result && (divisor != 0);
+}
+
+bool doesRightRayIntersectLine (float2 p, float2 a1, float2 a2, inout bool bad) {
     float divisor = (a1.y-a2.y);
     bool crossesY = ((a2.y>p.y) != (a1.y>p.y));
-    bool result = crossesY &&
+    bool isClose = (abs(a1.y - p.y) < intersectEpsilon) || (abs(a2.y - p.y) < intersectEpsilon);
+    if (isClose)
+        bad = true;
+    bool result = !isClose && crossesY &&
         (p.x < (a1.x-a2.x) * (p.y-a2.y) / divisor + a2.x);
     return result && (divisor != 0);
 }
