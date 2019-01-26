@@ -53,26 +53,44 @@ bool doesRightRayIntersectLine (float2 rayOrigin, float2 a1, float2 a2) {
 }
 */
 
-#define intersectEpsilon 0.03
+#define intersectEpsilon 0.25
+#define intersectOffset 0.5
+
+// If a ray crosses an edge endpoint the ray data becomes garbage.
+// We offset the ray position in this case to attempt to calculate mostly-correct data for 
+//  the edge instead, and if that fails we flag the entire ray as bad.
+// In most cases either the down or right ray will survive, but for pixels that are close
+//  to an edge endpoint both rays may fail. Offsetting increases the odds that we get usable
+//  data for that pixel.
+
+bool isCloseX (float2 p, float2 a1, float2 a2) {
+    return (abs(a1.x - p.x) < intersectEpsilon) || (abs(a2.x - p.x) < intersectEpsilon);
+}
+
+bool isCloseY (float2 p, float2 a1, float2 a2) {
+    return (abs(a1.y - p.y) < intersectEpsilon) || (abs(a2.y - p.y) < intersectEpsilon);
+}
 
 bool doesDownRayIntersectLine (float2 p, float2 a1, float2 a2, inout bool bad) {
     float divisor = (a1.x-a2.x);
-    bool crossesX = ((a2.x>p.x) != (a1.x>p.x));
-    bool isClose = (abs(a1.x - p.x) < intersectEpsilon) || (abs(a2.x - p.x) < intersectEpsilon);
-    if (isClose)
+    if (isCloseX(p, a1, a2))
+        p.x += intersectOffset;
+    if (isCloseX(p, a1, a2))
         bad = true;
-    bool result = crossesX &&
+    bool crossesX = ((a2.x>p.x) != (a1.x>p.x));
+    bool result = !bad && crossesX &&
         (p.y < (a1.y-a2.y) * (p.x-a2.x) / divisor + a2.y);
     return result && (divisor != 0);
 }
 
 bool doesRightRayIntersectLine (float2 p, float2 a1, float2 a2, inout bool bad) {
     float divisor = (a1.y-a2.y);
-    bool crossesY = ((a2.y>p.y) != (a1.y>p.y));
-    bool isClose = (abs(a1.y - p.y) < intersectEpsilon) || (abs(a2.y - p.y) < intersectEpsilon);
-    if (isClose)
+    if (isCloseY(p, a1, a2))
+        p.y += intersectOffset;
+    if (isCloseY(p, a1, a2))
         bad = true;
-    bool result = !isClose && crossesY &&
+    bool crossesY = ((a2.y>p.y) != (a1.y>p.y));
+    bool result = !bad && crossesY &&
         (p.x < (a1.x-a2.x) * (p.y-a2.y) / divisor + a2.x);
     return result && (divisor != 0);
 }
