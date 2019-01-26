@@ -140,8 +140,14 @@ namespace Squared.Illuminant.Modeling {
                 if (m == null) {
                     if (forSave)
                         Properties.Remove(key);
-                } else
-                    Properties[key].Normalize();
+                    continue;
+                }
+
+                var p = Properties[key];
+                if (p != null)
+                    p.Normalize();
+                else if (forSave)
+                    Properties.Remove(key);
             }
         }
 
@@ -150,8 +156,10 @@ namespace Squared.Illuminant.Modeling {
                 Name = Name,
                 Type = Type
             };
-            foreach (var kvp in Properties)
-                result.Properties.Add(kvp.Key, kvp.Value.Clone());
+            foreach (var kvp in Properties) {
+                if (kvp.Value != null)
+                    result.Properties.Add(kvp.Key, kvp.Value.Clone());
+            }
             return result;
         }
     }

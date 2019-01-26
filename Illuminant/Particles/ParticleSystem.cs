@@ -591,7 +591,8 @@ namespace Squared.Illuminant.Particles {
                 spawnCount = requestedSpawnCount;
 
             bool needClear;
-            var chunk = PickTargetForSpawn(spawner is Transforms.FeedbackSpawner, spawnCount, out needClear);
+            var fs = spawner as Transforms.FeedbackSpawner;
+            var chunk = PickTargetForSpawn(fs != null, spawnCount, out needClear);
 
             if (spawnCount > chunk.Free)
                 spawnCount = chunk.Free;
@@ -605,8 +606,15 @@ namespace Squared.Illuminant.Particles {
 
             chunk.NextSpawnOffset += spawnCount;
             TotalSpawnCount += spawnCount;
-            if (sourceChunk != null)
-                sourceChunk.TotalConsumedForFeedback += spawnCount;
+            if (sourceChunk != null) {
+                var consumedCount = spawnCount;
+                // HACK
+                if (fs != null) {
+                    consumedCount /= fs.InstanceMultiplier;
+                    if (!fs.SpawnFromEntireWindow)
+                        sourceChunk.TotalConsumedForFeedback += consumedCount;
+                }
+            }
 
             // Console.WriteLine("Spawning {0} into {1} (w/{2} free)", spawnCount, chunk.ID, chunk.Free);
             spawner.EndTick(requestedSpawnCount, spawnCount);
@@ -1138,6 +1146,7 @@ namespace Squared.Illuminant.Particles {
             dc.Origin = Vector2.One * 0.5f;
 
             var animRate = Configuration.Appearance?.AnimationRate ?? Vector2.Zero;
+            var animRateAbs = new Vector2(Math.Abs(animRate.X), Math.Abs(animRate.Y));
             var cfv = Configuration.Appearance?.ColumnFromVelocity ?? false;
             var rfv = Configuration.Appearance?.RowFromVelocity ?? false;
             var c = Color.White;
@@ -1182,11 +1191,7 @@ namespace Squared.Illuminant.Particles {
                 var rot = rd.Y % (float)(2 * Math.PI);
 
                 if ((frameCountX > 1) || (frameCountY > 1)) {
-                    var frameIndexXy = animRate * life;
-                    if (animRate.X < 0)
-                        frameIndexXy.X += frameCountX;
-                    if (animRate.Y < 0)
-                        frameIndexXy.Y += frameCountY;
+                    var frameIndexXy = animRateAbs * life;
 
                     frameIndexXy.Y += (float)Math.Floor(rd.W);
                     if (cfv)
@@ -1196,6 +1201,10 @@ namespace Squared.Illuminant.Particles {
 
                     frameIndexXy.X = Math.Max(0, frameIndexXy.X) % frameCountX;
                     frameIndexXy.Y = Arithmetic.Clamp(frameIndexXy.Y, 0, frameCountY - 1);
+                    if (animRate.X < 0)
+                        frameIndexXy.X = frameCountX - frameIndexXy.X;
+                    if (animRate.Y < 0)
+                        frameIndexXy.Y = frameCountY - frameIndexXy.Y;
                     var texOffset = frameIndexXy * texSize;
 
                     dc.TextureRegion = region;

@@ -94,11 +94,7 @@ void VS_PosVelAttr(
 
     float2 texSize = (RasterizeSettings.BitmapTextureRegion.zw - RasterizeSettings.BitmapTextureRegion.xy);
     float2 frameCountXy = floor(1.0 / texSize);
-    float2 frameIndexXy = floor(getAnimationRate() * position.w);
-    if (getAnimationRate().x < 0)
-        frameIndexXy.x = frameCountXy.x + frameIndexXy.x;
-    if (getAnimationRate().y < 0)
-        frameIndexXy.y = frameCountXy.y + frameIndexXy.y;
+    float2 frameIndexXy = floor(abs(getAnimationRate()) * position.w);
 
     float  frameAngle = angle;
     float2 maxAngleXy = (2 * PI) / frameCountXy;
@@ -112,6 +108,11 @@ void VS_PosVelAttr(
 
     frameIndexXy.x = max(frameIndexXy.x, 0) % frameCountXy.x;
     frameIndexXy.y = clamp(frameIndexXy.y, 0, frameCountXy.y - 1);
+
+    if (getAnimationRate().x < 0)
+        frameIndexXy.x = frameCountXy.x - frameIndexXy.x;
+    if (getAnimationRate().y < 0)
+        frameIndexXy.y = frameCountXy.y - frameIndexXy.y;
 
     float2 frameTexCoord = frameIndexXy * texSize;
     texCoord += frameTexCoord;

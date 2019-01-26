@@ -3,9 +3,9 @@
 
 #define MAX_POSITION_CONSTANTS 32
 
-uniform bool   AlignVelocityAndPosition, ZeroZAxis;
+uniform bool   AlignVelocityAndPosition, ZeroZAxis, MultiplyLife, SpawnFromEntireWindow;
 uniform bool   AlignPositionConstant, MultiplyAttributeConstant, PolygonLoop;
-uniform float  PolygonRate, SourceVelocityFactor, FeedbackSourceIndex, PositionConstantCount, AttributeDiscardThreshold;
+uniform float  PolygonRate, SourceVelocityFactor, FeedbackSourceIndex, PositionConstantCount, AttributeDiscardThreshold, InstanceMultiplier;
 uniform float4 PositionConstants[MAX_POSITION_CONSTANTS];
 uniform float4 ChunkSizeAndIndices;
 uniform float4 Configuration[8];
@@ -146,7 +146,7 @@ void PS_SpawnFeedback (
         return;
     }
 
-    float sourceIndex = (index - ChunkSizeAndIndices.y) + FeedbackSourceIndex;
+    float sourceIndex = ((index - ChunkSizeAndIndices.y) / InstanceMultiplier) + FeedbackSourceIndex;
     float sourceY, sourceX = modf(sourceIndex / SourceChunkSizeAndTexel.x, sourceY) * SourceChunkSizeAndTexel.x;
     float2 sourceXy = float2(sourceX, sourceY);
 
@@ -161,7 +161,7 @@ void PS_SpawnFeedback (
     float relativeIndex = (index - ChunkSizeAndIndices.y) + ChunkSizeAndIndices.w;
     float4 positionConstant = PositionConstants[0];
     if (AlignPositionConstant)
-        positionConstant += sourcePosition;
+        positionConstant.xyz += sourcePosition.xyz;
     float4 tempPosition = evaluateFormula(0, positionConstant, Configuration[0], Configuration[1], random1, FormulaTypes.x);
 
     float4 attributeConstant = Configuration[5];
@@ -170,6 +170,9 @@ void PS_SpawnFeedback (
 
     newPosition = mul(float4(tempPosition.xyz, 1), PositionMatrix);
     newPosition.w = tempPosition.w;
+
+    if (MultiplyLife)
+        newPosition.w *= sourcePosition.w;
 
     float4 velocityConstant = Configuration[2];
     newVelocity = evaluateFormula(newPosition, velocityConstant, Configuration[3], Configuration[4], random2, FormulaTypes.y);

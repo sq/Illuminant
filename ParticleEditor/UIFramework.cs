@@ -1198,7 +1198,7 @@ namespace Lumined {
 
         private unsafe bool RenderVectorProperty (CachedPropertyInfo cpi, ref Vector2 v2, ref bool changed, bool layout = true) {
             if (layout)
-                SetVectorRowLayout(2, cpi.AllowNull);
+                SetVectorRowLayout(2, cpi?.AllowNull ?? false);
             var a = RenderPropertyElement("#x", cpi?.Info, ref v2.X, ref changed);
             var b = RenderPropertyElement("#y", cpi?.Info, ref v2.Y, ref changed);
             return a || b;
@@ -1206,7 +1206,7 @@ namespace Lumined {
 
         private unsafe bool RenderVectorProperty (CachedPropertyInfo cpi, ref Vector3 v3, ref bool changed, bool layout = true) {
             if (layout)
-                SetVectorRowLayout(3, cpi.AllowNull);
+                SetVectorRowLayout(3, cpi?.AllowNull ?? false);
             var a = RenderPropertyElement("#x", cpi?.Info, ref v3.X, ref changed);
             var b = RenderPropertyElement("#y", cpi?.Info, ref v3.Y, ref changed);
             var c = RenderPropertyElement("#z", cpi?.Info, ref v3.Z, ref changed);
@@ -1215,7 +1215,7 @@ namespace Lumined {
 
         private unsafe bool RenderVectorProperty (CachedPropertyInfo cpi, ref Vector4 v4, ref bool changed, bool isColor, bool layout = true) {
             if (layout)
-                SetVectorRowLayout(4, cpi.AllowNull);
+                SetVectorRowLayout(4, cpi?.AllowNull ?? false);
             var a = RenderPropertyElement(isColor ? "#r" : "#x", cpi?.Info, ref v4.X, ref changed);
             var b = RenderPropertyElement(isColor ? "#g" : "#y", cpi?.Info, ref v4.Y, ref changed);
             var c = RenderPropertyElement(isColor ? "#b" : "#z", cpi?.Info, ref v4.Z, ref changed);

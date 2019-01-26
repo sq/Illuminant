@@ -137,6 +137,11 @@ namespace Squared.Illuminant.Particles.Transforms {
         public bool AlignPositionConstant = true;
 
         /// <summary>
+        /// Multiplies the life of the new particle by the life of the source particle.
+        /// </summary>
+        public bool MultiplyLife = false;
+
+        /// <summary>
         /// Multiplies the color Constant of new particles by the attribute of source particles
         /// </summary>
         public bool MultiplyColorConstant = false;
@@ -161,6 +166,18 @@ namespace Squared.Illuminant.Particles.Transforms {
         ///  brute force way to wait until particles have aged before using them for feedback.
         /// </summary>
         public int SlidingWindowMargin = 0;
+
+        /// <summary>
+        /// Spawns this many particles from each source particle.
+        /// </summary>
+        public int InstanceMultiplier = 1;
+
+        /// <summary>
+        /// Spawns from randomly selected particles inside the entire sliding window instead of
+        ///  only spawning from the most recent (non-consumed) particles. This spawner will no
+        ///  longer consume particles.
+        /// </summary>
+        public bool SpawnFromEntireWindow = false;
         
         [NonSerialized]
         private ParticleSystem.Chunk CurrentFeedbackSource;
@@ -176,6 +193,10 @@ namespace Squared.Illuminant.Particles.Transforms {
         }
 
         public override void BeginTick (ParticleSystem system, double now, double deltaTimeSeconds, out int spawnCount, out ParticleSystem.Chunk sourceChunk) {
+            // HACK
+            if (InstanceMultiplier < 1)
+                InstanceMultiplier = 1;
+
             spawnCount = 0;
             sourceChunk = null;
             CurrentFeedbackSource = null;
@@ -188,6 +209,14 @@ namespace Squared.Illuminant.Particles.Transforms {
                 return;
 
             base.BeginTick(system, now, deltaTimeSeconds, out spawnCount, out sourceChunk);
+
+            // FIXME: We can't handle partial spawns from a source particle because tracking
+            //  how many we've spawned from it is impossible without more complex state
+            if (spawnCount < InstanceMultiplier) {
+                AddError(spawnCount);
+                spawnCount = 0;
+                return;
+            }
 
             sourceChunk = SourceSystem.Instance.PickSourceForFeedback(spawnCount);
             if (sourceChunk == null) {
@@ -212,12 +241,19 @@ namespace Squared.Illuminant.Particles.Transforms {
 
             var availableLessMargin = Math.Max(0, windowedAvailable - SlidingWindowMargin);
 
-            spawnCount = Math.Min(spawnCount, availableLessMargin);
+            var maximumPossibleSpawns = availableLessMargin * InstanceMultiplier;
+            spawnCount = Math.Min(spawnCount, maximumPossibleSpawns);
             // Now actually clamp it to the amount available after applying the window math that considers
             //  chunk transitions
-            spawnCount = Math.Min(spawnCount, sourceChunk.AvailableForFeedback);
+            spawnCount = Math.Min(spawnCount, sourceChunk.AvailableForFeedback * InstanceMultiplier);
             CurrentFeedbackSource = sourceChunk;
             CurrentFeedbackSourceIndex = sourceChunk.FeedbackSourceIndex;
+
+            // HACK: Select a random offset within the source window to pull source particles from
+            //  this is not completely random but for low spawn rates it's going to look somewhat close
+            if (SpawnFromEntireWindow) {
+                CurrentFeedbackSourceIndex += RNG.Next(0, availableLessMargin - (spawnCount / InstanceMultiplier));
+            }
         }
 
         protected override Material GetMaterial (ParticleMaterials materials) {
@@ -233,9 +269,12 @@ namespace Squared.Illuminant.Particles.Transforms {
             parameters["PositionConstantCount"].SetValue((float)1);
             parameters["PositionConstants"].SetValue(Temp3);
             parameters["AlignPositionConstant"].SetValue(AlignPositionConstant);
+            parameters["MultiplyLife"].SetValue(MultiplyLife);
             parameters["MultiplyAttributeConstant"].SetValue(MultiplyColorConstant);
             parameters["FeedbackSourceIndex"].SetValue(CurrentFeedbackSourceIndex);
             parameters["SourceVelocityFactor"].SetValue(SourceVelocityFactor);
+            parameters["InstanceMultiplier"].SetValue(InstanceMultiplier);
+            parameters["SpawnFromEntireWindow"].SetValue(SpawnFromEntireWindow);
         }
 
         public override bool IsValid {
