@@ -101,7 +101,7 @@ void PS_Spawn (
     // Ensure the z axis of generated circular coordinates is 0, resulting in pure xy normals
     float relativeIndex = (index - ChunkSizeAndIndices.y);
     float4 positionConstant;
-    if (PolygonRate > 1) {
+    if (PolygonRate > 0.05) {
         float positionIndexF = (relativeIndex / PolygonRate) + ChunkSizeAndIndices.w;
         float positionIndexI, positionIndexT = modf(positionIndexF, positionIndexI);
         float4 position1 = PositionConstants[positionIndexI % PositionConstantCount],

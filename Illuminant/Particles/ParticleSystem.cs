@@ -1183,6 +1183,10 @@ namespace Squared.Illuminant.Particles {
 
                 if ((frameCountX > 1) || (frameCountY > 1)) {
                     var frameIndexXy = animRate * life;
+                    if (animRate.X < 0)
+                        frameIndexXy.X += frameCountX;
+                    if (animRate.Y < 0)
+                        frameIndexXy.Y += frameCountY;
 
                     frameIndexXy.Y += (float)Math.Floor(rd.W);
                     if (cfv)

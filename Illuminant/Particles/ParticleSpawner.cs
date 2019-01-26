@@ -210,9 +210,8 @@ namespace Squared.Illuminant.Particles.Transforms {
         public float? PolygonRate = null;
         /// <summary>
         /// A list of additional positions to spawn particles from.
-        /// You can set the W value of a position to -1 for it to inherit the main position's W value.
         /// </summary>
-        public readonly List<Vector4> AdditionalPositions = new List<Vector4>();
+        public readonly List<Vector3> AdditionalPositions = new List<Vector3>();
         /// <summary>
         /// If set, the MinRate and MaxRate parameters apply to each position instead of the spawner as a whole.
         /// </summary>
@@ -258,9 +257,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             Temp3[0] = new Vector4(position, life);
             for (var i = 0; (i < AdditionalPositions.Count) && (i < MaxPositions - 1); i++) {
                 var ap = AdditionalPositions[i];
-                if (ap.W <= -0.99)
-                    ap.W = life;
-                Temp3[i + 1] = ap;
+                Temp3[i + 1] = new Vector4(ap, life);
             }
 
             var count = Math.Min(1 + AdditionalPositions.Count, MaxPositions);

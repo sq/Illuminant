@@ -113,7 +113,7 @@ namespace Lumined {
                                 var s = ((SpawnerBase)obj);
                                 // FIXME: Parameter references?
                                 var c = s.Position.Constant.Evaluate(0, null);
-                                return new Vector4(c, -1);
+                                return c;
                             },
                             MaxCount = Spawner.MaxPositions - 1
                         } },
