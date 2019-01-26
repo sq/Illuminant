@@ -4,7 +4,7 @@
 #define MAX_POSITION_CONSTANTS 32
 
 uniform bool   AlignVelocityAndPosition, ZeroZAxis;
-uniform bool   AlignPositionConstant, MultiplyAttributeConstant;
+uniform bool   AlignPositionConstant, MultiplyAttributeConstant, PolygonLoop;
 uniform float  PolygonRate, SourceVelocityFactor, FeedbackSourceIndex, PositionConstantCount, AttributeDiscardThreshold;
 uniform float4 PositionConstants[MAX_POSITION_CONSTANTS];
 uniform float4 ChunkSizeAndIndices;
@@ -103,9 +103,18 @@ void PS_Spawn (
     float4 positionConstant;
     if (PolygonRate > 0.05) {
         float positionIndexF = (relativeIndex / PolygonRate) + ChunkSizeAndIndices.w;
+        float divisor = PositionConstantCount;
+        int index1, index2;
         float positionIndexI, positionIndexT = modf(positionIndexF, positionIndexI);
-        float4 position1 = PositionConstants[positionIndexI % PositionConstantCount],
-            position2 = PositionConstants[(positionIndexI + 1) % PositionConstantCount];
+        if (PolygonLoop) {
+            index1 = positionIndexI % divisor;
+            index2 = (positionIndexI + 1) % divisor;
+        } else {
+            index1 = positionIndexI % divisor;
+            index2 = min(index1 + 1, divisor - 1);
+        }
+        float4 position1 = PositionConstants[index1],
+            position2 = PositionConstants[index2];
         positionConstant = lerp(position1, position2, positionIndexT);
     } else {
         float positionIndex = (relativeIndex + ChunkSizeAndIndices.w) % PositionConstantCount;

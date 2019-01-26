@@ -841,7 +841,14 @@ namespace Lumined {
                 case "Int32":
                 case "Single":
                     if (!cpi.AllowNull || (value != null)) {
-                        Nuklear.NewRow(LineHeight, 1);
+                        const float buttonSizePx = 26f;
+                        var rl = new RowLayout {
+                            {1.0f, true}
+                        };
+                        if (cpi.AllowNull)
+                            rl.Add(buttonSizePx, false);
+                        rl.Apply(Nuklear, LineHeight);
+
                         if (cpi.Type == typeof(float)) {
                             var v = (float)value;
                             RenderPropertyElement(cpi.Name, cpi.Info, ref v, ref changed, tooltip: cpi.Summary);
@@ -858,6 +865,12 @@ namespace Lumined {
                                 1, 0.5f, tooltip: cpi.Summary
                             )) {
                                 cpi.Setter(instance, v);
+                                return true;
+                            }
+                        }
+                        if (cpi.AllowNull) {
+                            if (ShowEraseButton()) {
+                                cpi.Setter(instance, null);
                                 return true;
                             }
                         }
@@ -970,6 +983,10 @@ namespace Lumined {
             }
 
             return false;
+        }
+
+        private unsafe bool ShowEraseButton () {
+            return Nuklear.Button("×", tooltip: "Set to null");
         }
 
         private unsafe bool ShowNewVariableButton () {
@@ -1169,9 +1186,19 @@ namespace Lumined {
             return changed;
         }
 
+        private void SetVectorRowLayout (int columnCount, bool eraseButton) {
+            const float buttonSizePx = 26f;
+            var rl = new RowLayout();
+            for (int i = 0; i < columnCount; i++)
+                rl.Add(1.0f / columnCount, true);
+            if (eraseButton)
+                rl.Add(buttonSizePx, false);
+            rl.Apply(Nuklear, LineHeight);
+        }
+
         private unsafe bool RenderVectorProperty (CachedPropertyInfo cpi, ref Vector2 v2, ref bool changed, bool layout = true) {
             if (layout)
-                Nuklear.NewRow(LineHeight, 2);
+                SetVectorRowLayout(2, cpi.AllowNull);
             var a = RenderPropertyElement("#x", cpi?.Info, ref v2.X, ref changed);
             var b = RenderPropertyElement("#y", cpi?.Info, ref v2.Y, ref changed);
             return a || b;
@@ -1179,7 +1206,7 @@ namespace Lumined {
 
         private unsafe bool RenderVectorProperty (CachedPropertyInfo cpi, ref Vector3 v3, ref bool changed, bool layout = true) {
             if (layout)
-                Nuklear.NewRow(LineHeight, 3);
+                SetVectorRowLayout(3, cpi.AllowNull);
             var a = RenderPropertyElement("#x", cpi?.Info, ref v3.X, ref changed);
             var b = RenderPropertyElement("#y", cpi?.Info, ref v3.Y, ref changed);
             var c = RenderPropertyElement("#z", cpi?.Info, ref v3.Z, ref changed);
@@ -1188,7 +1215,7 @@ namespace Lumined {
 
         private unsafe bool RenderVectorProperty (CachedPropertyInfo cpi, ref Vector4 v4, ref bool changed, bool isColor, bool layout = true) {
             if (layout)
-                Nuklear.NewRow(LineHeight, 4);
+                SetVectorRowLayout(4, cpi.AllowNull);
             var a = RenderPropertyElement(isColor ? "#r" : "#x", cpi?.Info, ref v4.X, ref changed);
             var b = RenderPropertyElement(isColor ? "#g" : "#y", cpi?.Info, ref v4.Y, ref changed);
             var c = RenderPropertyElement(isColor ? "#b" : "#z", cpi?.Info, ref v4.Z, ref changed);

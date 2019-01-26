@@ -209,6 +209,11 @@ namespace Squared.Illuminant.Particles.Transforms {
         /// </summary>
         public float? PolygonRate = null;
         /// <summary>
+        /// If set, polygonal spawn positions will form a closed shape with the last edge being between
+        ///  the last additional position and the first spawn position.
+        /// </summary>
+        public bool PolygonLoop = true;
+        /// <summary>
         /// A list of additional positions to spawn particles from.
         /// </summary>
         public readonly List<Vector3> AdditionalPositions = new List<Vector3>();
@@ -242,6 +247,8 @@ namespace Squared.Illuminant.Particles.Transforms {
             var result = base.GetChunkSizeAndIndices(engine);
             var polygonRate = PolygonRate.GetValueOrDefault(0);
             if (polygonRate >= 1) {
+                if (!PolygonLoop)
+                    count -= 1;
                 result.W = (TotalSpawned / polygonRate) % (float)count;
             } else {
                 result.W = TotalSpawned % count;
@@ -264,6 +271,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             parameters["PositionConstantCount"].SetValue((float)count);
             parameters["PositionConstants"].SetValue(Temp3);
             parameters["PolygonRate"].SetValue(PolygonRate.GetValueOrDefault(0));
+            parameters["PolygonLoop"].SetValue(PolygonLoop);
         }
 
         public override bool IsValid {
