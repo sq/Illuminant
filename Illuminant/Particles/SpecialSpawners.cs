@@ -210,6 +210,8 @@ namespace Squared.Illuminant.Particles.Transforms {
 
             base.BeginTick(system, now, deltaTimeSeconds, out spawnCount, out sourceChunk);
 
+            var requestedCount = spawnCount;
+
             // FIXME: We can't handle partial spawns from a source particle because tracking
             //  how many we've spawned from it is impossible without more complex state
             if ((spawnCount < InstanceMultiplier) && !SpawnFromEntireWindow) {
@@ -218,7 +220,16 @@ namespace Squared.Illuminant.Particles.Transforms {
                 return;
             }
 
-            sourceChunk = SourceSystem.Instance.PickSourceForFeedback(spawnCount);
+            var instances = spawnCount / InstanceMultiplier;
+            var rounded = instances * InstanceMultiplier;
+            if (rounded < spawnCount) {
+                if (rounded > 0) {
+                    AddError(spawnCount - rounded);
+                    spawnCount = rounded;
+                }
+            }
+
+            sourceChunk = SourceSystem.Instance.PickSourceForFeedback(instances);
             if (sourceChunk == null) {
                 spawnCount = 0;
                 return;
@@ -255,6 +266,8 @@ namespace Squared.Illuminant.Particles.Transforms {
                 var sourceCount = Math.Max(spawnCount / InstanceMultiplier, 1);
                 CurrentFeedbackSourceIndex += RNG.Next(0, availableLessMargin - sourceCount);
             }
+
+            // Console.WriteLine("requested {0} spawning {1}", requestedCount, spawnCount);
         }
 
         protected override Material GetMaterial (ParticleMaterials materials) {
