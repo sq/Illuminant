@@ -30,7 +30,7 @@ float4 randomCustom (float2 xy, float2 offset, float2 rate) {
 }
 
 float4 random (float2 xy) {
-    return randomCustom(xy, RandomnessOffset, RandomnessTexel);
+    return randomCustom(xy, RandomnessOffset, 1);
 }
 
 float4 smoothRandomCustom (float2 xy, float2 offset, float2 rate) {
@@ -39,7 +39,7 @@ float4 smoothRandomCustom (float2 xy, float2 offset, float2 rate) {
 }
 
 float4 smoothRandom (float2 xy) {
-    return smoothRandomCustom(xy, RandomnessOffset, RandomnessTexel);
+    return smoothRandomCustom(xy, RandomnessOffset, 1);
 }
 
 #endif
