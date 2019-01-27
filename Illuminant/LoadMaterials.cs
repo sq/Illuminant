@@ -319,6 +319,10 @@ namespace Squared.Illuminant.Particles {
                     effects.Load("Noise"), "Noise", dBegin, dEnd
                 ));
 
+                DefineMaterial(ParticleMaterials.SpatialNoise = new Material(
+                    effects.Load("Noise"), "SpatialNoise", dBegin, dEnd
+                ));
+
                 DefineMaterial(ParticleMaterials.Gravity = new Material(
                     effects.Load("Gravity"), "Gravity", dBegin, dEnd
                 ));

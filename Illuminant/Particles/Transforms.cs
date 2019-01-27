@@ -132,21 +132,36 @@ namespace Squared.Illuminant.Particles.Transforms {
         public const float IntervalUnit = 1000;
 
         public class NoiseParameters<T> where T : struct {
-            public Parameter<T> Offset, Scale;
+            /// <summary>
+            /// This value is subtracted from the noise value before it is scaled.
+            /// </summary>
+            public Parameter<T> Offset;
+            /// <summary>
+            /// The noise value is scaled by this amount.
+            /// </summary>
+            public Parameter<T> Scale;
         }
 
         public float? CyclesPerSecond = 10;
         public NoiseParameters<Vector4> Position;
         public NoiseParameters<Vector3> Velocity;
+        /// <summary>
+        /// The number of milliseconds between noise field changes. Changes occur smoothly over time. Set to 0 for no changes.
+        /// </summary>
         public Parameter<float> Interval;
+        /// <summary>
+        /// If set, the velocity of the particles is instantly changed to the new value from the noise field.
+        /// </summary>
         public bool ReplaceOldVelocity = true;
-
-        private double LastUChangeWhen;
-        private double CurrentU, CurrentV;
-        private double NextU, NextV;
 
         private static int NextSeed = 1;
 
+        [NonSerialized]
+        private double LastUChangeWhen;
+        [NonSerialized]
+        private double CurrentU, CurrentV;
+        [NonSerialized]
+        private double NextU, NextV;
         [NonSerialized]
         protected readonly MersenneTwister RNG;
 
@@ -167,8 +182,8 @@ namespace Squared.Illuminant.Particles.Transforms {
                 Offset = Vector3.One * 0.5f,
                 Scale = Vector3.One,
             };
-            LastUChangeWhen = 0;
-            CycleUVs();
+
+            Reset();
         }
 
         private void CycleUVs () {
@@ -178,7 +193,19 @@ namespace Squared.Illuminant.Particles.Transforms {
             NextV = RNG.NextDouble();
         }
 
+        public override void Reset () {
+            base.Reset();
+
+            LastUChangeWhen = 0;
+            CycleUVs();
+        }
+
         private void AutoCycleUV (float now, double intervalSecs, out float t) {
+            if (intervalSecs <= 0.01) {
+                t = 0;
+                return;
+            }
+
             var nextChangeWhen = LastUChangeWhen + intervalSecs;
             if (now >= nextChangeWhen) {
                 var elapsed = now - nextChangeWhen;
@@ -209,14 +236,10 @@ namespace Squared.Illuminant.Particles.Transforms {
             float t;
             AutoCycleUV(now, intervalSecs, out t);
 
-            parameters["RandomnessOffset"]?.SetValue(new Vector2(
-                (float)(CurrentU * 253),
-                (float)(CurrentV * 127)
-            ));
-            parameters["NextRandomnessOffset"]?.SetValue(new Vector2(
-                (float)(NextU * 253),
-                (float)(NextV * 127)
-            ));
+            var ro = new Vector2((float)(CurrentU * 253), (float)(CurrentV * 127));
+            var nro = new Vector2((float)(NextU * 253), (float)(NextV * 127));
+            parameters["RandomnessOffset"]?.SetValue(ro);
+            parameters["NextRandomnessOffset"]?.SetValue(nro);
 
             parameters["FrequencyLerp"].SetValue(t);
             parameters["ReplaceOldVelocity"].SetValue(ReplaceOldVelocity);
@@ -224,6 +247,34 @@ namespace Squared.Illuminant.Particles.Transforms {
 
         protected override Material GetMaterial (ParticleMaterials materials) {
             return materials.Noise;
+        }
+    }
+
+    public class SpatialNoise : Noise {
+        /// <summary>
+        /// The scale of the noise field. Larger scale = larger, blurrier pattern.
+        /// </summary>
+        public Parameter<Vector2> SpaceScale;
+
+        public SpatialNoise ()
+            : this (null) {
+        }
+
+        public SpatialNoise (int? seed)
+            : base (seed) {
+
+            SpaceScale = Vector2.One;
+        }
+
+        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
+            base.SetParameters(engine, parameters, now, frameIndex);
+
+            var scale = SpaceScale.Evaluate(now, engine.ResolveVector2);
+            parameters["SpaceScale"].SetValue(new Vector2(1.0f / scale.X, 1.0f / scale.Y));
+        }
+
+        protected override Material GetMaterial (ParticleMaterials materials) {
+            return materials.SpatialNoise;
         }
     }
 
@@ -237,15 +288,31 @@ namespace Squared.Illuminant.Particles.Transforms {
         public const int MaxAttractors = 16;
 
         public class Attractor {
+            /// <summary>
+            /// The center of the attractor.
+            /// </summary>
             public Parameter<Vector3> Position;
+            /// <summary>
+            /// The distance from the center of the attractor to its outer edge.
+            /// </summary>
             public Parameter<float>   Radius = 1;
+            /// <summary>
+            /// The strength of the attractor's pull.
+            /// </summary>
             public Parameter<float>   Strength = 1;
+            /// <summary>
+            /// The falloff formula that applies to the attractor's pull.
+            /// </summary>
             public AttractorType      Type = AttractorType.Linear;
         }
 
+        /// <summary>
+        /// The total forces applied to a particle will not exceed this amount.
+        /// </summary>
         public Parameter<float> MaximumAcceleration = 8;
 
         public readonly List<Attractor> Attractors = new List<Attractor>();
+
         [NonSerialized]
         private Vector3[] _Positions;
         [NonSerialized]

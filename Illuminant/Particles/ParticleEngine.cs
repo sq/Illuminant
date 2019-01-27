@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Graphics.PackedVector;
 using Squared.Illuminant.Configuration;
 using Squared.Illuminant.Util;
 using Squared.Render;
@@ -35,7 +36,7 @@ namespace Squared.Illuminant.Particles {
         internal          VertexBuffer  RasterizeOffsetBuffer;
 
         internal const int              RandomnessTextureWidth = 807,
-                                        RandomnessTextureHeight = 381;
+                                        RandomnessTextureHeight = 653;
         internal          Texture2D     RandomnessTexture, 
             LowPrecisionRandomnessTexture;
 
@@ -311,7 +312,7 @@ namespace Squared.Illuminant.Particles {
                 LowPrecisionRandomnessTexture = new Texture2D(
                     Coordinator.Device,
                     RandomnessTextureWidth, RandomnessTextureHeight, false,
-                    SurfaceFormat.Color
+                    SurfaceFormat.Rgba64
                 );
 
                 var buffer = new Vector4[RandomnessTextureWidth * RandomnessTextureHeight];
@@ -336,9 +337,9 @@ namespace Squared.Illuminant.Particles {
 
                 RandomnessTexture.SetData(buffer);
 
-                var buffer2 = new Color[RandomnessTextureWidth * RandomnessTextureHeight];
+                var buffer2 = new Rgba64[RandomnessTextureWidth * RandomnessTextureHeight];
                 for (int i = 0; i < buffer.Length; i++)
-                    buffer2[i] = new Color(buffer[i]);
+                    buffer2[i] = new Rgba64(buffer[i]);
 
                 LowPrecisionRandomnessTexture.SetData(buffer2);
             }

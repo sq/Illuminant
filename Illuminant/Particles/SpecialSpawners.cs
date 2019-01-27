@@ -212,7 +212,7 @@ namespace Squared.Illuminant.Particles.Transforms {
 
             // FIXME: We can't handle partial spawns from a source particle because tracking
             //  how many we've spawned from it is impossible without more complex state
-            if (spawnCount < InstanceMultiplier) {
+            if ((spawnCount < InstanceMultiplier) && !SpawnFromEntireWindow) {
                 AddError(spawnCount);
                 spawnCount = 0;
                 return;
@@ -252,7 +252,8 @@ namespace Squared.Illuminant.Particles.Transforms {
             // HACK: Select a random offset within the source window to pull source particles from
             //  this is not completely random but for low spawn rates it's going to look somewhat close
             if (SpawnFromEntireWindow) {
-                CurrentFeedbackSourceIndex += RNG.Next(0, availableLessMargin - (spawnCount / InstanceMultiplier));
+                var sourceCount = Math.Max(spawnCount / InstanceMultiplier, 1);
+                CurrentFeedbackSourceIndex += RNG.Next(0, availableLessMargin - sourceCount);
             }
         }
 

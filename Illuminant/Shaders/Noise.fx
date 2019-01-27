@@ -9,6 +9,8 @@ uniform float4 PositionOffset, PositionScale;
 uniform float4 VelocityOffset, VelocityScale;
 uniform bool   ReplaceOldVelocity;
 
+uniform float2 SpaceScale;
+
 uniform float  Strength;
 uniform int    AreaType;
 uniform float3 AreaCenter, AreaSize;
@@ -22,7 +24,7 @@ float computeWeight(float3 worldPosition) {
 }
 
 void PS_Noise(
-    in  float2 xy            : VPOS,
+    in  float2 xy          : VPOS,
     out float4 newPosition : COLOR0,
     out float4 newVelocity : COLOR1
 ) {
@@ -34,13 +36,43 @@ void PS_Noise(
     float weight = computeWeight(oldPosition);
     float t = weight * getDeltaTime() / TimeDivisor;
 
-    float2 randomOffset1 = xy, 
-        // FIXME: Correlated in a way that might be noticeable?
-        randomOffset2 = xy + (NextRandomnessOffset - RandomnessOffset);
-    float4 randomP1 = random(randomOffset1);
-    float4 randomP2 = random(randomOffset2);
-    float4 randomV1 = random(randomOffset1 + float2(2, 1));
-    float4 randomV2 = random(randomOffset2 + float2(2, 1));
+    float4 randomP1 = randomCustom(xy, RandomnessOffset, RandomnessTexel);
+    float4 randomP2 = randomCustom(xy, NextRandomnessOffset, RandomnessTexel);
+    float4 randomV1 = randomCustom(xy + float2(2, 1), RandomnessOffset, RandomnessTexel);
+    float4 randomV2 = randomCustom(xy + float2(2, 1), NextRandomnessOffset, RandomnessTexel);
+
+    float4 randomP = lerp(randomP1, randomP2, FrequencyLerp);
+    float4 randomV = lerp(randomV1, randomV2, FrequencyLerp);
+
+    float4 positionDelta = (randomP - PositionOffset) * PositionScale;
+    float4 velocityDelta = (randomV - VelocityOffset) * VelocityScale;
+
+    newPosition = lerp(oldPosition, oldPosition + positionDelta, t);
+    if (ReplaceOldVelocity)
+        newVelocity = lerp(oldVelocity, velocityDelta, weight);
+    else
+        newVelocity = lerp(oldVelocity, oldVelocity + velocityDelta, t);
+}
+
+void PS_SpatialNoise(
+    in  float2 xy          : VPOS,
+    out float4 newPosition : COLOR0,
+    out float4 newVelocity : COLOR1
+) {
+    float4 oldPosition, oldVelocity;
+    readStatePV(
+        xy, oldPosition, oldVelocity
+    );
+
+    float weight = computeWeight(oldPosition);
+    float t = weight * getDeltaTime() / TimeDivisor;
+
+    float2 randomXy = oldPosition.xy;
+    float2 rate = SpaceScale;
+    float4 randomP1 = smoothRandomCustom(randomXy, RandomnessOffset, rate);
+    float4 randomP2 = smoothRandomCustom(randomXy, NextRandomnessOffset, rate);
+    float4 randomV1 = smoothRandomCustom(randomXy + float2(2, 1), RandomnessOffset, rate);
+    float4 randomV2 = smoothRandomCustom(randomXy + float2(2, 1), NextRandomnessOffset, rate);
 
     float4 randomP = lerp(randomP1, randomP2, FrequencyLerp);
     float4 randomV = lerp(randomV1, randomV2, FrequencyLerp);
@@ -60,5 +92,13 @@ technique Noise {
     {
         vertexShader = compile vs_3_0 VS_Update();
         pixelShader = compile ps_3_0 PS_Noise();
+    }
+}
+
+technique SpatialNoise {
+    pass P0
+    {
+        vertexShader = compile vs_3_0 VS_Update();
+        pixelShader = compile ps_3_0 PS_SpatialNoise();
     }
 }

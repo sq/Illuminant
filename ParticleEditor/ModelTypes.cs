@@ -138,7 +138,13 @@ namespace Lumined {
                 },
                 {
                     "Noise", new Dictionary<string, ModelTypeInfo> {
-                        {"Interval", new ModelTypeInfo { Min = 10, Max = 10000 } },
+                        {"Interval", new ModelTypeInfo { Min = 0, Max = 10000 } },
+                        {"Strength", new ModelTypeInfo { Min = 0, Max = 1 } }
+                    }
+                },
+                {
+                    "SpatialNoise", new Dictionary<string, ModelTypeInfo> {
+                        {"Interval", new ModelTypeInfo { Min = 0, Max = 10000 } },
                         {"Strength", new ModelTypeInfo { Min = 0, Max = 1 } }
                     }
                 },

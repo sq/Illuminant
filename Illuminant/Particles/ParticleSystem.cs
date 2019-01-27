@@ -609,10 +609,9 @@ namespace Squared.Illuminant.Particles {
             if (sourceChunk != null) {
                 var consumedCount = spawnCount;
                 // HACK
-                if (fs != null) {
-                    consumedCount /= fs.InstanceMultiplier;
-                    if (!fs.SpawnFromEntireWindow)
-                        sourceChunk.TotalConsumedForFeedback += consumedCount;
+                if ((fs != null) && !fs.SpawnFromEntireWindow) {
+                    consumedCount = Math.Max(consumedCount / fs.InstanceMultiplier, 1);
+                    sourceChunk.TotalConsumedForFeedback += consumedCount;
                 }
             }
 

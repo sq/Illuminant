@@ -110,9 +110,9 @@ void VS_PosVelAttr(
     frameIndexXy.y = clamp(frameIndexXy.y, 0, frameCountXy.y - 1);
 
     if (getAnimationRate().x < 0)
-        frameIndexXy.x = frameCountXy.x - frameIndexXy.x;
+        frameIndexXy.x = (frameCountXy.x - frameIndexXy.x) - 1;
     if (getAnimationRate().y < 0)
-        frameIndexXy.y = frameCountXy.y - frameIndexXy.y;
+        frameIndexXy.y = (frameCountXy.y - frameIndexXy.y) - 1;
 
     float2 frameTexCoord = frameIndexXy * texSize;
     texCoord += frameTexCoord;
