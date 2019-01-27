@@ -1190,7 +1190,7 @@ namespace Squared.Illuminant.Particles {
                 var rot = rd.Y % (float)(2 * Math.PI);
 
                 if ((frameCountX > 1) || (frameCountY > 1)) {
-                    var frameIndexXy = animRateAbs * life;
+                    var frameIndexXy = (animRateAbs * life).Floor();
 
                     frameIndexXy.Y += (float)Math.Floor(rd.W);
                     if (cfv)

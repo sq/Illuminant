@@ -54,7 +54,7 @@ namespace Lumined {
                 return;
 
             foreach (var system in Systems)
-                system.Instance.Configuration.AutoReadback = GetData().DrawAsBitmaps;
+                system.Instance.Configuration.AutoReadback = GetData().DrawAsBitmaps && (system.Model.Configuration.Appearance?.Texture?.IsInitialized ?? false);
 
             editor.Controller.StepPending = false;
             Time.Advance(deltaTimeTicks);
