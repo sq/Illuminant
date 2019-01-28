@@ -27,13 +27,7 @@ namespace Lumined {
         }
 
         public EditorData GetData () {
-            var ud = Model.UserData["EditorData"];
-            var jud = ud as JObject;
-            if (jud != null) {
-                ud = jud.ToObject<EditorData>();
-                Model.UserData["EditorData"] = ud;
-            }
-            return (EditorData)ud;
+            return Model.GetUserData<EditorData>("EditorData");
         }
 
         protected override ParticleEngineConfiguration MakeConfiguration () {

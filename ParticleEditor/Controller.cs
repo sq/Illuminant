@@ -38,6 +38,10 @@ namespace Lumined {
         [StructLayout(LayoutKind.Sequential)]
         public class State {
             public ListState Systems, Transforms, Variables;
+
+            public State Clone () {
+                return (State)this.MemberwiseClone();
+            }
         }
 
         public bool StepPending;
@@ -45,7 +49,7 @@ namespace Lumined {
         public readonly EditorGame Game;
         public EngineModel Model;
         public View View;
-        public readonly State CurrentState = new State();
+        public State CurrentState { get; private set; }
         public readonly List<ParticleSystemView> QueuedResets = new List<ParticleSystemView>();
 
         internal PositionPropertyInfo SelectedProperty = null, NewSelectedProperty = null;
@@ -101,6 +105,7 @@ namespace Lumined {
             Game = game;
             Model = model;
             View = view;
+            CurrentState = new State();
             StatePin = GCHandle.Alloc(CurrentState, GCHandleType.Pinned);
         }
 
@@ -360,6 +365,7 @@ namespace Lumined {
                     if (dlg.ShowDialog() != DialogResult.OK)
                         return;
 
+                    Model.UserData["ControllerState"] = CurrentState.Clone();
                     Model.Save(dlg.FileName);
                 }
             });
@@ -391,6 +397,17 @@ namespace Lumined {
             Model = model;
             Game.RenderCoordinator.DisposeResource(View);
             Game.View = View = new View(model);
+
+            if (StatePin.IsAllocated)
+                StatePin.Free();
+
+            if (model.UserData.ContainsKey("ControllerState")) {
+                CurrentState = (model.GetUserData<State>("ControllerState") ?? new State()).Clone();
+            } else {
+                CurrentState = new State();
+            }
+            StatePin = GCHandle.Alloc(CurrentState, GCHandleType.Pinned);
+
             View.Initialize(Game);
         }
 

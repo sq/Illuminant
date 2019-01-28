@@ -25,6 +25,22 @@ namespace Squared.Illuminant.Modeling {
             Filename = null;
         }
 
+        public T GetUserData<T> (string key)
+            where T : class {
+            object result;
+            if (!UserData.TryGetValue(key, out result))
+                return default(T);
+
+            var jud = result as JObject;
+            if (jud != null) {
+                var ud = jud.ToObject<T>();
+                UserData[key] = ud;
+                return ud;
+            }
+
+            return result as T;
+        }
+
         public void Normalize (bool forSave) {
             foreach (var s in Systems)
                 s.Normalize(forSave);

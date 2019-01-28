@@ -95,7 +95,10 @@ namespace Lumined {
             }
             if (Model.Filename != null) {
                 if (Nuklear.Button("Save")) {
-                    RunWorkItem(() => Model.Save(Model.Filename));
+                    RunWorkItem(() => {
+                        Model.UserData["ControllerState"] = Controller.CurrentState.Clone();
+                        Model.Save(Model.Filename);
+                    });
                 }
                 if (Nuklear.Button("Save As"))
                     Controller.ShowSaveDialog();

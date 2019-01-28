@@ -1286,6 +1286,8 @@ namespace Squared.Illuminant {
 
             ComputeUniforms();
 
+            viewDirection.Normalize();
+
             var tl = new Vector3(rectangle.TopLeft, 0);
             var tr = new Vector3(rectangle.TopRight, 0);
             var bl = new Vector3(rectangle.BottomLeft, 0);
@@ -1311,6 +1313,16 @@ namespace Squared.Illuminant {
             }
             var extent = worldMax - worldMin;
             var center = (worldMin + worldMax) / 2f;
+            var centerMask = new Vector3(
+                Math.Abs(Math.Sign(viewDirection.X)),
+                Math.Abs(Math.Sign(viewDirection.Y)),
+                Math.Abs(Math.Sign(viewDirection.Z))
+            );
+            center = new Vector3(
+                MathHelper.Lerp(center.X, worldMin.X, centerMask.X),
+                MathHelper.Lerp(center.Y, worldMin.Y, centerMask.Y),
+                MathHelper.Lerp(center.Z, worldMin.Z, centerMask.Z)
+            );
             var halfTexel = new Vector3(-0.5f * (1.0f / extent.X), -0.5f * (1.0f / extent.Y), 0);
 
             // HACK: Pick an appropriate length that will always travel through the whole field
