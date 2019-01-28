@@ -11,6 +11,7 @@ float evaluateFunctions (float3 worldPosition, float vars);
 
 #define OUTLINE_SIZE OutlineSize
 #define FILL_INTERIOR FilledInterior
+#define VISUALIZE_TEXEL float4(0.75, 0.75, 0.75, 0)
 
 uniform bool   FilledInterior;
 uniform float  OutlineSize;

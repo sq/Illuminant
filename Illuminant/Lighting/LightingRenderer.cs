@@ -1357,7 +1357,7 @@ namespace Squared.Illuminant {
                 var planeCenter = FindBoxIntersection(ray, worldMin, worldMax);
                 if (!planeCenter.HasValue)
                     return new VisualizationInfo { Failed = true, Right = right, Up = up, ViewDirection = viewDirection };
-                rayOrigin = planeCenter.Value;
+                rayOrigin = planeCenter.Value - viewDirection;
             }
 
             Vector3 worldTL, worldTR, worldBL, worldBR;

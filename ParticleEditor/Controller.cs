@@ -263,10 +263,9 @@ namespace Lumined {
                     var padding = (falloff * 2f) + 1f;
                     var bounds = obj.Bounds3.XY.Expand(padding, padding);
                     Game.LightingRenderer.VisualizeDistanceField(
-                        bounds, -Vector3.UnitZ, container, layer, obj, VisualizationMode.Surfaces,
+                        bounds, -Vector3.UnitZ, container, layer, obj, VisualizationMode.Silhouettes,
                         worldBounds: obj.Bounds3.Expand(padding, padding, 0f),
-                        outlineSize: falloff, color: new Vector4(0.5f, 0.1f, 0.1f, 0.5f),
-                        ambientColor: Vector3.One * 0.2f, lightColor: Vector3.One
+                        outlineSize: falloff, color: new Vector4(0.4f, 0.2f, 0.1f, 0.2f)
                     );
                 }
 
