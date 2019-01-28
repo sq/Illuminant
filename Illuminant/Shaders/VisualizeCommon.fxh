@@ -1,6 +1,11 @@
 #define SMALL_STEP_FACTOR 1
 #define EPSILON 0.5
-#define OUTLINE_SIZE 1.8
+#ifndef OUTLINE_SIZE
+    #define OUTLINE_SIZE 1.8
+#endif
+#ifndef FILL_INTERIOR
+    #define FILL_INTERIOR false
+#endif
 
 float3 estimateNormal3(
     float3   position,
@@ -113,8 +118,13 @@ float traceOutlines (
 
         closestDistance = min(distance, closestDistance);
 
-        if (distance < -OUTLINE_SIZE)
-            break;
+        if (FILL_INTERIOR) {
+            if (distance <= 1)
+                return 1;
+        } else {
+            if (distance < -OUTLINE_SIZE)
+                break;
+        }
 
         float minStepSize = max(2.5, (positionAlongRay / rayLength) * 12);
         float stepSize = max(minStepSize, abs(distance) * SMALL_STEP_FACTOR);

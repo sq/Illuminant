@@ -1279,7 +1279,8 @@ namespace Squared.Illuminant {
             Vector3? ambientColor = null,
             Vector3? lightColor = null,
             Vector3? lightDirection = null,
-            Bounds3? worldBounds = null
+            Bounds3? worldBounds = null,
+            float outlineSize = 1.8f
         ) {
             if ((_DistanceField == null) && (singleObject == null))
                 return new VisualizationInfo { Failed = true };
@@ -1318,12 +1319,17 @@ namespace Squared.Illuminant {
                 Math.Abs(Math.Sign(viewDirection.Y)),
                 Math.Abs(Math.Sign(viewDirection.Z))
             );
+            var halfDisplaySize = new Vector3(
+                MathHelper.Lerp(extent.X / 2f, 0, centerMask.X),
+                MathHelper.Lerp(extent.Y / 2f, 0, centerMask.Y),
+                MathHelper.Lerp(extent.Z / 2f, 0, centerMask.Z)
+            );
             center = new Vector3(
                 MathHelper.Lerp(center.X, worldMin.X, centerMask.X),
                 MathHelper.Lerp(center.Y, worldMin.Y, centerMask.Y),
                 MathHelper.Lerp(center.Z, worldMin.Z, centerMask.Z)
             );
-            var halfTexel = new Vector3(-0.5f * (1.0f / extent.X), -0.5f * (1.0f / extent.Y), 0);
+            var halfTexel = new Vector3(-0.5f * (1.0f / rectangle.Size.X), -0.5f * (1.0f / rectangle.Size.Y), 0);
 
             // HACK: Pick an appropriate length that will always travel through the whole field
             var rayLength = extent.Length() * 2f;
@@ -1364,10 +1370,10 @@ namespace Squared.Illuminant {
             var planeRight = Vector3.Cross(absViewDirection, up);
             var planeUp = Vector3.Cross(absViewDirection, right);
 
-            worldTL = rayOrigin + (-planeRight * center) + (-planeUp  * center);
-            worldTR = rayOrigin + (planeRight  * center) + (-planeUp  * center);
-            worldBL = rayOrigin + (-planeRight * center) + (planeUp * center);
-            worldBR = rayOrigin + (planeRight  * center) + (planeUp * center);
+            worldTL = rayOrigin + (-planeRight * halfDisplaySize) + (-planeUp * halfDisplaySize);
+            worldTR = rayOrigin + ( planeRight * halfDisplaySize) + (-planeUp * halfDisplaySize);
+            worldBL = rayOrigin + (-planeRight * halfDisplaySize) + ( planeUp * halfDisplaySize);
+            worldBR = rayOrigin + ( planeRight * halfDisplaySize) + ( planeUp * halfDisplaySize);
 
             var _color = color.GetValueOrDefault(Vector4.One);
 
@@ -1401,11 +1407,11 @@ namespace Squared.Illuminant {
             Render.Material material = null;
 
             if (singleObject != null) {
-                material = mode == VisualizationMode.Outlines
+                material = mode != VisualizationMode.Surfaces
                     ? IlluminantMaterials.FunctionOutline
                     : IlluminantMaterials.FunctionSurface;
             } else {
-                material = mode == VisualizationMode.Outlines
+                material = mode != VisualizationMode.Surfaces
                     ? IlluminantMaterials.ObjectOutlines
                     : IlluminantMaterials.ObjectSurfaces;
             }
@@ -1437,6 +1443,9 @@ namespace Squared.Illuminant {
                         p["FunctionCenter"].SetValue(singleObject.Center);
                         p["FunctionSize"].SetValue(singleObject.Size);
                     }
+
+                    p["OutlineSize"]?.SetValue(Math.Max(outlineSize, 1f));
+                    p["FilledInterior"]?.SetValue(mode == VisualizationMode.Silhouettes);
                 }
             )) {
                 batch.Add(new PrimitiveDrawCall<VisualizeDistanceFieldVertex>(
@@ -1945,7 +1954,8 @@ namespace Squared.Illuminant {
 
     public enum VisualizationMode {
         Surfaces,
-        Outlines
+        Outlines,
+        Silhouettes
     }
 
     public struct VisualizationInfo {

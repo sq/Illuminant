@@ -9,7 +9,11 @@ float evaluateFunctions (float3 worldPosition, float vars);
 #define TRACE_MIN_STEP_SIZE 2
 #define TRACE_FINAL_MIN_STEP_SIZE 12
 
-#include "VisualizeCommon.fxh"
+#define OUTLINE_SIZE OutlineSize
+#define FILL_INTERIOR FilledInterior
+
+uniform bool   FilledInterior;
+uniform float  OutlineSize;
 
 uniform float3 AmbientColor;
 uniform float3 LightDirection;
@@ -18,6 +22,8 @@ uniform float3 LightColor;
 uniform int    FunctionType;
 uniform float3 FunctionCenter;
 uniform float3 FunctionSize;
+
+#include "VisualizeCommon.fxh"
 
 float4 ApplyTransform (float3 position) {
     float3 localPosition = ((position - float3(Viewport.Position.xy, 0)) * float3(Viewport.Scale, 1));
