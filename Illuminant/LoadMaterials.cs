@@ -331,6 +331,10 @@ namespace Squared.Illuminant.Particles {
                     effects.Load("SpawnParticles"), "SpawnParticles", dBegin, dEnd
                 ));
 
+                DefineMaterial(ParticleMaterials.SpawnFromPositionTexture = new Material(
+                    effects.Load("SpawnParticles"), "SpawnParticlesFromPositionTexture", dBegin, dEnd
+                ));
+
                 DefineMaterial(ParticleMaterials.SpawnFeedback = new Material(
                     effects.Load("SpawnParticles"), "SpawnFeedbackParticles", dBegin, dEnd
                 ));

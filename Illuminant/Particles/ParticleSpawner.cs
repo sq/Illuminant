@@ -201,7 +201,7 @@ namespace Squared.Illuminant.Particles.Transforms {
     }
 
     public sealed class Spawner : SpawnerBase {
-        public const int MaxPositions = 4;
+        public const int MaxInlinePositions = 4;
 
         /// <summary>
         /// If set, the spawn position will trace a linear path between each specified
@@ -223,12 +223,14 @@ namespace Squared.Illuminant.Particles.Transforms {
         public bool RatePerPosition = true;
 
         [NonSerialized]
-        private Vector4[] Temp3 = new Vector4[MaxPositions];
+        private Vector4[] Temp3 = new Vector4[MaxInlinePositions];
         [NonSerialized]
         private Texture2D PositionBuffer = null;
 
         protected override Material GetMaterial (ParticleMaterials materials) {
-            return materials.Spawn;
+            return (AdditionalPositions.Count > MaxInlinePositions)
+                ? materials.SpawnFromPositionTexture
+                : materials.Spawn;
         }
 
         protected override int CountScale {
@@ -242,7 +244,7 @@ namespace Squared.Illuminant.Particles.Transforms {
         }
 
         protected override Vector4 GetChunkSizeAndIndices (ParticleEngine engine) {
-            var count = Math.Min(1 + AdditionalPositions.Count, MaxPositions);
+            var count = 1 + AdditionalPositions.Count;
             var result = base.GetChunkSizeAndIndices(engine);
             var polygonRate = PolygonRate.GetValueOrDefault(0);
             if (polygonRate >= 1) {
@@ -261,12 +263,12 @@ namespace Squared.Illuminant.Particles.Transforms {
             var life = Life.Constant.Evaluate(now, engine.ResolveSingle);
             var position = Position.Constant.Evaluate(now, engine.ResolveVector3);
             Temp3[0] = new Vector4(position, life);
-            for (var i = 0; (i < AdditionalPositions.Count) && (i < MaxPositions - 1); i++) {
+            for (var i = 0; (i < AdditionalPositions.Count) && (i < MaxInlinePositions - 1); i++) {
                 var ap = AdditionalPositions[i];
                 Temp3[i + 1] = new Vector4(ap, life);
             }
 
-            var count = Math.Min(1 + AdditionalPositions.Count, MaxPositions);
+            var count = Math.Min(1 + AdditionalPositions.Count, MaxInlinePositions);
             parameters["PositionConstantCount"].SetValue((float)count);
             parameters["PositionConstants"].SetValue(Temp3);
             parameters["PolygonRate"].SetValue(PolygonRate.GetValueOrDefault(0));

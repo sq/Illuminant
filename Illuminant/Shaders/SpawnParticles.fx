@@ -96,7 +96,7 @@ void evaluateRandomForIndex(in float index, out float4 random1, out float4 rando
 bool Spawn_Stage1(
     in float2 xy,
     out float4 random1, out float4 random2, out float4 random3,
-    out float4 positionConstant
+    out int index1, out int index2, out float positionIndexT
 ) {
     float index = (xy.x) + (xy.y * ChunkSizeAndIndices.x);
 
@@ -113,22 +113,18 @@ bool Spawn_Stage1(
     if (PolygonRate > 0.05) {
         float positionIndexF = (relativeIndex / PolygonRate) + ChunkSizeAndIndices.w;
         float divisor = PositionConstantCount;
-        int index1, index2;
-        float positionIndexI, positionIndexT = modf(positionIndexF, positionIndexI);
+        float positionIndexI;
+        positionIndexT = modf(positionIndexF, positionIndexI);
         if (PolygonLoop) {
             index1 = positionIndexI % divisor;
             index2 = (positionIndexI + 1) % divisor;
-        }
-        else {
+        } else {
             index1 = positionIndexI % divisor;
             index2 = min(index1 + 1, divisor - 1);
         }
-        float4 position1 = PositionConstants[index1],
-            position2 = PositionConstants[index2];
-        positionConstant = lerp(position1, position2, positionIndexT);
     } else {
-        float positionIndex = (relativeIndex + ChunkSizeAndIndices.w) % PositionConstantCount;
-        positionConstant = PositionConstants[positionIndex];
+        index1 = index2 = (relativeIndex + ChunkSizeAndIndices.w) % PositionConstantCount;
+        positionIndexT = 0;
     }
 
     return true;
@@ -140,10 +136,16 @@ void Spawn_Common(
     out float4 newVelocity,
     out float4 newAttributes
 ) {
+    int index1, index2;
+    float positionIndexT;
     float4 random1, random2, random3, positionConstant;
 
-    if (!Spawn_Stage1(xy, random1, random2, random3, positionConstant))
+    if (!Spawn_Stage1(xy, random1, random2, random3, index1, index2, positionIndexT))
         return;
+
+    float4 position1 = PositionConstants[index1],
+        position2 = PositionConstants[index2];
+    positionConstant = lerp(position1, position2, positionIndexT);
 
     float4 tempPosition = evaluateFormula(0, positionConstant, Configuration[0], Configuration[1], random1, FormulaTypes.x);
 

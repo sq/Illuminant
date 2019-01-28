@@ -115,7 +115,7 @@ namespace Lumined {
                                 var c = s.Position.Constant.Evaluate(0, null);
                                 return c;
                             },
-                            MaxCount = Spawner.MaxPositions - 1
+                            MaxCount = Spawner.MaxInlinePositions - 1
                         } },
                         {"Color", new ModelTypeInfo { Type = "ColorFormula" } },
                         {"AlphaDiscardThreshold", new ModelTypeInfo { Min = 0, Max = 255 } }
