@@ -225,10 +225,12 @@ namespace Squared.Illuminant.Particles.Transforms {
         [NonSerialized]
         private Vector4[] Temp3 = new Vector4[MaxInlinePositions];
         [NonSerialized]
-        private Texture2D PositionBuffer = null;
+        private Vector4[] Temp4;
+        [NonSerialized]
+        private Texture2D PositionBuffer;
 
         protected override Material GetMaterial (ParticleMaterials materials) {
-            return (AdditionalPositions.Count > MaxInlinePositions)
+            return (AdditionalPositions.Count >= MaxInlinePositions)
                 ? materials.SpawnFromPositionTexture
                 : materials.Spawn;
         }
@@ -241,6 +243,38 @@ namespace Squared.Illuminant.Particles.Transforms {
 
         public override void BeginTick (ParticleSystem system, double now, double deltaTimeSeconds, out int spawnCount, out ParticleSystem.Chunk sourceChunk) {
             base.BeginTick(system, now, deltaTimeSeconds, out spawnCount, out sourceChunk);
+
+            var life = Life.Constant.Evaluate((float)now, system.Engine.ResolveSingle);
+            var position = Position.Constant.Evaluate((float)now, system.Engine.ResolveVector3);
+
+            var count = AdditionalPositions.Count + 1;
+            if (count > MaxInlinePositions) {
+                if ((PositionBuffer != null) && (PositionBuffer.Width < count)) {
+                    system.Engine.Coordinator.DisposeResource(PositionBuffer);
+                    PositionBuffer = null;
+                }
+                if (PositionBuffer == null) {
+                    var bufSize = (count + 127) / 128 * 128;
+                    Temp4 = new Vector4[bufSize];
+                    lock (system.Engine.Coordinator.CreateResourceLock)
+                        PositionBuffer = new Texture2D(system.Engine.Coordinator.Device, bufSize, 1, false, SurfaceFormat.Vector4);
+                }
+
+                Temp4[0] = new Vector4(position, life);
+                for (var i = 0; i < AdditionalPositions.Count; i++) {
+                    var ap = AdditionalPositions[i];
+                    Temp4[i + 1] = new Vector4(ap, life);
+                }
+
+                lock (system.Engine.Coordinator.UseResourceLock)
+                    PositionBuffer.SetData(Temp4);
+            } else {
+                Temp3[0] = new Vector4(position, life);
+                for (var i = 0; (i < AdditionalPositions.Count) && (i < MaxInlinePositions - 1); i++) {
+                    var ap = AdditionalPositions[i];
+                    Temp3[i + 1] = new Vector4(ap, life);
+                }
+            }
         }
 
         protected override Vector4 GetChunkSizeAndIndices (ParticleEngine engine) {
@@ -260,19 +294,26 @@ namespace Squared.Illuminant.Particles.Transforms {
         protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
             base.SetParameters(engine, parameters, now, frameIndex);
 
-            var life = Life.Constant.Evaluate(now, engine.ResolveSingle);
-            var position = Position.Constant.Evaluate(now, engine.ResolveVector3);
-            Temp3[0] = new Vector4(position, life);
-            for (var i = 0; (i < AdditionalPositions.Count) && (i < MaxInlinePositions - 1); i++) {
-                var ap = AdditionalPositions[i];
-                Temp3[i + 1] = new Vector4(ap, life);
+            var count = 1 + AdditionalPositions.Count;
+            if (count > MaxInlinePositions) {
+                parameters["PositionConstantTexel"].SetValue(new Vector2(1.0f / PositionBuffer.Width, 1.0f / PositionBuffer.Height));
+                parameters["PositionConstantTexture"].SetValue(PositionBuffer);
+            } else {
+                parameters["InlinePositionConstants"].SetValue(Temp3);
+                parameters["PositionConstantTexture"]?.SetValue((Texture2D)null);
             }
-
-            var count = Math.Min(1 + AdditionalPositions.Count, MaxInlinePositions);
             parameters["PositionConstantCount"].SetValue((float)count);
-            parameters["PositionConstants"].SetValue(Temp3);
             parameters["PolygonRate"].SetValue(PolygonRate.GetValueOrDefault(0));
             parameters["PolygonLoop"].SetValue(PolygonLoop);
+        }
+
+        public override void Dispose () {
+            base.Dispose();
+
+            if (PositionBuffer != null) {
+                PositionBuffer.Dispose();
+                PositionBuffer = null;
+            }
         }
 
         public override bool IsValid {

@@ -15,7 +15,8 @@ uniform float4 PatternSizeRowSizeAndResolution;
 uniform float2 InitialPatternXY;
 
 uniform float  PositionConstantCount;
-uniform float4 PositionConstants[MAX_INLINE_POSITION_CONSTANTS];
+uniform float2 PositionConstantTexel;
+uniform float4 InlinePositionConstants[MAX_INLINE_POSITION_CONSTANTS];
 
 Texture2D PositionConstantTexture;
 sampler PositionConstantSampler {
@@ -130,29 +131,19 @@ bool Spawn_Stage1(
     return true;
 }
 
-void Spawn_Common(
-    in float2 xy,
+void Spawn_Stage2(
+    in float4 positionConstant,
+    in float4 random1, in float4 random2, in float4 random3,
     out float4 newPosition,
     out float4 newVelocity,
     out float4 newAttributes
 ) {
-    int index1, index2;
-    float positionIndexT;
-    float4 random1, random2, random3, positionConstant;
-
-    if (!Spawn_Stage1(xy, random1, random2, random3, index1, index2, positionIndexT))
-        return;
-
-    float4 position1 = PositionConstants[index1],
-        position2 = PositionConstants[index2];
-    positionConstant = lerp(position1, position2, positionIndexT);
-
     float4 tempPosition = evaluateFormula(0, positionConstant, Configuration[0], Configuration[1], random1, FormulaTypes.x);
 
     newPosition = mul(float4(tempPosition.xyz, 1), PositionMatrix);
     newPosition.w = tempPosition.w;
 
-    newVelocity   = evaluateFormula(newPosition, Configuration[2], Configuration[3], Configuration[4], random2, FormulaTypes.y);
+    newVelocity = evaluateFormula(newPosition, Configuration[2], Configuration[3], Configuration[4], random2, FormulaTypes.y);
     newAttributes = evaluateFormula(newPosition, Configuration[5], Configuration[6], Configuration[7], random3, FormulaTypes.z);
 
     if (newAttributes.w < AttributeDiscardThreshold)
@@ -165,7 +156,18 @@ void PS_Spawn (
     out float4 newVelocity   : COLOR1,
     out float4 newAttributes : COLOR2
 ) {
-    Spawn_Common(xy, newPosition, newVelocity, newAttributes);
+    int index1, index2;
+    float positionIndexT;
+    float4 random1, random2, random3, positionConstant;
+
+    if (!Spawn_Stage1(xy, random1, random2, random3, index1, index2, positionIndexT))
+        return;
+
+    float4 position1 = InlinePositionConstants[index1],
+        position2 = InlinePositionConstants[index2];
+    positionConstant = lerp(position1, position2, positionIndexT);
+
+    Spawn_Stage2(positionConstant, random1, random2, random3, newPosition, newVelocity, newAttributes);
 }
 
 void PS_SpawnFromPositionTexture (
@@ -174,7 +176,18 @@ void PS_SpawnFromPositionTexture (
     out float4 newVelocity   : COLOR1,
     out float4 newAttributes : COLOR2
 ) {
-    Spawn_Common(xy, newPosition, newVelocity, newAttributes);
+    int index1, index2;
+    float positionIndexT;
+    float4 random1, random2, random3, positionConstant;
+
+    if (!Spawn_Stage1(xy, random1, random2, random3, index1, index2, positionIndexT))
+        return;
+
+    float4 position1 = tex2Dlod(PositionConstantSampler, float4(index1 * PositionConstantTexel.x, 0, 0, 0)),
+        position2 = tex2Dlod(PositionConstantSampler, float4(index2 * PositionConstantTexel.x, 0, 0, 0));
+    positionConstant = lerp(position1, position2, positionIndexT);
+
+    Spawn_Stage2(positionConstant, random1, random2, random3, newPosition, newVelocity, newAttributes);
 }
 
 void PS_SpawnFeedback (
@@ -204,7 +217,7 @@ void PS_SpawnFeedback (
     evaluateRandomForIndex(index, random1, random2, random3);
 
     float relativeIndex = (index - ChunkSizeAndIndices.y) + ChunkSizeAndIndices.w;
-    float4 positionConstant = PositionConstants[0];
+    float4 positionConstant = InlinePositionConstants[0];
     if (AlignPositionConstant)
         positionConstant.xyz += sourcePosition.xyz;
     float4 tempPosition = evaluateFormula(0, positionConstant, Configuration[0], Configuration[1], random1, FormulaTypes.x);
@@ -259,7 +272,7 @@ void PS_SpawnPattern (
     float4 random1, random2, random3;
     evaluateRandomForIndex(index, random1, random2, random3);
 
-    float4 positionConstant = PositionConstants[0];
+    float4 positionConstant = InlinePositionConstants[0];
     float4 pixelAlignment = float4(patternXy - (patternSize * 0.5), 0, 0);
     float4 tempPosition = evaluateFormula(0, positionConstant + pixelAlignment, Configuration[0], Configuration[1], random1, FormulaTypes.x);
 

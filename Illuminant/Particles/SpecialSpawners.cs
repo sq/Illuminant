@@ -101,7 +101,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             var position = Position.Constant.Evaluate(now, engine.ResolveVector3);
             Temp3[0] = new Vector4(position, life);
             parameters["PositionConstantCount"].SetValue((float)1);
-            parameters["PositionConstants"].SetValue(Temp3);
+            parameters["InlinePositionConstants"].SetValue(Temp3);
             parameters["MultiplyAttributeConstant"].SetValue(MultiplyColorConstant);
             parameters["PatternTexture"].SetValue(Texture.Instance);
             parameters["PatternSizeRowSizeAndResolution"].SetValue(new Vector4(
@@ -281,7 +281,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             var position = Position.Constant.Evaluate(now, engine.ResolveVector3);
             Temp3[0] = new Vector4(position, life);
             parameters["PositionConstantCount"].SetValue((float)1);
-            parameters["PositionConstants"].SetValue(Temp3);
+            parameters["InlinePositionConstants"].SetValue(Temp3);
             parameters["AlignPositionConstant"].SetValue(AlignPositionConstant);
             parameters["MultiplyLife"].SetValue(MultiplyLife);
             parameters["MultiplyAttributeConstant"].SetValue(MultiplyColorConstant);
