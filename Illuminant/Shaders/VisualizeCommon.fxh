@@ -6,6 +6,14 @@
 #ifndef FILL_INTERIOR
     #define FILL_INTERIOR false
 #endif
+#ifndef VISUALIZE_TEXEL
+    #define VISUALIZE_TEXEL (float4( \
+        getInvScaleFactorX(), \
+        getInvScaleFactorY(), \
+        DistanceField.Extent.z / max(DistanceField.TextureSliceCount.w, 1), \
+        0 \
+    ))
+#endif
 
 float3 estimateNormal3(
     float3   position,
@@ -13,13 +21,7 @@ float3 estimateNormal3(
 ) {
     // We want to stagger the samples so that we are moving a reasonable distance towards the nearest texel
     // FIXME: Pick better constant when sampling a distance function
-    float4 texel = float4(
-        getInvScaleFactorX(),
-        getInvScaleFactorY(),
-        DistanceField.Extent.z / DistanceField.TextureSliceCount.w,
-        0
-    );
-
+    float4 texel = VISUALIZE_TEXEL;
     float3 result = 0;
 
     [loop]
@@ -48,12 +50,7 @@ float3 estimateNormal4(
 ) {
     // We want to stagger the samples so that we are moving a reasonable distance towards the nearest texel
     // FIXME: Pick better constant when sampling a distance function
-    float4 texel = float4(
-        getInvScaleFactorX(),
-        getInvScaleFactorY(),
-        DistanceField.Extent.z / DistanceField.TextureSliceCount.w,
-        0
-    );
+    float4 texel = VISUALIZE_TEXEL;
 
     float3 result = 0;
     [loop]
