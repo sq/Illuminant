@@ -570,9 +570,8 @@ namespace Squared.Illuminant.Particles {
         }
 
         private bool RunSpawner (
-            IBatchContainer container, ref int layer, Material m,
+            IBatchContainer container, ref int layer,
             long startedWhen, Transforms.SpawnerBase spawner,
-            Transforms.ParameterSetter setParameters,
             double deltaTimeSeconds, double now, bool isSecondPass
         ) {
             int spawnCount = 0, requestedSpawnCount;
@@ -623,7 +622,7 @@ namespace Squared.Illuminant.Particles {
                 var h = isSecondPass ? spawner.Handler2 : spawner.Handler;
 
                 RunTransform(
-                    chunk, container, ref layer, m,
+                    chunk, container, ref layer, ((Transforms.IParticleTransform)spawner).GetMaterial(Engine.ParticleMaterials),
                     startedWhen, true,
                     h.BeforeDraw, h.AfterDraw, 
                     deltaTimeSeconds, needClear, now, false,
@@ -1000,15 +999,13 @@ namespace Squared.Illuminant.Particles {
 
                     var it = (Transforms.IParticleTransform)s;
                     var isPartialSpawn = RunSpawner(
-                        group, ref i, it.GetMaterial(Engine.ParticleMaterials),
-                        startedWhen, s,
-                        it.SetParameters, actualDeltaTimeSeconds, now, false
+                        group, ref i, startedWhen, s,
+                        actualDeltaTimeSeconds, now, false
                     );
                     if (isPartialSpawn)
                         RunSpawner(
-                            group, ref i, it.GetMaterial(Engine.ParticleMaterials),
-                            startedWhen, s,
-                            it.SetParameters, actualDeltaTimeSeconds, now, true
+                            group, ref i, startedWhen, s,
+                            actualDeltaTimeSeconds, now, true
                         );
                 }
 

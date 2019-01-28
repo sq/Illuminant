@@ -1,12 +1,11 @@
 #include "ParticleCommon.fxh"
 #include "RandomCommon.fxh"
 
-#define MAX_POSITION_CONSTANTS 32
+#define MAX_INLINE_POSITION_CONSTANTS 4
 
 uniform bool   AlignVelocityAndPosition, ZeroZAxis, MultiplyLife, SpawnFromEntireWindow;
 uniform bool   AlignPositionConstant, MultiplyAttributeConstant, PolygonLoop;
-uniform float  PolygonRate, SourceVelocityFactor, FeedbackSourceIndex, PositionConstantCount, AttributeDiscardThreshold, InstanceMultiplier;
-uniform float4 PositionConstants[MAX_POSITION_CONSTANTS];
+uniform float  PolygonRate, SourceVelocityFactor, FeedbackSourceIndex, AttributeDiscardThreshold, InstanceMultiplier;
 uniform float4 ChunkSizeAndIndices;
 uniform float4 Configuration[8];
 uniform float4 FormulaTypes;
@@ -14,6 +13,19 @@ uniform float4x4 PositionMatrix;
 uniform float3 SourceChunkSizeAndTexel;
 uniform float4 PatternSizeRowSizeAndResolution;
 uniform float2 InitialPatternXY;
+
+uniform float  PositionConstantCount;
+uniform float4 PositionConstants[MAX_INLINE_POSITION_CONSTANTS];
+
+Texture2D PositionConstantTexture;
+sampler PositionConstantSampler {
+    Texture = (PositionConstantTexture);
+    AddressU = CLAMP;
+    AddressV = CLAMP;
+    MipFilter = POINT;
+    MinFilter = POINT;
+    MagFilter = POINT;
+};
 
 Texture2D PatternTexture;
 sampler PatternSampler {
@@ -81,26 +93,23 @@ void evaluateRandomForIndex(in float index, out float4 random1, out float4 rando
         random2.xy = random1.xy;
 }
 
-void PS_Spawn (
-    in  float2 xy            : VPOS,
-    out float4 newPosition   : COLOR0,
-    out float4 newVelocity   : COLOR1,
-    out float4 newAttributes : COLOR2
+bool Spawn_Stage1(
+    in float2 xy,
+    out float4 random1, out float4 random2, out float4 random3,
+    out float4 positionConstant
 ) {
     float index = (xy.x) + (xy.y * ChunkSizeAndIndices.x);
 
     [branch]
     if ((index < ChunkSizeAndIndices.y) || (index > ChunkSizeAndIndices.z)) {
         discard;
-        return;
+        return false;
     }
 
-    float4 random1, random2, random3;
     evaluateRandomForIndex(index, random1, random2, random3);
 
     // Ensure the z axis of generated circular coordinates is 0, resulting in pure xy normals
     float relativeIndex = (index - ChunkSizeAndIndices.y);
-    float4 positionConstant;
     if (PolygonRate > 0.05) {
         float positionIndexF = (relativeIndex / PolygonRate) + ChunkSizeAndIndices.w;
         float divisor = PositionConstantCount;
@@ -109,7 +118,8 @@ void PS_Spawn (
         if (PolygonLoop) {
             index1 = positionIndexI % divisor;
             index2 = (positionIndexI + 1) % divisor;
-        } else {
+        }
+        else {
             index1 = positionIndexI % divisor;
             index2 = min(index1 + 1, divisor - 1);
         }
@@ -120,6 +130,21 @@ void PS_Spawn (
         float positionIndex = (relativeIndex + ChunkSizeAndIndices.w) % PositionConstantCount;
         positionConstant = PositionConstants[positionIndex];
     }
+
+    return true;
+}
+
+void Spawn_Common(
+    in float2 xy,
+    out float4 newPosition,
+    out float4 newVelocity,
+    out float4 newAttributes
+) {
+    float4 random1, random2, random3, positionConstant;
+
+    if (!Spawn_Stage1(xy, random1, random2, random3, positionConstant))
+        return;
+
     float4 tempPosition = evaluateFormula(0, positionConstant, Configuration[0], Configuration[1], random1, FormulaTypes.x);
 
     newPosition = mul(float4(tempPosition.xyz, 1), PositionMatrix);
@@ -130,6 +155,24 @@ void PS_Spawn (
 
     if (newAttributes.w < AttributeDiscardThreshold)
         discard;
+}
+
+void PS_Spawn (
+    in  float2 xy            : VPOS,
+    out float4 newPosition   : COLOR0,
+    out float4 newVelocity   : COLOR1,
+    out float4 newAttributes : COLOR2
+) {
+    Spawn_Common(xy, newPosition, newVelocity, newAttributes);
+}
+
+void PS_SpawnFromPositionTexture (
+    in  float2 xy            : VPOS,
+    out float4 newPosition   : COLOR0,
+    out float4 newVelocity   : COLOR1,
+    out float4 newAttributes : COLOR2
+) {
+    Spawn_Common(xy, newPosition, newVelocity, newAttributes);
 }
 
 void PS_SpawnFeedback (
@@ -241,6 +284,14 @@ technique SpawnParticles {
     {
         vertexShader = compile vs_3_0 VS_Spawn();
         pixelShader = compile ps_3_0 PS_Spawn();
+    }
+}
+
+technique SpawnParticlesFromPositionTexture {
+    pass P0
+    {
+        vertexShader = compile vs_3_0 VS_Spawn();
+        pixelShader = compile ps_3_0 PS_SpawnFromPositionTexture();
     }
 }
 

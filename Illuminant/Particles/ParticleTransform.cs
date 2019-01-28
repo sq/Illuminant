@@ -228,17 +228,21 @@ namespace Squared.Illuminant.Particles.Transforms {
         public float Strength = 1;
         public TransformArea Area = null;
 
-        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
-            if (Area != null) {
-                parameters["AreaType"].SetValue((int)Area.Type);
-                parameters["AreaCenter"].SetValue(Area.Center.Evaluate(now, engine.ResolveVector3));
-                parameters["AreaSize"].SetValue(Area.Size.Evaluate(now, engine.ResolveVector3));
-                var falloff = Area.Falloff.Evaluate(now, engine.ResolveSingle);
+        public static void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, TransformArea area) {
+            if (area != null) {
+                parameters["AreaType"].SetValue((int)area.Type);
+                parameters["AreaCenter"].SetValue(area.Center.Evaluate(now, engine.ResolveVector3));
+                parameters["AreaSize"].SetValue(area.Size.Evaluate(now, engine.ResolveVector3));
+                var falloff = area.Falloff.Evaluate(now, engine.ResolveSingle);
                 falloff = Math.Max(1, falloff);
                 parameters["AreaFalloff"].SetValue(falloff);
             } else {
                 parameters["AreaType"].SetValue(0);
             }
+        }
+
+        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
+            SetParameters(engine, parameters, now, Area);
             parameters["Strength"].SetValue(Strength);
         }
 
@@ -246,16 +250,6 @@ namespace Squared.Illuminant.Particles.Transforms {
             get {
                 return true;
             }
-        }
-    }
-
-    public class ParticleCounter : ParticleAreaTransform {
-        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
-            base.SetParameters(engine, parameters, now, frameIndex);
-        }
-
-        protected override Material GetMaterial (ParticleMaterials materials) {
-            return null;
         }
     }
 }

@@ -354,7 +354,7 @@ namespace TestGame {
         }
 
         public override void Draw (GameTime gameTime, Frame frame) {
-            Nuklear.UpdateInput(PreviousMouseState, MouseState, PreviousKeyboardState, KeyboardState, IsMouseOverUI);
+            Nuklear.UpdateInput(IsActive, PreviousMouseState, MouseState, PreviousKeyboardState, KeyboardState, IsMouseOverUI);
 
             using (var group = BatchGroup.ForRenderTarget(frame, -9990, UIRenderTarget)) {
                 ClearBatch.AddNew(group, -1, Materials.Clear, clearColor: Color.Transparent);

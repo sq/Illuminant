@@ -201,7 +201,7 @@ namespace Squared.Illuminant.Particles.Transforms {
     }
 
     public sealed class Spawner : SpawnerBase {
-        public const int MaxPositions = 32;
+        public const int MaxPositions = 4;
 
         /// <summary>
         /// If set, the spawn position will trace a linear path between each specified
@@ -224,6 +224,8 @@ namespace Squared.Illuminant.Particles.Transforms {
 
         [NonSerialized]
         private Vector4[] Temp3 = new Vector4[MaxPositions];
+        [NonSerialized]
+        private Texture2D PositionBuffer = null;
 
         protected override Material GetMaterial (ParticleMaterials materials) {
             return materials.Spawn;
@@ -236,9 +238,6 @@ namespace Squared.Illuminant.Particles.Transforms {
         }
 
         public override void BeginTick (ParticleSystem system, double now, double deltaTimeSeconds, out int spawnCount, out ParticleSystem.Chunk sourceChunk) {
-            if (AdditionalPositions.Count >= MaxPositions)
-                throw new Exception("Maximum number of positions for a spawner is " + MaxPositions);
-
             base.BeginTick(system, now, deltaTimeSeconds, out spawnCount, out sourceChunk);
         }
 

@@ -379,7 +379,7 @@ namespace Lumined {
 
             Nuklear.SceneBounds = Bounds.FromPositionAndSize(0, 0, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight);
             Nuklear.UpdateInput(
-                PreviousMouseState, MouseState, 
+                IsActive, PreviousMouseState, MouseState, 
                 PreviousKeyboardState, KeyboardState, 
                 IsMouseOverUI, UI.KeyboardInputHandler.Buffer
             );

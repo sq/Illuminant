@@ -200,24 +200,43 @@ namespace Lumined {
             public object Value;
         }
 
-        private static CachedPropertyInfo GetElementInfo (Type type) {
-            if (typeof(System.Collections.IList).IsAssignableFrom(type)) {
-                var elementType = type.GetGenericArguments()[0];
-                var info = GetInfoForField(type, "Item", elementType);
-                return new CachedPropertyInfo {
-                    Name = "Value",
-                    Info = info,
-                    Field = null,
-                    Property = null,
-                    RawType = elementType,
-                    Type = elementType,
-                    AllowNull = false,
-                    Getter = (i) => ((ElementBox)i).Value,
-                    Setter = (i, v) => { ((ElementBox)i).Value = v; }
-                };
-            } else {
-                return null;
+        internal static Type GetElementType (Type type) {
+            if (type.IsArray)
+                return type.GetElementType();
+
+            foreach (var iface in type.GetInterfaces()) {
+                if (iface.Name != "IList`1")
+                    continue;
+                if (iface.Namespace != "System.Collections.Generic")
+                    continue;
+
+                var ga = iface.GetGenericArguments();
+                if ((ga == null) || (ga.Length == 0))
+                    continue;
+
+                return ga[0];
             }
+
+            return null;
+        }
+
+        private static CachedPropertyInfo GetElementInfo (Type type) {
+            var elementType = GetElementType(type);
+            if (elementType == null)
+                return null;
+
+            var info = GetInfoForField(type, "Item", elementType);
+            return new CachedPropertyInfo {
+                Name = "Value",
+                Info = info,
+                Field = null,
+                Property = null,
+                RawType = elementType,
+                Type = elementType,
+                AllowNull = false,
+                Getter = (i) => ((ElementBox)i).Value,
+                Setter = (i, v) => { ((ElementBox)i).Value = v; }
+            };
         }
 
         private static string GetSummaryForMember (MemberInfo m) {
@@ -1618,7 +1637,7 @@ namespace Lumined {
         ) {
             var ctx = Nuklear.Context;
             var list = (System.Collections.IList)_list;
-            var itemType = _list.GetType().GetGenericArguments()[0];
+            var itemType = GetElementType(_list.GetType());
 
             using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, actualName, false)) {
                 if (pGroup.Visible) {
