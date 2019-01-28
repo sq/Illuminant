@@ -35,6 +35,7 @@ namespace Lumined {
         public NuklearService Nuklear;
         public IlluminantMaterials IlluminantMaterials;
         public ParticleMaterials ParticleMaterials;
+        public LightingRenderer LightingRenderer;
         public PropertyEditor UI;
 
         public EmbeddedTexture2DProvider TextureLoader { get; private set; }
@@ -185,6 +186,11 @@ namespace Lumined {
             Materials = new DefaultMaterialSet(RenderCoordinator);
             IlluminantMaterials = new IlluminantMaterials(Materials);
             ParticleMaterials = new ParticleMaterials(Materials);
+            LightingRenderer = new LightingRenderer(
+                Content, RenderCoordinator, Materials, 
+                new LightingEnvironment(), new RendererConfiguration(2048, 2048, false), 
+                IlluminantMaterials
+            );
 
             if (UI == null)
                 UI = new PropertyEditor(this);

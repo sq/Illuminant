@@ -11,6 +11,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Squared.Game;
 using Squared.Illuminant;
 using Squared.Illuminant.Modeling;
 using Squared.Illuminant.Particles;
@@ -245,6 +246,21 @@ namespace Lumined {
                 container, Game.Materials, layer, blendState: BlendState.AlphaBlend, worldSpace: false
             );
             if (SelectedProperty != null) {
+                var area = SelectedProperty.Instance as TransformArea;
+                if ((area != null) && (area.Type != AreaType.None)) {
+                    var now = 0; // FIXME
+                    var obj = new LightObstruction(
+                        (LightObstructionType)(((int)area.Type)-1),
+                        area.Center.Evaluate(now, View.Engine.ResolveVector3),
+                        area.Size.Evaluate(now, View.Engine.ResolveVector3)
+                    );
+                    var bounds = obj.Bounds3.XY;
+                    Game.LightingRenderer.VisualizeDistanceField(
+                        bounds, Vector3.UnitZ, container, layer, obj, VisualizationMode.Outlines,
+                        worldBounds: obj.Bounds3
+                    );
+                }
+
                 var scale = 0.85f;
                 Vector2 drawPos;
 

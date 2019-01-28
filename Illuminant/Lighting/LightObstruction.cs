@@ -7,9 +7,9 @@ using Squared.Game;
 
 namespace Squared.Illuminant {
     public enum LightObstructionType {
-        Ellipsoid,
-        Box,
-        Cylinder,
+        Ellipsoid = 0,
+        Box = 1,
+        Cylinder = 2,
 
         MAX = Cylinder
     }

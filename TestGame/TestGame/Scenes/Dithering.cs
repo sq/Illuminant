@@ -43,6 +43,7 @@ namespace TestGame.Scenes {
             Power.Max = 12;
             Power.Min = 1;
             Power.Speed = 1;
+            Power.Integral = true;
 
             LightSize.Speed = 0.05f;
             LightSize.Max = 2.0f;

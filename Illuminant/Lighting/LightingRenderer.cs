@@ -1278,10 +1278,11 @@ namespace Squared.Illuminant {
             Vector4? color = null,
             Vector3? ambientColor = null,
             Vector3? lightColor = null,
-            Vector3? lightDirection = null
+            Vector3? lightDirection = null,
+            Bounds3? worldBounds = null
         ) {
-            if (_DistanceField == null)
-                return new VisualizationInfo();
+            if ((_DistanceField == null) && (singleObject == null))
+                return new VisualizationInfo { Failed = true };
 
             ComputeUniforms();
 
@@ -1290,29 +1291,32 @@ namespace Squared.Illuminant {
             var bl = new Vector3(rectangle.BottomLeft, 0);
             var br = new Vector3(rectangle.BottomRight, 0);
 
-            var extent = new Vector3(
-                _DistanceField.VirtualWidth,
-                _DistanceField.VirtualHeight,
-                Environment.MaximumZ
-            );
-            var center = extent * 0.5f;
+            Vector3 worldMin, worldMax;
+            if (worldBounds != null) {
+                worldMin = worldBounds.Value.Minimum;
+                worldMax = worldBounds.Value.Maximum;
+            } else {
+                if (_DistanceField != null) {
+                    worldMin = Vector3.Zero;
+                    worldMax = new Vector3(
+                        _DistanceField.VirtualWidth,
+                        _DistanceField.VirtualHeight,
+                        Environment.MaximumZ
+                    );
+                } else {
+                    var sz = singleObject.Bounds3;
+                    worldMin = sz.Minimum;
+                    worldMax = sz.Maximum;
+                }
+            }
+            var extent = worldMax - worldMin;
+            var center = (worldMin + worldMax) / 2f;
             var halfTexel = new Vector3(-0.5f * (1.0f / extent.X), -0.5f * (1.0f / extent.Y), 0);
 
             // HACK: Pick an appropriate length that will always travel through the whole field
-            var rayLength = extent.Length() * 1.5f;
+            var rayLength = extent.Length() * 2f;
             var rayVector = viewDirection * rayLength;
             Vector3 rayOrigin;
-
-            // HACK: Place our view plane somewhere reasonable
-            {
-                var ray = new Ray(center, -viewDirection);
-                var planeCenter = FindBoxIntersection(ray, Vector3.Zero, extent);
-                if (!planeCenter.HasValue)
-                    throw new Exception("Ray didn't intersect the box... what?");
-                rayOrigin = planeCenter.Value;
-            }
-
-            Vector3 worldTL, worldTR, worldBL, worldBR;
 
             Vector3 right, up;
 
@@ -1328,6 +1332,17 @@ namespace Squared.Illuminant {
             } else {
                 right = Vector3.UnitX;
             }
+
+            // HACK: Place our view plane somewhere reasonable
+            {
+                var ray = new Ray(center, -viewDirection);
+                var planeCenter = FindBoxIntersection(ray, worldMin, worldMax);
+                if (!planeCenter.HasValue)
+                    return new VisualizationInfo { Failed = true, Right = right, Up = up, ViewDirection = viewDirection };
+                rayOrigin = planeCenter.Value;
+            }
+
+            Vector3 worldTL, worldTR, worldBL, worldBR;
 
             var absViewDirection = new Vector3(
                 Math.Abs(viewDirection.X),
@@ -1420,7 +1435,8 @@ namespace Squared.Illuminant {
             return new VisualizationInfo {
                 ViewCenter = rayOrigin,
                 Up = planeUp,
-                Right = planeRight
+                Right = planeRight,
+                ViewDirection = viewDirection
             };
         }
 
@@ -1921,7 +1937,8 @@ namespace Squared.Illuminant {
     }
 
     public struct VisualizationInfo {
-        public Vector3 ViewCenter;
+        public bool Failed;
+        public Vector3 ViewCenter, ViewDirection;
         public Vector3 Up, Right;
     }
 

@@ -248,4 +248,14 @@ namespace Squared.Illuminant.Particles.Transforms {
             }
         }
     }
+
+    public class ParticleCounter : ParticleAreaTransform {
+        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
+            base.SetParameters(engine, parameters, now, frameIndex);
+        }
+
+        protected override Material GetMaterial (ParticleMaterials materials) {
+            return null;
+        }
+    }
 }
