@@ -68,6 +68,7 @@ namespace Squared.Illuminant.Particles.Transforms {
         }
 
         public override void Reset () {
+            base.Reset();
             RowsSpawned = 0;
         }
 
@@ -188,6 +189,7 @@ namespace Squared.Illuminant.Particles.Transforms {
         private Vector4[] Temp3 = new Vector4[1];
 
         public override void Reset () {
+            base.Reset();
             CurrentFeedbackSourceIndex = 0;
             CurrentFeedbackSource = null;
         }

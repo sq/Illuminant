@@ -183,7 +183,7 @@ namespace Lumined {
             var t = type;
             while (t != null) {
                 Dictionary<string, ModelTypeInfo> d;
-                if (FieldTypeOverrides.TryGetValue(type.Name, out d)) {
+                if (FieldTypeOverrides.TryGetValue(t.Name, out d)) {
                     ModelTypeInfo temp;
                     if (d.TryGetValue(fieldName, out temp))
                         return temp;
@@ -281,7 +281,7 @@ namespace Lumined {
                    let isGetItem = (p != null) && (p.GetIndexParameters().Length > 0)
                    let summary = GetSummaryForMember(m)
                    where (f == null) || !f.IsInitOnly || isList
-                   where (p == null) || (p.CanWrite && p.CanRead) || isList
+                   where (p == null) || p.CanRead || isList
                    where !m.GetCustomAttributes<NonSerializedAttribute>().Any()
                    orderby m.Name
                    select new CachedPropertyInfo {
@@ -833,7 +833,6 @@ namespace Lumined {
 
             var writable = cpi?.IsWritable ?? true;
 
-            if (writable)
             switch (valueType) {
                 case "List":
                     return RenderListProperty(cpi, instance, ref changed, actualName, value, false);
@@ -842,6 +841,9 @@ namespace Lumined {
                     return RenderListProperty(cpi, instance, ref changed, actualName, value, true);
 
                 case "Parameter`1": {
+                    if (!writable)
+                        break;
+
                     var p = (IParameter)value;
                     return RenderParameter(cpi, instance, ref changed, actualName, parentType, ref p, true);
                 }
@@ -859,13 +861,22 @@ namespace Lumined {
                     return RenderFormula(cpi, instance, actualName, (Formula4)value, true);
 
                 case "ParticleSystemReference":
+                    if (!writable)
+                        return false;
+
                     return RenderSystemReferenceProperty(cpi, instance, ref changed, actualName, value);
 
                 case "NullableLazyResource`1":
+                    if (!writable)
+                        return false;
+
                     return RenderTextureProperty(cpi, instance, ref changed, actualName, value);
 
                 case "Int32":
                 case "Single":
+                    if (!writable)
+                        break;
+
                     if (!cpi.AllowNull || (value != null)) {
                         const float buttonSizePx = 26f;
                         var rl = new RowLayout {
@@ -906,6 +917,9 @@ namespace Lumined {
 
                 case "Color":
                 case "ColorF":
+                    if (!writable)
+                        break;
+
                     return RenderColorProperty(cpi, instance, out changed, value);
 
                 case "Matrix":

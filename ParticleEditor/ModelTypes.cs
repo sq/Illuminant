@@ -47,6 +47,12 @@ namespace Lumined {
                     }
                 },
                 {
+                    "ParticleTransform", new Dictionary<string, ModelTypeInfo> {
+                        {"IsValid", new ModelTypeInfo { Hidden = true } },
+                        {"IsAnalyzer", new ModelTypeInfo { Hidden = true } },
+                    }
+                },
+                {
                     "ParticleSystemConfiguration", new Dictionary<string, ModelTypeInfo> {
                         {"BounceVelocityMultiplier", new ModelTypeInfo { Min = 0, Max = 3 } },
                         {"StippleFactor", new ModelTypeInfo { Min = 0, Max = 1 } },
@@ -139,13 +145,11 @@ namespace Lumined {
                 {
                     "Noise", new Dictionary<string, ModelTypeInfo> {
                         {"Interval", new ModelTypeInfo { Min = 0, Max = 10000 } },
-                        {"Strength", new ModelTypeInfo { Min = 0, Max = 1 } }
                     }
                 },
                 {
                     "SpatialNoise", new Dictionary<string, ModelTypeInfo> {
                         {"Interval", new ModelTypeInfo { Min = 0, Max = 10000 } },
-                        {"Strength", new ModelTypeInfo { Min = 0, Max = 1 } }
                     }
                 },
                 {
@@ -163,7 +167,7 @@ namespace Lumined {
                     }
                 },
                 {
-                    "Collector", new Dictionary<string, ModelTypeInfo> {
+                    "Sensor", new Dictionary<string, ModelTypeInfo> {
                         {"Strength", new ModelTypeInfo {
                             Hidden = true
                         } }

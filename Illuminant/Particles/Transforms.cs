@@ -356,29 +356,50 @@ namespace Squared.Illuminant.Particles.Transforms {
         }
     }
 
-    public class Collector : ParticleAreaTransform {
+    public class Sensor : ParticleAreaTransform {
+        [NonSerialized]
+        private object Lock = new object();
         [NonSerialized]
         private UnorderedList<OcclusionQuery> UnusedQueries = new UnorderedList<OcclusionQuery>();
         [NonSerialized]
+        private UnorderedList<OcclusionQuery> WaitingQueries = new UnorderedList<OcclusionQuery>();
+        [NonSerialized]
         private UnorderedList<OcclusionQuery> UsedQueries = new UnorderedList<OcclusionQuery>();
 
-        public int PreviousCount { get; private set; }
-        public int Count { get; private set; }
+        [NonSerialized]
+        private volatile int _PreviousCount, _Count, _UpdateCount;
+
+        public int PreviousCount {
+            get {
+                return _PreviousCount;
+            }
+        }
+        public int Count {
+            get {
+                return _Count;
+            }
+        }
 
         private OcclusionQuery ActiveQuery = null;
 
-        public Collector () {
+        public Sensor () {
             IsAnalyzer = true;
         }
 
-        public override void Dispose () {
-            foreach (var q in UsedQueries)
-                q.Dispose();
-            foreach (var q in UnusedQueries)
-                q.Dispose();
+        public override void Reset () {
+            _PreviousCount = _Count = 0;
+        }
 
-            UsedQueries.Clear();
-            UnusedQueries.Clear();
+        public override void Dispose () {
+            lock (Lock) {
+                foreach (var q in UsedQueries)
+                    q.Dispose();
+                foreach (var q in UnusedQueries)
+                    q.Dispose();
+
+                UsedQueries.Clear();
+                UnusedQueries.Clear();
+            }
         }
 
         protected override Material GetMaterial (ParticleMaterials materials) {
@@ -390,30 +411,68 @@ namespace Squared.Illuminant.Particles.Transforms {
         }
 
         public override void AfterFrame (ParticleEngine engine) {
-            PreviousCount = Count;
-            Count = 0;
+            if (IsActive) {
+                lock (Lock) {
+                    if (_UpdateCount > 0) {
+                        // Give up on updating this frame
+                        UnusedQueries.AddRange(UsedQueries);
+                        UsedQueries.Clear();
+                    } else {
+                        WaitingQueries.Clear();
+                        WaitingQueries.AddRange(UsedQueries);
+                        UsedQueries.Clear();
+                        Interlocked.Increment(ref _UpdateCount);
+                        ThreadPool.QueueUserWorkItem(DoUpdateCount);
+                    }
+                }
+            } else
+                _PreviousCount = Interlocked.Exchange(ref _Count, 0);
+        }
 
+        private void DoUpdateCount (object _) {
             var started = Time.Ticks;
-            var endBy = started + (Time.MillisecondInTicks * 10);
+            var endBy = started + (Time.MillisecondInTicks * 5);
 
-            foreach (var q in UsedQueries) {
-                while (!q.IsComplete && Time.Ticks < endBy)
-                    Thread.SpinWait(10);
-                // FIXME: Should this really be possible?
-                if (!q.IsComplete)
-                    continue;
-                Count += q.PixelCount;
+            bool isWaiting = true;
+
+            int count = 0;
+            try {
+                while (isWaiting && (Time.Ticks <= endBy)) {
+                    isWaiting = false;
+
+                    lock (Lock) {
+                        using (var e = WaitingQueries.GetEnumerator())
+                        while (e.MoveNext()) {
+                            var q = e.Current;
+                            if (!q.IsComplete) {
+                                isWaiting = true;
+                                continue;
+                            }
+
+                            count += q.PixelCount;
+                            e.RemoveCurrent();
+                            UnusedQueries.Add(q);
+                        }
+                    }
+
+                    if (isWaiting)
+                        Thread.Sleep(0);
+                }
+
+                _PreviousCount = Interlocked.Exchange(ref _Count, count);
+            } finally {
+                Interlocked.Decrement(ref _UpdateCount);
             }
-
-            UnusedQueries.AddRange(UsedQueries);
-            UsedQueries.Clear();
         }
 
         protected override void BeforeUpdateChunk (ParticleEngine engine) {
             OcclusionQuery query;
-            if (!UnusedQueries.TryPopFront(out query))
-                query = new OcclusionQuery(engine.Coordinator.Device);
-            UsedQueries.Add(query);
+
+            lock (Lock) {
+                if (!UnusedQueries.TryPopFront(out query))
+                    query = new OcclusionQuery(engine.Coordinator.Device);
+                UsedQueries.Add(query);
+            }
 
             var _ = query.IsComplete;
             query.Begin();
@@ -422,7 +481,11 @@ namespace Squared.Illuminant.Particles.Transforms {
 
         protected override void AfterUpdateChunk (ParticleEngine engine) {
             var query = Interlocked.Exchange(ref ActiveQuery, null);
+            if (query == null)
+                return;
+
             query.End();
+            var _ = query.IsComplete;
         }
     }
 }
