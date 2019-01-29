@@ -48,10 +48,13 @@ void PS_Noise(
     float4 velocityDelta = (randomV - VelocityOffset) * VelocityScale;
 
     newPosition = lerp(oldPosition, oldPosition + positionDelta, t);
-    if (ReplaceOldVelocity)
-        newVelocity = lerp(oldVelocity, velocityDelta, weight);
-    else
-        newVelocity = lerp(oldVelocity, oldVelocity + velocityDelta, t);
+    if (ReplaceOldVelocity) {
+        newVelocity = float4(lerp(oldVelocity.xyz, velocityDelta.xyz, weight), oldVelocity.w);
+        newVelocity.xyz += normalize(oldVelocity.xyz) * velocityDelta.w;
+    } else {
+        newVelocity = float4(lerp(oldVelocity.xyz, oldVelocity.xyz + velocityDelta.xyz, t), oldVelocity.w);
+        newVelocity.xyz += normalize(oldVelocity.xyz) * velocityDelta.w;
+    }
 }
 
 void PS_SpatialNoise(
@@ -81,10 +84,13 @@ void PS_SpatialNoise(
     float4 velocityDelta = (randomV - VelocityOffset) * VelocityScale;
 
     newPosition = lerp(oldPosition, oldPosition + positionDelta, t);
-    if (ReplaceOldVelocity)
-        newVelocity = lerp(oldVelocity, velocityDelta, weight);
-    else
-        newVelocity = lerp(oldVelocity, oldVelocity + velocityDelta, t);
+    if (ReplaceOldVelocity) {
+        newVelocity = float4(lerp(oldVelocity.xyz, velocityDelta.xyz, weight), oldVelocity.w);
+        newVelocity.xyz += normalize(oldVelocity.xyz) * velocityDelta.w;
+    } else {
+        newVelocity = float4(lerp(oldVelocity.xyz, oldVelocity.xyz + velocityDelta.xyz, t), oldVelocity.w);
+        newVelocity.xyz += normalize(oldVelocity.xyz) * velocityDelta.w;
+    }
 }
 
 technique Noise {

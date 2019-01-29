@@ -295,6 +295,16 @@ namespace Squared.Illuminant.Particles {
                     }, dEnd
                 ));
 
+                DefineMaterial(ParticleMaterials.CollectParticles = new Material(
+                    effects.Load("CollectParticles"), "CollectParticles", new[] {
+                        MaterialUtil.MakeDelegate(
+                            rasterizerState: RasterizerState.CullNone,
+                            depthStencilState: DepthStencilState.None,
+                            blendState: noopBlendState
+                        )
+                    }, dEnd
+                ));
+
                 DefineMaterial(ParticleMaterials.Erase = new Material(
                     effects.Load("UpdateParticleSystem"), "Erase", dBegin, dEnd
                 ));

@@ -128,6 +128,8 @@ namespace Squared.Illuminant.Particles.Transforms {
 
                 if (up.ShouldClear)
                     dm.Device.Clear(Color.Transparent);
+
+                Transform.BeforeUpdateChunk();
             }
 
             private void _AfterDraw (DeviceManager dm, object _up) {
@@ -143,6 +145,8 @@ namespace Squared.Illuminant.Particles.Transforms {
                 if (e != null) {
                     p.ClearTextures(ParticleSystem.ClearTextureList);
                 }
+
+                Transform.AfterUpdateChunk();
             }
         }
 
@@ -213,6 +217,12 @@ namespace Squared.Illuminant.Particles.Transforms {
             get {
                 return Handler.AfterDraw;
             }
+        }
+
+        protected virtual void BeforeUpdateChunk () {
+        }
+
+        protected virtual void AfterUpdateChunk () {
         }
 
         public abstract bool IsValid { get; }

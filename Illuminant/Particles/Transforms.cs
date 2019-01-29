@@ -145,6 +145,7 @@ namespace Squared.Illuminant.Particles.Transforms {
         public float? CyclesPerSecond = 10;
         public NoiseParameters<Vector4> Position;
         public NoiseParameters<Vector3> Velocity;
+        public NoiseParameters<float>   Speed;
         /// <summary>
         /// The number of milliseconds between noise field changes. Changes occur smoothly over time. Set to 0 for no changes.
         /// </summary>
@@ -175,12 +176,16 @@ namespace Squared.Illuminant.Particles.Transforms {
 
             Interval = IntervalUnit;
             Position = new NoiseParameters<Vector4> {
-                Offset = Vector4.One * 0.5f,
+                Offset = Vector4.One * -0.5f,
                 Scale = Vector4.Zero,
             };
             Velocity = new NoiseParameters<Vector3> {
-                Offset = Vector3.One * 0.5f,
+                Offset = Vector3.One * -0.5f,
                 Scale = Vector3.One,
+            };
+            Speed = new NoiseParameters<float> {
+                Offset = -0.5f,
+                Scale = 0
             };
 
             Reset();
@@ -229,8 +234,8 @@ namespace Squared.Illuminant.Particles.Transforms {
             parameters["TimeDivisor"].SetValue(CyclesPerSecond.HasValue ? Uniforms.ParticleSystem.VelocityConstantScale / CyclesPerSecond.Value : -1);
             parameters["PositionOffset"].SetValue(Position.Offset.Evaluate(now, engine.ResolveVector4));
             parameters["PositionScale"].SetValue (Position.Scale.Evaluate(now, engine.ResolveVector4));
-            parameters["VelocityOffset"].SetValue(new Vector4(Velocity.Offset.Evaluate(now, engine.ResolveVector3), 0));
-            parameters["VelocityScale"].SetValue (new Vector4(Velocity.Scale.Evaluate(now, engine.ResolveVector3), 1));
+            parameters["VelocityOffset"].SetValue(new Vector4(Velocity.Offset.Evaluate(now, engine.ResolveVector3), Speed.Offset.Evaluate(now, engine.ResolveSingle)));
+            parameters["VelocityScale"].SetValue (new Vector4(Velocity.Scale.Evaluate(now, engine.ResolveVector3), Speed.Scale.Evaluate(now, engine.ResolveSingle)));
 
             double intervalSecs = Interval.Evaluate(now, engine.ResolveSingle) / (double)IntervalUnit;
             float t;
@@ -346,6 +351,21 @@ namespace Squared.Illuminant.Particles.Transforms {
             get {
                 return Attractors.Count > 0;
             }
+        }
+    }
+
+    public class Collector : ParticleAreaTransform {
+        [NonSerialized]
+        private List<OcclusionQuery> UnusedQueries = new List<OcclusionQuery>();
+        [NonSerialized]
+        private List<OcclusionQuery> UsedQueries = new List<OcclusionQuery>();
+
+        protected override Material GetMaterial (ParticleMaterials materials) {
+            return materials.CollectParticles;
+        }
+
+        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
+            base.SetParameters(engine, parameters, now, frameIndex);
         }
     }
 }
