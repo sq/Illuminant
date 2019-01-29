@@ -3,12 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Squared.Illuminant.Configuration;
 using Squared.Illuminant.Util;
 using Squared.Render;
+using Squared.Util;
 
 namespace Squared.Illuminant.Particles.Transforms {
     public class FMA : ParticleAreaTransform {
@@ -356,9 +358,28 @@ namespace Squared.Illuminant.Particles.Transforms {
 
     public class Collector : ParticleAreaTransform {
         [NonSerialized]
-        private List<OcclusionQuery> UnusedQueries = new List<OcclusionQuery>();
+        private UnorderedList<OcclusionQuery> UnusedQueries = new UnorderedList<OcclusionQuery>();
         [NonSerialized]
-        private List<OcclusionQuery> UsedQueries = new List<OcclusionQuery>();
+        private UnorderedList<OcclusionQuery> UsedQueries = new UnorderedList<OcclusionQuery>();
+
+        public int PreviousCount { get; private set; }
+        public int Count { get; private set; }
+
+        private OcclusionQuery ActiveQuery = null;
+
+        public Collector () {
+            IsAnalyzer = true;
+        }
+
+        public override void Dispose () {
+            foreach (var q in UsedQueries)
+                q.Dispose();
+            foreach (var q in UnusedQueries)
+                q.Dispose();
+
+            UsedQueries.Clear();
+            UnusedQueries.Clear();
+        }
 
         protected override Material GetMaterial (ParticleMaterials materials) {
             return materials.CollectParticles;
@@ -366,6 +387,42 @@ namespace Squared.Illuminant.Particles.Transforms {
 
         protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
             base.SetParameters(engine, parameters, now, frameIndex);
+        }
+
+        public override void AfterFrame (ParticleEngine engine) {
+            PreviousCount = Count;
+            Count = 0;
+
+            var started = Time.Ticks;
+            var endBy = started + (Time.MillisecondInTicks * 10);
+
+            foreach (var q in UsedQueries) {
+                while (!q.IsComplete && Time.Ticks < endBy)
+                    Thread.SpinWait(10);
+                // FIXME: Should this really be possible?
+                if (!q.IsComplete)
+                    continue;
+                Count += q.PixelCount;
+            }
+
+            UnusedQueries.AddRange(UsedQueries);
+            UsedQueries.Clear();
+        }
+
+        protected override void BeforeUpdateChunk (ParticleEngine engine) {
+            OcclusionQuery query;
+            if (!UnusedQueries.TryPopFront(out query))
+                query = new OcclusionQuery(engine.Coordinator.Device);
+            UsedQueries.Add(query);
+
+            var _ = query.IsComplete;
+            query.Begin();
+            ActiveQuery = query;
+        }
+
+        protected override void AfterUpdateChunk (ParticleEngine engine) {
+            var query = Interlocked.Exchange(ref ActiveQuery, null);
+            query.End();
         }
     }
 }

@@ -14,6 +14,7 @@ namespace Lumined {
             public string               Type;
             public float?               Min, Max;
             public bool                 AllowNull;
+            public bool                 Hidden;
             public Func<object, object> GetDefaultValue;
             public int?                 MaxCount;
             public float?               DragScale;
@@ -159,6 +160,13 @@ namespace Lumined {
                             Type = "List",
                             MaxCount = Gravity.MaxAttractors
                         } },
+                    }
+                },
+                {
+                    "Collector", new Dictionary<string, ModelTypeInfo> {
+                        {"Strength", new ModelTypeInfo {
+                            Hidden = true
+                        } }
                     }
                 }
             };

@@ -40,6 +40,8 @@ namespace Squared.Illuminant.Particles {
         internal          Texture2D     RandomnessTexture, 
             LowPrecisionRandomnessTexture;
 
+        internal         RenderTarget2D ScratchTexture;
+
         internal readonly List<ParticleSystem.BufferSet> AllBuffers = 
             new List<ParticleSystem.BufferSet>();
         internal readonly UnorderedList<ParticleSystem.BufferSet> AvailableBuffers
@@ -124,6 +126,11 @@ namespace Squared.Illuminant.Particles {
                     new ParticleSystemVertex(argh, -2, 1),
                     new ParticleSystemVertex(-2, argh, 2),
                 });
+
+                ScratchTexture = new RenderTarget2D(
+                    coordinator.Device, configuration.ChunkSize, configuration.ChunkSize, 
+                    false, SurfaceFormat.Alpha8, DepthFormat.None, 0, RenderTargetUsage.PreserveContents
+                );
             }
 
             FillIndexBuffer();

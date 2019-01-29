@@ -234,6 +234,7 @@ namespace Lumined {
                 RawType = elementType,
                 Type = elementType,
                 AllowNull = false,
+                IsWritable = true,
                 Getter = (i) => ((ElementBox)i).Value,
                 Setter = (i, v) => { ((ElementBox)i).Value = v; }
             };
@@ -276,7 +277,7 @@ namespace Lumined {
                    let info = GetInfoForField(type, m.Name, mtype)
                    let isList = (info.Type == "List") || (info.Type == "ValueList")
                    let enumValueNames = mtype.IsEnum ? mtype.GetEnumNames() : null
-                   let isWritable = ((f != null) && !f.IsInitOnly) || ((p != null) && p.CanWrite)
+                   let isWritable = ((f != null) && !f.IsInitOnly) || ((p != null) && p.CanWrite && (p.GetSetMethod()?.IsPublic ?? false))
                    let isGetItem = (p != null) && (p.GetIndexParameters().Length > 0)
                    let summary = GetSummaryForMember(m)
                    where (f == null) || !f.IsInitOnly || isList
@@ -298,6 +299,7 @@ namespace Lumined {
                        ElementInfo = GetElementInfo(mtype),
                        EnumValueNames = enumValueNames,
                        IsGetItem = isGetItem,
+                       IsWritable = isWritable,
                        Summary = summary
                    };
         }
@@ -755,6 +757,8 @@ namespace Lumined {
         ) {
             if (cpi.IsGetItem)
                 return false;
+            if (cpi?.Info.Hidden ?? false)
+                return false;
 
             var actualName = cpi.Name;
 
@@ -827,6 +831,9 @@ namespace Lumined {
                 return RenderGenericObjectProperty(cache, cpi, instance, value, actualName);
             }
 
+            var writable = cpi?.IsWritable ?? true;
+
+            if (writable)
             switch (valueType) {
                 case "List":
                     return RenderListProperty(cpi, instance, ref changed, actualName, value, false);
@@ -926,13 +933,17 @@ namespace Lumined {
                 case "Bezier4":
                 case "ColorBezier4":
                     return RenderBezierProperty(cpi, instance, actualName, value, null, valueType.StartsWith("Color"));
-
+                
                 case "String":
                     Nuklear.NewRow(LineHeight + 3, 1);
                     var text = value.ToString();
-                    if (Nuklear.Textbox(ref text, tooltip: cpi.Summary)) {
-                        cpi.Setter(instance, text);
-                        return true;
+                    if (writable) {
+                        if (Nuklear.Textbox(ref text, tooltip: cpi.Summary)) {
+                            cpi.Setter(instance, text);
+                            return true;
+                        }
+                    } else {
+                        Nuklear.Label(text);
                     }
                     return false;
 
@@ -988,6 +999,8 @@ namespace Lumined {
                 default:
                     if (cpi.Type.IsEnum) {
                         return RenderEnumProperty(cpi, instance, value);
+                    } else if (value.GetType().IsPrimitive) {
+                        Nuklear.Label(value.ToString());
                     } else {
                         Nuklear.Label(value.GetType().Name);
                     }
@@ -996,6 +1009,11 @@ namespace Lumined {
         }
 
         private unsafe bool RenderEnumProperty (CachedPropertyInfo cpi, object instance, object value) {
+            if (!(cpi?.IsWritable ?? true)) {
+                Nuklear.Label(value.ToString());
+                return false;
+            }
+
             if (Nuklear.EnumCombo(ref value, cpi.Type, cpi.EnumValueNames)) {
                 cpi.Setter(instance, value);
                 return true;
@@ -1768,7 +1786,7 @@ namespace Lumined {
         public Type RawType, Type;
         public Func<object, object> Getter;
         public Action<object, object> Setter;
-        public bool AllowNull, IsGetItem;
+        public bool AllowNull, IsGetItem, IsWritable;
         public CachedPropertyInfo ElementInfo;
         public string[] EnumValueNames;
         public string Summary;

@@ -73,6 +73,7 @@ namespace Squared.Illuminant.Particles.Transforms {
 
         protected SpawnerBase ()
             : this(null) {
+            IsAnalyzer = false;
         }
 
         protected SpawnerBase (int? seed) {

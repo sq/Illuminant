@@ -623,7 +623,7 @@ namespace Squared.Illuminant.Particles {
 
                 RunTransform(
                     chunk, container, ref layer, ((Transforms.IParticleTransform)spawner).GetMaterial(Engine.ParticleMaterials),
-                    startedWhen, true,
+                    startedWhen, true, false,
                     h.BeforeDraw, h.AfterDraw, 
                     deltaTimeSeconds, needClear, now, false,
                     sourceChunk
@@ -640,7 +640,7 @@ namespace Squared.Illuminant.Particles {
 
         private void RunTransform (
             Chunk chunk, IBatchContainer container, ref int layer, Material m,
-            long startedWhen, bool isSpawning,
+            long startedWhen, bool isSpawning, bool isAnalyzer,
             Action<DeviceManager, object> beforeDraw,
             Action<DeviceManager, object> afterDraw,
             double deltaTimeSeconds, bool shouldClear,
@@ -660,7 +660,7 @@ namespace Squared.Illuminant.Particles {
             var chunkMaterial = m;
             if (isSpawning)
                 li.DeadFrameCount = 0;
-            else
+            else if (!isAnalyzer)
                 RotateBuffers(chunk);
 
             var prev = chunk.Previous;
@@ -993,6 +993,9 @@ namespace Squared.Illuminant.Particles {
                     computingLiveness = true;
                 }
 
+                foreach (var t in Transforms)
+                    t.BeforeFrame(Engine);
+
                 foreach (var s in Transforms.OfType<Transforms.SpawnerBase>()) {
                     if (!s.IsActive)
                         continue;
@@ -1018,6 +1021,14 @@ namespace Squared.Illuminant.Particles {
 
             var ts = Time.Ticks;
 
+            var sc = SynchronizationContext.Current;
+            Engine.Coordinator.AfterPresent(() => {
+                sc.Post((_) => {
+                    foreach (var t in Transforms)
+                        t.AfterFrame(Engine);
+                }, null);
+            });
+
             Engine.EndOfUpdate(initialTurn);
             return new UpdateResult(this, true, (float)now);
         }
@@ -1038,11 +1049,12 @@ namespace Squared.Illuminant.Particles {
 
                 RunTransform(
                     chunk, group, ref i, it.GetMaterial(Engine.ParticleMaterials),
-                    startedWhen, false, it.BeforeDraw, it.AfterDraw,
-                    actualDeltaTimeSeconds, isFirstXform, now, false, null
+                    startedWhen, false, it.IsAnalyzer, it.BeforeDraw, it.AfterDraw,
+                    actualDeltaTimeSeconds, isFirstXform && !it.IsAnalyzer, now, false, null
                 );
 
-                isFirstXform = false;
+                if (!it.IsAnalyzer)
+                    isFirstXform = false;
             }
 
             if (IsClearPending) {
@@ -1052,7 +1064,7 @@ namespace Squared.Illuminant.Particles {
                 for (int k = 0; k < 2; k++) {
                     RunTransform(
                         chunk, group, ref i, pm.Erase,
-                        startedWhen, false,
+                        startedWhen, false, false,
                         null, null, actualDeltaTimeSeconds, 
                         true, now, true, null
                     );
@@ -1064,13 +1076,15 @@ namespace Squared.Illuminant.Particles {
 
                 RunTransform(
                     chunk, group, ref i, pm.UpdateWithDistanceField,
-                    startedWhen, false,
-                    Updater.BeforeDraw, Updater.AfterDraw, actualDeltaTimeSeconds, true, now, true, null
+                    startedWhen, false, false,
+                    Updater.BeforeDraw, Updater.AfterDraw, 
+                    actualDeltaTimeSeconds, true, now, true, null
                 );
             } else {
                 RunTransform(
                     chunk, group, ref i, pm.UpdatePositions,
-                    startedWhen, false, Updater.BeforeDraw, Updater.AfterDraw,
+                    startedWhen, false, false, 
+                    Updater.BeforeDraw, Updater.AfterDraw,
                     actualDeltaTimeSeconds, true, now, true, null
                 );
             }

@@ -23,6 +23,7 @@ namespace Squared.Illuminant.Particles.Transforms {
         void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex);
         Action<DeviceManager, object> BeforeDraw { get; }
         Action<DeviceManager, object> AfterDraw { get; }
+        bool IsAnalyzer { get; }
     }
 
     public delegate void ParameterSetter (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex);
@@ -72,7 +73,10 @@ namespace Squared.Illuminant.Particles.Transforms {
                 var curr = up.Curr;
                 if (curr.IsDisposed)
                     return;
-                if (up.IsUpdate) {
+
+                if (Transform?.IsAnalyzer ?? false) {
+                    dm.Device.SetRenderTarget(engine.ScratchTexture);
+                } else if (up.IsUpdate) {
                     curr.Bindings4[2] = new RenderTargetBinding(up.Chunk.RenderColor);
                     curr.Bindings4[3] = new RenderTargetBinding(up.Chunk.RenderData);
                     dm.Device.SetRenderTargets(curr.Bindings4);
@@ -126,10 +130,10 @@ namespace Squared.Illuminant.Particles.Transforms {
                     m.Flush();
                 }
 
-                if (up.ShouldClear)
+                if (up.ShouldClear && !(Transform?.IsAnalyzer ?? false))
                     dm.Device.Clear(Color.Transparent);
 
-                Transform.BeforeUpdateChunk();
+                Transform?.BeforeUpdateChunk(engine);
             }
 
             private void _AfterDraw (DeviceManager dm, object _up) {
@@ -142,11 +146,10 @@ namespace Squared.Illuminant.Particles.Transforms {
 
                 // XNA effectparameter gets confused about whether a value is set or not, so we do this
                 //  to ensure it always re-sets the texture parameter
-                if (e != null) {
+                if (e != null)
                     p.ClearTextures(ParticleSystem.ClearTextureList);
-                }
 
-                Transform.AfterUpdateChunk();
+                Transform?.AfterUpdateChunk(engine);
             }
         }
 
@@ -172,8 +175,11 @@ namespace Squared.Illuminant.Particles.Transforms {
         protected abstract Material GetMaterial (ParticleMaterials materials);
         protected abstract void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex);
 
+        public bool IsAnalyzer { get; protected set; }
+
         protected ParticleTransform () {
             Handler = new UpdateHandler(this);
+            IsAnalyzer = false;
         }
 
         Material IParticleTransform.GetMaterial (ParticleMaterials materials) {
@@ -219,10 +225,16 @@ namespace Squared.Illuminant.Particles.Transforms {
             }
         }
 
-        protected virtual void BeforeUpdateChunk () {
+        public virtual void BeforeFrame (ParticleEngine engine) {
         }
 
-        protected virtual void AfterUpdateChunk () {
+        public virtual void AfterFrame (ParticleEngine engine) {
+        }
+
+        protected virtual void BeforeUpdateChunk (ParticleEngine engine) {
+        }
+
+        protected virtual void AfterUpdateChunk (ParticleEngine engine) {
         }
 
         public abstract bool IsValid { get; }
@@ -253,7 +265,7 @@ namespace Squared.Illuminant.Particles.Transforms {
 
         protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
             SetParameters(engine, parameters, now, Area);
-            parameters["Strength"].SetValue(Strength);
+            parameters["Strength"]?.SetValue(Strength);
         }
 
         public override bool IsValid {
