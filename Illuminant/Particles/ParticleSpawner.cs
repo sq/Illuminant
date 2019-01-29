@@ -252,6 +252,7 @@ namespace Squared.Illuminant.Particles.Transforms {
                 if ((PositionBuffer != null) && (PositionBuffer.Width < count)) {
                     system.Engine.Coordinator.DisposeResource(PositionBuffer);
                     PositionBuffer = null;
+                    Temp4 = null;
                 }
                 if (PositionBuffer == null) {
                     var bufSize = (count + 127) / 128 * 128;
@@ -260,12 +261,25 @@ namespace Squared.Illuminant.Particles.Transforms {
                         PositionBuffer = new Texture2D(system.Engine.Coordinator.Device, bufSize, 1, false, SurfaceFormat.Vector4);
                 }
 
-                Temp4[0] = new Vector4(position, life);
-                for (var i = 0; i < AdditionalPositions.Count; i++) {
-                    var ap = AdditionalPositions[i];
-                    Temp4[i + 1] = new Vector4(ap, life);
+                var dirty = false;
+
+                var v = new Vector4(position, life);
+                if (Temp4[0] != v) {
+                    dirty = true;
+                    Temp4[0] = v;
                 }
 
+                for (var i = 0; i < AdditionalPositions.Count; i++) {
+                    var ap = AdditionalPositions[i];
+                    v = new Vector4(ap, life);
+                    if (Temp4[i + 1] == v)
+                        continue;
+
+                    Temp4[i + 1] = v;
+                    dirty = true;
+                }
+
+                if (dirty)
                 lock (system.Engine.Coordinator.UseResourceLock)
                     PositionBuffer.SetData(Temp4);
             } else {
