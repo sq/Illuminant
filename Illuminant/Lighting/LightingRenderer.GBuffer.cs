@@ -328,7 +328,7 @@ namespace Squared.Illuminant {
                         previousType = billboard.Type;
                     }
 
-                    var sb = billboard.ScreenBounds;
+                    var sb = billboard.ScreenBounds.GetValueOrDefault();
                     var normal1 = billboard.Normal;
                     var normal2 = normal1;
                     var dataScaleAndDynamicFlag = new Vector2(
@@ -353,6 +353,20 @@ namespace Squared.Illuminant {
                             Minimum = new Vector3(x1, y, baseZ + zScale),
                             Maximum = new Vector3(x2, y, baseZ)
                         };
+                    }
+
+                    if (!billboard.ScreenBounds.HasValue && billboard.WorldBounds.HasValue) {
+                        sb = new Bounds(
+                            new Vector2(wb.Minimum.X, wb.Minimum.Y - (wb.Minimum.Z * Environment.ZToYMultiplier)),
+                            new Vector2(wb.Maximum.X, wb.Maximum.Y - (wb.Maximum.Z * Environment.ZToYMultiplier))
+                        );
+
+                        var minZ = Math.Min(wb.Minimum.Z, wb.Maximum.Z);
+                        var maxZ = Math.Max(wb.Minimum.Z, wb.Maximum.Z);
+                        // FIXME
+                        // HACK: Paint the maximum Z value of the volume
+                        wb.Minimum.Z = maxZ;
+                        wb.Maximum.Z = maxZ;
                     }
 
                     wb.Minimum += billboard.WorldOffset;
@@ -404,6 +418,7 @@ namespace Squared.Illuminant {
         private void SetGBufferParameters (EffectParameterCollection p) {
             // FIXME: RenderScale?
             if (_GBuffer != null) {
+                p["GBufferViewportRelative"].SetValue(Configuration.GBufferViewportRelative);
                 p["GBufferTexelSize"].SetValue(_GBuffer.InverseSize);
                 p["GBuffer"].SetValue(_GBuffer.Texture);
             } else {

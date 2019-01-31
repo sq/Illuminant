@@ -36,6 +36,7 @@ static const float3 ClippedLightVertices[] = {
 
 #include "EnvironmentCommon.fxh"
 
+uniform bool   GBufferViewportRelative;
 uniform float  GBufferInvScaleFactor;
 uniform float2 GBufferTexelSize;
 
@@ -68,7 +69,12 @@ void sampleGBuffer (
     [branch]
     if (any(GBufferTexelSize)) {
         // FIXME: Should we be offsetting distance field samples too?
-        float2 uv     = (screenPositionPx + 0.5) * GBufferTexelSize;
+        float2 sourceXy = screenPositionPx;
+        if (GBufferViewportRelative) {
+            sourceXy /= Viewport.Scale.xy;
+            sourceXy += Viewport.Position.xy;
+        }
+        float2 uv     = (sourceXy + 0.5) * GBufferTexelSize;
         float4 sample = tex2Dlod(GBufferSampler, float4(uv, 0, 0));
 
         float relativeY = sample.z * RELATIVEY_SCALE;

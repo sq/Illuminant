@@ -188,9 +188,15 @@ namespace Lumined {
             ParticleMaterials = new ParticleMaterials(Materials);
             LightingRenderer = new LightingRenderer(
                 Content, RenderCoordinator, Materials, 
-                new LightingEnvironment(), new RendererConfiguration(2048, 2048, false), 
+                new LightingEnvironment(), new RendererConfiguration(2048, 2048, false) {
+                    EnableGBuffer = true,
+                    GBufferCaching = false,
+                    GBufferViewportRelative = true,
+                    TwoPointFiveD = true
+                }, 
                 IlluminantMaterials
             );
+            LightingRenderer.DistanceField = new DistanceField(RenderCoordinator, 1024, 1024, 128, 8, 0.25f);
 
             if (UI == null)
                 UI = new PropertyEditor(this);
@@ -475,7 +481,22 @@ namespace Lumined {
 
         private void UpdateLightingEnvironment () {
             var e = LightingRenderer.Environment;
-            e.Clear();
+
+            e.ZToYMultiplier = 0f;
+
+            if (e.Obstructions.Count == 0) {
+                e.Obstructions.Add(new LightObstruction(LightObstructionType.Box, center: new Vector3(106, 48, -8), radius: new Vector3(96, 16, 24)));
+                var b = e.Obstructions[0].Bounds3;
+                e.Billboards = new[] {
+                    new Billboard {
+                        Type = BillboardType.Mask,
+                        WorldBounds = b,
+                        WorldOffset = new Vector3(0, 0, 4)
+                    }
+                };
+            }
+
+            e.Lights.Clear();
 
             if (View == null)
                 return;
@@ -484,7 +505,7 @@ namespace Lumined {
             if (d.Lights.Count > 0)
                 e.Lights.Add(new DirectionalLightSource {
                     Color = new Vector4(1, 1, 1, 0.1f),
-                    Direction = null
+                    Direction = new Vector3(-0.5f, -0.5f, -0.5f)
                 });
 
             foreach (var l in d.Lights) {

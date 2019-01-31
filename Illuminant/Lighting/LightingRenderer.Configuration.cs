@@ -145,6 +145,12 @@ namespace Squared.Illuminant {
         public bool GBufferCaching    = true;
 
         /// <summary>
+        /// If true, G-buffer reads will be relative to the current ViewTransform position and scale.
+        /// This means the g-buffer will scroll with the viewport.
+        /// </summary>
+        public bool GBufferViewportRelative = false;
+
+        /// <summary>
         /// If disabled, the lighting renderer will regenerate global illumination data every frame.
         /// </summary>
         public bool GICaching    = true;

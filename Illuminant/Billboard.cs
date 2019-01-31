@@ -13,8 +13,9 @@ namespace Squared.Illuminant {
         public Texture2D Texture;
         /// <summary>
         /// Specifies the screen-space rectangle to render the billboard into.
+        /// If not set, automatically generated from world bounds.
         /// </summary>
-        public Bounds    ScreenBounds;
+        public Bounds?   ScreenBounds;
         /// <summary>
         /// If set, specifies the world coordinates for the top left and bottom right corners of the billboard.
         /// If not set, automatically generated. The Z-height of the billboard in world space is based on the screen-space Y height.
