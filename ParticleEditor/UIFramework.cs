@@ -266,7 +266,8 @@ namespace Lumined {
         }
 
         private static IEnumerable<CachedPropertyInfo> CachePropertyInfo (Type type) {
-            return from m in type.GetMembers(BindingFlags.Instance | BindingFlags.Public)
+            var members = type.GetMembers(BindingFlags.Instance | BindingFlags.Public);
+            return from m in members
                    where (m.MemberType == MemberTypes.Field) || (m.MemberType == MemberTypes.Property)
                    let f = m as FieldInfo
                    let p = m as PropertyInfo
@@ -283,7 +284,7 @@ namespace Lumined {
                    where (f == null) || !f.IsInitOnly || isList
                    where (p == null) || p.CanRead || isList
                    where !m.GetCustomAttributes<NonSerializedAttribute>().Any()
-                   orderby m.Name
+                   // orderby m.Name
                    select new CachedPropertyInfo {
                        Name = m.Name,
                        Info = info,

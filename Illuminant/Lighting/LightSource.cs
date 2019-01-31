@@ -17,6 +17,7 @@ namespace Squared.Illuminant {
     }
 
     public abstract class LightSource {
+        [NonSerialized]
         public readonly LightSourceTypeID TypeID;
 
         public object     UserData;
@@ -60,7 +61,7 @@ namespace Squared.Illuminant {
         /// <summary>
         /// Allows you to optionally set a ramp texture to control the appearance of light falloff.
         /// </summary>
-        public Texture2D  RampTexture = null;
+        public NullableLazyResource<Texture2D> RampTexture = null;
         /// <summary>
         /// Allows you to optionally override quality settings for this light.
         /// It is *much* faster to share a single settings instance for many lights!
@@ -285,6 +286,13 @@ namespace Squared.Illuminant {
                 StippleFactor = StippleFactor
             };
             return result;
+        }
+
+        internal int GetUniqueId () {
+            if (System == null)
+                return 0;
+            else
+                return System.GetHashCode();
         }
     }
 

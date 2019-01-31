@@ -1386,20 +1386,21 @@ namespace Squared.Illuminant.Particles {
 
             // FIXME: Race condition
             Renderer.OverrideStippleFactor = overrideStippleFactor;
-            var m = Engine.Materials.Get(
-                material, blendState: blendState
-            );
-            var e = m.Effect;
+            if (blendState != null)
+                material = Engine.Materials.Get(
+                    material, blendState: blendState
+                );
+            var e = material.Effect;
             var p = e.Parameters;
             using (var group = BatchGroup.New(
                 container, layer,
-                Renderer.BeforeDraw, Renderer.AfterDraw, m
+                Renderer.BeforeDraw, Renderer.AfterDraw, material
             )) {
                 RenderTrace.Marker(group, -9999, "Rasterize {0} particle chunks", Chunks.Count);
 
                 int i = 1;
                 foreach (var chunk in Chunks)
-                    RenderChunk(group, chunk, m, i++);
+                    RenderChunk(group, chunk, material, i++);
             }
         }
 

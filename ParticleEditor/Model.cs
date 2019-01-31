@@ -37,6 +37,11 @@ namespace Lumined {
         public readonly List<EditorSprite> Sprites = new List<EditorSprite>();
 
         /// <summary>
+        /// A list of light sources to render in the preview scene.
+        /// </summary>
+        public readonly List<EditorLight> Lights = new List<EditorLight>();
+
+        /// <summary>
         /// Determines the size of the particle buffers used by the particle systems.
         /// A small size is ideal for scenarios where you are not spawning many particles,
         ///  or where you need to read particle state from the GPU.
@@ -72,6 +77,20 @@ namespace Lumined {
         public Vector2? TextureSizePx;
 
         public float Scale = 1;
+    }
+
+    public class EditorLight {
+        /// <summary>
+        /// If set, this is a particle light source.
+        /// </summary>
+        public ParticleSystemReference ParticleSystem;
+
+        public Vector3 WorldPosition;
+
+        public float Radius = 16;
+        public float Falloff = 128;
+
+        public Color Color = Color.White;
     }
 
     public enum PresetChunkSize : int {

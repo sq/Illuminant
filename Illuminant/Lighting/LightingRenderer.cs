@@ -45,7 +45,7 @@ namespace Squared.Illuminant {
             public BlendState              BlendState;
             public RendererQualitySettings Quality;
             public bool                    DistanceRamp;
-            public object                  UniqueObject;
+            public ParticleLightSource     ParticleLightSource;
 
             public override int GetHashCode () {
                 var result = ((int)Type) ^ (DistanceRamp ? 2057 : 16593);
@@ -55,8 +55,8 @@ namespace Squared.Illuminant {
                     result ^= RampTexture.GetHashCode() << 4;
                 if (Quality != null)
                     result ^= Quality.GetHashCode() << 6;
-                if (UniqueObject != null)
-                    result ^= UniqueObject.GetHashCode() << 8;
+                if (ParticleLightSource != null)
+                    result ^= ParticleLightSource.GetHashCode() << 8;
                 return result;
             }
 
@@ -68,7 +68,7 @@ namespace Squared.Illuminant {
             }
 
             public bool Equals (LightTypeRenderStateKey ltrsk) {
-                return (UniqueObject == ltrsk.UniqueObject) &&
+                return (ParticleLightSource == ltrsk.ParticleLightSource) &&
                     (Type == ltrsk.Type) &&
                     (DistanceRamp == ltrsk.DistanceRamp) &&
                     (RampTexture == ltrsk.RampTexture) &&
@@ -162,7 +162,7 @@ namespace Squared.Illuminant {
 
             private ParticleLightSource ParticleLightSource {
                 get {
-                    return Key.UniqueObject as ParticleLightSource;
+                    return Key.ParticleLightSource as ParticleLightSource;
                 }
             }
 
@@ -672,7 +672,7 @@ namespace Squared.Illuminant {
 
         private void _ParticleLightBatchSetup (DeviceManager device, object userData) {
             var ltrs = (LightTypeRenderState)userData;
-            var pls = (ParticleLightSource)ltrs.Key.UniqueObject;
+            var pls = (ParticleLightSource)ltrs.Key.ParticleLightSource;
             IlluminationBatchSetup (device, ltrs);
             var p = ltrs.Material.Effect.Parameters;
             var lightSource = pls.Template;
@@ -709,7 +709,7 @@ namespace Squared.Illuminant {
                     BlendState = ls.BlendMode,
                     RampTexture = ls.RampTexture ?? Configuration.DefaultRampTexture,
                     Quality = ls.Quality ?? Configuration.DefaultQuality,
-                    UniqueObject = (ls is ParticleLightSource) ? ls : null
+                    ParticleLightSource = ls as ParticleLightSource
                 };
 
             // A 1x1 ramp is treated as no ramp at all.
@@ -777,6 +777,10 @@ namespace Squared.Illuminant {
             return newLuminanceBuffer;
         }
 
+        // FIXME: This is awful
+        private readonly HashSet<LightTypeRenderStateKey> DeadRenderStates = new HashSet<LightTypeRenderStateKey>();
+        private readonly HashSet<ParticleLightSource> ParticleLightSourcesRemainingToDraw = new HashSet<ParticleLightSource>();
+
         /// <summary>
         /// Updates the lightmap in the target batch container on the specified layer.
         /// To display lighting, call RenderedLighting.Resolve on the result.
@@ -836,6 +840,9 @@ namespace Squared.Illuminant {
             PendingDrawViewportPosition = viewportPosition;
             PendingDrawViewportScale = viewportScale;
 
+            foreach (var ls in Environment.Lights)
+                ls.RampTexture?.EnsureInitialized(Configuration.RampTextureLoader);
+
             BatchGroup resultGroup;
 
             using (var outerGroup = BatchGroup.New(container, layer)) {
@@ -867,10 +874,22 @@ namespace Squared.Illuminant {
 
                     // TODO: Use threads?
                     lock (_LightStateLock) {
+                        foreach (var drs in DeadRenderStates) {
+                            LightTypeRenderState ltrs;
+                            if (!LightRenderStates.TryGetValue(drs, out ltrs))
+                                continue;
+
+                            LightRenderStates.Remove(drs);
+                            Coordinator.DisposeResource(ltrs);
+                        }
+
+                        DeadRenderStates.Clear();
+
                         foreach (var kvp in LightRenderStates) {
                             if (kvp.Value.LightVertices != null)
                                 kvp.Value.LightVertices.Clear();
                             kvp.Value.LightCount = 0;
+                            DeadRenderStates.Add(kvp.Key);
                         }
 
                         using (var buffer = BufferPool<LightSource>.Allocate(Environment.Lights.Count)) {
@@ -887,9 +906,12 @@ namespace Squared.Illuminant {
                                 var lineLightSource = lightSource as LineLightSource;
 
                                 var ltrs = GetLightRenderState(lightSource);
+                                DeadRenderStates.Remove(ltrs.Key);
 
-                                if (particleLightSource != null)
+                                if (particleLightSource != null) {
+                                    ParticleLightSourcesRemainingToDraw.Add(particleLightSource);
                                     continue;
+                                }
 
                                 if (pointLightSource != null)
                                     RenderSphereLightSource(pointLightSource, intensityScale, ltrs);
@@ -906,41 +928,48 @@ namespace Squared.Illuminant {
                             kvp.Value.UpdateVertexBuffer();
 
                         if (paintDirectIllumination)
-                            foreach (var kvp in LightRenderStates) {
-                                var ltrs = kvp.Value;
-                                var count = ltrs.LightCount;
+                        foreach (var kvp in LightRenderStates) {
+                            if (DeadRenderStates.Contains(kvp.Key))
+                                continue;
 
-                                if (RenderTrace.EnableTracing)
-                                    RenderTrace.Marker(resultGroup, layerIndex++, "LightingRenderer {0} : Render {1} {2} light(s)", this.ToObjectID(), count, ltrs.Key.Type);
+                            var ltrs = kvp.Value;
+                            var count = ltrs.LightCount;
 
-                                var pls = ltrs.Key.UniqueObject as ParticleLightSource;
-                                if (pls != null) {
-                                    if (!pls.IsActive)
-                                        continue;
+                            if (RenderTrace.EnableTracing)
+                                RenderTrace.Marker(resultGroup, layerIndex++, "LightingRenderer {0} : Render {1} {2} light(s)", this.ToObjectID(), count, ltrs.Key.Type);
 
-                                    using (var bg = BatchGroup.New(
-                                        resultGroup, layerIndex++, ParticleLightBatchSetup, null, ltrs
-                                    )) {
-                                        pls.System.Render(bg, 0, ltrs.Material, null, null, pls.StippleFactor);
-                                    }
-                                } else {
-                                    if (count <= 0)
-                                        continue;
+                            var pls = ltrs.Key.ParticleLightSource;
+                            if (pls != null) {
+                                if (!pls.IsActive)
+                                    continue;
+                                if (!ParticleLightSourcesRemainingToDraw.Contains(pls))
+                                    continue;
 
-                                    using (var nb = NativeBatch.New(
-                                        resultGroup, layerIndex++, ltrs.Material, IlluminationBatchSetup, userData: ltrs
-                                    )) {
-                                        var cornerBuffer = ltrs.GetCornerBuffer(false);
-                                        nb.Add(new NativeDrawCall(
-                                            PrimitiveType.TriangleList,
-                                            cornerBuffer, 0,
-                                            ltrs.GetVertexBuffer(), 0,
-                                            null, 0,
-                                            QuadIndexBuffer, 0, 0, cornerBuffer.VertexCount, 0, cornerBuffer.VertexCount / 2, ltrs.LightCount
-                                        ));
-                                    }
+                                ParticleLightSourcesRemainingToDraw.Remove(pls);
+
+                                using (var bg = BatchGroup.New(
+                                    resultGroup, layerIndex++, ParticleLightBatchSetup, null, ltrs
+                                )) {
+                                    pls.System.Render(bg, 0, ltrs.Material, null, null, pls.StippleFactor);
+                                }
+                            } else {
+                                if (count <= 0)
+                                    continue;
+
+                                using (var nb = NativeBatch.New(
+                                    resultGroup, layerIndex++, ltrs.Material, IlluminationBatchSetup, userData: ltrs
+                                )) {
+                                    var cornerBuffer = ltrs.GetCornerBuffer(false);
+                                    nb.Add(new NativeDrawCall(
+                                        PrimitiveType.TriangleList,
+                                        cornerBuffer, 0,
+                                        ltrs.GetVertexBuffer(), 0,
+                                        null, 0,
+                                        QuadIndexBuffer, 0, 0, cornerBuffer.VertexCount, 0, cornerBuffer.VertexCount / 2, ltrs.LightCount
+                                    ));
                                 }
                             }
+                        }
 
                         if (
                             Configuration.EnableGlobalIllumination &&

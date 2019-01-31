@@ -44,6 +44,9 @@ namespace Lumined {
                         {"Sprites", new ModelTypeInfo {
                             Type = "List"
                         } },
+                        {"Lights", new ModelTypeInfo {
+                            Type = "List"
+                        } },
                     }
                 },
                 {

@@ -285,11 +285,37 @@ namespace Squared.Illuminant.Configuration {
     }
 
     public struct ParticleSystemReference {
-        public int?   Index;
-        public string Name;
+        private int?   _Index;
+        private string _Name;
 
         [NonSerialized]
         public Particles.ParticleSystem Instance;
+
+        public int? Index {
+            get {
+                return _Index;
+            }
+            set {
+                if (value == _Index)
+                    return;
+
+                Instance = null;
+                _Index = value;
+            }
+        }
+
+        public string Name {
+            get {
+                return _Name;
+            }
+            set {
+                if (value == _Name)
+                    return;
+
+                Instance = null;
+                _Name = value;
+            }
+        }
 
         public bool TryInitialize (Func<string, int?, Particles.ParticleSystem> resolver) {
             if ((Instance != null) && Instance.IsDisposed)

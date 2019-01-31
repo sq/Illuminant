@@ -162,6 +162,11 @@ namespace Squared.Illuminant {
         /// </summary>
         public bool RenderGroundPlane = true;
 
+        /// <summary>
+        /// Used to load lazy texture resources.
+        /// </summary>
+        public Func<string, Texture2D> RampTextureLoader = null;
+
         public RendererConfiguration (
             int maxWidth, int maxHeight, bool highQuality,
             bool enableBrightnessEstimation = false,

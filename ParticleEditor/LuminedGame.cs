@@ -396,7 +396,7 @@ namespace Lumined {
 
             if (View != null) {
                 MaybeDrawPreviousBitmaps(frame, 3);
-                View.Update(this, frame, -3, gameTime.ElapsedGameTime.Ticks);
+                View.Update(this, frame, -10, gameTime.ElapsedGameTime.Ticks);
                 ClearBatch.AddNew(frame, -2, Materials.Clear, View.GetData().BackgroundColor);
             } else {
                 ClearBatch.AddNew(frame, -2, Materials.Clear, Color.Black);
@@ -413,12 +413,20 @@ namespace Lumined {
             Materials.ViewportPosition = ViewOffset;
             Materials.ViewportScale = Zoom * Vector2.One;
 
+            UpdateLightingEnvironment();
+            var shouldRenderLighting = (LightingRenderer.Environment?.Lights.Count ?? 0) > 0;
+            Texture2D backgroundTexture = null;
+
             if (View != null) {
                 var bg = View.GetData().Background;
                 if (bg != null) {
                     bg.EnsureInitialized(View.Engine.Configuration.TextureLoader);
-                    if (bg.IsInitialized)
-                        ir.Draw(bg.Instance, Vector2.Zero, origin: Vector2.One * 0.5f, layer: -1, worldSpace: true);
+                    if (bg.IsInitialized) {
+                        if (shouldRenderLighting)
+                            backgroundTexture = bg.Instance;
+                        else
+                            ir.Draw(bg.Instance, Vector2.Zero, origin: Vector2.One * 0.5f, layer: -1, worldSpace: true);
+                    }
                 }
 
                 foreach (var spr in View.GetData().Sprites) {
@@ -447,6 +455,15 @@ namespace Lumined {
 
             ir.Draw(UIRenderTarget, Vector2.Zero, multiplyColor: Color.White * uiOpacity);
 
+            LightingRenderer.UpdateFields(frame, -11);
+
+            if (shouldRenderLighting) {
+                // NOTE: This needs to happen after the particle system update
+                // TODO: Maybe enforce this programmatically?
+                var rl = LightingRenderer.RenderLighting(frame, -8);
+                rl.Resolve(frame, -1, Vector2.Zero, albedo: backgroundTexture);
+            }
+
             if (View != null) {
                 if (!View.GetData().DrawAsBitmaps)
                     View.Draw(this, frame, 3);
@@ -458,6 +475,34 @@ namespace Lumined {
                 DrawPerformanceStats(ref ir);
 
             ThreadPool.QueueUserWorkItem(GCAfterVsync, null);
+        }
+
+        private void UpdateLightingEnvironment () {
+            var e = LightingRenderer.Environment;
+            e.Clear();
+
+            if (View == null)
+                return;
+            var d = View.GetData();
+
+            foreach (var l in d.Lights) {
+                var sls = new SphereLightSource {
+                    Position = l.WorldPosition,
+                    Radius = l.Radius,
+                    RampLength = l.Falloff,
+                    Color = l.Color.ToVector4()
+                };
+
+                if (l.ParticleSystem.TryInitialize(View.Engine.Configuration.SystemResolver)) {
+                    var pls = new ParticleLightSource {
+                        Template = sls,
+                        System = l.ParticleSystem.Instance
+                    };
+                    e.Lights.Add(pls);
+                } else {
+                    e.Lights.Add(sls);
+                }
+            }
         }
 
         private void MaybeDrawPreviousBitmaps (IBatchContainer container, int layer) {
@@ -507,8 +552,9 @@ namespace Lumined {
             // This should hide most or all of the GC time behind the rendering time.
             if (!Graphics.SynchronizeWithVerticalRetrace)
                 return;
-            if (RenderCoordinator.TryWaitForPresentToStart(3, 1))
-                GC.Collect(1, GCCollectionMode.Optimized);
+            bool didEnd;
+            if (RenderCoordinator.TryWaitForPresentToStart(3, out didEnd, 1) && !didEnd)
+                GC.Collect(1, GCCollectionMode.Optimized, false);
         }
 
         private void DrawPerformanceStats (ref ImperativeRenderer ir) {
