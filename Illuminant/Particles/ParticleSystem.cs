@@ -669,7 +669,7 @@ namespace Squared.Illuminant.Particles {
                 ShouldClear = shouldClear,
                 Chunk = chunk,
                 SourceChunk = sourceChunk,
-                SourceCurr = sourceChunk?.Current,
+                SourceData = sourceChunk?.Previous ?? sourceChunk?.Current,
                 Now = (float)now,
                 DeltaTimeSeconds = deltaTimeSeconds,
                 CurrentFrameIndex = CurrentFrameIndex

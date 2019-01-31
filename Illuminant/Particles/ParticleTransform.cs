@@ -42,7 +42,7 @@ namespace Squared.Illuminant.Particles.Transforms {
     public class ParticleTransformUpdateParameters {
         public ParticleSystem System;
         public ParticleSystem.Chunk Chunk, SourceChunk;
-        internal ParticleSystem.BufferSet Prev, Curr, SourceCurr;
+        internal ParticleSystem.BufferSet Prev, Curr, SourceData;
         public Material Material;
         public bool IsUpdate, IsSpawning, ShouldClear;
         public double DeltaTimeSeconds;
@@ -96,8 +96,8 @@ namespace Squared.Illuminant.Particles.Transforms {
 
                     if ((up.Prev != null) || (up.SourceChunk != null)) {
                         if (up.SourceChunk != null) {
-                            p["PositionTexture"].SetValue(up.SourceCurr.PositionAndLife);
-                            p["VelocityTexture"].SetValue(up.SourceCurr.Velocity);
+                            p["PositionTexture"].SetValue(up.SourceData.PositionAndLife);
+                            p["VelocityTexture"].SetValue(up.SourceData.Velocity);
                             var invSize = 1.0f / up.SourceChunk.Size;
                             p["SourceChunkSizeAndTexel"].SetValue(new Vector3(
                                 up.SourceChunk.Size, invSize, invSize
