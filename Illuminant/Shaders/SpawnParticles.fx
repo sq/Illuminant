@@ -7,7 +7,7 @@ uniform bool   AlignVelocityAndPosition, ZeroZAxis, MultiplyLife, SpawnFromEntir
 uniform bool   AlignPositionConstant, MultiplyAttributeConstant, PolygonLoop;
 uniform float  PolygonRate, SourceVelocityFactor, FeedbackSourceIndex, AttributeDiscardThreshold, InstanceMultiplier;
 uniform float4 ChunkSizeAndIndices;
-uniform float4 Configuration[8];
+uniform float4 Configuration[9];
 uniform float4 FormulaTypes;
 uniform float4x4 PositionMatrix;
 uniform float3 SourceChunkSizeAndTexel;
@@ -132,7 +132,7 @@ bool Spawn_Stage1(
 }
 
 void Spawn_Stage2(
-    in float4 positionConstant,
+    in float4 positionConstant, in float4 towardsNext,
     in float4 random1, in float4 random2, in float4 random3,
     out float4 newPosition,
     out float4 newVelocity,
@@ -144,7 +144,11 @@ void Spawn_Stage2(
     newPosition.w = tempPosition.w;
 
     newVelocity = evaluateFormula(newPosition, Configuration[2], Configuration[3], Configuration[4], random2, FormulaTypes.y);
-    newAttributes = evaluateFormula(newPosition, Configuration[5], Configuration[6], Configuration[7], random3, FormulaTypes.z);
+    newAttributes = evaluateFormula(0, Configuration[5], Configuration[6], Configuration[7], random3, FormulaTypes.z);
+    
+    // FIXME: float->float4, random3.w
+    float towardsSpeed = evaluateFormula(0, Configuration[8].x, Configuration[8].y, Configuration[8].z, random3.w, FormulaTypes.w).x;
+    newVelocity += towardsSpeed * normalize(towardsNext);
 
     if (newAttributes.w < AttributeDiscardThreshold)
         discard;
@@ -167,7 +171,7 @@ void PS_Spawn (
         position2 = InlinePositionConstants[index2];
     positionConstant = lerp(position1, position2, positionIndexT);
 
-    Spawn_Stage2(positionConstant, random1, random2, random3, newPosition, newVelocity, newAttributes);
+    Spawn_Stage2(positionConstant, position2 - position1, random1, random2, random3, newPosition, newVelocity, newAttributes);
 }
 
 void PS_SpawnFromPositionTexture (
@@ -187,7 +191,7 @@ void PS_SpawnFromPositionTexture (
         position2 = tex2Dlod(PositionConstantSampler, float4(index2 * PositionConstantTexel.x, 0, 0, 0));
     positionConstant = lerp(position1, position2, positionIndexT);
 
-    Spawn_Stage2(positionConstant, random1, random2, random3, newPosition, newVelocity, newAttributes);
+    Spawn_Stage2(positionConstant, position2 - position1, random1, random2, random3, newPosition, newVelocity, newAttributes);
 }
 
 void PS_SpawnFeedback (

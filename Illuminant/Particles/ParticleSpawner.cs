@@ -77,7 +77,7 @@ namespace Squared.Illuminant.Particles.Transforms {
         protected readonly MersenneTwister RNG;
 
         [NonSerialized]
-        protected Vector4[] Temp = new Vector4[8];
+        protected Vector4[] Temp = new Vector4[9];
 
         [NonSerialized]
         internal readonly UpdateHandler Handler2;
@@ -197,6 +197,8 @@ namespace Squared.Illuminant.Particles.Transforms {
                 0
             );
 
+            InitConfiguration(engine, now, ref Temp, ref ft);
+
             parameters["AlignVelocityAndPosition"].SetValue(
                 AlignVelocityAndPosition && Position.Circular && Velocity.Circular
             );
@@ -209,6 +211,9 @@ namespace Squared.Illuminant.Particles.Transforms {
             parameters["PositionMatrix"].SetValue(m.Matrix);
 
             parameters["AttributeDiscardThreshold"].SetValue(AlphaDiscardThreshold / 255f);
+        }
+
+        protected virtual void InitConfiguration (ParticleEngine engine, float now, ref Vector4[] configuration, ref Vector4 formulaTypes) {
         }
     }
 
@@ -232,7 +237,7 @@ namespace Squared.Illuminant.Particles.Transforms {
         /// <summary>
         /// The velocity of the particle towards the next point in the spawn polygon (if any)
         /// </summary>
-        public Formula1 TowardsNext = Formula1.One();
+        public Formula1 VelocityAlongPolygon = Formula1.Zero();
         /// <summary>
         /// If set, the MinRate and MaxRate parameters apply to each position instead of the spawner as a whole.
         /// </summary>
@@ -335,6 +340,18 @@ namespace Squared.Illuminant.Particles.Transforms {
             parameters["PositionConstantCount"].SetValue((float)count);
             parameters["PolygonRate"].SetValue(PolygonRate.GetValueOrDefault(0));
             parameters["PolygonLoop"].SetValue(PolygonLoop);
+        }
+
+        protected override void InitConfiguration (ParticleEngine engine, float now, ref Vector4[] configuration, ref Vector4 formulaTypes) {
+            base.InitConfiguration(engine, now, ref configuration, ref formulaTypes);
+
+            configuration[8] = new Vector4(
+                VelocityAlongPolygon.Constant.Evaluate(now, engine.ResolveSingle),
+                VelocityAlongPolygon.RandomScale.Evaluate(now, engine.ResolveSingle),
+                VelocityAlongPolygon.Offset.Evaluate(now, engine.ResolveSingle),
+                0
+            );
+            formulaTypes.W = 0;
         }
 
         public override void Dispose () {
