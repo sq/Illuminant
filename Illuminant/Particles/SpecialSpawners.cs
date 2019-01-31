@@ -133,27 +133,6 @@ namespace Squared.Illuminant.Particles.Transforms {
         public ParticleSystemReference SourceSystem;
 
         /// <summary>
-        /// Adds the position of source particles to the position Constant of new particles
-        /// </summary>
-        public bool AlignPositionConstant = true;
-
-        /// <summary>
-        /// Multiplies the life of the new particle by the life of the source particle.
-        /// </summary>
-        public bool MultiplyLife = false;
-
-        /// <summary>
-        /// Multiplies the color Constant of new particles by the attribute of source particles
-        /// </summary>
-        public bool MultiplyColorConstant = false;
-
-        /// <summary>
-        /// The new particles inherit the source particles' velocities as a velocity constant, multiplied
-        ///  by this factor
-        /// </summary>
-        public float SourceVelocityFactor = 0.0f;
-
-        /// <summary>
         /// Only considers the N most recently spawned particles from the source system for feedback.
         /// Use this for cases where the source system spawns at a much higher rate than your spawner,
         ///  to avoid performing feedback spawning against particles that are already dead.
@@ -169,16 +148,37 @@ namespace Squared.Illuminant.Particles.Transforms {
         public int SlidingWindowMargin = 0;
 
         /// <summary>
-        /// Spawns this many particles from each source particle.
-        /// </summary>
-        public int InstanceMultiplier = 1;
-
-        /// <summary>
         /// Spawns from randomly selected particles inside the entire sliding window instead of
         ///  only spawning from the most recent (non-consumed) particles. This spawner will no
         ///  longer consume particles.
         /// </summary>
         public bool SpawnFromEntireWindow = false;
+
+        /// <summary>
+        /// Spawns this many particles from each source particle.
+        /// </summary>
+        public int InstanceMultiplier = 1;
+
+        /// <summary>
+        /// Adds the position of source particles to the position Constant of new particles
+        /// </summary>
+        public bool AlignPositionConstant = true;
+
+        /// <summary>
+        /// The new particles inherit the source particles' velocities as a velocity constant, multiplied
+        ///  by this factor
+        /// </summary>
+        public float SourceVelocityFactor = 0.0f;
+
+        /// <summary>
+        /// Multiplies the life of the new particle by the life of the source particle.
+        /// </summary>
+        public bool MultiplyLife = false;
+
+        /// <summary>
+        /// Multiplies the color Constant of new particles by the attribute of source particles
+        /// </summary>
+        public bool MultiplyColorConstant = false;
         
         [NonSerialized]
         private ParticleSystem.Chunk CurrentFeedbackSource;

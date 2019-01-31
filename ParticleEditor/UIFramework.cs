@@ -590,7 +590,7 @@ namespace Lumined {
             var result = false;
             var name = cpi.Name;
 
-            using (var pGroup = Nuklear.CollapsingGroup(name, actualName, false)) {
+            using (var pGroup = Nuklear.CollapsingGroup(name, actualName, false, tooltip: cpi.Summary)) {
                 if (pGroup.Visible) {
                     Nuklear.NewRow(LineHeight, 2);
                     if (Nuklear.Button("Zero")) {
@@ -632,7 +632,7 @@ namespace Lumined {
             var result = false;
             var name = cpi.Name;
 
-            using (var pGroup = Nuklear.CollapsingGroup(name, actualName, false)) {
+            using (var pGroup = Nuklear.CollapsingGroup(name, actualName, false, tooltip: cpi.Summary)) {
                 if (pGroup.Visible) {
                     Nuklear.NewRow(LineHeight, 3);
                     if (Nuklear.Button("Zero")) {
@@ -685,7 +685,7 @@ namespace Lumined {
             var result = false;
             var name = cpi.Name;
 
-            using (var pGroup = Nuklear.CollapsingGroup(name, actualName, false)) {
+            using (var pGroup = Nuklear.CollapsingGroup(name, actualName, false, tooltip: cpi.Summary)) {
                 if (pGroup.Visible) {
                     Nuklear.NewRow(LineHeight, 2);
                     if (Nuklear.Button("Zero")) {
@@ -736,7 +736,7 @@ namespace Lumined {
 
             if ((instance == null) || (value == null))
                 return false;
-            using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, groupKey, false)) {
+            using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, groupKey, false, tooltip: cpi.Summary)) {
                 if (pGroup.Visible) {
                     foreach (var i in members) 
                         if (RenderProperty(cache, i, value, cpi.Info.Type, cpi.Name))
@@ -1315,7 +1315,7 @@ namespace Lumined {
             bool isDynamic, ref bool doBezierConversion, ref bool doReferenceConversion
         ) {
             var ctx = Nuklear.Context;
-            using (var pGroup = Nuklear.CollapsingGroup(actualName, actualName, false)) {
+            using (var pGroup = Nuklear.CollapsingGroup(actualName, actualName, false, tooltip: cpi.Summary)) {
                 if (pGroup.Visible) {
                     var buttonCount = 1;
                     if (isDynamic)
@@ -1458,7 +1458,7 @@ namespace Lumined {
                 elementCount = 4;
 
             var ctx = Nuklear.Context;
-            using (var pGroup = Nuklear.CollapsingGroup(cpi?.Name ?? actualName, actualName, initiallyOpen)) {
+            using (var pGroup = Nuklear.CollapsingGroup(cpi?.Name ?? actualName, actualName, initiallyOpen, tooltip: cpi?.Summary)) {
                 if (pGroup.Visible) {
                     var b = (IBezier)value;
 
@@ -1672,7 +1672,7 @@ namespace Lumined {
             var list = (System.Collections.IList)_list;
             var itemType = GetElementType(_list.GetType());
 
-            using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, actualName, false)) {
+            using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, actualName, false, tooltip: cpi.Summary)) {
                 if (pGroup.Visible) {
                     PropertyGridCache pgc;
                     if (!GridCaches.TryGetValue(actualName, out pgc))
@@ -1747,7 +1747,7 @@ namespace Lumined {
         ) {
             changed = false;
             var ctx = Nuklear.Context;
-            using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, cpi.Name, false)) {
+            using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, cpi.Name, false, tooltip: cpi.Summary)) {
                 if (pGroup.Visible) {
                     Vector4 c;
                     if (value is Vector4)

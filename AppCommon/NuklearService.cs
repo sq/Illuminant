@@ -596,13 +596,16 @@ namespace Framework {
             };
         }
 
-        public Tree CollapsingGroup (string caption, string name, bool defaultOpen = true, int hash = 0) {
+        public Tree CollapsingGroup (string caption, string name, bool defaultOpen = true, int hash = 0, string tooltip = null) {
             using (var tCaption = new NString(caption))
             using (var tName = new NString(name)) {
+                var bounds = Nuklear.nk_widget_bounds(Context);
                 var result = Nuklear.nk_tree_push_hashed(
                     Context, nk_tree_type.NK_TREE_TAB, tCaption.pText,
                     defaultOpen ? nk_collapse_states.NK_MAXIMIZED : nk_collapse_states.NK_MINIMIZED, tName.pText, tName.Length, hash
                 );
+                if (tooltip != null)
+                    Tooltip(bounds, tooltip);
                 return new Tree {
                     ctx = Context,
                     Visible = (result != 0)

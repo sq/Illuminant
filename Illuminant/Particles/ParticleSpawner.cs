@@ -22,6 +22,19 @@ namespace Squared.Illuminant.Particles.Transforms {
         /// Maximum number of particles to spawn per second.
         /// </summary>
         public Parameter<float> MaxRate;
+        /// <summary>
+        /// If set, the spawner will only be allowed to produce this many particles in total.
+        /// </summary>
+        public int? MaximumTotal = null;
+
+        /// <summary>
+        /// The position of the particle.
+        /// </summary>
+        public Formula3 Position = Formula3.UnitNormal();
+        /// <summary>
+        /// Applies a matrix transform to particle positions after the position formula has been evaluated.
+        /// </summary>
+        public Parameter<DynamicMatrix> PositionPostMatrix = DynamicMatrix.Identity;
 
         /// <summary>
         /// If set, the randomly selected normals for position and velocity will be identical.
@@ -33,29 +46,27 @@ namespace Squared.Illuminant.Particles.Transforms {
         /// If not set, random normals will be 3-dimensional.
         /// </summary>
         public bool ZeroZAxis = false;
-        /// <summary>
-        /// If a new particle's color has an alpha (w) less than this value the particle is discarded.
-        /// </summary>
-        public float AlphaDiscardThreshold = 1;
 
-        public Formula3 Position = Formula3.UnitNormal();
+        /// <summary>
+        /// The velocity of the particle.
+        /// </summary>
         public Formula3 Velocity = Formula3.UnitNormal();
+        /// <summary>
+        /// The life value of the particle.
+        /// </summary>
         public Formula1 Life = Formula1.One();
         /// <summary>
         /// The category of the particle (controls which row of the texture is used, if applicable)
         /// </summary>
         public Formula1 Category = Formula1.Zero();
+        /// <summary>
+        /// The constant color of the particle (multiplied by other color settings and ramps).
+        /// </summary>
         public Formula4 Color = Formula4.One();
-
         /// <summary>
-        /// Applies a matrix transform to particle positions after the position formula has been evaluated.
+        /// If a new particle's color has an alpha (w) less than this value the particle is discarded.
         /// </summary>
-        public Parameter<DynamicMatrix> PositionPostMatrix = DynamicMatrix.Identity;
-
-        /// <summary>
-        /// If set, the spawner will only be allowed to produce this many particles in total.
-        /// </summary>
-        public int? MaximumTotal = null;
+        public float AlphaDiscardThreshold = 1;
 
         private static int NextSeed = 1;
 
@@ -205,8 +216,12 @@ namespace Squared.Illuminant.Particles.Transforms {
         public const int MaxInlinePositions = 4;
 
         /// <summary>
-        /// If set, the spawn position will trace a linear path between each specified
-        ///  position from the additional positions list at this rate.
+        /// A list of additional positions to spawn particles from.
+        /// </summary>
+        public readonly List<Vector3> AdditionalPositions = new List<Vector3>();
+        /// <summary>
+        /// If set, the spawn position will trace a linear path between each specified position
+        ///  at this rate.
         /// </summary>
         public float? PolygonRate = null;
         /// <summary>
@@ -215,9 +230,9 @@ namespace Squared.Illuminant.Particles.Transforms {
         /// </summary>
         public bool PolygonLoop = true;
         /// <summary>
-        /// A list of additional positions to spawn particles from.
+        /// The velocity of the particle towards the next point in the spawn polygon (if any)
         /// </summary>
-        public readonly List<Vector3> AdditionalPositions = new List<Vector3>();
+        public Formula1 TowardsNext = Formula1.One();
         /// <summary>
         /// If set, the MinRate and MaxRate parameters apply to each position instead of the spawner as a whole.
         /// </summary>
