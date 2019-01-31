@@ -20,6 +20,11 @@ using Squared.Util;
 
 namespace Squared.Illuminant.Particles {
     public class ParticleSystem : IDisposable {
+        internal class InternalRenderParameters {
+            public Material Material;
+            public ParticleRenderParameters UserParameters;
+        }
+
         public class UpdateResult {
             public ParticleSystem System { get; private set; }
             public bool PerformedUpdate { get; private set; }
@@ -264,16 +269,15 @@ namespace Squared.Illuminant.Particles {
             public readonly ParticleSystem System;
             public readonly Action<DeviceManager, object> BeforeDraw, AfterDraw;
 
-            public float? OverrideStippleFactor { get; internal set; }
-
             public RenderHandler (ParticleSystem system) {
                 System = system;
                 BeforeDraw = _BeforeDraw;
                 AfterDraw = _AfterDraw;
             }
 
-            private void _BeforeDraw (DeviceManager dm, object _m) {
-                var m = (Material)_m;
+            private void _BeforeDraw (DeviceManager dm, object _rp) {
+                var rp = (InternalRenderParameters)_rp;
+                var m = rp.Material;
                 var e = m.Effect;
                 var p = e.Parameters;
 
@@ -303,7 +307,7 @@ namespace Squared.Illuminant.Particles {
                     }
                 }
                 
-                p["StippleFactor"]?.SetValue(OverrideStippleFactor.GetValueOrDefault(System.Configuration.StippleFactor));
+                p["StippleFactor"]?.SetValue(rp.UserParameters?.StippleFactor ?? System.Configuration.StippleFactor);
 
                 var u = new RasterizeParticleSystem(System.Engine.Configuration, System.Configuration);
                 System.Engine.uRasterize.TrySet(m, ref u);
@@ -316,8 +320,9 @@ namespace Squared.Illuminant.Particles {
                 System.MaybeSetLifeRampParameters(p);
             }
 
-            private void _AfterDraw (DeviceManager dm, object _m) {
-                var m = (Material)_m;
+            private void _AfterDraw (DeviceManager dm, object _rp) {
+                var rp = (InternalRenderParameters)_rp;
+                var m = rp.Material;
                 var e = m.Effect;
                 var p = e.Parameters;
                 p.ClearTextures(ClearTextureList);
@@ -1361,7 +1366,7 @@ namespace Squared.Illuminant.Particles {
             Material material = null,
             Matrix? transform = null, 
             BlendState blendState = null,
-            float? overrideStippleFactor = null,
+            ParticleRenderParameters renderParams = null,
             bool usePreviousData = false
         ) {
             var startedWhen = Time.Ticks;
@@ -1381,7 +1386,6 @@ namespace Squared.Illuminant.Particles {
             }
 
             // FIXME: Race condition
-            Renderer.OverrideStippleFactor = overrideStippleFactor;
             if (blendState != null)
                 material = Engine.Materials.Get(
                     material, blendState: blendState
@@ -1390,7 +1394,8 @@ namespace Squared.Illuminant.Particles {
             var p = e.Parameters;
             using (var group = BatchGroup.New(
                 container, layer,
-                Renderer.BeforeDraw, Renderer.AfterDraw, material
+                Renderer.BeforeDraw, Renderer.AfterDraw, 
+                userData: new InternalRenderParameters { Material = material, UserParameters = renderParams }
             )) {
                 RenderTrace.Marker(group, -9999, "Rasterize {0} particle chunks", Chunks.Count);
 
@@ -1687,5 +1692,9 @@ namespace Squared.Illuminant.Particles {
             var result = (ParticleSystemConfiguration)this.MemberwiseClone();
             return result;
         }
+    }
+
+    public class ParticleRenderParameters {
+        public float? StippleFactor = null;
     }
 }

@@ -84,6 +84,7 @@ namespace Lumined {
         /// If set, this is a particle light source.
         /// </summary>
         public ParticleSystemReference ParticleSystem;
+        public float ParticleStippleFactor = 1.0f;
 
         public Vector3 WorldPosition;
 

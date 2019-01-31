@@ -421,12 +421,8 @@ namespace Lumined {
                 var bg = View.GetData().Background;
                 if (bg != null) {
                     bg.EnsureInitialized(View.Engine.Configuration.TextureLoader);
-                    if (bg.IsInitialized) {
-                        if (shouldRenderLighting)
-                            backgroundTexture = bg.Instance;
-                        else
-                            ir.Draw(bg.Instance, Vector2.Zero, origin: Vector2.One * 0.5f, layer: -1, worldSpace: true);
-                    }
+                    if (bg.IsInitialized)
+                        ir.Draw(bg.Instance, Vector2.Zero, origin: Vector2.One * 0.5f, layer: -1, worldSpace: true);
                 }
 
                 foreach (var spr in View.GetData().Sprites) {
@@ -461,7 +457,7 @@ namespace Lumined {
                 // NOTE: This needs to happen after the particle system update
                 // TODO: Maybe enforce this programmatically?
                 var rl = LightingRenderer.RenderLighting(frame, -8);
-                rl.Resolve(frame, -1, Vector2.Zero, albedo: backgroundTexture);
+                rl.Resolve(frame, -1, Vector2.Zero, worldSpace: false);
             }
 
             if (View != null) {
@@ -485,6 +481,12 @@ namespace Lumined {
                 return;
             var d = View.GetData();
 
+            if (d.Lights.Count > 0)
+                e.Lights.Add(new DirectionalLightSource {
+                    Color = new Vector4(1, 1, 1, 0.1f),
+                    Direction = null
+                });
+
             foreach (var l in d.Lights) {
                 var sls = new SphereLightSource {
                     Position = l.WorldPosition,
@@ -496,7 +498,8 @@ namespace Lumined {
                 if (l.ParticleSystem.TryInitialize(View.Engine.Configuration.SystemResolver)) {
                     var pls = new ParticleLightSource {
                         Template = sls,
-                        System = l.ParticleSystem.Instance
+                        System = l.ParticleSystem.Instance,
+                        StippleFactor = l.ParticleStippleFactor
                     };
                     e.Lights.Add(pls);
                 } else {
