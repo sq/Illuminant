@@ -779,7 +779,6 @@ namespace Squared.Illuminant {
 
         // FIXME: This is awful
         private readonly HashSet<LightTypeRenderStateKey> DeadRenderStates = new HashSet<LightTypeRenderStateKey>();
-        private readonly HashSet<ParticleLightSource> ParticleLightSourcesRemainingToDraw = new HashSet<ParticleLightSource>();
 
         /// <summary>
         /// Updates the lightmap in the target batch container on the specified layer.
@@ -908,10 +907,8 @@ namespace Squared.Illuminant {
                                 var ltrs = GetLightRenderState(lightSource);
                                 DeadRenderStates.Remove(ltrs.Key);
 
-                                if (particleLightSource != null) {
-                                    ParticleLightSourcesRemainingToDraw.Add(particleLightSource);
+                                if (particleLightSource != null)
                                     continue;
-                                }
 
                                 if (pointLightSource != null)
                                     RenderSphereLightSource(pointLightSource, intensityScale, ltrs);
@@ -942,10 +939,6 @@ namespace Squared.Illuminant {
                             if (pls != null) {
                                 if (!pls.IsActive)
                                     continue;
-                                if (!ParticleLightSourcesRemainingToDraw.Contains(pls))
-                                    continue;
-
-                                ParticleLightSourcesRemainingToDraw.Remove(pls);
 
                                 using (var bg = BatchGroup.New(
                                     resultGroup, layerIndex++, ParticleLightBatchSetup, null, ltrs

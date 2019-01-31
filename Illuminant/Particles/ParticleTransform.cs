@@ -42,7 +42,7 @@ namespace Squared.Illuminant.Particles.Transforms {
     public class ParticleTransformUpdateParameters {
         public ParticleSystem System;
         public ParticleSystem.Chunk Chunk, SourceChunk;
-        internal ParticleSystem.BufferSet Prev, Curr;
+        internal ParticleSystem.BufferSet Prev, Curr, SourceCurr;
         public Material Material;
         public bool IsUpdate, IsSpawning, ShouldClear;
         public double DeltaTimeSeconds;
@@ -95,9 +95,17 @@ namespace Squared.Illuminant.Particles.Transforms {
                         Transform.SetParameters(engine, p, up.Now, up.CurrentFrameIndex);
 
                     if ((up.Prev != null) || (up.SourceChunk != null)) {
-                        var src = up.SourceChunk?.Current ?? up.Prev;
-                        p["PositionTexture"].SetValue(src.PositionAndLife);
-                        p["VelocityTexture"].SetValue(src.Velocity);
+                        if (up.SourceChunk != null) {
+                            p["PositionTexture"].SetValue(up.SourceCurr.PositionAndLife);
+                            p["VelocityTexture"].SetValue(up.SourceCurr.Velocity);
+                            var invSize = 1.0f / up.SourceChunk.Size;
+                            p["SourceChunkSizeAndTexel"].SetValue(new Vector3(
+                                up.SourceChunk.Size, invSize, invSize
+                            ));
+                        } else {
+                            p["PositionTexture"].SetValue(up.Prev.PositionAndLife);
+                            p["VelocityTexture"].SetValue(up.Prev.Velocity);
+                        }
 
                         var at = p["AttributeTexture"];
                         if (at != null) {
@@ -107,12 +115,6 @@ namespace Squared.Illuminant.Particles.Transforms {
                                 at.SetValue(up.IsSpawning ? null : up.Chunk.Color);
                         }
 
-                    }
-
-                    if (up.SourceChunk != null) {
-                        p["SourceChunkSizeAndTexel"].SetValue(new Vector3(
-                            up.SourceChunk.Size, 1.0f / up.SourceChunk.Size, 1.0f / up.SourceChunk.Size
-                        ));
                     }
 
                     var dft = p["DistanceFieldTexture"];

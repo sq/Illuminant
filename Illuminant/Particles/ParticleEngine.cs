@@ -142,12 +142,14 @@ namespace Squared.Illuminant.Particles {
 
         public long CurrentTurn { get; private set; }
 
-        private void SiftBuffers () {
+        private void SiftBuffers (int frameIndex) {
             ParticleSystem.BufferSet b;
             using (var e = DiscardedBuffers.GetEnumerator())
             while (e.GetNext(out b)) {
-                if (b.IsUpdateResult)
+                // We can't reuse any buffers that were recently used for painting or readback
+                if (b.LastFrameDependency >= (frameIndex - 1))
                     continue;
+
                 var age = CurrentTurn - b.LastTurnUsed;
                 if (age >= Configuration.RecycleInterval) {
                     e.RemoveCurrent();
@@ -186,14 +188,14 @@ namespace Squared.Illuminant.Particles {
             return true;
         }
 
-        internal void NextTurn () {
+        internal void NextTurn (int frameIndex) {
             CurrentTurn += 1;
 
-            SiftBuffers();
+            SiftBuffers(frameIndex);
         }
 
-        internal void EndOfUpdate (long initialTurn) {
-            SiftBuffers();
+        internal void EndOfUpdate (long initialTurn, int frameIndex) {
+            SiftBuffers(frameIndex);
 
             ParticleSystem.BufferSet b;
             using (var e = AvailableBuffers.GetEnumerator())
@@ -398,7 +400,7 @@ namespace Squared.Illuminant.Particles {
         /// <summary>
         /// The maximum number of spare buffers to keep around.
         /// </summary>
-        public int SpareBufferCount = 24;
+        public int SpareBufferCount = 16;
 
         /// <summary>
         /// Used to measure elapsed time automatically for updates

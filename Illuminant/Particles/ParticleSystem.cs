@@ -123,6 +123,7 @@ namespace Squared.Illuminant.Particles {
             public readonly int Size, MaximumCount;
             public readonly int ID;
 
+            public int  LastFrameDependency = -1;
             public long LastTurnUsed;
 
             public RenderTargetBinding[] Bindings2, Bindings3, Bindings4;
@@ -130,7 +131,6 @@ namespace Squared.Illuminant.Particles {
             public RenderTarget2D Velocity;
 
             public bool IsDisposed { get; private set; }
-            public bool IsUpdateResult;
 
             private static volatile int NextID;
 
@@ -183,7 +183,6 @@ namespace Squared.Illuminant.Particles {
             public RenderTarget2D Color;
 
             internal RenderTarget2D RenderData, RenderColor;
-            internal BufferSet LastUpdateResult;
 
             public bool NoLongerASpawnTarget { get; internal set; }
             public bool IsFeedbackSource { get; internal set; }
@@ -221,16 +220,14 @@ namespace Squared.Illuminant.Particles {
 
                 var device = system.Engine.Coordinator.Device;
                 Query = new OcclusionQuery(device);
-                Color = new RenderTarget2D(
-                    device, Size, Size, false, SurfaceFormat.Vector4, 
-                    DepthFormat.None, 0, RenderTargetUsage.PreserveContents
-                );
-                RenderData = new RenderTarget2D(
-                    device, Size, Size, false, SurfaceFormat.Vector4, 
-                    DepthFormat.None, 0, RenderTargetUsage.PreserveContents
-                );
-                RenderColor = new RenderTarget2D(
-                    device, Size, Size, false, SurfaceFormat.Vector4, 
+                Color = MakeRT(device);
+                RenderData = MakeRT(device);
+                RenderColor = MakeRT(device);
+            }
+
+            private RenderTarget2D MakeRT (GraphicsDevice device) {
+                return new RenderTarget2D(
+                    device, Size, Size, false, SurfaceFormat.Vector4,
                     DepthFormat.None, 0, RenderTargetUsage.PreserveContents
                 );
             }
@@ -239,12 +236,8 @@ namespace Squared.Illuminant.Particles {
                 if (IsDisposed)
                     return;
 
-                if (LastUpdateResult != null)
-                    LastUpdateResult.IsUpdateResult = false;
-
                 IsDisposed = true;
 
-                LastUpdateResult = null;
                 Color.Dispose();
                 RenderData.Dispose();
                 RenderColor.Dispose();
@@ -253,10 +246,6 @@ namespace Squared.Illuminant.Particles {
             }
 
             internal void Clear () {
-                if (LastUpdateResult != null)
-                    LastUpdateResult.IsUpdateResult = false;
-
-                LastUpdateResult = null;
                 NextSpawnOffset = 0;
                 TotalConsumedForFeedback = 0;
                 TotalSpawned = 0;
@@ -379,6 +368,7 @@ namespace Squared.Illuminant.Particles {
         internal bool IsClearPending;
 
         private int LastResetCount = 0;
+        private int LastFrameUpdated = -1;
         public event Action<ParticleSystem> OnDeviceReset;
 
         // HACK: Performing occlusion queries every frame seems to be super unreliable,
@@ -631,10 +621,6 @@ namespace Squared.Illuminant.Particles {
             }
 
             var isPartialSpawn = (requestedSpawnCount > spawnCount);
-            /*
-            if (isPartialSpawn)
-                Console.WriteLine("Partial spawn");
-            */
             return isPartialSpawn;
         }
 
@@ -661,7 +647,7 @@ namespace Squared.Illuminant.Particles {
             if (isSpawning)
                 li.DeadFrameCount = 0;
             else if (!isAnalyzer)
-                RotateBuffers(chunk);
+                RotateBuffers(chunk, container.RenderManager.DeviceManager.FrameIndex);
 
             var prev = chunk.Previous;
             var curr = chunk.Current;
@@ -671,7 +657,7 @@ namespace Squared.Illuminant.Particles {
             curr.LastTurnUsed = Engine.CurrentTurn;
 
             if (e != null)
-                RenderTrace.Marker(container, layer++, "Particle transform {0}", e.CurrentTechnique.Name);
+                RenderTrace.Marker(container, layer++, "System {0:X8} Transform {1} Chunk {2}", GetHashCode(), e.CurrentTechnique.Name, chunk.ID);
 
             var up = new Transforms.ParticleTransformUpdateParameters {
                 System = this,
@@ -683,6 +669,7 @@ namespace Squared.Illuminant.Particles {
                 ShouldClear = shouldClear,
                 Chunk = chunk,
                 SourceChunk = sourceChunk,
+                SourceCurr = sourceChunk?.Current,
                 Now = (float)now,
                 DeltaTimeSeconds = deltaTimeSeconds,
                 CurrentFrameIndex = CurrentFrameIndex
@@ -701,10 +688,10 @@ namespace Squared.Illuminant.Particles {
             }
 
             if (isUpdate) {
-                if (chunk.LastUpdateResult != null)
-                    chunk.LastUpdateResult.IsUpdateResult = false;
-                chunk.LastUpdateResult = curr;
-                curr.IsUpdateResult = true;
+                curr.LastFrameDependency = container.RenderManager.DeviceManager.FrameIndex;
+                // Console.WriteLine("Updating into {0}", curr.ID);
+            } else {
+                // Console.WriteLine("Transforming through {0}", curr.ID);
             }
         }
 
@@ -891,8 +878,8 @@ namespace Squared.Illuminant.Particles {
             return result;
         }
 
-        private void RotateBuffers (Chunk chunk) {
-            Engine.NextTurn();
+        private void RotateBuffers (Chunk chunk, int frameIndex) {
+            Engine.NextTurn(frameIndex);
 
             var prev = chunk.Previous;
             chunk.Previous = chunk.Current;
@@ -907,6 +894,9 @@ namespace Squared.Illuminant.Particles {
             UpdateErrorAccumulator = 0;
             var now = TimeProvider.Seconds;
             CurrentFrameIndex++;
+
+            if (LastFrameUpdated >= container.RenderManager.DeviceManager.FrameIndex)
+                throw new InvalidOperationException("Cannot update twice in a single frame");
 
             var ups = Engine.Configuration.UpdatesPerSecond;
             var maxDeltaTime = Arithmetic.Clamp(Engine.Configuration.MaximumUpdateDeltaTimeSeconds, 1 / 200f, 10f);
@@ -930,6 +920,8 @@ namespace Squared.Illuminant.Particles {
             } else {
                 LastUpdateTimeSeconds = now;
             }
+
+            LastFrameUpdated = container.RenderManager.DeviceManager.FrameIndex;
 
             actualDeltaTimeSeconds = Math.Min(actualDeltaTimeSeconds, maxDeltaTime);
 
@@ -1029,7 +1021,7 @@ namespace Squared.Illuminant.Particles {
                 }, null);
             });
 
-            Engine.EndOfUpdate(initialTurn);
+            Engine.EndOfUpdate(initialTurn, container.RenderManager.DeviceManager.FrameIndex);
             return new UpdateResult(this, true, (float)now);
         }
 
@@ -1069,6 +1061,7 @@ namespace Squared.Illuminant.Particles {
                         true, now, true, null
                     );
                 }
+
                 // FIXME: Still fucked
             } else if (Configuration.Collision?.DistanceField != null) {
                 if (Configuration.Collision.DistanceFieldMaximumZ == null)
@@ -1088,6 +1081,12 @@ namespace Squared.Illuminant.Particles {
                     actualDeltaTimeSeconds, true, now, true, null
                 );
             }
+        }
+
+        private void CopyBuffer (IBatchContainer container, ref int layer, RenderTarget2D from, RenderTarget2D to) {
+            using (var group = BatchGroup.ForRenderTarget(container, ++layer, to))
+            using (var bb = BitmapBatch.New(group, 0, Engine.Materials.GetBitmapMaterial(false, RasterizerState.CullNone, DepthStencilState.None, BlendState.Opaque), samplerState: SamplerState.PointClamp))
+                bb.Add(new BitmapDrawCall(from, Vector2.Zero));
         }
 
         private void AutoGrowBuffer<T> (ref T[] buffer, int size) {
@@ -1299,14 +1298,10 @@ namespace Squared.Illuminant.Particles {
         ) {
             // TODO: Actual occupied count?
             var quadCount = ChunkMaximumCount;
+
             var curr = chunk.Current;
 
-            if (curr == null)
-                return;
-
-            curr.LastTurnUsed = Engine.CurrentTurn;
-
-            // Console.WriteLine("Draw {0}", chunk.ID);
+            // Console.WriteLine("Draw {0}", curr.ID);
 
             using (var batch = NativeBatch.New(
                 group, layer, m, (dm, _) => {
