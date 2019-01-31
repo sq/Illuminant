@@ -1294,19 +1294,19 @@ namespace Squared.Illuminant.Particles {
         }
 
         private void RenderChunk (
-            BatchGroup group, Chunk chunk, Material m, int layer
+            BatchGroup group, Chunk chunk, Material m, int layer, bool usePreviousData
         ) {
             // TODO: Actual occupied count?
             var quadCount = ChunkMaximumCount;
 
-            var curr = chunk.Current;
+            var src = usePreviousData ? chunk.Previous : chunk.Current;
 
             // Console.WriteLine("Draw {0}", curr.ID);
 
             using (var batch = NativeBatch.New(
                 group, layer, m, (dm, _) => {
                     var p = m.Effect.Parameters;
-                    p["PositionTexture"].SetValue(curr.PositionAndLife);
+                    p["PositionTexture"].SetValue(src.PositionAndLife);
                     // HACK
                     p["VelocityTexture"].SetValue(chunk.RenderData);
                     p["AttributeTexture"].SetValue(chunk.RenderColor);
@@ -1361,7 +1361,8 @@ namespace Squared.Illuminant.Particles {
             Material material = null,
             Matrix? transform = null, 
             BlendState blendState = null,
-            float? overrideStippleFactor = null
+            float? overrideStippleFactor = null,
+            bool usePreviousData = false
         ) {
             var startedWhen = Time.Ticks;
 
@@ -1395,7 +1396,7 @@ namespace Squared.Illuminant.Particles {
 
                 int i = 1;
                 foreach (var chunk in Chunks)
-                    RenderChunk(group, chunk, material, i++);
+                    RenderChunk(group, chunk, material, i++, usePreviousData);
             }
         }
 
