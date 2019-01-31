@@ -31,6 +31,9 @@ void ParticleLightVertexShader(
     position = tex2Dlod(PositionSampler, actualXy);
     renderData = 0;
     renderColor = tex2Dlod(AttributeSampler, actualXy);
+    // Unpremultiply
+    if (renderColor.a > 0)
+        renderColor.rgb /= renderColor.a;
 
     // HACK
     float life = position.w;

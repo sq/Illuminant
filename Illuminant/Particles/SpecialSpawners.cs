@@ -134,16 +134,13 @@ namespace Squared.Illuminant.Particles.Transforms {
 
         /// <summary>
         /// Only considers the N most recently spawned particles from the source system for feedback.
-        /// Use this for cases where the source system spawns at a much higher rate than your spawner,
-        ///  to avoid performing feedback spawning against particles that are already dead.
-        /// Note that this will have bad interactions with other feedback spawners consuming particles
-        ///  from the same source.
+        /// You can use this to avoid using old nearly-dead particles as inputs.
         /// </summary>
         public int? SlidingWindowSize = null;
 
         /// <summary>
         /// Waits until N additional particles are ready to consume for feedback. This provides a
-        ///  brute force way to wait until particles have aged before using them for feedback.
+        ///  way to avoid using brand-new particles.
         /// </summary>
         public int SlidingWindowMargin = 0;
 

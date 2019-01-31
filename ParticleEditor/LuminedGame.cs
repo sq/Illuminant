@@ -189,14 +189,16 @@ namespace Lumined {
             LightingRenderer = new LightingRenderer(
                 Content, RenderCoordinator, Materials, 
                 new LightingEnvironment(), new RendererConfiguration(2048, 2048, false) {
+                    /*
                     EnableGBuffer = true,
                     GBufferCaching = false,
                     GBufferViewportRelative = true,
                     TwoPointFiveD = true
+                    */
                 }, 
                 IlluminantMaterials
             );
-            LightingRenderer.DistanceField = new DistanceField(RenderCoordinator, 1024, 1024, 128, 8, 0.25f);
+            // LightingRenderer.DistanceField = new DistanceField(RenderCoordinator, 1024, 1024, 128, 8, 0.25f);
 
             if (UI == null)
                 UI = new PropertyEditor(this);
@@ -463,7 +465,7 @@ namespace Lumined {
                 // NOTE: This needs to happen after the particle system update
                 // TODO: Maybe enforce this programmatically?
                 var rl = LightingRenderer.RenderLighting(frame, -8);
-                rl.Resolve(frame, -1, Vector2.Zero, worldSpace: false);
+                rl.Resolve(frame, 4, Vector2.Zero, worldSpace: false, blendState: BlendState.Additive);
             }
 
             if (View != null) {
@@ -471,7 +473,7 @@ namespace Lumined {
                     View.Draw(this, frame, 3);
             }
 
-            Controller.Draw(this, frame, 4);
+            Controller.Draw(this, frame, 5);
 
             if (ShowPerformanceStats)
                 DrawPerformanceStats(ref ir);
@@ -482,6 +484,7 @@ namespace Lumined {
         private void UpdateLightingEnvironment () {
             var e = LightingRenderer.Environment;
 
+            /*
             e.ZToYMultiplier = 0f;
 
             if (e.Obstructions.Count == 0) {
@@ -495,18 +498,13 @@ namespace Lumined {
                     }
                 };
             }
+            */
 
             e.Lights.Clear();
 
             if (View == null)
                 return;
             var d = View.GetData();
-
-            if (d.Lights.Count > 0)
-                e.Lights.Add(new DirectionalLightSource {
-                    Color = new Vector4(1, 1, 1, 0.1f),
-                    Direction = new Vector3(-0.5f, -0.5f, -0.5f)
-                });
 
             foreach (var l in d.Lights) {
                 var sls = new SphereLightSource {

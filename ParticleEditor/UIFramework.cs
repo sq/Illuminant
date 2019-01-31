@@ -265,6 +265,16 @@ namespace Lumined {
             return result;
         }
 
+        private static int CountParentTypes (Type type) {
+            Type t = type;
+            int result = 0;
+            while (t != null) {
+                t = t.BaseType;
+                result++;
+            }
+            return result;
+        }
+
         private static IEnumerable<CachedPropertyInfo> CachePropertyInfo (Type type) {
             var members = type.GetMembers(BindingFlags.Instance | BindingFlags.Public);
             return from m in members
@@ -284,7 +294,7 @@ namespace Lumined {
                    where (f == null) || !f.IsInitOnly || isList
                    where (p == null) || p.CanRead || isList
                    where !m.GetCustomAttributes<NonSerializedAttribute>().Any()
-                   // orderby m.Name
+                   orderby CountParentTypes(m.DeclaringType)
                    select new CachedPropertyInfo {
                        Name = m.Name,
                        Info = info,
