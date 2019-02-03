@@ -1018,12 +1018,17 @@ namespace Squared.Illuminant.Particles {
 
             var ts = Time.Ticks;
 
+            var cbk = (SendOrPostCallback)((_) => {
+                foreach (var t in Transforms)
+                    t.AfterFrame(Engine);
+            });
+
             var sc = SynchronizationContext.Current;
             Engine.Coordinator.AfterPresent(() => {
-                sc.Post((_) => {
-                    foreach (var t in Transforms)
-                        t.AfterFrame(Engine);
-                }, null);
+                if (sc != null)
+                    sc.Post(cbk, null);
+                else
+                    cbk(null);
             });
 
             Engine.EndOfUpdate(initialTurn, container.RenderManager.DeviceManager.FrameIndex);
