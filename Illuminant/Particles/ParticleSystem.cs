@@ -1252,6 +1252,10 @@ namespace Squared.Illuminant.Particles {
         private void ComputeLiveness (
             BatchGroup group, int layer
         ) {
+#if FNA
+            return;
+#endif
+
             var quadCount = ChunkMaximumCount;
 
             using (var rtg = BatchGroup.ForRenderTarget(

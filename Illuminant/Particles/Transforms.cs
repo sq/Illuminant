@@ -466,6 +466,9 @@ namespace Squared.Illuminant.Particles.Transforms {
         }
 
         protected override void BeforeUpdateChunk (ParticleEngine engine) {
+#if FNA
+            return;
+#endif
             OcclusionQuery query;
 
             lock (Lock) {
@@ -480,6 +483,10 @@ namespace Squared.Illuminant.Particles.Transforms {
         }
 
         protected override void AfterUpdateChunk (ParticleEngine engine) {
+#if FNA
+            return;
+#endif
+
             var query = Interlocked.Exchange(ref ActiveQuery, null);
             if (query == null)
                 return;
