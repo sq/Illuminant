@@ -123,11 +123,13 @@ namespace Lumined {
                 Nuklear.NewRow(LineHeight, 2);
                 var liveCount = Game.View.Systems.Sum(s => s.Instance.LiveCount);
                 var capacity = Game.View.Systems.Sum(s => s.Instance.Capacity);
-                var memory = Game.View.Engine.EstimateMemoryUsage();
-                using (var tCount = new NString(string.Format("{0}/{1}", liveCount, capacity)))
-                    Nuke.nk_text(ctx, tCount.pText, tCount.Length, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
-                using (var tMemory = new NString(string.Format("{0:0000.00}MB", memory / (1024 * 1024.0))))
-                    Nuke.nk_text(ctx, tMemory.pText, tMemory.Length, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_RIGHT);
+                if (Game.View.Engine != null) {
+                    var memory = Game.View.Engine.EstimateMemoryUsage();
+                    using (var tCount = new NString(string.Format("{0}/{1}", liveCount, capacity)))
+                        Nuke.nk_text(ctx, tCount.pText, tCount.Length, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
+                    using (var tMemory = new NString(string.Format("{0:0000.00}MB", memory / (1024 * 1024.0))))
+                        Nuke.nk_text(ctx, tMemory.pText, tMemory.Length, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_RIGHT);
+                }
             }
 
             // }
