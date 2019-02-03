@@ -29,11 +29,11 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|FNA'">
     <DefineConstants>DEBUG;TRACE;FNA</DefineConstants>
-    <PlatformTarget>AnyCPU</PlatformTarget>
+    <PlatformTarget>x86</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|FNA'">
     <DefineConstants>TRACE;FNA</DefineConstants>
-    <PlatformTarget>AnyCPU</PlatformTarget>
+    <PlatformTarget>x86</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup>
     <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
@@ -54,6 +54,9 @@
       <Project>{35253CE1-C864-4CD3-8249-4D1319748E8F}</Project>
       <Name>FNA</Name>
     </ProjectReference>
+    <None Include="..\..\..\FNA\fnalibs\$(PlatformTarget)\*.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib">

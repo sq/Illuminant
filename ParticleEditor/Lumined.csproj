@@ -38,11 +38,11 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|FNA'">
     <DefineConstants>DEBUG;TRACE;FNA</DefineConstants>
-    <PlatformTarget>AnyCPU</PlatformTarget>
+    <PlatformTarget>x86</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|FNA'">
     <DefineConstants>TRACE;FNA</DefineConstants>
-    <PlatformTarget>AnyCPU</PlatformTarget>
+    <PlatformTarget>x86</PlatformTarget>
   </PropertyGroup>
   <ItemGroup Condition=" '$(Platform)' == 'x86' ">
     <Reference Include="Microsoft.Xna.Framework, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553">
@@ -60,6 +60,9 @@
       <Project>{35253CE1-C864-4CD3-8249-4D1319748E8F}</Project>
       <Name>FNA</Name>
     </ProjectReference>
+    <None Include="..\..\FNA\fnalibs\$(PlatformTarget)\*.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <PropertyGroup>
     <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
