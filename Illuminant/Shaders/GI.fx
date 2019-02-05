@@ -58,11 +58,19 @@ void SHVisualizerVertexShader (
     result = TransformPosition(float4(position.xy, 0, 1), 0);
 }
 
-float readSHProbeRow (
+float4 readSHProbeRow (
     int y, in float4 uv
 ) {
     uv.y = (y + FUDGE) * SphericalHarmonicsTexelSize.y;
     return tex2Dlod(SphericalHarmonicsSampler, uv);
+}
+
+float3 readSHProbeRowAndSum (
+    int y, in float4 uv, inout float a
+) {
+    float4 coeff = readSHProbeRow(y, uv);
+    a += coeff.a;
+    return coeff.rgb;
 }
 
 float readSHProbe (
@@ -71,41 +79,15 @@ float readSHProbe (
     float4 uv = float4((probeIndex + FUDGE) * SphericalHarmonicsTexelSize.x, 0, 0, 0);
     float received = 0;
 
-    float4 coeff = readSHProbeRow(0, uv);
-    result.a = coeff.rgb;
-    received += coeff.a;
-
-    coeff = readSHProbeRow(1, uv);
-    result.b = coeff.rgb;
-    received += coeff.a;
-
-    coeff = readSHProbeRow(2, uv);
-    result.c = coeff.rgb;
-    received += coeff.a;
-
-    coeff = readSHProbeRow(3, uv);
-    result.d = coeff.rgb;
-    received += coeff.a;
-
-    coeff = readSHProbeRow(4, uv);
-    result.e = coeff.rgb;
-    received += coeff.a;
-
-    coeff = readSHProbeRow(5, uv);
-    result.f = coeff.rgb;
-    received += coeff.a;
-
-    coeff = readSHProbeRow(6, uv);
-    result.g = coeff.rgb;
-    received += coeff.a;
-
-    coeff = readSHProbeRow(7, uv);
-    result.h = coeff.rgb;
-    received += coeff.a;
-
-    coeff = readSHProbeRow(8, uv);
-    result.i = coeff.rgb;
-    received += coeff.a;
+    result.a = readSHProbeRowAndSum(0, uv, received);
+    result.b = readSHProbeRowAndSum(1, uv, received);
+    result.c = readSHProbeRowAndSum(2, uv, received);
+    result.d = readSHProbeRowAndSum(3, uv, received);
+    result.e = readSHProbeRowAndSum(4, uv, received);
+    result.f = readSHProbeRowAndSum(5, uv, received);
+    result.g = readSHProbeRowAndSum(6, uv, received);
+    result.h = readSHProbeRowAndSum(7, uv, received);
+    result.i = readSHProbeRowAndSum(8, uv, received);
 
     return received;
 }

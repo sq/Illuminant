@@ -56,7 +56,7 @@ float3 estimateNormal4(
     [loop]
     for (int i = 0; i < 4; i++) {
         float3 weight = normalWeights[i];
-        result += weight * SAMPLE(position + weight * texel, vars);
+        result += weight * SAMPLE(position + weight * texel.rgb, vars);
     }
 
     return normalize(result);
