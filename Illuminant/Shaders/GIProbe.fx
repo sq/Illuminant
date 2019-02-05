@@ -61,8 +61,10 @@ float3 ComputeRowNormal(float row) {
     if (row < 1)
         return float3(0, 0, 1);
 
+    float sliceCount = max(0.001, NormalSliceCount);
+
     row -= 1;
-    float normalSliceSize = floor((NormalCount - 1) / NormalSliceCount);
+    float normalSliceSize = max(0.001, floor((NormalCount - 1) / sliceCount));
     float sliceIndex = floor(row / normalSliceSize);
     float radians = (row + (sliceIndex * 0.33)) / normalSliceSize * 2 * Pi + (Dithering.FrameIndex * 0.001);
 
@@ -73,16 +75,17 @@ float3 ComputeRowNormal(float row) {
 }
 
 void ProbeSelectorPixelShader(
-    in  float2 vpos           : VPOS,
+    in  float2 vpos                    : VPOS,
     in  float4 probeOffsetAndBaseIndex : TEXCOORD0,
     in  float4 probeIntervalAndCount   : TEXCOORD1,
-    out float4 resultPosition : COLOR0,
-    out float4 resultNormal   : COLOR1
+    out float4 resultPosition          : COLOR0,
+    out float4 resultNormal            : COLOR1
 ) {
     float2 probeInterval = probeIntervalAndCount.xy;
     float2 probeCount = probeIntervalAndCount.zw;
+    float probeCountDivisor = max(0.001, probeCount.x);
     float rawIndex = vpos.x - probeOffsetAndBaseIndex.w;
-    float yIndex = floor(rawIndex / probeCount.x);
+    float yIndex = floor(rawIndex / probeCountDivisor);
     float xIndex = rawIndex - (yIndex * probeCount.x);
     float3 requestedPosition = probeOffsetAndBaseIndex.xyz + float3(probeInterval.x * xIndex, probeInterval.y * yIndex, 0);
     float3 normal = ComputeRowNormal(vpos.y);
@@ -94,9 +97,11 @@ void ProbeSelectorPixelShader(
     resultPosition = 0;
     resultNormal = 0;
 
+    /*
     [branch]
     if (initialDistance <= 1.66)
         return;
+        */
 
     if (DO_FIRST_BOUNCE) {
         float intersectionDistance;
@@ -129,7 +134,7 @@ void SHGeneratorPixelShader(
 
     SH9Color r;
 
-    float received = 0;
+    float received = 0.001;
     float divisor = 0.001;
 
     for (float idx = 0; idx < NormalCount; idx++) {
@@ -150,7 +155,7 @@ void SHGeneratorPixelShader(
     if (DROP_DEAD_SAMPLES_FROM_SH)
         SHScaleColorByCosine(r, received);
     else
-        SHScaleColorByCosine(r, NormalCount);
+        SHScaleColorByCosine(r, max(0.001, NormalCount));
 
     float3 previousBounceValue = 0;
 

@@ -70,7 +70,7 @@ bool traceSurface (
     in TVARS   vars
 ) {
     float positionAlongRay = 0;
-    float rayLength = length(rayVector);
+    float rayLength = max(0.001, length(rayVector));
     float3 rayDirection = rayVector / rayLength;
 
     [loop]

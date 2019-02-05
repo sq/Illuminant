@@ -269,8 +269,8 @@ DistanceFieldConstants makeDistanceFieldConstants() {
     DistanceFieldConstants result = {
         float3(
             DistanceField.TextureSliceCount.z, 
-            (1.0 / DistanceField.TextureSliceCount.x) * (1.0 / 3.0), 
-            (1.0 / DistanceField.Extent.z) * DistanceField.TextureSliceCount.w
+            (1.0 / max(0.001, DistanceField.TextureSliceCount.x)) * (1.0 / 3.0), 
+            (1.0 / max(0.001, DistanceField.Extent.z)) * DistanceField.TextureSliceCount.w
         ),
         halfTexel, getDistanceSliceSize() - halfTexel
     };
