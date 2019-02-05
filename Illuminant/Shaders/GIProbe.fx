@@ -142,8 +142,7 @@ void SHGeneratorPixelShader(
         float3 normal = ComputeRowNormal(idx);
         SH9 cos = SHCosineLobe(normal);
 
-        for (int j = 0; j < SHValueCount; j++)
-            r.c[j] += cos.c[j] * value.rgb * InverseScaleFactor;
+        SH9CAdd9(r, cos, value.rgb * InverseScaleFactor);
 
         received += 1;
     }
@@ -161,7 +160,39 @@ void SHGeneratorPixelShader(
         previousBounceValue = oldSample.rgb;
     }
 
-    result.rgb = (r.c[y] * Brightness) + previousBounceValue;
+    float3 row;
+    switch (y) {
+        case 0:
+            row = r.a;
+            break;
+        case 1:
+            row = r.b;
+            break;
+        case 2:
+            row = r.c;
+            break;
+        case 3:
+            row = r.d;
+            break;
+        case 4:
+            row = r.e;
+            break;
+        case 5:
+            row = r.f;
+            break;
+        case 6:
+            row = r.g;
+            break;
+        case 7:
+            row = r.h;
+            break;
+        case 8:
+        default:
+            row = r.i;
+            break;
+    }
+
+    result.rgb = (row * Brightness) + previousBounceValue;
     result.a = received;
 }
 

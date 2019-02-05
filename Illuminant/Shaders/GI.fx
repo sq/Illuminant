@@ -43,7 +43,7 @@ void SHRendererVertexShader(
     inout float4 probeIntervalAndCount   : TEXCOORD1,
     out   float4 result                  : POSITION0
 ) {
-    float3 screenPosition = (worldPosition - float3(Viewport.Position.xy, 0));
+    float3 screenPosition = (worldPosition.xyz - float3(Viewport.Position.xy, 0));
     screenPosition.xy *= Viewport.Scale * Environment.RenderScale;
     float4 transformedPosition = mul(mul(float4(screenPosition.xyz, 1), Viewport.ModelView), Viewport.Projection);
     result = float4(transformedPosition.xy, 0, transformedPosition.w);
@@ -58,19 +58,54 @@ void SHVisualizerVertexShader (
     result = TransformPosition(float4(position.xy, 0, 1), 0);
 }
 
+float readSHProbeRow (
+    int y, in float4 uv
+) {
+    uv.y = (y + FUDGE) * SphericalHarmonicsTexelSize.y;
+    return tex2Dlod(SphericalHarmonicsSampler, uv);
+}
+
 float readSHProbe (
     float probeIndex, out SH9Color result
 ) {
     float4 uv = float4((probeIndex + FUDGE) * SphericalHarmonicsTexelSize.x, 0, 0, 0);
     float received = 0;
 
-    for (int y = 0; y < SHTexelCount; y++) {
-        uv.y = (y + FUDGE) * SphericalHarmonicsTexelSize.y;
-        float4 coeff = tex2Dlod(SphericalHarmonicsSampler, uv);
-        // FIXME: This loop is being unrolled here... is that bad?
-        result.c[y] = coeff.rgb;
-        received += coeff.a;
-    }
+    float4 coeff = readSHProbeRow(0, uv);
+    result.a = coeff.rgb;
+    received += coeff.a;
+
+    coeff = readSHProbeRow(1, uv);
+    result.b = coeff.rgb;
+    received += coeff.a;
+
+    coeff = readSHProbeRow(2, uv);
+    result.c = coeff.rgb;
+    received += coeff.a;
+
+    coeff = readSHProbeRow(3, uv);
+    result.d = coeff.rgb;
+    received += coeff.a;
+
+    coeff = readSHProbeRow(4, uv);
+    result.e = coeff.rgb;
+    received += coeff.a;
+
+    coeff = readSHProbeRow(5, uv);
+    result.f = coeff.rgb;
+    received += coeff.a;
+
+    coeff = readSHProbeRow(6, uv);
+    result.g = coeff.rgb;
+    received += coeff.a;
+
+    coeff = readSHProbeRow(7, uv);
+    result.h = coeff.rgb;
+    received += coeff.a;
+
+    coeff = readSHProbeRow(8, uv);
+    result.i = coeff.rgb;
+    received += coeff.a;
 
     return received;
 }
@@ -96,9 +131,7 @@ float3 computeSHIrradiance (
     SH9 cos = SHCosineLobe(normal);
     SHScaleByCosine(cos);
 
-    float3 irradiance = 0;
-    for (int i = 0; i < SHValueCount; i++)
-        irradiance += probe.c[i] * cos.c[i];
+    float3 irradiance = SH9CSum9(probe, cos);
 
     return irradiance;
 }
@@ -113,17 +146,20 @@ void SHVisualizerPixelShader(
     SH9Color rad;
     float received = readSHProbe(probeIndex, rad);
 
+    /*
     [branch]
     if (received < 1) {
         discard;
         return;
     }
+    */
 
     float xyLength = length(localPosition);
     float z = 1 - clamp(xyLength / 0.9, 0, 1);
     // FIXME: Correct?
     float3 normal = float3(localPosition.x * -1.1, localPosition.y * -1.1, z * z);
-    normal = normalize(normal);
+    float normalLength = max(0.001, length(normal));
+    normal /= normalLength;
 
     float3 irradiance = computeSHIrradiance(rad, normal);
 
@@ -155,10 +191,8 @@ float4 computeProbeRadiance(
 
     float3 vectorToProbe = probePosition - shadedPixelPosition;
     float3 normalToProbe = normalize(vectorToProbe);
-    float3 localRadiance = 0;
 
-    for (int j = 0; j < SHValueCount; j++)
-        localRadiance += probe.c[j] * cos.c[j];
+    float3 localRadiance = SH9CSum9(probe, cos);
 
     float coneWeight = 1;
 
