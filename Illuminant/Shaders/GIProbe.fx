@@ -1,3 +1,5 @@
+#pragma fxcparams(/Od /Zi)
+
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\DitherCommon.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\GeometryCommon.fxh"
@@ -74,6 +76,7 @@ float3 ComputeRowNormal(float row) {
     return normalize(float3(xy, sliceIndex / SliceIndexToZ));
 }
 
+// FIXME: This is broken in any optimization mode except /Od
 void ProbeSelectorPixelShader(
     in  float2 vpos                    : VPOS,
     in  float4 probeOffsetAndBaseIndex : TEXCOORD0,
