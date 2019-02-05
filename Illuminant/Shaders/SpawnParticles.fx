@@ -1,3 +1,6 @@
+// FIXME: ParticleLights.cs is broken in release mode
+#pragma fxcparams(/Od /Zi)
+
 #include "ParticleCommon.fxh"
 #include "RandomCommon.fxh"
 
@@ -69,9 +72,10 @@ float4 evaluateFormula (float4 origin, float4 constant, float4 scale, float4 off
         }
         case 2: {
             float3 distance = constant - origin;
-            if (length(distance) < 0.1)
+            float ldistance = length(distance);
+            if (ldistance < 0.1)
                 return float4(0, 0, 0, constant.w);
-            float3 direction = normalize(distance);
+            float3 direction = distance / ldistance;
             float3 randomSpeed = (randomness.x * scale.xyz * direction.xyz);
             float3 fixedSpeed = (offset.xyz * direction);
             return float4(randomSpeed + fixedSpeed, type0.w);
@@ -112,9 +116,9 @@ bool Spawn_Stage1(
     // Ensure the z axis of generated circular coordinates is 0, resulting in pure xy normals
     float relativeIndex = (index - ChunkSizeAndIndices.y);
     if (PolygonRate > 0.05) {
-        float polyRate = max(0.01, PolygonRate);
+        float polyRate = PolygonRate;
         float positionIndexF = (relativeIndex / polyRate) + ChunkSizeAndIndices.w;
-        float divisor = max(0.01, PositionConstantCount);
+        float divisor = PositionConstantCount;
         float positionIndexI;
         positionIndexT = modf(positionIndexF, positionIndexI);
         if (PolygonLoop) {
@@ -147,10 +151,12 @@ void Spawn_Stage2(
     newVelocity = evaluateFormula(newPosition, Configuration[2], Configuration[3], Configuration[4], random2, FormulaTypes.y);
     newAttributes = evaluateFormula(0, Configuration[5], Configuration[6], Configuration[7], random3, FormulaTypes.z);
     
-    // FIXME: float->float4, random3.w
-    float towardsSpeed = evaluateFormula(0, Configuration[8].x, Configuration[8].y, Configuration[8].z, random3.w, FormulaTypes.w).x;
-    float towardsDistance = max(0.001, length(towardsNext));
-    newVelocity += towardsSpeed * (towardsNext / towardsDistance);
+    float towardsDistance = length(towardsNext);
+    if (towardsDistance > 0) {
+        // FIXME: float->float4, random3.w
+        float towardsSpeed = evaluateFormula(0, Configuration[8].x, Configuration[8].y, Configuration[8].z, random3.w, FormulaTypes.w).x;
+        newVelocity += towardsSpeed * (towardsNext / towardsDistance);
+    }
 
     if (newAttributes.w < AttributeDiscardThreshold)
         discard;
