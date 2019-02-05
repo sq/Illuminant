@@ -97,11 +97,9 @@ void ProbeSelectorPixelShader(
     resultPosition = 0;
     resultNormal = 0;
 
-    /*
     [branch]
     if (initialDistance <= 1.66)
         return;
-        */
 
     if (DO_FIRST_BOUNCE) {
         float intersectionDistance;
