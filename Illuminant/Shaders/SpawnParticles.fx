@@ -112,8 +112,9 @@ bool Spawn_Stage1(
     // Ensure the z axis of generated circular coordinates is 0, resulting in pure xy normals
     float relativeIndex = (index - ChunkSizeAndIndices.y);
     if (PolygonRate > 0.05) {
-        float positionIndexF = (relativeIndex / PolygonRate) + ChunkSizeAndIndices.w;
-        float divisor = PositionConstantCount;
+        float polyRate = max(0.01, PolygonRate);
+        float positionIndexF = (relativeIndex / polyRate) + ChunkSizeAndIndices.w;
+        float divisor = max(0.01, PositionConstantCount);
         float positionIndexI;
         positionIndexT = modf(positionIndexF, positionIndexI);
         if (PolygonLoop) {
@@ -148,7 +149,8 @@ void Spawn_Stage2(
     
     // FIXME: float->float4, random3.w
     float towardsSpeed = evaluateFormula(0, Configuration[8].x, Configuration[8].y, Configuration[8].z, random3.w, FormulaTypes.w).x;
-    newVelocity += towardsSpeed * normalize(towardsNext);
+    float towardsDistance = max(0.001, length(towardsNext));
+    newVelocity += towardsSpeed * (towardsNext / towardsDistance);
 
     if (newAttributes.w < AttributeDiscardThreshold)
         discard;
