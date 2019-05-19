@@ -43,13 +43,16 @@ namespace TestGame.Scenes {
         }
 
         public override void LoadContent () {
-            Background = Game.TextureLoader.Load("test pattern");
+            Background = Game.TextureLoader.Load("vector-field-background");
 
             var keys = Game.LUTs.Keys.OrderBy(n => n).ToArray();
             LUT1.AddRange(keys);
             LUT2.AddRange(keys);
         }
-        
+
+        public override void UnloadContent () {
+        }
+
         public override void Draw (Squared.Render.Frame frame) {
             var m = Game.Materials.Get(Game.Materials.ScreenSpaceBitmapWithLUT, blendState: BlendState.Opaque);
 

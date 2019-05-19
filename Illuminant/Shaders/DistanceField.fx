@@ -50,8 +50,9 @@ float computeSquaredDistanceZ (float sliceZ, float2 zRange) {
 void computeDistanceStep (float2 xy, inout float resultDistanceSq, inout int intersectionCountDown, inout int intersectionCountRight, in float4 uv, inout bool badDown, inout bool badRight) {
     float2 a, b, temp;
     loadEdge(uv, a, b);
-    bool down = doesDownRayIntersectLine(xy, a, b, badDown);
-    bool right = doesRightRayIntersectLine(xy, a, b, badRight);
+    float2 qa = quantize2(a), qb = quantize2(b), qxy = quantize2(xy);
+    bool down = doesDownRayIntersectLine(qxy, qa, qb, badDown);
+    bool right = doesRightRayIntersectLine(qxy, qa, qb, badRight);
     if (down)
         intersectionCountDown += 1;
     if (right)

@@ -327,6 +327,12 @@ namespace TestGame.Scenes {
                 WhitePointSamples.Enqueue(1.0f);
         }
 
+        public override void UnloadContent () {
+            DistanceField.Dispose();
+            ForegroundRenderer?.Dispose(); ForegroundRenderer = null;
+            Renderer?.Dispose(); Renderer = null;
+        }
+
         private void Pillar (float x, float y, int textureIndex) {
             var tex = Pillars[textureIndex];
 

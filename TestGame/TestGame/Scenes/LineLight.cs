@@ -184,7 +184,12 @@ namespace TestGame.Scenes {
             for (int x = -1024; x < (Width + 1024); x += 37)
                 Pillar(new Vector2(x, 540 + (x / 24.0f)));
         }
-        
+
+        public override void UnloadContent () {
+            DistanceField.Dispose();
+            Renderer?.Dispose(); Renderer = null;
+        }
+
         public override void Draw (Squared.Render.Frame frame) {
             CreateRenderTargets();
 

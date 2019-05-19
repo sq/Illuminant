@@ -187,7 +187,7 @@ namespace Lumined {
             ParticleMaterials = new ParticleMaterials(Materials);
             LightingRenderer = new LightingRenderer(
                 Content, RenderCoordinator, Materials, 
-                new LightingEnvironment(), new RendererConfiguration(2048, 2048, false) {
+                new LightingEnvironment(), new RendererConfiguration(4000, 4000, false) {
                     /*
                     EnableGBuffer = true,
                     GBufferCaching = false,

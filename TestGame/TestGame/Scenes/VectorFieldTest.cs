@@ -77,6 +77,13 @@ namespace TestGame.Scenes {
             Reset();
         }
 
+        public override void UnloadContent () {
+            Reset();
+            System.Dispose();
+            Field.Dispose();
+            Engine.Dispose();
+        }
+
         void SetupParticleSystem () {
             var sz = new Vector3(Width, Height, 0);
             var fireball = Game.TextureLoader.Load("fireball");
@@ -120,6 +127,10 @@ namespace TestGame.Scenes {
         }
         
         public override void Draw (Squared.Render.Frame frame) {
+            // FIXME
+            if (Game.IlluminantMaterials.ScreenSpaceVectorWarp == null)
+                return;
+
             if (Running)
                 System.Update(frame, -2);
 

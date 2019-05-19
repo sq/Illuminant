@@ -78,6 +78,11 @@ namespace TestGame.Scenes {
             BuildObstructions();
         }
 
+        public override void UnloadContent () {
+            DistanceField.Dispose();
+            Renderer?.Dispose(); Renderer = null;
+        }
+
         private void BuildViewports () {
             var visSize = Math.Min(
                 Game.Graphics.PreferredBackBufferWidth / 4.1f,

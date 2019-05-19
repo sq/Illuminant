@@ -71,6 +71,18 @@ bool isCloseY (float2 p, float2 a1, float2 a2) {
     return (abs(a1.y - p.y) < intersectEpsilon) || (abs(a2.y - p.y) < intersectEpsilon);
 }
 
+#define QUANTIZE_PRECISION 100
+
+float quantize (float v) {
+    return v;
+    // return floor(v * QUANTIZE_PRECISION);
+}
+
+float2 quantize2 (float2 v) {
+    return v;
+    // return floor(v * QUANTIZE_PRECISION);
+}
+
 bool doesDownRayIntersectLine (float2 p, float2 a1, float2 a2, inout bool bad) {
     float divisor = (a1.x-a2.x);
     if (isCloseX(p, a1, a2))

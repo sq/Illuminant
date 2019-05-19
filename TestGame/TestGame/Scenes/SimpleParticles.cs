@@ -88,6 +88,14 @@ namespace TestGame.Scenes {
             Reset();
         }
 
+        public override void UnloadContent () {
+            Reset();
+            DistanceField.Dispose();
+            LightingRenderer?.Dispose(); LightingRenderer = null;
+            System.Dispose();
+            Engine.Dispose();
+        }
+
         void SetupParticleSystem () {
             var sz = new Vector3(Width, Height, 0);
             var fireball = Game.TextureLoader.Load("fireball");

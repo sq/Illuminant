@@ -100,7 +100,11 @@ namespace TestGame.Scenes {
                 Color = Vector4.One * 1f
             });
         }
-        
+
+        public override void UnloadContent () {
+            Renderer?.Dispose(); Renderer = null;
+        }
+
         public override void Draw (Squared.Render.Frame frame) {
             CreateRenderTargets();
 

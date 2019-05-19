@@ -127,6 +127,7 @@ namespace TestGame.Scenes {
 
         public override void LoadContent () {
             Environment = new LightingEnvironment();
+            Obstructions.Clear();
 
             Environment.GroundZ = 0;
             Environment.MaximumZ = 128;
@@ -192,7 +193,12 @@ namespace TestGame.Scenes {
                 Environment.Obstructions.Add(obs);
             }
         }
-        
+
+        public override void UnloadContent () {
+            DistanceField.Dispose();
+            Renderer?.Dispose(); Renderer = null;
+        }
+
         public override void Draw (Squared.Render.Frame frame) {
             CreateRenderTargets();
 

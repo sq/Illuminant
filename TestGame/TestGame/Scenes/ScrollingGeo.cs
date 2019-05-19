@@ -166,7 +166,12 @@ namespace TestGame.Scenes {
             ));
             */
         }
-        
+
+        public override void UnloadContent () {
+            DistanceField.Dispose();
+            Renderer?.Dispose(); Renderer = null;
+        }
+
         public override void Draw (Squared.Render.Frame frame) {
             CreateRenderTargets();
 

@@ -113,6 +113,7 @@ namespace TestGame.Scenes {
 
         public override void LoadContent () {
             Environment = new LightingEnvironment();
+            Lights.Clear();
 
             Environment.GroundZ = 0;
             Environment.MaximumZ = 128;
@@ -200,7 +201,12 @@ namespace TestGame.Scenes {
                 0f, maxHeight
             ));
         }
-        
+
+        public override void UnloadContent () {
+            DistanceField.Dispose();
+            Renderer?.Dispose(); Renderer = null;
+        }
+
         public override void Draw (Squared.Render.Frame frame) {
             Renderer.Configuration.TwoPointFiveD = TwoPointFiveD;
             Renderer.Configuration.SetScale(LightmapScaleRatio);

@@ -45,7 +45,13 @@ namespace TestGame {
         public RenderTarget2D UIRenderTarget;
 
         public readonly Scene[] Scenes;
-        public int ActiveSceneIndex;
+        private int _ActiveSceneIndex;
+
+        public int ActiveSceneIndex {
+            get {
+                return _ActiveSceneIndex;
+            }
+        }
 
         private int LastPerformanceStatPrimCount = 0;
 
@@ -92,12 +98,10 @@ namespace TestGame {
                 new DynamicObstructions(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new DitheringTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new LineLight(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new VectorFieldTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
+                // FIXME
+                // new VectorFieldTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new LUTTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
             };
-
-            ActiveSceneIndex = Scenes.Length - 1;
-            // ActiveSceneIndex = 1;
         }
 
         protected override void Initialize () {
@@ -280,10 +284,31 @@ namespace TestGame {
 
             LoadLUTs();
 
+            /*
             foreach (var scene in Scenes)
                 scene.LoadContent();
+            */
 
             LastTimeOverUI = Time.Ticks;
+
+            _ActiveSceneIndex = -1;
+            SetActiveScene(Scenes.Length - 1);
+        }
+
+        private void SetActiveScene (int index) {
+            RenderCoordinator.WaitForActiveDraws();
+
+            Scene oldScene = null;
+            if (_ActiveSceneIndex >= 0)
+                oldScene = Scenes[_ActiveSceneIndex];
+
+            _ActiveSceneIndex = index;
+            var newScene = Scenes[index];
+            if (oldScene != newScene) {
+                if (oldScene != null)
+                    oldScene.DoUnloadContent();
+                newScene.DoLoadContent();
+            }
         }
 
         private void LoadLUTs () {
@@ -322,9 +347,9 @@ namespace TestGame {
                 var wasAlt = PreviousKeyboardState.IsKeyDown(Keys.LeftAlt) || PreviousKeyboardState.IsKeyDown(Keys.RightAlt);
 
                 if (KeyboardState.IsKeyDown(Keys.OemOpenBrackets) && !PreviousKeyboardState.IsKeyDown(Keys.OemOpenBrackets))
-                    ActiveSceneIndex = Arithmetic.Wrap(ActiveSceneIndex - 1, 0, Scenes.Length - 1);
+                    SetActiveScene(Arithmetic.Wrap(ActiveSceneIndex - 1, 0, Scenes.Length - 1));
                 else if (KeyboardState.IsKeyDown(Keys.OemCloseBrackets) && !PreviousKeyboardState.IsKeyDown(Keys.OemCloseBrackets))
-                    ActiveSceneIndex = Arithmetic.Wrap(ActiveSceneIndex + 1, 0, Scenes.Length - 1);
+                    SetActiveScene(Arithmetic.Wrap(ActiveSceneIndex + 1, 0, Scenes.Length - 1));
                 else if (KeyboardState.IsKeyDown(Keys.OemTilde) && !PreviousKeyboardState.IsKeyDown(Keys.OemTilde)) {
                     Graphics.SynchronizeWithVerticalRetrace = !Graphics.SynchronizeWithVerticalRetrace;
                     Graphics.ApplyChangesAfterPresent(RenderCoordinator);
@@ -424,7 +449,21 @@ namespace TestGame {
             Settings = new SettingCollection(this);
         }
 
+        private bool HasLoadedContent;
+
+        public void DoLoadContent () {
+            LoadContent();
+            HasLoadedContent = true;
+        }
+
+        public void DoUnloadContent () {
+            if (HasLoadedContent)
+                UnloadContent();
+            HasLoadedContent = false;
+        }
+
         public abstract void LoadContent ();
+        public abstract void UnloadContent ();
         public abstract void Draw (Frame frame);
         public abstract void Update (GameTime gameTime);
 

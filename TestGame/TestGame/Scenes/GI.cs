@@ -299,7 +299,12 @@ namespace TestGame.Scenes {
             Rect(new Vector2(630, 930), new Vector2(900, 970), floor, 40f);
             Rect(new Vector2(1000, 930), new Vector2(Width - 100, 970), floor, 40f);
         }
-        
+
+        public override void UnloadContent () {
+            DistanceField.Dispose();
+            Renderer?.Dispose(); Renderer = null;
+        }
+
         public override void Draw (Squared.Render.Frame frame) {
             CreateRenderTargets();
 

@@ -311,6 +311,10 @@ namespace TestGame.Scenes {
             DarkLUT.AddRange(keys);
             BrightLUT.AddRange(keys);
         }
+
+        public override void UnloadContent () {
+            Renderer?.Dispose(); Renderer = null;
+        }
         
         public override void Draw (Squared.Render.Frame frame) {
             CreateRenderTargets();

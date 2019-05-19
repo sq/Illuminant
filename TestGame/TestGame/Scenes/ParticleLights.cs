@@ -265,6 +265,13 @@ namespace TestGame.Scenes {
             Rect(new Vector2(1000, 930), new Vector2(Width - 100, 970), floor, 40f);
         }
 
+        public override void UnloadContent () {
+            DistanceField.Dispose();
+            Renderer?.Dispose(); Renderer = null;
+            System.Dispose();
+            Engine.Dispose();
+        }
+
         void SetupParticleSystem () {
             var sz = new Vector3(Width, Height, 0);
             var fireball = Game.TextureLoader.Load("fireball");
