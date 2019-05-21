@@ -94,7 +94,12 @@ namespace Squared.Illuminant.Particles {
             }
         }
 
+#if FNA
+        // FIXME: We should be able to separate out the upload operation, I think?
+        internal struct BufferInitializer<TElement> : IMainThreadWorkItem
+#else
         internal struct BufferInitializer<TElement> : IWorkItem
+#endif
             where TElement : struct
         {
             static ThreadLocal<TElement[]> Scratch = new ThreadLocal<TElement[]>();

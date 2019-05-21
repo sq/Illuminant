@@ -17,7 +17,11 @@ using Squared.Util;
 
 namespace Squared.Illuminant {
     public sealed partial class LightingRenderer : IDisposable, INameableGraphicsObject {
+#if FNA
+        private struct HistogramUpdateTask : IMainThreadWorkItem {
+#else
         private struct HistogramUpdateTask : IWorkItem {
+#endif
             public LightingRenderer Renderer;
             public RenderTarget2D Texture;
             public int LevelIndex;

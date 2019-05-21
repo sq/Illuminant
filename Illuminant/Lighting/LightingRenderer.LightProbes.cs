@@ -106,7 +106,11 @@ namespace Squared.Illuminant {
             }
         }
 
+#if FNA
+        private struct LightProbeDownloadTask : IMainThreadWorkItem {
+#else
         private struct LightProbeDownloadTask : IWorkItem {
+#endif
             public LightingRenderer Renderer;
             public RenderTarget2D Texture;
             public long Timestamp;

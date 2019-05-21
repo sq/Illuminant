@@ -76,7 +76,11 @@ namespace TestGame {
 
             Content.RootDirectory = "Content";
 
+#if FNA
+            UseThreadedDraw = false;
+#else
             UseThreadedDraw = true;
+#endif
             IsFixedTimeStep = false;
 
             if (IsFixedTimeStep) {
@@ -100,7 +104,9 @@ namespace TestGame {
                 new LineLight(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 // FIXME
                 // new VectorFieldTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
+#if !FNA
                 new LUTTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
+#endif
             };
         }
 
@@ -250,6 +256,12 @@ namespace TestGame {
 
         protected override void LoadContent () {
             base.LoadContent();
+
+#if FNA
+            RenderCoordinator.EnableThreading = false;
+#else
+            RenderCoordinator.EnableThreading = true;
+#endif
 
             TextureLoader = new EmbeddedTexture2DProvider(RenderCoordinator) {
                 DefaultOptions = new TextureLoadOptions {
