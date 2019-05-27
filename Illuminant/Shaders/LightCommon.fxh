@@ -9,17 +9,17 @@
 
 #define RELATIVEY_SCALE 128
 
-static const float3 LightCorners[] = {
+const float3 LightCorners[] = {
     { 0, 0, 0 },
     { 1, 0, 0 },
     { 1, 1, 0 },
     { 0, 1, 0 }
 };
 
-static const float cOne = 1 / 7.0;
-static const float mOne = 6 / 7.0;
+#define cOne 1 / 7.0
+#define mOne 6 / 7.0
 
-static const float3 ClippedLightVertices[] = {
+const float3 ClippedLightVertices[] = {
     { cOne, 0, 0 },
     { mOne, 0, 0 },
     { mOne, 1, 0 },

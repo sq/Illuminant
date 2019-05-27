@@ -72,7 +72,6 @@ void LightingResolvePixelShader (
     out float4 result : COLOR0
 ) {
     result = ResolveCommon(texCoord1, texRgn1);
-
     result.rgb = max(0, result.rgb + Offset);
     result.rgb *= (ExposureMinusOne + 1);
     result.rgb = pow(result.rgb, (GammaMinusOne + 1));

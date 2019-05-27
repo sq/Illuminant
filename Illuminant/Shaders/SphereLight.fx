@@ -1,6 +1,39 @@
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "SphereLightCore.fxh"
 
+float3 GetVertexForIndex (int index) {
+    return ClippedLightVertices[index];
+    /*
+    switch (abs(index)) {
+        case 0:
+            return float3(cOne, 0, 0);
+        case 1:
+            return float3(mOne, 0, 0);
+        case 2:
+            return float3(mOne, 1, 0);
+        case 3:
+            return float3(cOne, 1, 0);
+        case 4:
+            return float3(mOne, cOne, 0);
+        case 5:
+            return float3(1, cOne, 0);
+        case 6:
+            return float3(1, mOne, 0);
+        case 7:
+            return float3(mOne, mOne, 0);
+        case 8:
+            return float3(0, cOne, 0);
+        case 9:
+            return float3(cOne, cOne, 0);
+        case 10:
+            return float3(cOne, mOne, 0);
+        case 11:
+            return float3(0, mOne, 0);
+    }
+    return 0;
+    */
+}
+
 void SphereLightVertexShader(
     in int2 vertexIndex              : BLENDINDICES0,
     inout float3 lightCenter         : TEXCOORD0,
@@ -12,12 +45,11 @@ void SphereLightVertexShader(
     out float3 worldPosition         : POSITION1,
     out float4 result                : POSITION0
 ) {
-    float3 vertex = ClippedLightVertices[vertexIndex.x];
+    float3 vertex = GetVertexForIndex(vertexIndex.x);
 
     float  radius = lightProperties.x + lightProperties.y + 1;
-    float  deltaY = (radius) - (radius / moreLightProperties.z);
+    float  deltaY = (radius)-(radius / moreLightProperties.z);
     float3 radius3;
-
     if (1)
         // HACK: Scale the y axis some to clip off dead pixels caused by the y falloff factor
         radius3 = float3(radius, radius - (deltaY / 2.0), 0);
@@ -25,6 +57,7 @@ void SphereLightVertexShader(
         radius3 = float3(radius, radius, 0);
 
     float3 tl = lightCenter - radius3, br = lightCenter + radius3;
+    worldPosition = lerp(tl, br, vertex);
 
     // Unfortunately we need to adjust both by the light's radius (to account for pixels above/below the center point
     //  being lit in 2.5d projection), along with adjusting by the z of the light's centerpoint (to deal with pixels
@@ -32,11 +65,15 @@ void SphereLightVertexShader(
     float radiusOffset = radius * getInvZToYMultiplier();
     float zOffset = lightCenter.z * getZToYMultiplier();
 
-    worldPosition = lerp(tl, br, vertex);
-
     if (vertex.y < 0.5) {
         worldPosition.y -= radiusOffset;
         worldPosition.y -= zOffset;
+    }
+
+    // FIXME
+    if (1) {
+        result = float4(vertex.x * 2 - 1, vertex.y * 2 - 1, 0, 1);
+        return;
     }
 
     float3 screenPosition = (worldPosition - float3(Viewport.Position.xy, 0));
@@ -54,6 +91,7 @@ void SphereLightPixelShader(
     ACCEPTS_VPOS,
     out float4 result              : COLOR0
 ) {
+    /*
     float3 shadedPixelPosition;
     float3 shadedPixelNormal;
     sampleGBuffer(
@@ -66,6 +104,8 @@ void SphereLightPixelShader(
     );
 
     result = float4(color.rgb * color.a * opacity, 1);
+    */
+    result = float4(1, 0, 0, 1);
 }
 
 void SphereLightWithDistanceRampPixelShader(
