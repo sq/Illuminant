@@ -69,7 +69,7 @@ float3 ComputeRowNormal(float row) {
     row -= 1;
     float normalSliceSize = max(0.001, floor((NormalCount - 1) / sliceCount));
     float sliceIndex = floor(row / normalSliceSize);
-    float radians = (row + (sliceIndex * 0.33)) / normalSliceSize * 2 * Pi + (Dithering.FrameIndex * 0.001);
+    float radians = (row + (sliceIndex * 0.33)) / normalSliceSize * 2 * Pi + (DitheringGetFrameIndex() * 0.001);
 
     float2 xy;
     sincos(radians, xy.x, xy.y);
