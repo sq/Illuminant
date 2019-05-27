@@ -165,18 +165,6 @@
     <None Include="packages.config" />
     <None Include="Properties\app.manifest" />
   </ItemGroup>
-  <ItemGroup Condition=" '$(Configuration)' == 'Debug' ">
-    <Content Include="..\Squared.Nuklear\bin_dbg\Nuklear.dll">
-      <Link>Nuklear.dll</Link>
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-  <ItemGroup Condition=" '$(Configuration)' == 'Release' ">
-    <Content Include="..\Squared.Nuklear\bin\Nuklear.dll">
-      <Link>Nuklear.dll</Link>
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
   <ItemGroup>
     <TTF Include="..\AppCommon\Fonts\*.otf;..\AppCommon\Fonts\*.ttf;..\AppCommon\Fonts\*.ttc">
       <Visible>false</Visible>
