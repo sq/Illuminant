@@ -1,5 +1,6 @@
 #define ENABLE_DITHERING
 
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\BitmapCommon.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\DitherCommon.fxh"
@@ -67,7 +68,7 @@ void LightingResolvePixelShader (
     in float4 addColor : COLOR1,
     in float2 texCoord1 : TEXCOORD0,
     in float4 texRgn1 : TEXCOORD1,
-    in float2 __vpos__ : VPOS,
+    ACCEPTS_VPOS,
     out float4 result : COLOR0
 ) {
     result = ResolveCommon(texCoord1, texRgn1);
@@ -77,7 +78,7 @@ void LightingResolvePixelShader (
     result.rgb = pow(result.rgb, (GammaMinusOne + 1));
     if (ResolveToSRGB)
         result.rgb = LinearToSRGB(result.rgb);
-    result.rgb = ApplyDither(result.rgb, vpos);
+    result.rgb = ApplyDither(result.rgb, GET_VPOS);
 }
 
 void GammaCompressedLightingResolvePixelShader(
@@ -85,7 +86,7 @@ void GammaCompressedLightingResolvePixelShader(
     in float4 addColor : COLOR1,
     in float2 texCoord1 : TEXCOORD0,
     in float4 texRgn1 : TEXCOORD1,
-    in float2 __vpos__ : VPOS,
+    ACCEPTS_VPOS,
     out float4 result : COLOR0
 ) {
     result = ResolveCommon(texCoord1, texRgn1);
@@ -93,7 +94,7 @@ void GammaCompressedLightingResolvePixelShader(
     result = GammaCompress(result);
     if (ResolveToSRGB)
         result.rgb = LinearToSRGB(result.rgb);
-    result.rgb = ApplyDither(result.rgb, vpos);
+    result.rgb = ApplyDither(result.rgb, GET_VPOS);
 }
 
 void ToneMappedLightingResolvePixelShader(
@@ -101,7 +102,7 @@ void ToneMappedLightingResolvePixelShader(
     in float4 addColor : COLOR1,
     in float2 texCoord1 : TEXCOORD0,
     in float4 texRgn1 : TEXCOORD1,
-    in float2 __vpos__ : VPOS,
+    ACCEPTS_VPOS,
     out float4 result : COLOR0
 ) {
     result = ResolveCommon(texCoord1, texRgn1);
@@ -112,7 +113,7 @@ void ToneMappedLightingResolvePixelShader(
     result.rgb = pow(result.rgb, (GammaMinusOne + 1));
     if (ResolveToSRGB)
         result.rgb = LinearToSRGB(result.rgb);
-    result.rgb = ApplyDither(result.rgb, vpos);
+    result.rgb = ApplyDither(result.rgb, GET_VPOS);
 }
 
 void LightingResolveWithAlbedoPixelShader(
@@ -122,7 +123,7 @@ void LightingResolveWithAlbedoPixelShader(
     in float4 texRgn1 : TEXCOORD1,
     in float2 texCoord2 : TEXCOORD2,
     in float4 texRgn2 : TEXCOORD3,
-    in float2 __vpos__ : VPOS,
+    ACCEPTS_VPOS,
     out float4 result : COLOR0
 ) {
     result = ResolveWithAlbedoCommon(texCoord1, texRgn1, texCoord2, texRgn2);
@@ -132,7 +133,7 @@ void LightingResolveWithAlbedoPixelShader(
     result.rgb = pow(result.rgb, (GammaMinusOne + 1));
     if (ResolveToSRGB)
         result.rgb = LinearToSRGB(result.rgb);
-    result.rgb = ApplyDither(result.rgb, vpos);
+    result.rgb = ApplyDither(result.rgb, GET_VPOS);
 }
 
 void GammaCompressedLightingResolveWithAlbedoPixelShader(
@@ -142,7 +143,7 @@ void GammaCompressedLightingResolveWithAlbedoPixelShader(
     in float4 texRgn1 : TEXCOORD1,
     in float2 texCoord2 : TEXCOORD2,
     in float4 texRgn2 : TEXCOORD3,
-    in float2 __vpos__ : VPOS,
+    ACCEPTS_VPOS,
     out float4 result : COLOR0
 ) {
     result = ResolveWithAlbedoCommon(texCoord1, texRgn1, texCoord2, texRgn2);
@@ -150,7 +151,7 @@ void GammaCompressedLightingResolveWithAlbedoPixelShader(
     result = GammaCompress(result);
     if (ResolveToSRGB)
         result.rgb = LinearToSRGB(result.rgb);
-    result.rgb = ApplyDither(result.rgb, vpos);
+    result.rgb = ApplyDither(result.rgb, GET_VPOS);
 }
 
 void ToneMappedLightingResolveWithAlbedoPixelShader(
@@ -160,7 +161,7 @@ void ToneMappedLightingResolveWithAlbedoPixelShader(
     in float4 texRgn1 : TEXCOORD1,
     in float2 texCoord2 : TEXCOORD2,
     in float4 texRgn2 : TEXCOORD3,
-    in float2 __vpos__ : VPOS,
+    ACCEPTS_VPOS,
     out float4 result : COLOR0
 ) {
     result = ResolveWithAlbedoCommon(texCoord1, texRgn1, texCoord2, texRgn2);
@@ -171,13 +172,13 @@ void ToneMappedLightingResolveWithAlbedoPixelShader(
     result.rgb = pow(result.rgb, (GammaMinusOne + 1));
     if (ResolveToSRGB)
         result.rgb = LinearToSRGB(result.rgb);
-    result.rgb = ApplyDither(result.rgb, vpos);
+    result.rgb = ApplyDither(result.rgb, GET_VPOS);
 }
 
 void CalculateLuminancePixelShader(
     in float2 texCoord1 : TEXCOORD0,
     in float4 texRgn1 : TEXCOORD1,
-    in float2 __vpos__ : VPOS,
+    ACCEPTS_VPOS,
     out float4 result : COLOR0
 ) {
     float4 coord = float4(clamp(texCoord1, texRgn1.xy, texRgn1.zw), 0, 0);

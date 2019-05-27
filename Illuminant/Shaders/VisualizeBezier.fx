@@ -1,3 +1,4 @@
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\GeometryCommon.fxh"
 #include "Bezier.fxh"
@@ -18,7 +19,7 @@ void ScreenSpaceBezierVisualizerVertexShader (
 void BezierVisualizerPixelShader (
     in float4 color   : COLOR0,
     in float2 xy      : TEXCOORD0,
-    in float2 __vpos__    : VPOS,
+    ACCEPTS_VPOS,
     out float4 result : COLOR0
 ) {
     float count = Bezier.RangeAndCount.z;
@@ -70,6 +71,7 @@ void BezierVisualizerPixelShader (
 
     float4 w = (scaledDistances.a + invDistanceToT) * float4(1, 1, 1, 0);
     float  alpha = (scaledDistances.r + scaledDistances.g + scaledDistances.b + scaledDistances.a) + invDistanceToT;
+    float2 vpos = GET_VPOS;
     float  stipple = (vpos.x % 2) - (vpos.y % 2);
     alpha += pow(distanceAboveOne + distanceBelowZero, 1.25) * ((stipple * 0.08) + 0.4);
     result = float4(scaledDistances.rgb + w, saturate(alpha));

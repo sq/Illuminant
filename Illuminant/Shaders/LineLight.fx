@@ -1,3 +1,4 @@
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "LineLightCore.fxh"
 
 void LineLightVertexShader(
@@ -60,13 +61,13 @@ void LineLightPixelShader(
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 startColor          : TEXCOORD4,
     in  float4 endColor            : TEXCOORD5,
-    in  float2 __vpos__                : VPOS,
+    ACCEPTS_VPOS,
     out float4 result              : COLOR0
 ) {
     float3 shadedPixelPosition;
     float3 shadedPixelNormal;
     sampleGBuffer(
-        vpos,
+        GET_VPOS,
         shadedPixelPosition, shadedPixelNormal
     );
 
@@ -89,13 +90,13 @@ void LineLightWithDistanceRampPixelShader(
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 startColor          : TEXCOORD4,
     in  float4 endColor            : TEXCOORD5,
-    in  float2 __vpos__                : VPOS,
+    ACCEPTS_VPOS,
     out float4 result              : COLOR0
 ) {
     float3 shadedPixelPosition;
     float3 shadedPixelNormal;
     sampleGBuffer(
-        vpos,
+        GET_VPOS,
         shadedPixelPosition, shadedPixelNormal
     );
 
@@ -118,13 +119,13 @@ void LineLightWithOpacityRampPixelShader(
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 startColor          : TEXCOORD4,
     in  float4 endColor            : TEXCOORD5,
-    in  float2 __vpos__                : VPOS,
+    ACCEPTS_VPOS,
     out float4 result              : COLOR0
 ) {
     float3 shadedPixelPosition;
     float3 shadedPixelNormal;
     sampleGBuffer(
-        vpos,
+        GET_VPOS,
         shadedPixelPosition, shadedPixelNormal
     );
 

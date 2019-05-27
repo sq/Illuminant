@@ -1,3 +1,4 @@
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "SphereLightCore.fxh"
 #include "Bezier.fxh"
 #include "ParticleCommon.fxh"
@@ -78,13 +79,13 @@ void ParticleLightPixelShader(
     in  float4 lightProperties     : TEXCOORD2,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 lightColor          : COLOR0,
-    in  float2 __vpos__                : VPOS,
+    ACCEPTS_VPOS,
     out float4 result              : COLOR0
 ) {
     float3 shadedPixelPosition;
     float3 shadedPixelNormal;
     sampleGBuffer(
-        vpos,
+        GET_VPOS,
         shadedPixelPosition, shadedPixelNormal
     );
 

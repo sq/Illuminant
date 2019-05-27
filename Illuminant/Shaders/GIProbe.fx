@@ -1,5 +1,6 @@
 #pragma fxcparams(/Od /Zi)
 
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\DitherCommon.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\GeometryCommon.fxh"
@@ -78,7 +79,7 @@ float3 ComputeRowNormal(float row) {
 
 // FIXME: This is broken in any optimization mode except /Od
 void ProbeSelectorPixelShader(
-    in  float2 __vpos__                    : VPOS,
+    ACCEPTS_VPOS,
     in  float4 probeOffsetAndBaseIndex : TEXCOORD0,
     in  float4 probeIntervalAndCount   : TEXCOORD1,
     out float4 resultPosition          : COLOR0,
@@ -87,11 +88,11 @@ void ProbeSelectorPixelShader(
     float2 probeInterval = probeIntervalAndCount.xy;
     float2 probeCount = probeIntervalAndCount.zw;
     float probeCountDivisor = max(0.001, probeCount.x);
-    float rawIndex = vpos.x - probeOffsetAndBaseIndex.w;
+    float rawIndex = GET_VPOS.x - probeOffsetAndBaseIndex.w;
     float yIndex = floor(rawIndex / probeCountDivisor);
     float xIndex = rawIndex - (yIndex * probeCount.x);
     float3 requestedPosition = probeOffsetAndBaseIndex.xyz + float3(probeInterval.x * xIndex, probeInterval.y * yIndex, 0);
-    float3 normal = ComputeRowNormal(vpos.y);
+    float3 normal = ComputeRowNormal(GET_VPOS.y);
 
     DistanceFieldConstants vars = makeDistanceFieldConstants();
 
@@ -128,9 +129,10 @@ void ProbeSelectorPixelShader(
 }
 
 void SHGeneratorPixelShader(
-    in  float2 __vpos__   : VPOS,
+    ACCEPTS_VPOS,
     out float4 result : COLOR0
 ) {
+    float2 vpos = GET_VPOS;
     int y = max(0, floor(vpos.y));
 
     SH9Color r;

@@ -1,3 +1,4 @@
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "SphereLightCore.fxh"
 
 void SphereLightProbeVertexShader(
@@ -23,7 +24,7 @@ void SphereLightProbePixelShader(
     in  float4 lightProperties     : TEXCOORD2,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : TEXCOORD4,
-    in  float2 __vpos__                : VPOS,
+    ACCEPTS_VPOS,
     out float4 result              : COLOR0
 ) {
     float3 shadedPixelPosition;
@@ -31,7 +32,7 @@ void SphereLightProbePixelShader(
     float opacity, enableShadows;
 
     sampleLightProbeBuffer(
-        vpos,
+        GET_VPOS,
         shadedPixelPosition, shadedPixelNormal, opacity, enableShadows
     );
 
@@ -50,7 +51,7 @@ void SphereLightProbeWithDistanceRampPixelShader(
     in  float4 lightProperties     : TEXCOORD2,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : TEXCOORD4,
-    in  float2 __vpos__                : VPOS,
+    ACCEPTS_VPOS,
     out float4 result              : COLOR0
 ) {
     float3 shadedPixelPosition;
@@ -58,7 +59,7 @@ void SphereLightProbeWithDistanceRampPixelShader(
     float opacity, enableShadows;
 
     sampleLightProbeBuffer(
-        vpos,
+        GET_VPOS,
         shadedPixelPosition, shadedPixelNormal, opacity, enableShadows
     );
 
@@ -77,7 +78,7 @@ void SphereLightProbeWithOpacityRampPixelShader(
     in  float4 lightProperties     : TEXCOORD2,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : TEXCOORD4,
-    in  float2 __vpos__                : VPOS,
+    ACCEPTS_VPOS,
     out float4 result              : COLOR0
 ) {
     float3 shadedPixelPosition;
@@ -85,7 +86,7 @@ void SphereLightProbeWithOpacityRampPixelShader(
     float opacity, enableShadows;
 
     sampleLightProbeBuffer(
-        vpos,
+        GET_VPOS,
         shadedPixelPosition, shadedPixelNormal, opacity, enableShadows
     );
 

@@ -1,3 +1,4 @@
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\GeometryCommon.fxh"
 #include "LightCommon.fxh"
@@ -259,7 +260,7 @@ float4 SHRendererPixelShaderCore(
 }
 
 void SHRendererPixelShader(
-    in  float2 __vpos__ : VPOS,
+    ACCEPTS_VPOS,
     in  float4 probeOffsetAndBaseIndex : TEXCOORD0,
     in  float4 probeIntervalAndCount   : TEXCOORD1,
     out float4 result : COLOR0
@@ -267,7 +268,7 @@ void SHRendererPixelShader(
     float3 shadedPixelPosition;
     float3 shadedPixelNormal;
     sampleGBuffer(
-        vpos,
+        GET_VPOS,
         shadedPixelPosition, shadedPixelNormal
     );
 
@@ -282,7 +283,7 @@ void SHRendererPixelShader(
 }
 
 void LightProbeSHRendererPixelShader(
-    in  float2 __vpos__ : VPOS,
+    ACCEPTS_VPOS,
     in  float4 probeOffsetAndBaseIndex : TEXCOORD0,
     in  float4 probeIntervalAndCount   : TEXCOORD1,
     out float4 result : COLOR0
@@ -292,7 +293,7 @@ void LightProbeSHRendererPixelShader(
     float opacity, enableShadows;
 
     sampleLightProbeBuffer(
-        vpos,
+        GET_VPOS,
         shadedPixelPosition, shadedPixelNormal, opacity, enableShadows
     );
 

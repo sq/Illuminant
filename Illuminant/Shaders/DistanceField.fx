@@ -1,3 +1,4 @@
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\GeometryCommon.fxh"
 #include "LightCommon.fxh"
@@ -118,7 +119,7 @@ float4 computeSliceDistances (float2 xy, float2 zRange, float4 SliceZ) {
 void DistanceToPolygonPixelShader (
     out float4 color : COLOR0,
     in  float2 zRange : TEXCOORD0,
-    in  float2 __vpos__  : VPOS
+    ACCEPTS_VPOS
 ) {
     float2 vp = (__vpos__ * getInvScaleFactors()) + Viewport.Position;
 

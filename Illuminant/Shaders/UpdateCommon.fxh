@@ -1,7 +1,7 @@
 #ifndef UPDATE_DEFINED
 #define UPDATE_DEFINED
 
-#define vpos floor(__vpos__)
+#define vpos (__vpos__)
 
 Texture2D LifeRampTexture;
 sampler LifeRampSampler {

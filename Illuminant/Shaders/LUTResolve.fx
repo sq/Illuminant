@@ -1,5 +1,6 @@
 #define ENABLE_DITHERING
 
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\BitmapCommon.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\DitherCommon.fxh"
@@ -111,7 +112,7 @@ void LUTBlendedLightingResolveWithAlbedoPixelShader(
     in float4 texRgn1 : TEXCOORD1,
     in float2 texCoord2 : TEXCOORD2,
     in float4 texRgn2 : TEXCOORD3,
-    in float2 __vpos__ : VPOS,
+    ACCEPTS_VPOS,
     out float4 result : COLOR0
 ) {
     result = LUTBlendedResolveWithAlbedoCommon(texCoord1, texRgn1, texCoord2, texRgn2);
@@ -121,7 +122,7 @@ void LUTBlendedLightingResolveWithAlbedoPixelShader(
     result.rgb = pow(result.rgb, (GammaMinusOne + 1));
     if (ResolveToSRGB)
         result.rgb = LinearToSRGB(result.rgb);
-    result.rgb = ApplyDither(result.rgb, vpos);
+    result.rgb = ApplyDither(result.rgb, GET_VPOS);
 }
 
 technique ScreenSpaceLUTBlendedLightingResolveWithAlbedo

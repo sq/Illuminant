@@ -307,6 +307,7 @@ namespace TestGame {
         }
 
         protected override void UnloadContent () {
+            Process.GetCurrentProcess().Kill();
             Environment.Exit(0);
         }
 

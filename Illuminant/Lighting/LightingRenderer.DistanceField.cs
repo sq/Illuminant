@@ -198,6 +198,7 @@ namespace Squared.Illuminant {
         private void ClearDistanceFieldSlice (
             short[] indices, IBatchContainer container, int layer, int firstSliceIndex, Texture2D clearTexture
         ) {
+            return;
             // var color = new Color((firstSliceIndex * 16) % 255, 0, 0, 0);
             var color = Color.Transparent;
 

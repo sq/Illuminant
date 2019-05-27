@@ -1,3 +1,4 @@
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\GeometryCommon.fxh"
 #include "LightCommon.fxh"
@@ -37,10 +38,11 @@ float2 getPositionXy (in float2 __vpos__) {
 
 void BoxPixelShader (
     out float4 color  : COLOR0,
-    in  float2 __vpos__   : VPOS,
+    ACCEPTS_VPOS,
     in  float3 center : TEXCOORD0,
     in  float3 size   : TEXCOORD1
 ) {
+    float2 vpos = GET_VPOS;
     color = float4(
         encodeDistance(evaluateBox(float3(getPositionXy(vpos), SliceZ.x), center, size)),
         encodeDistance(evaluateBox(float3(getPositionXy(vpos), SliceZ.y), center, size)),
@@ -51,10 +53,11 @@ void BoxPixelShader (
 
 void EllipsoidPixelShader(
     out float4 color  : COLOR0,
-    in  float2 __vpos__   : VPOS,
+    ACCEPTS_VPOS,
     in  float3 center : TEXCOORD0,
     in  float3 size : TEXCOORD1
 ) {
+    float2 vpos = GET_VPOS;
     color = float4(
         encodeDistance(evaluateEllipsoid(float3(getPositionXy(vpos), SliceZ.x), center, size)),
         encodeDistance(evaluateEllipsoid(float3(getPositionXy(vpos), SliceZ.y), center, size)),
@@ -65,10 +68,11 @@ void EllipsoidPixelShader(
 
 void CylinderPixelShader(
     out float4 color  : COLOR0,
-    in  float2 __vpos__   : VPOS,
+    ACCEPTS_VPOS,
     in  float3 center : TEXCOORD0,
     in  float3 size : TEXCOORD1
 ) {
+    float2 vpos = GET_VPOS;
     color = float4(
         encodeDistance(evaluateCylinder(float3(getPositionXy(vpos), SliceZ.x), center, size)),
         encodeDistance(evaluateCylinder(float3(getPositionXy(vpos), SliceZ.y), center, size)),

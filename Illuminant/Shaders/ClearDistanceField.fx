@@ -1,3 +1,4 @@
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\GeometryCommon.fxh"
 
@@ -24,11 +25,11 @@ void DistanceVertexShader (
 
 void ClearPixelShader (
     out float4 color : COLOR0,
-    in  float2 __vpos__ : VPOS
+    ACCEPTS_VPOS
 ) {
     [branch]
     if (ClearMultiplier.a > 0) {
-        float2 vp = (vpos + 0.5) * ClearInverseScale;
+        float2 vp = (GET_VPOS + 0.5) * ClearInverseScale;
         float4 tex = tex2Dlod(ClearSampler, float4(vp.x, vp.y, 0, 0));
         color = tex * ClearMultiplier;
     } else {
