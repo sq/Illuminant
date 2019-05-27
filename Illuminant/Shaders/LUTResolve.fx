@@ -111,7 +111,7 @@ void LUTBlendedLightingResolveWithAlbedoPixelShader(
     in float4 texRgn1 : TEXCOORD1,
     in float2 texCoord2 : TEXCOORD2,
     in float4 texRgn2 : TEXCOORD3,
-    in float2 vpos : VPOS,
+    in float2 __vpos__ : VPOS,
     out float4 result : COLOR0
 ) {
     result = LUTBlendedResolveWithAlbedoCommon(texCoord1, texRgn1, texCoord2, texRgn2);

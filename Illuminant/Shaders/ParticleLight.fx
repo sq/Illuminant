@@ -78,7 +78,7 @@ void ParticleLightPixelShader(
     in  float4 lightProperties     : TEXCOORD2,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 lightColor          : COLOR0,
-    in  float2 vpos                : VPOS,
+    in  float2 __vpos__                : VPOS,
     out float4 result              : COLOR0
 ) {
     float3 shadedPixelPosition;

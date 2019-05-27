@@ -18,7 +18,7 @@ void ScreenSpaceBezierVisualizerVertexShader (
 void BezierVisualizerPixelShader (
     in float4 color   : COLOR0,
     in float2 xy      : TEXCOORD0,
-    in float2 vpos    : VPOS,
+    in float2 __vpos__    : VPOS,
     out float4 result : COLOR0
 ) {
     float count = Bezier.RangeAndCount.z;

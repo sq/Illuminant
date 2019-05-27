@@ -16,7 +16,7 @@ void VectorWarpPixelShader (
     in float4 texRgn1       : TEXCOORD1,
     in float2 texCoord2     : TEXCOORD2,
     in float4 texRgn2       : TEXCOORD3,
-    in float2 vpos          : VPOS,
+    in float2 __vpos__          : VPOS,
     out float4 result       : COLOR0
 ) {
     float2 fieldTexCoord = clamp(texCoord1, texRgn1.xy, texRgn1.zw);

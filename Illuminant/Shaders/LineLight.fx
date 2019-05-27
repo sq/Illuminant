@@ -60,7 +60,7 @@ void LineLightPixelShader(
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 startColor          : TEXCOORD4,
     in  float4 endColor            : TEXCOORD5,
-    in  float2 vpos                : VPOS,
+    in  float2 __vpos__                : VPOS,
     out float4 result              : COLOR0
 ) {
     float3 shadedPixelPosition;
@@ -89,7 +89,7 @@ void LineLightWithDistanceRampPixelShader(
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 startColor          : TEXCOORD4,
     in  float4 endColor            : TEXCOORD5,
-    in  float2 vpos                : VPOS,
+    in  float2 __vpos__                : VPOS,
     out float4 result              : COLOR0
 ) {
     float3 shadedPixelPosition;
@@ -118,7 +118,7 @@ void LineLightWithOpacityRampPixelShader(
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 startColor          : TEXCOORD4,
     in  float4 endColor            : TEXCOORD5,
-    in  float2 vpos                : VPOS,
+    in  float2 __vpos__                : VPOS,
     out float4 result              : COLOR0
 ) {
     float3 shadedPixelPosition;

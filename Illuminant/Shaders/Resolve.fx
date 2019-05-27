@@ -67,7 +67,7 @@ void LightingResolvePixelShader (
     in float4 addColor : COLOR1,
     in float2 texCoord1 : TEXCOORD0,
     in float4 texRgn1 : TEXCOORD1,
-    in float2 vpos : VPOS,
+    in float2 __vpos__ : VPOS,
     out float4 result : COLOR0
 ) {
     result = ResolveCommon(texCoord1, texRgn1);
@@ -85,7 +85,7 @@ void GammaCompressedLightingResolvePixelShader(
     in float4 addColor : COLOR1,
     in float2 texCoord1 : TEXCOORD0,
     in float4 texRgn1 : TEXCOORD1,
-    in float2 vpos : VPOS,
+    in float2 __vpos__ : VPOS,
     out float4 result : COLOR0
 ) {
     result = ResolveCommon(texCoord1, texRgn1);
@@ -101,7 +101,7 @@ void ToneMappedLightingResolvePixelShader(
     in float4 addColor : COLOR1,
     in float2 texCoord1 : TEXCOORD0,
     in float4 texRgn1 : TEXCOORD1,
-    in float2 vpos : VPOS,
+    in float2 __vpos__ : VPOS,
     out float4 result : COLOR0
 ) {
     result = ResolveCommon(texCoord1, texRgn1);
@@ -122,7 +122,7 @@ void LightingResolveWithAlbedoPixelShader(
     in float4 texRgn1 : TEXCOORD1,
     in float2 texCoord2 : TEXCOORD2,
     in float4 texRgn2 : TEXCOORD3,
-    in float2 vpos : VPOS,
+    in float2 __vpos__ : VPOS,
     out float4 result : COLOR0
 ) {
     result = ResolveWithAlbedoCommon(texCoord1, texRgn1, texCoord2, texRgn2);
@@ -142,7 +142,7 @@ void GammaCompressedLightingResolveWithAlbedoPixelShader(
     in float4 texRgn1 : TEXCOORD1,
     in float2 texCoord2 : TEXCOORD2,
     in float4 texRgn2 : TEXCOORD3,
-    in float2 vpos : VPOS,
+    in float2 __vpos__ : VPOS,
     out float4 result : COLOR0
 ) {
     result = ResolveWithAlbedoCommon(texCoord1, texRgn1, texCoord2, texRgn2);
@@ -160,7 +160,7 @@ void ToneMappedLightingResolveWithAlbedoPixelShader(
     in float4 texRgn1 : TEXCOORD1,
     in float2 texCoord2 : TEXCOORD2,
     in float4 texRgn2 : TEXCOORD3,
-    in float2 vpos : VPOS,
+    in float2 __vpos__ : VPOS,
     out float4 result : COLOR0
 ) {
     result = ResolveWithAlbedoCommon(texCoord1, texRgn1, texCoord2, texRgn2);
@@ -177,7 +177,7 @@ void ToneMappedLightingResolveWithAlbedoPixelShader(
 void CalculateLuminancePixelShader(
     in float2 texCoord1 : TEXCOORD0,
     in float4 texRgn1 : TEXCOORD1,
-    in float2 vpos : VPOS,
+    in float2 __vpos__ : VPOS,
     out float4 result : COLOR0
 ) {
     float4 coord = float4(clamp(texCoord1, texRgn1.xy, texRgn1.zw), 0, 0);

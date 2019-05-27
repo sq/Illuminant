@@ -78,7 +78,7 @@ float3 ComputeRowNormal(float row) {
 
 // FIXME: This is broken in any optimization mode except /Od
 void ProbeSelectorPixelShader(
-    in  float2 vpos                    : VPOS,
+    in  float2 __vpos__                    : VPOS,
     in  float4 probeOffsetAndBaseIndex : TEXCOORD0,
     in  float4 probeIntervalAndCount   : TEXCOORD1,
     out float4 resultPosition          : COLOR0,
@@ -128,7 +128,7 @@ void ProbeSelectorPixelShader(
 }
 
 void SHGeneratorPixelShader(
-    in  float2 vpos   : VPOS,
+    in  float2 __vpos__   : VPOS,
     out float4 result : COLOR0
 ) {
     int y = max(0, floor(vpos.y));

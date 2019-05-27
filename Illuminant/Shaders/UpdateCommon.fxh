@@ -1,6 +1,8 @@
 #ifndef UPDATE_DEFINED
 #define UPDATE_DEFINED
 
+#define vpos floor(__vpos__)
+
 Texture2D LifeRampTexture;
 sampler LifeRampSampler {
     Texture = (LifeRampTexture);
@@ -80,7 +82,7 @@ float getRotationForVelocity (float3 velocity) {
 }
 
 void computeRenderData (
-    in float2 vpos, 
+    in float2 __vpos__, 
     in float4 position, in float4 velocity, in float4 attributes, 
     out float4 renderColor, out float4 renderData
 ) {

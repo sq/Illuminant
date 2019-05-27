@@ -60,7 +60,7 @@ void FunctionSurfacePixelShader(
     in  float3 rayStart : TEXCOORD0,
     in  float3 rayVector : TEXCOORD1,
     in  float4 color : COLOR0,
-    in  float2 vpos : VPOS,
+    in  float2 __vpos__ : VPOS,
     out float4 result : COLOR0
 ) {
     float vars = 0;
@@ -86,7 +86,7 @@ void FunctionOutlinePixelShader(
     in  float3 rayStart : TEXCOORD0,
     in  float3 rayVector : TEXCOORD1,
     in  float4 color : COLOR0,
-    in  float2 vpos : VPOS,
+    in  float2 __vpos__ : VPOS,
     out float4 result : COLOR0
 ) {
     float vars = 0;

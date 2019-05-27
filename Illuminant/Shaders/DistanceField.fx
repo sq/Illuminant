@@ -118,12 +118,11 @@ float4 computeSliceDistances (float2 xy, float2 zRange, float4 SliceZ) {
 void DistanceToPolygonPixelShader (
     out float4 color : COLOR0,
     in  float2 zRange : TEXCOORD0,
-    in  float2 vpos  : VPOS
+    in  float2 __vpos__  : VPOS
 ) {
-    vpos *= getInvScaleFactors();
-    vpos += Viewport.Position;
+    float2 vp = (__vpos__ * getInvScaleFactors()) + Viewport.Position;
 
-    float4 sliceDistances = computeSliceDistances(vpos, zRange, SliceZ);
+    float4 sliceDistances = computeSliceDistances(vp, zRange, SliceZ);
     color = float4(
         encodeDistance(sliceDistances.x),
         encodeDistance(sliceDistances.y),

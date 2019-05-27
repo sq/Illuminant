@@ -30,15 +30,14 @@ void DistanceFunctionVertexShader(
     result.w = 1;
 }
 
-float2 getPositionXy (in float2 vpos) {
-    vpos *= getInvScaleFactors();
-    vpos += Viewport.Position;
-    return vpos;
+float2 getPositionXy (in float2 __vpos__) {
+    float2 vp = (__vpos__ * getInvScaleFactors()) + Viewport.Position;
+    return vp;
 }
 
 void BoxPixelShader (
     out float4 color  : COLOR0,
-    in  float2 vpos   : VPOS,
+    in  float2 __vpos__   : VPOS,
     in  float3 center : TEXCOORD0,
     in  float3 size   : TEXCOORD1
 ) {
@@ -52,7 +51,7 @@ void BoxPixelShader (
 
 void EllipsoidPixelShader(
     out float4 color  : COLOR0,
-    in  float2 vpos   : VPOS,
+    in  float2 __vpos__   : VPOS,
     in  float3 center : TEXCOORD0,
     in  float3 size : TEXCOORD1
 ) {
@@ -66,7 +65,7 @@ void EllipsoidPixelShader(
 
 void CylinderPixelShader(
     out float4 color  : COLOR0,
-    in  float2 vpos   : VPOS,
+    in  float2 __vpos__   : VPOS,
     in  float3 center : TEXCOORD0,
     in  float3 size : TEXCOORD1
 ) {

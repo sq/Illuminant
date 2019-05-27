@@ -24,13 +24,12 @@ void DistanceVertexShader (
 
 void ClearPixelShader (
     out float4 color : COLOR0,
-    in  float2 vpos : VPOS
+    in  float2 __vpos__ : VPOS
 ) {
     [branch]
     if (ClearMultiplier.a > 0) {
-        vpos += 0.5;
-        vpos *= ClearInverseScale;
-        float4 tex = tex2Dlod(ClearSampler, float4(vpos.x, vpos.y, 0, 0));
+        float2 vp = (vpos + 0.5) * ClearInverseScale;
+        float4 tex = tex2Dlod(ClearSampler, float4(vp.x, vp.y, 0, 0));
         color = tex * ClearMultiplier;
     } else {
         color = float4(0, 0, 0, 0);

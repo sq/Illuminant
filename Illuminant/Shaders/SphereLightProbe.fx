@@ -23,7 +23,7 @@ void SphereLightProbePixelShader(
     in  float4 lightProperties     : TEXCOORD2,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : TEXCOORD4,
-    in  float2 vpos                : VPOS,
+    in  float2 __vpos__                : VPOS,
     out float4 result              : COLOR0
 ) {
     float3 shadedPixelPosition;
@@ -50,7 +50,7 @@ void SphereLightProbeWithDistanceRampPixelShader(
     in  float4 lightProperties     : TEXCOORD2,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : TEXCOORD4,
-    in  float2 vpos                : VPOS,
+    in  float2 __vpos__                : VPOS,
     out float4 result              : COLOR0
 ) {
     float3 shadedPixelPosition;
@@ -77,7 +77,7 @@ void SphereLightProbeWithOpacityRampPixelShader(
     in  float4 lightProperties     : TEXCOORD2,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : TEXCOORD4,
-    in  float2 vpos                : VPOS,
+    in  float2 __vpos__                : VPOS,
     out float4 result              : COLOR0
 ) {
     float3 shadedPixelPosition;

@@ -259,7 +259,7 @@ float4 SHRendererPixelShaderCore(
 }
 
 void SHRendererPixelShader(
-    in  float2 vpos : VPOS,
+    in  float2 __vpos__ : VPOS,
     in  float4 probeOffsetAndBaseIndex : TEXCOORD0,
     in  float4 probeIntervalAndCount   : TEXCOORD1,
     out float4 result : COLOR0
@@ -282,7 +282,7 @@ void SHRendererPixelShader(
 }
 
 void LightProbeSHRendererPixelShader(
-    in  float2 vpos : VPOS,
+    in  float2 __vpos__ : VPOS,
     in  float4 probeOffsetAndBaseIndex : TEXCOORD0,
     in  float4 probeIntervalAndCount   : TEXCOORD1,
     out float4 result : COLOR0
