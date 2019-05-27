@@ -132,20 +132,22 @@ namespace TestGame.Scenes {
                 ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black);
 
                 var lighting = Renderer.RenderLighting(bg, 1, 1 / 2f);
+                var dithering = new DitheringSettings {
+                    Strength = Strength,
+                    Power = (int)Power.Value,
+                    BandSize = BandSize,
+                    RangeMin = RangeMin,
+                    RangeMax = RangeMax
+                };
+                var hdr = new HDRConfiguration {
+                    InverseScaleFactor = 2f,
+                    Gamma = sRGB ? 2.3f : 1.0f,
+                    ResolveToSRGB = sRGB,
+                    Dithering = dithering
+                };
                 lighting.Resolve(
                     bg, 2, Width, Height, 
-                    hdr: new HDRConfiguration {
-                        InverseScaleFactor = 2f,
-                        Gamma = sRGB ? 2.3f : 1.0f,
-                        ResolveToSRGB = sRGB,
-                        Dithering = new DitheringSettings {
-                            Strength = Strength,
-                            Power = (int)Power.Value,
-                            BandSize = BandSize,
-                            RangeMin = RangeMin,
-                            RangeMax = RangeMax
-                        },
-                    }
+                    hdr: hdr
                 );
             };
 
