@@ -104,9 +104,7 @@ namespace TestGame {
                 new LineLight(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 // FIXME
                 // new VectorFieldTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-#if !FNA
                 new LUTTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-#endif
             };
         }
 
@@ -304,7 +302,12 @@ namespace TestGame {
             LastTimeOverUI = Time.Ticks;
 
             _ActiveSceneIndex = -1;
-            SetActiveScene(Scenes.Length - 1);
+            // SetActiveScene(Scenes.Length - 1);
+            SetActiveScene(1);
+        }
+
+        protected override void UnloadContent () {
+            Environment.Exit(0);
         }
 
         private void SetActiveScene (int index) {

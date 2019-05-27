@@ -83,7 +83,7 @@ namespace TestGame.Scenes {
             Histogram = new Histogram(4f, 2f);
 
             Deterministic.Value = true;
-            ShowHistogram.Value = true;
+            ShowHistogram.Value = false;
             UseRampTexture.Value = false;
             TwoPointFiveD.Value = true;
             DistanceFieldResolution.Value = 0.25f;
@@ -331,7 +331,7 @@ namespace TestGame.Scenes {
             Renderer.Configuration.TwoPointFiveD = TwoPointFiveD;
             Renderer.Configuration.SetScale(LightmapScaleRatio);
 
-            Renderer.InvalidateFields();
+            Renderer.InvalidateFields(invalidateDistanceField: !Deterministic.Value);
             Renderer.UpdateFields(frame, -2);
 
             LUTBlendingConfiguration? lutBlending = null;

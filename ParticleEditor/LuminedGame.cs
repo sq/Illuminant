@@ -154,6 +154,8 @@ namespace Lumined {
         }
 
         protected override void UnloadContent () {
+            Environment.Exit(0);
+
             RenderCoordinator.WaitForActiveDraws();
 
             FreeContent();
