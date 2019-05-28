@@ -149,7 +149,7 @@ namespace TestGame.Scenes {
                 };
                 lighting.Resolve(
                     bg, 2, Width, Height, 
-                    hdr: null
+                    hdr: hdr
                 );
             };
 
