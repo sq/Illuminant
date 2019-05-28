@@ -1498,6 +1498,7 @@ namespace Squared.Illuminant {
 
             if (_DistanceField == null) {
                 dfu = new Uniforms.DistanceField();
+                dfu.InvScaleFactorX = dfu.InvScaleFactorY = 1;
                 dfu.Extent.Z = Environment.MaximumZ;
                 uDistanceField.TrySet(m, ref dfu);
                 p.ClearTexture("DistanceFieldTexture");
