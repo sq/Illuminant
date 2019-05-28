@@ -105,7 +105,8 @@ void SphereLightPixelShader(
     );
 
     if (1) {
-        result = float4(shadedPixelPosition.x / 1920.0, 0, shadedPixelPosition.y / 1280.0, 1);
+        // FIXME: GET_VPOS is right but shadedPixelPosition.y is wrong
+        result = float4(shadedPixelPosition.x / 1920, 0, shadedPixelPosition.y / 1280, 1);
         return;
     }
 
