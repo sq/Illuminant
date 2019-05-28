@@ -86,7 +86,6 @@ namespace Squared.Illuminant.Particles.Transforms {
                 } else {
                     dm.SetRenderTargets(curr.Bindings2);
                 }
-                dm.SetRenderTargets(null);
                 dm.SetViewport(vp);
 
                 if (e != null) {
