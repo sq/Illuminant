@@ -71,6 +71,12 @@ void LightingResolvePixelShader (
     ACCEPTS_VPOS,
     out float4 result : COLOR0
 ) {
+    if (0) {
+        float2 vpos = GET_VPOS;
+        result = float4(vpos.x / 1920, vpos.y / 1280, 0, 1);
+        return;
+    }
+
     result = ResolveCommon(texCoord1, texRgn1);
     result.rgb = max(0, result.rgb + Offset);
     result.rgb *= (ExposureMinusOne + 1);
@@ -88,6 +94,12 @@ void GammaCompressedLightingResolvePixelShader(
     ACCEPTS_VPOS,
     out float4 result : COLOR0
 ) {
+    if (0) {
+        float2 vpos = GET_VPOS;
+        result = float4(vpos.x / 1920, vpos.y / 1280, 0, 1);
+        return;
+    }
+
     result = ResolveCommon(texCoord1, texRgn1);
 
     result = GammaCompress(result);
@@ -104,6 +116,12 @@ void ToneMappedLightingResolvePixelShader(
     ACCEPTS_VPOS,
     out float4 result : COLOR0
 ) {
+    if (0) {
+        float2 vpos = GET_VPOS;
+        result = float4(vpos.x / 1920, vpos.y / 1280, 0, 1);
+        return;
+    }
+
     result = ResolveCommon(texCoord1, texRgn1);
 
     float3 preToneMap = max(0, result.rgb + Offset) * (ExposureMinusOne + 1);
@@ -125,6 +143,12 @@ void LightingResolveWithAlbedoPixelShader(
     ACCEPTS_VPOS,
     out float4 result : COLOR0
 ) {
+    if (0) {
+        float2 vpos = GET_VPOS;
+        result = float4(vpos.x / 1920, vpos.y / 1280, 0, 1);
+        return;
+    }
+
     result = ResolveWithAlbedoCommon(texCoord1, texRgn1, texCoord2, texRgn2);
 
     result.rgb = max(0, result.rgb + Offset);
@@ -145,6 +169,12 @@ void GammaCompressedLightingResolveWithAlbedoPixelShader(
     ACCEPTS_VPOS,
     out float4 result : COLOR0
 ) {
+    if (0) {
+        float2 vpos = GET_VPOS;
+        result = float4(vpos.x / 1920, vpos.y / 1280, 0, 1);
+        return;
+    }
+
     result = ResolveWithAlbedoCommon(texCoord1, texRgn1, texCoord2, texRgn2);
 
     result = GammaCompress(result);
@@ -163,6 +193,12 @@ void ToneMappedLightingResolveWithAlbedoPixelShader(
     ACCEPTS_VPOS,
     out float4 result : COLOR0
 ) {
+    if (0) { 
+        float2 vpos = GET_VPOS;
+        result = float4(vpos.x / 1920, vpos.y / 1280, 0, 1);
+        return;
+    }
+
     result = ResolveWithAlbedoCommon(texCoord1, texRgn1, texCoord2, texRgn2);
 
     float3 preToneMap = max(0, result.rgb + Offset) * (ExposureMinusOne + 1);

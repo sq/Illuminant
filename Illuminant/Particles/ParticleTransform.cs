@@ -75,17 +75,18 @@ namespace Squared.Illuminant.Particles.Transforms {
                     return;
 
                 if (Transform?.IsAnalyzer ?? false) {
-                    dm.Device.SetRenderTarget(engine.ScratchTexture);
+                    dm.SetRenderTarget(engine.ScratchTexture);
                 } else if (up.IsUpdate) {
                     curr.Bindings4[2] = new RenderTargetBinding(up.Chunk.RenderColor);
                     curr.Bindings4[3] = new RenderTargetBinding(up.Chunk.RenderData);
-                    dm.Device.SetRenderTargets(curr.Bindings4);
+                    dm.SetRenderTargets(curr.Bindings4);
                 } else if (up.IsSpawning) {
                     curr.Bindings3[2] = up.Chunk.Color;
-                    dm.Device.SetRenderTargets(curr.Bindings3);
+                    dm.SetRenderTargets(curr.Bindings3);
                 } else {
-                    dm.Device.SetRenderTargets(curr.Bindings2);
+                    dm.SetRenderTargets(curr.Bindings2);
                 }
+                dm.SetRenderTargets(null);
                 dm.Device.Viewport = vp;
 
                 if (e != null) {

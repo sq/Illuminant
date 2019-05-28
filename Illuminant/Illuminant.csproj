@@ -144,7 +144,7 @@
     <ShaderOptimizationLevel>3</ShaderOptimizationLevel>
   </PropertyGroup>
   <PropertyGroup>
-    <PreBuildEvent>"$(ProjectDir)\..\..\Fracture\ShaderCompiler\bin\ShaderCompiler.exe" $(ProjectDir)\..\..\Fracture\ext\fxc $(ProjectDir)\Shaders $(ProjectDir)\Shaders\bin\$(Configuration) "/O$(ShaderOptimizationLevel) /Zi"
+    <PreBuildEvent>"$(ProjectDir)\..\..\Fracture\ShaderCompiler\bin\ShaderCompiler.exe" $(ProjectDir)\..\..\Fracture\ext\fxc $(ProjectDir)\Shaders $(ProjectDir)\Shaders\bin\$(Configuration) "/O$(ShaderOptimizationLevel) /Zi /Op"
     <!-- thanks xna -->
     del /s/q $(ProjectDir)\*.cachefile
     del /s/q $(ProjectDir)\cachefile-*.*

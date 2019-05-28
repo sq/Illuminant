@@ -302,8 +302,8 @@ namespace TestGame {
             LastTimeOverUI = Time.Ticks;
 
             _ActiveSceneIndex = -1;
-            // SetActiveScene(Scenes.Length - 1);
-            SetActiveScene(10);
+            SetActiveScene(Scenes.Length - 1);
+            // SetActiveScene(10);
         }
 
         protected override void UnloadContent () {

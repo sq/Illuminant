@@ -28,6 +28,9 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "STBNative", "..\Fracture\Squared\STBNative\STBNative.vcxproj", "{82960120-664F-4D6C-9DA5-140077DDB6C1}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Squared.Render.STB", "..\Fracture\Squared\Render.STB\Squared.Render.STB.csproj", "{CFB603C1-8371-460D-BA60-91E697EAE1B4}"
+	ProjectSection(ProjectDependencies) = postProject
+		{82960120-664F-4D6C-9DA5-140077DDB6C1} = {82960120-664F-4D6C-9DA5-140077DDB6C1}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Modeling", "Modeling\Modeling.csproj", "{9C41F780-0084-4F13-A24A-47433D4DCD4C}"
 EndProject

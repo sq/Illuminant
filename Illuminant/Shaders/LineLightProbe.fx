@@ -11,6 +11,7 @@ void LineLightProbeVertexShader(
     inout float4 color               : TEXCOORD4,
     out float4 result                : POSITION0
 ) {
+    DEFINE_LightCorners
     if (cornerIndex.x > 3) {
         result = float4(-9999, -9999, 0, 0);
     } else {

@@ -43,7 +43,7 @@ namespace TestGame.Scenes {
         }
 
         public override void LoadContent () {
-            Background = Game.TextureLoader.Load("vector-field-background");
+            Background = Game.TextureLoader.Load("test pattern");
 
             var keys = Game.LUTs.Keys.OrderBy(n => n).ToArray();
             LUT1.AddRange(keys);

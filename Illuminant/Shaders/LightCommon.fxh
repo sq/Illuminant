@@ -9,29 +9,29 @@
 
 #define RELATIVEY_SCALE 128
 
-const float3 LightCorners[] = {
-    { 0, 0, 0 },
-    { 1, 0, 0 },
-    { 1, 1, 0 },
-    { 0, 1, 0 }
+#define DEFINE_LightCorners const float3 LightCorners[] = { \
+    { 0, 0, 0 }, \
+    { 1, 0, 0 }, \
+    { 1, 1, 0 }, \
+    { 0, 1, 0 } \
 };
 
 #define cOne 1 / 7.0
 #define mOne 6 / 7.0
 
-const float3 ClippedLightVertices[] = {
-    { cOne, 0, 0 },
-    { mOne, 0, 0 },
-    { mOne, 1, 0 },
-    { cOne, 1, 0 },
-    { mOne, cOne, 0 },
-    { 1, cOne, 0 },
-    { 1, mOne, 0 },
-    { mOne, mOne, 0 },
-    { 0, cOne, 0 },
-    { cOne, cOne, 0 },
-    { cOne, mOne, 0 },
-    { 0, mOne, 0 },
+#define DEFINE_ClippedLightVertices const float3 ClippedLightVertices[] = { \
+    { cOne, 0, 0 }, \
+    { mOne, 0, 0 }, \
+    { mOne, 1, 0 }, \
+    { cOne, 1, 0 }, \
+    { mOne, cOne, 0 }, \
+    { 1, cOne, 0 }, \
+    { 1, mOne, 0 }, \
+    { mOne, mOne, 0 }, \
+    { 0, cOne, 0 }, \
+    { cOne, cOne, 0 }, \
+    { cOne, mOne, 0 }, \
+    { 0, mOne, 0 }, \
 };
 
 #include "EnvironmentCommon.fxh"
@@ -131,7 +131,7 @@ float computeSphereLightOpacity (
     float  distanceFactor = 1 - saturate((distance - lightRadius) / lightRampLength);
 
     float3 lightNormal = distance3 / distance;
-    float normalFactor = computeNormalFactor(lightNormal, shadedPixelNormal);
+    float normalFactor = 1; // computeNormalFactor(lightNormal, shadedPixelNormal);
 
     [flatten]
     if (falloffMode >= 2) {

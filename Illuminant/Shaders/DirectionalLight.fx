@@ -24,6 +24,7 @@ void DirectionalLightVertexShader(
     out float4   result              : POSITION0
 ) {
     // FIXME: Z
+    DEFINE_LightCorners
     worldPosition = lerp(lightPositionMin, lightPositionMax, LightCorners[cornerIndex.x]);
     float3 screenPosition = (worldPosition - float3(Viewport.Position.xy, 0));
     screenPosition.xy *= Viewport.Scale * Environment.RenderScale;
@@ -42,6 +43,7 @@ void DirectionalLightProbeVertexShader(
     if (cornerIndex.x > 3) {
         result = float4(-9999, -9999, 0, 0);
     } else {
+        DEFINE_LightCorners
         float2 clipPosition = (LightCorners[cornerIndex.x] * 99999) - 1;
         result = float4(clipPosition.xy, 0, 1);
     }

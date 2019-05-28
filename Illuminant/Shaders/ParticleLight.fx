@@ -24,6 +24,7 @@ void ParticleLightVertexShader(
         return;
     }
 
+    DEFINE_LightCorners
     float3 corner = LightCorners[cornerIndex.x];
 
     float4 actualXy = float4(xy + offsetAndIndex.xy, 0, 0);

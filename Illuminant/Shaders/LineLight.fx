@@ -14,6 +14,8 @@ void LineLightVertexShader(
     out float3 worldPosition         : POSITION1,
     out float4 result                : POSITION0
 ) {
+    DEFINE_LightCorners
+
     float3 vertex = LightCorners[vertexIndex.x];
 
     float  radius = lightProperties.x + lightProperties.y + 1;

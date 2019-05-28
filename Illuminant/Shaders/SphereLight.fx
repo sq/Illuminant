@@ -2,6 +2,7 @@
 #include "SphereLightCore.fxh"
 
 float3 GetVertexForIndex (int index) {
+    DEFINE_ClippedLightVertices
     return ClippedLightVertices[index];
     /*
     switch (abs(index)) {
@@ -91,7 +92,11 @@ void SphereLightPixelShader(
     ACCEPTS_VPOS,
     out float4 result              : COLOR0
 ) {
-    /*
+    if (0) {
+        result = float4(color.rgb, 1);
+        return;
+    }
+
     float3 shadedPixelPosition;
     float3 shadedPixelNormal;
     sampleGBuffer(
@@ -99,13 +104,24 @@ void SphereLightPixelShader(
         shadedPixelPosition, shadedPixelNormal
     );
 
-    float opacity = SphereLightPixelCore(
-        shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties, false, false
-    );
+    if (1) {
+        result = float4(shadedPixelPosition.x / 1920.0, 0, shadedPixelPosition.y / 1280.0, 1);
+        return;
+    }
+
+    float opacity;
+    if (1) {
+        opacity = computeSphereLightOpacity(
+            shadedPixelPosition, shadedPixelNormal,
+            lightCenter, lightProperties, moreLightProperties.z
+        );
+    } else {
+        opacity = SphereLightPixelCore(
+            shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties, false, false
+        );
+    }
 
     result = float4(color.rgb * color.a * opacity, 1);
-    */
-    result = float4(1, 0, 0, 1);
 }
 
 void SphereLightWithDistanceRampPixelShader(
