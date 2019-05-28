@@ -147,6 +147,9 @@ float coneTrace (
     in DistanceFieldConstants vars,
     in bool   enable
 ) {
+    if (!enable)
+        return 1;
+
     TraceState traceA;
     coneTraceInitialize(
         traceA, shadedPixelPosition, lightCenter,

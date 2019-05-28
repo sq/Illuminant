@@ -39,6 +39,8 @@ float SphereLightPixelCore(
 
     float preTraceOpacity = distanceOpacity * aoOpacity;
 
+    return preTraceOpacity;
+
     bool traceShadows = visible && lightProperties.w && (preTraceOpacity >= SHADOW_OPACITY_THRESHOLD);
     float coneOpacity = coneTrace(
         lightCenter, lightProperties.xy, 
@@ -51,7 +53,7 @@ float SphereLightPixelCore(
     float lightOpacity = preTraceOpacity;
 
     [branch]
-    if (useRamp) {
+    if (useRamp && false) {
         float rampInput = useOpacityRamp 
             ? preTraceOpacity * coneOpacity
             : preTraceOpacity;
@@ -63,6 +65,6 @@ float SphereLightPixelCore(
 
     // HACK: Don't cull pixels unless they were killed by distance falloff.
     // This ensures that billboards are always lit.
-    clip(visible ? 1 : -1);
+    // clip(visible ? 1 : -1);
     return visible ? lightOpacity : 0;
 }
