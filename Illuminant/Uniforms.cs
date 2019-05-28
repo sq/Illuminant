@@ -12,33 +12,33 @@ namespace Squared.Illuminant.Uniforms {
     [StructLayout(LayoutKind.Sequential)]
     public struct Environment {
         // GroundZ, ZToYMultiplier, InvZToYMultiplier
-        private Vector3 _Z;
-        public Vector2 RenderScale;
+        private Vector4 ZAndScale;
 
         public float GroundZ {
             get {
-                return _Z.X;
+                return ZAndScale.X;
             }
             set {
-                _Z.X = value;
+                ZAndScale.X = value;
             }
         }
 
         public float ZToYMultiplier {
             get {
-                return _Z.Y;
+                return ZAndScale.Y;
             }
             set {
-                _Z.Y = value;
+                ZAndScale.Y = value;
             }
         }
 
-        public float InvZToYMultiplier {
+        public Vector2 RenderScale {
             get {
-                return _Z.Z;
+                return new Vector2(ZAndScale.Z, ZAndScale.W);
             }
             set {
-                _Z.Z = value;
+                ZAndScale.Z = value.X;
+                ZAndScale.W = value.Y;
             }
         }
     }

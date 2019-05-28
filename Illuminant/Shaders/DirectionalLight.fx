@@ -27,7 +27,7 @@ void DirectionalLightVertexShader(
     DEFINE_LightCorners
     worldPosition = lerp(lightPositionMin, lightPositionMax, LightCorners[cornerIndex.x]);
     float3 screenPosition = (worldPosition - float3(GetViewportPosition(), 0));
-    screenPosition.xy *= GetViewportScale() * Environment.RenderScale;
+    screenPosition.xy *= GetViewportScale() * getEnvironmentRenderScale();
     float4 transformedPosition = mul(mul(float4(screenPosition.xyz, 1), Viewport.ModelView), Viewport.Projection);
     result = float4(transformedPosition.xy, 0, transformedPosition.w);
 }

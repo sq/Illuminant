@@ -74,13 +74,21 @@ void sampleGBuffer (
             sourceXy /= GetViewportScale();
             sourceXy += GetViewportPosition();
         }
+
         float2 uv     = (sourceXy + 0.5) * GBufferTexelSize;
         float4 sample = tex2Dlod(GBufferSampler, float4(uv, 0, 0));
 
         float relativeY = sample.z * RELATIVEY_SCALE;
         float worldZ    = sample.w * 512;
 
-        screenPositionPx /= Environment.RenderScale;
+        // getEnvironmentRenderScale() is wrong here in GL
+        screenPositionPx /= getEnvironmentRenderScale();
+
+        if (1) {
+            normal = 0;
+            worldPosition = float3(screenPositionPx, 0);
+            return;
+        }
 
         worldPosition = float3(
             (screenPositionPx.xy + float2(0, relativeY)) / GetViewportScale() + GetViewportPosition(),
@@ -93,7 +101,7 @@ void sampleGBuffer (
             (sample.x - 0.5) * 2, 1 - abs(normalZ), normalZ
         ));
     } else {
-        screenPositionPx /= Environment.RenderScale;
+        screenPositionPx /= getEnvironmentRenderScale();
 
         worldPosition = float3(
             screenPositionPx.xy / GetViewportScale() + GetViewportPosition(),

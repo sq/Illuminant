@@ -97,7 +97,7 @@ void HeightVolumePixelShader(
     // HACK: Offset away from the surface to prevent self occlusion
     float3 selfOcclusionBias = float3(0, 0, ZSelfOcclusionHack);
 
-    float relativeY = ((worldPosition.z * getZToYMultiplier()) * GetViewportScale() / Environment.RenderScale) + selfOcclusionBias.y;
+    float relativeY = ((worldPosition.z * getZToYMultiplier()) * GetViewportScale() / getEnvironmentRenderScale()) + selfOcclusionBias.y;
     result = encodeSample(normal, relativeY, worldPosition.z + selfOcclusionBias.z, dead);
 }
 
@@ -115,7 +115,7 @@ void HeightVolumeFacePixelShader(
     // HACK: Offset away from the surface to prevent self occlusion
     float3 selfOcclusionBias = float3(SelfOcclusionHack, SelfOcclusionHack, ZSelfOcclusionHack) * normal;
 
-    float relativeY = ((worldPosition.z * getZToYMultiplier()) * GetViewportScale() / Environment.RenderScale) + selfOcclusionBias.y;
+    float relativeY = ((worldPosition.z * getZToYMultiplier()) * GetViewportScale() / getEnvironmentRenderScale()) + selfOcclusionBias.y;
     result = encodeSample(normal, relativeY, worldPosition.z + selfOcclusionBias.z, dead);
 }
 

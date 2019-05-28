@@ -2,22 +2,25 @@
 #define ENVIRONMENT_DEFINED
 
 struct EnvironmentSettings {
-    float3 _Z;
-    float2 RenderScale;
+    float4 ZAndScale;
 };
 
 uniform EnvironmentSettings Environment;
 
 float getGroundZ () {
-    return Environment._Z.x;
+    return Environment.ZAndScale.x;
 }
 
 float getZToYMultiplier () {
-    return Environment._Z.y;
+    return Environment.ZAndScale.y;
 }
 
 float getInvZToYMultiplier () {
-    return Environment._Z.z;
+    return 1.0 / Environment.ZAndScale.y;
+}
+
+float getEnvironmentRenderScale () {
+    return Environment.ZAndScale.zw;
 }
 
 #endif
