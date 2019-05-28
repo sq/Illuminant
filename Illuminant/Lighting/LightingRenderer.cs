@@ -267,9 +267,9 @@ namespace Squared.Illuminant {
         public  readonly DepthStencilState DistanceStencilState;
         public  readonly DepthStencilState NeutralDepthStencilState;
 
-        private readonly IndexBuffer         QuadIndexBuffer;
-        private readonly VertexBuffer        CornerBuffer;
-        private readonly VertexBuffer        SphereBuffer;
+        private IndexBuffer         QuadIndexBuffer;
+        private VertexBuffer        CornerBuffer;
+        private VertexBuffer        SphereBuffer;
 
         class DistanceFunctionBuffer {
             public readonly LightingRenderer Renderer;
@@ -329,12 +329,12 @@ namespace Squared.Illuminant {
         private readonly UnorderedList<Billboard> BillboardScratch = new UnorderedList<Billboard>();
         private readonly UnorderedList<BillboardVertex> BillboardVertexScratch = new UnorderedList<BillboardVertex>();
 
-        private readonly BufferRing _Lightmaps;
+        private BufferRing _Lightmaps;
 
         private DistanceField _DistanceField;
         private GBuffer _GBuffer;
 
-        private readonly BufferRing _LuminanceBuffers;
+        private          BufferRing _LuminanceBuffers;
         private readonly object     _LuminanceReadbackArrayLock = new object();
         private          float[]    _LuminanceReadbackArray;
 
@@ -402,20 +402,7 @@ namespace Squared.Illuminant {
             ParticleLightBatchSetup       = _ParticleLightBatchSetup;
             SetTextureForGBufferBillboard = _SetTextureForGBufferBillboard;
 
-            lock (coordinator.CreateResourceLock) {
-                QuadIndexBuffer = new IndexBuffer(
-                    coordinator.Device, IndexElementSize.SixteenBits, 6 * 6, BufferUsage.WriteOnly
-                );
-                FillIndexBuffer();
-                CornerBuffer = new VertexBuffer(
-                    coordinator.Device, typeof(CornerVertex), 4, BufferUsage.WriteOnly
-                );
-                FillCornerBuffer();
-                SphereBuffer = new VertexBuffer(
-                    coordinator.Device, typeof(CornerVertex), 12, BufferUsage.WriteOnly
-                );
-                FillSphereBuffer();
-            }
+            InitBuffers(coordinator);
 
             DynamicDistanceFunctions = new DistanceFunctionBuffer(this, DistanceFunctionBufferInitialSize);
             StaticDistanceFunctions  = new DistanceFunctionBuffer(this, DistanceFunctionBufferInitialSize);
@@ -492,6 +479,29 @@ namespace Squared.Illuminant {
             Coordinator.DeviceReset += Coordinator_DeviceReset;
         }
 
+        private void InitBuffers (RenderCoordinator coordinator) {
+            lock (coordinator.CreateResourceLock) {
+                if (QuadIndexBuffer == null)
+                    QuadIndexBuffer = new IndexBuffer(
+                        coordinator.Device, IndexElementSize.SixteenBits, 6 * 6, BufferUsage.WriteOnly
+                    );
+                if (CornerBuffer == null)
+                    CornerBuffer = new VertexBuffer(
+                        coordinator.Device, typeof(CornerVertex), 4, BufferUsage.WriteOnly
+                    );
+                if (SphereBuffer == null)
+                    SphereBuffer = new VertexBuffer(
+                        coordinator.Device, typeof(CornerVertex), 12, BufferUsage.WriteOnly
+                    );
+            }
+
+            lock (coordinator.UseResourceLock) {
+                FillIndexBuffer();
+                FillCornerBuffer();
+                FillSphereBuffer();
+            }
+        }
+
         public string Name {
             get {
                 return _Name;
@@ -526,7 +536,7 @@ namespace Squared.Illuminant {
 
         private void Coordinator_DeviceReset (object sender, EventArgs e) {
             Environment.GIVolumes.IsDirty = true;
-            FillIndexBuffer();
+            InitBuffers(Coordinator);
         }
 
         private void FillIndexBuffer () {
@@ -568,16 +578,16 @@ namespace Squared.Illuminant {
 
             Effects.Dispose();
 
-            Coordinator.DisposeResource(QuadIndexBuffer);
-            Coordinator.DisposeResource(CornerBuffer);
-            Coordinator.DisposeResource(SphereBuffer);
-            Coordinator.DisposeResource(_DistanceField);
-            Coordinator.DisposeResource(_GBuffer);
-            Coordinator.DisposeResource(_Lightmaps);
-            Coordinator.DisposeResource(_LuminanceBuffers);
-            Coordinator.DisposeResource(_LightProbePositions);
-            Coordinator.DisposeResource(_LightProbeNormals);
-            Coordinator.DisposeResource(_LightProbeValueBuffers);
+            Coordinator.DisposeResource(ref QuadIndexBuffer);
+            Coordinator.DisposeResource(ref CornerBuffer);
+            Coordinator.DisposeResource(ref SphereBuffer);
+            Coordinator.DisposeResource(ref _DistanceField);
+            Coordinator.DisposeResource(ref _GBuffer);
+            Coordinator.DisposeResource(ref _Lightmaps);
+            Coordinator.DisposeResource(ref _LuminanceBuffers);
+            Coordinator.DisposeResource(ref _LightProbePositions);
+            Coordinator.DisposeResource(ref _LightProbeNormals);
+            Coordinator.DisposeResource(ref _LightProbeValueBuffers);
 
             ReleaseGIProbeResources();
 

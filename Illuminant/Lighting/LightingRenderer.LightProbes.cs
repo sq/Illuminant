@@ -14,9 +14,9 @@ using Squared.Util;
 
 namespace Squared.Illuminant {
     public sealed partial class LightingRenderer : IDisposable, INameableGraphicsObject {
-        private readonly Texture2D  _LightProbePositions, _LightProbeNormals;
-        private readonly BufferRing _LightProbeValueBuffers;
-        private readonly object     _LightProbeReadbackArrayLock = new object();
+        private          Texture2D     _LightProbePositions, _LightProbeNormals;
+        private          BufferRing    _LightProbeValueBuffers;
+        private readonly object        _LightProbeReadbackArrayLock = new object();
         private          HalfVector4[] _LightProbeReadbackArray;
 
         private void _LightProbeBatchSetup (DeviceManager device, object userData) {

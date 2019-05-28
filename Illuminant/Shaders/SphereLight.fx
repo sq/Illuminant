@@ -1,3 +1,6 @@
+#pragma fxcparams(/Od /Zi /Op)
+// FIXME: The fxc optimizer breaks sphere lights in some cases
+
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "SphereLightCore.fxh"
 
