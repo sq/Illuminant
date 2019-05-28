@@ -81,14 +81,7 @@ void sampleGBuffer (
         float relativeY = sample.z * RELATIVEY_SCALE;
         float worldZ    = sample.w * 512;
 
-        // getEnvironmentRenderScale() is wrong here in GL
         screenPositionPx /= getEnvironmentRenderScale();
-
-        if (1) {
-            normal = 0;
-            worldPosition = float3(screenPositionPx, 0);
-            return;
-        }
 
         worldPosition = float3(
             (screenPositionPx.xy + float2(0, relativeY)) / GetViewportScale() + GetViewportPosition(),
