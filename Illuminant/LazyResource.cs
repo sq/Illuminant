@@ -72,7 +72,12 @@ namespace Squared.Illuminant {
             return result;
         }
 
-        public static implicit operator LazyResource<T> (T instance) {
+        public void Set (T instance, string name = null) {
+            Instance = instance;
+            Name = name;
+        }
+
+        public static explicit operator LazyResource<T> (T instance) {
             return new LazyResource<T>(instance);
         }
 
@@ -123,7 +128,7 @@ namespace Squared.Illuminant {
             return result;
         }
 
-        public static implicit operator NullableLazyResource<T> (T instance) {
+        public static explicit operator NullableLazyResource<T> (T instance) {
             return new NullableLazyResource<T>(instance);
         }
     }

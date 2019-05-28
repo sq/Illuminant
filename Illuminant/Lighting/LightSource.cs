@@ -61,7 +61,7 @@ namespace Squared.Illuminant {
         /// <summary>
         /// Allows you to optionally set a ramp texture to control the appearance of light falloff.
         /// </summary>
-        public NullableLazyResource<Texture2D> RampTexture = null;
+        public NullableLazyResource<Texture2D> RampTexture = new NullableLazyResource<Texture2D>();
         /// <summary>
         /// Allows you to optionally override quality settings for this light.
         /// It is *much* faster to share a single settings instance for many lights!

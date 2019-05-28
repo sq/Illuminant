@@ -95,8 +95,7 @@ namespace TestGame.Scenes {
             System = new ParticleSystem(
                 Engine,
                 new ParticleSystemConfiguration() {
-                    Appearance = {
-                        Texture = spark,
+                    Appearance = new ParticleAppearance(texture: spark) {
                         RelativeSize = false
                     },
                     Size = Vector2.One * 2.6f,

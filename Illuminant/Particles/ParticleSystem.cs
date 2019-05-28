@@ -1474,6 +1474,10 @@ namespace Squared.Illuminant.Particles {
     }
 
     public class ParticleAppearance {
+        public ParticleAppearance (Texture2D texture = null, string textureName = null) {
+            Texture.Set(texture, textureName);
+        }
+
         /// <summary>
         /// Configures the sprite used to render each particle.
         /// If null, the particle will be a solid-color quad

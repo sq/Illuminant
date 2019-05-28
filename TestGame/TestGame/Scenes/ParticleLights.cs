@@ -280,8 +280,7 @@ namespace TestGame.Scenes {
             System = new ParticleSystem(
                 Engine,
                 new ParticleSystemConfiguration() {
-                    Appearance = {
-                        Texture = fireball,
+                    Appearance = new ParticleAppearance(texture: fireball) {
                         Rectangle = fireballRect,
                         AnimationRate = new Vector2(1 / 3f, 0),
                         RelativeSize = false
