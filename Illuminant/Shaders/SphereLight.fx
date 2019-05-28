@@ -71,15 +71,11 @@ void SphereLightVertexShader(
         worldPosition.y -= zOffset;
     }
 
-    // FIXME
-    if (1) {
-        result = float4(vertex.x * 2 - 1, vertex.y * 2 - 1, 0, 1);
-        return;
-    }
+    float4x4 modelView = Viewport.ModelView, projection = Viewport.Projection;
 
     float3 screenPosition = (worldPosition - float3(GetViewportPosition(), 0));
     screenPosition.xy *= GetViewportScale() * getEnvironmentRenderScale();
-    float4 transformedPosition = mul(mul(float4(screenPosition.xyz, 1), Viewport.ModelView), Viewport.Projection);
+    float4 transformedPosition = mul(mul(float4(screenPosition.xyz, 1), modelView), projection);
     result = float4(transformedPosition.xy, 0, transformedPosition.w);
 }
 

@@ -16,7 +16,10 @@ float getZToYMultiplier () {
 }
 
 float getInvZToYMultiplier () {
-    return 1.0 / Environment.ZAndScale.y;
+    if (abs(Environment.ZAndScale.y) > 0)
+        return 1.0 / Environment.ZAndScale.y;
+    else
+        return 0;
 }
 
 float getEnvironmentRenderScale () {
