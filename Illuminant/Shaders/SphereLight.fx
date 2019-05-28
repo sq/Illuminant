@@ -71,11 +71,9 @@ void SphereLightVertexShader(
         worldPosition.y -= zOffset;
     }
 
-    float4x4 modelView = Viewport.ModelView, projection = Viewport.Projection;
-
     float3 screenPosition = (worldPosition - float3(GetViewportPosition(), 0));
     screenPosition.xy *= GetViewportScale() * getEnvironmentRenderScale();
-    float4 transformedPosition = mul(mul(float4(screenPosition.xyz, 1), modelView), projection);
+    float4 transformedPosition = mul(mul(float4(screenPosition.xyz, 1), Viewport.ModelView), Viewport.Projection);
     result = float4(transformedPosition.xy, 0, transformedPosition.w);
 }
 
@@ -101,7 +99,7 @@ void SphereLightPixelShader(
     );
 
     float opacity;
-    if (1) {
+    if (0) {
         opacity = computeSphereLightOpacity(
             shadedPixelPosition, shadedPixelNormal,
             lightCenter, lightProperties, moreLightProperties.z
