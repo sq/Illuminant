@@ -157,7 +157,7 @@ namespace Squared.Illuminant.Uniforms {
         public Vector4 CollisionSettings;
         public Vector4 TexelAndSize;
         public Vector4 AnimationRateAndRotationAndZToY;
-        public Vector2 RotationFromLifeAndIndex;
+        public Vector4 RotationFromLifeAndIndex;
 
         public ParticleSystem (
             Particles.ParticleEngineConfiguration Engine,
@@ -181,9 +181,10 @@ namespace Squared.Illuminant.Uniforms {
                 );
             else
                 CollisionSettings = Vector4.Zero;
-            RotationFromLifeAndIndex = new Vector2(
+            RotationFromLifeAndIndex = new Vector4(
                 MathHelper.ToRadians(Configuration.RotationFromLife), 
-                MathHelper.ToRadians(Configuration.RotationFromIndex)
+                MathHelper.ToRadians(Configuration.RotationFromIndex),
+                0, 0
             );
             var ar = Configuration.Appearance != null ? Configuration.Appearance.AnimationRate : Vector2.Zero;
             AnimationRateAndRotationAndZToY = new Vector4(
@@ -197,7 +198,7 @@ namespace Squared.Illuminant.Uniforms {
     public struct RasterizeParticleSystem {
         Vector4 GlobalColor;
         Vector4 BitmapTextureRegion;
-        Vector2 SizeFactor;
+        Vector4 SizeFactor;
 
         public RasterizeParticleSystem (
             Particles.ParticleEngineConfiguration Engine,
@@ -225,9 +226,9 @@ namespace Squared.Illuminant.Uniforms {
                 BitmapTextureRegion = new Vector4(0, 0, 1, 1);
             }
             if ((tex != null) && appearance.RelativeSize)
-                SizeFactor = appearance.SizePx.GetValueOrDefault(texSize) * 0.5f;
+                SizeFactor = new Vector4(appearance.SizePx.GetValueOrDefault(texSize) * 0.5f, 0, 0);
             else
-                SizeFactor = Vector2.One;
+                SizeFactor = new Vector4(1, 1, 0, 0);
 
             var gcolor = Configuration.Color.Global;
             gcolor.X *= gcolor.W;

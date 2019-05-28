@@ -12,7 +12,7 @@ struct ParticleSystemSettings {
     float4 TexelAndSize;
     // rate_x, rate_y, velocityRotation, zToY
     float4 AnimationRateAndRotationAndZToY;
-    float2 RotationFromLifeAndIndex;
+    float4 RotationFromLifeAndIndex;
 };
 
 uniform ParticleSystemSettings System;
