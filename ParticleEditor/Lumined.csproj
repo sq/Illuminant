@@ -122,6 +122,7 @@
     <SquaredPath>..\..\Fracture</SquaredPath>
     <FNAPath>..\..\FNA\</FNAPath>
     <FNALibPath>..\..\FNA\fnalibs</FNALibPath>
+    <IncludeSquaredGame>true</IncludeSquaredGame>
     <IncludeFreetype>true</IncludeFreetype>
     <IncludeSTBImage>true</IncludeSTBImage>
   </PropertyGroup>
