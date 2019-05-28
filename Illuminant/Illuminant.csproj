@@ -92,6 +92,8 @@
     <Compile Include="Uniforms.cs" />
     <Compile Include="VectorField.cs" />
     <Compile Include="Vertices.cs" />
+    <None Include="Shaders\*.fx" />
+    <None Include="Shaders\*.fxh" />
   </ItemGroup>
 
   <PropertyGroup>
