@@ -72,8 +72,8 @@ void LightingResolvePixelShader (
     out float4 result : COLOR0
 ) {
     if (0) {
-        float2 vpos = GET_VPOS;
-        result = float4(vpos.x / 1920, vpos.y / 1280, 0, 1);
+        float2 vpos = GET_VPOS / GetRenderTargetSize();
+        result = float4(vpos.x, vpos.y, 0, 1);
         return;
     }
 
@@ -95,8 +95,8 @@ void GammaCompressedLightingResolvePixelShader(
     out float4 result : COLOR0
 ) {
     if (0) {
-        float2 vpos = GET_VPOS;
-        result = float4(vpos.x / 1920, vpos.y / 1280, 0, 1);
+        float2 vpos = GET_VPOS / GetRenderTargetSize();
+        result = float4(vpos.x, vpos.y, 0, 1);
         return;
     }
 
@@ -117,8 +117,8 @@ void ToneMappedLightingResolvePixelShader(
     out float4 result : COLOR0
 ) {
     if (0) {
-        float2 vpos = GET_VPOS;
-        result = float4(vpos.x / 1920, vpos.y / 1280, 0, 1);
+        float2 vpos = GET_VPOS / GetRenderTargetSize();
+        result = float4(vpos.x, vpos.y, 0, 1);
         return;
     }
 
@@ -144,8 +144,8 @@ void LightingResolveWithAlbedoPixelShader(
     out float4 result : COLOR0
 ) {
     if (0) {
-        float2 vpos = GET_VPOS;
-        result = float4(vpos.x / 1920, vpos.y / 1280, 0, 1);
+        float2 vpos = GET_VPOS / GetRenderTargetSize();
+        result = float4(vpos.x, vpos.y, 0, 1);
         return;
     }
 
@@ -170,8 +170,8 @@ void GammaCompressedLightingResolveWithAlbedoPixelShader(
     out float4 result : COLOR0
 ) {
     if (0) {
-        float2 vpos = GET_VPOS;
-        result = float4(vpos.x / 1920, vpos.y / 1280, 0, 1);
+        float2 vpos = GET_VPOS / GetRenderTargetSize();
+        result = float4(vpos.x, vpos.y, 0, 1);
         return;
     }
 
@@ -194,8 +194,8 @@ void ToneMappedLightingResolveWithAlbedoPixelShader(
     out float4 result : COLOR0
 ) {
     if (0) { 
-        float2 vpos = GET_VPOS;
-        result = float4(vpos.x / 1920, vpos.y / 1280, 0, 1);
+        float2 vpos = GET_VPOS / GetRenderTargetSize();
+        result = float4(vpos.x, vpos.y, 0, 1);
         return;
     }
 

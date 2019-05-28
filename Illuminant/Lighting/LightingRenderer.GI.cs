@@ -39,7 +39,7 @@ namespace Squared.Illuminant {
         private void _GIProbeBatchSetup (DeviceManager device, object userData) {
             var ltrs = (LightTypeRenderState)userData;
 
-            device.Device.Viewport = new Viewport(0, 0, GIProbeCount, GIProbeSampleCount);
+            device.SetViewport(new Viewport(0, 0, GIProbeCount, GIProbeSampleCount));
             device.Device.BlendState = RenderStates.AdditiveBlend;
 
             SetLightShaderParameters(ltrs.ProbeMaterial, ltrs.Key.Quality);
@@ -241,7 +241,7 @@ namespace Squared.Illuminant {
                 container, layer,
                 (dm, _) => {
                     dm.PushRenderTargets(new RenderTargetBinding[] { _SelectedGIProbePositions, _SelectedGIProbeNormals });
-                    dm.Device.Viewport = new Viewport(0, 0, GIProbeCount, GIProbeSampleCount);
+                    dm.SetViewport(new Viewport(0, 0, GIProbeCount, GIProbeSampleCount));
 
                     SetDistanceFieldParameters(m, true, Configuration.GIProbeQuality);
 
@@ -305,7 +305,7 @@ namespace Squared.Illuminant {
             using (var group = BatchGroup.ForRenderTarget(
                 container, layer, renderTarget,
                 (dm, _) => {
-                    dm.Device.Viewport = new Viewport(0, 0, GIProbeCount, GIProbeSampleCount);
+                    dm.SetViewport(new Viewport(0, 0, GIProbeCount, GIProbeSampleCount));
                     dm.Device.BlendState = RenderStates.AdditiveBlend;
 
                     SetLightShaderParameters(m, Configuration.GIProbeQuality);
@@ -352,7 +352,7 @@ namespace Squared.Illuminant {
                 container, layer,
                 (dm, _) => {
                     dm.PushRenderTarget(bounce);
-                    dm.Device.Viewport = new Viewport(0, 0, GIProbeCount, SHValueCount);
+                    dm.SetViewport(new Viewport(0, 0, GIProbeCount, SHValueCount));
                     dm.Device.BlendState = BlendState.Opaque;
 
                     p["Brightness"].SetValue(1.0f + (Configuration.GIBounceBrightnessAmplification * bounceIndex));

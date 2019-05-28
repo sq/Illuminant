@@ -630,7 +630,7 @@ namespace Squared.Illuminant {
             var renderWidth = (int)(Configuration.MaximumRenderSize.First * Configuration.RenderScale.X);
             var renderHeight = (int)(Configuration.MaximumRenderSize.Second * Configuration.RenderScale.Y);
 
-            device.Device.Viewport = new Viewport(0, 0, buffer.Width, buffer.Height);
+            device.SetViewport(new Viewport(0, 0, buffer.Width, buffer.Height));
             device.Device.ScissorRectangle = new Rectangle(0, 0, renderWidth, renderHeight);
 
             device.PushStates();
@@ -642,7 +642,7 @@ namespace Squared.Illuminant {
         private void _BeginLightProbePass (DeviceManager device, object userData) {
             var buffer = (RenderTarget2D)userData;
 
-            device.Device.Viewport = new Viewport(0, 0, buffer.Width, buffer.Height);
+            device.SetViewport(new Viewport(0, 0, buffer.Width, buffer.Height));
 
             device.PushStates();
             PushLightingViewTransform(buffer);
@@ -750,7 +750,7 @@ namespace Squared.Illuminant {
             using (var copyGroup = BatchGroup.ForRenderTarget(
                 container, layer, newLuminanceBuffer.Buffer,
                 (dm, _) => {
-                    dm.Device.Viewport = new Viewport(0, 0, w, h);
+                    dm.SetViewport(new Viewport(0, 0, w, h));
                     Materials.PushViewTransform(ViewTransform.CreateOrthographic(w, h));
                 },
                 (dm, _) => {

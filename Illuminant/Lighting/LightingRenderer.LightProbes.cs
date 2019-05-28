@@ -22,7 +22,7 @@ namespace Squared.Illuminant {
         private void _LightProbeBatchSetup (DeviceManager device, object userData) {
             var ltrs = (LightTypeRenderState)userData;
 
-            device.Device.Viewport = new Viewport(0, 0, Probes.Count, 1);
+            device.SetViewport(new Viewport(0, 0, Probes.Count, 1));
             device.Device.BlendState = RenderStates.AdditiveBlend;
 
             SetLightShaderParameters(ltrs.ProbeMaterial, ltrs.Key.Quality);

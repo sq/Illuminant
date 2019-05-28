@@ -87,7 +87,7 @@ namespace Squared.Illuminant.Particles.Transforms {
                     dm.SetRenderTargets(curr.Bindings2);
                 }
                 dm.SetRenderTargets(null);
-                dm.Device.Viewport = vp;
+                dm.SetViewport(vp);
 
                 if (e != null) {
                     system.SetSystemUniforms(m, up.DeltaTimeSeconds);
