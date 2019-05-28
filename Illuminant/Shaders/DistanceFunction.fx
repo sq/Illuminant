@@ -26,13 +26,13 @@ void DistanceFunctionVertexShader(
 ) {
     float msize = max(max(abs(size.x), abs(size.y)), abs(size.z)) + getMaximumEncodedDistance() + 0.5;
     float2 position = (FunctionCorners[cornerIndex.x] * (msize * FUNCTION_SIZE_HACK)) + center.xy;
-    result = TransformPosition(float4(position - Viewport.Position, 0, 1), 0);
+    result = TransformPosition(float4(position - GetViewportPosition(), 0, 1), 0);
     result.z = 0;
     result.w = 1;
 }
 
 float2 getPositionXy (in float2 __vpos__) {
-    float2 vp = (__vpos__ * getInvScaleFactors()) + Viewport.Position;
+    float2 vp = (__vpos__ * getInvScaleFactors()) + GetViewportPosition();
     return vp;
 }
 

@@ -25,7 +25,7 @@ void BillboardVertexShader(
     worldPosition += (SelfOcclusionHack * normal);
     screenPosition = position;
 
-    result = TransformPosition(float4((position.xy - Viewport.Position) * Viewport.Scale, 0, 1), 0);
+    result = TransformPosition(float4((position.xy - GetViewportPosition()) * GetViewportScale(), 0, 1), 0);
     result.z = position.z / DistanceFieldExtent.z;
     result.w = 1;
 }

@@ -12,7 +12,7 @@ void GroundPlaneVertexShader (
     out   float4   result        : POSITION0
 ) {
     worldPosition = position;
-    result = TransformPosition(float4((position.xy - Viewport.Position) * Viewport.Scale, 0, 1), 0);
+    result = TransformPosition(float4((position.xy - GetViewportPosition()) * GetViewportScale(), 0, 1), 0);
     result.z = 0;
     dead = worldPosition.z < -9999;
 }
@@ -28,7 +28,7 @@ void HeightVolumeVertexShader (
     worldPosition = position;
 
     position.y -= getZToYMultiplier() * position.z;
-    midTransform = float4((position.xy - Viewport.Position) * Viewport.Scale, 0, 1);
+    midTransform = float4((position.xy - GetViewportPosition()) * GetViewportScale(), 0, 1);
     result = TransformPosition(midTransform, 0);
     result.z = position.z / DistanceFieldExtent.z;
     result.w = 1;
@@ -46,7 +46,7 @@ void HeightVolumeFaceVertexShader(
     worldPosition = position;
 
     position.y -= getZToYMultiplier() * position.z;
-    midTransform = float4((position.xy - Viewport.Position) * Viewport.Scale, 0, 1);
+    midTransform = float4((position.xy - GetViewportPosition()) * GetViewportScale(), 0, 1);
     result = TransformPosition(midTransform, 0);
     result.z = position.z / DistanceFieldExtent.z;
     result.w = 1;
@@ -97,7 +97,7 @@ void HeightVolumePixelShader(
     // HACK: Offset away from the surface to prevent self occlusion
     float3 selfOcclusionBias = float3(0, 0, ZSelfOcclusionHack);
 
-    float relativeY = ((worldPosition.z * getZToYMultiplier()) * Viewport.Scale / Environment.RenderScale) + selfOcclusionBias.y;
+    float relativeY = ((worldPosition.z * getZToYMultiplier()) * GetViewportScale() / Environment.RenderScale) + selfOcclusionBias.y;
     result = encodeSample(normal, relativeY, worldPosition.z + selfOcclusionBias.z, dead);
 }
 
@@ -115,7 +115,7 @@ void HeightVolumeFacePixelShader(
     // HACK: Offset away from the surface to prevent self occlusion
     float3 selfOcclusionBias = float3(SelfOcclusionHack, SelfOcclusionHack, ZSelfOcclusionHack) * normal;
 
-    float relativeY = ((worldPosition.z * getZToYMultiplier()) * Viewport.Scale / Environment.RenderScale) + selfOcclusionBias.y;
+    float relativeY = ((worldPosition.z * getZToYMultiplier()) * GetViewportScale() / Environment.RenderScale) + selfOcclusionBias.y;
     result = encodeSample(normal, relativeY, worldPosition.z + selfOcclusionBias.z, dead);
 }
 

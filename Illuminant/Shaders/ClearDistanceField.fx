@@ -19,7 +19,7 @@ void DistanceVertexShader (
     in    float3 position : POSITION0, // x, y, z
     out   float4 result   : POSITION0
 ) {
-    result = TransformPosition(float4(position.xy - Viewport.Position, 0, 1), 0);
+    result = TransformPosition(float4(position.xy - GetViewportPosition(), 0, 1), 0);
     result.z = 0;
 }
 

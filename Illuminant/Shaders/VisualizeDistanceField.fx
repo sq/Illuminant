@@ -19,7 +19,7 @@ uniform float3 LightColor;
 #include "VisualizeCommon.fxh"
 
 float4 ApplyTransform (float3 position) {
-    float3 localPosition = ((position - float3(Viewport.Position.xy, 0)) * float3(Viewport.Scale, 1));
+    float3 localPosition = ((position - float3(GetViewportPosition(), 0)) * float3(GetViewportScale(), 1));
     return mul(mul(float4(localPosition.xyz, 1), Viewport.ModelView), Viewport.Projection);
 }
 

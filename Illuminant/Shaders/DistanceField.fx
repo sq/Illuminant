@@ -25,7 +25,7 @@ void DistanceVertexShader (
     inout float2 zRange   : TEXCOORD0,
     out   float4 result   : POSITION0
 ) {
-    result = TransformPosition(float4(position.xy - Viewport.Position, 0, 1), 0);
+    result = TransformPosition(float4(position.xy - GetViewportPosition(), 0, 1), 0);
     result.z = 0;
 }
 
@@ -121,7 +121,7 @@ void DistanceToPolygonPixelShader (
     in  float2 zRange : TEXCOORD0,
     ACCEPTS_VPOS
 ) {
-    float2 vp = (__vpos__ * getInvScaleFactors()) + Viewport.Position;
+    float2 vp = (__vpos__ * getInvScaleFactors()) + GetViewportPosition();
 
     float4 sliceDistances = computeSliceDistances(vp, zRange, SliceZ);
     color = float4(

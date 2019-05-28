@@ -82,11 +82,11 @@ void VS_PosVelAttr(
     // HACK: Discard Z
     float3 displayXyz = float3(position.x, position.y - (position.z * getZToY()), 0);
 
-    float3 screenXyz = displayXyz - float3(Viewport.Position.xy, 0) + rotatedCorner;
+    float3 screenXyz = displayXyz - float3(GetViewportPosition(), 0) + rotatedCorner;
 
     // FIXME
     result = TransformPosition(
-        float4(screenXyz.xy * Viewport.Scale.xy, screenXyz.z, 1), 0
+        float4(screenXyz.xy * GetViewportScale(), screenXyz.z, 1), 0
     );
 
     float2 cornerCoord = (Corners[cornerIndex.x].xy / 2) + 0.5;
