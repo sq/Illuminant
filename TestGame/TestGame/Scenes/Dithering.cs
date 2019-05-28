@@ -94,6 +94,8 @@ namespace TestGame.Scenes {
                 }, Game.IlluminantMaterials
             );
 
+            // Renderer.DistanceField = new DistanceField(Game.RenderCoordinator, 1024, 1024, 128, 3);
+
             Environment.Lights.Add(new SphereLightSource {
                 Position = new Vector3(Width / 2f, Height / 2f, 0),
                 Radius = 4,

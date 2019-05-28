@@ -86,11 +86,6 @@ void SphereLightPixelShader(
     ACCEPTS_VPOS,
     out float4 result              : COLOR0
 ) {
-    if (0) {
-        result = float4(color.rgb, 1);
-        return;
-    }
-
     float3 shadedPixelPosition;
     float3 shadedPixelNormal;
     sampleGBuffer(
@@ -99,16 +94,9 @@ void SphereLightPixelShader(
     );
 
     float opacity;
-    if (0) {
-        opacity = computeSphereLightOpacity(
-            shadedPixelPosition, shadedPixelNormal,
-            lightCenter, lightProperties, moreLightProperties.z
-        );
-    } else {
-        opacity = SphereLightPixelCore(
-            shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties, false, false
-        );
-    }
+    opacity = SphereLightPixelCore(
+        shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties, false, false
+    );
 
     result = float4(color.rgb * color.a * opacity, 1);
 }
