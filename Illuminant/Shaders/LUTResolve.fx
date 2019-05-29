@@ -1,5 +1,6 @@
 #define ENABLE_DITHERING
 
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\CompilerWorkarounds.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\BitmapCommon.fxh"
@@ -59,8 +60,8 @@ float4 LUTBlendedResolveWithAlbedoCommon(
     in float2 texCoord2,
     in float4 texRgn2
 ) {
-    texCoord1 = clamp(texCoord1, texRgn1.xy, texRgn1.zw);
-    texCoord2 = clamp(texCoord2 + LightmapUVOffset, texRgn2.xy, texRgn2.zw);
+    texCoord1 = clamp2(texCoord1, texRgn1.xy, texRgn1.zw);
+    texCoord2 = clamp2(texCoord2 + LightmapUVOffset, texRgn2.xy, texRgn2.zw);
 
     float4 light = tex2Dlod(TextureSampler2, float4(texCoord2, 0, 0));
     float4 albedo = tex2Dlod(TextureSampler, float4(texCoord1, 0, 0));
@@ -76,6 +77,8 @@ float4 LUTBlendedResolveWithAlbedoCommon(
         weight *= RgbToGray;
         weight = weight.r + weight.g + weight.b;
     }
+
+    albedo.rgb = saturate3(albedo.rgb);
 
     float3 lutValue1 = ReadLUT(DarkLUTSampler, LUTResolutions.x, albedo.rgb);
     float3 lutValue2 = ReadLUT(BrightLUTSampler, LUTResolutions.y, albedo.rgb);

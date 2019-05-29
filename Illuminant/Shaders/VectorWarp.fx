@@ -1,3 +1,4 @@
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\CompilerWorkarounds.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\BitmapCommon.fxh"
@@ -20,7 +21,7 @@ void VectorWarpPixelShader (
     ACCEPTS_VPOS,
     out float4 result       : COLOR0
 ) {
-    float2 fieldTexCoord = clamp(texCoord1, texRgn1.xy, texRgn1.zw);
+    float2 fieldTexCoord = clamp2(texCoord1, texRgn1.xy, texRgn1.zw);
     float4 rawFieldValue = tex2D(FieldSampler, fieldTexCoord);
     float3 adjustedFieldValue = (rawFieldValue.xyz - 0.5) * 2;
     float l = length(adjustedFieldValue);
@@ -33,7 +34,7 @@ void VectorWarpPixelShader (
 
     float2 baseTexCoord = (GET_VPOS * HalfTexel2);
     float2 warpedTexCoord = baseTexCoord + (fieldValue.xy * HalfTexel2);
-    float2 finalTexCoord = clamp(warpedTexCoord, texRgn2.xy, texRgn2.zw);
+    float2 finalTexCoord = clamp2(warpedTexCoord, texRgn2.xy, texRgn2.zw);
     float4 background = tex2D(TextureSampler2, finalTexCoord);
 
     result = background;

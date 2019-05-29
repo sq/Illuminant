@@ -1,6 +1,7 @@
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\GeometryCommon.fxh"
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\CompilerWorkarounds.fxh"
 #include "Bezier.fxh"
 
 uniform ClampedBezier4 Bezier;
@@ -49,9 +50,9 @@ void BezierVisualizerPixelShader (
         scaledT = CurrentT;
 
     float4 value = evaluateBezier4AtT(Bezier, count, xy.x);
-    float4 scaledValue = saturate((value - minValue) / valueRange);
+    float4 scaledValue = saturate4((value - minValue) / valueRange);
     float4 distances = abs((1 - xy.y) - scaledValue);
-    float4 scaledDistances = 1 - saturate(distances / 0.016);
+    float4 scaledDistances = 1 - saturate4(distances / 0.016);
 
     float elementCount = abs(ElementCount);
     if (elementCount < 1.5)
@@ -61,7 +62,7 @@ void BezierVisualizerPixelShader (
     else if (elementCount < 3.5)
         scaledDistances.w = 0;
 
-    float2 scaledOneAndZero = saturate((float2(1, 0) - minValue) / valueRange);
+    float2 scaledOneAndZero = saturate2((float2(1, 0) - minValue) / valueRange);
     float distanceAboveOne = saturate(((1 - xy.y) - scaledOneAndZero.x) / 0.015);
     float distanceBelowZero = saturate((scaledOneAndZero.y - (1 - xy.y)) / 0.015);
     float invDistanceToT = (1 - saturate(abs(xy.x - scaledT) / 0.01)) * 0.4;

@@ -1,3 +1,4 @@
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\CompilerWorkarounds.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\GeometryCommon.fxh"
@@ -222,9 +223,9 @@ float4 SHRendererPixelShaderCore(
     float2 maxIndex = probeCount - 1;
 
     float2 probeSpacePosition = shadedPixelPosition.xy - probeOffsetAndBaseIndex.xy;
-    float2 probeIndexTl = clamp(floor(probeSpacePosition / probeInterval.xy), minIndex, maxIndex);
+    float2 probeIndexTl = clamp2(floor(probeSpacePosition / probeInterval.xy), minIndex, maxIndex);
     float2 tlProbePosition = (probeIndexTl * probeInterval.xy);
-    float2 probeIndexBr = clamp(ceil(probeSpacePosition / probeInterval.xy), minIndex, maxIndex);
+    float2 probeIndexBr = clamp2(ceil(probeSpacePosition / probeInterval.xy), minIndex, maxIndex);
 
     float2 weightXY = (probeSpacePosition - tlProbePosition) / probeInterval.xy;
     float2 probeIndices[4] = {

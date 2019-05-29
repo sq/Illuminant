@@ -1,5 +1,6 @@
 #define ENABLE_DITHERING
 
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\CompilerWorkarounds.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\BitmapCommon.fxh"
@@ -34,7 +35,7 @@ float4 ResolveCommon (
 ) {
     float4 result;
 
-    float4 coord = float4(clamp(texCoord + LightmapUVOffset, texRgn.xy, texRgn.zw), 0, 0);
+    float4 coord = float4(clamp2(texCoord + LightmapUVOffset, texRgn.xy, texRgn.zw), 0, 0);
 
     float4 sampleLinear = tex2Dlod(LinearSampler, coord);
 
@@ -50,8 +51,8 @@ float4 ResolveWithAlbedoCommon (
     in float2 texCoord2,
     in float4 texRgn2
 ) {
-    texCoord1 = clamp(texCoord1, texRgn1.xy, texRgn1.zw);
-    texCoord2 = clamp(texCoord2 + LightmapUVOffset, texRgn2.xy, texRgn2.zw);
+    texCoord1 = clamp2(texCoord1, texRgn1.xy, texRgn1.zw);
+    texCoord2 = clamp2(texCoord2 + LightmapUVOffset, texRgn2.xy, texRgn2.zw);
 
     float4 light = tex2Dlod(TextureSampler2, float4(texCoord2, 0, 0));
     float4 albedo = tex2Dlod(TextureSampler, float4(texCoord1, 0, 0));
@@ -216,7 +217,7 @@ void CalculateLuminancePixelShader(
     ACCEPTS_VPOS,
     out float4 result : COLOR0
 ) {
-    float4 coord = float4(clamp(texCoord1, texRgn1.xy, texRgn1.zw), 0, 0);
+    float4 coord = float4(clamp2(texCoord1, texRgn1.xy, texRgn1.zw), 0, 0);
     float2 coordTexels = coord.xy * BitmapTextureSize;
 
     float4 samplePoint = tex2Dlod(PointSampler, coord);

@@ -1,3 +1,4 @@
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\CompilerWorkarounds.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"
 #include "LightCommon.fxh"
 #include "DistanceFieldCommon.fxh"
@@ -39,7 +40,7 @@ float SphereLightPixelCore(
 
     float preTraceOpacity = distanceOpacity * aoOpacity;
 
-    bool traceShadows = visible && lightProperties.w && (preTraceOpacity >= SHADOW_OPACITY_THRESHOLD) && (DistanceField.Extent.x > 0);
+    bool traceShadows = visible && lightProperties.w && (preTraceOpacity >= SHADOW_OPACITY_THRESHOLD);
     float coneOpacity = coneTrace(
         lightCenter, lightProperties.xy, 
         float2(getConeGrowthFactor(), moreLightProperties.y),
@@ -51,7 +52,7 @@ float SphereLightPixelCore(
     float lightOpacity = preTraceOpacity;
 
     [branch]
-    if (useRamp && false) {
+    if (useRamp) {
         float rampInput = useOpacityRamp 
             ? preTraceOpacity * coneOpacity
             : preTraceOpacity;

@@ -1,3 +1,4 @@
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\CompilerWorkarounds.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\BitmapCommon.fxh"
 #include "HDR.fxh"
@@ -14,7 +15,7 @@ void GammaCompressedPixelShader(
     addColor.rgb *= addColor.a;
     addColor.a = 0;
 
-    result = multiplyColor * (tex2D(TextureSampler, clamp(texCoord, texRgn.xy, texRgn.zw)) * InverseScaleFactor);
+    result = multiplyColor * (tex2D(TextureSampler, clamp2(texCoord, texRgn.xy, texRgn.zw)) * InverseScaleFactor);
     result += (addColor * result.a);
 
     result = GammaCompress(result);
@@ -30,7 +31,7 @@ void ToneMappedPixelShader(
     addColor.rgb *= addColor.a;
     addColor.a = 0;
 
-    result = multiplyColor * (tex2D(TextureSampler, clamp(texCoord, texRgn.xy, texRgn.zw)) * InverseScaleFactor);
+    result = multiplyColor * (tex2D(TextureSampler, clamp2(texCoord, texRgn.xy, texRgn.zw)) * InverseScaleFactor);
     result += (addColor * result.a);
 
     float3 preToneMap = max(result.rgb + Offset, 0) * (ExposureMinusOne + 1);
