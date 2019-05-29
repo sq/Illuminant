@@ -303,7 +303,7 @@ namespace TestGame {
 
             _ActiveSceneIndex = -1;
             SetActiveScene(Scenes.Length - 1);
-            SetActiveScene(10);
+            SetActiveScene(12);
         }
 
         protected override void UnloadContent () {

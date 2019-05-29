@@ -18,48 +18,28 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
+
+  <PropertyGroup Condition="'$(Platform)' == 'x86'">
+    <EnableFNA>false</EnableFNA>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Platform)' == 'FNA'">
+    <EnableFNA>true</EnableFNA>
+    <PlatformTarget>x86</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Platform)' == 'FNA-x64'">
+    <EnableFNA>true</EnableFNA>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
     <Optimize>false</Optimize>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <DebugType>pdbonly</DebugType>
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DefineConstants>TRACE</DefineConstants>
     <Optimize>true</Optimize>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
-    <DefineConstants>DEBUG;TRACE;WINDOWS</DefineConstants>
-    <PlatformTarget>x86</PlatformTarget>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
-    <DefineConstants>TRACE;WINDOWS</DefineConstants>
-    <PlatformTarget>x86</PlatformTarget>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|FNA'">
-    <DefineConstants>DEBUG;TRACE;FNA</DefineConstants>
-    <PlatformTarget>AnyCPU</PlatformTarget>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|FNA'">
-    <DefineConstants>TRACE;FNA</DefineConstants>
-    <PlatformTarget>AnyCPU</PlatformTarget>
-  </PropertyGroup>
-  <ItemGroup Condition=" '$(Platform)' == 'x86' ">
-    <Reference Include="Microsoft.Xna.Framework, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553">
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="Microsoft.Xna.Framework.Game, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553">
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="Microsoft.Xna.Framework.Graphics, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553, processorArchitecture=x86">
-      <Private>False</Private>
-    </Reference>
-  </ItemGroup>
-  <ItemGroup Condition=" '$(Platform)' == 'FNA' ">
-    <ProjectReference Include="..\..\FNA\FNA.csproj">
-      <Project>{35253CE1-C864-4CD3-8249-4D1319748E8F}</Project>
-      <Name>FNA</Name>
-    </ProjectReference>
-  </ItemGroup>
+
   <ItemGroup>
     <Reference Include="mscorlib">
       <Private>False</Private>
@@ -83,18 +63,6 @@
     <Compile Include="View.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Fracture\Squared\Render.STB\Squared.Render.STB.csproj">
-      <Project>{cfb603c1-8371-460d-ba60-91e697eae1b4}</Project>
-      <Name>Squared.Render.STB</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\Fracture\Squared\RenderLib\Squared.Render.csproj">
-      <Project>{FE871F18-FD35-4124-AF8F-0021C9D4BA29}</Project>
-      <Name>Squared.Render</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\Fracture\Squared\Util\Squared.Util.csproj">
-      <Project>{D7F549CF-E0A6-491C-A78C-ECAB590BB2A7}</Project>
-      <Name>Squared.Util</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Illuminant\Illuminant.csproj">
       <Project>{e86544ad-5974-4fee-b96f-71331efab054}</Project>
       <Name>Illuminant</Name>
@@ -103,7 +71,19 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+
+  <PropertyGroup>
+    <SquaredPath>..\..\Fracture</SquaredPath>
+    <FNAPath>..\..\FNA\</FNAPath>
+    <FNALibPath>..\..\FNA\fnalibs</FNALibPath>
+    <ShaderDirectory>shaders</ShaderDirectory>
+    <IncludeSTBImage>true</IncludeSTBImage>
+  </PropertyGroup>
+
+  <Import Project="$(SquaredPath)\Squared\SquaredGameLibraries.targets" />
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(SquaredPath)\Squared\XNAFramework.targets" />
+
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
