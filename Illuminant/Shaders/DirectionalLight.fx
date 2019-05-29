@@ -1,3 +1,6 @@
+#pragma fxcparams(/Od /Zi)
+// FIXME: Preshader is incompatible with FNA and it gets generated if not in /Od
+
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\CompilerWorkarounds.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"

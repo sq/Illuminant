@@ -375,13 +375,13 @@ namespace Squared.Illuminant.Particles {
                 );
                 
                 LoadOneMaterial(out ParticleMaterials.TextureLinear,
-                    "RasterizeParticleSystem", "TextureLinear"
+                    "RasterizeParticleSystem", "RasterizeParticlesTextureLinear"
                 );
                 LoadOneMaterial(out ParticleMaterials.TexturePoint,
-                    "RasterizeParticleSystem", "TexturePoint"
+                    "RasterizeParticleSystem", "RasterizeParticlesTexturePoint"
                 );
                 LoadOneMaterial(out ParticleMaterials.NoTexture,
-                    "RasterizeParticleSystem", "NoTexture"
+                    "RasterizeParticleSystem", "RasterizeParticlesNoTexture"
                 );
 
                 ParticleMaterials.IsLoaded = true;

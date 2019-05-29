@@ -1,3 +1,6 @@
+#pragma fxcparams(/Od /Zi)
+// FIXME: Preshader is incompatible with FNA and it gets generated if not in /Od
+
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\GeometryCommon.fxh"
 #include "Bezier.fxh"
@@ -183,7 +186,7 @@ void PS_NoTexture (
         discard;
 }
 
-technique TextureLinear {
+technique RasterizeParticlesTextureLinear {
     pass P0
     {
         vertexShader = compile vs_3_0 VS_PosVelAttr();
@@ -191,7 +194,7 @@ technique TextureLinear {
     }
 }
 
-technique TexturePoint {
+technique RasterizeParticlesTexturePoint {
     pass P0
     {
         vertexShader = compile vs_3_0 VS_PosVelAttr();
@@ -199,7 +202,7 @@ technique TexturePoint {
     }
 }
 
-technique NoTexture {
+technique RasterizeParticlesNoTexture {
     pass P0
     {
         vertexShader = compile vs_3_0 VS_PosVelAttr();

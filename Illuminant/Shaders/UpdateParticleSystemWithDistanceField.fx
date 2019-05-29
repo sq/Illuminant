@@ -1,3 +1,6 @@
+#pragma fxcparams(/Od /Zi)
+// FIXME: Preshader is incompatible with FNA and it gets generated if not in /Od
+
 #define INCLUDE_RAMPS
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\CompilerWorkarounds.fxh"
 #include "Bezier.fxh"
