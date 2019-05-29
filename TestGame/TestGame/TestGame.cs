@@ -26,6 +26,8 @@ using Nuke = NuklearDotNet.Nuklear;
 
 namespace TestGame {
     public class TestGame : MultithreadedGame, INuklearHost {
+        public int? DefaultScene = 5;
+
         public GraphicsDeviceManager Graphics;
         public DefaultMaterialSet Materials { get; private set; }
         public NuklearService Nuklear;
@@ -302,8 +304,7 @@ namespace TestGame {
             LastTimeOverUI = Time.Ticks;
 
             _ActiveSceneIndex = -1;
-            SetActiveScene(Scenes.Length - 1);
-            SetActiveScene(12);
+            SetActiveScene(DefaultScene ?? Scenes.Length - 1);
         }
 
         protected override void UnloadContent () {

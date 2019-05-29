@@ -332,10 +332,12 @@ namespace Squared.Illuminant.Particles {
                 var p = e.Parameters;
                 p.ClearTextures(ClearTextureList);
                 // ughhhhhhhhhh
+#if !FNA
                 for (var i = 0; i < 4; i++)
                     dm.Device.VertexTextures[i] = null;
                 for (var i = 0; i < 16; i++)
                     dm.Device.Textures[i] = null;
+#endif
             }
         }
 
@@ -1330,6 +1332,10 @@ namespace Squared.Illuminant.Particles {
                     p["VelocityTexture"].SetValue(chunk.RenderData);
                     p["AttributeTexture"].SetValue(chunk.RenderColor);
                     m.Flush();
+                    p["PositionTexture"].SetValue(src.PositionAndLife);
+                    // HACK
+                    p["VelocityTexture"].SetValue(chunk.RenderData);
+                    p["AttributeTexture"].SetValue(chunk.RenderColor);
                 }
             )) {
                 batch.Add(new NativeDrawCall(
