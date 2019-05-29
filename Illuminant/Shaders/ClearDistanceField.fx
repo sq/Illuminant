@@ -37,7 +37,7 @@ void ClearPixelShader (
     }
 }
 
-technique Clear
+technique ClearDistanceField
 {
     pass P0
     {

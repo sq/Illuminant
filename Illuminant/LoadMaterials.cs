@@ -74,11 +74,11 @@ namespace Squared.Illuminant {
                 );
 
                 LoadOneMaterial(out IlluminantMaterials.LineLightWithDistanceRamp,
-                    "LineLight", "LineLightWithDistanceRamp", dBegin, dEnd
+                    "LineLightEx", "LineLightWithDistanceRamp", dBegin, dEnd
                 );
 
                 LoadOneMaterial(out IlluminantMaterials.LineLightWithOpacityRamp,
-                    "LineLight", "LineLightWithOpacityRamp", dBegin, dEnd
+                    "LineLightEx", "LineLightWithOpacityRamp", dBegin, dEnd
                 );
 
                 LoadOneMaterial(out IlluminantMaterials.SphereLightProbe,
@@ -139,7 +139,7 @@ namespace Squared.Illuminant {
                 );
 
                 LoadOneMaterial(out IlluminantMaterials.ClearDistanceFieldSlice,
-                    "ClearDistanceField", "Clear",
+                    "ClearDistanceField", "ClearDistanceField",
                     new[] { MaterialUtil.MakeDelegate(BlendState.Opaque) }
                 );
 
