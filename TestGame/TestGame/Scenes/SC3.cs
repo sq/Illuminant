@@ -132,7 +132,9 @@ namespace TestGame.Scenes {
             ShowHistogram,
             VisualizeForeground,
             EnableGBuffer,
-            Deterministic;
+            Deterministic,
+            CastShadows,
+            AmbientOcclusion;
 
         Slider ZToYMultiplier,
             LightFalloffYFactor,
@@ -163,10 +165,14 @@ namespace TestGame.Scenes {
             Deterministic.Key = Keys.R;
             VisualizeForeground.Key = Keys.F;
             EnableGBuffer.Key = Keys.E;
+            CastShadows.Key = Keys.S;
+            AmbientOcclusion.Key = Keys.A;
 
             ShowHistogram.Value = true;
             Deterministic.Value = true;
             EnableGBuffer.Value = true;
+            CastShadows.Value = true;
+            AmbientOcclusion.Value = true;
 
             ZToYMultiplier.Min = 0.0f;
             ZToYMultiplier.Max = 4.0f;
@@ -251,7 +257,7 @@ namespace TestGame.Scenes {
                         OcclusionToOpacityPower = 1.35f,
                         MaxConeRadius = 30,
                     }
-                    */
+                    */                    
                 }, Game.IlluminantMaterials
             ) {
                 DistanceField = DistanceField
@@ -284,7 +290,7 @@ namespace TestGame.Scenes {
                 Radius = 300,
                 RampLength = 64,
                 RampMode = LightSourceRampMode.Exponential,
-                // AmbientOcclusionRadius = 8f
+                AmbientOcclusionOpacity = 1.0f
             };
 
             Environment.Lights.Add(light);
@@ -299,7 +305,7 @@ namespace TestGame.Scenes {
                 ShadowRampRate = 0.15f,
                 ShadowSoftness = 12f,
                 Color = new Vector4(0.33f, 0.85f, 0.65f, 0.15f),
-                CastsShadows = true,
+                AmbientOcclusionOpacity = 1.0f
             };
 
             Environment.Lights.Add(ambientLight);
@@ -443,6 +449,16 @@ namespace TestGame.Scenes {
 
             Renderer.Configuration.EnableGBuffer = 
                 ForegroundRenderer.Configuration.EnableGBuffer = EnableGBuffer.Value;
+
+            foreach (var l in Environment.Lights) {
+                l.CastsShadows = CastShadows.Value;
+                l.AmbientOcclusionRadius = AmbientOcclusion.Value ? 8f : 0f;
+            }
+
+            foreach (var l in ForegroundEnvironment.Lights) {
+                l.CastsShadows = CastShadows.Value;
+                l.AmbientOcclusionRadius = AmbientOcclusion.Value ? 8f : 0f;
+            }
 
             Environment.ZToYMultiplier = ForegroundEnvironment.ZToYMultiplier = ZToYMultiplier.Value;
 

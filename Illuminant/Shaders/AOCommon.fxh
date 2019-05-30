@@ -1,16 +1,15 @@
 float computeAO (
-    float3 shadedPixelPosition,
-    float3 shadedPixelNormal,
-    float4 moreLightProperties, 
-    DistanceFieldConstants vars,
-    bool visible
+    in float3 shadedPixelPosition,
+    in float3 shadedPixelNormal,
+    in float4 moreLightProperties, 
+    in DistanceFieldConstants vars,
+    in bool visible
 ) {
-    float aoRamp = 1;
-    [branch]
+    [flatten]
     if ((moreLightProperties.x >= 0.5) && (DistanceField.Extent.x > 0) && visible) {
         float distance = sampleDistanceFieldEx(shadedPixelPosition + float3(0, 0, shadedPixelNormal.z * moreLightProperties.x), vars);
-        float aoOpacity = saturate(moreLightProperties.w);
-        float aoRamp = (saturate(distance / moreLightProperties.x) * aoOpacity) + (1 - aoOpacity);
+        float clampedDistance = clamp(distance, 0, moreLightProperties.x);
+        return (clampedDistance / moreLightProperties.x) * moreLightProperties.w;
     }
-    return aoRamp;
+    return 1;
 }
