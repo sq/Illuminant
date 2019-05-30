@@ -1509,6 +1509,7 @@ namespace Squared.Illuminant {
                 dfu.InvScaleFactorX = dfu.InvScaleFactorY = 1;
                 dfu.Extent.Z = Environment.MaximumZ;
                 uDistanceField.TrySet(m, ref dfu);
+                p["DistanceFieldPacked1"].SetValue(Vector4.Zero);
                 p.ClearTexture("DistanceFieldTexture");
                 return;
             }
@@ -1529,6 +1530,12 @@ namespace Squared.Illuminant {
 
             if (setDistanceTexture)
                 p["DistanceFieldTexture"].SetValue(_DistanceField.Texture);
+
+            p["DistanceFieldPacked1"]?.SetValue(new Vector4(
+                (float)((1.0 / Math.Max(0.00001, dfu.TextureSliceCount.X)) * (1.0 / 3.0)), 
+                (float)((1.0 / Math.Max(0.00001, dfu.Extent.Z)) * dfu.TextureSliceCount.W),
+                dfu.TextureSliceCount.Z, dfu.MinimumLength
+            ));
         }
 
         public void InvalidateFields (

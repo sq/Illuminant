@@ -1,4 +1,4 @@
-// FIXME: The fxc optimizer breaks sphere lights in some cases
+// FIXME: The fxc optimizer breaks sphere lights in DitheringTest and LightProbes
 #pragma fxcparams(/Od /Zi)
 
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
@@ -7,35 +7,6 @@
 float3 GetVertexForIndex (int index) {
     DEFINE_ClippedLightVertices
     return ClippedLightVertices[index];
-    /*
-    switch (abs(index)) {
-        case 0:
-            return float3(cOne, 0, 0);
-        case 1:
-            return float3(mOne, 0, 0);
-        case 2:
-            return float3(mOne, 1, 0);
-        case 3:
-            return float3(cOne, 1, 0);
-        case 4:
-            return float3(mOne, cOne, 0);
-        case 5:
-            return float3(1, cOne, 0);
-        case 6:
-            return float3(1, mOne, 0);
-        case 7:
-            return float3(mOne, mOne, 0);
-        case 8:
-            return float3(0, cOne, 0);
-        case 9:
-            return float3(cOne, cOne, 0);
-        case 10:
-            return float3(cOne, mOne, 0);
-        case 11:
-            return float3(0, mOne, 0);
-    }
-    return 0;
-    */
 }
 
 void SphereLightVertexShader(

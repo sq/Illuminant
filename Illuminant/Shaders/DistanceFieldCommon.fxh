@@ -202,6 +202,13 @@ struct DistanceFieldSettings {
 
 uniform DistanceFieldSettings DistanceField;
 
+/*
+    1.0 / max(0.001, dfu.TextureSliceCount.X) * (1.0 / 3.0), 
+    DistanceFieldPacked1.z * (1.0 / max(0.001, dfu.TextureSliceCount.W)),
+    DistanceField.TextureSliceCount.z, dfu.MinimumLength
+*/
+uniform float4 DistanceFieldPacked1;
+
 float getMaximumEncodedDistance () {
     return DistanceField.Extent.w;
 }
@@ -212,7 +219,8 @@ float getStepLimit () {
 }
 
 float getMinStepSize () {
-    return DistanceField._StepAndMisc2.y;
+    return DistanceFieldPacked1.w;
+    // return DistanceField._StepAndMisc2.y;
 }
 
 float getLongStepFactor () {
@@ -280,9 +288,9 @@ DistanceFieldConstants makeDistanceFieldConstants() {
     float2 halfTexel = getDistanceTexelSize() * 0.5;
     DistanceFieldConstants result = {
         float3(
-            DistanceField.TextureSliceCount.z, 
-            (1.0 / max(0.001, DistanceField.TextureSliceCount.x)) * (1.0 / 3.0), 
-            (1.0 / max(0.001, DistanceField.Extent.z)) * DistanceField.TextureSliceCount.w
+            DistanceFieldPacked1.z, 
+            DistanceFieldPacked1.x, 
+            DistanceFieldPacked1.y
         ),
         halfTexel, getDistanceSliceSize() - halfTexel
     };
