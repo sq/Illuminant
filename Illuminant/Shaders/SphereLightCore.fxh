@@ -72,8 +72,6 @@ float SphereLightPixelPrologue (
     visible = (distanceOpacity > 0) && 
         (shadedPixelPosition.x > -9999);
 
-    // clip(visible ? 1 : -1);
-
     // HACK: AO is only on upward-facing surfaces
     moreLightProperties.x *= max(0, shadedPixelNormal.z);
 
@@ -103,7 +101,7 @@ float SphereLightPixelEpilogue (
 
     // HACK: Don't cull pixels unless they were killed by distance falloff.
     // This ensures that billboards are always lit.
-    // clip(visible ? 1 : -1);
+    clip(visible ? 1 : -1);
     return visible ? lightOpacity : 0;
 }
 
@@ -124,6 +122,8 @@ float SphereLightPixelCore (
         lightCenter, lightProperties,
         moreLightProperties, visible
     );
+
+    clip(visible ? 1 : -1);
 
     DistanceFieldConstants vars = makeDistanceFieldConstants();
 

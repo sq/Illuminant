@@ -1118,6 +1118,85 @@ namespace Squared.Illuminant {
             ltrs.LightCount++;
         }
 
+        private class LightingResolveHandler {
+            public readonly LightingRenderer Renderer;
+            public Material m;
+            public HDRConfiguration? hdr;
+            public Vector2 uvOffset;
+            public bool usedLut;
+            public LUTBlendingConfiguration? lutBlending;
+
+            public readonly Action<DeviceManager, object> Before, After;
+
+            public LightingResolveHandler (LightingRenderer renderer) {
+                Renderer = renderer;
+                Before = _Before;
+                After = _After;
+            }
+
+            private void _Before (DeviceManager dm, object _) {
+                // FIXME: RenderScale?
+                var p = m.Effect.Parameters;
+
+                Renderer.SetGBufferParameters(p);
+                p["InverseScaleFactor"].SetValue(
+                    hdr.HasValue
+                        ? ((hdr.Value.InverseScaleFactor != 0) ? hdr.Value.InverseScaleFactor : 1.0f)
+                        : 1.0f
+                );
+                p["ResolveToSRGB"].SetValue(
+                    hdr.HasValue
+                        ? hdr.Value.ResolveToSRGB
+                        : false
+                );
+                m.Parameters.LightmapUVOffset.SetValue(uvOffset);
+
+                if (usedLut)
+                    IlluminantMaterials.SetLUTBlending(m, lutBlending.Value);
+
+                var ds = (hdr.HasValue && hdr.Value.Dithering.HasValue)
+                    ? hdr.Value.Dithering.Value
+                    : new DitheringSettings {
+                        Unit = 255f,
+                        Strength = 0f
+                    };
+                ds.FrameIndex = dm.FrameIndex;
+
+                Renderer.uDithering.Set(m, ref ds);
+                Renderer.EnvironmentUniforms.SetIntoParameters(p);
+
+                if (hdr.HasValue) {
+                    if (hdr.Value.Mode == HDRMode.GammaCompress)
+                        Renderer.IlluminantMaterials.SetGammaCompressionParameters(
+                            hdr.Value.GammaCompression.MiddleGray,
+                            hdr.Value.GammaCompression.AverageLuminance,
+                            hdr.Value.GammaCompression.MaximumLuminance,
+                            hdr.Value.Offset
+                        );
+                    else if (hdr.Value.Mode == HDRMode.ToneMap)
+                        Renderer.IlluminantMaterials.SetToneMappingParameters(
+                            hdr.Value.Exposure,
+                            hdr.Value.ToneMapping.WhitePoint,
+                            hdr.Value.Offset,
+                            hdr.Value.Gamma
+                        );
+                    else 
+                        Renderer.IlluminantMaterials.SetToneMappingParameters(
+                            hdr.Value.Exposure,
+                            1f,
+                            hdr.Value.Offset,
+                            hdr.Value.Gamma
+                        );
+                }
+            }
+
+            private void _After (DeviceManager dm, object _) {
+                Interlocked.CompareExchange(ref Renderer._AvailableResolveHandler, this, null);
+            }
+        }
+
+        private LightingResolveHandler _AvailableResolveHandler = null;
+
         /// <summary>
         /// Resolves the current lightmap into the specified batch container on the specified layer.
         /// </summary>
@@ -1186,63 +1265,21 @@ namespace Squared.Illuminant {
             );
             var albedoBounds = albedoRegion.GetValueOrDefault(Bounds.Unit);
 
+            LightingResolveHandler resolveHandler;
+            resolveHandler = Interlocked.Exchange(ref _AvailableResolveHandler, null);
+            if (resolveHandler == null)
+                resolveHandler = new LightingResolveHandler(this);
+
+            resolveHandler.hdr = hdr;
+            resolveHandler.lutBlending = lutBlending;
+            resolveHandler.m = m;
+            resolveHandler.usedLut = usedLut;
+            resolveHandler.uvOffset = uvOffset;
+
             // HACK: This is a little gross
             using (var group = BatchGroup.New(
-                container, layer, before: (dm, _) => {
-                // FIXME: RenderScale?
-                var p = m.Effect.Parameters;
-
-                SetGBufferParameters(p);
-                p["InverseScaleFactor"].SetValue(
-                    hdr.HasValue
-                        ? ((hdr.Value.InverseScaleFactor != 0) ? hdr.Value.InverseScaleFactor : 1.0f)
-                        : 1.0f
-                );
-                p["ResolveToSRGB"].SetValue(
-                    hdr.HasValue
-                        ? hdr.Value.ResolveToSRGB
-                        : false
-                );
-                m.Parameters.LightmapUVOffset.SetValue(uvOffset);
-
-                if (usedLut)
-                    IlluminantMaterials.SetLUTBlending(m, lutBlending.Value);
-
-                var ds = (hdr.HasValue && hdr.Value.Dithering.HasValue)
-                    ? hdr.Value.Dithering.Value
-                    : new DitheringSettings {
-                        Unit = 255f,
-                        Strength = 0f
-                    };
-                ds.FrameIndex = dm.FrameIndex;
-
-                uDithering.Set(m, ref ds);
-                EnvironmentUniforms.SetIntoParameters(p);
-
-                if (hdr.HasValue) {
-                    if (hdr.Value.Mode == HDRMode.GammaCompress)
-                        IlluminantMaterials.SetGammaCompressionParameters(
-                            hdr.Value.GammaCompression.MiddleGray,
-                            hdr.Value.GammaCompression.AverageLuminance,
-                            hdr.Value.GammaCompression.MaximumLuminance,
-                            hdr.Value.Offset
-                        );
-                    else if (hdr.Value.Mode == HDRMode.ToneMap)
-                        IlluminantMaterials.SetToneMappingParameters(
-                            hdr.Value.Exposure,
-                            hdr.Value.ToneMapping.WhitePoint,
-                            hdr.Value.Offset,
-                            hdr.Value.Gamma
-                        );
-                    else 
-                        IlluminantMaterials.SetToneMappingParameters(
-                            hdr.Value.Exposure,
-                            1f,
-                            hdr.Value.Offset,
-                            hdr.Value.Gamma
-                        );
-                }
-            })) {
+                container, layer, before: resolveHandler.Before, after: resolveHandler.After
+            )) {
                 using (var bb = BitmapBatch.New(
                     group, 0, m, 
                     samplerState: albedoSamplerState ?? SamplerState.LinearClamp,
