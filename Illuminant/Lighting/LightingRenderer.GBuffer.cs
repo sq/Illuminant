@@ -105,9 +105,12 @@ namespace Squared.Illuminant {
                         p["SelfOcclusionHack"].SetValue(ComputeSelfOcclusionHack());
                         p["ZSelfOcclusionHack"].SetValue(ComputeZSelfOcclusionHack());
 
-                        uEnvironment.Set(IlluminantMaterials.HeightVolumeFace, ref EnvironmentUniforms);
-                        uEnvironment.Set(IlluminantMaterials.HeightVolume, ref EnvironmentUniforms);
-                        uEnvironment.Set(IlluminantMaterials.GroundPlane, ref EnvironmentUniforms);
+                        IlluminantMaterials.HeightVolumeFace.Effect
+                            .Parameters["EnvironmentZAndScale"]?.SetValue(EnvironmentUniforms._ZAndScale);
+                        IlluminantMaterials.HeightVolume.Effect
+                            .Parameters["EnvironmentZAndScale"]?.SetValue(EnvironmentUniforms._ZAndScale);
+                        IlluminantMaterials.GroundPlane.Effect
+                            .Parameters["EnvironmentZAndScale"]?.SetValue(EnvironmentUniforms._ZAndScale);
 
                         dm.Device.RasterizerState = Render.Convenience.RenderStates.ScissorOnly;
                     }
@@ -284,7 +287,7 @@ namespace Squared.Illuminant {
                     blendState: BlendState.Opaque
                 ), (dm, _) => {
                     var material = IlluminantMaterials.MaskBillboard;
-                    uEnvironment.Set(material, ref EnvironmentUniforms);
+                    material.Effect.Parameters["EnvironmentZAndScale"]?.SetValue(EnvironmentUniforms._ZAndScale);
                     material.Effect.Parameters["DistanceFieldExtent"].SetValue(Extent3);
                     material.Effect.Parameters["SelfOcclusionHack"].SetValue(ComputeSelfOcclusionHack());
                 }
@@ -297,7 +300,7 @@ namespace Squared.Illuminant {
                     blendState: BlendState.Opaque
                 ), (dm, _) => {
                     var material = IlluminantMaterials.GDataBillboard;
-                    uEnvironment.Set(material, ref EnvironmentUniforms);
+                    material.Effect.Parameters["EnvironmentZAndScale"]?.SetValue(EnvironmentUniforms._ZAndScale);
                     material.Effect.Parameters["DistanceFieldExtent"].SetValue(Extent3);
                     material.Effect.Parameters["SelfOcclusionHack"].SetValue(ComputeSelfOcclusionHack());
                 }

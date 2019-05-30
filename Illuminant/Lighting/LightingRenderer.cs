@@ -364,7 +364,6 @@ namespace Squared.Illuminant {
 
         private readonly EmbeddedEffectProvider Effects;
 
-        private readonly TypedUniform<Uniforms.Environment> uEnvironment;
         private readonly TypedUniform<Uniforms.DistanceField> uDistanceField;
         private readonly TypedUniform<Render.DitheringSettings> uDithering;
 
@@ -379,7 +378,6 @@ namespace Squared.Illuminant {
             Coordinator = coordinator;
             Configuration = configuration;
 
-            uEnvironment = materials.NewTypedUniform<Uniforms.Environment>("Environment");
             uDistanceField = materials.NewTypedUniform<Uniforms.DistanceField>("DistanceField");
             uDithering = materials.NewTypedUniform<Render.DitheringSettings>("Dithering");
 
@@ -702,7 +700,7 @@ namespace Squared.Illuminant {
 
             SetGBufferParameters(p);
 
-            uEnvironment.Set(material, ref EnvironmentUniforms);
+            p["EnvironmentZAndScale"]?.SetValue(EnvironmentUniforms._ZAndScale);
 
             SetDistanceFieldParameters(material, true, q);
         }
@@ -1197,7 +1195,7 @@ namespace Squared.Illuminant {
                 ds.FrameIndex = dm.FrameIndex;
 
                 uDithering.Set(m, ref ds);
-                uEnvironment.Set(m, ref EnvironmentUniforms);
+                p["EnvironmentZAndScale"]?.SetValue(EnvironmentUniforms._ZAndScale);
 
                 if (hdr.HasValue) {
                     if (hdr.Value.Mode == HDRMode.GammaCompress)
@@ -1502,7 +1500,7 @@ namespace Squared.Illuminant {
             Uniforms.DistanceField dfu;
             var p = m.Effect.Parameters;
 
-            uEnvironment.TrySet(m, ref EnvironmentUniforms);
+            p["EnvironmentZAndScale"]?.SetValue(EnvironmentUniforms._ZAndScale);
 
             if (_DistanceField == null) {
                 dfu = new Uniforms.DistanceField();
@@ -1532,8 +1530,10 @@ namespace Squared.Illuminant {
                 p["DistanceFieldTexture"].SetValue(_DistanceField.Texture);
 
             p["DistanceFieldPacked1"]?.SetValue(new Vector4(
-                (float)((1.0 / Math.Max(0.00001, dfu.TextureSliceCount.X)) * (1.0 / 3.0)), 
-                (float)((1.0 / Math.Max(0.00001, dfu.Extent.Z)) * dfu.TextureSliceCount.W),
+                // FIXME: Surprisingly, using double precision for 1/3 here breaks
+                //  the top of the ParticleLights wall and makes it black...
+                (float)((1.0f / Math.Max(0.0001f, dfu.TextureSliceCount.X)) * (1.0f / 3.0f)), 
+                (float)((1.0f / Math.Max(0.0001f, dfu.Extent.Z)) * dfu.TextureSliceCount.W),
                 dfu.TextureSliceCount.Z, dfu.MinimumLength
             ));
         }

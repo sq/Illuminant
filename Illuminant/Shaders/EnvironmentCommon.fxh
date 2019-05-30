@@ -1,29 +1,25 @@
 #ifndef ENVIRONMENT_DEFINED
 #define ENVIRONMENT_DEFINED
 
-struct EnvironmentSettings {
-    float4 ZAndScale;
-};
-
-uniform EnvironmentSettings Environment;
+uniform float4 EnvironmentZAndScale;
 
 float getGroundZ () {
-    return Environment.ZAndScale.x;
+    return EnvironmentZAndScale.x;
 }
 
 float getZToYMultiplier () {
-    return Environment.ZAndScale.y;
+    return EnvironmentZAndScale.y;
 }
 
 float getInvZToYMultiplier () {
-    if (abs(Environment.ZAndScale.y) > 0)
-        return 1.0 / Environment.ZAndScale.y;
+    if (abs(EnvironmentZAndScale.y) > 0)
+        return 1.0 / EnvironmentZAndScale.y;
     else
         return 0;
 }
 
 float getEnvironmentRenderScale () {
-    return Environment.ZAndScale.zw;
+    return EnvironmentZAndScale.zw;
 }
 
 #endif
