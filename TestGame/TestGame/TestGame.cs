@@ -78,11 +78,6 @@ namespace TestGame {
 
             Content.RootDirectory = "Content";
 
-#if FNA
-            UseThreadedDraw = false;
-#else
-            UseThreadedDraw = true;
-#endif
             IsFixedTimeStep = false;
 
             if (IsFixedTimeStep) {
@@ -257,11 +252,7 @@ namespace TestGame {
         protected override void LoadContent () {
             base.LoadContent();
 
-#if FNA
             RenderCoordinator.EnableThreading = false;
-#else
-            RenderCoordinator.EnableThreading = true;
-#endif
 
             TextureLoader = new EmbeddedTexture2DProvider(RenderCoordinator) {
                 DefaultOptions = new TextureLoadOptions {
