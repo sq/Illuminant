@@ -91,9 +91,7 @@ namespace Squared.Illuminant {
                 Parent = parent;
                 Key    = key;
 
-                if (key.Type == LightSourceTypeID.Particle)
-                    ;
-                else
+                if (key.Type != LightSourceTypeID.Particle)
                     LightVertices = new UnorderedList<LightVertex>(512);
 
                 switch (key.Type) {
