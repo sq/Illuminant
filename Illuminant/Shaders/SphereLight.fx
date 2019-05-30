@@ -23,8 +23,9 @@ void SphereLightVertexShader(
     float3 vertex = GetVertexForIndex(vertexIndex.x);
 
     float  radius = lightProperties.x + lightProperties.y + 1;
-    float  deltaY = (radius)-(radius / moreLightProperties.z);
+    float  deltaY = (radius) - (radius / moreLightProperties.z);
     float3 radius3;
+
     if (1)
         // HACK: Scale the y axis some to clip off dead pixels caused by the y falloff factor
         radius3 = float3(radius, radius - (deltaY / 2.0), 0);
@@ -32,7 +33,6 @@ void SphereLightVertexShader(
         radius3 = float3(radius, radius, 0);
 
     float3 tl = lightCenter - radius3, br = lightCenter + radius3;
-    worldPosition = lerp(tl, br, vertex);
 
     // Unfortunately we need to adjust both by the light's radius (to account for pixels above/below the center point
     //  being lit in 2.5d projection), along with adjusting by the z of the light's centerpoint (to deal with pixels
@@ -40,6 +40,7 @@ void SphereLightVertexShader(
     float radiusOffset = radius * getInvZToYMultiplier();
     float zOffset = lightCenter.z * getZToYMultiplier();
 
+    worldPosition = lerp(tl, br, vertex);
     if (vertex.y < 0.5) {
         worldPosition.y -= radiusOffset;
         worldPosition.y -= zOffset;
@@ -67,8 +68,7 @@ void SphereLightPixelShader(
         shadedPixelPosition, shadedPixelNormal
     );
 
-    float opacity;
-    opacity = SphereLightPixelCore(
+    float opacity = SphereLightPixelCore(
         shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties, false, false
     );
 

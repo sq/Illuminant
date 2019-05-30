@@ -7,7 +7,7 @@ uniform float2 NextRandomnessOffset;
 uniform float  TimeDivisor;
 uniform float4 PositionOffset, PositionScale;
 uniform float4 VelocityOffset, VelocityScale;
-uniform bool   ReplaceOldVelocity;
+uniform float  ReplaceOldVelocity;
 
 uniform float2 SpaceScale;
 

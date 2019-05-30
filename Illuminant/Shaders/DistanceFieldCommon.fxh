@@ -325,7 +325,7 @@ float sampleDistanceFieldEx (
     DistanceFieldConstants vars
 ) {
     float3 extent = DistanceField.Extent.xyz;
-    float3 clampedPosition = clamp3(position, 0, extent);
+    float3 clampedPosition = clamp(position, 0, extent);
     float distanceToVolume = length(clampedPosition - position);
 
     // Interpolate between two Z samples. The xy interpolation is done by the GPU for us.
@@ -335,7 +335,7 @@ float sampleDistanceFieldEx (
 
     float2 texelUv = clampedPosition.xy * getDistanceTexelSize();
     if (0)
-        texelUv = clamp2(texelUv, vars.halfDistanceTexel, vars.distanceSliceSizeMinusHalfTexel);
+        texelUv = clamp(texelUv, vars.halfDistanceTexel, vars.distanceSliceSizeMinusHalfTexel);
     
     float4 uv = float4(
         computeDistanceFieldSliceUv(virtualSliceIndex, getInvSliceCountXTimesOneThird(vars)) + texelUv,

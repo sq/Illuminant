@@ -51,7 +51,7 @@ sampler PointSampler : register(s7) {
 };
 
 uniform float2 LightmapUVOffset;
-uniform bool   ResolveToSRGB;
+uniform float  ResolveToSRGB;
 uniform float  InverseScaleFactor;
 
 float4 LUTBlendedResolveWithAlbedoCommon(

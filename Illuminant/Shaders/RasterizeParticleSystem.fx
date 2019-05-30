@@ -13,7 +13,7 @@ struct RasterizeParticleSystemSettings {
 
 uniform RasterizeParticleSystemSettings RasterizeSettings;
 uniform ClampedBezier1 RoundingPowerFromLife;
-uniform bool Rounded, BitmapBilinear, ColumnFromVelocity, RowFromVelocity;
+uniform float Rounded, BitmapBilinear, ColumnFromVelocity, RowFromVelocity;
 
 Texture2D BitmapTexture;
 sampler BitmapSampler {

@@ -36,7 +36,7 @@
 
 #include "EnvironmentCommon.fxh"
 
-uniform bool   GBufferViewportRelative;
+uniform float  GBufferViewportRelative;
 uniform float  GBufferInvScaleFactor;
 uniform float4 GBufferTexelSizeAndMisc;
 
@@ -138,7 +138,7 @@ float computeSphereLightOpacity (
     float  distanceFactor = 1 - saturate((distance - lightRadius) / lightRampLength);
 
     float3 lightNormal = distance3 / distance;
-    float normalFactor = 1; // computeNormalFactor(lightNormal, shadedPixelNormal);
+    float normalFactor = computeNormalFactor(lightNormal, shadedPixelNormal);
 
     [flatten]
     if (falloffMode >= 2) {

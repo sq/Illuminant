@@ -6,8 +6,8 @@
 
 #define MAX_INLINE_POSITION_CONSTANTS 4
 
-uniform bool   AlignVelocityAndPosition, ZeroZAxis, MultiplyLife, SpawnFromEntireWindow;
-uniform bool   AlignPositionConstant, MultiplyAttributeConstant, PolygonLoop;
+uniform float  AlignVelocityAndPosition, ZeroZAxis, MultiplyLife, SpawnFromEntireWindow;
+uniform float  AlignPositionConstant, MultiplyAttributeConstant, PolygonLoop;
 uniform float  PolygonRate, SourceVelocityFactor, FeedbackSourceIndex, AttributeDiscardThreshold, InstanceMultiplier;
 uniform float4 ChunkSizeAndIndices;
 uniform float4 Configuration[9];

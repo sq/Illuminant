@@ -11,7 +11,7 @@
 #define OUTLINE_SIZE OutlineSize
 #define FILL_INTERIOR FilledInterior
 
-uniform bool   FilledInterior;
+uniform float  FilledInterior;
 uniform float  OutlineSize;
 uniform float3 AmbientColor;
 uniform float3 LightDirection;
