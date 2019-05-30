@@ -82,10 +82,11 @@ namespace Squared.Illuminant {
             public  readonly LightTypeRenderStateKey    Key;
             public  readonly object                     Lock = new object();
             public  readonly UnorderedList<LightVertex> LightVertices = null;
-            public  readonly Material                   Material, ProbeMaterial;
+            public           Material                   Material, ProbeMaterial;
 
             internal int                                LightCount = 0;
             private DynamicVertexBuffer                 LightVertexBuffer = null;
+            private bool                                HadDistanceField;
 
             public LightTypeRenderState (LightingRenderer parent, LightTypeRenderStateKey key) {
                 Parent = parent;
@@ -94,10 +95,25 @@ namespace Squared.Illuminant {
                 if (key.Type != LightSourceTypeID.Particle)
                     LightVertices = new UnorderedList<LightVertex>(512);
 
+                SelectMaterial();
+            }
+
+            internal void SelectMaterial () {
+                var hasDistanceField = Parent.DistanceField != null;
+
+                if ((Material != null) && (hasDistanceField == HadDistanceField))
+                    return;
+
+                var key = Key;
+                var parent = Parent;
                 switch (key.Type) {
                     case LightSourceTypeID.Sphere:
                         Material = (key.RampTexture == null)
-                            ? parent.IlluminantMaterials.SphereLight
+                            ? (
+                                (parent.DistanceField == null)
+                                    ? parent.IlluminantMaterials.SphereLightWithoutDistanceField
+                                    : parent.IlluminantMaterials.SphereLight
+                            )
                             : (
                                 key.DistanceRamp
                                     ? parent.IlluminantMaterials.SphereLightWithDistanceRamp
@@ -123,7 +139,9 @@ namespace Squared.Illuminant {
                         // FIXME
                         if (key.RampTexture != null)
                             throw new NotImplementedException("Ramp textures");
-                        Material = parent.IlluminantMaterials.ParticleSystemSphereLight;
+                        Material = (parent.DistanceField == null)
+                            ? parent.IlluminantMaterials.ParticleSystemSphereLight
+                            : parent.IlluminantMaterials.ParticleSystemSphereLightWithoutDistanceField;
                         if (parent.Configuration.EnableGlobalIllumination)
                             throw new NotImplementedException("GI");
                         ProbeMaterial = null;
@@ -156,6 +174,8 @@ namespace Squared.Illuminant {
 
                 if (Material == null)
                     throw new Exception("No material found");
+
+                HadDistanceField = hasDistanceField;
             }
 
             private ParticleLightSource ParticleLightSource {
@@ -700,7 +720,7 @@ namespace Squared.Illuminant {
 
             SetGBufferParameters(p);
 
-            p["EnvironmentZAndScale"]?.SetValue(EnvironmentUniforms._ZAndScale);
+            EnvironmentUniforms.SetIntoParameters(p);
 
             SetDistanceFieldParameters(material, true, q);
         }
@@ -937,6 +957,8 @@ namespace Squared.Illuminant {
 
                             if (RenderTrace.EnableTracing)
                                 RenderTrace.Marker(resultGroup, layerIndex++, "LightingRenderer {0} : Render {1} {2} light(s)", this.ToObjectID(), count, ltrs.Key.Type);
+
+                            ltrs.SelectMaterial();
 
                             var pls = ltrs.Key.ParticleLightSource;
                             if (pls != null) {
@@ -1195,7 +1217,7 @@ namespace Squared.Illuminant {
                 ds.FrameIndex = dm.FrameIndex;
 
                 uDithering.Set(m, ref ds);
-                p["EnvironmentZAndScale"]?.SetValue(EnvironmentUniforms._ZAndScale);
+                EnvironmentUniforms.SetIntoParameters(p);
 
                 if (hdr.HasValue) {
                     if (hdr.Value.Mode == HDRMode.GammaCompress)
@@ -1500,7 +1522,7 @@ namespace Squared.Illuminant {
             Uniforms.DistanceField dfu;
             var p = m.Effect.Parameters;
 
-            p["EnvironmentZAndScale"]?.SetValue(EnvironmentUniforms._ZAndScale);
+            EnvironmentUniforms.SetIntoParameters(p);
 
             if (_DistanceField == null) {
                 dfu = new Uniforms.DistanceField();

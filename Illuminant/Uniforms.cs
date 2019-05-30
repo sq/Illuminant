@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using Squared.Illuminant.Particles;
 using Squared.Util;
 
@@ -13,22 +14,36 @@ namespace Squared.Illuminant.Uniforms {
     public struct Environment {
         // GroundZ, ZToYMultiplier, InvZToYMultiplier
         internal Vector4 _ZAndScale;
+        internal Vector4 _ZToY;
+
+        internal void SetIntoParameters (EffectParameterCollection parameters) {
+            parameters["EnvironmentZAndScale"]?.SetValue(_ZAndScale);
+            parameters["EnvironmentZToY"]?.SetValue(_ZToY);
+        }
 
         public float GroundZ {
             get {
                 return _ZAndScale.X;
             }
             set {
+                if (!Arithmetic.IsFinite(value))
+                    throw new ArgumentOutOfRangeException("value");
                 _ZAndScale.X = value;
             }
         }
 
         public float ZToYMultiplier {
             get {
-                return _ZAndScale.Y;
+                return _ZToY.X;
             }
             set {
-                _ZAndScale.Y = value;
+                if (!Arithmetic.IsFinite(value))
+                    throw new ArgumentOutOfRangeException("value");
+                _ZToY.X = value;
+                if (Math.Abs(value) <= 0.0001f)
+                    _ZToY.Y = 0;
+                else
+                    _ZToY.Y = 1.0f / value;
             }
         }
 
@@ -37,6 +52,8 @@ namespace Squared.Illuminant.Uniforms {
                 return new Vector2(_ZAndScale.Z, _ZAndScale.W);
             }
             set {
+                if (!Arithmetic.IsFinite(value.X) || !Arithmetic.IsFinite(value.Y))
+                    throw new ArgumentOutOfRangeException("value");
                 _ZAndScale.Z = value.X;
                 _ZAndScale.W = value.Y;
             }
@@ -88,6 +105,8 @@ namespace Squared.Illuminant.Uniforms {
                 return _StepAndMisc2.Y;
             }
             set {
+                if (!Arithmetic.IsFinite(value))
+                    throw new ArgumentException("value");
                 _StepAndMisc2.Y = value;
             }
         }
@@ -97,6 +116,8 @@ namespace Squared.Illuminant.Uniforms {
                 return _StepAndMisc2.Z;
             }
             set {
+                if (!Arithmetic.IsFinite(value))
+                    throw new ArgumentException("value");
                 _StepAndMisc2.Z = value;
             }
         }
@@ -106,6 +127,8 @@ namespace Squared.Illuminant.Uniforms {
                 return _ConeAndMisc.X;
             }
             set {
+                if (!Arithmetic.IsFinite(value))
+                    throw new ArgumentException("value");
                 _ConeAndMisc.X = value;
             }
         }
@@ -115,6 +138,8 @@ namespace Squared.Illuminant.Uniforms {
                 return _ConeAndMisc.Y;
             }
             set {
+                if (!Arithmetic.IsFinite(value))
+                    throw new ArgumentException("value");
                 _ConeAndMisc.Y = value;
             }
         }
@@ -124,6 +149,8 @@ namespace Squared.Illuminant.Uniforms {
                 return _ConeAndMisc.Z;
             }
             set {
+                if (!Arithmetic.IsFinite(value))
+                    throw new ArgumentException("value");
                 _ConeAndMisc.Z = value;
             }
         }
@@ -133,6 +160,8 @@ namespace Squared.Illuminant.Uniforms {
                 return _ConeAndMisc.W;
             }
             set {
+                if (!Arithmetic.IsFinite(value))
+                    throw new ArgumentException("value");
                 _ConeAndMisc.W = value;
             }
         }
@@ -142,6 +171,8 @@ namespace Squared.Illuminant.Uniforms {
                 return _StepAndMisc2.W;
             }
             set {
+                if (!Arithmetic.IsFinite(value))
+                    throw new ArgumentException("value");
                 _StepAndMisc2.W = value;
             }
         }
@@ -190,7 +221,7 @@ namespace Squared.Illuminant.Uniforms {
             AnimationRateAndRotationAndZToY = new Vector4(
                 (ar.X != 0) ? 1.0f / ar.X : 0, (ar.Y != 0) ? 1.0f / ar.Y : 0,
                 Configuration.RotationFromVelocity ? 1f : 0f, Configuration.ZToY
-            );            
+            );
         }
     }
 

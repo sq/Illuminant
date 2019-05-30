@@ -15,7 +15,7 @@ void SphereLightProbeVertexShader(
         result = float4(-9999, -9999, 0, 0);
     } else {
         DEFINE_LightCorners
-        float2 clipPosition = (LightCorners[cornerIndex.x] * 9999) - 1;
+        float2 clipPosition = (LightCorners[cornerIndex.x] * 9999).xy - 1;
         result = float4(clipPosition.xy, 0, 1);
     }
 }

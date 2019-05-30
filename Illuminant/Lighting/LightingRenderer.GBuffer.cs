@@ -96,21 +96,19 @@ namespace Squared.Illuminant {
                         p["DistanceFieldExtent"].SetValue(Extent3);
                         p["SelfOcclusionHack"].SetValue(ComputeSelfOcclusionHack());
                         p["ZSelfOcclusionHack"].SetValue(ComputeZSelfOcclusionHack());
+                        EnvironmentUniforms.SetIntoParameters(p);
+
                         p = IlluminantMaterials.GroundPlane.Effect.Parameters;
                         p["DistanceFieldExtent"].SetValue(Extent3);
                         p["SelfOcclusionHack"].SetValue(ComputeSelfOcclusionHack());
                         p["ZSelfOcclusionHack"].SetValue(ComputeZSelfOcclusionHack());
+                        EnvironmentUniforms.SetIntoParameters(p);
+
                         p = IlluminantMaterials.HeightVolume.Effect.Parameters;
                         p["DistanceFieldExtent"].SetValue(Extent3);
                         p["SelfOcclusionHack"].SetValue(ComputeSelfOcclusionHack());
                         p["ZSelfOcclusionHack"].SetValue(ComputeZSelfOcclusionHack());
-
-                        IlluminantMaterials.HeightVolumeFace.Effect
-                            .Parameters["EnvironmentZAndScale"]?.SetValue(EnvironmentUniforms._ZAndScale);
-                        IlluminantMaterials.HeightVolume.Effect
-                            .Parameters["EnvironmentZAndScale"]?.SetValue(EnvironmentUniforms._ZAndScale);
-                        IlluminantMaterials.GroundPlane.Effect
-                            .Parameters["EnvironmentZAndScale"]?.SetValue(EnvironmentUniforms._ZAndScale);
+                        EnvironmentUniforms.SetIntoParameters(p);
 
                         dm.Device.RasterizerState = Render.Convenience.RenderStates.ScissorOnly;
                     }
@@ -287,9 +285,10 @@ namespace Squared.Illuminant {
                     blendState: BlendState.Opaque
                 ), (dm, _) => {
                     var material = IlluminantMaterials.MaskBillboard;
-                    material.Effect.Parameters["EnvironmentZAndScale"]?.SetValue(EnvironmentUniforms._ZAndScale);
-                    material.Effect.Parameters["DistanceFieldExtent"].SetValue(Extent3);
-                    material.Effect.Parameters["SelfOcclusionHack"].SetValue(ComputeSelfOcclusionHack());
+                    var p = material.Effect.Parameters;
+                    p["DistanceFieldExtent"].SetValue(Extent3);
+                    p["SelfOcclusionHack"].SetValue(ComputeSelfOcclusionHack());
+                    EnvironmentUniforms.SetIntoParameters(p);
                 }
             )) 
             using (var gDataBatch = PrimitiveBatch<BillboardVertex>.New(
@@ -300,9 +299,10 @@ namespace Squared.Illuminant {
                     blendState: BlendState.Opaque
                 ), (dm, _) => {
                     var material = IlluminantMaterials.GDataBillboard;
-                    material.Effect.Parameters["EnvironmentZAndScale"]?.SetValue(EnvironmentUniforms._ZAndScale);
-                    material.Effect.Parameters["DistanceFieldExtent"].SetValue(Extent3);
-                    material.Effect.Parameters["SelfOcclusionHack"].SetValue(ComputeSelfOcclusionHack());
+                    var p = material.Effect.Parameters;
+                    p["DistanceFieldExtent"].SetValue(Extent3);
+                    p["SelfOcclusionHack"].SetValue(ComputeSelfOcclusionHack());
+                    EnvironmentUniforms.SetIntoParameters(p);
                 }
             )) {
                 Action flushBatch = () => {

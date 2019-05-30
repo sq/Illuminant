@@ -17,7 +17,7 @@ float3  closestPointRect(in  float3 pos , in  float3  planeOrigin , in  float3  
     // - Clamp  inside  the  rectangle
     // - Calculate  new  world  position
     float2  dist2D = float2(dot(dir , left), dot(dir , up));
-    float  rectHalfSize = float2(halfWidth , halfHeight);
+    float2  rectHalfSize = float2(halfWidth , halfHeight);
     dist2D = clamp2(dist2D , -rectHalfSize , rectHalfSize);
     return  planeOrigin + dist2D.x * left + dist2D.y * up;
 }

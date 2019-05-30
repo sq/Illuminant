@@ -13,6 +13,7 @@ namespace Squared.Illuminant {
         public Material SphereLightProbe, DirectionalLightProbe, LineLightProbe;
         public Material SphereLightProbeWithDistanceRamp, SphereLightProbeWithOpacityRamp, 
             DirectionalLightProbeWithRamp, LineLightProbeWithDistanceRamp, LineLightProbeWithOpacityRamp;
+        public Material SphereLightWithoutDistanceField, ParticleSystemSphereLightWithoutDistanceField;
         public Material DistanceToPolygon;
         public Material[] DistanceFunctionTypes;
         public Material ClearDistanceFieldSlice;

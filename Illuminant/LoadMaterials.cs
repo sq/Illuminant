@@ -49,12 +49,20 @@ namespace Squared.Illuminant {
                     "SphereLight", "SphereLight", dBegin, dEnd
                 );
 
+                LoadOneMaterial(out IlluminantMaterials.SphereLightWithoutDistanceField,
+                    "SphereLightWithoutDistanceField", "SphereLightWithoutDistanceField", dBegin, dEnd
+                );
+
                 LoadOneMaterial(out IlluminantMaterials.DirectionalLight,
                     "DirectionalLight", "DirectionalLight", dBegin, dEnd
                 );
 
                 LoadOneMaterial(out IlluminantMaterials.ParticleSystemSphereLight,
                     "ParticleLight", "ParticleLight", dBegin, dEnd
+                );
+
+                LoadOneMaterial(out IlluminantMaterials.ParticleSystemSphereLightWithoutDistanceField,
+                    "ParticleLight", "ParticleLightWithoutDistanceField", dBegin, dEnd
                 );
 
                 LoadOneMaterial(out IlluminantMaterials.LineLight,

@@ -97,10 +97,41 @@ void ParticleLightPixelShader(
     result = float4(lightColor.rgb * lightColor.a * opacity, 1);
 }
 
+void ParticleLightWithoutDistanceFieldPixelShader(
+    in  float3 lightCenter         : TEXCOORD0,
+    in  float3 worldPosition : TEXCOORD1,
+    in  float4 lightProperties : TEXCOORD2,
+    in  float4 moreLightProperties : TEXCOORD3,
+    in  float4 lightColor : COLOR0,
+    ACCEPTS_VPOS,
+    out float4 result : COLOR0
+) {
+    float3 shadedPixelPosition;
+    float3 shadedPixelNormal;
+    sampleGBuffer(
+        GET_VPOS,
+        shadedPixelPosition, shadedPixelNormal
+    );
+
+    float opacity = SphereLightPixelCoreNoDF(
+        shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties, false, false
+    );
+
+    result = float4(lightColor.rgb * lightColor.a * opacity, 1);
+}
+
 technique ParticleLight {
     pass P0
     {
         vertexShader = compile vs_3_0 ParticleLightVertexShader();
         pixelShader  = compile ps_3_0 ParticleLightPixelShader();
+    }
+}
+
+technique ParticleLightWithoutDistanceField {
+    pass P0
+    {
+        vertexShader = compile vs_3_0 ParticleLightVertexShader();
+        pixelShader = compile ps_3_0 ParticleLightWithoutDistanceFieldPixelShader();
     }
 }

@@ -2,23 +2,21 @@
 #define ENVIRONMENT_DEFINED
 
 uniform float4 EnvironmentZAndScale;
+uniform float4 EnvironmentZToY;
 
 float getGroundZ () {
     return EnvironmentZAndScale.x;
 }
 
 float getZToYMultiplier () {
-    return EnvironmentZAndScale.y;
+    return EnvironmentZToY.x;
 }
 
 float getInvZToYMultiplier () {
-    if (abs(EnvironmentZAndScale.y) > 0)
-        return 1.0 / EnvironmentZAndScale.y;
-    else
-        return 0;
+    return EnvironmentZToY.y;
 }
 
-float getEnvironmentRenderScale () {
+float2 getEnvironmentRenderScale () {
     return EnvironmentZAndScale.zw;
 }
 
