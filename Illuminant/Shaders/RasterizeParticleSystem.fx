@@ -1,5 +1,3 @@
-#pragma fxcparams(if(FNA==1) /Od /Zi)
-
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\GeometryCommon.fxh"
 #include "Bezier.fxh"

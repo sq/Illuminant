@@ -72,11 +72,7 @@ void sampleGBuffer (
     out float3 worldPosition,
     out float3 normal
 ) {
-#if FNA
-    [flatten]
-#else
-    [branch]
-#endif
+    PREFER_BRANCH
     if (any(GBufferTexelSizeAndMisc.xy)) {
         // FIXME: Should we be offsetting distance field samples too?
         float2 sourceXy = screenPositionPx;
@@ -144,7 +140,7 @@ float computeSphereLightOpacity (
     float3 lightNormal = distance3 / distance;
     float normalFactor = computeNormalFactor(lightNormal, shadedPixelNormal);
 
-    [flatten]
+    PREFER_FLATTEN
     if (falloffMode >= 2) {
         distanceFactor = 1 - saturate(distance - lightRadius);
         normalFactor = 1;
@@ -179,7 +175,7 @@ void sampleLightProbeBuffer (
     float4 positionSample = tex2Dlod(GBufferSampler, float4(uv, 0, 0));
 
     opacity = positionSample.w;
-    [branch]
+    PREFER_BRANCH
     if (opacity <= 0) {
         discard;
         return;

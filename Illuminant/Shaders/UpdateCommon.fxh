@@ -56,7 +56,7 @@ float getSizeForLifeAndVelocity (float life, float velocityLength) {
 float4 getRampedColorForLifeValueAndIndex (float life, float velocityLength, float index) {
     float4 result = getColorForLifeAndVelocity(life, velocityLength);
 
-    [branch]
+    PREFER_BRANCH
     if (LifeRampSettings.x != 0) {
         float u = (life - LifeRampSettings.y) / LifeRampSettings.z;
         if (LifeRampSettings.x < 0)

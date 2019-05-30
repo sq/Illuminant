@@ -88,7 +88,7 @@ float SphereLightPixelEpilogue (
     bool useRamp = useOpacityRamp || useDistanceRamp;
     float lightOpacity = preTraceOpacity;
 
-    [flatten]
+    PREFER_BRANCH
     if (useRamp) {
         float rampInput = useOpacityRamp 
             ? preTraceOpacity * coneOpacity

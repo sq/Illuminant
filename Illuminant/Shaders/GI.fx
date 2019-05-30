@@ -1,5 +1,3 @@
-#pragma fxcparams(/Od /Zi)
-
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\CompilerWorkarounds.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"
@@ -132,14 +130,6 @@ void SHVisualizerPixelShader(
     SH9Color rad;
     float received = readSHProbe(probeIndex, rad);
 
-    /*
-    [branch]
-    if (received < 1) {
-        discard;
-        return;
-    }
-    */
-
     float xyLength = length(localPosition);
     float z = 1 - clamp(xyLength / 0.9, 0, 1);
     // FIXME: Correct?
@@ -171,7 +161,7 @@ float4 computeProbeRadiance(
     float3 probePosition;
 
     float received = readSHProbeXy(probeIndexXy, probeOffsetAndBaseIndex, probeIntervalAndCount, probe, probePosition);
-    [branch]
+    PREFER_BRANCH
     if (received < 1)
         return float4(0, 0, 0, 0);
 

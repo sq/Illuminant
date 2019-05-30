@@ -1,5 +1,3 @@
-#pragma fxcparams(if(FNA==1) /Od /Zi)
-
 #define INCLUDE_RAMPS
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\CompilerWorkarounds.fxh"
 #include "Bezier.fxh"
@@ -77,7 +75,7 @@ void PS_Update (
             stepCount = 0;
     }
 
-    [branch]
+    REQUIRE_BRANCH // estimating normals is expensive
     if (collided) {
         bool bounce = oldVelocity.w <= 0;
         bool redirect = wasColliding && !escaping;

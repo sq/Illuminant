@@ -1,5 +1,4 @@
-#pragma fxcparams(if(FNA==1) /Od /Zi)
-
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\CompilerWorkarounds.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\GeometryCommon.fxh"
@@ -29,7 +28,7 @@ void ClearPixelShader (
     out float4 color : COLOR0,
     ACCEPTS_VPOS
 ) {
-    [branch]
+    PREFER_BRANCH
     if (ClearMultiplier.a > 0) {
         float2 vp = (GET_VPOS + 0.5) * ClearInverseScale;
         float4 tex = tex2Dlod(ClearSampler, float4(vp.x, vp.y, 0, 0));

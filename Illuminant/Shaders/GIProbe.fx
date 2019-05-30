@@ -1,5 +1,3 @@
-#pragma fxcparams(/Od /Zi)
-
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\CompilerWorkarounds.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\DitherCommon.fxh"
@@ -78,7 +76,6 @@ float3 ComputeRowNormal(float row) {
     return normalize(float3(xy, sliceIndex / SliceIndexToZ));
 }
 
-// FIXME: This is broken in any optimization mode except /Od
 void ProbeSelectorPixelShader(
     ACCEPTS_VPOS,
     in  float4 probeOffsetAndBaseIndex : TEXCOORD0,
@@ -102,11 +99,7 @@ void ProbeSelectorPixelShader(
     resultPosition = 0;
     resultNormal = 0;
 
-    [branch]
-    if (initialDistance <= 1.66)
-        return;
-
-    if (DO_FIRST_BOUNCE) {
+    if ((initialDistance <= 1.66) && DO_FIRST_BOUNCE) {
         float intersectionDistance;
         float3 estimatedIntersection;
         float3 ray = normal * BounceSearchDistance;

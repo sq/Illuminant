@@ -1,6 +1,7 @@
-// FIXME: ParticleLights.cs is broken in release mode
+// In release mode all particles spawn from the same spot with the same velocity
 #pragma fxcparams(/Od /Zi)
 
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\CompilerWorkarounds.fxh"
 #include "ParticleCommon.fxh"
 #include "RandomCommon.fxh"
 
@@ -105,7 +106,7 @@ bool Spawn_Stage1(
 ) {
     float index = (xy.x) + (xy.y * ChunkSizeAndIndices.x);
 
-    [branch]
+    PREFER_BRANCH
     if ((index < ChunkSizeAndIndices.y) || (index > ChunkSizeAndIndices.z)) {
         discard;
         return false;
@@ -210,7 +211,7 @@ void PS_SpawnFeedback (
 ) {
     float index = (xy.x) + (xy.y * ChunkSizeAndIndices.x);
 
-    [branch]
+    PREFER_BRANCH
     if ((index < ChunkSizeAndIndices.y) || (index > ChunkSizeAndIndices.z)) {
         discard;
         return;
@@ -262,7 +263,7 @@ void PS_SpawnPattern (
 ) {
     float index = (xy.x) + (xy.y * ChunkSizeAndIndices.x);
 
-    [branch]
+    PREFER_BRANCH
     if ((index < ChunkSizeAndIndices.y) || (index > ChunkSizeAndIndices.z)) {
         discard;
         return;

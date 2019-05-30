@@ -1,4 +1,5 @@
 #define INCLUDE_RAMPS
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\CompilerWorkarounds.fxh"
 #include "Bezier.fxh"
 #include "ParticleCommon.fxh"
 #include "UpdateCommon.fxh"

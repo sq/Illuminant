@@ -85,7 +85,7 @@ float DirectionalLightPixelCore(
         vars, traceShadows
     );
 
-    [flatten]
+    PREFER_BRANCH
     if (useOpacityRamp)
         lightOpacity = SampleFromRamp(lightOpacity);
 

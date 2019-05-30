@@ -5,7 +5,7 @@ float computeAO (
     in DistanceFieldConstants vars,
     in bool visible
 ) {
-    [flatten]
+    PREFER_BRANCH
     if ((moreLightProperties.x >= 0.5) && (DistanceField.Extent.x > 0) && visible) {
         float distance = sampleDistanceFieldEx(shadedPixelPosition + float3(0, 0, shadedPixelNormal.z * moreLightProperties.x), vars);
         float clampedDistance = clamp(distance, 0, moreLightProperties.x);
