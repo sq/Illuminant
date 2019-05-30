@@ -1,5 +1,3 @@
-#pragma fxcparams(if(FNA==1) /Od /Zi)
-
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "LineLightCore.fxh"
 

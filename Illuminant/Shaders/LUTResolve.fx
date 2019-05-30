@@ -16,7 +16,7 @@ Texture2D DarkLUT : register(t4);
 Texture2D BrightLUT : register(t5);
 uniform const float2 LUTResolutions;
 uniform const float3 LUTLevels;
-uniform const bool   PerChannelLUT, LUTOnly;
+uniform const float  PerChannelLUT, LUTOnly;
 
 sampler DarkLUTSampler : register(s4) {
     Texture = (DarkLUT);

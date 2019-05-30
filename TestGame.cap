@@ -5,7 +5,7 @@
         "commandLine": "",
         "environment": [
         ],
-        "executable": "C:\\Users\\Katelyn\\Documents\\Projects\\Illuminant\\TestGame\\TestGame\\bin\\FNA-x64\\Debug\\TestGame.exe",
+        "executable": "C:\\Users\\Katelyn\\Documents\\Projects\\Illuminant\\TestGame\\TestGame\\bin\\FNA-x64\\Release\\TestGame.exe",
         "inject": false,
         "numQueuedFrames": 0,
         "options": {
@@ -16,7 +16,7 @@
             "captureCallstacks": true,
             "captureCallstacksOnlyDraws": false,
             "debugOutputMute": true,
-            "delayForDebugger": 2,
+            "delayForDebugger": 1,
             "hookIntoChildren": false,
             "refAllResources": true,
             "verifyBufferAccess": true

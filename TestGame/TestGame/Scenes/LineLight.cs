@@ -162,8 +162,8 @@ namespace TestGame.Scenes {
                 EndColor = new Vector4(0.22f, 0.22f, 1f, 0.9f),
                 RampMode = LightSourceRampMode.Exponential
             };
-            MovableLight.StartPosition = new Vector3(200, 650, Elevation);
-            MovableLight.EndPosition = new Vector3(900, 740, Elevation);
+            MovableLight.StartPosition = new Vector3(240, 350, Elevation);
+            MovableLight.EndPosition = new Vector3(900, 720, Elevation);
 
             Environment.Lights.Add(MovableLight);
 

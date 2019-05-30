@@ -72,7 +72,11 @@ void sampleGBuffer (
     out float3 worldPosition,
     out float3 normal
 ) {
+#if FNA
+    [flatten]
+#else
     [branch]
+#endif
     if (any(GBufferTexelSizeAndMisc.xy)) {
         // FIXME: Should we be offsetting distance field samples too?
         float2 sourceXy = screenPositionPx;
