@@ -76,7 +76,6 @@
     <SquaredPath>..\..\Fracture</SquaredPath>
     <FNAPath>..\..\FNA\</FNAPath>
     <FNALibPath>..\..\FNA\fnalibs</FNALibPath>
-    <ShaderDirectory>shaders</ShaderDirectory>
     <IncludeSTBImage>true</IncludeSTBImage>
   </PropertyGroup>
 

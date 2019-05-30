@@ -1,4 +1,4 @@
-#pragma fxcparams(/Od /Zi)
+#pragma fxcparams(if(FNA==1) /Od /Zi)
 
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\CompilerWorkarounds.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
