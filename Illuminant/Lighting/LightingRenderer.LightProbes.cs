@@ -28,7 +28,10 @@ namespace Squared.Illuminant {
             SetLightShaderParameters(ltrs.ProbeMaterial, ltrs.Key.Quality);
 
             ltrs.ProbeMaterial.Effect.Parameters["GBuffer"].SetValue(_LightProbePositions);
-            ltrs.ProbeMaterial.Effect.Parameters["GBufferTexelSize"].SetValue(new Vector2(1.0f / Configuration.MaximumLightProbeCount, 1.0f));
+            ltrs.ProbeMaterial.Effect.Parameters["GBufferTexelSizeAndMisc"].SetValue(new Vector4(
+                1.0f / Configuration.MaximumLightProbeCount, 1.0f,
+                1, 1
+            ));
             ltrs.ProbeMaterial.Effect.Parameters["ProbeNormals"].SetValue(_LightProbeNormals);
             ltrs.ProbeMaterial.Effect.Parameters["RampTexture"].SetValue(ltrs.Key.RampTexture);
         }

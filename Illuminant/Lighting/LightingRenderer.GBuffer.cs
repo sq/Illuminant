@@ -418,15 +418,31 @@ namespace Squared.Illuminant {
             }
         }
 
+        private float ViewportScaleX () {
+            return PendingDrawViewportScale?.X 
+                ?? PendingFieldViewportScale?.X 
+                ?? 1;
+        }
+
+        private float ViewportScaleY () {
+            return PendingDrawViewportScale?.Y 
+                ?? PendingFieldViewportScale?.Y 
+                ?? 1;
+        }
+
         private void SetGBufferParameters (EffectParameterCollection p) {
             // FIXME: RenderScale?
             if (_GBuffer != null) {
                 p["GBufferViewportRelative"].SetValue(Configuration.GBufferViewportRelative);
-                p["GBufferTexelSize"].SetValue(_GBuffer.InverseSize);
+                p["GBufferTexelSizeAndMisc"].SetValue(new Vector4(
+                    _GBuffer.InverseSize, ViewportScaleX(), ViewportScaleY()
+                ));
                 p["GBuffer"].SetValue(_GBuffer.Texture);
             } else {
                 p.ClearTexture("GBuffer");
-                p["GBufferTexelSize"].SetValue(Vector2.Zero);
+                p["GBufferTexelSizeAndMisc"].SetValue(new Vector4(
+                    0, 0, ViewportScaleX(), ViewportScaleY()
+                ));
             }
         }
     }

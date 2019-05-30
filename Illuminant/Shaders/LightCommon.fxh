@@ -38,7 +38,13 @@
 
 uniform bool   GBufferViewportRelative;
 uniform float  GBufferInvScaleFactor;
-uniform float2 GBufferTexelSize;
+uniform float4 GBufferTexelSizeAndMisc;
+
+#define GetViewportScale GetViewportScalePacked
+
+float2 GetViewportScalePacked () {
+    return GBufferTexelSizeAndMisc.zw;
+}
 
 Texture2D GBuffer      : register(t2);
 sampler GBufferSampler : register(s2) {
@@ -67,7 +73,7 @@ void sampleGBuffer (
     out float3 normal
 ) {
     [branch]
-    if (any(GBufferTexelSize)) {
+    if (any(GBufferTexelSizeAndMisc.xy)) {
         // FIXME: Should we be offsetting distance field samples too?
         float2 sourceXy = screenPositionPx;
         if (GBufferViewportRelative) {
@@ -75,7 +81,7 @@ void sampleGBuffer (
             sourceXy += GetViewportPosition();
         }
 
-        float2 uv     = (sourceXy + 0.5) * GBufferTexelSize;
+        float2 uv     = (sourceXy + 0.5) * GBufferTexelSizeAndMisc.xy;
         float4 sample = tex2Dlod(GBufferSampler, float4(uv, 0, 0));
 
         float relativeY = sample.z * RELATIVEY_SCALE;
@@ -165,7 +171,7 @@ void sampleLightProbeBuffer (
     out float  opacity,
     out float  enableShadows
 ) {
-    float2 uv = screenPositionPx * GBufferTexelSize;
+    float2 uv = screenPositionPx * GBufferTexelSizeAndMisc.xy;
     float4 positionSample = tex2Dlod(GBufferSampler, float4(uv, 0, 0));
 
     opacity = positionSample.w;

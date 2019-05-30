@@ -45,7 +45,9 @@ namespace Squared.Illuminant {
             SetLightShaderParameters(ltrs.ProbeMaterial, ltrs.Key.Quality);
 
             ltrs.ProbeMaterial.Effect.Parameters["GBuffer"].SetValue(_SelectedGIProbePositions);
-            ltrs.ProbeMaterial.Effect.Parameters["GBufferTexelSize"].SetValue(new Vector2(1.0f / _SelectedGIProbePositions.Width, 1.0f / GIProbeSampleCount));
+            ltrs.ProbeMaterial.Effect.Parameters["GBufferTexelSizeAndMisc"].SetValue(new Vector4(
+                1.0f / _SelectedGIProbePositions.Width, 1.0f / GIProbeSampleCount, 1, 1
+            ));
             ltrs.ProbeMaterial.Effect.Parameters["ProbeNormals"].SetValue(_SelectedGIProbeNormals);
             ltrs.ProbeMaterial.Effect.Parameters["RampTexture"].SetValue(ltrs.Key.RampTexture);
         }
@@ -315,7 +317,10 @@ namespace Squared.Illuminant {
                     p.ClearTextures("GBuffer", "SphericalHarmonics", "ProbeNormals");
 
                     p["GBuffer"].SetValue(_SelectedGIProbePositions);
-                    p["GBufferTexelSize"].SetValue(new Vector2(1.0f / _SelectedGIProbePositions.Width, 1.0f / GIProbeSampleCount));
+                    p["GBufferTexelSizeAndMisc"].SetValue(new Vector4(
+                        1.0f / _SelectedGIProbePositions.Width, 1.0f / GIProbeSampleCount,
+                        1, 1
+                    ));
                     p["ProbeNormals"].SetValue(_SelectedGIProbeNormals);
 
                     p["SphericalHarmonicsTexelSize"].SetValue(new Vector2(1.0f / source.Width, 1.0f / source.Height));
