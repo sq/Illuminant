@@ -126,8 +126,8 @@ namespace Squared.Illuminant {
             p["BrightLUT"].SetValue(c.BrightLUT.Texture);
             p["LUTResolutions"].SetValue(new Vector2(c.DarkLUT.Resolution, c.BrightLUT.Resolution));
             p["LUTLevels"].SetValue(new Vector3(c.DarkLevel, c.NeutralBandSize, c.BrightLevel));
-            p["PerChannelLUT"].SetValue(c.PerChannel);
-            p["LUTOnly"].SetValue(c.LUTOnly);
+            p["PerChannelLUT"].SetValue(c.PerChannel ? 1f : 0f);
+            p["LUTOnly"].SetValue(c.LUTOnly ? 1f : 0f);
         }
     }
 }

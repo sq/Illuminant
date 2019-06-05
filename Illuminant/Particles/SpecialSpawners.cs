@@ -103,7 +103,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             Temp3[0] = new Vector4(position, life);
             parameters["PositionConstantCount"].SetValue((float)1);
             parameters["InlinePositionConstants"].SetValue(Temp3);
-            parameters["MultiplyAttributeConstant"].SetValue(MultiplyColorConstant);
+            parameters["MultiplyAttributeConstant"].SetValue(MultiplyColorConstant? 1f : 0f);
             parameters["PatternTexture"].SetValue(Texture.Instance);
             parameters["PatternSizeRowSizeAndResolution"].SetValue(new Vector4(
                 Texture.Instance.Width, Texture.Instance.Height,
@@ -281,13 +281,13 @@ namespace Squared.Illuminant.Particles.Transforms {
             Temp3[0] = new Vector4(position, life);
             parameters["PositionConstantCount"].SetValue((float)1);
             parameters["InlinePositionConstants"].SetValue(Temp3);
-            parameters["AlignPositionConstant"].SetValue(AlignPositionConstant);
-            parameters["MultiplyLife"].SetValue(MultiplyLife);
-            parameters["MultiplyAttributeConstant"].SetValue(MultiplyColorConstant);
+            parameters["AlignPositionConstant"].SetValue(AlignPositionConstant? 1f : 0f);
+            parameters["MultiplyLife"].SetValue(MultiplyLife? 1f : 0f);
+            parameters["MultiplyAttributeConstant"].SetValue(MultiplyColorConstant? 1f : 0f);
             parameters["FeedbackSourceIndex"].SetValue(CurrentFeedbackSourceIndex);
             parameters["SourceVelocityFactor"].SetValue(SourceVelocityFactor);
             parameters["InstanceMultiplier"].SetValue(InstanceMultiplier);
-            parameters["SpawnFromEntireWindow"].SetValue(SpawnFromEntireWindow);
+            parameters["SpawnFromEntireWindow"].SetValue(SpawnFromEntireWindow? 1f : 0f);
         }
 
         public override bool IsValid {

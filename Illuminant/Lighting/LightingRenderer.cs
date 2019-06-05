@@ -1146,8 +1146,8 @@ namespace Squared.Illuminant {
                 );
                 p["ResolveToSRGB"].SetValue(
                     hdr.HasValue
-                        ? hdr.Value.ResolveToSRGB
-                        : false
+                        ? (hdr.Value.ResolveToSRGB ? 1f : 0f)
+                        : 0f
                 );
                 m.Parameters.LightmapUVOffset.SetValue(uvOffset);
 
@@ -1536,7 +1536,7 @@ namespace Squared.Illuminant {
                     }
 
                     p["OutlineSize"]?.SetValue(Math.Max(outlineSize, 1f));
-                    p["FilledInterior"]?.SetValue(mode == VisualizationMode.Silhouettes);
+                    p["FilledInterior"]?.SetValue((mode == VisualizationMode.Silhouettes) ? 1f : 0f);
                 }
             )) {
                 batch.Add(new PrimitiveDrawCall<VisualizeDistanceFieldVertex>(

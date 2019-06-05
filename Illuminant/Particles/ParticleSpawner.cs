@@ -200,9 +200,9 @@ namespace Squared.Illuminant.Particles.Transforms {
             InitConfiguration(engine, now, ref Temp, ref ft);
 
             parameters["AlignVelocityAndPosition"].SetValue(
-                AlignVelocityAndPosition && Position.Circular && Velocity.Circular
+                (AlignVelocityAndPosition && Position.Circular && Velocity.Circular) ? 1f : 0f
             );
-            parameters["ZeroZAxis"].SetValue(ZeroZAxis);
+            parameters["ZeroZAxis"].SetValue(ZeroZAxis ? 1f : 0f);
             parameters["Configuration"].SetValue(Temp);
             parameters["FormulaTypes"].SetValue(ft);
 
@@ -339,7 +339,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             }
             parameters["PositionConstantCount"].SetValue((float)count);
             parameters["PolygonRate"].SetValue(PolygonRate.GetValueOrDefault(0));
-            parameters["PolygonLoop"].SetValue(PolygonLoop);
+            parameters["PolygonLoop"].SetValue(PolygonLoop ? 1f : 0f);
         }
 
         protected override void InitConfiguration (ParticleEngine engine, float now, ref Vector4[] configuration, ref Vector4 formulaTypes) {

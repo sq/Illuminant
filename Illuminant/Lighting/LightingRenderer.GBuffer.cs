@@ -433,7 +433,7 @@ namespace Squared.Illuminant {
         private void SetGBufferParameters (EffectParameterCollection p) {
             // FIXME: RenderScale?
             if (_GBuffer != null) {
-                p["GBufferViewportRelative"].SetValue(Configuration.GBufferViewportRelative);
+                p["GBufferViewportRelative"].SetValue(Configuration.GBufferViewportRelative ? 1f : 0f);
                 p["GBufferTexelSizeAndMisc"].SetValue(new Vector4(
                     _GBuffer.InverseSize, ViewportScaleX(), ViewportScaleY()
                 ));

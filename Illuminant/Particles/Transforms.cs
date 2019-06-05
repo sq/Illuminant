@@ -249,7 +249,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             parameters["NextRandomnessOffset"]?.SetValue(nro);
 
             parameters["FrequencyLerp"].SetValue(t);
-            parameters["ReplaceOldVelocity"].SetValue(ReplaceOldVelocity);
+            parameters["ReplaceOldVelocity"].SetValue(ReplaceOldVelocity? 1f : 0f);
         }
 
         protected override Material GetMaterial (ParticleMaterials materials) {
