@@ -1596,7 +1596,7 @@ namespace Lumined {
 
             if (Nuklear.ComboBox(ref index, (i) =>
                 (i > 0) && (i <= Game.View.Systems.Count)
-                    ? Game.View.Systems[i - 1].Model.Name
+                    ? string.Format("#{0} '{1}'", i, Game.View.Systems[i - 1].Model.Name)
                     : "none",
                 Game.View.Systems.Count + 1
             )) {

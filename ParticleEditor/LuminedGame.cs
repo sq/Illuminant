@@ -428,9 +428,11 @@ namespace Lumined {
             Texture2D backgroundTexture = null;
 
             if (View != null) {
+                var tloader = (View.Engine != null) ? View.Engine.Configuration.TextureLoader : null;
+
                 var bg = View.GetData().Background;
-                if (bg != null) {
-                    bg.EnsureInitialized(View.Engine.Configuration.TextureLoader);
+                if ((bg != null) && (tloader != null)) {
+                    bg.EnsureInitialized(tloader);
                     if (bg.IsInitialized)
                         ir.Draw(bg.Instance, Vector2.Zero, origin: Vector2.One * 0.5f, layer: -1, worldSpace: true);
                 }

@@ -132,6 +132,15 @@ namespace Squared.Illuminant.Modeling {
                 Sort();
         }
 
+        public bool AdditiveBlend {
+            get {
+                return (BlendState == BlendState.Additive);
+            }
+            set {
+                BlendState = (value ? BlendState.Additive : BlendState.AlphaBlend);
+            }
+        }
+
         public SystemModel Clone () {
             var result = new SystemModel {
                 Name = Name,
