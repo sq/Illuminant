@@ -5,12 +5,13 @@
 #include "UpdateCommon.fxh"
 
 void PS_Update (
-    in  float2 xy          : VPOS,
+    ACCEPTS_VPOS,
     out float4 newPosition : COLOR0,
     out float4 newVelocity : COLOR1,
     out float4 renderColor : COLOR2,
     out float4 renderData  : COLOR3
 ) {
+    float2 xy = GET_VPOS;
     float4 oldPosition, oldVelocity, attributes;
     readStateOrDiscard(
         xy, oldPosition, oldVelocity, attributes
@@ -33,12 +34,13 @@ void PS_Update (
 }
 
 void PS_Erase (
-    in  float2 xy          : VPOS,
+    ACCEPTS_VPOS,
     out float4 newPosition : COLOR0,
     out float4 newVelocity : COLOR1,
     out float4 renderColor : COLOR2,
     out float4 renderData  : COLOR3
 ) {
+    float2 xy = GET_VPOS;
     newPosition = newVelocity = renderColor = renderData = 0;
 }
 

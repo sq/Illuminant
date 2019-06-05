@@ -8,10 +8,12 @@ uniform float3 AttractorRadiusesAndStrengths[MAX_ATTRACTORS];
 uniform float  MaximumAcceleration;
 
 void PS_Gravity (
-    in  float2 xy                : VPOS,
+    ACCEPTS_VPOS,
     out float4 newPosition       : COLOR0,
     out float4 newVelocity       : COLOR1
 ) {
+    float2 xy = GET_VPOS;
+
     float4 oldVelocity;
     readStatePV(
         xy, newPosition, oldVelocity

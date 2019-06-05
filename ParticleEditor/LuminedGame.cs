@@ -466,7 +466,7 @@ namespace Lumined {
             if (shouldRenderLighting) {
                 // NOTE: This needs to happen after the particle system update
                 // TODO: Maybe enforce this programmatically?
-                var rl = LightingRenderer.RenderLighting(frame, -8);
+                var rl = LightingRenderer.RenderLighting(frame, -8, viewportScale: Zoom * Vector2.One);
                 rl.Resolve(frame, 4, Vector2.Zero, worldSpace: false, blendState: BlendState.Additive);
             }
 

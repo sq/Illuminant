@@ -6,9 +6,11 @@ uniform float3 AreaCenter, AreaSize;
 uniform float  AreaFalloff;
 
 void PS_CollectParticles (
-    in  float2 xy    : VPOS,
+    ACCEPTS_VPOS,
     out float4 color : COLOR0
 ) {
+    float2 xy = GET_VPOS;
+
     float4 uv = float4(xy * getTexel(), 0, 0);
     float4 worldPosition = tex2Dlod(PositionSampler, uv);
 

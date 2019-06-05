@@ -164,7 +164,7 @@ void Spawn_Stage2(
 }
 
 void PS_Spawn (
-    in  float2 xy            : VPOS,
+    ACCEPTS_VPOS,
     out float4 newPosition   : COLOR0,
     out float4 newVelocity   : COLOR1,
     out float4 newAttributes : COLOR2
@@ -172,6 +172,8 @@ void PS_Spawn (
     int index1, index2;
     float positionIndexT;
     float4 random1, random2, random3, positionConstant;
+
+    float2 xy = GET_VPOS;
 
     if (!Spawn_Stage1(xy, random1, random2, random3, index1, index2, positionIndexT))
         return;
@@ -184,7 +186,7 @@ void PS_Spawn (
 }
 
 void PS_SpawnFromPositionTexture (
-    in  float2 xy            : VPOS,
+    ACCEPTS_VPOS,
     out float4 newPosition   : COLOR0,
     out float4 newVelocity   : COLOR1,
     out float4 newAttributes : COLOR2
@@ -192,6 +194,8 @@ void PS_SpawnFromPositionTexture (
     int index1, index2;
     float positionIndexT;
     float4 random1, random2, random3, positionConstant;
+
+    float2 xy = GET_VPOS;
 
     if (!Spawn_Stage1(xy, random1, random2, random3, index1, index2, positionIndexT))
         return;
@@ -204,11 +208,12 @@ void PS_SpawnFromPositionTexture (
 }
 
 void PS_SpawnFeedback (
-    in  float2 xy            : VPOS,
+    ACCEPTS_VPOS,
     out float4 newPosition   : COLOR0,
     out float4 newVelocity   : COLOR1,
     out float4 newAttributes : COLOR2
 ) {
+    float2 xy = GET_VPOS;
     float index = (xy.x) + (xy.y * ChunkSizeAndIndices.x);
 
     PREFER_BRANCH
@@ -256,11 +261,12 @@ void PS_SpawnFeedback (
 }
 
 void PS_SpawnPattern (
-    in  float2 xy            : VPOS,
+    ACCEPTS_VPOS,
     out float4 newPosition   : COLOR0,
     out float4 newVelocity   : COLOR1,
     out float4 newAttributes : COLOR2
 ) {
+    float2 xy = GET_VPOS;
     float index = (xy.x) + (xy.y * ChunkSizeAndIndices.x);
 
     PREFER_BRANCH

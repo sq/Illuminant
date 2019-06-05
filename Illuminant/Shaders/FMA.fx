@@ -27,10 +27,12 @@ float4 computeFMA (
 }
 
 void PS_FMA (
-    in  float2 xy            : VPOS,
+    ACCEPTS_VPOS,
     out float4 newPosition   : COLOR0,
     out float4 newVelocity   : COLOR1
 ) {
+    float2 xy = GET_VPOS;
+
     float4 oldPosition, oldVelocity;
     readStatePV(
         xy, oldPosition, oldVelocity

@@ -142,6 +142,9 @@ namespace Squared.Illuminant.Particles.Transforms {
                 RateError = currentRate - spawnCount;
             }
 
+            if (spawnCount == 1)
+                spawnCount = 2;
+
             if (MaximumTotal.HasValue) {
                 var remaining = MaximumTotal.Value - TotalSpawned;
                 if (spawnCount > remaining) {
