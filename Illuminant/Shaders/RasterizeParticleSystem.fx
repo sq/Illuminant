@@ -123,7 +123,7 @@ void VS_PosVelAttr(
 }
 
 float computeCircularAlpha (float3 positionXyAndRounding) {
-    float2 position = positionXyAndRounding;
+    float2 position = positionXyAndRounding.xy;
     if (Rounded) {
         float distance = length(position);
         float power = max(positionXyAndRounding.z, 0.01);

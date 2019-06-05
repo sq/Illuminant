@@ -317,10 +317,10 @@ namespace Squared.Illuminant.Particles {
                 var u = new RasterizeParticleSystem(System.Engine.Configuration, System.Configuration);
                 System.Engine.uRasterize.TrySet(m, ref u);
 
-                p["ColumnFromVelocity"]?.SetValue(appearance?.ColumnFromVelocity ?? false);
-                p["RowFromVelocity"]?.SetValue(appearance?.RowFromVelocity ?? false);
-                p["BitmapBilinear"]?.SetValue(appearance?.Bilinear ?? true);
-                p["Rounded"]?.SetValue(appearance?.Rounded ?? false);
+                p["ColumnFromVelocity"]?.SetValue((appearance?.ColumnFromVelocity ?? false) ? 1f : 0f);
+                p["RowFromVelocity"]?.SetValue((appearance?.RowFromVelocity ?? false) ? 1f : 0f);
+                p["BitmapBilinear"]?.SetValue((appearance?.Bilinear ?? true) ? 1f : 0f);
+                p["Rounded"]?.SetValue((appearance?.Rounded ?? false) ? 1f : 0f);
 
                 System.MaybeSetLifeRampParameters(p);
             }

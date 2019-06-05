@@ -198,7 +198,7 @@ namespace Lumined {
             QueuedResets.Clear();
 
             var data = View.GetData();
-            if (data != null) {
+            if ((data != null) && (View.Engine != null)) {
                 View.Engine.Configuration.UpdatesPerSecond = data.FrameRate;
                 View.Engine.Configuration.MaximumUpdateDeltaTimeSeconds = data.MaximumDeltaTimeMS / 1000f;
                 if ((int)data.ChunkSize != View.Engine.Configuration.ChunkSize)
