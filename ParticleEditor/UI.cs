@@ -263,6 +263,9 @@ namespace Lumined {
             Nuklear.NewRow(LineHeight + 3, 2);
             Nuklear.Property("#Draw Order", ref s.Model.DrawOrder, -1, Model.Systems.Count + 1, 1, 0.5f);
             Nuklear.Property("#Update Order", ref s.Model.UpdateOrder, -1, Model.Systems.Count + 1, 1, 0.5f);
+            bool addBlend = s.Model.AdditiveBlend;
+            Nuklear.Checkbox("Additive Blend", ref addBlend);
+            s.Model.AdditiveBlend = addBlend;
 
             var config = Controller.SelectedSystem.Model.Configuration;
             SystemProperties.Prepare(config);

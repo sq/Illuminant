@@ -47,6 +47,7 @@ namespace Squared.Illuminant.Modeling {
                 case "ModelProperty":
                 case "DynamicMatrix":
                 case "Matrix":
+                case "Color":
                     return true;
                 default:
                     return false;
@@ -64,10 +65,12 @@ namespace Squared.Illuminant.Modeling {
         }
 
         public override object ReadJson (JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer) {
+            JToken token;
+
             switch (objectType.Name) {
                 case "NamedVariableCollection": {
                     var result = (NamedVariableCollection)existingValue ?? new NamedVariableCollection();
-                    var token = JToken.Load(reader);
+                    token = JToken.Load(reader);
                     if (token.Type != JTokenType.Object)
                         throw new InvalidDataException();
                     var obj = (JObject)token;
@@ -84,7 +87,7 @@ namespace Squared.Illuminant.Modeling {
                     Type expectedValueType = objectType.IsGenericType ? objectType.GetGenericArguments()[0] : null;
                     Type tResult = objectType.IsGenericType ? typeof(Parameter<>).MakeGenericType(expectedValueType) : null;
 
-                    var token = JToken.Load(reader);
+                    token = JToken.Load(reader);
                     var obj = token as JObject;
                     IParameter result;
                     if (obj != null) {
@@ -152,6 +155,11 @@ namespace Squared.Illuminant.Modeling {
                             arr[8], arr[9], arr[10], arr[11],
                             arr[12], arr[13], arr[14], arr[15]
                         );
+                case "Color":
+                    token = JToken.Load(reader);
+                    var text = token.ToString();
+                    var rgba = text.Split(',').Select(s => int.Parse(s)).ToList();
+                    return new Color(rgba[0], rgba[1], rgba[2], rgba[3]);
                 default:
                     throw new NotImplementedException();
             }
@@ -236,6 +244,11 @@ namespace Squared.Illuminant.Modeling {
                             m.M41, m.M42, m.M43, m.M44,
                         };
                     serializer.Serialize(writer, values);
+                    return;
+                }
+                case "Color": {
+                    var c = (Color)value;
+                    serializer.Serialize(writer, string.Format("{0},{1},{2},{3}", c.R, c.G, c.B, c.A));
                     return;
                 }
                 default:

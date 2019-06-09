@@ -438,9 +438,11 @@ namespace Lumined {
                 }
 
                 foreach (var spr in View.GetData().Sprites) {
+                    if (tloader == null)
+                        continue;
                     if (spr.Texture == null)
                         continue;
-                    spr.Texture.EnsureInitialized(View.Engine.Configuration.TextureLoader);
+                    spr.Texture.EnsureInitialized(tloader);
                     if (!spr.Texture.IsInitialized)
                         continue;
                     var tex = spr.Texture.Instance;
