@@ -15,7 +15,7 @@ using Squared.Illuminant.Configuration;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Squared.Illuminant.Modeling {
-    public class EngineModel {
+    public partial class EngineModel {
         public string Filename { get; private set; }
         public readonly NamedVariableCollection NamedVariables = new NamedVariableCollection();
         public readonly List<SystemModel> Systems = new List<SystemModel>();
@@ -84,7 +84,7 @@ namespace Squared.Illuminant.Modeling {
                 s.Sort();
         }
 
-        public void Save (string fileName) {
+        public void Save (string fileName, bool saveCode = true) {
             Normalize(true);
 
             var tempPath = Path.GetTempFileName();
@@ -94,6 +94,19 @@ namespace Squared.Illuminant.Modeling {
             }
             File.Copy(tempPath, fileName, true);
             Filename = Path.GetFullPath(fileName);
+
+            if (saveCode)
+                SaveAsCode(fileName.Replace(".lumined", ".cs"));
+        }
+
+        public void SaveAsCode (string fileName) {
+            using (var outStream = File.OpenWrite(fileName)) {
+                outStream.SetLength(0);
+                using (var sw = new StreamWriter(outStream, Encoding.UTF8)) {
+                    WriteCodeHeader(sw);
+                    WriteCodeFooter(sw);
+                }
+            }
         }
 
         public IEnumerable<string> ConstantNamesOfType (Type valueType) {
