@@ -508,7 +508,7 @@ namespace Lumined {
 
             e.Lights.Clear();
 
-            if (View == null)
+            if ((View == null) || (View.Engine == null))
                 return;
             var d = View.GetData();
 

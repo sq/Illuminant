@@ -95,18 +95,25 @@ namespace Squared.Illuminant.Modeling {
             File.Copy(tempPath, fileName, true);
             Filename = Path.GetFullPath(fileName);
 
-            if (saveCode)
-                SaveAsCode(fileName.Replace(".lumined", ".cs"));
-        }
-
-        public void SaveAsCode (string fileName) {
-            using (var outStream = File.OpenWrite(fileName)) {
-                outStream.SetLength(0);
-                using (var sw = new StreamWriter(outStream, Encoding.UTF8)) {
-                    WriteCodeHeader(sw);
-                    WriteCodeFooter(sw);
+            if (saveCode) {
+                using (var outStream = File.OpenWrite(fileName.Replace(Path.GetExtension(fileName), ".cs"))) {
+                    outStream.SetLength(0);
+                    using (var sw = new StreamWriter(outStream, Encoding.UTF8))
+                        SaveAsCode(sw);
                 }
             }
+        }
+
+        public void SaveAsCode (TextWriter writer) {
+            var name = Path.GetFileNameWithoutExtension(Filename).Replace(" ", "_").Replace("-", "_");
+            name = name.Substring(0, 1).ToUpper() + name.Substring(1);
+
+            WriteCodeHeader(writer, name);
+            WriteConfiguration(writer);
+            WriteNamedVariables(writer);
+            WriteUserData(writer);
+            WriteSystems(writer);
+            WriteCodeFooter(writer);
         }
 
         public IEnumerable<string> ConstantNamesOfType (Type valueType) {
