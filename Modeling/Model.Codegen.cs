@@ -16,6 +16,12 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace Squared.Illuminant.Modeling {
     public partial class EngineModel {
+        private static HashSet<Type> IncludedSerializationTypes = new HashSet<Type> {
+            typeof(ParticleCollision),
+            typeof(ParticleAppearance),
+            typeof(ParticleColor)
+        };
+
         private string GetSystemName (SystemModel sm, int index) {
             if (String.IsNullOrWhiteSpace(sm.Name))
                 return "System" + index;
@@ -143,7 +149,7 @@ namespace Squared.Illuminant.Compiled {{
                     if (getValue == null)
                         value = f.GetValue(o);
                 } else if (p != null) {
-                    if (!p.CanWrite)
+                    if (!p.CanWrite || !p.CanRead)
                         continue;
                     if (p.GetSetMethod(false) == null)
                         continue;
@@ -305,6 +311,9 @@ namespace Squared.Illuminant.Compiled {{
 
             type = (type ?? value.GetType());
 
+            // TODO: Lazy resources
+            // TODO: Formulas
+
             switch (type.Name) {
                 case "Boolean":
                     return (bool)value ? "true" : "false";
@@ -332,6 +341,16 @@ namespace Squared.Illuminant.Compiled {{
                     return string.Format(
                         "\"{0}\"", s.Replace("\"", "\\\"")
                     );
+            }
+
+            if (IncludedSerializationTypes.Contains(type)) {
+                var sb = new StringBuilder();
+                using (var sw = new StringWriter(sb)) {
+                    sb.AppendLine("{");
+                    WriteMembers(sw, value, type);
+                    sb.AppendLine("}");
+                }
+                return sb.ToString();
             }
 
             // FIXME
