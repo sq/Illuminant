@@ -155,7 +155,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             }
         }
 
-        private bool _IsActive;
+        private bool _IsActive = true;
 
         public bool IsActive {
             get {
