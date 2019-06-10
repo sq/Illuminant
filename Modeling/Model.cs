@@ -109,10 +109,8 @@ namespace Squared.Illuminant.Modeling {
             name = name.Substring(0, 1).ToUpper() + name.Substring(1);
 
             WriteCodeHeader(writer, name);
-            WriteConfiguration(writer);
-            WriteNamedVariables(writer);
-            WriteUserData(writer);
             WriteSystems(writer);
+            WriteNamedVariables(writer);
             WriteCodeFooter(writer);
         }
 

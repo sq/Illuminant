@@ -17,29 +17,29 @@ using Microsoft.Xna.Framework.Graphics;
 namespace Squared.Illuminant.Modeling {
     public partial class EngineModel {
         private string GetSystemName (SystemModel sm, int index) {
-            var name = (sm.Name ?? "").Replace(" ", "").Replace("-", "");
-            name = name.Substring(0, 1).ToUpper().Substring(1);
-            if (String.IsNullOrWhiteSpace(name)) {
-                name = "System" + index;
-            }
+            if (String.IsNullOrWhiteSpace(sm.Name))
+                return "System" + index;
+            else
+                return FormatName(sm.Name);
+        }
+
+        private string FormatName (string name) {
+            name = (name ?? "").Replace(" ", "").Replace("-", "").Replace(".", "");
+            name = name.Substring(0, 1).ToUpper() + name.Substring(1);
             return name;
         }
 
         private void WriteCodeHeader (TextWriter tw, string name) {
             tw.WriteLine(
 @"using System;
-using System.Collections.Generic;
-using Squared.Illuminant;
 using Squared.Illuminant.Particles;
-using Squared.Illuminant.Particles.Transforms;
+using Microsoft.Xna.Framework;
 
 namespace Squared.Illuminant.Compiled {{
     public class @{0} : IDisposable {{
         public bool IsDisposed {{ get; private set; }}
 
         public readonly ParticleEngine Engine;
-        public readonly Dictionary<string, object> NamedVariables;
-        public readonly Dictionary<string, object> UserData;
 ", name
             );
 
@@ -59,8 +59,6 @@ namespace Squared.Illuminant.Compiled {{
         private void WriteCodeFooter (TextWriter tw) {
             tw.WriteLine(
 @"
-        }
-
         public void Dispose () {
             if (IsDisposed)
                 return;
@@ -82,9 +80,6 @@ namespace Squared.Illuminant.Compiled {{
             );
         }
 
-        private void WriteConfiguration (TextWriter tw) {
-        }
-
         private void WriteSystems (TextWriter tw) {
             int i = 0;
             foreach (var s in Systems) {
@@ -92,18 +87,32 @@ namespace Squared.Illuminant.Compiled {{
 
                 WriteSystem(tw, s, name);
             }
+
+            tw.WriteLine(
+@"        }
+"
+            );
         }
 
         private void WriteSystem (TextWriter tw, SystemModel s, string name) {
             tw.WriteLine(
 @"            
-            var {0}Configuration = new ParticleSystemConfiguration {{
-            }};
+            var {0}Configuration = new ParticleSystemConfiguration {{", name
+            );
+
+            WriteConfiguration(tw, s.Configuration);
+
+            tw.WriteLine(
+@"            }};
 
             s = {0} = new ParticleSystem(engine, {0}Configuration);", name
             );
 
             WriteTransforms(tw, s);
+        }
+
+        private void WriteConfiguration (TextWriter tw, ParticleSystemConfiguration c) {
+            WriteMembers(tw, c, typeof(ParticleSystemConfiguration));
         }
 
         private void WriteTransforms (TextWriter tw, SystemModel s) {
@@ -112,18 +121,222 @@ namespace Squared.Illuminant.Compiled {{
             }
         }
 
+        delegate bool TryGetValue (string name, out object result);
+
+        private void WriteMembers (
+            TextWriter tw, object o, Type type,
+            TryGetValue getValue = null
+        ) {
+            foreach (var m in type.GetMembers(BindingFlags.Public | BindingFlags.Instance)) {
+                var f = m as FieldInfo;
+                var p = m as PropertyInfo;
+
+                string memberName;
+                Type memberType;
+                object value = null;
+
+                if (f != null) {
+                    if (f.IsInitOnly)
+                        continue;
+                    memberName = f.Name;
+                    memberType = f.FieldType;
+                    if (getValue == null)
+                        value = f.GetValue(o);
+                } else if (p != null) {
+                    if (!p.CanWrite)
+                        continue;
+                    if (p.GetSetMethod(false) == null)
+                        continue;
+                    memberName = p.Name;
+                    memberType = p.PropertyType;
+                    if (getValue == null)
+                        value = p.GetValue(o);
+                } else {
+                    continue;
+                }
+
+                if (getValue != null) {
+                    if (!getValue(memberName, out value))
+                        continue;
+                }
+
+                if (value == null)
+                    continue;
+
+                var formatted = FormatValue(value, memberType);
+                if (formatted == null)
+                    continue;
+
+                tw.WriteLine("                {0} = {1},", memberName, formatted);
+            }
+        }
+
         private void WriteTransform (TextWriter tw, SystemModel s, TransformModel t) {
             tw.WriteLine(
 @"
-            s.Transforms.Add(new {0} {{
-            }});", t.Type.FullName
+            s.Transforms.Add(new {0} {{", GetTypeName(t.Type)
             );
-        }
 
-        private void WriteUserData (TextWriter tw) {
+            WriteMembers(tw, t, t.Type, (string name, out object value) => {
+                if (!t.Properties.ContainsKey(name)) {
+                    value = null;
+                    return false;
+                }
+
+                value = t.Properties[name].Value;
+                return true;
+            });
+
+            tw.WriteLine("            });");
         }
 
         private void WriteNamedVariables (TextWriter tw) {
+            foreach (var kvp in NamedVariables) {
+                var name = FormatName(kvp.Key);
+                WriteNamedVariable(tw, name, kvp.Value);
+            }
+        }
+
+        private string GetTypeName (Type t) {
+            if (t == null)
+                return "object";
+
+            var typeName = t.Namespace + "." + t.Name.Replace("`1", "").Replace("`2", "").Replace("`3", "");
+            var ga = t.GetGenericArguments();
+            if ((ga != null) && (ga.Length > 0)) {
+                typeName += "<";
+                bool first = true;
+                foreach (var a in ga) {
+                    if (!first)
+                        typeName += ", ";
+
+                    var aName = GetTypeName(a);
+                    typeName += aName;
+                    first = false;
+                }
+                typeName += ">";
+            }
+
+            return typeName.Replace("Squared.Illuminant.", "")
+                .Replace("Microsoft.Xna.Framework.", "")
+                .Replace("System.", "");
+        }
+
+        private void WriteNamedVariable (TextWriter tw, string name, object value) {
+            Type valueType = null;
+            string valueText = "null";
+
+            if (value != null)
+                valueText = FormatValue(value, ref valueType);
+            else
+                valueType = typeof(object);
+
+            var typeName = GetTypeName(valueType);
+
+            tw.WriteLine("        public {0} {1} = ", typeName, FormatName(name));
+            tw.WriteLine("            {0};", valueText ?? "default(" + typeName + ")");
+        }
+
+        private string FormatValue (object value, Type type = null) {
+            return FormatValue(value, ref type);
+        }
+
+        private string MakeEvaluator (string name) {
+            var isBezier = false;
+            IParameter param;
+            if (NamedVariables.TryGetValue(name, out param))
+                isBezier = param.IsBezier;
+
+            name = FormatName(name);
+
+            if (isBezier)
+                return string.Format("(t) => {0}.Evaluate(t)", name);
+            else
+                return string.Format("(t) => {0}", name);
+        }
+
+        private string FormatValue (object value, ref Type type) {
+            if (value == null)
+                return null;
+
+            var iParam = value as IParameter;
+            string valueText;
+            if (iParam != null) {
+                if (iParam.IsConstant) {
+                    type = iParam.ValueType;
+                    value = iParam.Constant;
+                    return FormatValue(value);
+                } else if (iParam.IsBezier) {
+                    type = iParam.Bezier.GetType();
+                    value = iParam.Bezier;
+                    return FormatValue(iParam.Bezier);
+                } else if (iParam.IsReference) {
+                    type = iParam.GetType();
+                    return string.Format(
+                        "new {0}({1}, {2})",
+                        GetTypeName(type),
+                        FormatValue(iParam.Name),
+                        MakeEvaluator(iParam.Name)
+                    );
+                }
+            } else
+                type = value.GetType();
+
+            var tempType = type;
+
+            var bezier = value as IBezier;
+            if (bezier != null) {
+                return string.Format(
+                    @"new {0} {{
+                A = {1},
+                B = {2},
+                C = {3},
+                D = {4},
+                Count = {5}, Mode = BezierTimeMode.{6},
+                MinValue = {7}, MaxValue = {8}
+            }}", 
+                    GetTypeName(type),
+                    FormatValue(bezier[0]), FormatValue(bezier[1]),
+                    FormatValue(bezier[2]), FormatValue(bezier[3]),
+                    bezier.Count, bezier.Mode,
+                    FormatValue(bezier.MinValue), FormatValue(bezier.MaxValue)
+                );
+            }
+
+            type = (type ?? value.GetType());
+
+            switch (type.Name) {
+                case "Boolean":
+                    return (bool)value ? "true" : "false";
+                case "Int32":
+                    return value.ToString();
+                case "Single":
+                    return value.ToString() + "f";
+                case "Vector2":
+                    var v2 = (Vector2)value;
+                    return "new Vector2(" + FormatValue(v2.X) + 
+                        ", " + FormatValue(v2.Y) + ")";
+                case "Vector3":
+                    var v3 = (Vector3)value;
+                    return "new Vector3(" + FormatValue(v3.X) + 
+                        ", " + FormatValue(v3.Y) + 
+                        ", " + FormatValue(v3.Z) + ")";
+                case "Vector4":
+                    var v4 = (Vector4)value;
+                    return "new Vector4(" + FormatValue(v4.X) + 
+                        ", " + FormatValue(v4.Y) + 
+                        ", " + FormatValue(v4.Z) + 
+                        ", " + FormatValue(v4.W) + ")";
+                case "String":
+                    var s = (string)value;
+                    return string.Format(
+                        "\"{0}\"", s.Replace("\"", "\\\"")
+                    );
+            }
+
+            // FIXME
+            // throw new NotImplementedException(value.GetType().FullName);
+            return null;
         }
     }
 }
