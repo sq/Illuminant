@@ -343,6 +343,12 @@ namespace Squared.Illuminant.Configuration {
 
             return Instance != null;
         }
+
+        public static implicit operator ParticleSystemReference (Particles.ParticleSystem instance) {
+            return new ParticleSystemReference {
+                Instance = instance
+            };
+        }
     }
 
     public class ParameterConverter : TypeConverter {

@@ -54,7 +54,7 @@ namespace TestGame.Scenes {
             Bear.Sparks.Update(frame, -4);
             Bear.Smoke.Update(frame, -3);
 
-            ClearBatch.AddNew(frame, 0, Game.Materials.Clear, clearColor: Color.Black);
+            ClearBatch.AddNew(frame, 0, Game.Materials.Clear, clearColor: Color.DarkTurquoise * 0.3f);
 
             using (var group = BatchGroup.New(
                 frame, 2, (dm, _) => {
@@ -65,7 +65,7 @@ namespace TestGame.Scenes {
                 }
             )) {
                 Bear.Smoke.Render(
-                    group, 0
+                    group, 0, blendState: BlendState.AlphaBlend
                 );
                 Bear.Sparks.Render(
                     group, 1, blendState: RenderStates.AdditiveBlend
@@ -74,6 +74,7 @@ namespace TestGame.Scenes {
         }
 
         public override void Update (GameTime gameTime) {
+            Game.IsMouseVisible = true;
         }
     }
 }

@@ -19,7 +19,8 @@ namespace Squared.Illuminant.Modeling {
         private static HashSet<Type> IncludedSerializationTypes = new HashSet<Type> {
             typeof(ParticleCollision),
             typeof(ParticleAppearance),
-            typeof(ParticleColor)
+            typeof(ParticleColor),
+            typeof(ParticleSystemReference)
         };
 
         private string GetSystemName (SystemModel sm, int index) {
@@ -94,6 +95,14 @@ namespace Squared.Illuminant.Compiled {{
                 WriteSystem(tw, s, name);
             }
 
+            i = 0;
+            foreach (var s in Systems) {
+                var name = GetSystemName(s, i++);
+
+                WriteTransforms(tw, s, name);
+            }
+
+
             tw.WriteLine(
 @"        }
 "
@@ -111,19 +120,17 @@ namespace Squared.Illuminant.Compiled {{
             tw.WriteLine(
 @"            }};
 
-            s = {0} = new ParticleSystem(engine, {0}Configuration);", name
+            {0} = new ParticleSystem(engine, {0}Configuration);", name
             );
-
-            WriteTransforms(tw, s);
         }
 
         private void WriteConfiguration (TextWriter tw, ParticleSystemConfiguration c) {
             WriteMembers(tw, c, typeof(ParticleSystemConfiguration));
         }
 
-        private void WriteTransforms (TextWriter tw, SystemModel s) {
+        private void WriteTransforms (TextWriter tw, SystemModel s, string systemName) {
             foreach (var t in s.Transforms) {
-                WriteTransform(tw, s, t);
+                WriteTransform(tw, s, systemName, t);
             }
         }
 
@@ -177,10 +184,10 @@ namespace Squared.Illuminant.Compiled {{
             }
         }
 
-        private void WriteTransform (TextWriter tw, SystemModel s, TransformModel t) {
+        private void WriteTransform (TextWriter tw, SystemModel s, string systemName, TransformModel t) {
             tw.WriteLine(
 @"
-            s.Transforms.Add(new {0} {{", GetTypeName(t.Type)
+            {0}.Transforms.Add(new {1} {{", systemName, GetTypeName(t.Type)
             );
 
             WriteMembers(tw, t, t.Type, (string name, out object value) => {
@@ -320,6 +327,11 @@ namespace Squared.Illuminant.Compiled {{
                 if (localName.StartsWith("\\"))
                     localName = localName.Substring(1);
                 return string.Format("{{ Name = {0} }}", FormatValue(localName));
+            }
+
+            if (value is ParticleSystemReference) {
+                var reference = (ParticleSystemReference)value;
+                return "@" + FormatName(reference.Name);
             }
 
             var formula = value as IFormula;
