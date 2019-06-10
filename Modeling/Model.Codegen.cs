@@ -294,12 +294,12 @@ namespace Squared.Illuminant.Compiled {{
             if (bezier != null) {
                 return string.Format(
                     @"new {0} {{
-                A = {1},
-                B = {2},
-                C = {3},
-                D = {4},
-                Count = {5}, Mode = BezierTimeMode.{6},
-                MinValue = {7}, MaxValue = {8}
+                    A = {1},
+                    B = {2},
+                    C = {3},
+                    D = {4},
+                    Count = {5}, Mode = BezierTimeMode.{6},
+                    MinValue = {7}, MaxValue = {8}
             }}", 
                     GetTypeName(type),
                     FormatValue(bezier[0]), FormatValue(bezier[1]),
@@ -322,7 +322,37 @@ namespace Squared.Illuminant.Compiled {{
                 return string.Format("{{ Name = {0} }}", FormatValue(localName));
             }
 
-            // TODO: Lazy resources
+            var formula = value as IFormula;
+            if (formula != null) {
+                if (formula.Type != null) {
+                    return string.Format(
+                        @"new {0} {{
+                        Constant = {1},
+                        Offset = {2},
+                        RandomScale = {3},
+                        Type = FormulaType.{4}
+                }}", 
+                        GetTypeName(type),
+                        FormatValue(formula.Constant),
+                        FormatValue(formula.Offset),
+                        FormatValue(formula.RandomScale),
+                        formula.Type
+                    );
+                } else {
+                    return string.Format(
+                        @"new {0} {{
+                        Constant = {1},
+                        Offset = {2},
+                        RandomScale = {3}
+                }}", 
+                        GetTypeName(type),
+                        FormatValue(formula.Constant),
+                        FormatValue(formula.Offset),
+                        FormatValue(formula.RandomScale)
+                    );
+                }
+            }
+
             // TODO: Formulas
 
             switch (type.Name) {

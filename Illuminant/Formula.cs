@@ -7,10 +7,41 @@ using Microsoft.Xna.Framework;
 using Squared.Illuminant.Configuration;
 
 namespace Squared.Illuminant {
-    public class Formula1 {
+    public interface IFormula {
+        IParameter Constant { get; }
+        IParameter RandomScale { get; }
+        IParameter Offset { get; }
+        FormulaType? Type { get; }
+    }
+
+    public class Formula1 : IFormula {
         public Parameter<float> Constant;
         public Parameter<float> RandomScale;
         public Parameter<float> Offset;
+
+        FormulaType? IFormula.Type {
+            get {
+                return null;
+            }
+        }
+
+        IParameter IFormula.Constant {
+            get {
+                return Constant;
+            }
+        }
+
+        IParameter IFormula.RandomScale {
+            get {
+                return RandomScale;
+            }
+        }
+
+        IParameter IFormula.Offset {
+            get {
+                return Offset;
+            }
+        }
 
         public void SetToUnitNormal () {
             Constant = 0;
@@ -50,11 +81,35 @@ namespace Squared.Illuminant {
         }
     }
 
-    public class Formula3 {
+    public class Formula3 : IFormula {
         public Parameter<Vector3> Constant;
         public Parameter<Vector3> RandomScale;
         public Parameter<Vector3> Offset;
         public FormulaType Type;
+
+        FormulaType? IFormula.Type {
+            get {
+                return Type;
+            }
+        }
+
+        IParameter IFormula.Constant {
+            get {
+                return Constant;
+            }
+        }
+
+        IParameter IFormula.RandomScale {
+            get {
+                return RandomScale;
+            }
+        }
+
+        IParameter IFormula.Offset {
+            get {
+                return Offset;
+            }
+        }
 
         internal bool Circular {
             get {
@@ -132,10 +187,34 @@ namespace Squared.Illuminant {
         }
     }
 
-    public class Formula4 {
+    public class Formula4 : IFormula {
         public Parameter<Vector4> Constant;
         public Parameter<Vector4> RandomScale;
         public Parameter<Vector4> Offset;
+
+        FormulaType? IFormula.Type {
+            get {
+                return null;
+            }
+        }
+
+        IParameter IFormula.Constant {
+            get {
+                return Constant;
+            }
+        }
+
+        IParameter IFormula.RandomScale {
+            get {
+                return RandomScale;
+            }
+        }
+
+        IParameter IFormula.Offset {
+            get {
+                return Offset;
+            }
+        }
 
         public void SetToConstant (Vector4 value) {
             Constant = value;

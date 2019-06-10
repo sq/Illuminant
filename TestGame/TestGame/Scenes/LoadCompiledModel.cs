@@ -56,12 +56,21 @@ namespace TestGame.Scenes {
 
             ClearBatch.AddNew(frame, 0, Game.Materials.Clear, clearColor: Color.Black);
 
-            Bear.Smoke.Render(
-                frame, 2
-            );
-            Bear.Sparks.Render(
-                frame, 3, blendState: RenderStates.AdditiveBlend
-            );
+            using (var group = BatchGroup.New(
+                frame, 2, (dm, _) => {
+                    var vt = Game.Materials.ViewTransform;
+                    vt.Position = new Vector2(-Width / 2f, -Height / 2f) / 3f;
+                    vt.Scale = Vector2.One * 3f;
+                    Game.Materials.ViewTransform = vt;
+                }
+            )) {
+                Bear.Smoke.Render(
+                    group, 0
+                );
+                Bear.Sparks.Render(
+                    group, 1, blendState: RenderStates.AdditiveBlend
+                );
+            }
         }
 
         public override void Update (GameTime gameTime) {
