@@ -7,11 +7,15 @@ using System.Threading.Tasks;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Squared.Illuminant {
+    public interface ILazyResource {
+        string Name { get; }
+    }
+
     [Serializable]
-    public class LazyResource<T> : ISerializable, ICloneable 
+    public class LazyResource<T> : ISerializable, ICloneable, ILazyResource 
         where T : GraphicsResource {
 
-        public string Name;
+        public string Name { get; set; }
         [NonSerialized]
         public T Instance;
 

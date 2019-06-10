@@ -239,7 +239,7 @@ namespace Squared.Illuminant.Compiled {{
 
             var typeName = GetTypeName(valueType);
 
-            tw.WriteLine("        public {0} {1} = ", typeName, FormatName(name));
+            tw.WriteLine("        public {0} @{1} = ", typeName, FormatName(name));
             tw.WriteLine("            {0};", valueText ?? "default(" + typeName + ")");
         }
 
@@ -256,9 +256,9 @@ namespace Squared.Illuminant.Compiled {{
             name = FormatName(name);
 
             if (isBezier)
-                return string.Format("(t) => {0}.Evaluate(t)", name);
+                return string.Format("(t) => @{0}.Evaluate(t)", name);
             else
-                return string.Format("(t) => {0}", name);
+                return string.Format("(t) => @{0}", name);
         }
 
         private string FormatValue (object value, ref Type type) {
@@ -311,6 +311,17 @@ namespace Squared.Illuminant.Compiled {{
 
             type = (type ?? value.GetType());
 
+            var lazyResource = value as ILazyResource;
+            if ((lazyResource != null) && (lazyResource.Name != null)) {
+                var localName = lazyResource.Name;
+                var absolutePath = Path.GetDirectoryName(Path.GetFullPath(Filename));
+                var absoluteName = Path.GetFullPath(lazyResource.Name);
+                localName = absoluteName.Replace(absolutePath, "");
+                if (localName.StartsWith("\\"))
+                    localName = localName.Substring(1);
+                return string.Format("{{ Name = {0} }}", FormatValue(localName));
+            }
+
             // TODO: Lazy resources
             // TODO: Formulas
 
@@ -339,7 +350,7 @@ namespace Squared.Illuminant.Compiled {{
                 case "String":
                     var s = (string)value;
                     return string.Format(
-                        "\"{0}\"", s.Replace("\"", "\\\"")
+                        "\"{0}\"", s.Replace("\\", "\\\\").Replace("\"", "\\\"")
                     );
             }
 

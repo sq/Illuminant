@@ -108,6 +108,8 @@ namespace Squared.Illuminant.Modeling {
             var name = Path.GetFileNameWithoutExtension(Filename).Replace(" ", "_").Replace("-", "_");
             name = name.Substring(0, 1).ToUpper() + name.Substring(1);
 
+            writer.WriteLine("// Machine-generated from '{0}'", Filename);
+            writer.WriteLine();
             WriteCodeHeader(writer, name);
             WriteSystems(writer);
             WriteNamedVariables(writer);
