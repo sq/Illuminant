@@ -42,6 +42,9 @@ namespace Squared.Illuminant.Modeling {
 using Squared.Illuminant.Particles;
 using Microsoft.Xna.Framework;
 
+using C_RS = Squared.Render.Convenience.RenderStates;
+using G_BS = Microsoft.Xna.Framework.Graphics.BlendState;
+
 namespace Squared.Illuminant.Compiled {{
     public class @{0} : IDisposable {{
         public bool IsDisposed {{ get; private set; }}
@@ -64,6 +67,47 @@ namespace Squared.Illuminant.Compiled {{
         }
 
         private void WriteCodeFooter (TextWriter tw) {
+            var namedSystems = new Dictionary<string, SystemModel>();
+            int i = 0;
+            foreach (var s in Systems)
+                namedSystems[GetSystemName(s, i++)] = s;
+
+            WriteUpdateMethod(tw, namedSystems);
+            WriteRenderMethod(tw, namedSystems);
+            WriteDisposeMethod(tw, namedSystems);
+        }
+
+        private void WriteRenderMethod (TextWriter tw, Dictionary<string, SystemModel> systems) {
+            tw.WriteLine();
+            tw.WriteLine("        public void Render (Render.IBatchContainer container, ref int layer, Render.Material material = null, Matrix? transform = null, G_BS blendState = null, ParticleRenderParameters renderParams = null, bool usePreviousData = false) {");
+
+            var orderedSystems = (from kvp in systems orderby kvp.Value.DrawOrder select kvp);
+            foreach (var kvp in orderedSystems) {
+                var name = kvp.Key;
+                tw.WriteLine(
+                    "            var {0}BlendState = blendState ?? {1};", 
+                    name, kvp.Value.AdditiveBlend 
+                        ? "C_RS.AdditiveBlend"
+                        : "G_BS.AlphaBlend"
+                );
+                tw.WriteLine("            {0}.Render(container, layer++, material: material, transform: transform, blendState: {0}BlendState, renderParams: renderParams, usePreviousData: usePreviousData);", name);
+            }
+
+            tw.WriteLine("        }");
+        }
+
+        private void WriteUpdateMethod (TextWriter tw, Dictionary<string, SystemModel> systems) {
+            tw.WriteLine();
+            tw.WriteLine("        public void Update (Render.IBatchContainer container, ref int layer) {");
+
+            var orderedSystems = (from kvp in systems orderby kvp.Value.UpdateOrder select kvp.Key);
+            foreach (var name in orderedSystems)
+                tw.WriteLine("            {0}.Update(container, layer++);", name);
+
+            tw.WriteLine("        }");
+        }
+
+        private void WriteDisposeMethod (TextWriter tw, Dictionary<string, SystemModel> systems) {
             tw.WriteLine(
 @"
         public void Dispose () {
@@ -74,10 +118,8 @@ namespace Squared.Illuminant.Compiled {{
 "
             );
 
-            int i = 0;
-            foreach (var s in Systems) {
-                tw.WriteLine("            {0}.Dispose();", GetSystemName(s, i++));
-            }
+            foreach (var kvp in systems)
+                tw.WriteLine("            {0}.Dispose();", kvp.Key);
 
             tw.WriteLine(
 @"        }

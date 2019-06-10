@@ -51,8 +51,8 @@ namespace TestGame.Scenes {
         public override void Draw (Squared.Render.Frame frame) {
             CreateRenderTargets();
 
-            Bear.Sparks.Update(frame, -4);
-            Bear.Smoke.Update(frame, -3);
+            int layer = -4;
+            Bear.Update(frame, ref layer);
 
             ClearBatch.AddNew(frame, 0, Game.Materials.Clear, clearColor: Color.DarkTurquoise * 0.3f);
 
@@ -64,12 +64,8 @@ namespace TestGame.Scenes {
                     Game.Materials.ViewTransform = vt;
                 }
             )) {
-                Bear.Smoke.Render(
-                    group, 0, blendState: BlendState.AlphaBlend
-                );
-                Bear.Sparks.Render(
-                    group, 1, blendState: RenderStates.AdditiveBlend
-                );
+                layer = 0;
+                Bear.Render(group, ref layer);
             }
         }
 
