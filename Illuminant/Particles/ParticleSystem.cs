@@ -19,7 +19,25 @@ using Squared.Threading;
 using Squared.Util;
 
 namespace Squared.Illuminant.Particles {
-    public class ParticleSystem : IDisposable {
+    /// <summary>
+    /// Represents one or more particle systems
+    /// </summary>
+    public interface IParticleSystems : IDisposable {
+        ParticleSystem this [int index] { get; }
+        int SystemCount { get; }
+
+        void Update (IBatchContainer container, int layer);
+        void Render (
+            IBatchContainer container, int layer,
+            Material material = null,
+            Matrix? transform = null,
+            BlendState blendState = null,
+            ParticleRenderParameters renderParams = null,
+            bool usePreviousData = false
+        );
+    }
+
+    public class ParticleSystem : IParticleSystems {
         internal class InternalRenderParameters {
             public Material Material;
             public ParticleRenderParameters UserParameters;
@@ -314,7 +332,7 @@ namespace Squared.Illuminant.Particles {
                 
                 p["StippleFactor"]?.SetValue(rp.UserParameters?.StippleFactor ?? System.Configuration.StippleFactor);
 
-                var u = new RasterizeParticleSystem(System.Engine.Configuration, System.Configuration);
+                var u = new RasterizeParticleSystem(System.Engine.Configuration, System.Configuration, rp.UserParameters?.Position ?? Vector2.Zero);
                 System.Engine.uRasterize.TrySet(m, ref u);
 
                 p["ColumnFromVelocity"]?.SetValue((appearance?.ColumnFromVelocity ?? false) ? 1f : 0f);
@@ -516,6 +534,20 @@ namespace Squared.Illuminant.Particles {
         internal Vector2 ChunkSizeF {
             get {
                 return new Vector2(Engine.Configuration.ChunkSize, Engine.Configuration.ChunkSize);
+            }
+        }
+
+        int IParticleSystems.SystemCount {
+            get {
+                return 1;
+            }
+        }
+
+        ParticleSystem IParticleSystems.this[int index] {
+            get {
+                if (index != 0)
+                    throw new ArgumentOutOfRangeException("index");
+                return this;
             }
         }
 
@@ -1443,6 +1475,10 @@ namespace Squared.Illuminant.Particles {
             Engine.Coordinator.DisposeResource(LivenessQueryRT);
             LivenessInfos.Clear();
         }
+
+        void IParticleSystems.Update (IBatchContainer container, int layer) {
+            Update(container, layer);
+        }
     }
 
     public class ParticleCollision {
@@ -1719,6 +1755,7 @@ namespace Squared.Illuminant.Particles {
     }
 
     public class ParticleRenderParameters {
+        public Vector2 Position = Vector2.Zero;
         public float? StippleFactor = null;
     }
 }

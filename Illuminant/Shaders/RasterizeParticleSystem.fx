@@ -6,7 +6,7 @@
 struct RasterizeParticleSystemSettings {
     float4 GlobalColor;
     float4 BitmapTextureRegion;
-    float4 SizeFactor;
+    float4 SizeFactorAndPosition;
 };
 
 uniform RasterizeParticleSystemSettings RasterizeSettings;
@@ -75,7 +75,7 @@ void VS_PosVelAttr(
     float angle = renderData.y;
     angle = fmod(angle, 2 * PI);
 
-    float2 size = renderData.x * System.TexelAndSize.zw * RasterizeSettings.SizeFactor.xy;
+    float2 size = renderData.x * System.TexelAndSize.zw * RasterizeSettings.SizeFactorAndPosition.xy;
     float3 rotatedCorner = ComputeRotatedCorner(cornerIndex.x, angle * getVelocityRotation(), size);
     float2 positionXy = Corners[cornerIndex.x];
 
@@ -83,6 +83,7 @@ void VS_PosVelAttr(
     float3 displayXyz = float3(position.x, position.y - (position.z * getZToY()), 0);
 
     float3 screenXyz = displayXyz - float3(GetViewportPosition(), 0) + rotatedCorner;
+    screenXyz.xy += RasterizeSettings.SizeFactorAndPosition.zw;
 
     // FIXME
     result = TransformPosition(

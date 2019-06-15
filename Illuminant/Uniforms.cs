@@ -229,11 +229,12 @@ namespace Squared.Illuminant.Uniforms {
     public struct RasterizeParticleSystem {
         Vector4 GlobalColor;
         Vector4 BitmapTextureRegion;
-        Vector4 SizeFactor;
+        Vector4 SizeFactorAndPosition;
 
         public RasterizeParticleSystem (
             Particles.ParticleEngineConfiguration Engine,
-            Particles.ParticleSystemConfiguration Configuration
+            Particles.ParticleSystemConfiguration Configuration,
+            Vector2 Position
         ) {
             var appearance = Configuration.Appearance;
 
@@ -257,9 +258,9 @@ namespace Squared.Illuminant.Uniforms {
                 BitmapTextureRegion = new Vector4(0, 0, 1, 1);
             }
             if ((tex != null) && appearance.RelativeSize)
-                SizeFactor = new Vector4(appearance.SizePx.GetValueOrDefault(texSize) * 0.5f, 0, 0);
+                SizeFactorAndPosition = new Vector4(appearance.SizePx.GetValueOrDefault(texSize) * 0.5f, Position.X, Position.Y);
             else
-                SizeFactor = new Vector4(1, 1, 0, 0);
+                SizeFactorAndPosition = new Vector4(1, 1, Position.X, Position.Y);
 
             var gcolor = Configuration.Color.Global;
             gcolor.X *= gcolor.W;
