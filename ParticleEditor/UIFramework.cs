@@ -23,62 +23,6 @@ using Nuke = NuklearDotNet.Nuklear;
 
 namespace Lumined {
     public partial class PropertyEditor {
-        internal class KeyboardInput : System.Windows.Forms.IMessageFilter {
-            public struct Deactivation : IDisposable {
-                public KeyboardInput This;
-
-                public void Dispose () {
-                    This.DeactivateCount--;
-                    if (This.DeactivateCount == 0)
-                        System.Windows.Forms.Application.AddMessageFilter(This);
-                }
-            }
-
-            [DllImport("user32.dll")]
-            static extern bool TranslateMessage(ref System.Windows.Forms.Message lpMsg);
-
-            const int WM_KEYDOWN = 0x100;
-            const int WM_KEYUP = 0x101;
-            const int WM_CHAR = 0x102;
-
-            public readonly EditorGame Game;
-            public readonly List<char> Buffer = new List<char>();
-
-            private int DeactivateCount = 0;
-
-            public KeyboardInput (EditorGame game) {
-                Game = game;
-            }
-
-            public void Install () {
-                System.Windows.Forms.Application.AddMessageFilter(this);
-            }
-
-            public Deactivation Deactivate () {
-                this.DeactivateCount++;
-                System.Windows.Forms.Application.RemoveMessageFilter(this);
-                return new Deactivation { This = this };
-            }
-
-            public bool PreFilterMessage (ref System.Windows.Forms.Message m) {
-                switch (m.Msg) {
-                    case WM_KEYDOWN:
-                    case WM_KEYUP:
-                        // XNA normally doesn't invoke TranslateMessage so we don't get any char events
-                        TranslateMessage(ref m);
-                        return false;
-                    case WM_CHAR:
-                        var ch = (char)m.WParam.ToInt32();
-                        // We can get wm_char events for control characters like backspace and Nuklear *does not like that*
-                        if (ch >= 32)
-                            Buffer.Add(ch);
-                        return true;
-                    default:
-                        return false;
-                }
-            }
-        }
-
         private class PropertyGridCache {
             public Type CachedType;
             public List<CachedPropertyInfo> Members;
@@ -167,7 +111,7 @@ namespace Lumined {
         public PropertyEditor (EditorGame game) {
             Game = game;
 
-            KeyboardInputHandler = new KeyboardInput(game);
+            KeyboardInputHandler = new KeyboardInput();
             KeyboardInputHandler.Install();
         }
 
