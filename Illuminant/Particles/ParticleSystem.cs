@@ -330,19 +330,13 @@ namespace Squared.Illuminant.Particles {
                         ));
                     }
                 }
-
-                var vt = rp.DefaultMaterialSet.ViewTransform;
-                var pos = rp.UserParameters?.Origin ?? Vector2.Zero;
-                var scale = rp.UserParameters?.Scale ?? Vector2.One;
-                if ((pos != Vector2.Zero) || (scale != Vector2.One)) {
-                    vt.Position -= pos;
-                    vt.Scale *= scale;
-                    rp.DefaultMaterialSet.PushViewTransform(vt);
-                }
                 
                 p["StippleFactor"]?.SetValue(rp.UserParameters?.StippleFactor ?? System.Configuration.StippleFactor);
 
-                var u = new RasterizeParticleSystem(System.Engine.Configuration, System.Configuration, Vector2.Zero);
+                var origin = rp.UserParameters?.Origin ?? Vector2.Zero;
+                var scale = rp.UserParameters?.Scale ?? Vector2.One;
+
+                var u = new RasterizeParticleSystem(System.Engine.Configuration, System.Configuration, origin, scale);
                 System.Engine.uRasterize.TrySet(m, ref u);
 
                 p["ColumnFromVelocity"]?.SetValue((appearance?.ColumnFromVelocity ?? false) ? 1f : 0f);
@@ -358,11 +352,6 @@ namespace Squared.Illuminant.Particles {
                 var m = rp.Material;
                 var e = m.Effect;
                 var p = e.Parameters;
-
-                var pos = rp.UserParameters?.Origin ?? Vector2.Zero;
-                var scale = rp.UserParameters?.Scale ?? Vector2.One;
-                if ((pos != Vector2.Zero) || (scale != Vector2.One))
-                    rp.DefaultMaterialSet.PopViewTransform();
 
                 p.ClearTextures(ClearTextureList);
                 // ughhhhhhhhhh

@@ -7,6 +7,7 @@ struct RasterizeParticleSystemSettings {
     float4 GlobalColor;
     float4 BitmapTextureRegion;
     float4 SizeFactorAndPosition;
+    float4 Scale;
 };
 
 uniform RasterizeParticleSystemSettings RasterizeSettings;
@@ -81,9 +82,12 @@ void VS_PosVelAttr(
 
     // HACK: Discard Z
     float3 displayXyz = float3(position.x, position.y - (position.z * getZToY()), 0);
+    displayXyz.xy *= RasterizeSettings.Scale.xy;
+    displayXyz.xy += RasterizeSettings.SizeFactorAndPosition.zw;
+
+    rotatedCorner.xy *= RasterizeSettings.Scale.xy;
 
     float3 screenXyz = displayXyz - float3(GetViewportPosition(), 0) + rotatedCorner;
-    screenXyz.xy += RasterizeSettings.SizeFactorAndPosition.zw;
 
     // FIXME
     result = TransformPosition(
