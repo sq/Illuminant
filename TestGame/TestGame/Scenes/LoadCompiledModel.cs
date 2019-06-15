@@ -19,6 +19,8 @@ using Squared.Render.Convenience;
 using Squared.Util;
 using Nuke = NuklearDotNet.Nuklear;
 
+#if compiled_model
+
 namespace TestGame.Scenes {
     public class LoadCompiledModel : Scene {
         ParticleEngine Engine;
@@ -52,7 +54,8 @@ namespace TestGame.Scenes {
             CreateRenderTargets();
 
             int layer = -4;
-            Bear.Update(frame, ref layer);
+            Bear.Update(frame, layer);
+            layer += 2;
 
             ClearBatch.AddNew(frame, 0, Game.Materials.Clear, clearColor: Color.DarkTurquoise * 0.3f);
 
@@ -65,7 +68,8 @@ namespace TestGame.Scenes {
                 }
             )) {
                 layer = 0;
-                Bear.Render(group, ref layer);
+                Bear.Render(group, layer);
+                layer += 2;
             }
         }
 
@@ -74,3 +78,5 @@ namespace TestGame.Scenes {
         }
     }
 }
+
+#endif

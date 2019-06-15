@@ -39,6 +39,7 @@ namespace Squared.Illuminant.Modeling {
         private void WriteCodeHeader (TextWriter tw, string name) {
             tw.WriteLine(
 @"using System;
+using Squared.Util;
 using Squared.Illuminant.Particles;
 using Microsoft.Xna.Framework;
 
@@ -56,6 +57,16 @@ namespace Squared.Illuminant.Compiled {{
             int i = 0;
             foreach (var s in Systems) {
                 tw.WriteLine("        public readonly ParticleSystem {0};", GetSystemName(s, i++));
+            }
+
+            tw.WriteLine();
+
+            foreach (var s in Systems) {
+                foreach (var t in s.Transforms) {
+                    if (String.IsNullOrWhiteSpace(t.Name))
+                        continue;
+                    tw.WriteLine("        public readonly {0} {1};", GetTypeName(t.Type), FormatName(t.Name));
+                }
             }
 
             tw.WriteLine(
@@ -84,7 +95,7 @@ namespace Squared.Illuminant.Compiled {{
 
             tw.WriteLine(
 @"
-        public @{0} (ParticleEngine engine) {{
+        public @{0} (ParticleEngine engine, ITimeProvider timeProvider = null) {{
             ParticleSystem s;
             Engine = engine;", name
             );
@@ -191,6 +202,7 @@ namespace Squared.Illuminant.Compiled {{
         }
 
         private void WriteConfiguration (TextWriter tw, ParticleSystemConfiguration c) {
+            tw.WriteLine("                TimeProvider = timeProvider,");
             WriteMembers(tw, c, typeof(ParticleSystemConfiguration));
         }
 
@@ -253,7 +265,7 @@ namespace Squared.Illuminant.Compiled {{
         private void WriteTransform (TextWriter tw, SystemModel s, string systemName, TransformModel t) {
             tw.WriteLine(
 @"
-            {0}.Transforms.Add(new {1} {{", systemName, GetTypeName(t.Type)
+            {0}.Transforms.Add({2}new {1} {{", systemName, GetTypeName(t.Type), string.IsNullOrWhiteSpace(t.Name) ? "" : FormatName(t.Name) + " = "
             );
 
             WriteMembers(tw, t, t.Type, (string name, out object value) => {

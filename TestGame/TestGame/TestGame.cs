@@ -102,7 +102,9 @@ namespace TestGame {
                 // FIXME
                 // new VectorFieldTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new LUTTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
+#if compiled_model
                 new LoadCompiledModel(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
+#endif
             };
         }
 
