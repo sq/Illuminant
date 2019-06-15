@@ -332,10 +332,10 @@ namespace Squared.Illuminant.Particles {
                 }
 
                 var vt = rp.DefaultMaterialSet.ViewTransform;
-                var pos = rp.UserParameters?.Position ?? Vector2.Zero;
+                var pos = rp.UserParameters?.Origin ?? Vector2.Zero;
                 var scale = rp.UserParameters?.Scale ?? Vector2.One;
                 if ((pos != Vector2.Zero) || (scale != Vector2.One)) {
-                    vt.Position += pos;
+                    vt.Position -= pos;
                     vt.Scale *= scale;
                     rp.DefaultMaterialSet.PushViewTransform(vt);
                 }
@@ -359,7 +359,7 @@ namespace Squared.Illuminant.Particles {
                 var e = m.Effect;
                 var p = e.Parameters;
 
-                var pos = rp.UserParameters?.Position ?? Vector2.Zero;
+                var pos = rp.UserParameters?.Origin ?? Vector2.Zero;
                 var scale = rp.UserParameters?.Scale ?? Vector2.One;
                 if ((pos != Vector2.Zero) || (scale != Vector2.One))
                     rp.DefaultMaterialSet.PopViewTransform();
@@ -1771,7 +1771,7 @@ namespace Squared.Illuminant.Particles {
     }
 
     public class ParticleRenderParameters {
-        public Vector2 Position = Vector2.Zero;
+        public Vector2 Origin = Vector2.Zero;
         public Vector2 Scale = Vector2.One;
         public float? StippleFactor = null;
     }

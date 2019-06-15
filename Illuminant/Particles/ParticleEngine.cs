@@ -367,10 +367,10 @@ namespace Squared.Illuminant.Particles {
 
             IsDisposed = true;
 
-            foreach (var sys in Systems)
+            foreach (var sys in Systems.ToArray())
                 sys.Dispose();
 
-            foreach (var buf in AllBuffers)
+            foreach (var buf in AllBuffers.ToArray())
                 Coordinator.DisposeResource(buf);
 
             AllBuffers.Clear();
