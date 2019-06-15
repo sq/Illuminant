@@ -46,7 +46,7 @@ using C_RS = Squared.Render.Convenience.RenderStates;
 using G_BS = Microsoft.Xna.Framework.Graphics.BlendState;
 
 namespace Squared.Illuminant.Compiled {{
-    public class @{0} : IDisposable {{
+    public class @{0} : IParticleSystems {{
         public bool IsDisposed {{ get; private set; }}
 
         public readonly ParticleEngine Engine;
@@ -57,6 +57,30 @@ namespace Squared.Illuminant.Compiled {{
             foreach (var s in Systems) {
                 tw.WriteLine("        public readonly ParticleSystem {0};", GetSystemName(s, i++));
             }
+
+            tw.WriteLine(
+@"
+        public ParticleSystem this [int index] {
+            get {"
+            );
+
+            i = 0;
+            foreach (var s in Systems) {
+                tw.WriteLine("                if (index == {0}) return {1};", i, GetSystemName(s, i));
+                i++;
+            }
+
+            tw.WriteLine(@"
+                throw new ArgumentOutOfRangeException(""index"");
+            }}
+        }}
+
+        public int SystemCount {{
+            get {{
+                return {0};
+            }}
+        }}", Systems.Count
+            );
 
             tw.WriteLine(
 @"
@@ -79,7 +103,7 @@ namespace Squared.Illuminant.Compiled {{
 
         private void WriteRenderMethod (TextWriter tw, Dictionary<string, SystemModel> systems) {
             tw.WriteLine();
-            tw.WriteLine("        public void Render (Render.IBatchContainer container, ref int layer, Render.Material material = null, Matrix? transform = null, G_BS blendState = null, ParticleRenderParameters renderParams = null, bool usePreviousData = false) {");
+            tw.WriteLine("        public void Render (Render.IBatchContainer container, int layer, Render.Material material = null, Matrix? transform = null, G_BS blendState = null, ParticleRenderParameters renderParams = null, bool usePreviousData = false) {");
 
             var orderedSystems = (from kvp in systems orderby kvp.Value.DrawOrder select kvp);
             foreach (var kvp in orderedSystems) {
@@ -98,7 +122,7 @@ namespace Squared.Illuminant.Compiled {{
 
         private void WriteUpdateMethod (TextWriter tw, Dictionary<string, SystemModel> systems) {
             tw.WriteLine();
-            tw.WriteLine("        public void Update (Render.IBatchContainer container, ref int layer) {");
+            tw.WriteLine("        public void Update (Render.IBatchContainer container, int layer) {");
 
             var orderedSystems = (from kvp in systems orderby kvp.Value.UpdateOrder select kvp.Key);
             foreach (var name in orderedSystems)
