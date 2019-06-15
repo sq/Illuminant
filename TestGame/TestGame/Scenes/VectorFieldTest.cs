@@ -67,7 +67,7 @@ namespace TestGame.Scenes {
             FieldTexture = Game.TextureLoader.Load("vector-field", new TextureLoadOptions {
                 Premultiply = false,
                 GenerateMips = true
-            });
+            }, true);
             Field = new VectorField(Game.RenderCoordinator, FieldTexture);
             Background = Game.TextureLoader.Load("vector-field-background");
 

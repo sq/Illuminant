@@ -13,6 +13,7 @@ using System.Collections;
 using System.Reflection;
 using Squared.Illuminant.Configuration;
 using Microsoft.Xna.Framework.Graphics;
+using Squared.Illuminant.Particles.Transforms;
 
 namespace Squared.Illuminant.Modeling {
     public partial class EngineModel {
@@ -20,7 +21,14 @@ namespace Squared.Illuminant.Modeling {
             typeof(ParticleCollision),
             typeof(ParticleAppearance),
             typeof(ParticleColor),
-            typeof(ParticleSystemReference)
+            typeof(ParticleSystemReference),
+            typeof(FMA.FMAParameters),
+            typeof(TransformArea),
+            typeof(GeometricTransform.GTParameters),
+            typeof(Noise.NoiseParameters<float>),
+            typeof(Noise.NoiseParameters<Vector3>),
+            typeof(Noise.NoiseParameters<Vector4>),
+            typeof(Gravity.Attractor),
         };
 
         private string GetSystemName (SystemModel sm, int index) {
@@ -252,6 +260,10 @@ namespace Squared.Illuminant.Compiled {{
                 }
 
                 if (value == null)
+                    continue;
+
+                // Bad data in properties dict
+                if (!memberType.IsAssignableFrom(value.GetType()))
                     continue;
 
                 var formatted = FormatValue(value, memberType);

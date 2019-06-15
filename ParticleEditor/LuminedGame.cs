@@ -153,25 +153,21 @@ namespace Lumined {
             Window.ClientSizeChanged += Window_ClientSizeChanged;
         }
 
-        protected override void UnloadContent () {
+        protected override void OnUnloadContent () {
             Process.GetCurrentProcess().Kill();
             Environment.Exit(0);
 
             RenderCoordinator.WaitForActiveDraws();
 
             FreeContent();
-
-            base.UnloadContent();
         }
 
         protected override void OnExiting (object sender, EventArgs args) {
             Process.GetCurrentProcess().Kill();
         }
 
-        protected override void LoadContent () {
+        protected override void OnLoadContent (bool isReloading) {
             DidLoadContent = true;
-
-            base.LoadContent();
 
             TextureLoader = new EmbeddedTexture2DProvider(RenderCoordinator) {
                 DefaultOptions = new TextureLoadOptions {

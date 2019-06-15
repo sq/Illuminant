@@ -252,9 +252,7 @@ namespace TestGame {
             }
         }
 
-        protected override void LoadContent () {
-            base.LoadContent();
-
+        protected override void OnLoadContent (bool isReloading) {
             RenderCoordinator.EnableThreading = false;
 
             TextureLoader = new EmbeddedTexture2DProvider(RenderCoordinator) {
@@ -301,7 +299,7 @@ namespace TestGame {
             SetActiveScene(DefaultScene ?? Scenes.Length - 1);
         }
 
-        protected override void UnloadContent () {
+        protected override void OnUnloadContent () {
             Process.GetCurrentProcess().Kill();
             Environment.Exit(0);
         }
