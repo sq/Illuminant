@@ -38,10 +38,7 @@ void BezierVisualizerPixelShader (
     valueRanges = max(abs(valueRanges), 0.001) * sign(valueRanges);
     */
 
-    float minValue = min(minValues.r, min(minValues.g, min(minValues.b, minValues.a)));
-    float maxValue = max(maxValues.r, max(maxValues.g, max(maxValues.b, maxValues.a)));
-    float valueRange = maxValue - minValue;
-    valueRange = max(abs(valueRange), 0.001) * sign(valueRange);
+    float4 valueRange = maxValues - minValues;
 
     float scaledT;
     if (CurrentT >= -999)
@@ -50,7 +47,7 @@ void BezierVisualizerPixelShader (
         scaledT = CurrentT;
 
     float4 value = evaluateBezier4AtT(Bezier, count, xy.x);
-    float4 scaledValue = saturate4((value - minValue) / valueRange);
+    float4 scaledValue = saturate4((value - minValues) / valueRange);
     float4 distances = abs((1 - xy.y) - scaledValue);
     float4 scaledDistances = 1 - saturate4(distances / 0.016);
 
@@ -62,7 +59,7 @@ void BezierVisualizerPixelShader (
     else if (elementCount < 3.5)
         scaledDistances.w = 0;
 
-    float2 scaledOneAndZero = saturate2((float2(1, 0) - minValue) / valueRange);
+    float2 scaledOneAndZero = saturate2((float2(1, 0) - minValues) / valueRange);
     float distanceAboveOne = saturate(((1 - xy.y) - scaledOneAndZero.x) / 0.015);
     float distanceBelowZero = saturate((scaledOneAndZero.y - (1 - xy.y)) / 0.015);
     float invDistanceToT = (1 - saturate(abs(xy.x - scaledT) / 0.01)) * 0.4;

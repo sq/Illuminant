@@ -33,6 +33,7 @@ namespace Squared.Illuminant.Configuration {
     {
         public const string Unnamed = "<<none>>";
 
+        private Func<float, T> _Getter;
         private string _Name;
         private IBezier<T> _Bezier;
         private T _Constant;
@@ -41,16 +42,26 @@ namespace Squared.Illuminant.Configuration {
             _Name = null;
             _Bezier = bezier;
             _Constant = default(T);
+            _Getter = null;
         }
 
         public Parameter (T value) {
             _Name = null;
             _Bezier = null;
             _Constant = value;
+            _Getter = null;
         }
 
         public Parameter (string name) {
             _Name = name;
+            _Getter = null;
+            _Bezier = null;
+            _Constant = default(T);
+        }
+
+        public Parameter (string name, Func<float, T> getter) {
+            _Name = name;
+            _Getter = getter;
             _Bezier = null;
             _Constant = default(T);
         }
@@ -213,6 +224,9 @@ namespace Squared.Illuminant.Configuration {
         }
 
         public T Evaluate (float t, NamedConstantResolver<T> nameResolver) {
+            if (_Getter != null)
+                return _Getter(t);
+
             T resolved;
             if (
                 (_Name != null) &&
@@ -328,6 +342,12 @@ namespace Squared.Illuminant.Configuration {
                 Instance = resolver(Name, Index);
 
             return Instance != null;
+        }
+
+        public static implicit operator ParticleSystemReference (Particles.ParticleSystem instance) {
+            return new ParticleSystemReference {
+                Instance = instance
+            };
         }
     }
 

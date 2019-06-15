@@ -15,7 +15,7 @@ using Squared.Illuminant.Configuration;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Squared.Illuminant.Modeling {
-    public class EngineModel {
+    public partial class EngineModel {
         public string Filename { get; private set; }
         public readonly NamedVariableCollection NamedVariables = new NamedVariableCollection();
         public readonly List<SystemModel> Systems = new List<SystemModel>();
@@ -84,7 +84,7 @@ namespace Squared.Illuminant.Modeling {
                 s.Sort();
         }
 
-        public void Save (string fileName) {
+        public void Save (string fileName, bool saveCode = true) {
             Normalize(true);
 
             var tempPath = Path.GetTempFileName();
@@ -94,6 +94,26 @@ namespace Squared.Illuminant.Modeling {
             }
             File.Copy(tempPath, fileName, true);
             Filename = Path.GetFullPath(fileName);
+
+            if (saveCode) {
+                using (var outStream = File.OpenWrite(fileName.Replace(Path.GetExtension(fileName), ".cs"))) {
+                    outStream.SetLength(0);
+                    using (var sw = new StreamWriter(outStream, Encoding.UTF8))
+                        SaveAsCode(sw);
+                }
+            }
+        }
+
+        public void SaveAsCode (TextWriter writer) {
+            var name = Path.GetFileNameWithoutExtension(Filename).Replace(" ", "_").Replace("-", "_");
+            name = name.Substring(0, 1).ToUpper() + name.Substring(1);
+
+            writer.WriteLine("// Machine-generated from '{0}'", Filename);
+            writer.WriteLine();
+            WriteCodeHeader(writer, name);
+            WriteSystems(writer);
+            WriteNamedVariables(writer);
+            WriteCodeFooter(writer);
         }
 
         public IEnumerable<string> ConstantNamesOfType (Type valueType) {
@@ -130,6 +150,15 @@ namespace Squared.Illuminant.Modeling {
 
             if (forSave)
                 Sort();
+        }
+
+        public bool AdditiveBlend {
+            get {
+                return (BlendState == BlendState.Additive);
+            }
+            set {
+                BlendState = (value ? BlendState.Additive : BlendState.AlphaBlend);
+            }
         }
 
         public SystemModel Clone () {
