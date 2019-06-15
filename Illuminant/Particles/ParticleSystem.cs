@@ -39,6 +39,7 @@ namespace Squared.Illuminant.Particles {
 
     public class ParticleSystem : IParticleSystems {
         internal class InternalRenderParameters {
+            public DefaultMaterialSet DefaultMaterialSet;
             public Material Material;
             public ParticleRenderParameters UserParameters;
         }
@@ -329,10 +330,19 @@ namespace Squared.Illuminant.Particles {
                         ));
                     }
                 }
+
+                var vt = rp.DefaultMaterialSet.ViewTransform;
+                var pos = rp.UserParameters?.Position ?? Vector2.Zero;
+                var scale = rp.UserParameters?.Scale ?? Vector2.One;
+                if ((pos != Vector2.Zero) || (scale != Vector2.One)) {
+                    vt.Position += pos;
+                    vt.Scale *= scale;
+                    rp.DefaultMaterialSet.PushViewTransform(vt);
+                }
                 
                 p["StippleFactor"]?.SetValue(rp.UserParameters?.StippleFactor ?? System.Configuration.StippleFactor);
 
-                var u = new RasterizeParticleSystem(System.Engine.Configuration, System.Configuration, rp.UserParameters?.Position ?? Vector2.Zero);
+                var u = new RasterizeParticleSystem(System.Engine.Configuration, System.Configuration, Vector2.Zero);
                 System.Engine.uRasterize.TrySet(m, ref u);
 
                 p["ColumnFromVelocity"]?.SetValue((appearance?.ColumnFromVelocity ?? false) ? 1f : 0f);
@@ -348,6 +358,12 @@ namespace Squared.Illuminant.Particles {
                 var m = rp.Material;
                 var e = m.Effect;
                 var p = e.Parameters;
+
+                var pos = rp.UserParameters?.Position ?? Vector2.Zero;
+                var scale = rp.UserParameters?.Scale ?? Vector2.One;
+                if ((pos != Vector2.Zero) || (scale != Vector2.One))
+                    rp.DefaultMaterialSet.PopViewTransform();
+
                 p.ClearTextures(ClearTextureList);
                 // ughhhhhhhhhh
 #if !FNA
@@ -1447,7 +1463,7 @@ namespace Squared.Illuminant.Particles {
             using (var group = BatchGroup.New(
                 container, layer,
                 Renderer.BeforeDraw, Renderer.AfterDraw, 
-                userData: new InternalRenderParameters { Material = material, UserParameters = renderParams }
+                userData: new InternalRenderParameters { Material = material, UserParameters = renderParams, DefaultMaterialSet = Engine.Materials }
             )) {
                 RenderTrace.Marker(group, -9999, "Rasterize {0} particle chunks", Chunks.Count);
 
@@ -1756,6 +1772,7 @@ namespace Squared.Illuminant.Particles {
 
     public class ParticleRenderParameters {
         public Vector2 Position = Vector2.Zero;
+        public Vector2 Scale = Vector2.One;
         public float? StippleFactor = null;
     }
 }
