@@ -49,13 +49,23 @@ void VS_Spawn (
     result = float4(xy.x, xy.y, 0, 1);
 }
 
+#define FormulaType_Linear 0
+#define FormulaType_Spherical 1
+#define FormulaType_Towards 2
+#define FormulaType_Rectangular 3
+
 float4 evaluateFormula (float4 origin, float4 constant, float4 scale, float4 offset, float4 randomness, float type) {
     float4 nonCircular = (randomness + offset) * scale;
     float4 type0 = constant + nonCircular;
 
     uint itype = (uint)abs(floor(type));
     switch (itype) {
-        case 1: {
+        case FormulaType_Linear:
+        default: {
+            return type0;
+        }
+        case FormulaType_Rectangular:
+        case FormulaType_Spherical: {
             float o = randomness.x * PI * 2;
             float z = (randomness.y - 0.5) * 2;
             if (ZeroZAxis)
@@ -67,11 +77,16 @@ float4 evaluateFormula (float4 origin, float4 constant, float4 scale, float4 off
                 randomNormal.y * randomness.z * scale.y,
                 randomNormal.z * randomness.z * scale.z
             );
+            if (itype == FormulaType_Rectangular) {
+                // 1/sqrt(2)
+                float3 edge = scale.xyz * 0.70710678118;
+                circular = clamp(circular, -edge, edge);
+            }
             float3 result = constant.xyz + circular.xyz;
             result += randomNormal * offset.xyz;
             return float4(result, type0.w);
         }
-        case 2: {
+        case FormulaType_Towards: {
             float3 distance = constant - origin;
             float ldistance = length(distance);
             if (ldistance < 0.1)
@@ -86,7 +101,7 @@ float4 evaluateFormula (float4 origin, float4 constant, float4 scale, float4 off
     return type0;
 }
 
-void evaluateRandomForIndex(in float index, out float4 random1, out float4 random2, out float4 random3) {
+void evaluateRandomForIndex (in float index, out float4 random1, out float4 random2, out float4 random3) {
     float2 randomOffset1 = float2(index % 8039, 0 + (index % 57));
     float2 randomOffset2 = float2(index % 6180, 1 + (index % 4031));
     float2 randomOffset3 = float2(index % 2025, 2 + (index % 65531));
@@ -99,7 +114,7 @@ void evaluateRandomForIndex(in float index, out float4 random1, out float4 rando
         random2.xy = random1.xy;
 }
 
-bool Spawn_Stage1(
+bool Spawn_Stage1 (
     in float2 xy,
     out float4 random1, out float4 random2, out float4 random3,
     out int index1, out int index2, out float positionIndexT

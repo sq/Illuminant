@@ -245,6 +245,7 @@ namespace Squared.Illuminant {
     public enum FormulaType : uint {
         Linear = 0,
         Spherical = 1,
-        Towards = 2
+        Towards = 2,
+        Rectangular = 3
     }
 }
