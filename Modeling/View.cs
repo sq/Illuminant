@@ -64,7 +64,7 @@ namespace Squared.Illuminant.Modeling {
                         result = null;
 
                     return result;
-                }
+                },
             };
         }
 

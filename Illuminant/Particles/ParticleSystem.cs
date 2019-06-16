@@ -432,7 +432,7 @@ namespace Squared.Illuminant.Particles {
 
             engine.Systems.Add(this);
 
-            LivenessQueryRT = new AutoRenderTarget(engine.Coordinator, MaxChunkCount, 1, false, SurfaceFormat.Rg32, DepthFormat.Depth24, 1);
+            LivenessQueryRT = new AutoRenderTarget(engine.Coordinator, MaxChunkCount, 1, false, SurfaceFormat.Rg32, DepthFormat.Depth16, 1);
         }
 
         public ITimeProvider TimeProvider {
@@ -815,7 +815,12 @@ namespace Squared.Illuminant.Particles {
             foreach (var kvp in LivenessInfos) {
                 var isDead = false;
                 var li = kvp.Value;
-                LiveCount += li.Count.GetValueOrDefault(0);
+
+                var chunkCount = li.Count.GetValueOrDefault(0);
+                if (Engine.Configuration.AccurateLivenessCounts)
+                    LiveCount += chunkCount;
+                else
+                    LiveCount += (chunkCount > 0) ? ChunkMaximumCount : 0;
 
                 if (li.Count.GetValueOrDefault(1) <= 0) {
                     li.DeadFrameCount++;
@@ -999,7 +1004,7 @@ namespace Squared.Illuminant.Particles {
                     LivenessInfos.Clear();
                 }
 
-                bool computingLiveness = true;
+                bool computingLiveness = false;
                 if (FramesUntilNextLivenessCheck-- <= 0) {
                     FramesUntilNextLivenessCheck = LivenessCheckInterval;
                     computingLiveness = true;
@@ -1300,12 +1305,17 @@ namespace Squared.Illuminant.Particles {
 
             using (var rtg = BatchGroup.ForRenderTarget(
                 group, layer, LivenessQueryRT, (dm, _) => {
-                    dm.Device.Clear(Color.Black);
+                    dm.Device.Clear(
+                        ClearOptions.Target | ClearOptions.DepthBuffer, 
+                        Color.Transparent, 0, 0
+                    );
                 }
             )) {
                 RenderTrace.Marker(rtg, -9999, "Compute chunk liveness");
 
-                var m = Engine.ParticleMaterials.CountLiveParticles;
+                var m = Engine.Configuration.AccurateLivenessCounts
+                    ? Engine.ParticleMaterials.CountLiveParticles
+                    : Engine.ParticleMaterials.CountLiveParticlesFast;
 
                 lock (LivenessInfos) {
                     Array.Clear(LastLivenessInfoChunkIds, 0, MaxChunkCount);

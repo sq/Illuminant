@@ -439,6 +439,12 @@ namespace Squared.Illuminant.Particles {
         /// </summary>
         public Func<string, IParameter> NamedVariableResolver = null;
 
+        /// <summary>
+        /// Enables accurate counting of the number of live particles in a given chunk.
+        /// If disabled, only minimal tracking will be performed to identify dead chunks.
+        /// </summary>
+        public bool AccurateLivenessCounts = true;
+
         public ParticleEngineConfiguration (int chunkSize = 256) {
             ChunkSize = chunkSize;
         }

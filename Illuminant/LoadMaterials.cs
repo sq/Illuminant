@@ -323,12 +323,29 @@ namespace Squared.Illuminant.Particles {
                     ColorSourceBlend = Blend.One,
                 };
 
+                var countDepthState = new DepthStencilState {
+                    StencilEnable = false,
+                    DepthBufferEnable = true,
+                    DepthBufferWriteEnable = true,
+                    DepthBufferFunction = CompareFunction.Greater
+                };
+
                 LoadOneMaterial(out ParticleMaterials.CountLiveParticles,
                     "CountLiveParticles", "CountLiveParticles", new[] {
                         MaterialUtil.MakeDelegate(
                             rasterizerState: RasterizerState.CullNone,
                             depthStencilState: DepthStencilState.None,
                             blendState: countBlendState
+                        )
+                    }, dEnd
+                );
+
+                LoadOneMaterial(out ParticleMaterials.CountLiveParticlesFast,
+                    "CountLiveParticles", "CountLiveParticles", new[] {
+                        MaterialUtil.MakeDelegate(
+                            rasterizerState: RasterizerState.CullNone,
+                            depthStencilState: countDepthState,
+                            blendState: BlendState.Opaque
                         )
                     }, dEnd
                 );

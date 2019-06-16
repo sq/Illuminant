@@ -31,7 +31,7 @@ void VS_CountLiveParticles (
     float2 corner = Corners[cornerIndex.x].xy;
     float2 pos = lerp(tl, br, corner);
 
-    result = float4(pos * scale, 0, scale);
+    result = float4(pos * scale, 0.5 * scale, scale);
 }
 
 void PS_CountLiveParticles (

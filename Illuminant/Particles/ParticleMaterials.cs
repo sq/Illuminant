@@ -10,7 +10,7 @@ namespace Squared.Illuminant {
         public Material Erase, UpdatePositions, UpdateWithDistanceField;
         public Material FMA, Gravity, MatrixMultiply, Noise, SpatialNoise;
         public Material Spawn, SpawnFromPositionTexture, SpawnFeedback, SpawnPattern;
-        public Material CountLiveParticles, CollectParticles;
+        public Material CountLiveParticles, CollectParticles, CountLiveParticlesFast;
 
         public Material TextureLinear, TexturePoint, NoTexture;
 
