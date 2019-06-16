@@ -48,7 +48,7 @@ namespace Lumined {
         public Material ScreenSpaceBezierVisualizer { get; private set; }
 
         public FreeTypeFont Font;
-        public RenderTarget2D UIRenderTarget;
+        public AutoRenderTarget UIRenderTarget;
 
         private int LastPerformanceStatPrimCount = 0;
 
@@ -217,9 +217,8 @@ namespace Lumined {
 
             uBezier = Materials.NewTypedUniform<Squared.Illuminant.Uniforms.ClampedBezier4>("Bezier");
             
-            UIRenderTarget = new RenderTarget2D(
-                GraphicsDevice, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight, 
-                false, SurfaceFormat.Color, DepthFormat.None, 1, RenderTargetUsage.PlatformContents
+            UIRenderTarget = new AutoRenderTarget(
+                RenderCoordinator, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight
             );
 
             if (Nuklear == null)
@@ -282,11 +281,7 @@ namespace Lumined {
             Graphics.ApplyChangesAfterPresent(RenderCoordinator);
             RenderCoordinator.AfterPresent(() => {
                 Materials.AutoSetViewTransform();
-                RenderCoordinator.DisposeResource(UIRenderTarget);
-                UIRenderTarget = new RenderTarget2D(
-                    GraphicsDevice, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight, 
-                    false, SurfaceFormat.Color, DepthFormat.None, 1, RenderTargetUsage.PlatformContents
-                );
+                UIRenderTarget.Resize(Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight);
             });
         }
 
@@ -393,7 +388,7 @@ namespace Lumined {
             UI.KeyboardInputHandler.Buffer.Clear();
 
             using (UI.KeyboardInputHandler.Deactivate())
-            using (var group = BatchGroup.ForRenderTarget(frame, -9990, UIRenderTarget)) {
+            using (var group = BatchGroup.ForRenderTarget(frame, -9090, UIRenderTarget)) {
                 ClearBatch.AddNew(group, -1, Materials.Clear, clearColor: Color.Transparent);
                 Nuklear.Render(gameTime.ElapsedGameTime.Seconds, group, 1);
             }

@@ -38,6 +38,8 @@ namespace Squared.Illuminant.Particles {
     }
 
     public class ParticleSystem : IParticleSystems {
+        public const int MaxChunkCount = 128;
+
         internal class InternalRenderParameters {
             public DefaultMaterialSet DefaultMaterialSet;
             public Material Material;
@@ -69,9 +71,6 @@ namespace Squared.Illuminant.Particles {
         internal class LivenessInfo {
             public Chunk          Chunk;
             public int?           Count;
-            public bool           IsQueryRunning;
-            public OcclusionQuery PendingQuery;
-            public long           LastQueryStart;
             public int            DeadFrameCount;
         }
 
@@ -208,7 +207,6 @@ namespace Squared.Illuminant.Particles {
 
             internal BufferSet Previous, Current;
 
-            public OcclusionQuery Query;
             public RenderTarget2D Color;
 
             internal RenderTarget2D RenderData, RenderColor;
@@ -248,7 +246,6 @@ namespace Squared.Illuminant.Particles {
                 MaximumCount = Size * Size;
 
                 var device = system.Engine.Coordinator.Device;
-                Query = new OcclusionQuery(device);
                 Color = MakeRT(device);
                 RenderData = MakeRT(device);
                 RenderColor = MakeRT(device);
@@ -270,8 +267,6 @@ namespace Squared.Illuminant.Particles {
                 Color.Dispose();
                 RenderData.Dispose();
                 RenderColor.Dispose();
-                Query.Dispose();
-                Query = null;
             }
 
             internal void Clear () {
@@ -414,7 +409,7 @@ namespace Squared.Illuminant.Particles {
         private double? LastUpdateTimeSeconds = null;
         private double  UpdateErrorAccumulator = 0;
 
-        private readonly RenderTarget2D LivenessQueryRT;
+        private readonly AutoRenderTarget LivenessQueryRT;
 
         public long TotalSpawnCount { get; private set; }
 
@@ -437,8 +432,7 @@ namespace Squared.Illuminant.Particles {
 
             engine.Systems.Add(this);
 
-            lock (engine.Coordinator.CreateResourceLock)
-                LivenessQueryRT = new RenderTarget2D(engine.Coordinator.Device, 1, 1, false, SurfaceFormat.Color, DepthFormat.None);
+            LivenessQueryRT = new AutoRenderTarget(engine.Coordinator, MaxChunkCount, 1, false, SurfaceFormat.Rg32, DepthFormat.Depth24, 1);
         }
 
         public ITimeProvider TimeProvider {
@@ -485,6 +479,9 @@ namespace Squared.Illuminant.Particles {
         }
         
         private Chunk CreateChunk () {
+            if (Chunks.Count >= MaxChunkCount)
+                throw new Exception("Hit maximum chunk count");
+
             lock (Engine.Coordinator.CreateResourceLock) {
                 var result = new Chunk(this);
                 result.Current = AcquireOrCreateBufferSet();
@@ -690,7 +687,6 @@ namespace Squared.Illuminant.Particles {
             var p = (e != null) ? e.Parameters : null;
 
             var li = GetLivenessInfo(chunk);
-            UpdateChunkLivenessQuery(li);
 
             var chunkMaterial = m;
             if (isSpawning)
@@ -811,43 +807,15 @@ namespace Squared.Illuminant.Particles {
 
         internal HashSet<LivenessInfo> ChunksToReap = new HashSet<LivenessInfo>();
 
-        private void UpdateChunkLivenessQuery (LivenessInfo target) {
-            if (target.PendingQuery == null)
-                return;
-
-            lock (target.PendingQuery) {
-                if (!target.PendingQuery.IsComplete)
-                    return;
-
-                if (target.PendingQuery.IsDisposed) {
-                    target.PendingQuery = null;
-                    return;
-                }
-
-                target.IsQueryRunning = false;
-
-                if (target.LastQueryStart <= LastClearTimestamp) {
-                    target.Count = null;
-                    target.DeadFrameCount = 0;
-                } else {
-                    target.Count = target.PendingQuery.PixelCount;
-                    // Console.WriteLine("Chunk " + target.ID + " " + target.Count);
-
-                    if (target.Count > 0)
-                        target.DeadFrameCount = 0;
-                }
-
-                target.PendingQuery = null;
-            }
-        }
-
         private void UpdateLivenessAndReapDeadChunks () {
+            // FIXME
+            return;
+
             LiveCount = 0;
 
             foreach (var kvp in LivenessInfos) {
                 var isDead = false;
                 var li = kvp.Value;
-                UpdateChunkLivenessQuery(li);
                 LiveCount += li.Count.GetValueOrDefault(0);
 
                 if (li.Count.GetValueOrDefault(1) <= 0) {
@@ -984,9 +952,6 @@ namespace Squared.Illuminant.Particles {
                 LastResetCount = Engine.ResetCount;
             }
 
-            lock (LivenessInfos)
-                UpdateLivenessAndReapDeadChunks();
-
             var initialTurn = Engine.CurrentTurn;
 
             var pm = Engine.ParticleMaterials;
@@ -1059,6 +1024,11 @@ namespace Squared.Illuminant.Particles {
                 // FIXME: This here, this thing, randomly adds 10-20ms to BeginDraw making us miss vsync. Sick. Awesome.
                 if (computingLiveness)
                     ComputeLiveness(group, i++);
+
+                if (computingLiveness) {
+                    lock (LivenessInfos)
+                        UpdateLivenessAndReapDeadChunks();
+                }
             }
 
             var ts = Time.Ticks;
@@ -1294,49 +1264,54 @@ namespace Squared.Illuminant.Particles {
             return result;
         }
 
+        private void ReadLivenessDataFromRT () {
+            var buffer = new Rg32[MaxChunkCount];
+            lock (Engine.Coordinator.UseResourceLock)
+                LivenessQueryRT?.Get()?.GetData(buffer);
+
+            lock (LivenessInfos)
+            for (int i = 0; i < Chunks.Count; i++) {
+                var chunk = Chunks[i];
+                var li = GetLivenessInfo(chunk);
+                if (li == null) 
+                    continue;
+
+                li.Count = (int)(buffer[i].PackedValue);
+            }
+        }
+
         private void ComputeLiveness (
             BatchGroup group, int layer
         ) {
 #if FNA
             return;
 #endif
-
             var quadCount = ChunkMaximumCount;
+
+            Engine.Coordinator.BeforePrepare(ReadLivenessDataFromRT);
 
             using (var rtg = BatchGroup.ForRenderTarget(
                 group, layer, LivenessQueryRT, (dm, _) => {
-                    dm.Device.Clear(Color.White);
+                    dm.Device.Clear(Color.Black);
                 }
             )) {
-                RenderTrace.Marker(rtg, -9999, "Perform chunk occlusion queries");
+                RenderTrace.Marker(rtg, -9999, "Compute chunk liveness");
 
                 var m = Engine.ParticleMaterials.CountLiveParticles;
 
-                foreach (var chunk in Chunks) {
+                for (int i = 0; i < Chunks.Count; i++) {
+                    var chunk = Chunks[i];
                     var li = GetLivenessInfo(chunk);
                     if (li == null)
                         continue;
 
-                    var q = chunk.Query;
                     using (var chunkBatch = NativeBatch.New(
                         rtg, chunk.ID, m, (dm, _) => {
-                            dm.Device.Clear(Color.Transparent);
                             SetSystemUniforms(m, 0);
-
                             var p = m.Effect.Parameters;
+                            p["ChunkIndexAndMaxIndex"].SetValue(new Vector2(i, LivenessQueryRT.Width));
                             p["PositionTexture"].SetValue(chunk.Current.PositionAndLife);
                             m.Flush();
-                            if (!q.IsDisposed) {
-                                li.LastQueryStart = Time.Ticks;
-                                li.PendingQuery = q;
-                                var temp = q.IsComplete;
-                                Monitor.Enter(q);
-                                q.Begin();
-                            }
-                        }, (dm, _) => {
-                            q.End();
-                            Monitor.Exit(q);
-                            li.IsQueryRunning = true;
                         }
                     )) {
                         chunkBatch.Add(new NativeDrawCall(

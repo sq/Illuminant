@@ -314,12 +314,21 @@ namespace Squared.Illuminant.Particles {
                     ColorWriteChannels3 = ColorWriteChannels.None
                 };
 
+                var countBlendState = new BlendState {
+                    AlphaBlendFunction = BlendFunction.Add,
+                    ColorBlendFunction = BlendFunction.Add,
+                    AlphaDestinationBlend = Blend.One,
+                    ColorDestinationBlend = Blend.One,
+                    AlphaSourceBlend = Blend.One,
+                    ColorSourceBlend = Blend.One,
+                };
+
                 LoadOneMaterial(out ParticleMaterials.CountLiveParticles,
                     "CountLiveParticles", "CountLiveParticles", new[] {
                         MaterialUtil.MakeDelegate(
                             rasterizerState: RasterizerState.CullNone,
                             depthStencilState: DepthStencilState.None,
-                            blendState: noopBlendState
+                            blendState: countBlendState
                         )
                     }, dEnd
                 );

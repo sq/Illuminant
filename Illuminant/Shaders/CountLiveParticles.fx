@@ -1,11 +1,13 @@
 #include "ParticleCommon.fxh"
 
 static const float3 Corners[] = {
-    { -1, -1, 0 },
-    { 1, -1, 0 },
+    { 0, 0, 0 },
+    { 1, 0, 0 },
     { 1, 1, 0 },
-    { -1, 1, 0 }
+    { 0, 1, 0 }
 };
+
+uniform float2 ChunkIndexAndMaxIndex;
 
 void VS_CountLiveParticles (
     in  float2 xy             : POSITION0,
@@ -22,16 +24,25 @@ void VS_CountLiveParticles (
     else
         scale = 0;
 
-    result = float4(Corners[cornerIndex.x].xy * scale * 2, 0, scale);
+    float xPx = ChunkIndexAndMaxIndex.x;
+    float widthPx = ChunkIndexAndMaxIndex.y;
+    float scaledX = xPx / widthPx;
+    float2 scaledCorner = Corners[cornerIndex.x].xy;
+    scaledCorner.x /= widthPx;
+
+    result = float4(scaledCorner * scale, 0, scale);
 }
 
 void PS_CountLiveParticles (
     in  float4 position : TEXCOORD1,
     out float4 color    : COLOR0
 ) {
-    color = position.w;
-    if (position.w <= 1)
-        discard;
+    if (position.w <= 1) {
+        //discard;
+        color = 0;
+    } else {
+        color = 1.0 / 1024.0;
+    }
 }
 
 technique CountLiveParticles {
