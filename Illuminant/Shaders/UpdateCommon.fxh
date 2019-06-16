@@ -17,6 +17,10 @@ uniform float4 LifeRampSettings;
 
 float3 applyFrictionAndMaximum (float3 velocity) {
     float l = length(velocity);
+    // HACK: MojoShader and/or opengl don't like denormals much!
+    if (l <= 0.001)
+        return 0;
+
     if (l > getMaximumVelocity())
         l = getMaximumVelocity();
 
@@ -68,7 +72,10 @@ float4 getRampedColorForLifeValueAndIndex (float life, float velocityLength, flo
     return result;
 }
 
-float getRotationForVelocity (float3 velocity) {
+float getRotationForVelocity (float velocityLength, float3 velocity) {
+    if (velocityLength <= 0.001)
+        return 0;
+
     float2 absvel = abs(velocity.xy + float2(0, velocity.z * -getZToY()));
 
     float angle;
@@ -92,12 +99,14 @@ void computeRenderData (
     }
     // FIXME
     float index = vpos.x + (vpos.y * 256);
-    float velocityLength = max(length(velocity), 0.001);
+    float velocityLength = 0;
+    if (any(abs(velocity.xyz)))
+        velocityLength = length(velocity.xyz);
     renderColor = attributes * getRampedColorForLifeValueAndIndex(position.w, velocityLength, index);
     renderColor.a = saturate(renderColor.a);
     renderColor.rgb *= renderColor.a;
     renderData.x = getSizeForLifeAndVelocity(position.w, velocityLength);
-    renderData.y = getRotationForVelocity(velocity) +
+    renderData.y = getRotationForVelocity(velocityLength, velocity) +
         getRotationForLifeAndIndex(position.w, index);
     renderData.z = velocityLength;
     renderData.w = velocity.w;
