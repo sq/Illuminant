@@ -77,13 +77,13 @@ float4 evaluateFormula (float4 origin, float4 constant, float4 scale, float4 off
                 randomNormal.y * randomness.z * scale.y,
                 randomNormal.z * randomness.z * scale.z
             );
+            circular += randomNormal * offset.xyz;
             if (itype == FormulaType_Rectangular) {
                 // 1/sqrt(2)
-                float3 edge = scale.xyz * 0.70710678118;
+                float3 edge = (scale.xyz + offset.xyz) * 0.70710678118;
                 circular = clamp(circular, -edge, edge);
             }
             float3 result = constant.xyz + circular.xyz;
-            result += randomNormal * offset.xyz;
             return float4(result, type0.w);
         }
         case FormulaType_Towards: {
