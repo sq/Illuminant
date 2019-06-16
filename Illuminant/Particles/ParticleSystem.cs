@@ -806,11 +806,10 @@ namespace Squared.Illuminant.Particles {
         }
 
         internal HashSet<LivenessInfo> ChunksToReap = new HashSet<LivenessInfo>();
+        private int[] LastLivenessInfoChunkIds = new int[MaxChunkCount];
+        private bool  IsLivenessInfoUpdated = true;
 
         private void UpdateLivenessAndReapDeadChunks () {
-            // FIXME
-            return;
-
             LiveCount = 0;
 
             foreach (var kvp in LivenessInfos) {
@@ -952,6 +951,13 @@ namespace Squared.Illuminant.Particles {
                 LastResetCount = Engine.ResetCount;
             }
 
+            lock (LivenessInfos) {
+                if (IsLivenessInfoUpdated) {
+                    IsLivenessInfoUpdated = false;
+                    UpdateLivenessAndReapDeadChunks();
+                }
+            }
+
             var initialTurn = Engine.CurrentTurn;
 
             var pm = Engine.ParticleMaterials;
@@ -993,7 +999,7 @@ namespace Squared.Illuminant.Particles {
                     LivenessInfos.Clear();
                 }
 
-                bool computingLiveness = false;
+                bool computingLiveness = true;
                 if (FramesUntilNextLivenessCheck-- <= 0) {
                     FramesUntilNextLivenessCheck = LivenessCheckInterval;
                     computingLiveness = true;
@@ -1024,11 +1030,6 @@ namespace Squared.Illuminant.Particles {
                 // FIXME: This here, this thing, randomly adds 10-20ms to BeginDraw making us miss vsync. Sick. Awesome.
                 if (computingLiveness)
                     ComputeLiveness(group, i++);
-
-                if (computingLiveness) {
-                    lock (LivenessInfos)
-                        UpdateLivenessAndReapDeadChunks();
-                }
             }
 
             var ts = Time.Ticks;
@@ -1269,23 +1270,30 @@ namespace Squared.Illuminant.Particles {
             lock (Engine.Coordinator.UseResourceLock)
                 LivenessQueryRT?.Get()?.GetData(buffer);
 
-            lock (LivenessInfos)
-            for (int i = 0; i < Chunks.Count; i++) {
-                var chunk = Chunks[i];
-                var li = GetLivenessInfo(chunk);
-                if (li == null) 
-                    continue;
+            lock (LivenessInfos) {
+                for (int i = 0; i < MaxChunkCount; i++) {
+                    var id = LastLivenessInfoChunkIds[i];
+                    if (id <= 0)
+                        continue;
 
-                li.Count = (int)(buffer[i].PackedValue);
+                    var chunk = ChunkFromID(id);
+                    if (chunk == null)
+                        continue;
+                    var li = GetLivenessInfo(chunk);
+                    if (li == null) 
+                        continue;
+
+                    var count = (int)(buffer[i].PackedValue);
+                    li.Count = count;
+                }
+
+                IsLivenessInfoUpdated = true;
             }
         }
 
         private void ComputeLiveness (
             BatchGroup group, int layer
         ) {
-#if FNA
-            return;
-#endif
             var quadCount = ChunkMaximumCount;
 
             Engine.Coordinator.BeforePrepare(ReadLivenessDataFromRT);
@@ -1299,29 +1307,35 @@ namespace Squared.Illuminant.Particles {
 
                 var m = Engine.ParticleMaterials.CountLiveParticles;
 
-                for (int i = 0; i < Chunks.Count; i++) {
-                    var chunk = Chunks[i];
-                    var li = GetLivenessInfo(chunk);
-                    if (li == null)
-                        continue;
+                lock (LivenessInfos) {
+                    Array.Clear(LastLivenessInfoChunkIds, 0, MaxChunkCount);
 
-                    using (var chunkBatch = NativeBatch.New(
-                        rtg, chunk.ID, m, (dm, _) => {
-                            SetSystemUniforms(m, 0);
-                            var p = m.Effect.Parameters;
-                            p["ChunkIndexAndMaxIndex"].SetValue(new Vector2(i, LivenessQueryRT.Width));
-                            p["PositionTexture"].SetValue(chunk.Current.PositionAndLife);
-                            m.Flush();
+                    for (int i = 0; i < Chunks.Count; i++) {
+                        var chunk = Chunks[i];
+                        LastLivenessInfoChunkIds[i] = chunk.ID;
+                        var li = GetLivenessInfo(chunk);
+                        if (li == null)
+                            continue;
+                        var indexAndMax = new Vector2(i, LivenessQueryRT.Width);
+
+                        using (var chunkBatch = NativeBatch.New(
+                            rtg, chunk.ID, m, (dm, _) => {
+                                SetSystemUniforms(m, 0);
+                                var p = m.Effect.Parameters;
+                                p["ChunkIndexAndMaxIndex"].SetValue(indexAndMax);
+                                p["PositionTexture"].SetValue(chunk.Current.PositionAndLife);
+                                m.Flush();
+                            }
+                        )) {
+                            chunkBatch.Add(new NativeDrawCall(
+                                PrimitiveType.TriangleList, 
+                                Engine.RasterizeVertexBuffer, 0,
+                                Engine.RasterizeOffsetBuffer, 0, 
+                                null, 0,
+                                Engine.RasterizeIndexBuffer, 0, 0, 4, 0, 2,
+                                quadCount
+                            ));
                         }
-                    )) {
-                        chunkBatch.Add(new NativeDrawCall(
-                            PrimitiveType.TriangleList, 
-                            Engine.RasterizeVertexBuffer, 0,
-                            Engine.RasterizeOffsetBuffer, 0, 
-                            null, 0,
-                            Engine.RasterizeIndexBuffer, 0, 0, 4, 0, 2,
-                            quadCount
-                        ));
                     }
                 }
             }

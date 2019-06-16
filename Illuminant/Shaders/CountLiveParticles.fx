@@ -26,11 +26,12 @@ void VS_CountLiveParticles (
 
     float xPx = ChunkIndexAndMaxIndex.x;
     float widthPx = ChunkIndexAndMaxIndex.y;
-    float scaledX = xPx / widthPx;
-    float2 scaledCorner = Corners[cornerIndex.x].xy;
-    scaledCorner.x /= widthPx;
+    float2 tl = float2(-1 + (xPx / widthPx * 2), -1);
+    float2 br = float2(-1 + ((xPx + 1) / widthPx * 2), 1);
+    float2 corner = Corners[cornerIndex.x].xy;
+    float2 pos = lerp(tl, br, corner);
 
-    result = float4(scaledCorner * scale, 0, scale);
+    result = float4(pos * scale, 0, scale);
 }
 
 void PS_CountLiveParticles (
@@ -38,10 +39,10 @@ void PS_CountLiveParticles (
     out float4 color    : COLOR0
 ) {
     if (position.w <= 1) {
-        //discard;
+        discard;
         color = 0;
     } else {
-        color = 1.0 / 1024.0;
+        color = float4(1.0 / 65535, 0, 0, 0);
     }
 }
 
