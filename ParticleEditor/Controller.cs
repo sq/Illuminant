@@ -388,6 +388,8 @@ namespace Lumined {
                         Console.WriteLine("Failed to load file");
                     else
                         SetModel(model);
+
+                    View.Time.CurrentTime = -Time.SecondInTicks;
                 }
             });
         }

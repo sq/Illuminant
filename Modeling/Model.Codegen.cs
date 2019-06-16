@@ -47,11 +47,11 @@ namespace Squared.Illuminant.Modeling {
         private void WriteCodeHeader (TextWriter tw, string name) {
             tw.WriteLine(
 @"using System;
+using System.Collections.Generic;
 using Squared.Util;
 using Squared.Illuminant.Particles;
 using Microsoft.Xna.Framework;
 
-using C_RS = Squared.Render.Convenience.RenderStates;
 using G_BS = Microsoft.Xna.Framework.Graphics.BlendState;
 
 namespace Squared.Illuminant.Compiled {{
@@ -130,7 +130,7 @@ namespace Squared.Illuminant.Compiled {{
                 tw.WriteLine(
                     "            var {0}BlendState = blendState ?? {1};", 
                     name, kvp.Value.AdditiveBlend 
-                        ? "C_RS.AdditiveBlend"
+                        ? "G_BS.Additive"
                         : "G_BS.AlphaBlend"
                 );
                 tw.WriteLine("            {0}.Render(container, layer++, material: material, transform: transform, blendState: {0}BlendState, renderParams: renderParams, usePreviousData: usePreviousData);", name);
@@ -222,6 +222,10 @@ namespace Squared.Illuminant.Compiled {{
 
         delegate bool TryGetValue (string name, out object result);
 
+        private bool IsList (Type t) {
+            return typeof(IList).IsAssignableFrom(t);
+        }
+
         private void WriteMembers (
             TextWriter tw, object o, Type type,
             TryGetValue getValue = null
@@ -235,19 +239,24 @@ namespace Squared.Illuminant.Compiled {{
                 object value = null;
 
                 if (f != null) {
-                    if (f.IsInitOnly)
-                        continue;
                     memberName = f.Name;
                     memberType = f.FieldType;
+                    if (!IsList(memberType)) {
+                        if (f.IsInitOnly)
+                            continue;
+                    }
                     if (getValue == null)
                         value = f.GetValue(o);
                 } else if (p != null) {
-                    if (!p.CanWrite || !p.CanRead)
-                        continue;
-                    if (p.GetSetMethod(false) == null)
-                        continue;
                     memberName = p.Name;
                     memberType = p.PropertyType;
+                    if (IsList(memberType) && p.CanRead) {
+                    } else {
+                        if (!p.CanWrite || !p.CanRead)
+                            continue;
+                        if (p.GetSetMethod(false) == null)
+                            continue;
+                    }
                     if (getValue == null)
                         value = p.GetValue(o);
                 } else {
@@ -361,6 +370,20 @@ namespace Squared.Illuminant.Compiled {{
         private string FormatValue (object value, ref Type type) {
             if (value == null)
                 return null;
+
+            var iList = value as IList;
+            if (iList != null) {
+                var sb = new StringBuilder();
+                sb.Append("{ ");
+                for (int i = 0, c = iList.Count; i < c; i++) {
+                    var item = iList[i];
+                    var itemText = FormatValue(item);
+                    if (itemText != null)
+                        sb.AppendFormat("{0}, ", itemText);
+                }
+                sb.Append("}");
+                return sb.ToString();
+            }
 
             var iParam = value as IParameter;
             string valueText;

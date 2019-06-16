@@ -43,17 +43,20 @@ namespace Lumined {
         }
         
         public void Update (EditorGame editor, IBatchContainer container, int layer, long deltaTimeTicks) {
-            var doUpdate = !editor.Controller.Paused || editor.Controller.StepPending;
+            var doUpdate = (!editor.Controller.Paused || editor.Controller.StepPending);
             if (!doUpdate)
                 return;
 
-            foreach (var system in Systems)
-                system.Instance.Configuration.AutoReadback = GetData().DrawAsBitmaps && (system.Model.Configuration.Appearance?.Texture?.IsInitialized ?? false);
+            if (Time.Ticks >= 0) {
+                foreach (var system in Systems)
+                    system.Instance.Configuration.AutoReadback = GetData().DrawAsBitmaps && (system.Model.Configuration.Appearance?.Texture?.IsInitialized ?? false);
 
-            editor.Controller.StepPending = false;
+                editor.Controller.StepPending = false;
+
+                base.Update(container, layer, deltaTimeTicks);
+            }
+
             Time.Advance(deltaTimeTicks);
-
-            base.Update(container, layer, deltaTimeTicks);
         }
 
         public void Draw (EditorGame editor, IBatchContainer container, int layer) {
