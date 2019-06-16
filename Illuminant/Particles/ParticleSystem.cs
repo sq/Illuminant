@@ -1056,6 +1056,7 @@ namespace Squared.Illuminant.Particles {
                 foreach (var chunk in Chunks)
                     UpdateChunk(chunk, now, (float)actualDeltaTimeSeconds, startedWhen, pm, group, ref i, computingLiveness);
 
+                // FIXME: This here, this thing, randomly adds 10-20ms to BeginDraw making us miss vsync. Sick. Awesome.
                 if (computingLiveness)
                     ComputeLiveness(group, i++);
             }
