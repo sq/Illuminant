@@ -78,12 +78,15 @@ float4 evaluateFormula (float4 origin, float4 constant, float4 scale, float4 off
                 randomNormal.z * randomness.z * scale.z
             );
             circular += randomNormal * offset.xyz;
+            float3 result;
             if (itype == FormulaType_Rectangular) {
-                // 1/sqrt(2)
-                float3 edge = (scale.xyz + offset.xyz) * 0.70710678118;
-                circular = clamp(circular, -edge, edge);
+                const float sqrt2 = 1.41421356237;
+                circular *= sqrt2;
+                float3 edge = (scale.xyz + offset.xyz);
+                result = constant.xyz + clamp(circular.xyz, -edge, edge);
+            } else {
+                result = constant.xyz + circular.xyz;
             }
-            float3 result = constant.xyz + circular.xyz;
             return float4(result, type0.w);
         }
         case FormulaType_Towards: {
