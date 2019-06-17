@@ -196,6 +196,8 @@ namespace Lumined {
                         newName = n;
                 }
 
+                Nuklear.NewRow(LineHeight, 2);
+
                 var currentTypeName = p.ValueType.Name;
                 var currentTypeIndex = Array.IndexOf(ValidVariableTypeNames, currentTypeName);
                 if (Nuklear.ComboBox(ref currentTypeIndex, (i) => (i < 0) ? "" : ValidVariableTypeNames[i], ValidVariableTypeNames.Length, "Variable Type")) {
@@ -206,6 +208,8 @@ namespace Lumined {
                         changed = true;
                     }
                 }
+
+                Nuklear.Checkbox("External Value", ref def.IsExternal, "If set, the value of this variable will be determined at runtime");
 
                 NameStack.Clear();
                 if (p.ValueType.Name.Contains("Matrix"))

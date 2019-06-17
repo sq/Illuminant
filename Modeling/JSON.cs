@@ -41,6 +41,7 @@ namespace Squared.Illuminant.Modeling {
 
         public override bool CanConvert (Type objectType) {
             switch (objectType.Name) {
+                case "NamedVariableDefinition":
                 case "NamedVariableCollection":
                 case "IParameter":
                 case "Parameter`1":
@@ -64,6 +65,13 @@ namespace Squared.Illuminant.Modeling {
             return Type.GetType(name, false) ?? typeof(ParticleSystem).Assembly.GetType(name, false) ?? typeof(Vector4).Assembly.GetType(name, false);
         }
 
+        private IParameter ReadParameterFromJObject (JObject obj, JsonSerializer serializer) {
+            var expectedValueTypeName = obj["ValueType"].ToString();
+            var expectedValueType = ResolveTypeFromShortName(expectedValueTypeName);
+            var tValue = typeof(Parameter<>).MakeGenericType(expectedValueType);
+            return (IParameter)obj.ToObject(tValue, serializer);
+        }
+
         public override object ReadJson (JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer) {
             JToken token;
 
@@ -77,15 +85,35 @@ namespace Squared.Illuminant.Modeling {
                     foreach (var prop in obj.Properties()) {
                         var key = prop.Name.ToString();
                         var value = prop.Value;
-                        var asParameter = value.ToObject<IParameter>(serializer);
                         var asDefinition = value.ToObject<NamedVariableDefinition>(serializer);
-                        if (asDefinition != null) {
-                            result.Add(key, asDefinition);
-                        } else if (asParameter != null) {
-                            result.Add(key, new NamedVariableDefinition { DefaultValue = asParameter });
-                        }
+                        result.Add(key, asDefinition);
                     };
                     return result;
+                }
+                case "NamedVariableDefinition": {
+                    token = JToken.Load(reader);
+                    if (token.Type != JTokenType.Object)
+                        throw new InvalidDataException();
+                    var obj = (JObject)token;
+                    var isExternal = false;
+
+                    if (obj["IsExternal"] != null)
+                        isExternal = obj["IsExternal"].ToObject<bool>(serializer);
+                    IParameter param = null;
+
+                    if (obj["DefaultValue"] is JObject) {
+                        param = ReadParameterFromJObject((JObject)obj["DefaultValue"], serializer);
+                    } else if (obj["ValueType"] != null) {
+                        param = ReadParameterFromJObject(obj, serializer);
+                    }
+
+                    if (param == null)
+                        throw new InvalidDataException("Malformed named variable");
+
+                    return new NamedVariableDefinition {
+                        DefaultValue = param,
+                        IsExternal = isExternal
+                    };
                 }
                 case "IParameter":
                 case "Parameter`1": {
@@ -186,6 +214,14 @@ namespace Squared.Illuminant.Modeling {
                 case "NamedVariableCollection": {
                     var temp = new Dictionary<string, NamedVariableDefinition>((NamedVariableCollection)value);
                     serializer.Serialize(writer, temp);
+                    return;
+                }
+                case "NamedVariableDefinition": {
+                    var nvd = (NamedVariableDefinition)value;
+                    serializer.Serialize(writer, new {
+                        DefaultValue = nvd.DefaultValue,
+                        IsExternal = nvd.IsExternal
+                    });
                     return;
                 }
                 case "IParameter":

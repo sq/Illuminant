@@ -334,17 +334,18 @@ namespace Squared.Illuminant.Compiled {{
                 .Replace("System.", "");
         }
 
-        private void WriteNamedVariable (TextWriter tw, string name, object value) {
+        private void WriteNamedVariable (TextWriter tw, string name, NamedVariableDefinition def) {
             Type valueType = null;
             string valueText = "null";
 
-            if (value != null)
-                valueText = FormatValue(value, ref valueType);
-            else
-                valueType = typeof(object);
+            // throw?
+            if (def?.DefaultValue == null)
+                return;
+
+            valueType = def.ValueType;
+            valueText = FormatValue(def.DefaultValue, ref valueType);
 
             var typeName = GetTypeName(valueType);
-
             tw.WriteLine("        public {0} @{1} = ", typeName, FormatName(name));
             tw.WriteLine("            {0};", valueText ?? "default(" + typeName + ")");
         }
@@ -365,10 +366,16 @@ namespace Squared.Illuminant.Compiled {{
 
             name = FormatName(name);
 
+            string expr;
             if (isBezier)
-                return string.Format("(t) => @{0}.Evaluate(t)", name);
+                expr = string.Format("@{0}.Evaluate(t)", name);
             else
-                return string.Format("(t) => @{0}", name);
+                expr = string.Format("@{0}", name);
+
+            if (def?.IsExternal == true)
+                return string.Format("(t) => {{ {1} result; if (!Engine.Resolve{1}(\"{0}\", t, out result)) result = {2}; return result; }}", name, GetTypeName(def.ValueType), expr);
+            else
+                return "(t) => " + expr;
         }
 
         private string FormatValue (object value, ref Type type) {

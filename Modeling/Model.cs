@@ -288,7 +288,7 @@ namespace Squared.Illuminant.Modeling {
 
         public Type ValueType {
             get {
-                return DefaultValue.ValueType;
+                return DefaultValue?.ValueType;
             }
         }
     }
