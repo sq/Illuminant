@@ -24,7 +24,8 @@ namespace Squared.Illuminant {
         public readonly double Resolution;
         public readonly int MaximumEncodedDistance;
 
-        public readonly RenderTarget2D Texture;
+        public readonly RenderCoordinator Coordinator;
+        public readonly AutoRenderTarget Texture;
         public readonly int SliceWidth, SliceHeight, SliceCount;
         public readonly int PhysicalSliceCount;
         public readonly int ColumnCount, RowCount;
@@ -40,6 +41,7 @@ namespace Squared.Illuminant {
             int virtualWidth, int virtualHeight, float virtualDepth,
             int requestedSliceCount, double requestedResolution = 1, int maximumEncodedDistance = DefaultMaximumEncodedDistance
         ) {
+            Coordinator = coordinator;
             VirtualWidth = virtualWidth;
             VirtualHeight = virtualHeight;
             VirtualDepth = virtualDepth;
@@ -103,13 +105,11 @@ namespace Squared.Illuminant {
             UseLock = coordinator.UseResourceLock;
 
             lock (coordinator.CreateResourceLock)
-                Texture = new RenderTarget2D(
-                    coordinator.Device,
+                Texture = new AutoRenderTarget(
+                    coordinator,
                     SliceWidth * ColumnCount, 
                     SliceHeight * RowCount,
-                    false, SurfaceFormat.Rgba64,
-                    DepthFormat.None, 0, 
-                    RenderTargetUsage.PreserveContents
+                    false, SurfaceFormat.Rgba64
                 );
 
             coordinator.DeviceReset += Coordinator_DeviceReset;
@@ -184,8 +184,10 @@ namespace Squared.Illuminant {
             var size = 8 * Texture.Width * Texture.Height;
             var data = new byte[size];
 
+            var tex = Texture.Get();
+
             lock (UseLock)
-                Texture.GetData(data);
+                tex.GetData(data);
 
             output.Write(data, 0, size);
         }
@@ -202,8 +204,10 @@ namespace Squared.Illuminant {
             if (bytesRead != size)
                 throw new Exception("Truncated file");
 
+            var tex = Texture.Get();
+
             lock (UseLock)
-                Texture.SetData(data);
+                tex.SetData(data);
 
             SliceInfo.InvalidSlices.Clear();
             // FIXME: Is this right?
@@ -234,13 +238,14 @@ namespace Squared.Illuminant {
             // TODO: Remove event listener from rendercoordinator
 
             IsDisposed = true;
-            Texture.Dispose();
+
+            Coordinator.DisposeResource(Texture);
         }
     }
 
     public class DynamicDistanceField : DistanceField {
         internal readonly SliceInfo StaticSliceInfo = new SliceInfo();
-        public readonly RenderTarget2D StaticTexture;
+        public readonly AutoRenderTarget StaticTexture;
 
         public DynamicDistanceField (
             RenderCoordinator coordinator,
@@ -248,13 +253,11 @@ namespace Squared.Illuminant {
             int sliceCount, double requestedResolution = 1, int maximumEncodedDistance = DefaultMaximumEncodedDistance
         ) : base (coordinator, virtualWidth, virtualHeight, virtualDepth, sliceCount, requestedResolution, maximumEncodedDistance) {
             lock (coordinator.CreateResourceLock)
-                StaticTexture = new RenderTarget2D(
-                    coordinator.Device,
+                StaticTexture = new AutoRenderTarget(
+                    coordinator,
                     SliceWidth * ColumnCount, 
                     SliceHeight * RowCount,
-                    false, SurfaceFormat.Rgba64,
-                    DepthFormat.None, 0, 
-                    RenderTargetUsage.PreserveContents
+                    false, SurfaceFormat.Rgba64
                 );
         }
 

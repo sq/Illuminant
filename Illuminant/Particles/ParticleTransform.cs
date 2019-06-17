@@ -69,24 +69,23 @@ namespace Squared.Illuminant.Particles.Transforms {
                 var e = m.Effect;
                 var p = e.Parameters;
 
-                var vp = new Viewport(0, 0, engine.Configuration.ChunkSize, engine.Configuration.ChunkSize);
                 var curr = up.Curr;
                 if (curr.IsDisposed)
                     return;
 
+                // FIXME: Use a group?
                 if (Transform?.IsAnalyzer ?? false) {
-                    dm.SetRenderTarget(engine.ScratchTexture);
+                    dm.PushRenderTarget(engine.ScratchTexture);
                 } else if (up.IsUpdate) {
                     curr.Bindings4[2] = new RenderTargetBinding(up.Chunk.RenderColor);
                     curr.Bindings4[3] = new RenderTargetBinding(up.Chunk.RenderData);
-                    dm.SetRenderTargets(curr.Bindings4);
+                    dm.PushRenderTargets(curr.Bindings4);
                 } else if (up.IsSpawning) {
                     curr.Bindings3[2] = up.Chunk.Color;
-                    dm.SetRenderTargets(curr.Bindings3);
+                    dm.PushRenderTargets(curr.Bindings3);
                 } else {
-                    dm.SetRenderTargets(curr.Bindings2);
+                    dm.PushRenderTargets(curr.Bindings2);
                 }
-                dm.SetViewport(vp);
 
                 if (e != null) {
                     system.SetSystemUniforms(m, up.DeltaTimeSeconds);
@@ -119,7 +118,7 @@ namespace Squared.Illuminant.Particles.Transforms {
 
                     var dft = p["DistanceFieldTexture"];
                     if (dft != null) {
-                        dft.SetValue(system.Configuration.Collision?.DistanceField.Texture);
+                        dft.SetValue(system.Configuration.Collision?.DistanceField?.Texture?.Get());
 
                         var dfu = new Uniforms.DistanceField(
                             system.Configuration.Collision.DistanceField, 
@@ -152,6 +151,8 @@ namespace Squared.Illuminant.Particles.Transforms {
                     p.ClearTextures(ParticleSystem.ClearTextureList);
 
                 Transform?.AfterUpdateChunk(engine);
+
+                dm.PopRenderTarget();
             }
         }
 

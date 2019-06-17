@@ -245,7 +245,7 @@ namespace TestGame.Scenes {
                         samplerState: SamplerState.LinearClamp
                     ))
                         bb.Add(new BitmapDrawCall(
-                            Renderer.DistanceField.Texture, Vector2.Zero, new Bounds(Vector2.Zero, Vector2.One), 
+                            Renderer.DistanceField.Texture.Get(), Vector2.Zero, new Bounds(Vector2.Zero, Vector2.One), 
                             new Color(255, 255, 255, 255), dfScale
                         ));
                 }
@@ -259,7 +259,7 @@ namespace TestGame.Scenes {
                         samplerState: SamplerState.PointClamp
                     ))
                         bb.Add(new BitmapDrawCall(
-                            Renderer.GBuffer.Texture, Vector2.Zero, new Bounds(Vector2.Zero, Vector2.One), 
+                            Renderer.GBuffer.Texture.Get(), Vector2.Zero, new Bounds(Vector2.Zero, Vector2.One), 
                             Color.White, LightmapScaleRatio
                         ));
                 }

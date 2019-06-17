@@ -34,7 +34,8 @@ namespace Squared.Illuminant {
         }
 
         private void RenderDistanceFieldSliceTriplet (
-            BatchGroup rtGroup, int physicalSliceIndex, int firstVirtualSliceIndex, 
+            AutoRenderTarget renderTarget, BatchGroup rtGroup, 
+            int physicalSliceIndex, int firstVirtualSliceIndex, 
             ref int layer, bool? dynamicFlagFilter
         ) {
             var df = _DistanceField;
@@ -62,6 +63,8 @@ namespace Squared.Illuminant {
                         dm.Device.Clear(Color.Transparent);
                     }
 
+                    dm.AssertRenderTarget(renderTarget.Get());
+
                     // TODO: Optimize this
                     dm.Device.ScissorRectangle = new Rectangle(
                         sliceX, sliceY, df.SliceWidth, df.SliceHeight
@@ -86,7 +89,7 @@ namespace Squared.Illuminant {
                     RenderTrace.Marker(group, -2, "LightingRenderer {0} : Begin Distance Field Slices [{1}-{2}]", this.ToObjectID(), firstVirtualSliceIndex, lastVirtualSliceIndex);
 
                 ClearDistanceFieldSlice(
-                    QuadIndices, group, -1, firstVirtualSliceIndex, dynamicFlagFilter == true ? ddf.StaticTexture : null
+                    QuadIndices, group, -1, firstVirtualSliceIndex, dynamicFlagFilter == true ? ddf.StaticTexture.Get() : null
                 );
 
                 RenderDistanceFieldDistanceFunctions(firstVirtualSliceIndex, group, dynamicFlagFilter);
@@ -358,7 +361,8 @@ namespace Squared.Illuminant {
                 },
                 (dm, _) => {
                     Materials.PopViewTransform();
-                }
+                },
+                name: "Render Distance Field Partition"
             )) {
                 // We incrementally do a partial update of the distance field.
                 int layer = 0;
@@ -371,7 +375,8 @@ namespace Squared.Illuminant {
                     var physicalSlice = slice / PackedSliceCount;
 
                     RenderDistanceFieldSliceTriplet(
-                        rtGroup, physicalSlice, slice, ref layer, dynamicFlagFilter
+                        renderTarget, rtGroup, 
+                        physicalSlice, slice, ref layer, dynamicFlagFilter
                     );
 
                     slicesToUpdate -= 3;

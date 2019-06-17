@@ -967,18 +967,17 @@ namespace Squared.Illuminant.Particles {
 
             var pm = Engine.ParticleMaterials;
 
-            using (var group = BatchGroup.New(
-                container, layer,
+            using (var group = BatchGroup.ForRenderTarget(
+                container, layer, (RenderTarget2D)null,
                 (dm, _) => {
-                    dm.PushRenderTarget(null);
                     lock (ReadbackLock)
                     if (Configuration.AutoReadback)
                         ReadbackFuture = new Future<ArraySegment<BitmapDrawCall>>();
                 },
                 (dm, _) => {
-                    dm.PopRenderTarget();
                     MaybePerformReadback((float)now);
-                }
+                },
+                name: "Update particle system"
             )) {
                 int i = 0;
 
@@ -1032,9 +1031,8 @@ namespace Squared.Illuminant.Particles {
                 foreach (var chunk in Chunks)
                     UpdateChunk(chunk, now, (float)actualDeltaTimeSeconds, startedWhen, pm, group, ref i, computingLiveness);
 
-                // FIXME: This here, this thing, randomly adds 10-20ms to BeginDraw making us miss vsync. Sick. Awesome.
                 if (computingLiveness)
-                    ComputeLiveness(group, i++);
+                    ComputeLiveness(container, layer);
             }
 
             var ts = Time.Ticks;
@@ -1115,7 +1113,7 @@ namespace Squared.Illuminant.Particles {
         }
 
         private void CopyBuffer (IBatchContainer container, ref int layer, RenderTarget2D from, RenderTarget2D to) {
-            using (var group = BatchGroup.ForRenderTarget(container, ++layer, to))
+            using (var group = BatchGroup.ForRenderTarget(container, ++layer, to, name: "Copy Particle System Buffer"))
             using (var bb = BitmapBatch.New(group, 0, Engine.Materials.GetBitmapMaterial(false, RasterizerState.CullNone, DepthStencilState.None, BlendState.Opaque), samplerState: SamplerState.PointClamp))
                 bb.Add(new BitmapDrawCall(from, Vector2.Zero));
         }
@@ -1297,7 +1295,7 @@ namespace Squared.Illuminant.Particles {
         }
 
         private void ComputeLiveness (
-            BatchGroup group, int layer
+            IBatchContainer group, int layer
         ) {
             var quadCount = ChunkMaximumCount;
 
@@ -1309,7 +1307,7 @@ namespace Squared.Illuminant.Particles {
                         ClearOptions.Target | ClearOptions.DepthBuffer, 
                         Color.Transparent, 0, 0
                     );
-                }
+                }, name: "Compute chunk liveness"
             )) {
                 RenderTrace.Marker(rtg, -9999, "Compute chunk liveness");
 

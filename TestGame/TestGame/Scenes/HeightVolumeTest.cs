@@ -244,7 +244,7 @@ namespace TestGame.Scenes {
             )) {
                 var dc = new BitmapDrawCall(
                     ShowGBuffer
-                        ? Renderer.GBuffer.Texture
+                        ? Renderer.GBuffer.Texture.Get()
                         : Lightmap, 
                     Vector2.Zero,
                     Color.White
@@ -260,7 +260,7 @@ namespace TestGame.Scenes {
                 samplerState: SamplerState.LinearClamp
             )) {
                 var dc = new BitmapDrawCall(
-                    DistanceField.Texture,
+                    DistanceField.Texture.Get(),
                     Vector2.Zero,
                     Color.White
                 ) {

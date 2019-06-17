@@ -763,6 +763,7 @@ namespace Squared.Illuminant {
             if (!newLuminanceBuffer)
                 throw new Exception("Failed to get luminance buffer");
 
+            var name = "Generate HDR Buffer";
             var w = Configuration.RenderSize.First / 2;
             var h = Configuration.RenderSize.Second / 2;
             using (var copyGroup = BatchGroup.ForRenderTarget(
@@ -775,10 +776,11 @@ namespace Squared.Illuminant {
                     Materials.PopViewTransform();
                     // FIXME: Maybe don't do this until Present?
                     newLuminanceBuffer.Dispose();
-                }
+                },
+                name: name
             )) {
                 if (RenderTrace.EnableTracing)
-                    RenderTrace.Marker(copyGroup, -1, "LightingRenderer {0} : Generate HDR Buffer", this.ToObjectID());
+                    RenderTrace.Marker(copyGroup, -1, "LightingRenderer {0} : {1}", this.ToObjectID(), name);
 
                 var ir = new ImperativeRenderer(copyGroup, Materials);
                 var m = IlluminantMaterials.CalculateLuminance;
@@ -881,7 +883,8 @@ namespace Squared.Illuminant {
                 resultGroup = BatchGroup.ForRenderTarget(
                     outerGroup, 1, lightmap.Buffer,
                     before: BeginLightPass, after: EndLightPass,
-                    userData: lightmap.Buffer
+                    userData: lightmap.Buffer,
+                    name: "Light Pass"
                 );
 
                 {
@@ -1581,7 +1584,7 @@ namespace Squared.Illuminant {
             uDistanceField.TrySet(m, ref dfu);
 
             if (setDistanceTexture)
-                p["DistanceFieldTexture"].SetValue(_DistanceField.Texture);
+                p["DistanceFieldTexture"].SetValue(_DistanceField.Texture.Get());
 
             p["DistanceFieldPacked1"]?.SetValue(new Vector4(
                 // FIXME: Surprisingly, using double precision for 1/3 here breaks

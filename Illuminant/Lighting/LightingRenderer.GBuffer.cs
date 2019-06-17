@@ -74,12 +74,14 @@ namespace Squared.Illuminant {
                 (dm, _) => {
                     dm.PushStates();
                     Materials.PushViewTransform(ref vt);
+                    dm.AssertRenderTarget(_GBuffer.Texture.Get());
                     dm.Device.ScissorRectangle = new Rectangle(0, 0, renderWidth, renderHeight);
                 },
                 (dm, _) => {
                     Materials.PopViewTransform();
                     dm.PopStates();
-                }
+                },
+                name: "Render G-Buffer"
             )) {
                 if (RenderTrace.EnableTracing)
                     RenderTrace.Marker(group, -1, "LightingRenderer {0} : Begin G-Buffer", this.ToObjectID());
@@ -437,7 +439,7 @@ namespace Squared.Illuminant {
                 p["GBufferTexelSizeAndMisc"].SetValue(new Vector4(
                     _GBuffer.InverseSize, ViewportScaleX(), ViewportScaleY()
                 ));
-                p["GBuffer"].SetValue(_GBuffer.Texture);
+                p["GBuffer"].SetValue(_GBuffer.Texture.Get());
             } else {
                 p.ClearTexture("GBuffer");
                 p["GBufferTexelSizeAndMisc"].SetValue(new Vector4(

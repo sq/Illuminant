@@ -262,7 +262,7 @@ namespace TestGame.Scenes {
                     samplerState: SamplerState.LinearClamp
                 ))
                     bb.Add(new BitmapDrawCall(
-                        Renderer.DistanceField.Texture, 
+                        Renderer.DistanceField.Texture.Get(), 
                         Vector2.Zero, new Bounds(Vector2.Zero, Vector2.One), 
                         new Color(255, 255, 255, 255), dfScale
                     ));

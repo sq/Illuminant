@@ -266,7 +266,6 @@ namespace Lumined {
         }
 
         private void Window_ClientSizeChanged (object sender, EventArgs e) {
-            Console.WriteLine("ClientSizeChanged");
             if (Window.ClientBounds.Width <= 0)
                 return;
 

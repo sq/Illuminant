@@ -12,7 +12,8 @@ namespace Squared.Illuminant {
         public bool IsDisposed { get; private set; }
         public bool IsValid    { get; internal set; }
 
-        public readonly RenderTarget2D Texture;
+        public readonly RenderCoordinator Coordinator;
+        public readonly AutoRenderTarget Texture;
         public readonly Vector2 Size, InverseSize;
         public readonly int Width, Height;
 
@@ -25,15 +26,16 @@ namespace Squared.Illuminant {
             Height = height;
             Size = new Vector2(Width, Height);
             InverseSize = new Vector2(1.0f / Width, 1.0f / Height);
+            Coordinator = coordinator;
 
             lock (coordinator.CreateResourceLock)
-                Texture = new RenderTarget2D(
-                    coordinator.Device, 
+                Texture = new AutoRenderTarget(
+                    coordinator, 
                     width, height, false, 
                     highQuality
                         ? SurfaceFormat.Vector4
                         : SurfaceFormat.HalfVector4,
-                    DepthFormat.Depth24, 0, RenderTargetUsage.PreserveContents
+                    DepthFormat.Depth24, 0
                 );
 
             coordinator.DeviceReset += Coordinator_DeviceReset;
@@ -56,7 +58,7 @@ namespace Squared.Illuminant {
             // TODO: Remove event from coordinator
 
             IsDisposed = true;
-            Texture.Dispose();
+            Coordinator.DisposeResource(Texture);
         }
     }
 }

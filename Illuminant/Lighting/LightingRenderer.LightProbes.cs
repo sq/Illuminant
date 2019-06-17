@@ -48,7 +48,7 @@ namespace Squared.Illuminant {
             using (var lightProbeGroup = BatchGroup.ForRenderTarget(
                 container, layer, renderTarget, 
                 before: BeginLightProbePass, after: isForGi ? EndGIProbePass : EndLightProbePass,
-                userData: renderTarget
+                userData: renderTarget, name: "Update light probes"
             )) {
                 if (RenderTrace.EnableTracing)
                     RenderTrace.Marker(lightProbeGroup, -2, "LightingRenderer {0} : Update {1} probes", this.ToObjectID(), isForGi ? "GI" : "Light");

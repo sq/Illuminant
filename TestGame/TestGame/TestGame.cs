@@ -26,7 +26,7 @@ using Nuke = NuklearDotNet.Nuklear;
 
 namespace TestGame {
     public class TestGame : MultithreadedGame, INuklearHost {
-        public int? DefaultScene = null;
+        public int? DefaultScene = 11;
 
         public GraphicsDeviceManager Graphics;
         public DefaultMaterialSet Materials { get; private set; }
@@ -312,6 +312,7 @@ namespace TestGame {
                 oldScene = Scenes[_ActiveSceneIndex];
 
             _ActiveSceneIndex = index;
+
             var newScene = Scenes[index];
             if (oldScene != newScene) {
                 if (oldScene != null)
@@ -389,7 +390,10 @@ namespace TestGame {
         public override void Draw (GameTime gameTime, Frame frame) {
             Nuklear.UpdateInput(IsActive, PreviousMouseState, MouseState, PreviousKeyboardState, KeyboardState, IsMouseOverUI);
 
-            using (var group = BatchGroup.ForRenderTarget(frame, -9990, UIRenderTarget)) {
+            using (var group = BatchGroup.ForRenderTarget(
+                frame, -9990, UIRenderTarget,
+                name: "Render UI"
+            )) {
                 ClearBatch.AddNew(group, -1, Materials.Clear, clearColor: Color.Transparent);
                 Nuklear.Render(gameTime.ElapsedGameTime.Seconds, group, 1);
             }

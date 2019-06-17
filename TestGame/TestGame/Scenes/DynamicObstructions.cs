@@ -239,7 +239,7 @@ namespace TestGame.Scenes {
                         Game.Materials.Get(Game.Materials.ScreenSpaceBitmap, blendState: BlendState.AlphaBlend),
                         samplerState: SamplerState.PointClamp
                     ))
-                        bb.Add(new BitmapDrawCall(Renderer.GBuffer.Texture, Vector2.Zero));
+                        bb.Add(new BitmapDrawCall(Renderer.GBuffer.Texture.Get(), Vector2.Zero));
                 } else {
                     using (var bb = BitmapBatch.New(
                         group, 1,
@@ -267,7 +267,7 @@ namespace TestGame.Scenes {
                         samplerState: SamplerState.LinearClamp
                     ))
                         bb.Add(new BitmapDrawCall(
-                            Renderer.DistanceField.Texture, Vector2.Zero, new Bounds(Vector2.Zero, Vector2.One), 
+                            Renderer.DistanceField.Texture.Get(), Vector2.Zero, new Bounds(Vector2.Zero, Vector2.One), 
                             new Color(255, 255, 255, 255), dfScale
                         ));
                 }                

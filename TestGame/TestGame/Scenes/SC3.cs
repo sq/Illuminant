@@ -657,8 +657,8 @@ namespace TestGame.Scenes {
                     ))
                         bb.Add(new BitmapDrawCall(
                             VisualizeForeground 
-                                ? ForegroundRenderer.DistanceField.Texture
-                                : Renderer.DistanceField.Texture, 
+                                ? ForegroundRenderer.DistanceField.Texture.Get()
+                                : Renderer.DistanceField.Texture.Get(), 
                             Vector2.Zero, new Bounds(Vector2.Zero, Vector2.One), 
                             new Color(255, 255, 255, 255), dfScale
                         ));
@@ -674,8 +674,8 @@ namespace TestGame.Scenes {
                     ))
                         bb.Add(new BitmapDrawCall(
                             VisualizeForeground 
-                                ? ForegroundRenderer.GBuffer.Texture
-                                : Renderer.GBuffer.Texture, 
+                                ? ForegroundRenderer.GBuffer.Texture.Get()
+                                : Renderer.GBuffer.Texture.Get(), 
                             Vector2.Zero, new Bounds(Vector2.Zero, Vector2.One), 
                             Color.White, 
                             VisualizeForeground

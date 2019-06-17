@@ -239,12 +239,12 @@ namespace Squared.Illuminant {
             if (GIProbeCount < 1)
                 return;
 
-            using (var rt = BatchGroup.New(
-                container, layer,
-                (dm, _) => {
-                    dm.PushRenderTargets(new RenderTargetBinding[] { _SelectedGIProbePositions, _SelectedGIProbeNormals });
-                    dm.SetViewport(new Viewport(0, 0, GIProbeCount, GIProbeSampleCount));
+            var name = "Select GI probe locations";
 
+            var bindings = new RenderTargetBinding[] { _SelectedGIProbePositions, _SelectedGIProbeNormals };
+            using (var rt = BatchGroup.ForRenderTargets(
+                container, layer, bindings,
+                (dm, _) => {
                     SetDistanceFieldParameters(m, true, Configuration.GIProbeQuality);
 
                     p["NormalCount"].SetValue(GIProbeSampleCount);
@@ -255,7 +255,6 @@ namespace Squared.Illuminant {
                 (dm, _) => {
                     for (int i = 0; i < 16; i++)
                         dm.Device.Textures[i] = null;
-                    dm.PopRenderTarget();
 
                     // HACK: If probes are selected while the distance field is only partially generated, 
                     //  they will potentially penetrate walls. As a result we can't preserve those probes
@@ -267,9 +266,10 @@ namespace Squared.Illuminant {
                         Configuration.GICaching
                     )
                         Environment.GIVolumes.IsDirty = false;
-                }
+                },
+                name: name
             )) {
-                RenderTrace.Marker(rt, 0, "Select GI probe locations");
+                RenderTrace.Marker(rt, 0, name);
 
                 RenderGIVolumes(rt, 1, m, false);
             }
@@ -331,7 +331,8 @@ namespace Squared.Illuminant {
                 (dm, _) => {
                     for (int i = 0; i < 16; i++)
                         dm.Device.Textures[i] = null;
-                }
+                },
+                name: "Update GI probes from bounce"
             )) {
                 RenderTrace.Marker(group, 0, "Update GI probes from bounce {0}", sourceBounceIndex);
 
@@ -353,11 +354,9 @@ namespace Squared.Illuminant {
             var previousBounce = (bounceIndex > 0) ? _GIBounces[bounceIndex - 1].SH : null;
             var bounce = _GIBounces[bounceIndex].SH;
 
-            using (var rt = BatchGroup.New(
-                container, layer,
+            using (var rt = BatchGroup.ForRenderTarget(
+                container, layer, bounce,
                 (dm, _) => {
-                    dm.PushRenderTarget(bounce);
-                    dm.SetViewport(new Viewport(0, 0, GIProbeCount, SHValueCount));
                     dm.Device.BlendState = BlendState.Opaque;
 
                     p["Brightness"].SetValue(1.0f + (Configuration.GIBounceBrightnessAmplification * bounceIndex));
@@ -380,8 +379,8 @@ namespace Squared.Illuminant {
                 (dm, _) => {
                     for (int i = 0; i < 16; i++)
                         dm.Device.Textures[i] = null;
-                    dm.PopRenderTarget();
-                }
+                },
+                name: "Update spherical harmonics for bounce"
             )) {
                 RenderTrace.Marker(rt, 0, "Update spherical harmonics for bounce {0}", bounceIndex);
 
