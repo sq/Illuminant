@@ -77,8 +77,13 @@ namespace Squared.Illuminant.Modeling {
                     foreach (var prop in obj.Properties()) {
                         var key = prop.Name.ToString();
                         var value = prop.Value;
-                        var deserializedValue = value.ToObject<IParameter>(serializer);
-                        result.Add(key, deserializedValue);
+                        var asParameter = value.ToObject<IParameter>(serializer);
+                        var asDefinition = value.ToObject<NamedVariableDefinition>(serializer);
+                        if (asDefinition != null) {
+                            result.Add(key, asDefinition);
+                        } else if (asParameter != null) {
+                            result.Add(key, new NamedVariableDefinition { DefaultValue = asParameter });
+                        }
                     };
                     return result;
                 }
@@ -179,7 +184,7 @@ namespace Squared.Illuminant.Modeling {
             var type = value.GetType();
             switch (type.Name) {
                 case "NamedVariableCollection": {
-                    var temp = new Dictionary<string, IParameter>((NamedVariableCollection)value);
+                    var temp = new Dictionary<string, NamedVariableDefinition>((NamedVariableCollection)value);
                     serializer.Serialize(writer, temp);
                     return;
                 }

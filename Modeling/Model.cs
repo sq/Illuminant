@@ -276,23 +276,40 @@ namespace Squared.Illuminant.Modeling {
         }
     }
 
-    public class NamedVariableCollection : Dictionary<string, IParameter> {
+    public class NamedVariableDefinition {
+        /// <summary>
+        /// The default value for the variable, used during editing.
+        /// </summary>
+        public IParameter DefaultValue;
+        /// <summary>
+        /// If true, the default value will be replaced by a value provided at runtime.
+        /// </summary>
+        public bool IsExternal;
+
+        public Type ValueType {
+            get {
+                return DefaultValue.ValueType;
+            }
+        }
+    }
+
+    public class NamedVariableCollection : Dictionary<string, NamedVariableDefinition> {
         public NamedVariableCollection ()
             : base (StringComparer.OrdinalIgnoreCase) {
         }
 
         public bool Set<T> (string name, ref T value)
             where T: struct {
-            IParameter p;
-            if (!TryGetValue(name, out p))
+            NamedVariableDefinition def;
+            if (!TryGetValue(name, out def))
                 return false;
 
-            if (!(p is Parameter<T>))
+            if (!(def.DefaultValue is Parameter<T>))
                 return false;
 
-            var pv = (Parameter<T>)p;
+            var pv = (Parameter<T>)def.DefaultValue;
             pv.Constant = value;
-            this[name] = pv;
+            def.DefaultValue = pv;
             return true;
         }
 

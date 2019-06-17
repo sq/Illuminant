@@ -90,14 +90,20 @@ namespace Lumined {
             }
         }
 
+        public NamedVariableDefinition SelectedVariableDefinition {
+            get {
+                NamedVariableDefinition def;
+                if ((SelectedVariableName == null) ||
+                    !Model.NamedVariables.TryGetValue(SelectedVariableName, out def))
+                    def = null;
+
+                return def;
+            }
+        }
+
         public Squared.Illuminant.Configuration.IParameter SelectedVariable {
             get {
-                Squared.Illuminant.Configuration.IParameter c;
-                if ((SelectedVariableName == null) ||
-                    !Model.NamedVariables.TryGetValue(SelectedVariableName, out c))
-                    c = null;
-
-                return c;
+                return SelectedVariableDefinition?.DefaultValue;
             }
         }
 
@@ -141,7 +147,7 @@ namespace Lumined {
                 name = string.Format("var{0}", NextConstantID++);
             var tParameter = typeof(Squared.Illuminant.Configuration.Parameter<>).MakeGenericType(valueType);
             var value = (Squared.Illuminant.Configuration.IParameter)Activator.CreateInstance(tParameter);
-            Model.NamedVariables.Add(name, value);
+            Model.NamedVariables.Add(name, new NamedVariableDefinition { DefaultValue = value });
             SelectedVariableName = name;
             return name;
         }
@@ -154,14 +160,14 @@ namespace Lumined {
             if (string.IsNullOrWhiteSpace(to))
                 return false;
 
-            Squared.Illuminant.Configuration.IParameter c;
-            if (!Model.NamedVariables.TryGetValue(from, out c))
+            NamedVariableDefinition def;
+            if (!Model.NamedVariables.TryGetValue(from, out def))
                 return false;
             if (Model.NamedVariables.ContainsKey(to))
                 return false;
 
             Model.NamedVariables.Remove(from);
-            Model.NamedVariables.Add(to, c);
+            Model.NamedVariables.Add(to, def);
 
             if (SelectedVariableName == from)
                 SelectedVariableName = to;

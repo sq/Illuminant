@@ -1062,9 +1062,8 @@ namespace Lumined {
                     changed = true;
                     p.Name = Controller.AddVariable(valueType, PickName(actualName));
                     // Copy original constant
-                    var v = Model.NamedVariables[p.Name];
-                    v.Constant = p.Constant;
-                    Model.NamedVariables[p.Name] = v;
+                    var def = Model.NamedVariables[p.Name];
+                    def.DefaultValue.Constant = p.Constant;
                 }
                 if (ShowConstantButton()) {
                     changed = true;
@@ -1169,9 +1168,8 @@ namespace Lumined {
                             p = p.ToReference();
                             p.Name = Controller.AddVariable(valueType, PickName(actualName));
                             // Copy original constant
-                            var v = Model.NamedVariables[p.Name];
-                            v.Constant = p.Constant;
-                            Model.NamedVariables[p.Name] = v;
+                            var def = Model.NamedVariables[p.Name];
+                            def.DefaultValue.Constant = p.Constant;
                         }
                     }
                 }

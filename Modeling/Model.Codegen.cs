@@ -356,8 +356,12 @@ namespace Squared.Illuminant.Compiled {{
         private string MakeEvaluator (string name) {
             var isBezier = false;
             IParameter param;
-            if (NamedVariables.TryGetValue(name, out param))
+            NamedVariableDefinition def;
+
+            if (NamedVariables.TryGetValue(name, out def)) {
+                param = def.DefaultValue;
                 isBezier = param.IsBezier;
+            }
 
             name = FormatName(name);
 

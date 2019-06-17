@@ -175,8 +175,9 @@ namespace Lumined {
             }
 
             var n = Controller.SelectedVariableName;
+            var def = Controller.SelectedVariableDefinition;
             var p = Controller.SelectedVariable;
-            if (p == null)
+            if (def == null)
                 return;
 
             bool changed = false;
@@ -212,7 +213,7 @@ namespace Lumined {
 
                 RenderParameter(null, Model.NamedVariables, ref changed, newName, null, ref p, false);
                 if (changed)
-                    Model.NamedVariables[newName] = p;
+                    def.DefaultValue = p;
 
                 NameStack.Clear();
             }

@@ -60,8 +60,11 @@ namespace Squared.Illuminant.Modeling {
                 SystemResolver = ResolveReference,
                 NamedVariableResolver = (k) => {
                     Configuration.IParameter result;
-                    if (!Model.NamedVariables.TryGetValue(k, out result))
+                    NamedVariableDefinition def;
+                    if (!Model.NamedVariables.TryGetValue(k, out def))
                         result = null;
+                    else
+                        result = def.DefaultValue;
 
                     return result;
                 },
