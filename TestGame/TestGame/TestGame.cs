@@ -26,7 +26,7 @@ using Nuke = NuklearDotNet.Nuklear;
 
 namespace TestGame {
     public class TestGame : MultithreadedGame, INuklearHost {
-        public int? DefaultScene = 11;
+        public int? DefaultScene = null;
 
         public GraphicsDeviceManager Graphics;
         public DefaultMaterialSet Materials { get; private set; }
@@ -103,8 +103,9 @@ namespace TestGame {
                 // new VectorFieldTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new LUTTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
 #if compiled_model
-                new LoadCompiledModel(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
+                new LoadCompiledModel(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
 #endif
+                new Shapes(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
             };
         }
 

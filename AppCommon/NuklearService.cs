@@ -394,7 +394,7 @@ namespace Framework {
             PendingIR.FillRing(bounds.Center, Vector2.Zero, radius - Vector2.One, color, color, quality: 2);
             PendingIR.FillRing(bounds.Center, radius - (Vector2.One * 1.4f), radius + softEdge, color, Color.Transparent, quality: 2);
             */
-            PendingRenderer.Ellipse(bounds.Center, radius, color);
+            PendingRenderer.RasterizeEllipse(bounds.Center, radius, color);
         }
         
         private void RenderCommand (nk_command_line* c) {
