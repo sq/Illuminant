@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Newtonsoft.Json.Linq;
 using Squared.Illuminant.Particles;
@@ -91,10 +92,13 @@ namespace Squared.Illuminant.Modeling {
                 using (var img = new Squared.Render.STB.Image(name, premultiply: true, asFloatingPoint: floatingPoint))
                     result = img.CreateTexture(Coordinator, !floatingPoint);
             } else {
-                if (floatingPoint)
-                    return Engine.Configuration.FPTextureLoader(name);
-                else
-                    return Engine.Configuration.TextureLoader(name);
+                // HACK: Create placeholder texture
+                lock (Coordinator.CreateResourceLock) {
+                    result = new Texture2D(Coordinator.Device, 2, 2);
+                    result.SetData(new [] {
+                        Color.Black, Color.White, Color.Black, Color.White
+                    });
+                }
             }
 
             LoadedResources.Add(result);

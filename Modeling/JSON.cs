@@ -32,12 +32,8 @@ namespace Squared.Illuminant.Modeling {
     }
 
     public class IlluminantJsonConverter : JsonConverter {
-        private static readonly string FnaSuffix;
-
-        static IlluminantJsonConverter () {
-            var fnaName = typeof(Vector4).AssemblyQualifiedName;
-            FnaSuffix = fnaName.Substring(fnaName.IndexOf(',')).Trim();
-        }
+        private const string FnaSuffix = ", FNA, Version=19.5.0.0, Culture=neutral, PublicKeyToken=null";
+        private const string XnaSuffix = ", Microsoft.Xna.Framework, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553";
 
         public override bool CanConvert (Type objectType) {
             switch (objectType.Name) {
@@ -58,8 +54,11 @@ namespace Squared.Illuminant.Modeling {
         private static Type ResolveTypeFromShortName (string name) {
 #if FNA
             name = name.Replace(
-                ", Microsoft.Xna.Framework, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553",
-                FnaSuffix
+                XnaSuffix, FnaSuffix
+            );
+#else
+            name = name.Replace(
+                FnaSuffix, XnaSuffix
             );
 #endif
             return Type.GetType(name, false) ?? typeof(ParticleSystem).Assembly.GetType(name, false) ?? typeof(Vector4).Assembly.GetType(name, false);
