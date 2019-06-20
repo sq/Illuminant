@@ -1383,7 +1383,7 @@ namespace Squared.Illuminant.Particles {
             BatchGroup group, Chunk chunk, Material m, int layer, bool usePreviousData
         ) {
             // TODO: Actual occupied count?
-            var quadCount = ChunkMaximumCount;
+            var quadCount = Math.Min(ChunkMaximumCount, chunk.TotalSpawned + 1);
 
             var src = usePreviousData ? chunk.Previous : chunk.Current;
 
