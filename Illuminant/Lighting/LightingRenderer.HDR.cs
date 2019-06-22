@@ -11,6 +11,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Graphics.PackedVector;
 using Squared.Game;
 using Squared.Render;
+using Squared.Render.Evil;
 using Squared.Render.Tracing;
 using Squared.Threading;
 using Squared.Util;
@@ -39,7 +40,7 @@ namespace Squared.Illuminant {
                         buffer = Renderer._LuminanceReadbackArray = new float[count];
 
                     lock (Renderer.Coordinator.UseResourceLock)
-                        Texture.GetData(
+                        Texture.GetDataFast(
                             LevelIndex, new Rectangle(0, 0, Width, Height),
                             buffer, 0, count
                         );

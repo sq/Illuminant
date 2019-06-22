@@ -15,6 +15,7 @@ using Squared.Illuminant.Uniforms;
 using Squared.Illuminant.Util;
 using Squared.Render;
 using Squared.Render.Convenience;
+using Squared.Render.Evil;
 using Squared.Render.Tracing;
 using Squared.Threading;
 using Squared.Util;
@@ -410,11 +411,11 @@ namespace Squared.Illuminant.Particles {
         private double? LastUpdateTimeSeconds = null;
         private double  UpdateErrorAccumulator = 0;
 
-        private readonly AutoRenderTarget[] LivenessQueryRTs;
+        private readonly RenderTargetRing LivenessQueryRTs;
+
         internal HashSet<LivenessInfo> ChunksToReap = new HashSet<LivenessInfo>();
         private int[] LastLivenessInfoChunkIds = new int[MaxChunkCount];
         private bool  IsLivenessInfoUpdated = true;
-        private int LivenessBufferIndex = 0;
 
         public long TotalSpawnCount { get; private set; }
 
@@ -437,10 +438,7 @@ namespace Squared.Illuminant.Particles {
 
             engine.Systems.Add(this);
 
-            LivenessQueryRTs = new AutoRenderTarget[4];
-
-            for (int i = 0; i < LivenessQueryRTs.Length; i++)
-                LivenessQueryRTs[i] = new AutoRenderTarget(engine.Coordinator, MaxChunkCount, 1, false, SurfaceFormat.Rg32, DepthFormat.Depth16, 1);
+            LivenessQueryRTs = new RenderTargetRing(engine.Coordinator, 3, MaxChunkCount, 1, false, SurfaceFormat.Rg32, DepthFormat.Depth16, 1);
         }
 
         public ITimeProvider TimeProvider {
@@ -1162,9 +1160,9 @@ namespace Squared.Illuminant.Particles {
                 var rowCount = (int)Math.Ceiling(c.TotalSpawned / (float)Engine.Configuration.ChunkSize);
                 var eleCount = rowCount * Engine.Configuration.ChunkSize;
                 var rect = new Rectangle(0, 0, Engine.Configuration.ChunkSize, rowCount);
-                curr.PositionAndLife.GetData(0, rect, ReadbackBuffer1, 0, eleCount);
-                c.RenderData.GetData(0, rect, ReadbackBuffer2, 0, eleCount);
-                c.RenderColor.GetData(0, rect, ReadbackBuffer3, 0, eleCount);
+                curr.PositionAndLife.GetDataFast(0, rect, ReadbackBuffer1, 0, eleCount);
+                c.RenderData.GetDataFast(0, rect, ReadbackBuffer2, 0, eleCount);
+                c.RenderColor.GetDataFast(0, rect, ReadbackBuffer3, 0, eleCount);
                 totalCount += FillReadbackResult(
                     ReadbackResultBuffer, ReadbackBuffer1, ReadbackBuffer2, ReadbackBuffer3,
                     totalCount, eleCount, ReadbackTimestamp
@@ -1272,41 +1270,55 @@ namespace Squared.Illuminant.Particles {
             return result;
         }
 
-        private void ReadLivenessDataFromRT (AutoRenderTarget rt, bool needResourceLock) {
-            var startedWhen = Time.Ticks;
-            var buffer = new Rg32[MaxChunkCount];
+#if FNA
+        private class LivenessDataReadbackWorkItem : IMainThreadWorkItem {
+#else
+        private struct LivenessDataReadbackWorkItem : IWorkItem {
+#endif
+            public RenderTarget2D RenderTarget;
+            public ParticleSystem System;
+            public bool NeedResourceLock;
 
-            if (needResourceLock)
-                Monitor.Enter(Engine.Coordinator.UseResourceLock);
-            try {
-                var instance = rt?.Get();
-                instance?.GetData(buffer);
-            } finally {
-                if (needResourceLock)
-                    Monitor.Exit(Engine.Coordinator.UseResourceLock);
-            }
+            public void Execute () {
+                if (!AutoRenderTargetBase.IsRenderTargetValid(RenderTarget))
+                    return;
 
-            lock (LivenessInfos) {
-                for (int i = 0; i < MaxChunkCount; i++) {
-                    var id = LastLivenessInfoChunkIds[i];
-                    if (id <= 0)
-                        continue;
+                var startedWhen = Time.Ticks;
+                var buffer = new Rg32[MaxChunkCount];
 
-                    var chunk = ChunkFromID(id);
-                    if (chunk == null)
-                        continue;
-                    var li = GetLivenessInfo(chunk);
-                    if (li == null) 
-                        continue;
-
-                    var count = (int)(buffer[i].PackedValue);
-                    li.Count = count;
+                if (NeedResourceLock)
+                    Monitor.Enter(System.Engine.Coordinator.UseResourceLock);
+                try {
+                    RenderTarget.GetDataFast(buffer);
+                } finally {
+                    if (NeedResourceLock)
+                        Monitor.Exit(System.Engine.Coordinator.UseResourceLock);
                 }
 
-                IsLivenessInfoUpdated = true;
-            }
+                lock (System.LivenessInfos) {
+                    for (int i = 0; i < MaxChunkCount; i++) {
+                        var id = System.LastLivenessInfoChunkIds[i];
+                        if (id <= 0)
+                            continue;
 
-            // Console.WriteLine("{0:000.0}ms", (Time.Ticks - startedWhen) / (double)Time.MillisecondInTicks);
+                        var chunk = System.ChunkFromID(id);
+                        if (chunk == null)
+                            continue;
+                        var li = System.GetLivenessInfo(chunk);
+                        if (li == null) 
+                            continue;
+
+                        var count = (int)(buffer[i].PackedValue);
+                        li.Count = count;
+                    }
+
+                    System.IsLivenessInfoUpdated = true;
+                }
+
+                var elapsedMs = (Time.Ticks - startedWhen) / (double)Time.MillisecondInTicks;
+                if (false && elapsedMs > 3)
+                    Console.WriteLine("Readback took {0:000.0}ms", elapsedMs);
+            }
         }
 
         private void ComputeLiveness (
@@ -1316,27 +1328,26 @@ namespace Squared.Illuminant.Particles {
                 return;
 
             var quadCount = ChunkMaximumCount;
+            var wt = LivenessQueryRTs.AcquireWriteTarget();
+            var nextBuffer = wt.Target;
+            var previousBuffer = wt.Previous;
 
-            AutoRenderTarget previousBuffer, nextBuffer;
-
-            lock (LivenessInfos) {
-                previousBuffer = LivenessQueryRTs[LivenessBufferIndex];
-                LivenessBufferIndex = (LivenessBufferIndex + 1) % LivenessQueryRTs.Length;
-                nextBuffer = LivenessQueryRTs[LivenessBufferIndex];
-            }
-
-            // FIXME: This blocks for 12-16ms in FNA.
-            // HACK: Perform right before present to reduce the odds that this makes us miss a frame, since present blocks on vsync
-            Engine.Coordinator.BeforePresent(
-                () => {
-                    var dm = Engine.Coordinator.Manager.DeviceManager;
-                    ReadLivenessDataFromRT(previousBuffer, false);
-                }
-            );
+            // FIXME: This blocks for 12-16ms in FNA if we're in a debug context.
+            // HACK: Perform right after present to reduce the odds that this makes us miss a frame, 
+            //  since present blocks on vsync and so does a gpu readback in debug contexts
+            var wi = new LivenessDataReadbackWorkItem {
+                RenderTarget = previousBuffer,
+                NeedResourceLock = true,
+                System = this
+            };
+#if FNA
+            Engine.Coordinator.BeforePresent(wi.Execute);
+#else
+            Engine.Coordinator.ThreadGroup.Enqueue(wi);
+#endif
 
             using (var rtg = BatchGroup.ForRenderTarget(
                 group, layer, nextBuffer, (dm, _) => {
-
                     dm.Device.Clear(
                         ClearOptions.Target | ClearOptions.DepthBuffer, 
                         Color.Transparent, 0, 0
@@ -1358,7 +1369,7 @@ namespace Squared.Illuminant.Particles {
                         var li = GetLivenessInfo(chunk);
                         if (li == null)
                             continue;
-                        var indexAndMax = new Vector2(i, LivenessQueryRTs[LivenessBufferIndex].Width);
+                        var indexAndMax = new Vector2(i, LivenessQueryRTs.Width);
 
                         using (var chunkBatch = NativeBatch.New(
                             rtg, chunk.ID, m, (dm, _) => {
@@ -1509,8 +1520,7 @@ namespace Squared.Illuminant.Particles {
                 Engine.Coordinator.DisposeResource(chunk);
             }
             Engine.Systems.Remove(this);
-            foreach (var lqr in LivenessQueryRTs)
-                Engine.Coordinator.DisposeResource(lqr);
+            LivenessQueryRTs.Dispose();
             LivenessInfos.Clear();
         }
 

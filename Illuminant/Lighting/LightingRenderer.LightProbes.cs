@@ -9,6 +9,7 @@ using Microsoft.Xna.Framework.Graphics.PackedVector;
 using Squared.Render;
 using Squared.Render.Convenience;
 using Squared.Render.Tracing;
+using Squared.Render.Evil;
 using Squared.Threading;
 using Squared.Util;
 
@@ -129,7 +130,7 @@ namespace Squared.Illuminant {
                         buffer = Renderer._LightProbeReadbackArray = new HalfVector4[count];
 
                     lock (Renderer.Coordinator.UseResourceLock)
-                        Texture.GetData(
+                        Texture.GetDataFast(
                             0, new Rectangle(0, 0, count, 1),
                             buffer, 0, count
                         );

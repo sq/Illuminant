@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Squared.Render;
+using Squared.Render.Evil;
 
 namespace Squared.Illuminant {
     public class SliceInfo {
