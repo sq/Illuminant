@@ -1279,7 +1279,8 @@ namespace Squared.Illuminant.Particles {
             if (needResourceLock)
                 Monitor.Enter(Engine.Coordinator.UseResourceLock);
             try {
-                rt?.Get()?.GetData(buffer);
+                var instance = rt?.Get();
+                instance?.GetData(buffer);
             } finally {
                 if (needResourceLock)
                     Monitor.Exit(Engine.Coordinator.UseResourceLock);
@@ -1325,9 +1326,12 @@ namespace Squared.Illuminant.Particles {
             }
 
             // FIXME: This blocks for 12-16ms in FNA.
-            // HACK: Perform right before issue to reduce the odds that this makes us miss a frame.
+            // HACK: Perform right before present to reduce the odds that this makes us miss a frame, since present blocks on vsync
             Engine.Coordinator.BeforePresent(
-                () => ReadLivenessDataFromRT(previousBuffer, false)
+                () => {
+                    var dm = Engine.Coordinator.Manager.DeviceManager;
+                    ReadLivenessDataFromRT(previousBuffer, false);
+                }
             );
 
             using (var rtg = BatchGroup.ForRenderTarget(
