@@ -105,7 +105,8 @@ namespace TestGame {
 #if compiled_model
                 new LoadCompiledModel(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
 #endif
-                new Shapes(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
+                new Shapes(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
+                new SystemStress(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
             };
         }
 

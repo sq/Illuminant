@@ -38,8 +38,8 @@ namespace TestGame.Scenes {
 
             ir.RasterizeEllipse(
                 Vector2.One * 500, Vector2.One * 420, 4, 
-                new Color(0.5f, 0.1f, 0.25f, 1f), 
-                new Color(0.1f, 0.1f, 0f, 1f), 
+                new Color(0.0f, 0.0f, 0.0f, 1f), 
+                new Color(0.1f, 0.1f, 0.1f, 1f), 
                 outlineColor: Color.White, 
                 layer: 1
             );
