@@ -38,7 +38,7 @@ namespace Lumined {
         public void Initialize (EditorGame editor) {
             Game = editor;
             base.Initialize(Game.RenderCoordinator, Game.Materials, Game.ParticleMaterials);
-            Engine.ChangeChunkSizeAndReset((int)GetData().ChunkSize);
+            Engine.ChangePropertiesAndReset((int)GetData().ChunkSize, GetData().AccurateCounting);
             // Engine.Configuration.UpdatesPerSecond = 120;
         }
         

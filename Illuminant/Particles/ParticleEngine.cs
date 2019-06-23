@@ -219,10 +219,8 @@ namespace Squared.Illuminant.Particles {
             public bool NeedResourceLock;
 
             public void Execute () {
-                if (!AutoRenderTargetBase.IsRenderTargetValid(RenderTarget)) {
-                    Engine.ProcessLivenessInfoData(null);
+                if (!AutoRenderTargetBase.IsRenderTargetValid(RenderTarget))
                     return;
-                }
 
                 // Console.WriteLine("Read liveness data texture");
 
@@ -300,9 +298,11 @@ namespace Squared.Illuminant.Particles {
                 ? ParticleMaterials.CountLiveParticles
                 : ParticleMaterials.CountLiveParticlesFast;
 
+            if (!AutoRenderTarget.IsRenderTargetValid(nextBuffer))
+                return;
+
             var dm = Coordinator.Manager.DeviceManager;
             dm.PushRenderTarget(nextBuffer);
-            dm.PushStates();
             dm.Device.Clear(
                 ClearOptions.Target | ClearOptions.DepthBuffer, 
                 Color.Transparent, 0, 0
@@ -327,10 +327,16 @@ namespace Squared.Illuminant.Particles {
                                 continue;
                             }
 
+                            var srcTexture = chunk.LifeReadTexture;
+                            if (!AutoRenderTarget.IsRenderTargetValid(srcTexture)) {
+                                i++;
+                                continue;
+                            }
+
                             system.SetSystemUniforms(m, 0);
                             var p = m.Effect.Parameters;
                             p["ChunkIndexAndMaxIndex"].SetValue(new Vector2(i, LivenessQueryRTs.Width));
-                            p["PositionTexture"].SetValue(chunk.LifeReadTexture);
+                            p["PositionTexture"].SetValue(srcTexture);
                             m.Flush();
 
                             var call = new NativeDrawCall(
@@ -351,7 +357,6 @@ namespace Squared.Illuminant.Particles {
                 }
             }
 
-            dm.PopStates();
             dm.PopRenderTarget();
 
             Monitor.Exit(LivenessQueryRequests);
@@ -463,13 +468,11 @@ namespace Squared.Illuminant.Particles {
             }
         }
 
-        public void ChangeChunkSizeAndReset (int newSize) {
-            if (Configuration.ChunkSize == newSize)
-                return;
-
+        public void ChangePropertiesAndReset (int newSize, bool accurateCounting) {
             Coordinator.WaitForActiveDraws();
 
             Configuration.ChunkSize = newSize;
+            Configuration.AccurateLivenessCounts = accurateCounting;
             foreach (var s in Systems)
                 s.Reset();
 

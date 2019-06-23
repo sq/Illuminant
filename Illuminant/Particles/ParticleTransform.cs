@@ -54,6 +54,7 @@ namespace Squared.Illuminant.Particles.Transforms {
         internal class UpdateHandler {
             public readonly ParticleTransform Transform;
             public readonly Action<DeviceManager, object> BeforeDraw, AfterDraw;
+            private bool DidSetRenderTarget;
 
             public UpdateHandler (ParticleTransform transform) {
                 Transform = transform;
@@ -61,7 +62,22 @@ namespace Squared.Illuminant.Particles.Transforms {
                 AfterDraw = _AfterDraw;
             }
 
+            private bool IsValidUpdateTarget (ParticleSystem.Chunk chunk) {
+                if (chunk == null)
+                    return true;
+                return AutoRenderTarget.IsRenderTargetValid(chunk.RenderColor) &&
+                    AutoRenderTarget.IsRenderTargetValid(chunk.RenderData);
+            }
+
+            private bool IsValidUpdateTarget (ParticleSystem.BufferSet curr) {
+                if (curr == null)
+                    return true;
+                return AutoRenderTarget.IsRenderTargetValid(curr.PositionAndLife) &&
+                    AutoRenderTarget.IsRenderTargetValid(curr.Velocity);
+            }
+
             private void _BeforeDraw (DeviceManager dm, object _up) {
+                DidSetRenderTarget = false;
                 var up = (ParticleTransformUpdateParameters)_up;
                 var system = up.System;
                 var engine = system.Engine;
@@ -70,7 +86,13 @@ namespace Squared.Illuminant.Particles.Transforms {
                 var p = e.Parameters;
 
                 var curr = up.Curr;
-                if (curr.IsDisposed)
+                if (!IsValidUpdateTarget(curr))
+                    return;
+                if (!IsValidUpdateTarget(up.Chunk))
+                    return;
+                if (!IsValidUpdateTarget(up.Prev))
+                    return;
+                if (!IsValidUpdateTarget(up.SourceData))
                     return;
 
                 // FIXME: Use a group?
@@ -86,6 +108,7 @@ namespace Squared.Illuminant.Particles.Transforms {
                 } else {
                     dm.PushRenderTargets(curr.Bindings2);
                 }
+                DidSetRenderTarget = true;
 
                 if (e != null) {
                     system.SetSystemUniforms(m, up.DeltaTimeSeconds);
@@ -152,7 +175,8 @@ namespace Squared.Illuminant.Particles.Transforms {
 
                 Transform?.AfterUpdateChunk(engine);
 
-                dm.PopRenderTarget();
+                if (DidSetRenderTarget)
+                    dm.PopRenderTarget();
             }
         }
 

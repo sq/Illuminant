@@ -53,6 +53,11 @@ namespace Lumined {
         /// The bitmaps can be sorted into lists of other bitmaps and can use custom materials.
         /// </summary>
         public bool DrawAsBitmaps = false;
+
+        /// <summary>
+        /// If true, total particles will be accurately counted. Otherwise an efficient count will be used that just determines whether a chunk is empty.
+        /// </summary>
+        public bool AccurateCounting = true;
     }
 
     public class EditorSprite {

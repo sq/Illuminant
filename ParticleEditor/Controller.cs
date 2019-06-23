@@ -207,8 +207,11 @@ namespace Lumined {
             if ((data != null) && (View.Engine != null)) {
                 View.Engine.Configuration.UpdatesPerSecond = data.FrameRate;
                 View.Engine.Configuration.MaximumUpdateDeltaTimeSeconds = data.MaximumDeltaTimeMS / 1000f;
-                if ((int)data.ChunkSize != View.Engine.Configuration.ChunkSize)
-                    View.Engine.ChangeChunkSizeAndReset((int)data.ChunkSize);
+                if (
+                    (int)data.ChunkSize != View.Engine.Configuration.ChunkSize ||
+                    data.AccurateCounting != View.Engine.Configuration.AccurateLivenessCounts
+                )
+                    View.Engine.ChangePropertiesAndReset((int)data.ChunkSize, data.AccurateCounting);
             }
 
             if (Game.IsActive && !Game.IsMouseOverUI) {

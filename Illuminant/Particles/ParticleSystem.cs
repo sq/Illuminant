@@ -447,8 +447,12 @@ namespace Squared.Illuminant.Particles {
         public int Capacity {
             get {
                 // FIXME
-                lock (Chunks)
-                    return Chunks.Count * ChunkMaximumCount;
+                lock (Chunks) {
+                    if (Engine.Configuration.AccurateLivenessCounts)
+                        return Chunks.Count * ChunkMaximumCount;
+                    else
+                        return Chunks.Count;
+                }
             }
         }
 
@@ -1305,6 +1309,12 @@ namespace Squared.Illuminant.Particles {
                 Engine.LivenessQueryRequests.Add(this);
         }
 
+        private bool IsChunkValidSource (BufferSet src, Chunk chunk) {
+            return AutoRenderTarget.IsRenderTargetValid(src.PositionAndLife) &&
+                AutoRenderTarget.IsRenderTargetValid(chunk.RenderData) &&
+                AutoRenderTarget.IsRenderTargetValid(chunk.RenderColor);
+        }
+
         private void RenderChunk (
             BatchGroup group, Chunk chunk, Material m, int layer, bool usePreviousData
         ) {
@@ -1317,6 +1327,8 @@ namespace Squared.Illuminant.Particles {
 
             using (var batch = NativeBatch.New(
                 group, layer, m, (dm, _) => {
+                    if (!IsChunkValidSource(src, chunk))
+                        return;
                     var p = m.Effect.Parameters;
                     p["PositionTexture"].SetValue(src.PositionAndLife);
                     // HACK
@@ -1329,14 +1341,15 @@ namespace Squared.Illuminant.Particles {
                     p["AttributeTexture"].SetValue(chunk.RenderColor);
                 }
             )) {
-                batch.Add(new NativeDrawCall(
-                    PrimitiveType.TriangleList, 
-                    Engine.RasterizeVertexBuffer, 0,
-                    Engine.RasterizeOffsetBuffer, 0, 
-                    null, 0,
-                    Engine.RasterizeIndexBuffer, 0, 0, 4, 0, 2,
-                    quadCount
-                ));
+                if (IsChunkValidSource(src, chunk))
+                    batch.Add(new NativeDrawCall(
+                        PrimitiveType.TriangleList, 
+                        Engine.RasterizeVertexBuffer, 0,
+                        Engine.RasterizeOffsetBuffer, 0, 
+                        null, 0,
+                        Engine.RasterizeIndexBuffer, 0, 0, 4, 0, 2,
+                        quadCount
+                    ));
             }
         }
 
