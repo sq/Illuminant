@@ -229,6 +229,7 @@ namespace Lumined {
                    let isNullable = _mtype.Name == "Nullable`1"
                    let allowNull = _mtype.IsClass || isNullable
                    let mtype = isNullable ? _mtype.GetGenericArguments()[0] : _mtype
+                   where (mtype != typeof(Type))
                    let info = GetInfoForField(type, m.Name, mtype)
                    let isList = (info.Type == "List") || (info.Type == "ValueList")
                    let enumValueNames = mtype.IsEnum ? mtype.GetEnumNames() : null
@@ -1019,7 +1020,8 @@ namespace Lumined {
         }
 
         private string PickName (string suffix) {
-            return string.Join(".", NameStack.Where(n => !string.IsNullOrWhiteSpace(n)).Reverse().Concat(new[] { suffix }).ToArray());
+            var result = string.Join(".", NameStack.Where(n => !string.IsNullOrWhiteSpace(n)).Reverse().Concat(new[] { suffix }).ToArray());
+            return result;
         }
 
         private unsafe bool RenderParameter (

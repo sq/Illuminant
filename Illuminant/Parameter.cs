@@ -51,6 +51,7 @@ namespace Squared.Illuminant.Configuration {
         public Operators Operator;
         public Parameter<T> LeftHandSide, RightHandSide;
 
+        [NonSerialized]
         private bool _IsEvaluating;
 
         public BinaryParameterExpression (Parameter<T> lhs, Operators op, Parameter<T> rhs) {
