@@ -39,8 +39,8 @@ void PS_CountLiveParticles (
     out float4 color    : COLOR0
 ) {
     if (position.w <= 0) {
-        // discard;
-        color = float4(0, 1, 0, 1);
+        discard;
+        color = float4(0, 0, 0, 0);
     } else {
         color = float4(1.0 / 65535, 0.5, 0, 1);
     }

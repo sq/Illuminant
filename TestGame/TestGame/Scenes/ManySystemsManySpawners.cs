@@ -32,9 +32,9 @@ namespace TestGame.Scenes {
         public override void LoadContent () {
             Engine = new ParticleEngine(
                 Game.RenderCoordinator, Game.Materials, 
-                new ParticleEngineConfiguration(32) {
+                new ParticleEngineConfiguration(128) {
                     TextureLoader = Game.TextureLoader.Load,
-                    AccurateLivenessCounts = true
+                    AccurateLivenessCounts = false
                 }, Game.ParticleMaterials
             );
 

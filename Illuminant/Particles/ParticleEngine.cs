@@ -20,7 +20,7 @@ using Chunk = Squared.Illuminant.Particles.ParticleSystem.Chunk;
 
 namespace Squared.Illuminant.Particles {
     public partial class ParticleEngine : IDisposable {
-        public const int MaxLivenessCheckChunkCount = 32;
+        public const int MaxLivenessCheckChunkCount = 512;
 
         public bool IsDisposed { get; private set; }
         
@@ -296,7 +296,7 @@ namespace Squared.Illuminant.Particles {
             //  since present blocks on vsync and so does a gpu readback in debug contexts
             Coordinator.BeforePresent(wi.Execute);
 
-            RenderTrace.ImmediateMarker("Compute liveness for {0} chunk(s)", LivenessQueryRequests.Count);
+            RenderTrace.ImmediateMarker("Compute liveness for {0} system(s)", LivenessQueryRequests.Count);
             var m = Configuration.AccurateLivenessCounts
                 ? ParticleMaterials.CountLiveParticles
                 : ParticleMaterials.CountLiveParticlesFast;
@@ -319,33 +319,35 @@ namespace Squared.Illuminant.Particles {
                 Array.Clear(LastLivenessInfoChunks, 0, LastLivenessInfoChunks.Length);
                 int i = 0;
                 foreach (var system in LivenessQueryRequests) {
-                    lock (system.Chunks)
-                    foreach (var chunk in system.Chunks) {
-                        Monitor.Exit(system.Chunks);
+                    lock (system.Chunks) {
+                        RenderTrace.ImmediateMarker("Compute liveness for {0} chunk(s)", system.Chunks.Count);
+                        foreach (var chunk in system.Chunks) {
+                            Monitor.Exit(system.Chunks);
 
-                        LastLivenessInfoChunks[i] = chunk;
-                        system.SetSystemUniforms(m, 0);
-                        var p = m.Effect.Parameters;
-                        p["ChunkIndexAndMaxIndex"].SetValue(new Vector2(i, LivenessQueryRTs.Width));
-                        p["PositionTexture"].SetValue(chunk.Current.PositionAndLife);
-                        m.Flush();
+                            LastLivenessInfoChunks[i] = chunk;
+                            system.SetSystemUniforms(m, 0);
+                            var p = m.Effect.Parameters;
+                            p["ChunkIndexAndMaxIndex"].SetValue(new Vector2(i, LivenessQueryRTs.Width));
+                            p["PositionTexture"].SetValue(chunk.Current.PositionAndLife);
+                            m.Flush();
 
-                        var call = new NativeDrawCall(
-                            PrimitiveType.TriangleList,
-                            RasterizeVertexBuffer, 0,
-                            RasterizeOffsetBuffer, 0,
-                            null, 0,
-                            RasterizeIndexBuffer, 0, 0, 4, 0, 2,
-                            chunk.TotalSpawned
-                        );
-                        NativeBatch.IssueDrawCall(
-                            dm.Device, ref call,
-                            TwoBindings, ThreeBindings
-                        );
+                            var call = new NativeDrawCall(
+                                PrimitiveType.TriangleList,
+                                RasterizeVertexBuffer, 0,
+                                RasterizeOffsetBuffer, 0,
+                                null, 0,
+                                RasterizeIndexBuffer, 0, 0, 4, 0, 2,
+                                chunk.TotalSpawned
+                            );
+                            NativeBatch.IssueDrawCall(
+                                dm.Device, ref call,
+                                TwoBindings, ThreeBindings
+                            );
 
-                        Monitor.Enter(system.Chunks);
+                            Monitor.Enter(system.Chunks);
+                        }
+                        i++;
                     }
-                    i++;
                 }
             }
 
