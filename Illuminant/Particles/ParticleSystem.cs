@@ -764,6 +764,9 @@ namespace Squared.Illuminant.Particles {
             LastUpdateTimeSeconds = null;
             foreach (var xform in Transforms)
                 xform.Reset();
+            lock (LivenessInfos)
+                LivenessInfos.Clear();
+            LiveCount = 0;
         }
 
         public int Spawn (
@@ -833,7 +836,7 @@ namespace Squared.Illuminant.Particles {
                 if (Engine.Configuration.AccurateLivenessCounts)
                     LiveCount += chunkCount;
                 else
-                    LiveCount += (chunkCount > 0) ? ChunkMaximumCount : 0;
+                    LiveCount += (chunkCount > 0) ? 1 : 0;
 
                 if (li.Count.GetValueOrDefault(1) <= 0) {
                     li.DeadFrameCount++;

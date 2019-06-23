@@ -468,11 +468,10 @@ namespace Squared.Illuminant.Particles {
             }
         }
 
-        public void ChangePropertiesAndReset (int newSize, bool accurateCounting) {
+        public void ChangePropertiesAndReset (int newSize) {
             Coordinator.WaitForActiveDraws();
 
             Configuration.ChunkSize = newSize;
-            Configuration.AccurateLivenessCounts = accurateCounting;
             foreach (var s in Systems)
                 s.Reset();
 

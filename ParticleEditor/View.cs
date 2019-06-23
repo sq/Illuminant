@@ -32,13 +32,14 @@ namespace Lumined {
 
         protected override ParticleEngineConfiguration MakeConfiguration () {
             var result = base.MakeConfiguration();
+            result.AccurateLivenessCounts = GetData()?.AccurateCounting ?? true;
             return result;
         }
 
         public void Initialize (EditorGame editor) {
             Game = editor;
             base.Initialize(Game.RenderCoordinator, Game.Materials, Game.ParticleMaterials);
-            Engine.ChangePropertiesAndReset((int)GetData().ChunkSize, GetData().AccurateCounting);
+            Engine.ChangePropertiesAndReset((int)GetData().ChunkSize);
             // Engine.Configuration.UpdatesPerSecond = 120;
         }
         
