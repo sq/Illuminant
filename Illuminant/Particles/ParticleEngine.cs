@@ -249,11 +249,9 @@ namespace Squared.Illuminant.Particles {
         private void ProcessLivenessInfoData (Rg32[] buffer) {
             // Console.WriteLine("Process liveness info data {0}", buffer);
             lock (LastLivenessInfoChunks) {
-                if (buffer == null)
-                    return;
-
                 for (int i = 0; i < LastLivenessInfoChunks.Length; i++) {
-                    var chunk = LastLivenessInfoChunks[i];
+                    var j = i;
+                    var chunk = LastLivenessInfoChunks[j];
                     i++;
                     if (chunk == null)
                         continue;
@@ -262,7 +260,13 @@ namespace Squared.Illuminant.Particles {
                     if (li == null) 
                         continue;
 
-                    var raw = buffer[i].PackedValue;
+                    if (buffer == null) {
+                        li.Count = 0;
+                        chunk.System.IsLivenessInfoUpdated = true;
+                        continue;
+                    }
+
+                    var raw = buffer[j].PackedValue;
                     var flag = raw & 0xFFFF0000;
                     var count = raw & 0xFFFF;
                     li.Count = (int)count;
@@ -325,10 +329,15 @@ namespace Squared.Illuminant.Particles {
                             Monitor.Exit(system.Chunks);
 
                             LastLivenessInfoChunks[i] = chunk;
+                            if (chunk.TotalSpawned == 0) {
+                                i++;
+                                continue;
+                            }
+
                             system.SetSystemUniforms(m, 0);
                             var p = m.Effect.Parameters;
                             p["ChunkIndexAndMaxIndex"].SetValue(new Vector2(i, LivenessQueryRTs.Width));
-                            p["PositionTexture"].SetValue(chunk.Current.PositionAndLife);
+                            p["PositionTexture"].SetValue(chunk.Previous.PositionAndLife);
                             m.Flush();
 
                             var call = new NativeDrawCall(

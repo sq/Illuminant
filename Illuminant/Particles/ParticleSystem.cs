@@ -524,6 +524,7 @@ namespace Squared.Illuminant.Particles {
                     Chunk = c,
                     Remaining = (colorInitializer != null) ? 3 : 2
                 };
+                c.TotalSpawned = ChunkMaximumCount;
 
                 job.Run(g);
             }
