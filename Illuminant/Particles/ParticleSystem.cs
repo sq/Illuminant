@@ -406,15 +406,13 @@ namespace Squared.Illuminant.Particles {
         // HACK: Performing occlusion queries every frame seems to be super unreliable,
         //  so just perform them intermittently and accept that our data will be outdated
         public const int LivenessCheckInterval = 4;
-        private int FramesUntilNextLivenessCheck = LivenessCheckInterval;
+        private static int LivenessCheckStaggerValue = 0;
+        private int FramesUntilNextLivenessCheck = 0; // LivenessCheckStaggerValue++ % LivenessCheckInterval;
 
         private double? LastUpdateTimeSeconds = null;
         private double  UpdateErrorAccumulator = 0;
 
-        private readonly RenderTargetRing LivenessQueryRTs;
-
         internal HashSet<LivenessInfo> ChunksToReap = new HashSet<LivenessInfo>();
-        private int[] LastLivenessInfoChunkIds = new int[MaxChunkCount];
         private bool  IsLivenessInfoUpdated = true;
 
         public long TotalSpawnCount { get; private set; }
@@ -437,8 +435,6 @@ namespace Squared.Illuminant.Particles {
             Updater = new Transforms.ParticleTransform.UpdateHandler(null);
 
             engine.Systems.Add(this);
-
-            LivenessQueryRTs = new RenderTargetRing(engine.Coordinator, 3, MaxChunkCount, 1, false, SurfaceFormat.Rg32, DepthFormat.Depth16, 1);
         }
 
         public ITimeProvider TimeProvider {
@@ -450,11 +446,13 @@ namespace Squared.Illuminant.Particles {
         public int Capacity {
             get {
                 // FIXME
-                return Chunks.Count * ChunkMaximumCount;
+                lock (Chunks)
+                    return Chunks.Count * ChunkMaximumCount;
             }
         }
 
         private Chunk ChunkFromID (int id) {
+            lock (Chunks)
             foreach (var c in Chunks)
                 if (c.ID == id)
                     return c;
@@ -485,6 +483,7 @@ namespace Squared.Illuminant.Particles {
         }
         
         private Chunk CreateChunk () {
+            lock (Chunks)
             if (Chunks.Count >= MaxChunkCount)
                 throw new Exception("Hit maximum chunk count");
 
@@ -577,7 +576,8 @@ namespace Squared.Illuminant.Particles {
                 chunk = CreateChunk();
                 chunk.IsFeedbackSource = feedback;
                 currentTarget = chunk.ID;
-                Chunks.Add(chunk);
+                lock (Chunks)
+                    Chunks.Add(chunk);
                 needClear = true;
             } else {
                 needClear = false;
@@ -603,12 +603,14 @@ namespace Squared.Illuminant.Particles {
                 if ((cfs.AvailableForFeedback <= 0) && (cfs.Free <= 0))
                     cfs = null;
             }
-            var newChunk = Chunks.FirstOrDefault(
-                c => (c.AvailableForFeedback >= count / 2) && !c.IsFeedbackSource
-            );
-            if (newChunk != null)
-                CurrentFeedbackSource = newChunk.ID;
-            return newChunk;
+            lock (Chunks) {
+                var newChunk = Chunks.FirstOrDefault(
+                    c => (c.AvailableForFeedback >= count / 2) && !c.IsFeedbackSource
+                );
+                if (newChunk != null)
+                    CurrentFeedbackSource = newChunk.ID;
+                return newChunk;
+            }
         }
 
         private bool RunSpawner (
@@ -858,7 +860,8 @@ namespace Squared.Illuminant.Particles {
             Reap(chunk.Previous);
             Reap(chunk.Current);
             chunk.Previous = chunk.Current = null;
-            Chunks.Remove(chunk);
+            lock (Chunks)
+                Chunks.Remove(chunk);
             chunk.Clear();
             Engine.Coordinator.DisposeResource(chunk);
         }
@@ -988,14 +991,18 @@ namespace Squared.Illuminant.Particles {
                         nc.GlobalIndexOffset = TotalSpawnCount;
                         nc.NoLongerASpawnTarget = true;
                         TotalSpawnCount += nc.MaximumCount;
-                        Chunks.Add(nc);
+                        lock (Chunks)
+                            Chunks.Add(nc);
                     }
 
                     NewUserChunks.Clear();
                 }
 
                 if (IsClearPending) {
-                    foreach (var c in Chunks.ToList()) {
+                    List<Chunk> chunkList;
+                    lock (Chunks)
+                        chunkList = Chunks.ToList();
+                    foreach (var c in chunkList) {
                         if (c.Size == Engine.Configuration.ChunkSize)
                             c.Clear();
                         Reap(c);
@@ -1030,6 +1037,7 @@ namespace Squared.Illuminant.Particles {
                         );
                 }
 
+                lock (Chunks)
                 foreach (var chunk in Chunks)
                     UpdateChunk(chunk, now, (float)actualDeltaTimeSeconds, startedWhen, pm, group, ref i, computingLiveness);
 
@@ -1052,7 +1060,7 @@ namespace Squared.Illuminant.Particles {
                     cbk(null);
             });
 
-            Engine.EndOfUpdate(initialTurn, container.RenderManager.DeviceManager.FrameIndex);
+            Engine.EndOfUpdate(container, layer, initialTurn, container.RenderManager.DeviceManager.FrameIndex);
             return new UpdateResult(this, true, (float)now);
         }
 
@@ -1139,7 +1147,9 @@ namespace Squared.Illuminant.Particles {
 
             ReadbackTimestamp = timestamp;
             var chunkCount = Engine.Configuration.ChunkSize * Engine.Configuration.ChunkSize;
-            var maxTotalCount = Chunks.Count * chunkCount;
+            int maxTotalCount;
+            lock (Chunks)
+                maxTotalCount = Chunks.Count * chunkCount;
             var bufferSize = (int)Math.Ceiling(maxTotalCount / 4096.0) * 4096;
             AutoGrowBuffer(ref ReadbackBuffer1, chunkCount);
             AutoGrowBuffer(ref ReadbackBuffer2, chunkCount);
@@ -1153,6 +1163,7 @@ namespace Squared.Illuminant.Particles {
 
             int totalCount = 0;
             // FIXME: Do this in parallel
+            lock (Chunks)
             foreach (var c in Chunks) {
                 var curr = c.Current;
                 if (curr.IsDisposed)
@@ -1270,128 +1281,15 @@ namespace Squared.Illuminant.Particles {
             return result;
         }
 
-#if FNA
-        private class LivenessDataReadbackWorkItem : IMainThreadWorkItem {
-#else
-        private struct LivenessDataReadbackWorkItem : IWorkItem {
-#endif
-            public RenderTarget2D RenderTarget;
-            public ParticleSystem System;
-            public bool NeedResourceLock;
-
-            public void Execute () {
-                if (!AutoRenderTargetBase.IsRenderTargetValid(RenderTarget))
-                    return;
-
-                var startedWhen = Time.Ticks;
-                var buffer = new Rg32[MaxChunkCount];
-
-                if (NeedResourceLock)
-                    Monitor.Enter(System.Engine.Coordinator.UseResourceLock);
-                try {
-                    RenderTarget.GetDataFast(buffer);
-                } finally {
-                    if (NeedResourceLock)
-                        Monitor.Exit(System.Engine.Coordinator.UseResourceLock);
-                }
-
-                lock (System.LivenessInfos) {
-                    for (int i = 0; i < MaxChunkCount; i++) {
-                        var id = System.LastLivenessInfoChunkIds[i];
-                        if (id <= 0)
-                            continue;
-
-                        var chunk = System.ChunkFromID(id);
-                        if (chunk == null)
-                            continue;
-                        var li = System.GetLivenessInfo(chunk);
-                        if (li == null) 
-                            continue;
-
-                        var count = (int)(buffer[i].PackedValue);
-                        li.Count = count;
-                    }
-
-                    System.IsLivenessInfoUpdated = true;
-                }
-
-                var elapsedMs = (Time.Ticks - startedWhen) / (double)Time.MillisecondInTicks;
-                if (false && elapsedMs > 3)
-                    Console.WriteLine("Readback took {0:000.0}ms", elapsedMs);
-            }
-        }
-
         private void ComputeLiveness (
             IBatchContainer group, int layer
         ) {
+            lock (Chunks)
             if (Chunks.Count == 0)
                 return;
 
-            var quadCount = ChunkMaximumCount;
-            var wt = LivenessQueryRTs.AcquireWriteTarget();
-            var nextBuffer = wt.Target;
-            var previousBuffer = wt.Previous;
-
-            // FIXME: This blocks for 12-16ms in FNA if we're in a debug context.
-            // HACK: Perform right after present to reduce the odds that this makes us miss a frame, 
-            //  since present blocks on vsync and so does a gpu readback in debug contexts
-            var wi = new LivenessDataReadbackWorkItem {
-                RenderTarget = previousBuffer,
-                NeedResourceLock = true,
-                System = this
-            };
-#if FNA
-            Engine.Coordinator.BeforePresent(wi.Execute);
-#else
-            Engine.Coordinator.ThreadGroup.Enqueue(wi);
-#endif
-
-            using (var rtg = BatchGroup.ForRenderTarget(
-                group, layer, nextBuffer, (dm, _) => {
-                    dm.Device.Clear(
-                        ClearOptions.Target | ClearOptions.DepthBuffer, 
-                        Color.Transparent, 0, 0
-                    );
-                }, name: "Compute chunk liveness"
-            )) {
-                RenderTrace.Marker(rtg, -9999, "Compute chunk liveness");
-
-                var m = Engine.Configuration.AccurateLivenessCounts
-                    ? Engine.ParticleMaterials.CountLiveParticles
-                    : Engine.ParticleMaterials.CountLiveParticlesFast;
-
-                lock (LivenessInfos) {
-                    Array.Clear(LastLivenessInfoChunkIds, 0, MaxChunkCount);
-
-                    for (int i = 0; i < Chunks.Count; i++) {
-                        var chunk = Chunks[i];
-                        LastLivenessInfoChunkIds[i] = chunk.ID;
-                        var li = GetLivenessInfo(chunk);
-                        if (li == null)
-                            continue;
-                        var indexAndMax = new Vector2(i, LivenessQueryRTs.Width);
-
-                        using (var chunkBatch = NativeBatch.New(
-                            rtg, chunk.ID, m, (dm, _) => {
-                                SetSystemUniforms(m, 0);
-                                var p = m.Effect.Parameters;
-                                p["ChunkIndexAndMaxIndex"].SetValue(indexAndMax);
-                                p["PositionTexture"].SetValue(chunk.Current.PositionAndLife);
-                                m.Flush();
-                            }
-                        )) {
-                            chunkBatch.Add(new NativeDrawCall(
-                                PrimitiveType.TriangleList, 
-                                Engine.RasterizeVertexBuffer, 0,
-                                Engine.RasterizeOffsetBuffer, 0, 
-                                null, 0,
-                                Engine.RasterizeIndexBuffer, 0, 0, 4, 0, 2,
-                                quadCount
-                            ));
-                        }
-                    }
-                }
-            }
+            lock (Engine.LivenessQueryRequests)
+                Engine.LivenessQueryRequests.Add(this);
         }
 
         private void RenderChunk (
@@ -1500,6 +1398,7 @@ namespace Squared.Illuminant.Particles {
                 RenderTrace.Marker(group, -9999, "Rasterize {0} particle chunks", Chunks.Count);
 
                 int i = 1;
+                lock (Chunks)
                 foreach (var chunk in Chunks)
                     RenderChunk(group, chunk, material, i++, usePreviousData);
             }
@@ -1520,7 +1419,6 @@ namespace Squared.Illuminant.Particles {
                 Engine.Coordinator.DisposeResource(chunk);
             }
             Engine.Systems.Remove(this);
-            LivenessQueryRTs.Dispose();
             LivenessInfos.Clear();
         }
 
