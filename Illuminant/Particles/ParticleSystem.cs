@@ -469,7 +469,7 @@ namespace Squared.Illuminant.Particles {
             LivenessInfos.Add(
                 chunk.ID, result = new LivenessInfo {
                     Chunk = chunk,
-                    Count = null
+                    Count = chunk.TotalSpawned
                 }
             );
             return result;
@@ -817,6 +817,8 @@ namespace Squared.Illuminant.Particles {
         }
 
         private void UpdateLivenessAndReapDeadChunks () {
+            // FIXME: LiveCount randomly drops to 0 when a chunk is reaped
+            var oldLiveCount = LiveCount;
             LiveCount = 0;
 
             foreach (var kvp in LivenessInfos) {

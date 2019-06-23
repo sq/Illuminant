@@ -258,11 +258,8 @@ namespace Squared.Illuminant.Particles {
                     if (li == null) 
                         continue;
 
-                    if (buffer == null) {
-                        li.Count = 0;
-                        chunk.System.IsLivenessInfoUpdated = true;
+                    if (buffer == null)
                         continue;
-                    }
 
                     var raw = buffer[i].PackedValue;
                     var flag = raw & 0xFFFF0000;
