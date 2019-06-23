@@ -250,9 +250,7 @@ namespace Squared.Illuminant.Particles {
             // Console.WriteLine("Process liveness info data {0}", buffer);
             lock (LastLivenessInfoChunks) {
                 for (int i = 0; i < LastLivenessInfoChunks.Length; i++) {
-                    var j = i;
-                    var chunk = LastLivenessInfoChunks[j];
-                    i++;
+                    var chunk = LastLivenessInfoChunks[i];
                     if (chunk == null)
                         continue;
 
@@ -266,7 +264,7 @@ namespace Squared.Illuminant.Particles {
                         continue;
                     }
 
-                    var raw = buffer[j].PackedValue;
+                    var raw = buffer[i].PackedValue;
                     var flag = raw & 0xFFFF0000;
                     var count = raw & 0xFFFF;
                     li.Count = (int)count;
@@ -326,8 +324,6 @@ namespace Squared.Illuminant.Particles {
                     lock (system.Chunks) {
                         RenderTrace.ImmediateMarker("Compute liveness for {0} chunk(s)", system.Chunks.Count);
                         foreach (var chunk in system.Chunks) {
-                            Monitor.Exit(system.Chunks);
-
                             LastLivenessInfoChunks[i] = chunk;
                             if (chunk.TotalSpawned == 0) {
                                 i++;
@@ -337,7 +333,7 @@ namespace Squared.Illuminant.Particles {
                             system.SetSystemUniforms(m, 0);
                             var p = m.Effect.Parameters;
                             p["ChunkIndexAndMaxIndex"].SetValue(new Vector2(i, LivenessQueryRTs.Width));
-                            p["PositionTexture"].SetValue(chunk.Previous.PositionAndLife);
+                            p["PositionTexture"].SetValue(chunk.LifeReadTexture);
                             m.Flush();
 
                             var call = new NativeDrawCall(
@@ -352,10 +348,8 @@ namespace Squared.Illuminant.Particles {
                                 dm.Device, ref call,
                                 TwoBindings, ThreeBindings
                             );
-
-                            Monitor.Enter(system.Chunks);
+                            i++;
                         }
-                        i++;
                     }
                 }
             }

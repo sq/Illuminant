@@ -26,7 +26,7 @@ using Nuke = NuklearDotNet.Nuklear;
 
 namespace TestGame {
     public class TestGame : MultithreadedGame, INuklearHost {
-        public int? DefaultScene = null;
+        public int? DefaultScene = 8;
 
         public GraphicsDeviceManager Graphics;
         public DefaultMaterialSet Materials { get; private set; }

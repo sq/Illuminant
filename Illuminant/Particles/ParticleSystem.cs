@@ -236,6 +236,8 @@ namespace Squared.Illuminant.Particles {
                 }
             }
 
+            public RenderTarget2D LifeReadTexture { get; internal set; }
+
             private static volatile int NextID;
 
             public Chunk (
@@ -405,7 +407,7 @@ namespace Squared.Illuminant.Particles {
 
         // HACK: Performing occlusion queries every frame seems to be super unreliable,
         //  so just perform them intermittently and accept that our data will be outdated
-        public const int LivenessCheckInterval = 1;
+        public const int LivenessCheckInterval = 4;
         private int FramesUntilNextLivenessCheck = 0; // LivenessCheckStaggerValue++ % LivenessCheckInterval;
 
         private double? LastUpdateTimeSeconds = null;
@@ -525,6 +527,7 @@ namespace Squared.Illuminant.Particles {
                     Remaining = (colorInitializer != null) ? 3 : 2
                 };
                 c.TotalSpawned = ChunkMaximumCount;
+                GetLivenessInfo(c).Count = ChunkMaximumCount;
 
                 job.Run(g);
             }
@@ -1070,6 +1073,8 @@ namespace Squared.Illuminant.Particles {
             ParticleMaterials pm, BatchGroup group, 
             ref int i, bool computingLiveness
         ) {
+            var didRunAnyTransforms = false;
+
             var isFirstXform = true;
             foreach (var t in Transforms) {
                 var it = (Transforms.IParticleTransform)t;
@@ -1078,6 +1083,7 @@ namespace Squared.Illuminant.Particles {
                 if (shouldSkip)
                     continue;
 
+                didRunAnyTransforms = true;
                 RunTransform(
                     chunk, group, ref i, it.GetMaterial(Engine.ParticleMaterials),
                     startedWhen, false, it.IsAnalyzer, it.BeforeDraw, it.AfterDraw,
@@ -1092,6 +1098,7 @@ namespace Squared.Illuminant.Particles {
                 // occlusion queries suck and never work right, and for some reason
                 //  the old particle data is a ghost from hell and refuses to disappear
                 //  even after it is cleared
+                didRunAnyTransforms = true;
                 for (int k = 0; k < 2; k++) {
                     RunTransform(
                         chunk, group, ref i, pm.Erase,
@@ -1106,6 +1113,7 @@ namespace Squared.Illuminant.Particles {
                 if (Configuration.Collision.DistanceFieldMaximumZ == null)
                     throw new InvalidOperationException("If a distance field is active, you must set DistanceFieldMaximumZ");
 
+                didRunAnyTransforms = true;
                 RunTransform(
                     chunk, group, ref i, pm.UpdateWithDistanceField,
                     startedWhen, false, false,
@@ -1113,6 +1121,7 @@ namespace Squared.Illuminant.Particles {
                     actualDeltaTimeSeconds, true, now, true, null
                 );
             } else {
+                didRunAnyTransforms = true;
                 RunTransform(
                     chunk, group, ref i, pm.UpdatePositions,
                     startedWhen, false, false, 
@@ -1120,6 +1129,8 @@ namespace Squared.Illuminant.Particles {
                     actualDeltaTimeSeconds, true, now, true, null
                 );
             }
+
+            chunk.LifeReadTexture = chunk.Current.PositionAndLife;
         }
 
         private void CopyBuffer (IBatchContainer container, ref int layer, RenderTarget2D from, RenderTarget2D to) {
