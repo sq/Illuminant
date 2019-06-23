@@ -65,7 +65,7 @@ namespace Squared.Illuminant.Modeling {
                     if (!Model.NamedVariables.TryGetValue(k, out def))
                         result = null;
                     else
-                        result = def.LeftHandSide;
+                        result = def.DefaultValue;
 
                     return result;
                 },

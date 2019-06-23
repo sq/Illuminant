@@ -110,7 +110,7 @@ namespace Squared.Illuminant.Modeling {
                         throw new InvalidDataException("Malformed named variable");
 
                     return new NamedVariableDefinition {
-                        LeftHandSide = param,
+                        DefaultValue = param,
                         IsExternal = isExternal
                     };
                 }
@@ -133,7 +133,11 @@ namespace Squared.Illuminant.Modeling {
                             tResult = typeof(Parameter<>).MakeGenericType(type);
                         }
 
-                        if (obj.ContainsKey("Name"))
+                        if (obj.ContainsKey("Expression")) {
+                            var tExpr = typeof(BinaryParameterExpression<>).MakeGenericType(type);
+                            var expr = obj["Expression"].ToObject(tExpr, serializer);
+                            result = (IParameter)Activator.CreateInstance(tResult, new object[] { expr });
+                        } else if (obj.ContainsKey("Name"))
                             result = (IParameter)Activator.CreateInstance(tResult, new object[] { obj["Name"].ToObject(typeof(string), serializer) });
                         else if (obj.ContainsKey("Constant"))
                             result = (IParameter)Activator.CreateInstance(tResult, new object[] { obj["Constant"].ToObject(type, serializer) });
@@ -218,7 +222,7 @@ namespace Squared.Illuminant.Modeling {
                 case "NamedVariableDefinition": {
                     var nvd = (NamedVariableDefinition)value;
                     serializer.Serialize(writer, new {
-                        DefaultValue = nvd.LeftHandSide,
+                        DefaultValue = nvd.DefaultValue,
                         IsExternal = nvd.IsExternal
                     });
                     return;
@@ -228,7 +232,12 @@ namespace Squared.Illuminant.Modeling {
                     var p = (IParameter)value;
                     string typeName = PickTypeName(p.ValueType);
                     object obj;
-                    if (p.Name != null) {
+                    if (p.Expression != null) {
+                        obj = new {
+                            ValueType = typeName,
+                            Expression = p.Expression
+                        };
+                    } else if (p.Name != null) {
                         obj = new {
                             ValueType = typeName,
                             Name = p.Name

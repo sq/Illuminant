@@ -141,7 +141,7 @@ namespace Lumined {
                 name = string.Format("var{0}", NextConstantID++);
             var tParameter = typeof(Squared.Illuminant.Configuration.Parameter<>).MakeGenericType(valueType);
             var value = (Squared.Illuminant.Configuration.IParameter)Activator.CreateInstance(tParameter);
-            Model.NamedVariables.Add(name, new NamedVariableDefinition { LeftHandSide = value });
+            Model.NamedVariables.Add(name, new NamedVariableDefinition { DefaultValue = value });
             SelectedVariableName = name;
             return name;
         }

@@ -339,11 +339,11 @@ namespace Squared.Illuminant.Compiled {{
             string valueText = "null";
 
             // throw?
-            if (def?.LeftHandSide == null)
+            if (def?.DefaultValue == null)
                 return;
 
             valueType = def.ValueType;
-            valueText = FormatValue(def.LeftHandSide, ref valueType);
+            valueText = FormatValue(def.DefaultValue, ref valueType);
 
             var typeName = GetTypeName(valueType);
             tw.WriteLine("        public {0} @{1} = ", typeName, FormatName(name));
@@ -360,7 +360,7 @@ namespace Squared.Illuminant.Compiled {{
             NamedVariableDefinition def;
 
             if (NamedVariables.TryGetValue(name, out def)) {
-                param = def.LeftHandSide;
+                param = def.DefaultValue;
                 isBezier = param.IsBezier;
             }
 
@@ -399,7 +399,15 @@ namespace Squared.Illuminant.Compiled {{
             var iParam = value as IParameter;
             string valueText;
             if (iParam != null) {
-                if (iParam.IsConstant) {
+                if (iParam.IsExpression) {
+                    type = iParam.ValueType;
+                    return string.Format(
+                        "new Configuration.Parameter<{0}>(new Configuration.BinaryParameterExpression<{0}>(\r\n{1}, {2},\r\n{3}))",
+                        GetTypeName(type), FormatValue(iParam.Expression.LeftHandSide),
+                        "Configuration.Operators." + iParam.Expression.Operator.ToString(),
+                        FormatValue(iParam.Expression.RightHandSide)
+                    );
+                } else if (iParam.IsConstant) {
                     type = iParam.ValueType;
                     value = iParam.Constant;
                     return FormatValue(value);

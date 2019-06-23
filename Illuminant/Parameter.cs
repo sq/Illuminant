@@ -6,19 +6,37 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
+using Squared.Util;
 
 namespace Squared.Illuminant.Configuration {
+    public enum Operators : int {
+        Identity = 0,
+        Add = 1,
+        Subtract = 2,
+        Multiply = 3,
+    }
+
+    public interface IParameterExpression {
+        IParameter LeftHandSide { get; set; }
+        IParameter RightHandSide { get; set; }
+        Operators Operator { get; set; }
+        Type ValueType { get; }
+    }
+
     public interface IParameter {
         Type ValueType { get; }
         bool IsConstant { get; }
         bool IsBezier { get; }
         bool IsReference { get; }
+        bool IsExpression { get; }
         IParameter ToBezier ();
         IParameter ToConstant ();
         IParameter ToReference ();
+        IParameter ToExpression ();
         string Name { get; set; }
         object Constant { get; set; }
         IBezier Bezier { get; set; }
+        IParameterExpression Expression { get; set; }
     }
 
     internal interface IInternalParameter : IParameter {
@@ -26,6 +44,72 @@ namespace Squared.Illuminant.Configuration {
     }
 
     public delegate bool NamedConstantResolver<T> (string name, float t, out T result);
+
+    public class BinaryParameterExpression<T> : IParameterExpression
+        where T : struct
+    {
+        public Operators Operator;
+        public Parameter<T> LeftHandSide, RightHandSide;
+
+        private bool _IsEvaluating;
+
+        public BinaryParameterExpression (Parameter<T> lhs, Operators op, Parameter<T> rhs) {
+            Operator = op;
+            LeftHandSide = lhs;
+            RightHandSide = rhs;
+        }
+
+        public T Evaluate (float t, NamedConstantResolver<T> nameResolver) {
+            if (_IsEvaluating)
+                throw new StackOverflowException("Recursion in parameter");
+
+            _IsEvaluating = true;
+            try {
+                var lhs = LeftHandSide.Evaluate(t, nameResolver);
+                if (Operator == 0)
+                    return lhs;
+
+                var rhs = RightHandSide.Evaluate(t, nameResolver);
+                var result = Arithmetic.InvokeOperator((Arithmetic.Operators)(int)Operator, lhs, rhs);
+                return result;
+            } finally {
+                _IsEvaluating = false;
+            }
+        }
+
+        public Type ValueType {
+            get {
+                return LeftHandSide.ValueType ?? RightHandSide.ValueType;
+            }
+        }
+
+        IParameter IParameterExpression.LeftHandSide {
+            get {
+                return LeftHandSide;
+            }
+            set {
+                LeftHandSide = (Parameter<T>)value;
+            }
+        }
+
+        IParameter IParameterExpression.RightHandSide {
+            get {
+                return RightHandSide;
+            }
+            set {
+                RightHandSide = (Parameter<T>)value;
+            }
+        }
+
+        Operators IParameterExpression.Operator {
+            get {
+                return Operator;
+            }
+            set {
+                Operator = value;
+            }
+        }
+    }
 
     [TypeConverter(typeof(ParameterConverter))]
     public struct Parameter<T> : IInternalParameter
@@ -37,12 +121,14 @@ namespace Squared.Illuminant.Configuration {
         private string _Name;
         private IBezier<T> _Bezier;
         private T _Constant;
+        private BinaryParameterExpression<T> _Expression;
 
         public Parameter (IBezier<T> bezier) {
             _Name = null;
             _Bezier = bezier;
             _Constant = default(T);
             _Getter = null;
+            _Expression = null;
         }
 
         public Parameter (T value) {
@@ -50,6 +136,7 @@ namespace Squared.Illuminant.Configuration {
             _Bezier = null;
             _Constant = value;
             _Getter = null;
+            _Expression = null;
         }
 
         public Parameter (string name) {
@@ -57,6 +144,7 @@ namespace Squared.Illuminant.Configuration {
             _Getter = null;
             _Bezier = null;
             _Constant = default(T);
+            _Expression = null;
         }
 
         public Parameter (string name, Func<float, T> getter) {
@@ -64,6 +152,15 @@ namespace Squared.Illuminant.Configuration {
             _Getter = getter;
             _Bezier = null;
             _Constant = default(T);
+            _Expression = null;
+        }
+
+        public Parameter (BinaryParameterExpression<T> expression) {
+            _Name = null;
+            _Getter = null;
+            _Bezier = null;
+            _Constant = default(T);
+            _Expression = expression;
         }
 
         public string Name {
@@ -105,6 +202,21 @@ namespace Squared.Illuminant.Configuration {
             }
         }
 
+        public BinaryParameterExpression<T> Expression {
+            get {
+                return _Expression;
+            }
+            set {
+                _Expression = value;
+                if (value != null) {
+                    _Constant = default(T);
+                    _Bezier = null;
+                    _Name = null;
+                    _Getter = null;
+                }
+            }
+        }
+
         public Type ValueType {
             get {
                 return typeof(T);
@@ -113,20 +225,26 @@ namespace Squared.Illuminant.Configuration {
 
         public bool IsConstant {
             get {
-                return ((_Name == null) && (_Bezier == null)) || 
+                return ((_Name == null) && (_Bezier == null) && (_Expression == null)) || 
                     (_Bezier != null) && _Bezier.IsConstant;
             }
         }
 
         public bool IsBezier {
             get {
-                return (_Name == null) && (_Bezier != null);
+                return (_Name == null) && (_Bezier != null) && (_Expression == null);
             }
         }
 
         public bool IsReference {
             get {
-                return _Name != null;
+                return (_Name != null) && (_Expression == null);
+            }
+        }
+
+        public bool IsExpression {
+            get {
+                return _Expression != null;
             }
         }
 
@@ -134,7 +252,7 @@ namespace Squared.Illuminant.Configuration {
             if (IsBezier)
                 return true;
 
-            if (_Name != null)
+            if (!IsConstant)
                 return false;
 
             switch (ValueType.Name) {
@@ -182,6 +300,13 @@ namespace Squared.Illuminant.Configuration {
             return result;
         }
 
+        public Parameter<T> ToExpression () {
+            var expr = new BinaryParameterExpression<T>(
+                this, Operators.Identity, new Parameter<T>(default(T))
+            );
+            return new Parameter<T>(expr);
+        }
+
         public Parameter<T> ToBezier () {
             var result = this;
             if (IsReference)
@@ -191,6 +316,10 @@ namespace Squared.Illuminant.Configuration {
                 if (!result.TryConvertToBezier())
                     throw new Exception();
             return result;
+        }
+
+        IParameter IParameter.ToExpression () {
+            return ToExpression();
         }
 
         IParameter IParameter.ToReference () {
@@ -203,6 +332,15 @@ namespace Squared.Illuminant.Configuration {
 
         IParameter IParameter.ToBezier () {
             return ToBezier();
+        }
+
+        IParameterExpression IParameter.Expression {
+            get {
+                return _Expression;
+            }
+            set {
+                _Expression = (BinaryParameterExpression<T>)value;
+            }
         }
 
         IBezier IParameter.Bezier {
@@ -224,6 +362,9 @@ namespace Squared.Illuminant.Configuration {
         }
 
         public T Evaluate (float t, NamedConstantResolver<T> nameResolver) {
+            if (_Expression != null)
+                return _Expression.Evaluate(t, nameResolver);
+
             if (_Getter != null)
                 return _Getter(t);
 
@@ -249,7 +390,9 @@ namespace Squared.Illuminant.Configuration {
             return new Parameter<T> {
                 _Name = _Name,
                 _Bezier = _Bezier,
-                _Constant = _Constant
+                _Constant = _Constant,
+                _Getter = _Getter,
+                _Expression = _Expression
             };
         }
 

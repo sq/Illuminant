@@ -683,21 +683,24 @@ namespace Lumined {
         ) {
             bool changed = false;
             List<CachedPropertyInfo> members;
-            if (!CachedMembers.TryGetValue(cpi.Type, out members))
-                CachedMembers[cpi.Type] = members = CachePropertyInfo(cpi.Type).ToList();
+            var type = cpi?.Type ?? value?.GetType();
+            if (type == null)
+                return false;
+            if (!CachedMembers.TryGetValue(type, out members))
+                CachedMembers[type] = members = CachePropertyInfo(type).ToList();
 
             var groupKey = PickName(actualName);
 
             if ((instance == null) || (value == null))
                 return false;
-            using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, groupKey, false, tooltip: cpi.Summary)) {
+            using (var pGroup = Nuklear.CollapsingGroup(cpi?.Name ?? actualName, groupKey, false, tooltip: cpi?.Summary)) {
                 if (pGroup.Visible) {
                     foreach (var i in members) 
-                        if (RenderProperty(cache, i, value, cpi.Info.Type, cpi.Name))
+                        if (RenderProperty(cache, i, value, cpi?.Info.Type, cpi?.Name))
                             changed = true;
 
                     if (changed)
-                        cpi.Setter(instance, value);
+                        cpi?.Setter(instance, value);
                 }
                 return changed;
             }
@@ -996,7 +999,7 @@ namespace Lumined {
         }
 
         private unsafe bool ShowNewVariableButton () {
-            return Nuklear.Button("+", tooltip: "Create new variable");
+            return Nuklear.Button("=", tooltip: "Create new variable");
         }
 
         private unsafe bool ShowConstantButton () {
@@ -1011,15 +1014,23 @@ namespace Lumined {
             return Nuklear.Button("∑", tooltip: "Use bezier curve");
         }
 
+        private unsafe bool ShowExpressionButton () {
+            return Nuklear.Button("+", tooltip: "Use expression");
+        }
+
         private string PickName (string suffix) {
             return string.Join(".", NameStack.Where(n => !string.IsNullOrWhiteSpace(n)).Reverse().Concat(new[] { suffix }).ToArray());
         }
 
-        private unsafe bool RenderParameter (CachedPropertyInfo cpi, object instance, ref bool changed, string actualName, string parentType, ref IParameter p, bool allowReferences) {
+        private unsafe bool RenderParameter (
+            CachedPropertyInfo cpi, object instance, ref bool changed, 
+            string actualName, string parentType, ref IParameter p, bool allowReferences
+        ) {
             var valueType = p.ValueType;
             var isConstant = p.IsConstant;
             var isBezier = p.IsBezier;
             var isReference = p.IsReference;
+            var isExpression = p.IsExpression;
             var isMatrix = valueType.Name.EndsWith("Matrix");
             var now = (float)Game.View.Time.Seconds;
 
@@ -1040,6 +1051,7 @@ namespace Lumined {
                     {0.4f },
                     {0.6f },
                     {buttonSizePx, false },
+                    {buttonSizePx, false },
                     {buttonSizePx, false }
                 };
                 layout.Apply(Nuklear, LineHeight);
@@ -1058,17 +1070,24 @@ namespace Lumined {
                         Controller.SelectedVariableName = p.Name;
                     }
                 }
+                if (ShowExpressionButton()) {
+                    changed = true;
+                    p = p.ToExpression();
+                }
                 if (ShowNewVariableButton()) {
                     changed = true;
                     p.Name = Controller.AddVariable(valueType, PickName(actualName));
                     // Copy original constant
                     var def = Model.NamedVariables[p.Name];
-                    def.LeftHandSide.Constant = p.Constant;
+                    def.DefaultValue.Constant = p.Constant;
                 }
                 if (ShowConstantButton()) {
                     changed = true;
                     p = p.ToConstant();
                 }
+            } else if (isExpression) {
+                if (RenderGenericObjectProperty(null, cpi, p, p.Expression, actualName))
+                    changed = true;
             } else {
                 int eltCount;
                 switch (valueType.Name) {
@@ -1094,6 +1113,7 @@ namespace Lumined {
                 var row = new RowLayout();
                 for (int i = 0; i < eltCount; i++)
                     row.Add(1.0f / eltCount);
+                row.Add(buttonSizePx, false);
                 row.Add(buttonSizePx, false);
                 if (allowReferences)
                     row.Add(buttonSizePx, false);
@@ -1160,6 +1180,10 @@ namespace Lumined {
 
                 if (!isMatrix) {
                     doBezierConversion = ShowBezierButton();
+                    if (ShowExpressionButton()) {
+                        changed = true;
+                        p = p.ToExpression();
+                    }
                     if (hasAvailableReference && allowReferences)
                         doReferenceConversion = ShowReferenceButton();
                     else if (allowReferences) {
@@ -1169,7 +1193,7 @@ namespace Lumined {
                             p.Name = Controller.AddVariable(valueType, PickName(actualName));
                             // Copy original constant
                             var def = Model.NamedVariables[p.Name];
-                            def.LeftHandSide.Constant = p.Constant;
+                            def.DefaultValue.Constant = p.Constant;
                         }
                     }
                 }

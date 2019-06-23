@@ -203,15 +203,14 @@ namespace Lumined {
                     var newType = ValidVariableTypes[currentTypeIndex];
                     if (newType != def.ValueType) {
                         var ptype = typeof(Squared.Illuminant.Configuration.Parameter<>).MakeGenericType(newType);
-                        def.LeftHandSide = (Squared.Illuminant.Configuration.IParameter)Activator.CreateInstance(ptype);
-                        def.RightHandSide = null;
+                        def.DefaultValue = (Squared.Illuminant.Configuration.IParameter)Activator.CreateInstance(ptype);
                         changed = true;
                     }
                 }
 
                 Nuklear.Checkbox("External Value", ref def.IsExternal, "If set, the value of this variable will be determined at runtime");
 
-                var p = def.LeftHandSide;
+                var p = def.DefaultValue;
 
                 NameStack.Clear();
                 if (p.ValueType.Name.Contains("Matrix"))
@@ -219,7 +218,7 @@ namespace Lumined {
 
                 RenderParameter(null, Model.NamedVariables, ref changed, newName, null, ref p, false);
                 if (changed)
-                    def.LeftHandSide = p;
+                    def.DefaultValue = p;
 
                 NameStack.Clear();
             }
