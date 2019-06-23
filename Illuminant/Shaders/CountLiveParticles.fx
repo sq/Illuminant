@@ -19,7 +19,7 @@ void VS_CountLiveParticles (
     float4 actualXy = float4(xy + offsetAndIndex.xy, 0, 0);
     position = tex2Dlod(PositionSampler, actualXy);
     float scale;
-    if (position.w > 1)
+    if (position.w > 0)
         scale = 1;
     else
         scale = 0;
@@ -38,11 +38,11 @@ void PS_CountLiveParticles (
     in  float4 position : TEXCOORD1,
     out float4 color    : COLOR0
 ) {
-    if (position.w <= 1) {
-        discard;
-        color = 0;
+    if (position.w <= 0) {
+        // discard;
+        color = float4(0, 1, 0, 1);
     } else {
-        color = float4(1.0 / 65535, 0, 0, 0);
+        color = float4(1.0 / 65535, 0.5, 0, 1);
     }
 }
 

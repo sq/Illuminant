@@ -20,7 +20,7 @@ using Chunk = Squared.Illuminant.Particles.ParticleSystem.Chunk;
 
 namespace Squared.Illuminant.Particles {
     public partial class ParticleEngine : IDisposable {
-        public const int MaxLivenessCheckChunkCount = 512;
+        public const int MaxLivenessCheckChunkCount = 32;
 
         public bool IsDisposed { get; private set; }
         
@@ -73,12 +73,11 @@ namespace Squared.Illuminant.Particles {
         public readonly NamedConstantResolver<Matrix>  ResolveMatrix;
         public readonly NamedConstantResolver<DynamicMatrix> ResolveDynamicMatrix;
 
-        private int[] LastLivenessInfoChunkIds = new int[MaxLivenessCheckChunkCount];
+        private Chunk[] LastLivenessInfoChunks = new Chunk[MaxLivenessCheckChunkCount];
         private readonly RenderTargetRing LivenessQueryRTs;
         private bool IsLivenessQueryRequestPending = false;
 
         internal readonly HashSet<ParticleSystem> LivenessQueryRequests = new HashSet<ParticleSystem>();
-        internal readonly List<ParticleSystem> PendingLivenessQueryRequests = new List<ParticleSystem>();
 
         private VertexBufferBinding[] TwoBindings = new VertexBufferBinding[2],
             ThreeBindings = new VertexBufferBinding[3];
@@ -220,60 +219,67 @@ namespace Squared.Illuminant.Particles {
             public bool NeedResourceLock;
 
             public void Execute () {
-                if (!AutoRenderTargetBase.IsRenderTargetValid(RenderTarget))
+                if (!AutoRenderTargetBase.IsRenderTargetValid(RenderTarget)) {
+                    Engine.ProcessLivenessInfoData(null);
                     return;
-
-                var startedWhen = Time.Ticks;
-                var buffer = new Rg32[RenderTarget.Width];
-
-                if (NeedResourceLock)
-                    Monitor.Enter(Engine.Coordinator.UseResourceLock);
-                try {
-                    RenderTarget.GetDataFast(buffer);
-                } finally {
-                    if (NeedResourceLock)
-                        Monitor.Exit(Engine.Coordinator.UseResourceLock);
                 }
 
-                Engine.ProcessLivenessInfoData(buffer);
+                // Console.WriteLine("Read liveness data texture");
 
-                var elapsedMs = (Time.Ticks - startedWhen) / (double)Time.MillisecondInTicks;
-                if (false && elapsedMs > 3)
-                    Console.WriteLine("Readback took {0:000.0}ms", elapsedMs);
+                var startedWhen = Time.Ticks;
+                using (var buffer = Squared.Util.BufferPool<Rg32>.Allocate(RenderTarget.Width)) {
+                    if (NeedResourceLock)
+                        Monitor.Enter(Engine.Coordinator.UseResourceLock);
+                    try {
+                        RenderTrace.ImmediateMarker("Read liveness data from previous frame");
+                        RenderTarget.GetDataFast(buffer.Data);
+                        var elapsedMs = (Time.Ticks - startedWhen) / (double)Time.MillisecondInTicks;
+                        RenderTrace.ImmediateMarker("Readback took {0:000.0}ms", elapsedMs);
+                    } finally {
+                        if (NeedResourceLock)
+                            Monitor.Exit(Engine.Coordinator.UseResourceLock);
+                    }
+
+                    Engine.ProcessLivenessInfoData(buffer.Data);
+                }
+
             }
         }
 
         private void ProcessLivenessInfoData (Rg32[] buffer) {
-            Console.WriteLine("Process liveness info data");
-            PendingLivenessQueryRequests.Clear();
-            /*
-                lock (System.LivenessInfos) {
-                    for (int i = 0; i < MaxChunkCount; i++) {
-                        var id = System.LastLivenessInfoChunkIds[i];
-                        if (id <= 0)
-                            continue;
+            // Console.WriteLine("Process liveness info data {0}", buffer);
+            lock (LastLivenessInfoChunks) {
+                if (buffer == null)
+                    return;
 
-                        var chunk = System.ChunkFromID(id);
-                        if (chunk == null)
-                            continue;
-                        var li = System.GetLivenessInfo(chunk);
-                        if (li == null) 
-                            continue;
+                for (int i = 0; i < LastLivenessInfoChunks.Length; i++) {
+                    var chunk = LastLivenessInfoChunks[i];
+                    i++;
+                    if (chunk == null)
+                        continue;
 
-                        var count = (int)(buffer[i].PackedValue);
-                        li.Count = count;
-                    }
+                    var li = chunk.System.GetLivenessInfo(chunk);
+                    if (li == null) 
+                        continue;
 
-                    System.IsLivenessInfoUpdated = true;
+                    var raw = buffer[i].PackedValue;
+                    var flag = raw & 0xFFFF0000;
+                    var count = raw & 0xFFFF;
+                    li.Count = (int)count;
+                    // Console.WriteLine("#{0:0000} count = {1:00000}", chunk.ID, count);
+
+                    chunk.System.IsLivenessInfoUpdated = true;
                 }
-                */
+
+                Array.Clear(LastLivenessInfoChunks, 0, LastLivenessInfoChunks.Length);
+            }
         }
 
         private void IssueLivenessQueries () {
             Monitor.Enter(LivenessQueryRequests);
-            Console.WriteLine("Issue {0} liveness queries", LivenessQueryRequests.Count);
+            IsLivenessQueryRequestPending = false;
+            // Console.WriteLine("Issue {0} liveness queries", LivenessQueryRequests.Count);
 
-            var quadCount = LivenessQueryRTs.Width;
             if (LivenessQueryRequests.Count > LivenessQueryRTs.Width)
                 throw new Exception("Too many liveness queries");
 
@@ -281,100 +287,70 @@ namespace Squared.Illuminant.Particles {
             var nextBuffer = wt.Target;
             var previousBuffer = wt.Previous;
 
-            // FIXME: This blocks for 12-16ms in FNA if we're in a debug context.
-            // HACK: Perform right after present to reduce the odds that this makes us miss a frame, 
-            //  since present blocks on vsync and so does a gpu readback in debug contexts
             var wi = new LivenessDataReadbackWorkItem {
                 RenderTarget = previousBuffer,
                 NeedResourceLock = true,
                 Engine = this
             };
-
-            foreach (var lqr in LivenessQueryRequests)
-                PendingLivenessQueryRequests.Add(lqr);
+            // HACK: Perform right before present to reduce the odds that this makes us miss a frame, 
+            //  since present blocks on vsync and so does a gpu readback in debug contexts
+            Coordinator.BeforePresent(wi.Execute);
 
             RenderTrace.ImmediateMarker("Compute liveness for {0} chunk(s)", LivenessQueryRequests.Count);
-
-#if FNA
-            Coordinator.BeforePresent(wi.Execute);
-#else
-            Coordinator.ThreadGroup.Enqueue(wi);
-#endif
             var m = Configuration.AccurateLivenessCounts
                 ? ParticleMaterials.CountLiveParticles
                 : ParticleMaterials.CountLiveParticlesFast;
 
             var dm = Coordinator.Manager.DeviceManager;
             dm.PushRenderTarget(nextBuffer);
-            dm.ApplyMaterial(m);
+            dm.PushStates();
             dm.Device.Clear(
                 ClearOptions.Target | ClearOptions.DepthBuffer, 
                 Color.Transparent, 0, 0
             );
+            dm.ApplyMaterial(m);
+            dm.Device.BlendState = BlendState.Additive;
+            dm.Device.RasterizerState = RasterizerState.CullNone;
+            dm.Device.DepthStencilState = (Configuration.AccurateLivenessCounts)
+                ? DepthStencilState.None
+                : ParticleMaterials.CountDepthStencilState;
 
-            Array.Clear(LastLivenessInfoChunkIds, 0, LastLivenessInfoChunkIds.Length);
-            int i = 0;
-            foreach (var system in LivenessQueryRequests) {
-                lock (system.Chunks)
-                foreach (var chunk in system.Chunks) {
-                    Monitor.Exit(system.Chunks);
+            lock (LastLivenessInfoChunks) {
+                Array.Clear(LastLivenessInfoChunks, 0, LastLivenessInfoChunks.Length);
+                int i = 0;
+                foreach (var system in LivenessQueryRequests) {
+                    lock (system.Chunks)
+                    foreach (var chunk in system.Chunks) {
+                        Monitor.Exit(system.Chunks);
 
-                    system.SetSystemUniforms(m, 0);
-                    var p = m.Effect.Parameters;
-                    p["ChunkIndexAndMaxIndex"].SetValue(new Vector2(i, LivenessQueryRTs.Width));
-                    p["PositionTexture"].SetValue(chunk.Current.PositionAndLife);
-                    m.Flush();
+                        LastLivenessInfoChunks[i] = chunk;
+                        system.SetSystemUniforms(m, 0);
+                        var p = m.Effect.Parameters;
+                        p["ChunkIndexAndMaxIndex"].SetValue(new Vector2(i, LivenessQueryRTs.Width));
+                        p["PositionTexture"].SetValue(chunk.Current.PositionAndLife);
+                        m.Flush();
 
-                    NativeBatch.IssueDrawCall(
-                        dm.Device,
-                        new NativeDrawCall(
-                            PrimitiveType.TriangleList, 
+                        var call = new NativeDrawCall(
+                            PrimitiveType.TriangleList,
                             RasterizeVertexBuffer, 0,
-                            RasterizeOffsetBuffer, 0, 
+                            RasterizeOffsetBuffer, 0,
                             null, 0,
                             RasterizeIndexBuffer, 0, 0, 4, 0, 2,
-                            quadCount
-                        )
-                    );
+                            chunk.TotalSpawned
+                        );
+                        NativeBatch.IssueDrawCall(
+                            dm.Device, ref call,
+                            TwoBindings, ThreeBindings
+                        );
 
-                    Monitor.Enter(system.Chunks);
-                }
-                i++;
-            }
-
-            dm.PopRenderTarget();
-
-            /*
-
-                    for (int i = 0; i < Chunks.Count; i++) {
-                        var chunk = Chunks[i];
-                        LastLivenessInfoChunkIds[i] = chunk.ID;
-                        var li = GetLivenessInfo(chunk);
-                        if (li == null)
-                            continue;
-
-                        using (var chunkBatch = NativeBatch.New(
-                            rtg, chunk.ID, m, (dm, _) => {
-                                SetSystemUniforms(m, 0);
-                                var p = m.Effect.Parameters;
-                                p["ChunkIndexAndMaxIndex"].SetValue(indexAndMax);
-                                p["PositionTexture"].SetValue(chunk.Current.PositionAndLife);
-                                m.Flush();
-                            }
-                        )) {
-                            chunkBatch.Add(new NativeDrawCall(
-                                PrimitiveType.TriangleList, 
-                                Engine.RasterizeVertexBuffer, 0,
-                                Engine.RasterizeOffsetBuffer, 0, 
-                                null, 0,
-                                Engine.RasterizeIndexBuffer, 0, 0, 4, 0, 2,
-                                quadCount
-                            ));
-                        }
+                        Monitor.Enter(system.Chunks);
                     }
+                    i++;
                 }
             }
-            */
+
+            dm.PopStates();
+            dm.PopRenderTarget();
 
             Monitor.Exit(LivenessQueryRequests);
         }

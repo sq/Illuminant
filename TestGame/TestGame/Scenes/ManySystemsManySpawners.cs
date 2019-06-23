@@ -32,8 +32,9 @@ namespace TestGame.Scenes {
         public override void LoadContent () {
             Engine = new ParticleEngine(
                 Game.RenderCoordinator, Game.Materials, 
-                new ParticleEngineConfiguration(64) {
-                    TextureLoader = Game.TextureLoader.Load
+                new ParticleEngineConfiguration(32) {
+                    TextureLoader = Game.TextureLoader.Load,
+                    AccurateLivenessCounts = true
                 }, Game.ParticleMaterials
             );
 
@@ -75,8 +76,6 @@ namespace TestGame.Scenes {
             using (var group = BatchGroup.New(
                 frame, 2, (dm, _) => {
                     var vt = Game.Materials.ViewTransform;
-                    vt.Position = new Vector2(-Width / 2f, -Height / 2f) / 3f;
-                    vt.Scale = Vector2.One * 3f;
                     Game.Materials.ViewTransform = vt;
                 }
             )) {

@@ -323,7 +323,7 @@ namespace Squared.Illuminant.Particles {
                     ColorSourceBlend = Blend.One,
                 };
 
-                var countDepthState = new DepthStencilState {
+                ParticleMaterials.CountDepthStencilState = new DepthStencilState {
                     StencilEnable = false,
                     DepthBufferEnable = true,
                     DepthBufferWriteEnable = true,
@@ -344,7 +344,7 @@ namespace Squared.Illuminant.Particles {
                     "CountLiveParticles", "CountLiveParticles", new[] {
                         MaterialUtil.MakeDelegate(
                             rasterizerState: RasterizerState.CullNone,
-                            depthStencilState: countDepthState,
+                            depthStencilState: ParticleMaterials.CountDepthStencilState,
                             blendState: BlendState.Opaque
                         )
                     }, dEnd

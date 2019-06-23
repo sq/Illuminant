@@ -405,15 +405,14 @@ namespace Squared.Illuminant.Particles {
 
         // HACK: Performing occlusion queries every frame seems to be super unreliable,
         //  so just perform them intermittently and accept that our data will be outdated
-        public const int LivenessCheckInterval = 4;
-        private static int LivenessCheckStaggerValue = 0;
+        public const int LivenessCheckInterval = 1;
         private int FramesUntilNextLivenessCheck = 0; // LivenessCheckStaggerValue++ % LivenessCheckInterval;
 
         private double? LastUpdateTimeSeconds = null;
         private double  UpdateErrorAccumulator = 0;
 
         internal HashSet<LivenessInfo> ChunksToReap = new HashSet<LivenessInfo>();
-        private bool  IsLivenessInfoUpdated = true;
+        internal bool  IsLivenessInfoUpdated = true;
 
         public long TotalSpawnCount { get; private set; }
 
@@ -460,7 +459,7 @@ namespace Squared.Illuminant.Particles {
             return null;
         }
 
-        private LivenessInfo GetLivenessInfo (Chunk chunk) {
+        internal LivenessInfo GetLivenessInfo (Chunk chunk) {
             LivenessInfo result;
             if (LivenessInfos.TryGetValue(chunk.ID, out result))
                 return result;
@@ -1367,6 +1366,10 @@ namespace Squared.Illuminant.Particles {
             ParticleRenderParameters renderParams = null,
             bool usePreviousData = false
         ) {
+            lock (Chunks)
+            if (Chunks.Count == 0)
+                return;
+
             var startedWhen = Time.Ticks;
 
             var appearance = Configuration.Appearance;

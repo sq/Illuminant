@@ -14,6 +14,8 @@ namespace Squared.Illuminant {
 
         public Material TextureLinear, TexturePoint, NoTexture;
 
+        public DepthStencilState CountDepthStencilState;
+
         public bool IsLoaded { get; internal set; }
 
         public ParticleMaterials (DefaultMaterialSet materialSet) {
