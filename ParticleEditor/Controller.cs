@@ -101,12 +101,6 @@ namespace Lumined {
             }
         }
 
-        public Squared.Illuminant.Configuration.IParameter SelectedVariable {
-            get {
-                return SelectedVariableDefinition?.DefaultValue;
-            }
-        }
-
         public Controller (EditorGame game, EngineModel model, View view) {
             Game = game;
             Model = model;
@@ -147,7 +141,7 @@ namespace Lumined {
                 name = string.Format("var{0}", NextConstantID++);
             var tParameter = typeof(Squared.Illuminant.Configuration.Parameter<>).MakeGenericType(valueType);
             var value = (Squared.Illuminant.Configuration.IParameter)Activator.CreateInstance(tParameter);
-            Model.NamedVariables.Add(name, new NamedVariableDefinition { DefaultValue = value });
+            Model.NamedVariables.Add(name, new NamedVariableDefinition { LeftHandSide = value });
             SelectedVariableName = name;
             return name;
         }

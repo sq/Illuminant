@@ -13,6 +13,7 @@ using System.Collections;
 using System.Reflection;
 using Squared.Illuminant.Configuration;
 using Microsoft.Xna.Framework.Graphics;
+using Squared.Util;
 
 namespace Squared.Illuminant.Modeling {
     public partial class EngineModel {
@@ -280,15 +281,40 @@ namespace Squared.Illuminant.Modeling {
         /// <summary>
         /// The default value for the variable, used during editing.
         /// </summary>
-        public IParameter DefaultValue;
+        public IParameter LeftHandSide;
+        /// <summary>
+        /// Determines the operator used to evaluate binary expressions
+        /// </summary>
+        public Arithmetic.Operators Operator = (Arithmetic.Operators)0;
+        /// <summary>
+        /// If set, the variable's value is the result of evaluating a binary expression
+        /// </summary>
+        public IParameter RightHandSide {
+            get {
+                return _RHS;
+            }
+            set {
+                if (value == null) {
+                    _RHS = null;
+                    return;
+                }
+
+                if (value?.ValueType != LeftHandSide.ValueType)
+                    throw new InvalidOperationException("Value types must match");
+
+                _RHS = value;
+            }
+        }
         /// <summary>
         /// If true, the default value will be replaced by a value provided at runtime.
         /// </summary>
         public bool IsExternal;
 
+        internal IParameter _RHS;
+
         public Type ValueType {
             get {
-                return DefaultValue?.ValueType;
+                return LeftHandSide?.ValueType;
             }
         }
     }
@@ -304,12 +330,12 @@ namespace Squared.Illuminant.Modeling {
             if (!TryGetValue(name, out def))
                 return false;
 
-            if (!(def.DefaultValue is Parameter<T>))
+            if (!(def.LeftHandSide is Parameter<T>))
                 return false;
 
-            var pv = (Parameter<T>)def.DefaultValue;
+            var pv = (Parameter<T>)def.LeftHandSide;
             pv.Constant = value;
-            def.DefaultValue = pv;
+            def.LeftHandSide = pv;
             return true;
         }
 

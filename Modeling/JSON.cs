@@ -110,7 +110,7 @@ namespace Squared.Illuminant.Modeling {
                         throw new InvalidDataException("Malformed named variable");
 
                     return new NamedVariableDefinition {
-                        DefaultValue = param,
+                        LeftHandSide = param,
                         IsExternal = isExternal
                     };
                 }
@@ -218,7 +218,7 @@ namespace Squared.Illuminant.Modeling {
                 case "NamedVariableDefinition": {
                     var nvd = (NamedVariableDefinition)value;
                     serializer.Serialize(writer, new {
-                        DefaultValue = nvd.DefaultValue,
+                        DefaultValue = nvd.LeftHandSide,
                         IsExternal = nvd.IsExternal
                     });
                     return;

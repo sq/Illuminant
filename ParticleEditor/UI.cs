@@ -176,7 +176,6 @@ namespace Lumined {
 
             var n = Controller.SelectedVariableName;
             var def = Controller.SelectedVariableDefinition;
-            var p = Controller.SelectedVariable;
             if (def == null)
                 return;
 
@@ -198,18 +197,21 @@ namespace Lumined {
 
                 Nuklear.NewRow(LineHeight, 2);
 
-                var currentTypeName = p.ValueType.Name;
+                var currentTypeName = def.ValueType.Name;
                 var currentTypeIndex = Array.IndexOf(ValidVariableTypeNames, currentTypeName);
                 if (Nuklear.ComboBox(ref currentTypeIndex, (i) => (i < 0) ? "" : ValidVariableTypeNames[i], ValidVariableTypeNames.Length, "Variable Type")) {
                     var newType = ValidVariableTypes[currentTypeIndex];
-                    if (newType != p.ValueType) {
+                    if (newType != def.ValueType) {
                         var ptype = typeof(Squared.Illuminant.Configuration.Parameter<>).MakeGenericType(newType);
-                        p = (Squared.Illuminant.Configuration.IParameter)Activator.CreateInstance(ptype);
+                        def.LeftHandSide = (Squared.Illuminant.Configuration.IParameter)Activator.CreateInstance(ptype);
+                        def.RightHandSide = null;
                         changed = true;
                     }
                 }
 
                 Nuklear.Checkbox("External Value", ref def.IsExternal, "If set, the value of this variable will be determined at runtime");
+
+                var p = def.LeftHandSide;
 
                 NameStack.Clear();
                 if (p.ValueType.Name.Contains("Matrix"))
@@ -217,7 +219,7 @@ namespace Lumined {
 
                 RenderParameter(null, Model.NamedVariables, ref changed, newName, null, ref p, false);
                 if (changed)
-                    def.DefaultValue = p;
+                    def.LeftHandSide = p;
 
                 NameStack.Clear();
             }
