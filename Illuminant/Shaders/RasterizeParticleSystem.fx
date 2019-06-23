@@ -122,8 +122,9 @@ void VS_PosVelAttr(
     float2 frameTexCoord = frameIndexXy * texSize;
     texCoord += frameTexCoord;
 
+    float roundingPower = evaluateBezier1(RoundingPowerFromLife, position.w);
     positionXyAndRounding = float3(
-        positionXy, evaluateBezier1(RoundingPowerFromLife, position.w)
+        positionXy, clamp(roundingPower, 0.001, 1)
     );
 }
 

@@ -75,6 +75,10 @@ namespace Lumined {
         public Vector2 CameraPosition;
         public Vector2 CameraDragInitialPosition, CameraDragStart;
 
+        private long ResizeStartedWhen = 0;
+        private long ResizeSettleTime = Time.MillisecondInTicks * 300;
+        private bool WasResized;
+
         private Future<ArraySegment<BitmapDrawCall>> LastReadbackResult = null;
 
         private long LastViewRelease = 0;
@@ -107,6 +111,13 @@ namespace Lumined {
             WindowedResolution = new Pair<int>(1920, 1080);
 
             Scheduler = new Squared.Task.TaskScheduler(Squared.Task.JobQueue.ThreadSafe);
+        }
+
+        private bool IsResizing {
+            get {
+                var elapsed = Time.Ticks - ResizeStartedWhen;
+                return elapsed <= ResizeSettleTime;
+            }
         }
 
         private void ReleaseView () {
@@ -149,7 +160,11 @@ namespace Lumined {
 
             DesktopDisplayMode = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
 
+#if FNA
             Window.AllowUserResizing = true;
+#else
+            Window.AllowUserResizing = false;
+#endif
             Window.ClientSizeChanged += Window_ClientSizeChanged;
         }
 
@@ -269,22 +284,14 @@ namespace Lumined {
             if (Window.ClientBounds.Width <= 0)
                 return;
 
-            RenderCoordinator.WaitForActiveDraws();
-            ReleaseView();
-
-            if (!Graphics.IsFullScreen) {
-                WindowedResolution = new Pair<int>(Window.ClientBounds.Width, Window.ClientBounds.Height);
-                Graphics.PreferredBackBufferWidth = Window.ClientBounds.Width;
-                Graphics.PreferredBackBufferHeight = Window.ClientBounds.Height;
-            }
-            Graphics.ApplyChangesAfterPresent(RenderCoordinator);
-            RenderCoordinator.AfterPresent(() => {
-                Materials.AutoSetViewTransform();
-                UIRenderTarget.Resize(Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight);
-            });
+            ResizeStartedWhen = Time.Ticks;
+            WasResized = true;
         }
 
         protected override void Update (GameTime gameTime) {
+            if (IsResizing || WasResized)
+                return;
+
             if (View == null) {
                 if ((Time.Ticks - LastViewRelease) > Time.MillisecondInTicks * 1000)
                     CreateView();
@@ -364,6 +371,29 @@ namespace Lumined {
         }
 
         public override void Draw (GameTime gameTime, Frame frame) {
+            if (IsResizing)
+                return;
+
+            if (WasResized) {
+                WasResized = false;
+
+                RenderCoordinator.WaitForActiveDraws();
+                ReleaseView();
+
+                if (!Graphics.IsFullScreen) {
+                    WindowedResolution = new Pair<int>(Window.ClientBounds.Width, Window.ClientBounds.Height);
+                    Graphics.PreferredBackBufferWidth = Window.ClientBounds.Width;
+                    Graphics.PreferredBackBufferHeight = Window.ClientBounds.Height;
+                }
+                Graphics.ApplyChangesAfterPresent(RenderCoordinator);
+                RenderCoordinator.AfterPresent(() => {
+                    Materials.AutoSetViewTransform();
+                    UIRenderTarget.Resize(Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight);
+                });
+
+                return;
+            }
+
             if ((Window.ClientBounds.Width != Graphics.PreferredBackBufferWidth) || (Window.ClientBounds.Height != Graphics.PreferredBackBufferHeight))
                 return;
 
