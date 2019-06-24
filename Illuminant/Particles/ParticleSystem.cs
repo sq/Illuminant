@@ -838,9 +838,17 @@ namespace Squared.Illuminant.Particles {
                 else
                     LiveCount += (chunkCount > 0) ? 1 : 0;
 
+                var threshold = DeadFrameThreshold;
+                // HACK: Keep a chunk around for a very long time if we don't have any others.
+                // FIXME: This prevents a hitch when spawning new particles and also works 
+                //  around a bug (?) where our last remaining chunk is reaped too early.
+                if (Chunks.Count == 1)
+                    threshold = 180;
+
                 if (li.Count.GetValueOrDefault(1) <= 0) {
                     li.DeadFrameCount++;
-                    if (li.DeadFrameCount >= DeadFrameThreshold) {
+
+                    if (li.DeadFrameCount >= threshold) {
                         // Console.WriteLine("Chunk " + li.Chunk.ID + " dead");
                         isDead = true;
                     }
