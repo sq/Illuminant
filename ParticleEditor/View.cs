@@ -36,6 +36,11 @@ namespace Lumined {
             return result;
         }
 
+        protected override string ResolveFilename (string name) {
+            var basePath = Path.GetFullPath(Model.GetUserData<EditorData>("EditorData")?.ResourceDirectory?.Path ?? ".");
+            return Path.Combine(basePath, name);
+        }
+
         public void Initialize (EditorGame editor) {
             Game = editor;
             base.Initialize(Game.RenderCoordinator, Game.Materials, Game.ParticleMaterials);

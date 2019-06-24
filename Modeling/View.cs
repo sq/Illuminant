@@ -31,6 +31,8 @@ namespace Squared.Illuminant.Modeling {
             Time = new MockTimeProvider();
         }
 
+        protected abstract string ResolveFilename (string name);
+
         protected void Initialize (
             RenderCoordinator coordinator, 
             DefaultMaterialSet materials, 
@@ -87,9 +89,10 @@ namespace Squared.Illuminant.Modeling {
 
         internal Texture2D LoadTexture (string name, bool floatingPoint) {
             Texture2D result;
+            var path = ResolveFilename(name);
 
-            if (File.Exists(name)) {
-                using (var img = new Squared.Render.STB.Image(name, premultiply: true, asFloatingPoint: floatingPoint))
+            if (File.Exists(path)) {
+                using (var img = new Squared.Render.STB.Image(path, premultiply: true, asFloatingPoint: floatingPoint))
                     result = img.CreateTexture(Coordinator, !floatingPoint);
             } else {
                 // HACK: Create placeholder texture

@@ -418,7 +418,10 @@ namespace Lumined {
             View.Initialize(Game);
         }
 
-        internal void SelectTexture (CachedPropertyInfo cpi, object instance, NullableLazyResource<Texture2D> tex) {
+        internal void SelectTexture (
+            CachedPropertyInfo cpi, object instance, NullableLazyResource<Texture2D> tex,
+            string relativeTo
+        ) {
             if (tex == null)
                 tex = new NullableLazyResource<Texture2D>();
 
@@ -436,11 +439,37 @@ namespace Lumined {
                     }
                     if (dlg.ShowDialog() != DialogResult.OK)
                         return;
+                    if (dlg.FileName == null) {
+                        tex.Name = null;
+                        tex.Instance = null;
+                        return;
+                    }
 
-                    tex = new NullableLazyResource<Texture2D>(dlg.FileName);
+                    var fullPath = Path.GetFullPath(dlg.FileName);
+                    relativeTo = Path.GetFullPath(relativeTo);
+                    var offset = fullPath.IndexOf(relativeTo);
+                    if (offset >= 0)
+                        fullPath = fullPath.Substring(offset + relativeTo.Length, fullPath.Length - relativeTo.Length);
+                    while (fullPath.StartsWith("\\") || fullPath.StartsWith("//"))
+                        fullPath = fullPath.Substring(1);
+
+                    tex = new NullableLazyResource<Texture2D>(fullPath);
                     cpi.Setter(instance, tex);
                 }
             });
+        }
+
+        internal bool SelectDirectory (ref string path) {
+            using (var dlg = new FolderBrowserDialog()) {
+                dlg.Description = "Select folder";
+                dlg.SelectedPath = path;
+                if (dlg.ShowDialog() == DialogResult.OK) {
+                    path = dlg.SelectedPath;
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

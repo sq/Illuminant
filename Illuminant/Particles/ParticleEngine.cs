@@ -212,7 +212,7 @@ namespace Squared.Illuminant.Particles {
 #if FNA
         private class LivenessDataReadbackWorkItem : Threading.IMainThreadWorkItem {
 #else
-        private struct LivenessDataReadbackWorkItem : Threading.IWorkItem {
+        private struct LivenessDataReadbackWorkItem : Threading.IMainThreadWorkItem {
 #endif
             public RenderTarget2D RenderTarget;
             public ParticleEngine Engine;

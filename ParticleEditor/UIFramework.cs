@@ -825,6 +825,9 @@ namespace Lumined {
 
                     return RenderSystemReferenceProperty(cpi, instance, ref changed, actualName, value);
 
+                case "DirectoryName":
+                    return RenderDirectoryNameProperty(cpi, instance, ref changed, actualName, value);
+
                 case "NullableLazyResource`1":
                     if (!writable)
                         return false;
@@ -1585,6 +1588,36 @@ namespace Lumined {
             return false;
         }
 
+        private unsafe bool RenderDirectoryNameProperty (
+            CachedPropertyInfo cpi, object instance, ref bool changed, 
+            string actualName, object _value
+        ) {
+            var ctx = Nuklear.Context;
+            var dn = (_value as DirectoryName);
+            var value = dn?.Path;
+            var hasValue = !String.IsNullOrWhiteSpace(value);
+            using (var pGroup = Nuklear.CollapsingGroup(cpi.Name, actualName, false, tooltip: cpi.Summary)) {
+                if (pGroup.Visible) {
+                    Nuklear.NewRow(LineHeight, 1);
+                    Nuklear.Label(value ?? "none");
+                    Nuklear.NewRow(LineHeight, 2);
+                    if (Nuklear.Button("Select")) {
+                        if (dn == null)
+                            _value = dn = new DirectoryName();
+                        Controller.SelectDirectory(ref dn.Path);
+                        cpi.Setter(instance, dn);
+                        changed = true;
+                    }
+                    if (Nuklear.Button("Remove", hasValue)) {
+                        _value = dn = new DirectoryName();
+                        cpi.Setter(instance, dn);
+                        changed = true;
+                    }
+                }
+            }
+            return changed;
+        }
+
         private unsafe bool RenderTextureProperty (
             CachedPropertyInfo cpi, object instance, ref bool changed, 
             string actualName, object _value
@@ -1595,7 +1628,10 @@ namespace Lumined {
             Nuklear.NewRow(LineHeight, 3);
             Nuklear.Label(cpi.Name);
             if (Nuklear.Button("Select")) {
-                Controller.SelectTexture(cpi, instance, value);
+                Controller.SelectTexture(
+                    cpi, instance, value,
+                    (Controller.Model.GetUserData<EditorData>("EditorData")?.ResourceDirectory?.Path ?? ".")
+                );
                 changed = false;
             }
             if (Nuklear.Button("Remove", hasValue)) {

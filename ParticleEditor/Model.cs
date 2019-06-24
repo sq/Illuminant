@@ -58,6 +58,15 @@ namespace Lumined {
         /// If true, total particles will be accurately counted. Otherwise an efficient count will be used that just determines whether a chunk is empty.
         /// </summary>
         public bool AccurateCounting = true;
+
+        /// <summary>
+        /// Specifies where to search for texture resources.
+        /// </summary>
+        public DirectoryName ResourceDirectory = new DirectoryName();
+    }
+
+    public class DirectoryName {
+        public string Path = ".";
     }
 
     public class EditorSprite {
