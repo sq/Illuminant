@@ -46,6 +46,11 @@ namespace Squared.Illuminant {
         private ManualResetEventSlim InProgressSignal = new ManualResetEventSlim();
 
         public bool IsDisposed { get; private set; }
+        public int RingSize { get; private set; }
+        public int Width { get; private set; }
+        public int Height { get; private set; }
+        public bool MipMap { get; private set; }
+        public SurfaceFormat Format { get; private set; }
 
         public BufferRing (
             RenderCoordinator coordinator, int width, int height, 
@@ -53,18 +58,41 @@ namespace Squared.Illuminant {
         ) {
             Coordinator = coordinator;
 
-            for (int i = 0; i < ringSize; i++) {
+            RingSize = ringSize;
+            MipMap = mipMap;
+            Format = format;
+
+            CreateBuffers(width, height);
+        }
+
+        private void CreateBuffers (int width, int height) {
+            Width = width;
+            Height = height;
+
+            for (int i = 0; i < RingSize; i++) {
                 RenderTarget2D buffer;
-                lock (coordinator.CreateResourceLock)
+                lock (Coordinator.CreateResourceLock)
                     buffer = new RenderTarget2D(
-                        coordinator.Device, width, height, 
-                        mipMap, format, DepthFormat.None,
+                        Coordinator.Device, width, height, 
+                        MipMap, Format, DepthFormat.None,
                         0, RenderTargetUsage.PreserveContents
                     );
 
-                lock (Buffers)
-                    Buffers.Add(buffer);
+                lock (Buffers) {
+                    if (Buffers.Count > i) {
+                        Coordinator.DisposeResource(Buffers[i]);
+                        Buffers[i] = buffer;
+                    } else
+                        Buffers.Add(buffer);
+                }
             }
+        }
+
+        public void ResizeBuffers (int width, int height) {
+            if ((width == Width) && (height == Height))
+                return;
+
+            CreateBuffers(width, height);
         }
 
         public InProgressRender BeginDraw (bool allowBlocking) {

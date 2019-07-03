@@ -821,8 +821,17 @@ namespace Squared.Illuminant {
             Vector2? viewportPosition = null,
             Vector2? viewportScale = null
         ) {
+            _Lightmaps.ResizeBuffers(Configuration.MaximumRenderSize.First, Configuration.MaximumRenderSize.Second);
             var lightmap = _Lightmaps.BeginDraw(true);
             var lightProbe = default(BufferRing.InProgressRender);
+
+            if (_LuminanceBuffers != null) {
+                var lwidth = Configuration.MaximumRenderSize.First / 2;
+                var lheight = Configuration.MaximumRenderSize.Second / 2;
+
+                // FIXME: This causes a crash
+                _LuminanceBuffers.ResizeBuffers(lwidth, lheight);
+            }
 
             if (Probes.Count > 0) {
                 long lastProbesTimestamp;
@@ -880,8 +889,13 @@ namespace Squared.Illuminant {
                     // q.WaitUntilDrained();
 
                     var mostRecentLightmap = _Lightmaps.GetBuffer(false, out temp);
-                    if (mostRecentLightmap != null)
+                    if (
+                        (mostRecentLightmap != null) &&
+                        !mostRecentLightmap.IsDisposed && 
+                        !mostRecentLightmap.IsContentLost 
+                    ) {
                         result.LuminanceBuffer = UpdateLuminanceBuffer(outerGroup, 0, mostRecentLightmap, intensityScale).Buffer;
+                    }
                 }
 
                 resultGroup = BatchGroup.ForRenderTarget(
