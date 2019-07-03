@@ -232,7 +232,15 @@ namespace TestGame.Scenes {
 
                 var lighting = Renderer.RenderLighting(bg, 1, intensityScale: 1);
                 float mult = 1.0f / LightmapScaleRatio;
-                lighting.Resolve(bg, 2, Width * mult, Height * mult);
+                lighting.Resolve(
+                    bg, 2, Width * mult, Height * mult,
+                    hdr: new HDRConfiguration {
+                        Dithering = new DitheringSettings {
+                            Power = 8,
+                            Strength = 0
+                        }
+                    }
+                );
             };
 
             ClearBatch.AddNew(frame, 0, Game.Materials.Clear, clearColor: Color.Black);
