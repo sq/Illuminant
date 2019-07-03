@@ -1,3 +1,5 @@
+#pragma fxcparams(/O3 /Zi)
+
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "SphereLightCore.fxh"
 
