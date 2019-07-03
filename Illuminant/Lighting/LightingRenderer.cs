@@ -764,8 +764,10 @@ namespace Squared.Illuminant {
                 throw new Exception("Failed to get luminance buffer");
 
             var name = "Generate HDR Buffer";
-            var w = Configuration.RenderSize.First / 2;
-            var h = Configuration.RenderSize.Second / 2;
+            int w, h;
+            Configuration.GetRenderSize(out w, out h);
+            w /= 2;
+            h /= 2;
             using (var copyGroup = BatchGroup.ForRenderTarget(
                 container, layer, newLuminanceBuffer.Buffer,
                 (dm, _) => {
@@ -784,11 +786,13 @@ namespace Squared.Illuminant {
 
                 var ir = new ImperativeRenderer(copyGroup, Materials);
                 var m = IlluminantMaterials.CalculateLuminance;
+                int w2, h2;
+                Configuration.GetRenderSize(out w2, out h2);
                 ir.Clear(color: Color.Transparent);
                 ir.Draw(
                     lightmap, 
                     new Rectangle(0, 0, w, h), 
-                    new Rectangle(0, 0, Configuration.RenderSize.First, Configuration.RenderSize.Second), 
+                    new Rectangle(0, 0, w2, h2),
                     material: m
                 );
             }
@@ -1257,9 +1261,12 @@ namespace Squared.Illuminant {
 
             if (blendState != null)
                 m = Materials.Get(m, blendState: blendState);
+
+            int w, h;
+            Configuration.GetRenderSize(out w, out h);
             
             var lightmapBounds = lightmap.BoundsFromRectangle(
-                new Rectangle(0, 0, Configuration.RenderSize.First, Configuration.RenderSize.Second)
+                new Rectangle(0, 0, w, h)
             );
             var albedoBounds = albedoRegion.GetValueOrDefault(Bounds.Unit);
 

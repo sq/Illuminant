@@ -13,7 +13,7 @@ namespace Squared.Illuminant {
         /// <summary>
         /// The maximum width and height of the viewport.
         /// </summary>
-        public readonly Pair<int>  MaximumRenderSize;
+        public          Pair<int>  MaximumRenderSize { get; internal set; }
 
         /// <summary>
         /// The maximum number of light probes to update.
@@ -67,10 +67,17 @@ namespace Squared.Illuminant {
         public Vector2   RenderScale    = Vector2.One;
 
         /// <summary>
-        /// The current width and height of the viewport.
+        /// The current width of the viewport.
         /// Must not be larger than MaximumRenderSize.
+        /// If unspecified, the maximum render size will be used.
         /// </summary>
-        public Pair<int> RenderSize;
+        public int? RenderWidth { get; internal set; }
+        /// <summary>
+        /// The current height of the viewport.
+        /// Must not be larger than MaximumRenderSize.
+        /// If unspecified, the maximum render size will be used.
+        /// </summary>
+        public int? RenderHeight { get; internal set; }
 
         /// <summary>
         /// Sets the default ramp texture to use for lights with no ramp texture set.
@@ -184,8 +191,7 @@ namespace Squared.Illuminant {
             int maximumGIBounceCount = 2
         ) {
             HighQuality = highQuality;
-            MaximumRenderSize = new Pair<int>(maxWidth, maxHeight);
-            RenderSize = MaximumRenderSize;
+            AdjustMaximumRenderSize(maxWidth, maxHeight);
             EnableBrightnessEstimation = enableBrightnessEstimation;
             EnableGlobalIllumination = enableGlobalIllumination;
             RingBufferSize = ringBufferSize;
@@ -215,9 +221,45 @@ namespace Squared.Illuminant {
                 widthPixels / (float)maxWidth,
                 heightPixels / (float)maxHeight
             );
-            var size = new Pair<int>(widthPixels, heightPixels);
             RenderScale = scale;
-            RenderSize = size;
+            SetRenderSize(widthPixels, heightPixels);
+        }
+
+        /// <summary>
+        /// Adjusts the maximum render size. This will cause lighting renderers
+        ///  to recreate their surfaces. Note that you need to update RenderSize and
+        ///  RenderScale afterwards if they were being used.
+        /// </summary>
+        /// <param name="newWidth"></param>
+        /// <param name="newHeight"></param>
+        public void AdjustMaximumRenderSize (int newWidth, int newHeight) {
+            var oldSize = MaximumRenderSize;
+
+            if (newWidth <= 0 || newWidth > 4096)
+                throw new ArgumentOutOfRangeException("newWidth");
+            if (newHeight <= 0 || newHeight > 4096)
+                throw new ArgumentOutOfRangeException("newHeight");
+
+            MaximumRenderSize = new Pair<int>(newWidth, newHeight);
+        }
+
+        public void SetRenderSize (int? newWidth, int? newHeight) {
+            if (newWidth.HasValue) {
+                if ((newWidth.Value <= 0) || (newWidth.Value > MaximumRenderSize.First))
+                    throw new ArgumentOutOfRangeException("newWidth");
+            }
+            if (newHeight.HasValue) {
+                if ((newHeight.Value <= 0) || (newHeight.Value > MaximumRenderSize.Second))
+                    throw new ArgumentOutOfRangeException("newHeight");
+            }
+
+            RenderWidth = newWidth;
+            RenderHeight = newHeight;
+        }
+
+        public void GetRenderSize (out int width, out int height) {
+            width = RenderWidth ?? MaximumRenderSize.First;
+            height = RenderHeight ?? MaximumRenderSize.Second;
         }
     }
 

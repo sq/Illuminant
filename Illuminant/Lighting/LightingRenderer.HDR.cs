@@ -90,8 +90,7 @@ namespace Squared.Illuminant {
                 LightProbeValues = lightProbeValues;
                 LuminanceBuffer = null;
                 InverseScaleFactor = inverseScaleFactor;
-                Width = renderer.Configuration.RenderSize.First;
-                Height = renderer.Configuration.RenderSize.Second;
+                renderer.Configuration.GetRenderSize(out Width, out Height);
             }
 
             public bool IsValid {
