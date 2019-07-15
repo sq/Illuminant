@@ -427,7 +427,7 @@ namespace Squared.Illuminant.Particles {
         /// <summary>
         /// The number of frames a chunk must be dead for before it is reclaimed
         /// </summary>
-        public int DeadFrameThreshold = LivenessCheckInterval * 3;
+        public int DeadFrameThreshold = LivenessCheckInterval * 4;
 
         public ParticleSystem (
             ParticleEngine engine, ParticleSystemConfiguration configuration

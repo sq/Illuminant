@@ -322,7 +322,7 @@ namespace Squared.Illuminant.Particles {
                         continue;
                     }
 
-                    var srcTexture = chunk.Previous.PositionAndLife;
+                    var srcTexture = chunk.Current.PositionAndLife;
                     if (!AutoRenderTarget.IsRenderTargetValid(srcTexture)) {
                         i++;
                         continue;

@@ -76,7 +76,8 @@ namespace TestGame.Scenes {
             Engine = new ParticleEngine(
                 Game.RenderCoordinator, Game.Materials, 
                 new ParticleEngineConfiguration {
-                    TextureLoader = Game.TextureLoader.Load
+                    TextureLoader = Game.TextureLoader.Load,
+                    AccurateLivenessCounts = false
                 }, Game.ParticleMaterials
             );
 
