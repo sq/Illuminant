@@ -427,7 +427,7 @@ namespace Squared.Illuminant.Particles {
         /// <summary>
         /// The number of frames a chunk must be dead for before it is reclaimed
         /// </summary>
-        public int DeadFrameThreshold = LivenessCheckInterval * 4;
+        public int DeadFrameThreshold = LivenessCheckInterval * 3;
 
         public ParticleSystem (
             ParticleEngine engine, ParticleSystemConfiguration configuration
@@ -856,7 +856,7 @@ namespace Squared.Illuminant.Particles {
             lock (LivenessInfos)
                 li = LivenessInfos[chunk.ID];
 
-            Console.WriteLine("{0} count = {1}", chunk.ID, li.Count);
+            // Console.WriteLine("{0} count = {1}", chunk.ID, li.Count);
 
             if (!li.Count.HasValue)
                 return;
@@ -869,7 +869,7 @@ namespace Squared.Illuminant.Particles {
 
             bool isDead = (li.DeadFrameCount >= threshold);
             if (isDead) {
-                Console.WriteLine("Reaping {0}", chunk.ID);
+                // Console.WriteLine("Reaping {0}", chunk.ID);
                 lock (ChunksToReap)
                     ChunksToReap.Add(li);
             }
@@ -1355,8 +1355,6 @@ namespace Squared.Illuminant.Particles {
             var isValid = AutoRenderTarget.IsRenderTargetValid(src.PositionAndLife) &&
                 AutoRenderTarget.IsRenderTargetValid(chunk.RenderData) &&
                 AutoRenderTarget.IsRenderTargetValid(chunk.RenderColor);
-            if (!isValid)
-                Console.WriteLine("Invalid source");
             return isValid;
         }
 

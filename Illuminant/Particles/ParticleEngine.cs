@@ -236,18 +236,18 @@ namespace Squared.Illuminant.Particles {
             for (int i = 0; i < chunks.Length; i++) {
                 var chunk = chunks[i];
                 if (chunk == null) {
-                    Console.WriteLine("No chunk");
+                    // Console.WriteLine("No chunk");
                     continue;
                 }
 
                 var li = chunk.System.GetLivenessInfo(chunk);
                 if (li == null) {
-                    Console.WriteLine("No liveness info");
+                    // Console.WriteLine("No liveness info");
                     continue;
                 }
 
                 if (buffer == null) {
-                    Console.WriteLine("No buffer");
+                    // Console.WriteLine("No buffer");
                     continue;
                 }
 
