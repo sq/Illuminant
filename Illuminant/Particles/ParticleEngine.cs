@@ -33,11 +33,11 @@ namespace Squared.Illuminant.Particles {
 
         internal int ResetCount = 0;
 
-        internal readonly IndexBuffer   TriIndexBuffer;
-        internal readonly VertexBuffer  TriVertexBuffer;
-        internal          IndexBuffer   RasterizeIndexBuffer;
-        internal          VertexBuffer  RasterizeVertexBuffer;
-        internal          VertexBuffer  RasterizeOffsetBuffer;
+        internal IndexBuffer   TriIndexBuffer;
+        internal VertexBuffer  TriVertexBuffer;
+        internal IndexBuffer   RasterizeIndexBuffer;
+        internal VertexBuffer  RasterizeVertexBuffer;
+        internal VertexBuffer  RasterizeOffsetBuffer;
 
         internal const int              RandomnessTextureWidth = 807,
                                         RandomnessTextureHeight = 653;
@@ -126,30 +126,7 @@ namespace Squared.Illuminant.Particles {
 
             LoadMaterials(Effects);
 
-            lock (coordinator.CreateResourceLock) {
-                TriIndexBuffer = new IndexBuffer(coordinator.Device, IndexElementSize.SixteenBits, 3, BufferUsage.WriteOnly);
-                TriIndexBuffer.SetData(TriIndices);
-
-                const float argh = 99999999;
-
-                TriVertexBuffer = new VertexBuffer(coordinator.Device, typeof(ParticleSystemVertex), 3, BufferUsage.WriteOnly);
-                TriVertexBuffer.SetData(new [] {
-                    // HACK: Workaround for Intel's terrible video drivers.
-                    // No, I don't know why.
-                    new ParticleSystemVertex(-2, -2, 0),
-                    new ParticleSystemVertex(argh, -2, 1),
-                    new ParticleSystemVertex(-2, argh, 2),
-                });
-
-                ScratchTexture = new RenderTarget2D(
-                    coordinator.Device, configuration.ChunkSize, configuration.ChunkSize, 
-                    false, SurfaceFormat.Alpha8, DepthFormat.None, 0, RenderTargetUsage.PreserveContents
-                );
-            }
-
-            FillIndexBuffer();
-            FillVertexBuffer();
-            GenerateRandomnessTexture();
+            CreateInternalState(Coordinator);
 
             Coordinator.DeviceReset += Coordinator_DeviceReset;
         }
@@ -161,13 +138,16 @@ namespace Squared.Illuminant.Particles {
             using (var e = DiscardedBuffers.GetEnumerator())
             while (e.GetNext(out b)) {
                 // We can't reuse any buffers that were recently used for painting or readback
+                // Liveness queries are computed with an additional one-frame delay, so that means sifting is delayed
+                //  by two frames
                 if (b.LastFrameDependency >= (frameIndex - 2))
                     continue;
 
                 var age = CurrentTurn - b.LastTurnUsed;
                 if (age >= Configuration.RecycleInterval) {
                     e.RemoveCurrent();
-                    AvailableBuffers.Add(b);
+                    if (!b.IsDisposed)
+                        AvailableBuffers.Add(b);
                 }
             }
         }
@@ -439,63 +419,53 @@ namespace Squared.Illuminant.Particles {
         }
 
         private void FillVertexBuffer () {
-            if (RasterizeVertexBuffer == null)
-            {
-                var buf = new ParticleSystemVertex[4];
-                int i = 0;
-                var v = new ParticleSystemVertex();
-                buf[i++] = v;
-                v.Corner = v.Unused = 1;
-                buf[i++] = v;
-                v.Corner = v.Unused = 2;
-                buf[i++] = v;
-                v.Corner = v.Unused = 3;
-                buf[i++] = v;
+            var buf = new ParticleSystemVertex[4];
+            int i = 0;
+            var v = new ParticleSystemVertex();
+            buf[i++] = v;
+            v.Corner = v.Unused = 1;
+            buf[i++] = v;
+            v.Corner = v.Unused = 2;
+            buf[i++] = v;
+            v.Corner = v.Unused = 3;
+            buf[i++] = v;
 
-                RasterizeVertexBuffer = new VertexBuffer(
-                    Coordinator.Device, typeof(ParticleSystemVertex),
-                    buf.Length, BufferUsage.WriteOnly
-                );
-                RasterizeVertexBuffer.SetData(buf);
-            }
+            RasterizeVertexBuffer = new VertexBuffer(
+                Coordinator.Device, typeof(ParticleSystemVertex),
+                buf.Length, BufferUsage.WriteOnly
+            );
+            RasterizeVertexBuffer.SetData(buf);
 
             if (RasterizeOffsetBuffer != null)
                 Coordinator.DisposeResource(RasterizeOffsetBuffer);
 
-            {
-                var buf = new ParticleOffsetVertex[Configuration.ChunkSize * Configuration.ChunkSize];
-                RasterizeOffsetBuffer = new VertexBuffer(
-                    Coordinator.Device, typeof(ParticleOffsetVertex),
-                    buf.Length, BufferUsage.WriteOnly
-                );
-                var fsize = (float)Configuration.ChunkSize;
+            var buf2 = new ParticleOffsetVertex[Configuration.ChunkSize * Configuration.ChunkSize];
+            RasterizeOffsetBuffer = new VertexBuffer(
+                Coordinator.Device, typeof(ParticleOffsetVertex),
+                buf2.Length, BufferUsage.WriteOnly
+            );
+            var fsize = (float)Configuration.ChunkSize;
 
-                for (var y = 0; y < Configuration.ChunkSize; y++) {
-                    for (var x = 0; x < Configuration.ChunkSize; x++) {
-                        var i = (y * Configuration.ChunkSize) + x;
-                        buf[i].OffsetAndIndex = new Vector3(x / fsize, y / fsize, i);
-                    }
+            for (var y = 0; y < Configuration.ChunkSize; y++) {
+                for (var x = 0; x < Configuration.ChunkSize; x++) {
+                    var i2 = (y * Configuration.ChunkSize) + x;
+                    buf2[i2].OffsetAndIndex = new Vector3(x / fsize, y / fsize, i2);
                 }
-
-                RasterizeOffsetBuffer.SetData(buf);
             }
+
+            RasterizeOffsetBuffer.SetData(buf2);
         }
 
         public void ChangePropertiesAndReset (int newSize) {
             Coordinator.WaitForActiveDraws();
 
             Configuration.ChunkSize = newSize;
+
             foreach (var s in Systems)
                 s.Reset();
 
-            foreach (var buf in AllBuffers)
-                Coordinator.DisposeResource(buf);
-
-            AllBuffers.Clear();
-            AvailableBuffers.Clear();
-            DiscardedBuffers.Clear();
-
-            FillVertexBuffer();
+            ResetInternalState();
+            CreateInternalState(Coordinator);
         }
 
         private void GenerateRandomnessTexture (int? seed = null) {
@@ -548,15 +518,41 @@ namespace Squared.Illuminant.Particles {
 
         private void Coordinator_DeviceReset (object sender, EventArgs e) {
             ResetCount += 1;
+            foreach (var sys in Systems)
+                sys.NotifyDeviceReset();
+            ResetInternalState();
+            CreateInternalState(Coordinator);
             // FillIndexBuffer();
         }
 
-        public void Dispose () {
-            if (IsDisposed)
-                return;
+        private void CreateInternalState (RenderCoordinator coordinator) {
+            lock (coordinator.CreateResourceLock) {
+                TriIndexBuffer = new IndexBuffer(coordinator.Device, IndexElementSize.SixteenBits, 3, BufferUsage.WriteOnly);
+                TriIndexBuffer.SetData(TriIndices);
 
-            IsDisposed = true;
+                const float argh = 99999999;
 
+                TriVertexBuffer = new VertexBuffer(coordinator.Device, typeof(ParticleSystemVertex), 3, BufferUsage.WriteOnly);
+                TriVertexBuffer.SetData(new [] {
+                    // HACK: Workaround for Intel's terrible video drivers.
+                    // No, I don't know why.
+                    new ParticleSystemVertex(-2, -2, 0),
+                    new ParticleSystemVertex(argh, -2, 1),
+                    new ParticleSystemVertex(-2, argh, 2),
+                });
+
+                ScratchTexture = new RenderTarget2D(
+                    coordinator.Device, Configuration.ChunkSize, Configuration.ChunkSize, 
+                    false, SurfaceFormat.Alpha8, DepthFormat.None, 0, RenderTargetUsage.PreserveContents
+                );
+            }
+
+            FillIndexBuffer();
+            FillVertexBuffer();
+            GenerateRandomnessTexture();
+        }
+
+        private void ResetInternalState () {
             foreach (var sys in Systems.ToArray())
                 sys.Dispose();
 
@@ -567,8 +563,6 @@ namespace Squared.Illuminant.Particles {
             AvailableBuffers.Clear();
             DiscardedBuffers.Clear();
 
-            Effects.Dispose();
-
             Coordinator.DisposeResource(TriIndexBuffer);
             Coordinator.DisposeResource(TriVertexBuffer);
             Coordinator.DisposeResource(RasterizeIndexBuffer);
@@ -576,6 +570,16 @@ namespace Squared.Illuminant.Particles {
             Coordinator.DisposeResource(RasterizeOffsetBuffer);
             Coordinator.DisposeResource(RandomnessTexture);
             Coordinator.DisposeResource(LivenessQueryRTs);
+        }
+
+        public void Dispose () {
+            if (IsDisposed)
+                return;
+
+            IsDisposed = true;
+
+            ResetInternalState();
+            Effects.Dispose();
         }
     }
 

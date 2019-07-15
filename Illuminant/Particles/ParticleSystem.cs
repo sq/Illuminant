@@ -46,6 +46,7 @@ namespace Squared.Illuminant.Particles {
             public DefaultMaterialSet DefaultMaterialSet;
             public Material Material;
             public ParticleRenderParameters UserParameters;
+            public int LastResetCount;
         }
 
         public class UpdateResult {
@@ -307,6 +308,8 @@ namespace Squared.Illuminant.Particles {
                 var m = rp.Material;
                 var e = m.Effect;
                 var p = e.Parameters;
+                if (rp.LastResetCount != System.Engine.ResetCount)
+                    return;
 
                 // FIXME: deltaTime
                 System.SetSystemUniforms(m, 0);
@@ -519,13 +522,13 @@ namespace Squared.Illuminant.Particles {
 
             for (int i = 0; i < numToSpawn; i++) {
                 var c = CreateChunk();
-                RotateBuffers(c, renderManager.DeviceManager.FrameIndex);
+                // RotateBuffers(c, renderManager.DeviceManager.FrameIndex);
                 // Console.WriteLine("Creating new chunk " + c.ID);
                 var offset = i * mc;
                 var curr = c.Current;
                 var prev = c.Previous;
-                var pos = new BufferInitializer<TElement> { Buffer = curr.PositionAndLife, Buffer2 = prev.PositionAndLife, Initializer = positionInitializer, Offset = offset };
-                var vel = new BufferInitializer<TElement> { Buffer = curr.Velocity, Buffer2 = prev.Velocity, Initializer = velocityInitializer, Offset = offset };
+                var pos = new BufferInitializer<TElement> { Buffer = curr.PositionAndLife, Buffer2 = prev?.PositionAndLife, Initializer = positionInitializer, Offset = offset };
+                var vel = new BufferInitializer<TElement> { Buffer = curr.Velocity, Buffer2 = prev?.Velocity, Initializer = velocityInitializer, Offset = offset };
                 var attr = new BufferInitializer<TElement> { Buffer = c.Color, Initializer = colorInitializer, Offset = offset };
                 var job = new ChunkInitializer<TElement> {
                     System = this,
@@ -1007,12 +1010,6 @@ namespace Squared.Illuminant.Particles {
 
             var startedWhen = Time.Ticks;
 
-            if (LastResetCount != Engine.ResetCount) {
-                if (OnDeviceReset != null)
-                    OnDeviceReset(this);
-                LastResetCount = Engine.ResetCount;
-            }
-
             UpdateLiveCountAndReapDeadChunks();
 
             var initialTurn = Engine.CurrentTurn;
@@ -1108,7 +1105,16 @@ namespace Squared.Illuminant.Particles {
             });
 
             Engine.EndOfUpdate(container, layer, initialTurn, container.RenderManager.DeviceManager.FrameIndex);
+
+            LastResetCount = Engine.ResetCount;
             return new UpdateResult(this, true, (float)now);
+        }
+
+        internal void NotifyDeviceReset () {
+            if (OnDeviceReset != null)
+                OnDeviceReset(this);
+            LastResetCount = Engine.ResetCount;
+            Reset();
         }
 
         private void UpdateChunk (
@@ -1346,9 +1352,12 @@ namespace Squared.Illuminant.Particles {
         }
 
         private bool IsChunkValidSource (BufferSet src, Chunk chunk) {
-            return AutoRenderTarget.IsRenderTargetValid(src.PositionAndLife) &&
+            var isValid = AutoRenderTarget.IsRenderTargetValid(src.PositionAndLife) &&
                 AutoRenderTarget.IsRenderTargetValid(chunk.RenderData) &&
                 AutoRenderTarget.IsRenderTargetValid(chunk.RenderColor);
+            if (!isValid)
+                Console.WriteLine("Invalid source");
+            return isValid;
         }
 
         private void RenderChunk (
@@ -1433,6 +1442,9 @@ namespace Squared.Illuminant.Particles {
             if (Chunks.Count == 0)
                 return;
 
+            if (Engine.ResetCount != LastResetCount)
+                return;
+
             var startedWhen = Time.Ticks;
 
             var appearance = Configuration.Appearance;
@@ -1459,7 +1471,10 @@ namespace Squared.Illuminant.Particles {
             using (var group = BatchGroup.New(
                 container, layer,
                 Renderer.BeforeDraw, Renderer.AfterDraw, 
-                userData: new InternalRenderParameters { Material = material, UserParameters = renderParams, DefaultMaterialSet = Engine.Materials }
+                userData: new InternalRenderParameters {
+                    Material = material, UserParameters = renderParams,
+                    DefaultMaterialSet = Engine.Materials, LastResetCount = Engine.ResetCount
+                }
             )) {
                 RenderTrace.Marker(group, -9999, "Rasterize {0} particle chunks", Chunks.Count);
 
