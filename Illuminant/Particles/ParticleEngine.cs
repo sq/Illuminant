@@ -188,7 +188,11 @@ namespace Squared.Illuminant.Particles {
             SiftBuffers(frameIndex);
         }
 
+#if FNA
         private struct LivenessDataReadbackWorkItem : Threading.IMainThreadWorkItem {
+#else
+        private struct LivenessDataReadbackWorkItem : Threading.IWorkItem {
+#endif
             public BufferPool<Chunk>.Buffer Chunks;
             public RenderTarget2D RenderTarget;
             public ParticleEngine Engine;
@@ -285,6 +289,9 @@ namespace Squared.Illuminant.Particles {
                 return;
             }
 
+            var p = m.Effect.Parameters;
+            p["PositionTexture"].SetValue((Texture2D)null);
+
             var dm = Coordinator.Manager.DeviceManager;
             dm.PushRenderTarget(nextBuffer);
             dm.Device.Clear(
@@ -329,7 +336,6 @@ namespace Squared.Illuminant.Particles {
                     }
 
                     system.SetSystemUniforms(m, 0);
-                    var p = m.Effect.Parameters;
                     p["ChunkIndexAndMaxIndex"].SetValue(new Vector2(i, LivenessQueryRTs.Width));
                     p["PositionTexture"].SetValue(srcTexture);
                     m.Flush();
