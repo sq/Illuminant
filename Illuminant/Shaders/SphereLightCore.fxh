@@ -7,7 +7,7 @@
 #include "AOCommon.fxh"
 #include "FBPBR.fxh"
 
-#define SELF_OCCLUSION_HACK 1.5
+#define SELF_OCCLUSION_HACK 1.6
 #define SHADOW_OPACITY_THRESHOLD (0.75 / 255.0)
 
 void SphereLightVertexShader(

@@ -126,7 +126,7 @@ namespace Squared.Illuminant.Particles {
 
             public Action<TElement[], int> Initializer;
             public int Offset;
-            public RenderTarget2D Buffer;
+            public RenderTarget2D Buffer, Buffer2;
             public ChunkInitializer<TElement> Parent;
 
             public void Execute () {
@@ -138,8 +138,12 @@ namespace Squared.Illuminant.Particles {
 
                 try {
                     if (!Parent.Chunk.IsDisposed)
-                    lock (Parent.System.Engine.Coordinator.UseResourceLock)
-                        Buffer.SetData(scratch);
+                    lock (Parent.System.Engine.Coordinator.UseResourceLock) {
+                        if (AutoRenderTargetBase.IsRenderTargetValid(Buffer))
+                            Buffer.SetData(scratch);
+                        if (AutoRenderTargetBase.IsRenderTargetValid(Buffer2))
+                            Buffer2.SetData(scratch);
+                    }
                     Parent.OnBufferInitialized(false);
                 } catch (ObjectDisposedException) {
                     // This can happen even if we properly synchronize accesses, 
@@ -414,7 +418,6 @@ namespace Squared.Illuminant.Particles {
         private double  UpdateErrorAccumulator = 0;
 
         internal HashSet<LivenessInfo> ChunksToReap = new HashSet<LivenessInfo>();
-        internal bool  IsLivenessInfoUpdated = true;
 
         public long TotalSpawnCount { get; private set; }
 
@@ -503,7 +506,7 @@ namespace Squared.Illuminant.Particles {
         // Make sure to lock the slice first.
         public int InitializeNewChunks<TElement> (
             int particleCount,
-            GraphicsDevice device,
+            RenderManager renderManager,
             bool parallel,
             Action<TElement[], int> positionInitializer,
             Action<TElement[], int> velocityInitializer,
@@ -516,11 +519,13 @@ namespace Squared.Illuminant.Particles {
 
             for (int i = 0; i < numToSpawn; i++) {
                 var c = CreateChunk();
+                RotateBuffers(c, renderManager.DeviceManager.FrameIndex);
                 // Console.WriteLine("Creating new chunk " + c.ID);
                 var offset = i * mc;
                 var curr = c.Current;
-                var pos = new BufferInitializer<TElement> { Buffer = curr.PositionAndLife, Initializer = positionInitializer, Offset = offset };
-                var vel = new BufferInitializer<TElement> { Buffer = curr.Velocity, Initializer = velocityInitializer, Offset = offset };
+                var prev = c.Previous;
+                var pos = new BufferInitializer<TElement> { Buffer = curr.PositionAndLife, Buffer2 = prev.PositionAndLife, Initializer = positionInitializer, Offset = offset };
+                var vel = new BufferInitializer<TElement> { Buffer = curr.Velocity, Buffer2 = prev.Velocity, Initializer = velocityInitializer, Offset = offset };
                 var attr = new BufferInitializer<TElement> { Buffer = c.Color, Initializer = colorInitializer, Offset = offset };
                 var job = new ChunkInitializer<TElement> {
                     System = this,
@@ -531,7 +536,9 @@ namespace Squared.Illuminant.Particles {
                     Remaining = (colorInitializer != null) ? 3 : 2
                 };
                 c.TotalSpawned = ChunkMaximumCount;
+
                 GetLivenessInfo(c).Count = ChunkMaximumCount;
+                ProcessLatestLivenessInfo(c);
 
                 job.Run(g);
             }
@@ -670,6 +677,11 @@ namespace Squared.Illuminant.Particles {
             chunk.TotalSpawned += spawnCount;
 
             if (spawnCount > 0) {
+                var li = GetLivenessInfo(chunk);
+                li.DeadFrameCount = 0;
+            }
+
+            if (spawnCount > 0) {
                 var h = isSecondPass ? spawner.Handler2 : spawner.Handler;
 
                 RunTransform(
@@ -756,6 +768,7 @@ namespace Squared.Illuminant.Particles {
         }
 
         public void Reset () {
+            Engine.ResetCount++;
             LastClearTimestamp = Time.Ticks;
             IsClearPending = true;
             TotalSpawnCount = 0;
@@ -764,8 +777,11 @@ namespace Squared.Illuminant.Particles {
             LastUpdateTimeSeconds = null;
             foreach (var xform in Transforms)
                 xform.Reset();
-            lock (LivenessInfos)
-                LivenessInfos.Clear();
+            lock (ChunksToReap) {
+                ChunksToReap.Clear();
+                foreach (var chunk in Chunks)
+                    ChunksToReap.Add(GetLivenessInfo(chunk));
+            }
             LiveCount = 0;
         }
 
@@ -787,7 +803,7 @@ namespace Squared.Illuminant.Particles {
         ) {
             var result = InitializeNewChunks(
                 particleCount,
-                Engine.Coordinator.Device,
+                Engine.Coordinator.Manager,
                 parallel,
                 positionInitializer,
                 velocityInitializer,
@@ -814,7 +830,7 @@ namespace Squared.Illuminant.Particles {
         ) {
             var result = InitializeNewChunks(
                 particleCount,
-                Engine.Coordinator.Device,
+                Engine.Coordinator.Manager,
                 parallel,
                 positionInitializer,
                 velocityInitializer,
@@ -823,13 +839,46 @@ namespace Squared.Illuminant.Particles {
             return result;
         }
 
-        private void UpdateLivenessAndReapDeadChunks () {
+        internal void ProcessLatestLivenessInfo (Chunk chunk) {
+            var threshold = DeadFrameThreshold;
+            /*
+            // HACK: Keep a chunk around for a very long time if we don't have any others.
+            // FIXME: This prevents a hitch when spawning new particles and also works 
+            //  around a bug (?) where our last remaining chunk is reaped too early.
+            if (Chunks.Count == 1)
+                threshold = 180;
+            */
+
+            LivenessInfo li;
+            lock (LivenessInfos)
+                li = LivenessInfos[chunk.ID];
+
+            Console.WriteLine("{0} count = {1}", chunk.ID, li.Count);
+
+            if (!li.Count.HasValue)
+                return;
+
+            if (li.Count.Value <= 0) {
+                li.DeadFrameCount++;
+            } else {
+                li.DeadFrameCount = 0;
+            }
+
+            bool isDead = (li.DeadFrameCount >= threshold);
+            if (isDead) {
+                Console.WriteLine("Reaping {0}", chunk.ID);
+                lock (ChunksToReap)
+                    ChunksToReap.Add(li);
+            }
+        }
+
+        private void UpdateLiveCountAndReapDeadChunks () {
             // FIXME: LiveCount randomly drops to 0 when a chunk is reaped
             var oldLiveCount = LiveCount;
             LiveCount = 0;
 
+            lock (LivenessInfos)
             foreach (var kvp in LivenessInfos) {
-                var isDead = false;
                 var li = kvp.Value;
 
                 var chunkCount = li.Count.GetValueOrDefault(0);
@@ -837,33 +886,16 @@ namespace Squared.Illuminant.Particles {
                     LiveCount += chunkCount;
                 else
                     LiveCount += (chunkCount > 0) ? 1 : 0;
+            }
 
-                var threshold = DeadFrameThreshold;
-                // HACK: Keep a chunk around for a very long time if we don't have any others.
-                // FIXME: This prevents a hitch when spawning new particles and also works 
-                //  around a bug (?) where our last remaining chunk is reaped too early.
-                if (Chunks.Count == 1)
-                    threshold = 180;
-
-                if (li.Count.GetValueOrDefault(1) <= 0) {
-                    li.DeadFrameCount++;
-
-                    if (li.DeadFrameCount >= threshold) {
-                        // Console.WriteLine("Chunk " + li.Chunk.ID + " dead");
-                        isDead = true;
-                    }
+            lock (ChunksToReap) {
+                foreach (var li in ChunksToReap) {
+                    LivenessInfos.Remove(li.Chunk.ID);
+                    Reap(li.Chunk);
                 }
 
-                if (isDead)
-                    ChunksToReap.Add(li);
+                ChunksToReap.Clear();
             }
-
-            foreach (var li in ChunksToReap) {
-                LivenessInfos.Remove(li.Chunk.ID);
-                Reap(li.Chunk);
-            }
-
-            ChunksToReap.Clear();
         }
 
         private void Reap (BufferSet buffer) {
@@ -981,12 +1013,7 @@ namespace Squared.Illuminant.Particles {
                 LastResetCount = Engine.ResetCount;
             }
 
-            lock (LivenessInfos) {
-                if (IsLivenessInfoUpdated) {
-                    IsLivenessInfoUpdated = false;
-                    UpdateLivenessAndReapDeadChunks();
-                }
-            }
+            UpdateLiveCountAndReapDeadChunks();
 
             var initialTurn = Engine.CurrentTurn;
 
@@ -1146,8 +1173,6 @@ namespace Squared.Illuminant.Particles {
                     actualDeltaTimeSeconds, true, now, true, null
                 );
             }
-
-            chunk.LifeReadTexture = chunk.Current.PositionAndLife;
         }
 
         private void CopyBuffer (IBatchContainer container, ref int layer, RenderTarget2D from, RenderTarget2D to) {
