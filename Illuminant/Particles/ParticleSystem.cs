@@ -258,7 +258,7 @@ namespace Squared.Illuminant.Particles {
 
             private static volatile int NextID;
 
-            internal float ApproximateMaximumLife;
+            internal volatile float ApproximateMaximumLife;
 
             public Chunk (
                 ParticleSystem system
@@ -710,6 +710,11 @@ namespace Squared.Illuminant.Particles {
                     sourceChunk
                 );
             }
+
+            chunk.ApproximateMaximumLife = Math.Max(
+                chunk.ApproximateMaximumLife,
+                spawner.EstimateMaximumLifeForNewParticle((float)now, Engine.ResolveSingle)
+            );
 
             var isPartialSpawn = (requestedSpawnCount > spawnCount);
             return isPartialSpawn;
@@ -1185,6 +1190,7 @@ namespace Squared.Illuminant.Particles {
                     Updater.BeforeDraw, Updater.AfterDraw, 
                     actualDeltaTimeSeconds, true, now, true, null
                 );
+                chunk.ApproximateMaximumLife -= Configuration.LifeDecayPerSecond;
             } else {
                 didRunAnyTransforms = true;
                 RunTransform(
@@ -1193,6 +1199,7 @@ namespace Squared.Illuminant.Particles {
                     Updater.BeforeDraw, Updater.AfterDraw,
                     actualDeltaTimeSeconds, true, now, true, null
                 );
+                chunk.ApproximateMaximumLife -= Configuration.LifeDecayPerSecond;
             }
         }
 

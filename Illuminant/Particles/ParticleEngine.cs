@@ -265,7 +265,40 @@ namespace Squared.Illuminant.Particles {
             }
         }
 
+        private void PerformApproximateLivenessQueries () {
+            lock (LivenessQueryRequests) {
+                foreach (var system in LivenessQueryRequests) {
+                    int count;
+                    BufferPool<Chunk>.Buffer chunkList;
+
+                    lock (system.Chunks) {
+                        count = system.Chunks.Count;
+                        chunkList = BufferPool<Chunk>.Allocate(count);
+                        system.Chunks.CopyTo(chunkList.Data, 0);
+                    }
+
+                    using (var counts = Squared.Util.BufferPool<Rg32>.Allocate(chunkList.Data.Length)) {
+                        for (int i = 0; i < count; i++)
+                            counts.Data[i] = new Rg32(chunkList.Data[i].ApproximateMaximumLife > 0 ? 1 : 0, 0);
+
+                        ProcessLivenessInfoData(counts.Data, chunkList.Data);
+                    }
+
+                    chunkList.Dispose();
+                }
+
+                LivenessQueryRequests.Clear();
+
+                IsLivenessQueryRequestPending = false;
+            }
+        }
+
         private void IssueLivenessQueries () {
+            if (Configuration.ApproximateLivenessCounts) {
+                PerformApproximateLivenessQueries();
+                return;
+            }
+
             Monitor.Enter(LivenessQueryRequests);
             IsLivenessQueryRequestPending = false;
             // Console.WriteLine("Issue {0} liveness queries", LivenessQueryRequests.Count);
@@ -357,19 +390,22 @@ namespace Squared.Illuminant.Particles {
             }
 
             dm.PopRenderTarget();
+            LivenessQueryRequests.Clear();
 
             Monitor.Exit(LivenessQueryRequests);
         }
 
         private void AutoIssueLivenessQueries () {
-            lock (LivenessQueryRequests)
+            lock (LivenessQueryRequests) {
                 if (LivenessQueryRequests.Count == 0)
                     return;
 
-            if (IsLivenessQueryRequestPending)
-                return;
+                if (IsLivenessQueryRequestPending)
+                    return;
 
-            IsLivenessQueryRequestPending = true;
+                IsLivenessQueryRequestPending = true;
+            }
+
             Coordinator.BeforeIssue(IssueLivenessQueries);
         }
 
@@ -644,7 +680,27 @@ namespace Squared.Illuminant.Particles {
         /// Enables accurate counting of the number of live particles in a given chunk.
         /// If disabled, only minimal tracking will be performed to identify dead chunks.
         /// </summary>
-        public bool AccurateLivenessCounts = true;
+        public bool AccurateLivenessCounts {
+            get {
+                return _AccurateLivenessCounts && !ApproximateLivenessCounts;
+            }
+            set {
+                _AccurateLivenessCounts = value;
+            }
+        }
+
+        private bool _AccurateLivenessCounts = true;
+
+        /// <summary>
+        /// Estimates (worst-case) particle liveness on the CPU instead of doing counts
+        ///  on the GPU. This can result in chunks staying alive longer but works around
+        ///  the reality that OpenGL sucks and liveness counts are very slow.
+        /// </summary>
+#if FNA
+        public bool ApproximateLivenessCounts = true;
+#else
+        public bool ApproximateLivenessCounts = false;
+#endif
 
         public ParticleEngineConfiguration (int chunkSize = 256) {
             ChunkSize = chunkSize;

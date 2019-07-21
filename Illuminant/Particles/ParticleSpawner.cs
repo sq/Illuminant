@@ -112,10 +112,10 @@ namespace Squared.Illuminant.Particles.Transforms {
             }
         }
 
-        protected virtual float EstimateMaximumLifeForNewParticle (float t, NamedConstantResolver<float> nameResolver) {
-            var c = Life.Constant.Evaluate(t, nameResolver);
-            var o = Life.Offset.Evaluate(t, nameResolver);
-            var s = Life.RandomScale.Evaluate(t, nameResolver);
+        public virtual float EstimateMaximumLifeForNewParticle (float now, NamedConstantResolver<float> nameResolver) {
+            var c = Life.Constant.Evaluate(now, nameResolver);
+            var o = Life.Offset.Evaluate(now, nameResolver);
+            var s = Life.RandomScale.Evaluate(now, nameResolver);
 
             var a = c + (o * s);
             var b = c - (o * s);

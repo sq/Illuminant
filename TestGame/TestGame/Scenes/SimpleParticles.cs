@@ -444,6 +444,7 @@ namespace TestGame.Scenes {
                             ) / 60f
                         );
                     }
+                    return MaxLife;
                 },
                 (buf, offset) => {
                     var rng = new MersenneTwister(Interlocked.Increment(ref seed));
@@ -456,6 +457,7 @@ namespace TestGame.Scenes {
                             0, 0
                         );
                     }
+                    return 0;
                 },
                 (buf, offset) => {
                     float b = 0.66f / ParticlesPerPixel;
@@ -466,6 +468,7 @@ namespace TestGame.Scenes {
                         int idx = j % PatternPixels.Length;
                         buf[i] = PatternPixels[idx].ToVector4() * b;
                     };
+                    return 0;
                 }
             );
 
