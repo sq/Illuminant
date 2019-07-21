@@ -1190,7 +1190,7 @@ namespace Squared.Illuminant.Particles {
                     Updater.BeforeDraw, Updater.AfterDraw, 
                     actualDeltaTimeSeconds, true, now, true, null
                 );
-                chunk.ApproximateMaximumLife -= Configuration.LifeDecayPerSecond;
+                chunk.ApproximateMaximumLife -= Configuration.LifeDecayPerSecond * actualDeltaTimeSeconds;
             } else {
                 didRunAnyTransforms = true;
                 RunTransform(
@@ -1199,7 +1199,7 @@ namespace Squared.Illuminant.Particles {
                     Updater.BeforeDraw, Updater.AfterDraw,
                     actualDeltaTimeSeconds, true, now, true, null
                 );
-                chunk.ApproximateMaximumLife -= Configuration.LifeDecayPerSecond;
+                chunk.ApproximateMaximumLife -= Configuration.LifeDecayPerSecond * actualDeltaTimeSeconds;
             }
         }
 

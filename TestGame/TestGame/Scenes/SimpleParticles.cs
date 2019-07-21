@@ -428,6 +428,7 @@ namespace TestGame.Scenes {
             var totalSpawned = System.Spawn(
                 SpawnCount,
                 (buf, offset) => {
+                    float life = 0f;
                     var rng = new MersenneTwister(Interlocked.Increment(ref seed));
                     var scaledWidth = width * ParticlesPerPixel;
                     var invPerPixel = 1.0f / ParticlesPerPixel;
@@ -436,15 +437,14 @@ namespace TestGame.Scenes {
                         var x = (j % scaledWidth) * invPerPixel + offsetX;
                         var y = (j / scaledWidth) + offsetY;
 
-                        buf[i] = new Vector4(
-                            x, y, 0,
-                            rng.NextFloat(
-                                200, 
-                                MaxLife
-                            ) / 60f
-                        );
+                        float l = rng.NextFloat(
+                            200,
+                            MaxLife
+                        ) / 60f;
+                        buf[i] = new Vector4(x, y, 0, l);
+                        life = Math.Max(life, l);
                     }
-                    return MaxLife;
+                    return life;
                 },
                 (buf, offset) => {
                     var rng = new MersenneTwister(Interlocked.Increment(ref seed));
