@@ -695,12 +695,9 @@ namespace Squared.Illuminant.Particles {
         /// Estimates (worst-case) particle liveness on the CPU instead of doing counts
         ///  on the GPU. This can result in chunks staying alive longer but works around
         ///  the reality that OpenGL sucks and liveness counts are very slow.
+        /// This is faster than the readback in Direct3D too anyway so whatever. Why not.
         /// </summary>
-#if FNA
         public bool ApproximateLivenessCounts = true;
-#else
-        public bool ApproximateLivenessCounts = false;
-#endif
 
         public ParticleEngineConfiguration (int chunkSize = 256) {
             ChunkSize = chunkSize;
