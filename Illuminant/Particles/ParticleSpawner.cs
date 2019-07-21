@@ -112,6 +112,16 @@ namespace Squared.Illuminant.Particles.Transforms {
             }
         }
 
+        protected virtual float EstimateMaximumLifeForNewParticle (float t, NamedConstantResolver<float> nameResolver) {
+            var c = Life.Constant.Evaluate(t, nameResolver);
+            var o = Life.Offset.Evaluate(t, nameResolver);
+            var s = Life.RandomScale.Evaluate(t, nameResolver);
+
+            var a = c + (o * s);
+            var b = c - (o * s);
+            return Math.Max(a, b);
+        }
+
         protected virtual Vector4 GetChunkSizeAndIndices (ParticleEngine engine) {
             return new Vector4(
                 engine.Configuration.ChunkSize, Indices.X, Indices.Y, 0

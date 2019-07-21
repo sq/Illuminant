@@ -22,6 +22,12 @@ using Squared.Util;
 
 namespace Squared.Illuminant.Particles {
     /// <summary>
+    /// Fills the buffer with data for up to count particles.
+    /// </summary>
+    /// <returns>The maximum life value of the spawned particles.</returns>
+    public delegate float ParticleBufferInitializer<TElement> (TElement[] buffer, int count);
+
+    /// <summary>
     /// Represents one or more particle systems
     /// </summary>
     public interface IParticleSystems : IDisposable {
@@ -125,7 +131,7 @@ namespace Squared.Illuminant.Particles {
         {
             static ThreadLocal<TElement[]> Scratch = new ThreadLocal<TElement[]>();
 
-            public Action<TElement[], int> Initializer;
+            public ParticleBufferInitializer<TElement> Initializer;
             public int Offset;
             public RenderTarget2D Buffer, Buffer2;
             public ChunkInitializer<TElement> Parent;
@@ -135,9 +141,9 @@ namespace Squared.Illuminant.Particles {
                 if (scratch == null)
                     Scratch.Value = scratch = new TElement[Parent.System.ChunkMaximumCount];
 
-                Initializer(scratch, Offset);
+                var maxLife = Initializer(scratch, Offset);
 
-                try {
+                try {                    
                     if (!Parent.Chunk.IsDisposed)
                     lock (Parent.System.Engine.Coordinator.UseResourceLock) {
                         if (AutoRenderTargetBase.IsRenderTargetValid(Buffer))
@@ -145,6 +151,13 @@ namespace Squared.Illuminant.Particles {
                         if (AutoRenderTargetBase.IsRenderTargetValid(Buffer2))
                             Buffer2.SetData(scratch);
                     }
+
+                    float oldApproximateMaximumLife, newApproximateMaximumLife;
+                    do {
+                        oldApproximateMaximumLife = Parent.Chunk.ApproximateMaximumLife;
+                        newApproximateMaximumLife = Math.Max(oldApproximateMaximumLife, maxLife);
+                    } while (Interlocked.CompareExchange(ref Parent.Chunk.ApproximateMaximumLife, newApproximateMaximumLife, oldApproximateMaximumLife) != oldApproximateMaximumLife);
+
                     Parent.OnBufferInitialized(false);
                 } catch (ObjectDisposedException) {
                     // This can happen even if we properly synchronize accesses, 
@@ -244,6 +257,8 @@ namespace Squared.Illuminant.Particles {
             public RenderTarget2D LifeReadTexture { get; internal set; }
 
             private static volatile int NextID;
+
+            internal float ApproximateMaximumLife;
 
             public Chunk (
                 ParticleSystem system
@@ -511,9 +526,9 @@ namespace Squared.Illuminant.Particles {
             int particleCount,
             RenderManager renderManager,
             bool parallel,
-            Action<TElement[], int> positionInitializer,
-            Action<TElement[], int> velocityInitializer,
-            Action<TElement[], int> colorInitializer
+            ParticleBufferInitializer<TElement> positionInitializer,
+            ParticleBufferInitializer<TElement> velocityInitializer,
+            ParticleBufferInitializer<TElement> colorInitializer
         ) where TElement : struct {
             var mc = ChunkMaximumCount;
             int numToSpawn = (int)Math.Ceiling((double)particleCount / mc);
@@ -790,8 +805,8 @@ namespace Squared.Illuminant.Particles {
 
         public int Spawn (
             int particleCount,
-            Action<Vector4[], int> positionInitializer,
-            Action<Vector4[], int> velocityInitializer,
+            ParticleBufferInitializer<Vector4> positionInitializer,
+            ParticleBufferInitializer<Vector4> velocityInitializer,
             bool parallel = true
         ) {
             return Spawn(particleCount, positionInitializer, velocityInitializer, null, parallel);
@@ -799,9 +814,9 @@ namespace Squared.Illuminant.Particles {
 
         public int Spawn (
             int particleCount,
-            Action<Vector4[], int> positionInitializer,
-            Action<Vector4[], int> velocityInitializer,
-            Action<Vector4[], int> colorInitializer,
+            ParticleBufferInitializer<Vector4> positionInitializer,
+            ParticleBufferInitializer<Vector4> velocityInitializer,
+            ParticleBufferInitializer<Vector4> colorInitializer,
             bool parallel = true
         ) {
             var result = InitializeNewChunks(
@@ -817,18 +832,18 @@ namespace Squared.Illuminant.Particles {
 
         public int Spawn (
             int particleCount,
-            Action<HalfVector4[], int> positionInitializer,
-            Action<HalfVector4[], int> velocityInitializer,
+            ParticleBufferInitializer<HalfVector4> positionInitializer,
+            ParticleBufferInitializer<HalfVector4> velocityInitializer,
             bool parallel = true
         ) {
             return Spawn(particleCount, positionInitializer, velocityInitializer, null, parallel);
         }
 
         public int Spawn (
-            int particleCount,
-            Action<HalfVector4[], int> positionInitializer,
-            Action<HalfVector4[], int> velocityInitializer,
-            Action<HalfVector4[], int> colorInitializer,
+            int particleCount,            
+            ParticleBufferInitializer<HalfVector4> positionInitializer,
+            ParticleBufferInitializer<HalfVector4> velocityInitializer,
+            ParticleBufferInitializer<HalfVector4> colorInitializer,
             bool parallel = true
         ) {
             var result = InitializeNewChunks(
