@@ -11,13 +11,15 @@ namespace Squared.Illuminant {
         internal readonly Texture2D Texture;
         internal readonly RenderCoordinator Coordinator;
 
+        public readonly bool OwnsTexture;
         public readonly bool HighPrecision;
 
         public VectorField (
-            RenderCoordinator coordinator, int width, int height, bool highPrecision
+            RenderCoordinator coordinator, int width, int height, bool highPrecision, bool ownsTexture = true
         ) {
             Coordinator = coordinator;
             HighPrecision = highPrecision;
+            OwnsTexture = ownsTexture;
 
             lock (coordinator.CreateResourceLock)
                 Texture = new RenderTarget2D(
@@ -28,10 +30,11 @@ namespace Squared.Illuminant {
         }
 
         public VectorField (
-            RenderCoordinator coordinator, Texture2D texture
+            RenderCoordinator coordinator, Texture2D texture, bool ownsTexture = true
         ) {
             Coordinator = coordinator;
             HighPrecision = texture.Format == SurfaceFormat.Vector4;
+            OwnsTexture = ownsTexture;
             Texture = texture;
         }
 
@@ -43,7 +46,8 @@ namespace Squared.Illuminant {
         }
 
         public void Dispose () {
-            Texture.Dispose();
+            if (OwnsTexture)
+                Texture.Dispose();
         }
     }
 }

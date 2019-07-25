@@ -1,3 +1,4 @@
+// Results in /Od look worse so just always /O3
 #pragma fxcparams(/O3 /Zi)
 
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\CompilerWorkarounds.fxh"

@@ -37,6 +37,7 @@ namespace TestGame {
         public EmbeddedTexture2DProvider TextureLoader { get; private set; }
         public EmbeddedFreeTypeFontProvider FontLoader { get; private set; }
 
+        internal KeyboardInput KeyboardInputHandler;
         public KeyboardState PreviousKeyboardState, KeyboardState;
         public MouseState PreviousMouseState, MouseState;
 
@@ -100,7 +101,7 @@ namespace TestGame {
                 new DitheringTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new LineLight(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 // FIXME
-                // new VectorFieldTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
+                new VectorFieldTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new LUTTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
 #if compiled_model
                 new LoadCompiledModel(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
@@ -108,6 +109,9 @@ namespace TestGame {
                 new Shapes(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new SystemStress(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
             };
+
+            KeyboardInputHandler = new KeyboardInput();
+            KeyboardInputHandler.Install();
         }
 
         protected override void Initialize () {
@@ -390,8 +394,11 @@ namespace TestGame {
         }
 
         public override void Draw (GameTime gameTime, Frame frame) {
-            Nuklear.UpdateInput(IsActive, PreviousMouseState, MouseState, PreviousKeyboardState, KeyboardState, IsMouseOverUI);
+            Nuklear.UpdateInput(IsActive, PreviousMouseState, MouseState, PreviousKeyboardState, KeyboardState, IsMouseOverUI, KeyboardInputHandler.Buffer);
 
+            KeyboardInputHandler.Buffer.Clear();
+
+            using (KeyboardInputHandler.Deactivate())
             using (var group = BatchGroup.ForRenderTarget(
                 frame, -9990, UIRenderTarget,
                 name: "Render UI"

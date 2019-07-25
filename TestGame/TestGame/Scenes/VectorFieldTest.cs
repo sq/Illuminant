@@ -68,7 +68,7 @@ namespace TestGame.Scenes {
                 Premultiply = false,
                 GenerateMips = true
             }, true);
-            Field = new VectorField(Game.RenderCoordinator, FieldTexture);
+            Field = new VectorField(Game.RenderCoordinator, FieldTexture, ownsTexture: false);
             Background = Game.TextureLoader.Load("vector-field-background");
 
             SetupParticleSystem();

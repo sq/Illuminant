@@ -1,3 +1,7 @@
+// In release FNA the texCoord of particles always has an x of 0
+#pragma fxcparams(if(FNA==1) /Od /Zi)
+
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\CompilerWorkarounds.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\GeometryCommon.fxh"
 #include "Bezier.fxh"
@@ -32,17 +36,18 @@ sampler BitmapPointSampler {
     MagFilter = POINT;
 };
 
-static const float3 Corners[] = {
-    { -1, -1, 0 },
-    { 1, -1, 0 },
-    { 1, 1, 0 },
-    { -1, 1, 0 }
-};
-
-inline float3 ComputeRotatedCorner (
-    in int cornerIndex, in float angle, in float2 size
+inline float3 ComputeRotatedAndNonRotatedCorner (
+    in int cornerIndex, in float angle, in float2 size, out float2 nonRotatedUnit
 ) {    
-    float3 corner = Corners[cornerIndex.x] * float3(size, 1), sinCos;
+    const float3 Corners[] = {
+        { -1, -1, 0 },
+        { 1, -1, 0 },
+        { 1, 1, 0 },
+        { -1, 1, 0 }
+    };
+
+    float3 corner = Corners[cornerIndex.x] * float3(size.x, size.y, 1), sinCos;
+    nonRotatedUnit = Corners[cornerIndex.x].xy;
 
     sincos(angle, sinCos.x, sinCos.y);
 
@@ -77,8 +82,9 @@ void VS_PosVelAttr(
     angle = fmod(angle, 2 * PI);
 
     float2 size = renderData.x * System.TexelAndSize.zw * RasterizeSettings.SizeFactorAndPosition.xy;
-    float3 rotatedCorner = ComputeRotatedCorner(cornerIndex.x, angle * getVelocityRotation(), size);
-    float2 positionXy = Corners[cornerIndex.x];
+    float2 nonRotatedUnitCorner;
+    float3 rotatedCorner = ComputeRotatedAndNonRotatedCorner(cornerIndex.x, angle * getVelocityRotation(), size, nonRotatedUnitCorner);
+    float2 positionXy = nonRotatedUnitCorner;
 
     // HACK: Discard Z
     float3 displayXyz = float3(position.x, position.y - (position.z * getZToY()), 0);
@@ -94,7 +100,8 @@ void VS_PosVelAttr(
         float4(screenXyz.xy * GetViewportScale(), screenXyz.z, 1), 0
     );
 
-    float2 cornerCoord = (Corners[cornerIndex.x].xy / 2) + 0.5;
+    float2 cornerCoord = (nonRotatedUnitCorner / 2) + 0.5;
+    // FIXME: This is broken in release mode FNA
     texCoord = lerp(RasterizeSettings.BitmapTextureRegion.xy, RasterizeSettings.BitmapTextureRegion.zw, cornerCoord);
 
     float2 texSize = (RasterizeSettings.BitmapTextureRegion.zw - RasterizeSettings.BitmapTextureRegion.xy);
@@ -112,7 +119,7 @@ void VS_PosVelAttr(
         frameIndexXy.y += frameFromVelocity.y;
 
     frameIndexXy.x = max(frameIndexXy.x, 0) % frameCountXy.x;
-    frameIndexXy.y = clamp(frameIndexXy.y, 0, frameCountXy.y - 1);
+    frameIndexXy.y = clamp2(frameIndexXy.y, 0, frameCountXy.y - 1);
 
     if (getAnimationRate().x < 0)
         frameIndexXy.x = (frameCountXy.x - frameIndexXy.x) - 1;
@@ -173,6 +180,8 @@ void PS_TexturePoint(
         result *= RasterizeSettings.GlobalColor;
     }
     result *= computeCircularAlpha(positionXyAndRounding);
+    // result += float4(0.1, 0, 0, 0.1);
+    // result = float4(texCoord.x, texCoord.y, 0, 1);
     if (result.a <= (1 / 512))
         discard;
 }
