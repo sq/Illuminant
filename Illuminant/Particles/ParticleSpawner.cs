@@ -272,6 +272,20 @@ namespace Squared.Illuminant.Particles.Transforms {
             }
         }
 
+        private void EnsurePositionBufferExists (ParticleEngine engine, int count) {
+            if ((PositionBuffer != null) && (PositionBuffer.Width < count)) {
+                engine.Coordinator.DisposeResource(PositionBuffer);
+                PositionBuffer = null;
+                Temp4 = null;
+            }
+            if (PositionBuffer == null) {
+                var bufSize = (count + 127) / 128 * 128;
+                Temp4 = new Vector4[bufSize];
+                lock (engine.Coordinator.CreateResourceLock)
+                    PositionBuffer = new Texture2D(engine.Coordinator.Device, bufSize, 1, false, SurfaceFormat.Vector4);
+            }
+        }
+
         public override void BeginTick (ParticleSystem system, double now, double deltaTimeSeconds, out int spawnCount, out ParticleSystem.Chunk sourceChunk) {
             base.BeginTick(system, now, deltaTimeSeconds, out spawnCount, out sourceChunk);
 
@@ -280,17 +294,7 @@ namespace Squared.Illuminant.Particles.Transforms {
 
             var count = AdditionalPositions.Count + 1;
             if (count > MaxInlinePositions) {
-                if ((PositionBuffer != null) && (PositionBuffer.Width < count)) {
-                    system.Engine.Coordinator.DisposeResource(PositionBuffer);
-                    PositionBuffer = null;
-                    Temp4 = null;
-                }
-                if (PositionBuffer == null) {
-                    var bufSize = (count + 127) / 128 * 128;
-                    Temp4 = new Vector4[bufSize];
-                    lock (system.Engine.Coordinator.CreateResourceLock)
-                        PositionBuffer = new Texture2D(system.Engine.Coordinator.Device, bufSize, 1, false, SurfaceFormat.Vector4);
-                }
+                EnsurePositionBufferExists(system.Engine, count);
 
                 var dirty = false;
 
@@ -341,6 +345,7 @@ namespace Squared.Illuminant.Particles.Transforms {
 
             var count = 1 + AdditionalPositions.Count;
             if (count > MaxInlinePositions) {
+                EnsurePositionBufferExists(engine, count);
                 parameters["PositionConstantTexel"].SetValue(new Vector2(1.0f / PositionBuffer.Width, 1.0f / PositionBuffer.Height));
                 parameters["PositionConstantTexture"].SetValue(PositionBuffer);
             } else {
