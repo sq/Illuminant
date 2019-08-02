@@ -1,3 +1,8 @@
+// Results in /Od are sometimes incorrect
+#pragma fxcparams(/O3 /Zi)
+
+// FIXME: Why is this file sphere lights and not line lights
+
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "SphereLightCore.fxh"
 
