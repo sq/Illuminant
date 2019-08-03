@@ -131,7 +131,7 @@ namespace Squared.Illuminant.Particles.Transforms {
         public virtual void BeginTick (ParticleSystem system, double now, double deltaTimeSeconds, out int spawnCount, out ParticleSystem.Chunk sourceChunk) {
             sourceChunk = null;
 
-            if (!IsActive) {
+            if (!IsActive || !IsActive2) {
                 RateError = 0;
                 spawnCount = 0;
                 return;

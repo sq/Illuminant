@@ -1086,7 +1086,7 @@ namespace Squared.Illuminant.Particles {
                     t.BeforeFrame(Engine);
 
                 foreach (var s in Transforms.OfType<Transforms.SpawnerBase>()) {
-                    if (!s.IsActive)
+                    if (!s.IsActive || !s.IsActive2)
                         continue;
 
                     var it = (Transforms.IParticleTransform)s;
@@ -1149,7 +1149,7 @@ namespace Squared.Illuminant.Particles {
             foreach (var t in Transforms) {
                 var it = (Transforms.IParticleTransform)t;
 
-                var shouldSkip = !t.IsActive || (t is Transforms.SpawnerBase) || !t.IsValid;
+                var shouldSkip = !t.IsActive || !t.IsActive2 || (t is Transforms.SpawnerBase) || !t.IsValid;
                 if (shouldSkip)
                     continue;
 

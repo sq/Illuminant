@@ -411,7 +411,7 @@ namespace Squared.Illuminant.Particles.Transforms {
         }
 
         public override void AfterFrame (ParticleEngine engine) {
-            if (IsActive) {
+            if (IsActive && IsActive2) {
                 lock (Lock) {
                     if (_UpdateCount > 0) {
                         // Give up on updating this frame

@@ -180,7 +180,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             }
         }
 
-        private bool _IsActive = true;
+        private bool _IsActive = true, _IsActive2 = true;
 
         public bool IsActive {
             get {
@@ -191,6 +191,19 @@ namespace Squared.Illuminant.Particles.Transforms {
                     return;
 
                 _IsActive = value;
+                ActiveStateChanged?.Invoke();
+            }
+        }
+
+        public bool IsActive2 {
+            get {
+                return _IsActive2;
+            }
+            set {
+                if (value == _IsActive2)
+                    return;
+
+                _IsActive2 = value;
                 ActiveStateChanged?.Invoke();
             }
         }

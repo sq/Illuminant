@@ -192,7 +192,7 @@ namespace Squared.Illuminant.Compiled {{
                     if (tags.Count <= 0)
                         continue;
 
-                    tw.WriteLine("            {0}.Transforms[{1}].IsActive = {2};", FormatName(s.Key), i, string.Join(" && ", tags.Select(tag => "Tags." + FormatName(tag))));
+                    tw.WriteLine("            {0}.Transforms[{1}].IsActive2 = {2};", FormatName(s.Key), i, string.Join(" && ", tags.Select(tag => "Tags." + FormatName(tag))));
                 }
             }
 
