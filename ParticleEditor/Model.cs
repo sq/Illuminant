@@ -60,6 +60,11 @@ namespace Lumined {
         public bool AccurateCounting = true;
 
         /// <summary>
+        /// Runs the preview at a fixed pace even if the framerate is low. This produces consistent results.
+        /// </summary>
+        public bool FixedTimeStep = true;
+
+        /// <summary>
         /// Specifies where to search for texture resources.
         /// </summary>
         public DirectoryName ResourceDirectory = new DirectoryName();

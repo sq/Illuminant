@@ -135,7 +135,7 @@ namespace Squared.Illuminant.Modeling {
 
         internal static readonly TransformSorter Comparer = new TransformSorter();
 
-        public string Name;
+        public string Name, Tags;
         public int UpdateOrder, DrawOrder;
         public BlendState BlendState;
         public ParticleSystemConfiguration Configuration;

@@ -62,7 +62,10 @@ namespace Lumined {
                 base.Update(container, layer, deltaTimeTicks);
             }
 
-            Time.Advance(deltaTimeTicks);
+            if (editor.View.GetData().FixedTimeStep)
+                Time.Advance(TimeSpan.FromSeconds(1.0 / 60.0).Ticks);
+            else
+                Time.Advance(deltaTimeTicks);
         }
 
         public void Draw (EditorGame editor, IBatchContainer container, int layer) {

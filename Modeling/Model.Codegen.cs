@@ -44,7 +44,21 @@ namespace Squared.Illuminant.Modeling {
             return name;
         }
 
+        private IEnumerable<string> TagsForSystem (SystemModel sm) {
+            return (
+                from _ in (sm.Tags ?? "").Split(',')
+                let t = (_ ?? "").Trim()
+                where !string.IsNullOrEmpty(t)
+                select t
+            ).OrderBy(t => t, StringComparer.InvariantCultureIgnoreCase);
+        }
+
         private void WriteCodeHeader (TextWriter tw, string name) {
+            var allTagNames = 
+                Systems
+                    .SelectMany(TagsForSystem)
+                    .OrderBy(t => t, StringComparer.InvariantCultureIgnoreCase);
+
             tw.WriteLine(
 @"using System;
 using System.Collections.Generic;
@@ -101,7 +115,15 @@ namespace Squared.Illuminant.Compiled {{
         }}", Systems.Count
             );
 
-            tw.WriteLine(
+        tw.WriteLine("{0}        public struct _Tags {{", Environment.NewLine);
+
+        foreach (var t in allTagNames)
+            tw.WriteLine("            public bool {0} {{ get; set; }}", FormatName(t));
+
+        tw.WriteLine("        }");
+        tw.WriteLine("        public _Tags Tags;");
+
+        tw.WriteLine(
 @"
         public @{0} (ParticleEngine engine, ITimeProvider timeProvider = null) {{
             ParticleSystem s;
@@ -127,12 +149,16 @@ namespace Squared.Illuminant.Compiled {{
             var orderedSystems = (from kvp in systems orderby kvp.Value.DrawOrder select kvp);
             foreach (var kvp in orderedSystems) {
                 var name = kvp.Key;
+                var s = kvp.Value;
                 tw.WriteLine(
                     "            var {0}BlendState = blendState ?? {1};", 
-                    name, kvp.Value.AdditiveBlend 
+                    name, s.AdditiveBlend 
                         ? "G_BS.Additive"
                         : "G_BS.AlphaBlend"
                 );
+                var tags = TagsForSystem(s).ToList();
+                if (tags.Count > 0)
+                    tw.Write("{0}            if ({1}){0}    ", Environment.NewLine, string.Join(" && ", tags.Select(t => "Tags." + FormatName(t))));
                 tw.WriteLine("            {0}.Render(container, layer++, material: material, transform: transform, blendState: {0}BlendState, renderParams: renderParams, usePreviousData: usePreviousData);", name);
             }
 
@@ -144,6 +170,8 @@ namespace Squared.Illuminant.Compiled {{
             tw.WriteLine("        public void Update (Render.IBatchContainer container, int layer) {");
 
             var orderedSystems = (from kvp in systems orderby kvp.Value.UpdateOrder select kvp.Key);
+
+            // TODO: Conditionally update based on tags also?
             foreach (var name in orderedSystems)
                 tw.WriteLine("            {0}.Update(container, layer++);", name);
 

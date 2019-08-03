@@ -391,7 +391,7 @@ namespace Lumined {
                     else
                         SetModel(model);
 
-                    View.Time.CurrentTime = -Time.SecondInTicks;
+                    View.Time.CurrentTime = -Time.SecondInTicks / 2;
                 }
             });
         }
