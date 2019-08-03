@@ -44,20 +44,34 @@ namespace Squared.Illuminant.Modeling {
             return name;
         }
 
-        private IEnumerable<string> TagsForSystem (SystemModel sm) {
+        private IEnumerable<string> TagsFromString (string s) {
             return (
-                from _ in (sm.Tags ?? "").Split(',')
+                from _ in (s ?? "").Split(',')
                 let t = (_ ?? "").Trim()
                 where !string.IsNullOrEmpty(t)
                 select t
             ).OrderBy(t => t, StringComparer.InvariantCultureIgnoreCase);
         }
 
+        private IEnumerable<string> TagsForTransform (TransformModel tm) {
+            return TagsFromString(tm.Tags);
+        }
+
+        private IEnumerable<string> TagsForSystem (SystemModel sm) {
+            return TagsFromString(sm.Tags);
+        }
+
+        private IEnumerable<string> TagsForSystemTransforms (SystemModel sm) {
+            return sm.Transforms.SelectMany(TagsForTransform);
+        }
+
         private void WriteCodeHeader (TextWriter tw, string name) {
             var allTagNames = 
                 Systems
                     .SelectMany(TagsForSystem)
-                    .OrderBy(t => t, StringComparer.InvariantCultureIgnoreCase);
+                    .Concat(Systems.SelectMany(TagsForSystemTransforms))
+                    .OrderBy(t => t, StringComparer.InvariantCultureIgnoreCase)
+                    .Distinct();
 
             tw.WriteLine(
 @"using System;
@@ -115,13 +129,13 @@ namespace Squared.Illuminant.Compiled {{
         }}", Systems.Count
             );
 
-        tw.WriteLine("{0}        public struct _Tags {{", Environment.NewLine);
+        tw.WriteLine("{0}        public class _Tags {{", Environment.NewLine);
 
         foreach (var t in allTagNames)
-            tw.WriteLine("            public bool {0} {{ get; set; }}", FormatName(t));
+            tw.WriteLine("            public bool {0} = true;", FormatName(t));
 
         tw.WriteLine("        }");
-        tw.WriteLine("        public _Tags Tags;");
+        tw.WriteLine("        public readonly _Tags Tags = new _Tags();");
 
         tw.WriteLine(
 @"
@@ -158,7 +172,7 @@ namespace Squared.Illuminant.Compiled {{
                 );
                 var tags = TagsForSystem(s).ToList();
                 if (tags.Count > 0)
-                    tw.Write("{0}            if ({1}){0}    ", Environment.NewLine, string.Join(" && ", tags.Select(t => "Tags." + FormatName(t))));
+                    tw.Write("{0}            if ({1}){0}    ", Environment.NewLine, string.Join(" && ", tags.Select(tag => "Tags." + FormatName(tag))));
                 tw.WriteLine("            {0}.Render(container, layer++, material: material, transform: transform, blendState: {0}BlendState, renderParams: renderParams, usePreviousData: usePreviousData);", name);
             }
 
@@ -170,6 +184,17 @@ namespace Squared.Illuminant.Compiled {{
             tw.WriteLine("        public void Update (Render.IBatchContainer container, int layer) {");
 
             var orderedSystems = (from kvp in systems orderby kvp.Value.UpdateOrder select kvp.Key);
+
+            foreach (var s in systems) {
+                for (int i = 0, n = s.Value.Transforms.Count; i < n; i++) {
+                    var t = s.Value.Transforms[i];
+                    var tags = TagsForTransform(t).ToList();
+                    if (tags.Count <= 0)
+                        continue;
+
+                    tw.WriteLine("            {0}.Transforms[{1}].IsActive = {2};", FormatName(s.Key), i, string.Join(" && ", tags.Select(tag => "Tags." + FormatName(tag))));
+                }
+            }
 
             // TODO: Conditionally update based on tags also?
             foreach (var name in orderedSystems)

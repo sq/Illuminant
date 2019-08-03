@@ -330,6 +330,9 @@ namespace Lumined {
                 NameStack.Push(Controller.SelectedSystem.Model.Name);
                 NameStack.Push(xform.Model.Name);
 
+                Nuklear.NewRow(LineHeight + 3, 1);
+                Nuklear.Textbox(ref xform.Model.Tags, "Tags (comma separated)");
+
                 Nuklear.NewRow(LineHeight + 3, 2);
                 int typeIndex = TransformTypes.IndexOf(xform.Model.Type);
 

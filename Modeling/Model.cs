@@ -174,7 +174,7 @@ namespace Squared.Illuminant.Modeling {
     }
 
     public class TransformModel {
-        public string Name;
+        public string Name, Tags;
         public Type Type;
         public int UpdateOrder;
         public readonly Dictionary<string, ModelProperty> Properties = new Dictionary<string, ModelProperty>();
