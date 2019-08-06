@@ -26,7 +26,7 @@ using Nuke = NuklearDotNet.Nuklear;
 
 namespace TestGame {
     public class TestGame : MultithreadedGame, INuklearHost {
-        public int? DefaultScene = 10;
+        public int? DefaultScene = null;
 
         public GraphicsDeviceManager Graphics;
         public DefaultMaterialSet Materials { get; private set; }
@@ -107,7 +107,8 @@ namespace TestGame {
                 new LoadCompiledModel(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
 #endif
                 new Shapes(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new SystemStress(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
+                new SystemStress(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
+                new PaletteTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
             };
 
             KeyboardInputHandler = new KeyboardInput();
@@ -328,10 +329,22 @@ namespace TestGame {
         }
 
         private void LoadLUTs () {
+            var identityF = ColorLUT.CreateIdentity(
+                RenderCoordinator, LUTPrecision.Float32, LUTResolution.High, false
+            );
             var identity = ColorLUT.CreateIdentity(
                 RenderCoordinator, LUTPrecision.UInt16, LUTResolution.High, false
             );
             LUTs.Add("Identity", identity);
+
+            /*
+            Squared.Render.STB.ImageWrite.WriteImage(
+                identityF, File.OpenWrite("lut-identity.hdr"), Squared.Render.STB.ImageWriteFormat.HDR
+            );
+#if !FNA
+            identityF.Texture.SaveAsPng(File.OpenWrite("lut-identity.png"), identityF.Texture.Width, identityF.Texture.Height);
+#endif
+            */
 
             var names = TextureLoader.GetNames("LUTs\\");
             foreach (var name in names)
@@ -346,7 +359,7 @@ namespace TestGame {
             var texture = TextureLoader.Load(name, new TextureLoadOptions {
                 Premultiply = false,
                 GenerateMips = false,
-                FloatingPoint = false
+                FloatingPoint = true
             });
             var lut = new ColorLUT(texture, true);
             LUTs.Add(key, lut);
