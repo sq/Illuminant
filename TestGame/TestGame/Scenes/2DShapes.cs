@@ -22,6 +22,9 @@ using Nuke = NuklearDotNet.Nuklear;
 namespace TestGame.Scenes {
     // These aren't illuminant specific but who cares
     public class Shapes : Scene {
+        Toggle AnimateRadius;
+        Toggle BlendInLinearSpace;
+
         public Shapes (TestGame game, int width, int height)
             : base(game, width, height) {
         }
@@ -33,11 +36,13 @@ namespace TestGame.Scenes {
         }
 
         public override void Draw (Squared.Render.Frame frame) {
-            var ir = new ImperativeRenderer(frame, Game.Materials);
+            var ir = new ImperativeRenderer(frame, Game.Materials, blendState: BlendState.AlphaBlend);
             ir.Clear(layer: 0, color: Color.Black);
+            ir.RasterOutlineGamma = 1.5f;
+            ir.RasterBlendInLinearSpace = BlendInLinearSpace.Value;
 
             ir.RasterizeEllipse(
-                Vector2.One * 500, Vector2.One * 420, 4, 
+                Vector2.One * 500, Vector2.One * 420, 1, 
                 new Color(0.0f, 0.0f, 0.0f, 1f), 
                 new Color(0.1f, 0.1f, 0.1f, 1f), 
                 outlineColor: Color.White, 
@@ -45,9 +50,20 @@ namespace TestGame.Scenes {
             );
 
             ir.RasterizeLineSegment(
-                new Vector2(32, 32), new Vector2(1024, 64), Vector2.One * 6, 4, 
+                new Vector2(32, 32), new Vector2(1024, 64), Vector2.One * 6, 2, 
                 Color.White, Color.White,
                 outlineColor: Color.Red, 
+                layer: 2
+            );
+
+            var tl = new Vector2(64, 96);
+            var br = new Vector2(512, 400);
+            ir.RasterizeRectangle(
+                tl, br, Vector2.One * (AnimateRadius.Value 
+                    ? Arithmetic.PulseSine((float)Time.Seconds / 3f, 0, 32)
+                    : 0f), 6f, 
+                Color.White, Color.DarkRed,
+                outlineColor: Color.Blue,
                 layer: 2
             );
         }

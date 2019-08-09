@@ -231,6 +231,7 @@ namespace Lumined {
                    let mtype = isNullable ? _mtype.GetGenericArguments()[0] : _mtype
                    where (mtype != typeof(Type))
                    let info = GetInfoForField(type, m.Name, mtype)
+                   where m.Name != "IsActive2"
                    let isList = (info.Type == "List") || (info.Type == "ValueList")
                    let enumValueNames = mtype.IsEnum ? mtype.GetEnumNames() : null
                    let isWritable = ((f != null) && !f.IsInitOnly) || ((p != null) && p.CanWrite && (p.GetSetMethod()?.IsPublic ?? false))
