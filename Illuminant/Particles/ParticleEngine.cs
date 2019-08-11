@@ -188,53 +188,6 @@ namespace Squared.Illuminant.Particles {
             SiftBuffers(frameIndex);
         }
 
-#if FNA
-        private struct LivenessDataReadbackWorkItem : Threading.IMainThreadWorkItem {
-#else
-        private struct LivenessDataReadbackWorkItem : Threading.IWorkItem {
-#endif
-            public BufferPool<Chunk>.Buffer Chunks;
-            public RenderTarget2D RenderTarget;
-            public ParticleEngine Engine;
-            public bool NeedResourceLock;
-            public int ResetCount;
-
-            public void Execute () {
-                if (ResetCount != Engine.ResetCount) {
-                    Chunks.Dispose();
-                    Console.WriteLine("A reset invalidated this query");
-                    return;
-                }
-
-                if (!AutoRenderTargetBase.IsRenderTargetValid(RenderTarget)) {
-                    Chunks.Dispose();
-                    Console.WriteLine("Invalid render target");
-                    return;
-                }
-
-                // Console.WriteLine("Read liveness data texture");
-
-                var startedWhen = Time.Ticks;
-                using (var buffer = Squared.Util.BufferPool<Rg32>.Allocate(RenderTarget.Width)) {
-                    if (NeedResourceLock)
-                        Monitor.Enter(Engine.Coordinator.UseResourceLock);
-                    try {
-                        RenderTrace.ImmediateMarker("Read liveness data from previous frame");
-                        RenderTarget.GetDataFast(buffer.Data);
-                        var elapsedMs = (Time.Ticks - startedWhen) / (double)Time.MillisecondInTicks;
-                        RenderTrace.ImmediateMarker("Readback took {0:000.0}ms", elapsedMs);
-                    } finally {
-                        if (NeedResourceLock)
-                            Monitor.Exit(Engine.Coordinator.UseResourceLock);
-                    }
-
-                    Engine.ProcessLivenessInfoData(buffer.Data, Chunks.Data);
-                    Chunks.Dispose();
-                }
-
-            }
-        }
-
         private void ProcessLivenessInfoData (Rg32[] buffer, Chunk[] chunks) {
             // Console.WriteLine("Process liveness info data {0}", buffer);
             for (int i = 0; i < chunks.Length; i++) {

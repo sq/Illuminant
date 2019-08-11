@@ -71,6 +71,8 @@
     <Compile Include="Lighting\LightProbe.cs" />
     <Compile Include="MersenneTwister.cs" />
     <Compile Include="Parameter.cs" />
+    <Compile Include="Particles\ParticleConfiguration.cs" />
+    <Compile Include="Particles\ParticleLiveness.cs" />
     <Compile Include="Particles\ParticleMaterials.cs" />
     <Compile Include="Lighting\LightingRenderer.cs" />
     <Compile Include="Lighting\LightingEnvironment.cs" />
@@ -78,9 +80,12 @@
     <Compile Include="Lighting\LightSource.cs" />
     <Compile Include="LoadMaterials.cs" />
     <Compile Include="Particles\ParticleEngine.cs" />
+    <Compile Include="Particles\ParticleReadback.cs" />
+    <Compile Include="Particles\ParticleSpawning.cs" />
     <Compile Include="Particles\ParticleSystem.cs" />
     <Compile Include="Particles\ParticleSpawner.cs" />
     <Compile Include="Particles\ParticleTransform.cs" />
+    <Compile Include="Particles\ParticleWorkItems.cs" />
     <Compile Include="Particles\SpecialSpawners.cs" />
     <Compile Include="Particles\Transforms.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
