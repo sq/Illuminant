@@ -1,3 +1,6 @@
+// Most of these formulas are derived from inigo quilez's work
+// http://iquilezles.org/www/articles/distfunctions/distfunctions.htm
+
 #ifndef DISTANCE_FUNCTION_DEFINED
 #define DISTANCE_FUNCTION_DEFINED
 

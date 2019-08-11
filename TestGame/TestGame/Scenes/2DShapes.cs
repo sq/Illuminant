@@ -22,11 +22,15 @@ using Nuke = NuklearDotNet.Nuklear;
 namespace TestGame.Scenes {
     // These aren't illuminant specific but who cares
     public class Shapes : Scene {
-        Toggle AnimateRadius;
-        Toggle BlendInLinearSpace;
+        Toggle AnimateRadius, BlendInLinearSpace, GradientAlongLine, RadialGradient, Outlines;
+        Slider Gamma;
 
         public Shapes (TestGame game, int width, int height)
             : base(game, width, height) {
+            Gamma.Min = 0.1f;
+            Gamma.Max = 3.0f;
+            Gamma.Value = 1.5f;
+            Gamma.Speed = 0.1f;
         }
 
         public override void LoadContent () {
@@ -37,12 +41,12 @@ namespace TestGame.Scenes {
 
         public override void Draw (Squared.Render.Frame frame) {
             var ir = new ImperativeRenderer(frame, Game.Materials, blendState: BlendState.AlphaBlend);
-            ir.Clear(layer: 0, color: Color.Black);
-            ir.RasterOutlineGamma = 1.5f;
+            ir.Clear(layer: 0, color: new Color(0, 32, 48));
+            ir.RasterOutlineGamma = Gamma.Value;
             ir.RasterBlendInLinearSpace = BlendInLinearSpace.Value;
 
             ir.RasterizeEllipse(
-                Vector2.One * 500, Vector2.One * 420, 1, 
+                Vector2.One * 500, Vector2.One * 420, Outlines ? 1f : 0, 
                 new Color(0.0f, 0.0f, 0.0f, 1f), 
                 new Color(0.1f, 0.1f, 0.1f, 1f), 
                 outlineColor: Color.White, 
@@ -50,9 +54,10 @@ namespace TestGame.Scenes {
             );
 
             ir.RasterizeLineSegment(
-                new Vector2(32, 32), new Vector2(1024, 64), Vector2.One * 6, 2, 
-                Color.White, Color.White,
-                outlineColor: Color.Red, 
+                new Vector2(32, 32), new Vector2(1024, 64), Vector2.One * 6, 0f, 
+                Color.White, Color.Black,
+                outlineColor: Color.Transparent,
+                gradientAlongLine: GradientAlongLine, 
                 layer: 2
             );
 
@@ -61,10 +66,43 @@ namespace TestGame.Scenes {
             ir.RasterizeRectangle(
                 tl, br, Vector2.One * (AnimateRadius.Value 
                     ? Arithmetic.PulseSine((float)Time.Seconds / 3f, 0, 32)
-                    : 0f), 6f, 
-                Color.White, Color.DarkRed,
+                    : 0f), Outlines ? 6f : 0f, 
+                Color.Red, Color.Green,
                 outlineColor: Color.Blue,
+                radialGradient: RadialGradient,
                 layer: 2
+            );
+
+            ir.RasterizeRectangle(
+                new Vector2(16, 256), new Vector2(16, 512), Vector2.One * 4, new Color(0.5f, 0, 0, 1), new Color(0.5f, 0, 0, 1),
+                layer: 3
+            );
+
+            ir.RasterizeRectangle(
+                new Vector2(32, 256), new Vector2(32, 512), Vector2.One * 4, new Color(0.5f, 0.5f, 0, 1), new Color(0.5f, 0.5f, 0, 1),
+                layer: 3
+            );
+
+            ir.RasterizeRectangle(
+                new Vector2(48, 256), new Vector2(48, 512), Vector2.One * 4, new Color(0f, 0.5f, 0, 1), new Color(0f, 0.5f, 0, 1),
+                layer: 3
+            );
+
+            ir.RasterizeRectangle(
+                new Vector2(64, 256), new Vector2(64, 512), Vector2.One * 4, new Color(0f, 0.5f, 0.5f, 1), new Color(0f, 0.5f, 0.5f, 1),
+                layer: 3
+            );
+
+            ir.RasterizeRectangle(
+                new Vector2(80, 256), new Vector2(80, 512), Vector2.One * 4, new Color(0f, 0f, 0.5f, 1), new Color(0f, 0f, 0.5f, 1),
+                layer: 3
+            );
+
+            ir.RasterizeTriangle(
+                new Vector2(640, 96), new Vector2(1200, 256), new Vector2(800, 512), 
+                Vector2.One * 1, Outlines ? 2f : 0,
+                Color.Black, Color.White, outlineColor: Color.Blue,
+                layer: 4
             );
         }
 

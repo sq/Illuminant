@@ -406,16 +406,21 @@ namespace Framework {
         }
 
         private void RenderCommand (nk_command_triangle_filled* c) {
-            var gb = PendingRenderer.GetGeometryBatch(null, null, null);
             var color = ConvertColor(c->color);
             var v1 = new Vector2(c->a.x, c->a.y);
             var v2 = new Vector2(c->b.x, c->b.y);
             var v3 = new Vector2(c->c.x, c->c.y);
+            /*
+            var gb = PendingRenderer.GetGeometryBatch(null, null, null);
             // FIXME: Fill the triangle
             // FIXME: Why are these lines invisible?
             gb.AddLine(v1, v2, color);
             gb.AddLine(v2, v3, color);
             gb.AddLine(v3, v1, color);
+            */
+            PendingRenderer.RasterizeTriangle(
+                v1, v2, v3, Vector2.Zero, color, color, blendState: BlendState.AlphaBlend
+            );
         }
 
         private void RenderCommand (nk_command_rect_multi_color* c) {
