@@ -15,14 +15,20 @@ using Squared.Render.Tracing;
 
 namespace Squared.Illuminant {
     public sealed partial class LightingRenderer : IDisposable, INameableGraphicsObject {
+    }
+
+    public partial class IlluminantMaterials {
         private void DefineMaterial (Material m) {
-            Materials.Add(m);
+            MaterialSet.Add(m);
         }
 
-        private void LoadOneMaterial (out Material result, string fileName, string techniqueName, Action<DeviceManager>[] begin = null, Action<DeviceManager>[] end = null) {
+        private void LoadOneMaterial (
+            EmbeddedEffectProvider effects, out Material result, string fileName, string techniqueName, 
+            Action<DeviceManager>[] begin = null, Action<DeviceManager>[] end = null
+        ) {
             try {
                 var m = new Material(
-                    Effects.Load(fileName), techniqueName,
+                    effects.Load(fileName), techniqueName,
                     begin, end
                 );
                 result = m;
@@ -33,232 +39,240 @@ namespace Squared.Illuminant {
             }
         }
 
-        private void LoadMaterials (EmbeddedEffectProvider effects) {
-            lock (IlluminantMaterials) {
-                if (IlluminantMaterials.IsLoaded)
+        public void Load (RenderCoordinator coordinator, EmbeddedEffectProvider effects = null) {
+            lock (this) {
+                if (IsLoaded)
                     return;
+
+                IsLoaded = true;
+                // FIXME: This is a memory leak
+                if (effects == null)
+                    effects = new EmbeddedEffectProvider(coordinator);
+                            
+                var neutralDepthStencilState = new DepthStencilState {
+                    StencilEnable = false,
+                    DepthBufferEnable = false
+                };
 
                 var dBegin = new[] {
                     MaterialUtil.MakeDelegate(
-                        depthStencilState: NeutralDepthStencilState
+                        depthStencilState: neutralDepthStencilState
                     )
                 };
                 Action<DeviceManager>[] dEnd = null;
 
-                LoadOneMaterial(out IlluminantMaterials.SphereLight,
+                LoadOneMaterial(effects, out SphereLight,
                     "SphereLight", "SphereLight", dBegin, dEnd
                 );
 
-                LoadOneMaterial(out IlluminantMaterials.SphereLightWithoutDistanceField,
+                LoadOneMaterial(effects, out SphereLightWithoutDistanceField,
                     "SphereLightWithoutDistanceField", "SphereLightWithoutDistanceField", dBegin, dEnd
                 );
 
-                LoadOneMaterial(out IlluminantMaterials.DirectionalLight,
+                LoadOneMaterial(effects, out DirectionalLight,
                     "DirectionalLight", "DirectionalLight", dBegin, dEnd
                 );
 
-                LoadOneMaterial(out IlluminantMaterials.ParticleSystemSphereLight,
+                LoadOneMaterial(effects, out ParticleSystemSphereLight,
                     "ParticleLight", "ParticleLight", dBegin, dEnd
                 );
 
-                LoadOneMaterial(out IlluminantMaterials.ParticleSystemSphereLightWithoutDistanceField,
+                LoadOneMaterial(effects, out ParticleSystemSphereLightWithoutDistanceField,
                     "ParticleLight", "ParticleLightWithoutDistanceField", dBegin, dEnd
                 );
 
-                LoadOneMaterial(out IlluminantMaterials.LineLight,
+                LoadOneMaterial(effects, out LineLight,
                     "LineLight", "LineLight", dBegin, dEnd
                 );
 
-                LoadOneMaterial(out IlluminantMaterials.SphereLightWithDistanceRamp,
+                LoadOneMaterial(effects, out SphereLightWithDistanceRamp,
                     "SphereLight", "SphereLightWithDistanceRamp", dBegin, dEnd
                 );
 
-                LoadOneMaterial(out IlluminantMaterials.SphereLightWithOpacityRamp,
+                LoadOneMaterial(effects, out SphereLightWithOpacityRamp,
                     "SphereLight", "SphereLightWithOpacityRamp", dBegin, dEnd
                 );
 
-                LoadOneMaterial(out IlluminantMaterials.DirectionalLightWithRamp,
+                LoadOneMaterial(effects, out DirectionalLightWithRamp,
                     "DirectionalLight", "DirectionalLightWithRamp", dBegin, dEnd
                 );
 
-                LoadOneMaterial(out IlluminantMaterials.LineLightWithDistanceRamp,
+                LoadOneMaterial(effects, out LineLightWithDistanceRamp,
                     "LineLightEx", "LineLightWithDistanceRamp", dBegin, dEnd
                 );
 
-                LoadOneMaterial(out IlluminantMaterials.LineLightWithOpacityRamp,
+                LoadOneMaterial(effects, out LineLightWithOpacityRamp,
                     "LineLightEx", "LineLightWithOpacityRamp", dBegin, dEnd
                 );
 
-                LoadOneMaterial(out IlluminantMaterials.SphereLightProbe,
+                LoadOneMaterial(effects, out SphereLightProbe,
                     "SphereLightProbe", "SphereLightProbe", dBegin, dEnd
                 );
 
-                LoadOneMaterial(out IlluminantMaterials.SphereLightProbeWithDistanceRamp,
+                LoadOneMaterial(effects, out SphereLightProbeWithDistanceRamp,
                     "SphereLightProbe", "SphereLightProbeWithDistanceRamp", dBegin, dEnd
                 );
 
-                LoadOneMaterial(out IlluminantMaterials.SphereLightProbeWithOpacityRamp,
+                LoadOneMaterial(effects, out SphereLightProbeWithOpacityRamp,
                     "SphereLightProbe", "SphereLightProbeWithOpacityRamp", dBegin, dEnd
                 );
 
-                LoadOneMaterial(out IlluminantMaterials.DirectionalLightProbe,
+                LoadOneMaterial(effects, out DirectionalLightProbe,
                     "DirectionalLight", "DirectionalLightProbe", dBegin, dEnd
                 );
 
-                LoadOneMaterial(out IlluminantMaterials.DirectionalLightProbeWithRamp,
+                LoadOneMaterial(effects, out DirectionalLightProbeWithRamp,
                     "DirectionalLight", "DirectionalLightProbeWithRamp", dBegin, dEnd
                 );
 
-                LoadOneMaterial(out IlluminantMaterials.LineLightProbe,
+                LoadOneMaterial(effects, out LineLightProbe,
                     "LineLightProbe", "LineLightProbe", dBegin, dEnd
                 );
 
-                LoadOneMaterial(out IlluminantMaterials.LineLightProbeWithDistanceRamp,
+                LoadOneMaterial(effects, out LineLightProbeWithDistanceRamp,
                     "LineLightProbe", "LineLightProbeWithDistanceRamp", dBegin, dEnd
                 );
 
-                LoadOneMaterial(out IlluminantMaterials.LineLightProbeWithOpacityRamp,
+                LoadOneMaterial(effects, out LineLightProbeWithOpacityRamp,
                     "LineLightProbe", "LineLightProbeWithOpacityRamp", dBegin, dEnd
                 );
 
-                LoadOneMaterial(out IlluminantMaterials.GIProbeSelector,
+                LoadOneMaterial(effects, out GIProbeSelector,
                     "GIProbe", "ProbeSelector", dBegin, dEnd
                 );
 
-                LoadOneMaterial(out IlluminantMaterials.GIProbeSHGenerator,
+                LoadOneMaterial(effects, out GIProbeSHGenerator,
                     "GIProbe", "SHGenerator", dBegin, dEnd
                 );
 
-                LoadOneMaterial(out IlluminantMaterials.VisualizeGI,
+                LoadOneMaterial(effects, out VisualizeGI,
                     "GI", "VisualizeGI", dBegin, dEnd
                 );
 
-                LoadOneMaterial(out IlluminantMaterials.RenderGI,
+                LoadOneMaterial(effects, out RenderGI,
                     "GI", "RenderGI", dBegin, dEnd
                 );
 
-                LoadOneMaterial(out IlluminantMaterials.RenderLightProbesFromGI,
+                LoadOneMaterial(effects, out RenderLightProbesFromGI,
                     "GI", "RenderLightProbesFromGI", dBegin, dEnd
                 );
 
-                LoadOneMaterial(out IlluminantMaterials.DistanceToPolygon, 
+                LoadOneMaterial(effects, out DistanceToPolygon, 
                     "DistanceField", "DistanceToPolygon",
                     new[] { MaterialUtil.MakeDelegate(RenderStates.MaxBlendValue) }
                 );
 
-                LoadOneMaterial(out IlluminantMaterials.ClearDistanceFieldSlice,
+                LoadOneMaterial(effects, out ClearDistanceFieldSlice,
                     "ClearDistanceField", "ClearDistanceField",
                     new[] { MaterialUtil.MakeDelegate(BlendState.Opaque) }
                 );
 
-                IlluminantMaterials.DistanceFunctionTypes = new Render.Material[(int)LightObstructionType.MAX + 1];
+                DistanceFunctionTypes = new Render.Material[(int)LightObstructionType.MAX + 1];
 
                 foreach (var i in Enum.GetValues(typeof(LightObstructionType))) {
                     var name = Enum.GetName(typeof(LightObstructionType), i);
                     if (name == "MAX")
                         continue;
 
-                    LoadOneMaterial(out IlluminantMaterials.DistanceFunctionTypes[(int)i],
+                    LoadOneMaterial(effects, out DistanceFunctionTypes[(int)i],
                         "DistanceFunction", name,
                             new[] { MaterialUtil.MakeDelegate(RenderStates.MaxBlendValue) }
                     );
                 }
 
-                LoadOneMaterial(out IlluminantMaterials.GroundPlane,
+                LoadOneMaterial(effects, out GroundPlane,
                     "GBuffer", "GroundPlane");
 
-                LoadOneMaterial(out IlluminantMaterials.HeightVolume,
+                LoadOneMaterial(effects, out HeightVolume,
                     "GBuffer", "HeightVolume");
 
-                LoadOneMaterial(out IlluminantMaterials.HeightVolumeFace,
+                LoadOneMaterial(effects, out HeightVolumeFace,
                     "GBuffer", "HeightVolumeFace");
 
-                LoadOneMaterial(out IlluminantMaterials.MaskBillboard,
+                LoadOneMaterial(effects, out MaskBillboard,
                     "GBufferBitmap", "MaskBillboard");
 
-                LoadOneMaterial(out IlluminantMaterials.GDataBillboard,
+                LoadOneMaterial(effects, out GDataBillboard,
                     "GBufferBitmap", "GDataBillboard");
 
-                LoadOneMaterial(out IlluminantMaterials.ScreenSpaceLightingResolve,
+                LoadOneMaterial(effects, out ScreenSpaceLightingResolve,
                     "Resolve", "ScreenSpaceLightingResolve");
 
-                LoadOneMaterial(out IlluminantMaterials.ScreenSpaceGammaCompressedLightingResolve,
+                LoadOneMaterial(effects, out ScreenSpaceGammaCompressedLightingResolve,
                     "Resolve", "ScreenSpaceGammaCompressedLightingResolve");
 
-                LoadOneMaterial(out IlluminantMaterials.ScreenSpaceToneMappedLightingResolve,
+                LoadOneMaterial(effects, out ScreenSpaceToneMappedLightingResolve,
                     "Resolve", "ScreenSpaceToneMappedLightingResolve");
 
-                LoadOneMaterial(out IlluminantMaterials.ScreenSpaceLightingResolveWithAlbedo,
+                LoadOneMaterial(effects, out ScreenSpaceLightingResolveWithAlbedo,
                     "Resolve", "ScreenSpaceLightingResolveWithAlbedo");
 
-                LoadOneMaterial(out IlluminantMaterials.ScreenSpaceGammaCompressedLightingResolveWithAlbedo,
+                LoadOneMaterial(effects, out ScreenSpaceGammaCompressedLightingResolveWithAlbedo,
                     "Resolve", "ScreenSpaceGammaCompressedLightingResolveWithAlbedo");
 
-                LoadOneMaterial(out IlluminantMaterials.ScreenSpaceToneMappedLightingResolveWithAlbedo,
+                LoadOneMaterial(effects, out ScreenSpaceToneMappedLightingResolveWithAlbedo,
                     "Resolve", "ScreenSpaceToneMappedLightingResolveWithAlbedo");
 
-                LoadOneMaterial(out IlluminantMaterials.ScreenSpaceLUTBlendedLightingResolveWithAlbedo,
+                LoadOneMaterial(effects, out ScreenSpaceLUTBlendedLightingResolveWithAlbedo,
                     "LUTResolve", "ScreenSpaceLUTBlendedLightingResolveWithAlbedo");
 
-                LoadOneMaterial(out IlluminantMaterials.WorldSpaceLightingResolve,
+                LoadOneMaterial(effects, out WorldSpaceLightingResolve,
                     "Resolve", "WorldSpaceLightingResolve");
 
-                LoadOneMaterial(out IlluminantMaterials.WorldSpaceGammaCompressedLightingResolve,
+                LoadOneMaterial(effects, out WorldSpaceGammaCompressedLightingResolve,
                     "Resolve", "WorldSpaceGammaCompressedLightingResolve");
 
-                LoadOneMaterial(out IlluminantMaterials.WorldSpaceToneMappedLightingResolve,
+                LoadOneMaterial(effects, out WorldSpaceToneMappedLightingResolve,
                     "Resolve", "WorldSpaceToneMappedLightingResolve");
 
-                LoadOneMaterial(out IlluminantMaterials.WorldSpaceLightingResolveWithAlbedo,
+                LoadOneMaterial(effects, out WorldSpaceLightingResolveWithAlbedo,
                     "Resolve", "WorldSpaceLightingResolveWithAlbedo");
 
-                LoadOneMaterial(out IlluminantMaterials.WorldSpaceGammaCompressedLightingResolveWithAlbedo,
+                LoadOneMaterial(effects, out WorldSpaceGammaCompressedLightingResolveWithAlbedo,
                     "Resolve", "WorldSpaceGammaCompressedLightingResolveWithAlbedo");
 
-                LoadOneMaterial(out IlluminantMaterials.WorldSpaceToneMappedLightingResolveWithAlbedo,
+                LoadOneMaterial(effects, out WorldSpaceToneMappedLightingResolveWithAlbedo,
                     "Resolve", "WorldSpaceToneMappedLightingResolveWithAlbedo");
 
-                LoadOneMaterial(out IlluminantMaterials.WorldSpaceLUTBlendedLightingResolveWithAlbedo,
+                LoadOneMaterial(effects, out WorldSpaceLUTBlendedLightingResolveWithAlbedo,
                     "LUTResolve", "WorldSpaceLUTBlendedLightingResolveWithAlbedo");
 
-                LoadOneMaterial(out IlluminantMaterials.CalculateLuminance,
+                LoadOneMaterial(effects, out CalculateLuminance,
                     "Resolve", "CalculateLuminance");
 
-                LoadOneMaterial(out IlluminantMaterials.ObjectSurfaces,
+                LoadOneMaterial(effects, out ObjectSurfaces,
                     "VisualizeDistanceField", "ObjectSurfaces");
 
-                LoadOneMaterial(out IlluminantMaterials.ObjectOutlines,
+                LoadOneMaterial(effects, out ObjectOutlines,
                     "VisualizeDistanceField", "ObjectOutlines");
 
-                LoadOneMaterial(out IlluminantMaterials.FunctionSurface,
+                LoadOneMaterial(effects, out FunctionSurface,
                     "VisualizeDistanceFunction", "FunctionSurface");
 
-                LoadOneMaterial(out IlluminantMaterials.FunctionOutline,
+                LoadOneMaterial(effects, out FunctionOutline,
                     "VisualizeDistanceFunction", "FunctionOutline");
 
-                LoadOneMaterial(out IlluminantMaterials.ScreenSpaceGammaCompressedBitmap,
+                LoadOneMaterial(effects, out ScreenSpaceGammaCompressedBitmap,
                     "HDRBitmap", "ScreenSpaceGammaCompressedBitmap"
                 );
 
-                LoadOneMaterial(out IlluminantMaterials.WorldSpaceGammaCompressedBitmap,
+                LoadOneMaterial(effects, out WorldSpaceGammaCompressedBitmap,
                     "HDRBitmap", "WorldSpaceGammaCompressedBitmap"
                 );
 
-                LoadOneMaterial(out IlluminantMaterials.ScreenSpaceToneMappedBitmap,
+                LoadOneMaterial(effects, out ScreenSpaceToneMappedBitmap,
                     "HDRBitmap", "ScreenSpaceToneMappedBitmap"
                 );
 
-                LoadOneMaterial(out IlluminantMaterials.WorldSpaceToneMappedBitmap,
+                LoadOneMaterial(effects, out WorldSpaceToneMappedBitmap,
                     "HDRBitmap", "WorldSpaceToneMappedBitmap"
                 );
 
-                LoadOneMaterial(out IlluminantMaterials.ScreenSpaceVectorWarp,
+                LoadOneMaterial(effects, out ScreenSpaceVectorWarp,
                     
                         "VectorWarp", "ScreenSpaceVectorWarp", 
                         new [] { MaterialUtil.MakeDelegate(BlendState.AlphaBlend) }
                     );
-
-                IlluminantMaterials.IsLoaded = true;
             }
         }
     }

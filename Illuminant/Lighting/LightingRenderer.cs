@@ -283,7 +283,6 @@ namespace Squared.Illuminant {
 
         public  readonly DepthStencilState TopFaceDepthStencilState, FrontFaceDepthStencilState;
         public  readonly DepthStencilState DistanceStencilState;
-        public  readonly DepthStencilState NeutralDepthStencilState;
 
         private IndexBuffer         QuadIndexBuffer;
         private VertexBuffer        CornerBuffer;
@@ -481,13 +480,8 @@ namespace Squared.Illuminant {
                 DepthBufferFunction = CompareFunction.GreaterEqual,
                 DepthBufferWriteEnable = true
             };
-            
-            NeutralDepthStencilState = new DepthStencilState {
-                StencilEnable = false,
-                DepthBufferEnable = false
-            };
 
-            LoadMaterials(Effects);
+            IlluminantMaterials.Load(coordinator, Effects);
 
             Environment = environment;
             Probes = new LightProbeCollection(Configuration.MaximumLightProbeCount);

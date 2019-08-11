@@ -26,7 +26,7 @@ using Nuke = NuklearDotNet.Nuklear;
 
 namespace TestGame {
     public class TestGame : MultithreadedGame, INuklearHost {
-        public int? DefaultScene = 14;
+        public int? DefaultScene = 12;
 
         public GraphicsDeviceManager Graphics;
         public DefaultMaterialSet Materials { get; private set; }
@@ -276,6 +276,7 @@ namespace TestGame {
 
             Materials = new DefaultMaterialSet(RenderCoordinator);
             IlluminantMaterials = new IlluminantMaterials(Materials);
+            IlluminantMaterials.Load(RenderCoordinator);
             ParticleMaterials = new ParticleMaterials(Materials);
             RampTexture = TextureLoader.Load("light_ramp");
 

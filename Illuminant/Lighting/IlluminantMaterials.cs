@@ -4,7 +4,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Squared.Render;
 
 namespace Squared.Illuminant {
-    public class IlluminantMaterials {
+    public partial class IlluminantMaterials {
         public readonly DefaultMaterialSet MaterialSet;
 
         public Material SphereLight, DirectionalLight, ParticleSystemSphereLight, LineLight;

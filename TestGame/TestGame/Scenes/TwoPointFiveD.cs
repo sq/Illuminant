@@ -71,7 +71,7 @@ namespace TestGame.Scenes {
 
         Toggle Timelapse,
             Deterministic,
-            sRGB;
+            sRGB, Clipping;
 
         RendererQualitySettings DirectionalQuality;
 
@@ -274,7 +274,6 @@ namespace TestGame.Scenes {
 
             Environment.Lights.Add(new DirectionalLightSource {
                 Direction = new Vector3(-0.75f, -0.7f, -0.33f),
-                Bounds = new Bounds(new Vector2(16, 32), new Vector2(620, 550)),
                 Color = new Vector4(0.2f, 0.4f, 0.6f, 0.4f),
                 Quality = DirectionalQuality,
                 BlendMode = RenderStates.MaxBlendValue,
@@ -465,6 +464,10 @@ namespace TestGame.Scenes {
                 const float step = 0.1f;
                 
                 var time = (float)Time.Seconds;
+
+                var dl = (DirectionalLightSource)
+                    Environment.Lights[1];
+                dl.Bounds = Clipping ? new Bounds(new Vector2(16, 32), new Vector2(620, 550)) : (Bounds?)null;
 
                 Renderer.Configuration.DefaultQuality.MaxStepCount =
                     (Timelapse & !Deterministic)
