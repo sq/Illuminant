@@ -54,9 +54,9 @@ namespace TestGame.Scenes {
             );
 
             ir.RasterizeLineSegment(
-                new Vector2(32, 32), new Vector2(1024, 64), Vector2.One * 6, 0f, 
+                new Vector2(32, 32), new Vector2(1024, 64), Vector2.One * 6, Outlines ? 1.5f : 0f, 
                 Color.White, Color.Black,
-                outlineColor: Color.Transparent,
+                outlineColor: Color.Red,
                 gradientAlongLine: GradientAlongLine, 
                 layer: 2
             );
