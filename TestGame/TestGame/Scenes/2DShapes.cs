@@ -22,8 +22,10 @@ using Nuke = NuklearDotNet.Nuklear;
 namespace TestGame.Scenes {
     // These aren't illuminant specific but who cares
     public class Shapes : Scene {
-        Toggle AnimateRadius, BlendInLinearSpace, GradientAlongLine, RadialGradient, Outlines;
+        Toggle AnimateRadius, AnimateBezier, BlendInLinearSpace, GradientAlongLine, RadialGradient, Outlines, UseTexture;
         Slider Gamma;
+
+        Texture2D Texture;
 
         public Shapes (TestGame game, int width, int height)
             : base(game, width, height) {
@@ -34,6 +36,7 @@ namespace TestGame.Scenes {
         }
 
         public override void LoadContent () {
+            Texture = Game.TextureLoader.Load("template");
         }
 
         public override void UnloadContent () {
@@ -45,6 +48,8 @@ namespace TestGame.Scenes {
             ir.RasterOutlineGamma = Gamma.Value;
             ir.RasterBlendInLinearSpace = BlendInLinearSpace.Value;
 
+            var now = (float)Time.Seconds;
+
             ir.RasterizeEllipse(
                 Vector2.One * 500, Vector2.One * 420, Outlines ? 1f : 0, 
                 new Color(0.0f, 0.0f, 0.0f, 1f), 
@@ -54,56 +59,76 @@ namespace TestGame.Scenes {
             );
 
             ir.RasterizeLineSegment(
-                new Vector2(32, 32), new Vector2(1024, 64), Vector2.One * 6, Outlines ? 1.5f : 0f, 
+                new Vector2(32, 32), new Vector2(1024, 64), Vector2.One * 8, Outlines ? 1f : 0f, 
                 Color.White, Color.Black,
                 outlineColor: Color.Red,
                 gradientAlongLine: GradientAlongLine, 
-                layer: 2
+                layer: 1
             );
 
-            var tl = new Vector2(64, 96);
+            var tl = new Vector2(80, 112);
             var br = new Vector2(512, 400);
             ir.RasterizeRectangle(
                 tl, br, Vector2.One * (AnimateRadius.Value 
-                    ? Arithmetic.PulseSine((float)Time.Seconds / 3f, 0, 32)
+                    ? Arithmetic.PulseSine(now / 3f, 0, 32)
                     : 0f), Outlines ? 6f : 0f, 
                 Color.Red, Color.Green,
                 outlineColor: Color.Blue,
                 radialGradient: RadialGradient,
+                layer: 1,
+                texture: UseTexture ? Texture : null
+            );
+
+            ir.RasterizeRectangle(
+                new Vector2(16, 256), new Vector2(16, 512), Vector2.One * 4, new Color(1f, 0, 0, 1), new Color(0.5f, 0, 0, 1),
                 layer: 2
             );
 
             ir.RasterizeRectangle(
-                new Vector2(16, 256), new Vector2(16, 512), Vector2.One * 4, new Color(0.5f, 0, 0, 1), new Color(0.5f, 0, 0, 1),
-                layer: 3
+                new Vector2(32, 256), new Vector2(32, 512), Vector2.One * 4, new Color(1f, 1f, 0, 1), new Color(0.5f, 0.5f, 0, 1),
+                layer: 2
             );
 
             ir.RasterizeRectangle(
-                new Vector2(32, 256), new Vector2(32, 512), Vector2.One * 4, new Color(0.5f, 0.5f, 0, 1), new Color(0.5f, 0.5f, 0, 1),
-                layer: 3
+                new Vector2(48, 256), new Vector2(48, 512), Vector2.One * 4, new Color(0f, 1f, 0, 1), new Color(0f, 0.5f, 0, 1),
+                layer: 2
             );
 
             ir.RasterizeRectangle(
-                new Vector2(48, 256), new Vector2(48, 512), Vector2.One * 4, new Color(0f, 0.5f, 0, 1), new Color(0f, 0.5f, 0, 1),
-                layer: 3
+                new Vector2(64, 256), new Vector2(64, 512), Vector2.One * 4, new Color(0f, 1f, 1f, 1), new Color(0f, 0.5f, 0.5f, 1),
+                layer: 2
             );
 
             ir.RasterizeRectangle(
-                new Vector2(64, 256), new Vector2(64, 512), Vector2.One * 4, new Color(0f, 0.5f, 0.5f, 1), new Color(0f, 0.5f, 0.5f, 1),
-                layer: 3
-            );
-
-            ir.RasterizeRectangle(
-                new Vector2(80, 256), new Vector2(80, 512), Vector2.One * 4, new Color(0f, 0f, 0.5f, 1), new Color(0f, 0f, 0.5f, 1),
-                layer: 3
+                new Vector2(80, 256), new Vector2(80, 512), Vector2.One * 4, new Color(0f, 0f, 1f, 1), new Color(0f, 0f, 0.5f, 1),
+                layer: 2
             );
 
             ir.RasterizeTriangle(
                 new Vector2(640, 96), new Vector2(1200, 256), new Vector2(800, 512), 
-                Vector2.One * 1, Outlines ? 2f : 0,
+                Vector2.One * 1, Outlines ? 1f : 0,
                 Color.Black, Color.White, outlineColor: Color.Blue,
-                layer: 4
+                layer: 2,
+                texture: UseTexture ? Texture : null
             );
+
+            Vector2 a = new Vector2(1024, 64),
+                b, c = new Vector2(1400, 256);
+            if (AnimateBezier) {
+                float t = now / 2;
+                float r = 140;
+                b = new Vector2(1220 + (float)Math.Cos(t) * r, 180 + (float)Math.Sin(t) * r);
+            } else
+                b = new Vector2(1200, 64);
+
+            ir.RasterizeQuadraticBezier(
+                a, b, c, Vector2.One * 8, Outlines ? 1f : 0f, Color.White, Color.Black, Color.Red,
+                layer: 3
+            );
+
+            ir.RasterizeEllipse(a, Vector2.One * 3, Color.Yellow, layer: 4);
+            ir.RasterizeEllipse(b, Vector2.One * 3, Color.Yellow, layer: 4);
+            ir.RasterizeEllipse(c, Vector2.One * 3, Color.Yellow, layer: 4);
         }
 
         public override void Update (GameTime gameTime) {
