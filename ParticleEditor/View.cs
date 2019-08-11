@@ -62,7 +62,7 @@ namespace Lumined {
                 base.Update(container, layer, deltaTimeTicks);
             }
 
-            if (editor.View.GetData().FixedTimeStep)
+            if (editor.View.GetData().FixedTimeStep && editor.Graphics.SynchronizeWithVerticalRetrace)
                 Time.Advance(TimeSpan.FromSeconds(1.0 / 60.0).Ticks);
             else
                 Time.Advance(deltaTimeTicks);
