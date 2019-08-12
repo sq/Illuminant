@@ -23,7 +23,7 @@ namespace TestGame.Scenes {
     // These aren't illuminant specific but who cares
     public class Shapes : Scene {
         Toggle AnimateRadius, AnimateBezier, BlendInLinearSpace, GradientAlongLine, RadialGradient, Outlines, UseTexture;
-        Slider Gamma;
+        Slider Gamma, ArcLength;
 
         Texture2D Texture;
 
@@ -35,6 +35,10 @@ namespace TestGame.Scenes {
             Gamma.Speed = 0.1f;
             BlendInLinearSpace.Value = true;
             Outlines.Value = true;
+            ArcLength.Min = 5f;
+            ArcLength.Max = 180f;
+            ArcLength.Value = 45f;
+            ArcLength.Speed = 5f;
         }
 
         public override void LoadContent () {
@@ -112,6 +116,14 @@ namespace TestGame.Scenes {
                 Color.Black, Color.White, outlineColor: Color.Blue,
                 layer: 2,
                 texture: UseTexture ? Texture : null
+            );
+
+            ir.RasterizeArc(
+                new Vector2(200, 860),
+                AnimateBezier ? (float)(Time.Seconds) * 60f : 0f, ArcLength,
+                120, 8, Outlines ? 1 : 0,
+                Color.White, Color.Black, Color.Blue,
+                layer: 2
             );
 
             Vector2 a = new Vector2(1024, 64),
