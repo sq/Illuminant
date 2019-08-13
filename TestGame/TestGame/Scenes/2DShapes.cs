@@ -58,8 +58,8 @@ namespace TestGame.Scenes {
 
             ir.RasterizeEllipse(
                 Vector2.One * 500, Vector2.One * 420, Outlines ? 1f : 0, 
-                new Color(0.0f, 0.0f, 0.0f, 1f), 
-                new Color(0.2f, 0.2f, 0.2f, 1f), 
+                new Color(0.0f, 0.0f, 0.0f, 0.4f), 
+                new Color(0.1f, 0.1f, 0.1f, 0.8f), 
                 outlineColor: Color.White, 
                 layer: 1
             );
@@ -86,27 +86,27 @@ namespace TestGame.Scenes {
             );
 
             ir.RasterizeRectangle(
-                new Vector2(16, 256), new Vector2(16, 512), 8, new Color(1f, 0, 0, 1), new Color(0.5f, 0, 0, 1),
+                new Vector2(32, 256), new Vector2(32, 512), 4.5f, new Color(1f, 0, 0, 1), new Color(0.5f, 0, 0, 1),
                 layer: 2
             );
 
             ir.RasterizeRectangle(
-                new Vector2(32, 256), new Vector2(32, 512), 8, new Color(1f, 1f, 0, 1), new Color(0.5f, 0.5f, 0, 1),
+                new Vector2(48, 256), new Vector2(48, 512), 4.5f, new Color(1f, 1f, 0, 1), new Color(0.5f, 0.5f, 0, 1),
                 layer: 2
             );
 
             ir.RasterizeRectangle(
-                new Vector2(48, 256), new Vector2(48, 512), 8, new Color(0f, 1f, 0, 1), new Color(0f, 0.5f, 0, 1),
+                new Vector2(64, 256), new Vector2(64, 512), 4.5f, new Color(0f, 1f, 0, 1), new Color(0f, 0.5f, 0, 1),
                 layer: 2
             );
 
             ir.RasterizeRectangle(
-                new Vector2(64, 256), new Vector2(64, 512), 8, new Color(0f, 1f, 1f, 1), new Color(0f, 0.5f, 0.5f, 1),
+                new Vector2(80, 256), new Vector2(80, 512), 4.5f, new Color(0f, 1f, 1f, 1), new Color(0f, 0.5f, 0.5f, 1),
                 layer: 2
             );
 
             ir.RasterizeRectangle(
-                new Vector2(80, 256), new Vector2(80, 512), 8, new Color(0f, 0f, 1f, 1), new Color(0f, 0f, 0.5f, 1),
+                new Vector2(96, 256), new Vector2(96, 512), 4.5f, new Color(0f, 0f, 1f, 1), new Color(0f, 0f, 0.5f, 1),
                 layer: 2
             );
 
