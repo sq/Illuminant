@@ -57,7 +57,7 @@ namespace TestGame.Scenes {
             SpawnFromTemplate.Key = Keys.T;
 
             EscapeVelocity.Max = 2048;
-            EscapeVelocity.Value = 16 * 60f;
+            EscapeVelocity.Value = 256f;
             EscapeVelocity.Speed = 16;
 
             Friction.Max = 3.0f;

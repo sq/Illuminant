@@ -1,3 +1,5 @@
+#pragma fxcparams(/O3 /Zi)
+
 #define INCLUDE_RAMPS
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\CompilerWorkarounds.fxh"
 #include "Bezier.fxh"
@@ -12,6 +14,15 @@
 #define NO_NORMAL_THRESHOLD 0.33
 #define MAX_STEP_COUNT 3
 #define BOUNCE_DELAY 3
+
+// When checking whether we are escaping we mask out the z axis since in many 
+//  cases escaping via the Z axis will fail (many distance fields are truncated at top/bottom)
+#define ESCAPE_MASK float3(1, 1, 0)
+
+// When spawned inside an obstruction we start at a fraction of the escape speed
+//  and then accelerate over time while we are still trapped, up to the limit
+#define INITIAL_ESCAPE_SPEED 0.33
+#define ESCAPE_SPEED_ACCELERATION 1.1
 
 #include "VisualizeCommon.fxh"
 
@@ -85,17 +96,20 @@ void PS_Update (
         if (bounce || redirect)
             normal = estimateNormal4(collisionPosition, vars);
 
+        float escapeSpeed = min(getMaximumVelocity(), getEscapeVelocity());
+
         if (redirect) {
+            normal *= ESCAPE_MASK;
             if (length(normal) < NO_NORMAL_THRESHOLD) {
                 // HACK to avoid getting stuck at the center of volumes
                 float s, c;
-                sincos((xy.x / 97) + (xy.y / 17), s, c);
+                sincos((xy.x / 67) + (xy.y / 13), s, c);
                 normal = float3(s, c, 0);
             }
             // We started inside and are not escaping, so flee at our escape velocity.
             float3 escapeVector = normalize(normal);
-            float newSpeed = min(getMaximumVelocity(), getEscapeVelocity());
-            newVelocity = float4(escapeVector * newSpeed, BOUNCE_DELAY);
+            // FIXME: We use velocity.w for the particle type now so this seems bad
+            newVelocity = float4(escapeVector * escapeSpeed * INITIAL_ESCAPE_SPEED, BOUNCE_DELAY);
             float3 escapeDelta = newVelocity.xyz * getDeltaTimeSeconds();
             newPosition = oldPosition.xyz + escapeDelta;
         } else if (bounce) {
@@ -112,6 +126,9 @@ void PS_Update (
             newLife -= getCollisionLifePenalty();
         } else {
             // We're escaping so keep going
+            float currentSpeed = length(oldVelocity.xyz);
+            float newSpeed = max(currentSpeed * ESCAPE_SPEED_ACCELERATION, escapeSpeed);
+            newVelocity.xyz = unitVector * newSpeed;
             newPosition = oldPosition.xyz + (travelDistance * unitVector);
         }
     } else {
