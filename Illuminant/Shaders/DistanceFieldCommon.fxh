@@ -7,10 +7,6 @@
 // Moving this value up/down allocates more precision to positive or negative distances
 #define DISTANCE_ZERO (192.0 / 255.0)
 
-// Filtering dramatically increases the precision of the distance field,
-//  *and* it's mathematically correct!
-#define DISTANCE_FIELD_FILTER LINEAR
-
 float cross2d (float2 a, float2 b) {
     return a.x*b.y - a.y*b.x;
 }
@@ -269,14 +265,14 @@ float decodeDistance (float encodedDistance) {
 }
 
 
-Texture2D DistanceFieldTexture;
-sampler   DistanceFieldTextureSampler {
+Texture2D DistanceFieldTexture : register(t7);
+sampler   DistanceFieldTextureSampler : register(s7){
     Texture = (DistanceFieldTexture);
     AddressU  = CLAMP;
     AddressV  = CLAMP;
     MipFilter = POINT;
-    MinFilter = DISTANCE_FIELD_FILTER;
-    MagFilter = DISTANCE_FIELD_FILTER;
+    MinFilter = LINEAR;
+    MagFilter = LINEAR;
 };
 
 struct DistanceFieldConstants {
