@@ -29,23 +29,12 @@ float evaluateBox (
 float evaluateEllipsoid (
     float3 worldPosition, float3 center, float3 size
 ) {
-    /*
     float3 position = worldPosition - center;
 
-    // FIXME: Why is this a sphere???????????
+    // FIXME: This seems spherical?
     float3 pl = position / size;
     float l = length(pl) - 1.0;
     return l * min(min(size.x, size.y), size.z);
-    
-    float k0 = length(position/size);
-    float k1 = length(position/(size*size));
-    return k0*(k0-1.0)/k1;
-
-    */
-    worldPosition -= center;
-    float k0 = length(worldPosition / size);
-    float k1 = length(worldPosition / (size*size));
-    return k0 * (k0 - 1.0) / k1;
 }
 
 float evaluateCylinder (
