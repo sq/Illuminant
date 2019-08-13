@@ -45,7 +45,7 @@ namespace TestGame {
 
         public FreeTypeFont Font;
         public Texture2D RampTexture;
-        public RenderTarget2D UIRenderTarget;
+        public AutoRenderTarget UIRenderTarget;
 
         public readonly Scene[] Scenes;
         private int _ActiveSceneIndex;
@@ -284,9 +284,10 @@ namespace TestGame {
             TextMaterial.Parameters.ShadowColor.SetValue(new Vector4(0, 0, 0, 0.5f));
             TextMaterial.Parameters.ShadowOffset.SetValue(Vector2.One);
 
-            UIRenderTarget = new RenderTarget2D(
-                GraphicsDevice, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight, 
-                false, SurfaceFormat.Color, DepthFormat.None, 1, RenderTargetUsage.PlatformContents
+            UIRenderTarget = new AutoRenderTarget(
+                RenderCoordinator,
+                Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight, 
+                false, SurfaceFormat.Color, DepthFormat.None, 1
             );
 
             Nuklear = new NuklearService(this) {
