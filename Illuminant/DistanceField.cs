@@ -18,6 +18,8 @@ namespace Squared.Illuminant {
     public class DistanceField : IDisposable {
         public const int DefaultMaximumEncodedDistance = 128;
 
+        public readonly SurfaceFormat Format = SurfaceFormat.Rgba64;
+
         public bool IsDisposed { get; private set; }
 
         public readonly int VirtualWidth, VirtualHeight;
@@ -40,7 +42,8 @@ namespace Squared.Illuminant {
         public DistanceField (
             RenderCoordinator coordinator,
             int virtualWidth, int virtualHeight, float virtualDepth,
-            int requestedSliceCount, double requestedResolution = 1, int maximumEncodedDistance = DefaultMaximumEncodedDistance
+            int requestedSliceCount, double requestedResolution = 1, 
+            int maximumEncodedDistance = DefaultMaximumEncodedDistance
         ) {
             Coordinator = coordinator;
             VirtualWidth = virtualWidth;
@@ -110,7 +113,7 @@ namespace Squared.Illuminant {
                     coordinator,
                     SliceWidth * ColumnCount, 
                     SliceHeight * RowCount,
-                    false, SurfaceFormat.Rgba64
+                    false, Format
                 );
 
             coordinator.DeviceReset += Coordinator_DeviceReset;

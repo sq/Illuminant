@@ -16,6 +16,7 @@ using Squared.Illuminant.Particles.Transforms;
 using Squared.Illuminant.Util;
 using Squared.Render;
 using Squared.Render.Convenience;
+using Squared.Render.RasterShape;
 using Squared.Util;
 using Nuke = NuklearDotNet.Nuklear;
 
@@ -24,6 +25,12 @@ namespace TestGame.Scenes {
     public class Shapes : Scene {
         Toggle AnimateRadius, AnimateBezier, BlendInLinearSpace, GradientAlongLine, RadialGradient, Outlines, UseTexture;
         Slider Gamma, ArcLength;
+
+        [Items("Linear")]
+        [Items("Radial")]
+        [Items("Horizontal")]
+        [Items("Vertical")]
+        Dropdown<string> RectangleFillMode;
 
         Texture2D Texture;
 
@@ -39,6 +46,7 @@ namespace TestGame.Scenes {
             ArcLength.Max = 180f;
             ArcLength.Value = 45f;
             ArcLength.Speed = 5f;
+            RectangleFillMode.Value = "Linear";
         }
 
         public override void LoadContent () {
@@ -57,9 +65,9 @@ namespace TestGame.Scenes {
             var now = (float)Time.Seconds;
 
             ir.RasterizeEllipse(
-                Vector2.One * 500, Vector2.One * 420, Outlines ? 1f : 0, 
+                Vector2.One * 500, new Vector2(420, 360), Outlines ? 1f : 0, 
                 new Color(0.0f, 0.0f, 0.0f, 0.4f), 
-                new Color(0.1f, 0.1f, 0.1f, 0.8f), 
+                new Color(0.33f, 0.33f, 0.33f, 0.8f), 
                 outlineColor: Color.White, 
                 layer: 1
             );
@@ -80,7 +88,7 @@ namespace TestGame.Scenes {
                     : 0f), Outlines ? 6f : 0f, 
                 Color.Red, Color.Green,
                 outlineColor: Color.Blue,
-                radialGradient: RadialGradient,
+                fillMode: (RectangleFillMode)Enum.Parse(typeof(RectangleFillMode), RectangleFillMode.Value),
                 layer: 1,
                 texture: UseTexture ? Texture : null
             );

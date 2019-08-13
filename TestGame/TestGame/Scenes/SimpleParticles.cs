@@ -257,7 +257,7 @@ namespace TestGame.Scenes {
                 for (var i = 0; i < 4; i++) {
                     int x = rng.Next(0, numTilesX), y = rng.Next(0, numTilesY);
                     float sz = rng.NextFloat(100f, 200f);
-                    Environment.Obstructions.Add(LightObstruction.Ellipsoid(
+                    Environment.Obstructions.Add(LightObstruction.Cylinder(
                         new Vector3(x * tileSize, y * tileSize, 0),
                         new Vector3(sz, sz, 30)
                     ));

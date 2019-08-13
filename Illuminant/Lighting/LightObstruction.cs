@@ -50,6 +50,10 @@ namespace Squared.Illuminant {
             return new LightObstruction(LightObstructionType.Ellipsoid, center, size);
         }
 
+        public static LightObstruction Cylinder (Vector3 center, Vector3 size) {
+            return new LightObstruction(LightObstructionType.Cylinder, center, size);
+        }
+
         public override string ToString () {
             return string.Format("{3}{0}@{1} size={2}", Type, Center, Size, IsDynamic ? "dynamic " : "");
         }
