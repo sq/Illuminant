@@ -23,8 +23,8 @@ using Nuke = NuklearDotNet.Nuklear;
 namespace TestGame.Scenes {
     // These aren't illuminant specific but who cares
     public class Shapes : Scene {
-        Toggle AnimateRadius, AnimateBezier, BlendInLinearSpace, GradientAlongLine, RadialGradient, Outlines, UseTexture;
-        Slider Gamma, ArcLength;
+        Toggle AnimateRadius, AnimateBezier, BlendInLinearSpace, GradientAlongLine, UseTexture;
+        Slider Gamma, ArcLength, OutlineSize;
 
         [Items("Linear")]
         [Items("Radial")]
@@ -41,9 +41,12 @@ namespace TestGame.Scenes {
             Gamma.Value = 1.0f;
             Gamma.Speed = 0.1f;
             BlendInLinearSpace.Value = true;
-            Outlines.Value = true;
+            OutlineSize.Min = 0f;
+            OutlineSize.Max = 10f;
+            OutlineSize.Value = 0f;
+            OutlineSize.Speed = 0.5f;
             ArcLength.Min = 5f;
-            ArcLength.Max = 180f;
+            ArcLength.Max = 360f;
             ArcLength.Value = 45f;
             ArcLength.Speed = 5f;
             RectangleFillMode.Value = "Linear";
@@ -65,7 +68,7 @@ namespace TestGame.Scenes {
             var now = (float)Time.Seconds;
 
             ir.RasterizeEllipse(
-                Vector2.One * 500, new Vector2(420, 360), Outlines ? 1f : 0, 
+                Vector2.One * 500, new Vector2(420, 360), OutlineSize, 
                 new Color(0.0f, 0.0f, 0.0f, 0.4f), 
                 new Color(0.33f, 0.33f, 0.33f, 0.8f), 
                 outlineColor: Color.White, 
@@ -73,7 +76,7 @@ namespace TestGame.Scenes {
             );
 
             ir.RasterizeLineSegment(
-                new Vector2(32, 32), new Vector2(1024, 64), 8, Outlines ? 1f : 0f, 
+                new Vector2(32, 32), new Vector2(1024, 64), 8, OutlineSize, 
                 Color.White, Color.Black,
                 outlineColor: Color.Red,
                 gradientAlongLine: GradientAlongLine, 
@@ -85,7 +88,7 @@ namespace TestGame.Scenes {
             ir.RasterizeRectangle(
                 tl, br, (AnimateRadius.Value 
                     ? Arithmetic.PulseSine(now / 3f, 0, 32)
-                    : 0f), Outlines ? 6f : 0f, 
+                    : 0f), OutlineSize * 2f, 
                 Color.Red, Color.Green,
                 outlineColor: Color.Blue,
                 fillMode: (RectangleFillMode)Enum.Parse(typeof(RectangleFillMode), RectangleFillMode.Value),
@@ -120,7 +123,7 @@ namespace TestGame.Scenes {
 
             ir.RasterizeTriangle(
                 new Vector2(640, 96), new Vector2(1200, 256), new Vector2(800, 512), 
-                1, Outlines ? 1f : 0,
+                1, OutlineSize,
                 Color.Black, Color.White, outlineColor: Color.Blue,
                 layer: 2,
                 texture: UseTexture ? Texture : null
@@ -129,7 +132,7 @@ namespace TestGame.Scenes {
             ir.RasterizeArc(
                 new Vector2(200, 860),
                 AnimateBezier ? (float)(Time.Seconds) * 60f : 0f, ArcLength,
-                120, 8, Outlines ? 1 : 0,
+                120, 8, OutlineSize,
                 Color.White, Color.Black, Color.Blue,
                 layer: 2
             );
@@ -144,7 +147,7 @@ namespace TestGame.Scenes {
                 b = new Vector2(1200, 64);
 
             ir.RasterizeQuadraticBezier(
-                a, b, c, 8, Outlines ? 1f : 0f, Color.White, Color.Black, Color.Red,
+                a, b, c, 8, OutlineSize, Color.White, Color.Black, Color.Red,
                 layer: 3
             );
 
