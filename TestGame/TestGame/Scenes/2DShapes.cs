@@ -23,8 +23,8 @@ using Nuke = NuklearDotNet.Nuklear;
 namespace TestGame.Scenes {
     // These aren't illuminant specific but who cares
     public class Shapes : Scene {
-        Toggle AnimateRadius, AnimateBezier, BlendInLinearSpace, GradientAlongLine, UseTexture;
-        Slider Gamma, ArcLength, OutlineSize;
+        Toggle AnimateRadius, AnimateBezier, BlendInLinearSpace, GradientAlongLine, UseTexture, HardOutlines;
+        Slider Gamma, ArcLength, OutlineSize, FillOffset;
 
         [Items("Linear")]
         [Items("Radial")]
@@ -43,13 +43,17 @@ namespace TestGame.Scenes {
             BlendInLinearSpace.Value = true;
             OutlineSize.Min = 0f;
             OutlineSize.Max = 10f;
-            OutlineSize.Value = 0f;
+            OutlineSize.Value = 1f;
             OutlineSize.Speed = 0.5f;
             ArcLength.Min = 5f;
             ArcLength.Max = 360f;
             ArcLength.Value = 45f;
             ArcLength.Speed = 5f;
+            HardOutlines.Value = true;
             RectangleFillMode.Value = "Linear";
+            FillOffset.Min = -1f;
+            FillOffset.Max = 1f;
+            FillOffset.Speed = 0.1f;
         }
 
         public override void LoadContent () {
@@ -64,6 +68,7 @@ namespace TestGame.Scenes {
             ir.Clear(layer: 0, color: new Color(0, 32, 48));
             ir.RasterOutlineGamma = Gamma.Value;
             ir.RasterBlendInLinearSpace = BlendInLinearSpace.Value;
+            ir.RasterSoftOutlines = !HardOutlines.Value;
 
             var now = (float)Time.Seconds;
 
@@ -76,7 +81,7 @@ namespace TestGame.Scenes {
             );
 
             ir.RasterizeLineSegment(
-                new Vector2(32, 32), new Vector2(1024, 64), 8, OutlineSize, 
+                new Vector2(32, 32), new Vector2(1024, 64), 1, 8, OutlineSize, 
                 Color.White, Color.Black,
                 outlineColor: Color.Red,
                 gradientAlongLine: GradientAlongLine, 
@@ -89,9 +94,10 @@ namespace TestGame.Scenes {
                 tl, br, (AnimateRadius.Value 
                     ? Arithmetic.PulseSine(now / 3f, 0, 32)
                     : 0f), OutlineSize * 2f, 
-                Color.Red, Color.Green,
+                Color.Black, Color.White,
                 outlineColor: Color.Blue,
                 fillMode: (RectangleFillMode)Enum.Parse(typeof(RectangleFillMode), RectangleFillMode.Value),
+                fillOffset: FillOffset,
                 layer: 1,
                 texture: UseTexture ? Texture : null
             );
