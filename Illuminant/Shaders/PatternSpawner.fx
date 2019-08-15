@@ -21,6 +21,10 @@ uniform float  PositionConstantCount;
 uniform float2 PositionConstantTexel;
 uniform float4 InlinePositionConstants[MAX_INLINE_POSITION_CONSTANTS];
 
+uniform float4 StepWidthAndSizeScale;
+uniform float4 InitialOffsetAndCoord;
+uniform float4 ModulusesAndMipBias;
+
 Texture2D PositionConstantTexture;
 sampler PositionConstantSampler {
     Texture = (PositionConstantTexture);
@@ -180,51 +184,7 @@ void Spawn_Stage2(
         discard;
 }
 
-void PS_Spawn (
-    ACCEPTS_VPOS,
-    out float4 newPosition   : COLOR0,
-    out float4 newVelocity   : COLOR1,
-    out float4 newAttributes : COLOR2
-) {
-    int index1, index2;
-    float positionIndexT;
-    float4 random1, random2, random3, positionConstant;
-
-    float2 xy = GET_VPOS;
-
-    if (!Spawn_Stage1(xy, random1, random2, random3, index1, index2, positionIndexT))
-        return;
-
-    float4 position1 = InlinePositionConstants[index1],
-        position2 = InlinePositionConstants[index2];
-    positionConstant = lerp(position1, position2, positionIndexT);
-
-    Spawn_Stage2(positionConstant, position2 - position1, random1, random2, random3, newPosition, newVelocity, newAttributes);
-}
-
-void PS_SpawnFromPositionTexture (
-    ACCEPTS_VPOS,
-    out float4 newPosition   : COLOR0,
-    out float4 newVelocity   : COLOR1,
-    out float4 newAttributes : COLOR2
-) {
-    int index1, index2;
-    float positionIndexT;
-    float4 random1, random2, random3, positionConstant;
-
-    float2 xy = GET_VPOS;
-
-    if (!Spawn_Stage1(xy, random1, random2, random3, index1, index2, positionIndexT))
-        return;
-
-    float4 position1 = tex2Dlod(PositionConstantSampler, float4(index1 * PositionConstantTexel.x, 0, 0, 0)),
-        position2 = tex2Dlod(PositionConstantSampler, float4(index2 * PositionConstantTexel.x, 0, 0, 0));
-    positionConstant = lerp(position1, position2, positionIndexT);
-
-    Spawn_Stage2(positionConstant, position2 - position1, random1, random2, random3, newPosition, newVelocity, newAttributes);
-}
-
-void PS_SpawnFeedback (
+void PS_SpawnPattern (
     ACCEPTS_VPOS,
     out float4 newPosition   : COLOR0,
     out float4 newVelocity   : COLOR1,
@@ -239,37 +199,39 @@ void PS_SpawnFeedback (
         return;
     }
 
-    float sourceIndex = ((index - ChunkSizeAndIndices.y) / InstanceMultiplier) + FeedbackSourceIndex;
-    float sourceY, sourceX = modf(sourceIndex / SourceChunkSizeAndTexel.x, sourceY) * SourceChunkSizeAndTexel.x;
-    float2 sourceXy = float2(sourceX, sourceY);
+    float relativeIndex = index - ChunkSizeAndIndices.x;
 
-    float4 sourcePosition, sourceVelocity, sourceAttributes;
-    float4 sourceUv = float4(sourceXy * SourceChunkSizeAndTexel.yz, 0, 0);
+    float2 indexXy = floor(float2(
+        relativeIndex % StepWidthAndSizeScale.y, relativeIndex / StepWidthAndSizeScale.y
+    ));
+    float2 texCoordXy = indexXy * StepWidthAndSizeScale.zw + InitialOffsetAndCoord.zw;
+    float2 positionXy = floor(indexXy * StepWidthAndSizeScale.x) + InitialOffsetAndCoord.xy;
 
-    readStateUv(sourceUv, sourcePosition, sourceVelocity, sourceAttributes);
+    // FIXME: Mip bias
+    float4 patternColor = tex2D(PatternSampler, texCoordXy);
 
     float4 random1, random2, random3;
     evaluateRandomForIndex(index, random1, random2, random3);
 
-    float relativeIndex = (index - ChunkSizeAndIndices.y) + ChunkSizeAndIndices.w;
+    /*
     float4 positionConstant = InlinePositionConstants[0];
-    if (AlignPositionConstant)
-        positionConstant.xyz += sourcePosition.xyz;
-    float4 tempPosition = evaluateFormula(0, positionConstant, Configuration[0], Configuration[1], random1, FormulaTypes.x);
+    // FIXME: Align around center
+    float4 pixelAlignment = float4(0, 0, 0, 0);
+    float4 tempPosition = evaluateFormula(0, positionConstant + pixelAlignment, Configuration[0], Configuration[1], random1, FormulaTypes.x);
 
-    float4 attributeConstant = Configuration[5];
+    float4 attributeConstant = patternColor;
     if (MultiplyAttributeConstant)
-        attributeConstant *= sourceAttributes;
+        attributeConstant *= Configuration[5];
+    else
+        attributeConstant += Configuration[5];
+    */
+    float4 tempPosition = float4(positionXy, 0, 0);
 
     newPosition = mul(float4(tempPosition.xyz, 1), PositionMatrix);
     newPosition.w = tempPosition.w;
 
-    if (MultiplyLife)
-        newPosition.w *= sourcePosition.w;
-
     float4 velocityConstant = Configuration[2];
     newVelocity = evaluateFormula(newPosition, velocityConstant, Configuration[3], Configuration[4], random2, FormulaTypes.y);
-    newVelocity += sourceVelocity * SourceVelocityFactor;
 
     newAttributes = evaluateFormula(newPosition, attributeConstant, Configuration[6], Configuration[7], random3, FormulaTypes.z);
 
@@ -277,26 +239,10 @@ void PS_SpawnFeedback (
         discard;
 }
 
-technique SpawnParticles {
+technique SpawnPatternParticles {
     pass P0
     {
         vertexShader = compile vs_3_0 VS_Spawn();
-        pixelShader = compile ps_3_0 PS_Spawn();
-    }
-}
-
-technique SpawnParticlesFromPositionTexture {
-    pass P0
-    {
-        vertexShader = compile vs_3_0 VS_Spawn();
-        pixelShader = compile ps_3_0 PS_SpawnFromPositionTexture();
-    }
-}
-
-technique SpawnFeedbackParticles {
-    pass P0
-    {
-        vertexShader = compile vs_3_0 VS_Spawn();
-        pixelShader = compile ps_3_0 PS_SpawnFeedback();
+        pixelShader = compile ps_3_0 PS_SpawnPattern();
     }
 }

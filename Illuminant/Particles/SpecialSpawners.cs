@@ -101,6 +101,35 @@ namespace Squared.Illuminant.Particles.Transforms {
         protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
             base.SetParameters(engine, parameters, now, frameIndex);
 
+            var tex = Texture.Instance;
+            if (tex == null)
+                return;
+
+            var stepValue = (float)Math.Round(1.0 / EffectiveResolution);
+            var currentRow =
+                WholeSpawn
+                    ? 0
+                    : (RowsSpawned++) % RowsPerInstance;
+
+            var stepWidthAndSizeScale = new Vector4(
+                1.0f / EffectiveResolution, tex.Width, 
+                1.0f / tex.Width, 1.0f / tex.Height
+            );
+
+            var initialOffsetAndCoord = new Vector4(
+                0, stepValue * currentRow,
+                0, stepValue * currentRow / tex.Height
+            );
+
+            var modulusesAndMipBias = new Vector4(
+                tex.Width, tex.Height, 1.0f, 
+                (float)Math.Log(1.0 / EffectiveResolution, 2)
+            );
+
+            parameters["StepWidthAndSizeScale"]?.SetValue(stepWidthAndSizeScale);
+            parameters["InitialOffsetAndCoord"]?.SetValue(initialOffsetAndCoord);
+            parameters["ModulusesAndMipBias"]?.SetValue(modulusesAndMipBias);
+
             var life = Life.Constant.Evaluate(now, engine.ResolveSingle);
             var position = Position.Constant.Evaluate(now, engine.ResolveVector3);
             Temp3[0] = new Vector4(position, life);
@@ -108,18 +137,6 @@ namespace Squared.Illuminant.Particles.Transforms {
             parameters["InlinePositionConstants"].SetValue(Temp3);
             parameters["MultiplyAttributeConstant"].SetValue(MultiplyColorConstant? 1f : 0f);
             parameters["PatternTexture"].SetValue(Texture.Instance);
-            parameters["PatternSizeRowSizeAndResolution"].SetValue(new Vector4(
-                Texture.Instance.Width, Texture.Instance.Height,
-                ParticlesPerRow, EffectiveResolution
-            ));
-
-            if (WholeSpawn) {
-                parameters["InitialPatternXY"].SetValue(Vector2.Zero);
-            } else {
-                var currentRow = ((RowsSpawned++) % RowsPerInstance);
-                var xyInCurrentInstance = new Vector2(0, currentRow / EffectiveResolution);
-                parameters["InitialPatternXY"].SetValue(xyInCurrentInstance);
-            }
         }
 
         public override bool IsValid {
