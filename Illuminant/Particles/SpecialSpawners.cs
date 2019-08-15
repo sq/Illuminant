@@ -56,33 +56,42 @@ namespace Squared.Illuminant.Particles.Transforms {
             return (int)Math.Pow(2, Math.Ceiling(Math.Log(value, 2)));
         }
 
-        private int EffectiveWidth {
-            get {
-                return NextPowerOfTwo(Texture.Instance.Height);
-            }
-        }
-
-        private int EffectiveHeight {
+        private int NPOTWidth {
             get {
                 return NextPowerOfTwo(Texture.Instance.Width);
             }
         }
 
+        private int NPOTHeight {
+            get {
+                return NextPowerOfTwo(Texture.Instance.Height);
+            }
+        }
+
         private int ParticlesPerRow {
             get {
-                return NextPowerOfTwo(EffectiveWidth / Divisor);
+                return NextPowerOfTwo(NPOTWidth / Divisor);
             }
         }
 
         private int RowsPerInstance {
             get {
-                return NextPowerOfTwo(EffectiveHeight / Divisor);
+                return NextPowerOfTwo(NPOTHeight / Divisor);
             }
         }
 
         private int ParticlesPerInstance {
             get {
                 return ParticlesPerRow * RowsPerInstance;
+            }
+        }
+
+        protected override int CountScale {
+            get {
+                if (WholeSpawn)
+                    return ParticlesPerInstance;
+                else
+                    return ParticlesPerRow;
             }
         }
 
@@ -132,13 +141,13 @@ namespace Squared.Illuminant.Particles.Transforms {
 
             var stepWidthAndSizeScale = new Vector4(
                 Divisor, ParticlesPerRow, 
-                Divisor / (float)EffectiveWidth, Divisor / (float)EffectiveHeight
+                Divisor / (float)NPOTWidth, Divisor / (float)NPOTHeight
             );
 
             var yOffsetsAndCoordScale = new Vector4(
-                currentRow, (stepValue * currentRow / Divisor) / EffectiveHeight,
-                Divisor * ((float)tex.Width / EffectiveWidth),
-                Divisor * ((float)tex.Height / EffectiveHeight)
+                currentRow, (stepValue * currentRow / Divisor) / NPOTHeight,
+                Divisor * ((float)tex.Width / NPOTWidth),
+                Divisor * ((float)tex.Height / NPOTHeight)
             );
 
             var texelOffsetAndMipBias = new Vector4(

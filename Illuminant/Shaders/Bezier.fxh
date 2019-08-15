@@ -75,11 +75,18 @@ float evaluateBezier1AtT (in ClampedBezier1 bezier, in float count, in float t) 
     if (count <= 2.5)
         return ab;
 
+    if (count <= 3.5) {
+        // HACK: a/b/c shelf mode
+        if (t <= 0)
+            return a;
+        else if (t >= 1)
+            return c;
+        else
+            return b;
+    }
+
     float bc = lerp(b, c, t);
     float abbc = lerp(ab, bc, t);
-    if (count <= 3.5)
-        return abbc;
-
     float cd = lerp(c, d, t);
     float bccd = lerp(bc, cd, t);
 
@@ -106,11 +113,18 @@ float2 evaluateBezier2AtT (in ClampedBezier2 bezier, in float count, in float t)
     if (count <= 2.5)
         return ab;
 
+    if (count <= 3.5) {
+        // HACK: a/b/c shelf mode
+        if (t <= 0)
+            return a;
+        else if (t >= 1)
+            return c;
+        else
+            return b;
+    }
+
     float2 bc = lerp(b, c, t);
     float2 abbc = lerp(ab, bc, t);
-    if (count <= 3.5)
-        return abbc;
-
     float2 cd = lerp(c, d, t);
     float2 bccd = lerp(bc, cd, t);
 
@@ -137,11 +151,18 @@ float4 evaluateBezier4AtT (in ClampedBezier4 bezier, in float count, in float t)
     if (count <= 2.5)
         return ab;
 
+    if (count <= 3.5) {
+        // HACK: a/b/c shelf mode
+        if (t <= 0)
+            return a;
+        else if (t >= 1)
+            return c;
+        else
+            return b;
+    }
+
     float4 bc = lerp(b, c, t);
     float4 abbc = lerp(ab, bc, t);
-    if (count <= 3.5)
-        return abbc;
-
     float4 cd = lerp(c, d, t);
     float4 bccd = lerp(bc, cd, t);
 

@@ -157,7 +157,8 @@ namespace Squared.Illuminant.Particles.Transforms {
             }
 
             if (MaximumTotal.HasValue) {
-                var remaining = MaximumTotal.Value - TotalSpawned;
+                var scaledTotal = MaximumTotal.Value * CountScale;
+                var remaining = scaledTotal - TotalSpawned;
                 if (spawnCount > remaining) {
                     spawnCount = remaining;
                     RateError = 0;
@@ -198,7 +199,7 @@ namespace Squared.Illuminant.Particles.Transforms {
 
 #if FNA
             // HACK: Particles with 0 velocity are invisible in FNA for some reason
-            var velConstantOffset = new Vector3(0, 0, 0.0001f);
+            var velConstantOffset = new Vector3(0, 0, 0.01f);
 #else
             var velConstantOffset = Vector3.Zero;
 #endif

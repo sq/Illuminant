@@ -470,11 +470,18 @@ namespace Squared.Illuminant.Uniforms {
             if (count <= 2.5)
                 return ab;
 
+            // HACK: Shelf mode
+            if (count <= 3.5) {
+                if (t <= 0)
+                    return a;
+                else if (t >= 1)
+                    return c;
+                else
+                    return b;
+            }
+
             float bc = Arithmetic.Lerp(b, c, t);
             float abbc = Arithmetic.Lerp(ab, bc, t);
-            if (count <= 3.5)
-                return abbc;
-
             float cd = Arithmetic.Lerp(c, d, t);
             float bccd = Arithmetic.Lerp(bc, cd, t);
 
@@ -558,11 +565,18 @@ namespace Squared.Illuminant.Uniforms {
             if (count <= 2.5)
                 return ab;
 
+            // HACK: Shelf mode
+            if (count <= 3.5) {
+                if (t <= 0)
+                    return a;
+                else if (t >= 1)
+                    return c;
+                else
+                    return b;
+            }
+
             Vector2 bc = Arithmetic.Lerp(b, c, t);
             Vector2 abbc = Arithmetic.Lerp(ab, bc, t);
-            if (count <= 3.5)
-                return abbc;
-
             Vector2 cd = Arithmetic.Lerp(c, d, t);
             Vector2 bccd = Arithmetic.Lerp(bc, cd, t);
 
@@ -798,13 +812,20 @@ namespace Squared.Illuminant.Uniforms {
             if (count <= 2.5)
                 return ab;
 
-            var bc = Arithmetic.Lerp(B, C, t);
-            var abbc = Arithmetic.Lerp(ab, bc, t);
-            if (count <= 3.5)
-                return abbc;
+            // HACK: Shelf mode
+            if (count <= 3.5) {
+                if (t <= 0)
+                    return A;
+                else if (t >= 1)
+                    return C;
+                else
+                    return B;
+            }
 
-            var cd = Arithmetic.Lerp(C, D, t);
-            var bccd = Arithmetic.Lerp(bc, cd, t);
+            Vector4 bc = Arithmetic.Lerp(B, C, t);
+            Vector4 abbc = Arithmetic.Lerp(ab, bc, t);
+            Vector4 cd = Arithmetic.Lerp(C, D, t);
+            Vector4 bccd = Arithmetic.Lerp(bc, cd, t);
 
             var result = Arithmetic.Lerp(abbc, bccd, t);
             return result;
