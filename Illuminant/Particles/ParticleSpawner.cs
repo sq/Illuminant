@@ -191,9 +191,17 @@ namespace Squared.Illuminant.Particles.Transforms {
             var typeConstant = Category.Constant.Evaluate(now, engine.ResolveSingle);
             var typeScale = Category.RandomScale.Evaluate(now, engine.ResolveSingle);
             var typeOffset = Category.Offset.Evaluate(now, engine.ResolveSingle);
+
+#if FNA
+            // HACK: Particles with 0 velocity are invisible in FNA for some reason
+            var velConstantOffset = new Vector3(0, 0, 0.0001f);
+#else
+            var velConstantOffset = Vector3.Zero;
+#endif
+
             Temp[0] = new Vector4(Position.RandomScale.Evaluate(now, engine.ResolveVector3), lifeScale);
             Temp[1] = new Vector4(Position.Offset.Evaluate(now, engine.ResolveVector3), lifeOffset);
-            Temp[2] = new Vector4(Velocity.Constant.Evaluate(now, engine.ResolveVector3), typeConstant);
+            Temp[2] = new Vector4(Velocity.Constant.Evaluate(now, engine.ResolveVector3) + velConstantOffset, typeConstant);
             Temp[3] = new Vector4(Velocity.RandomScale.Evaluate(now, engine.ResolveVector3), typeScale);
             Temp[4] = new Vector4(Velocity.Offset.Evaluate(now, engine.ResolveVector3), typeOffset);
             Temp[5] = Color.Constant.Evaluate(now, engine.ResolveVector4);
