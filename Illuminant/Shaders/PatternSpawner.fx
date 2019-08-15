@@ -22,8 +22,8 @@ uniform float2 PositionConstantTexel;
 uniform float4 InlinePositionConstants[MAX_INLINE_POSITION_CONSTANTS];
 
 uniform float4 StepWidthAndSizeScale;
-uniform float4 InitialOffsetAndCoord;
-uniform float4 ModulusesAndMipBias;
+uniform float4 YOffsetsAndCoordScale;
+uniform float4 TexelOffsetAndMipBias;
 
 Texture2D PositionConstantTexture;
 sampler PositionConstantSampler {
@@ -40,7 +40,7 @@ sampler PatternSampler {
     Texture = (PatternTexture);
     AddressU = CLAMP;
     AddressV = CLAMP;
-    MipFilter = LINEAR;
+    MipFilter = POINT;
     MinFilter = LINEAR;
     MagFilter = LINEAR;
 };
@@ -191,7 +191,7 @@ void PS_SpawnPattern (
     out float4 newAttributes : COLOR2
 ) {
     float2 xy = GET_VPOS;
-    float index = (xy.x) + (xy.y * ChunkSizeAndIndices.x);
+    float index = floor(xy.x) + (floor(xy.y) * ChunkSizeAndIndices.x);
 
     PREFER_BRANCH
     if ((index < ChunkSizeAndIndices.y) || (index > ChunkSizeAndIndices.z)) {
@@ -202,15 +202,17 @@ void PS_SpawnPattern (
     float relativeIndex = index - ChunkSizeAndIndices.y;
 
     float2 indexXy = float2(
-        relativeIndex % StepWidthAndSizeScale.y, floor(relativeIndex / StepWidthAndSizeScale.y)
+        floor(relativeIndex % StepWidthAndSizeScale.y), floor(relativeIndex / StepWidthAndSizeScale.y)
     );
-    float2 texCoordXy = (indexXy * StepWidthAndSizeScale.zw) + InitialOffsetAndCoord.zw;
-    float2 positionXy = floor(indexXy * StepWidthAndSizeScale.x) + InitialOffsetAndCoord.xy;
+    indexXy.y += YOffsetsAndCoordScale.x;
+    float2 texCoordXy = (indexXy * StepWidthAndSizeScale.zw) + TexelOffsetAndMipBias.xy;
+    texCoordXy.y += YOffsetsAndCoordScale.y;
+    float2 positionXy = indexXy * YOffsetsAndCoordScale.zw;
 
-    // FIXME: Mip bias
-    float4 patternColor = tex2D(PatternSampler, texCoordXy) + float4(0.3, 0, 0, 0.3);
+    float4 patternColor = tex2Dlod(
+        PatternSampler, float4(texCoordXy, 0, TexelOffsetAndMipBias.w)
+    ) + float4(0.2, 0, 0, 0.2);
 
-    /*
     float4 random1, random2, random3;
     evaluateRandomForIndex(index, random1, random2, random3);
 
@@ -219,17 +221,17 @@ void PS_SpawnPattern (
     float4 pixelAlignment = float4(0, 0, 0, 0);
     float4 tempPosition = evaluateFormula(0, positionConstant + pixelAlignment, Configuration[0], Configuration[1], random1, FormulaTypes.x);
 
+    /*
     float4 attributeConstant = patternColor;
     if (MultiplyAttributeConstant)
         attributeConstant *= Configuration[5];
     else
         attributeConstant += Configuration[5];
     */
-    float4 positionConstant = 0, attributeConstant = 0;
-    float4 tempPosition = float4(positionXy, 0, 0);
+    float4 attributeConstant = 0;
 
-    newPosition = mul(float4(tempPosition.xyz, 1), PositionMatrix);
-    newPosition.w = 128;
+    newPosition = mul(float4(tempPosition.xyz + float3(positionXy, 0), 1), PositionMatrix);
+    newPosition.w = tempPosition.w;
 
     /*
     float4 velocityConstant = Configuration[2];

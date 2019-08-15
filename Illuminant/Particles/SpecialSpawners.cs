@@ -21,10 +21,19 @@ namespace Squared.Illuminant.Particles.Transforms {
         /// </summary>
         public NullableLazyResource<Texture2D> Texture = new NullableLazyResource<Texture2D>();
 
+        private int _Divisor = 1;
+
         /// <summary>
-        /// Adjusts the number of particles created per pixel.
+        /// Adjusts the number of particles created per pixel. A higher divisor means fewer particles.
         /// </summary>
-        public float Resolution = 1;
+        public int Divisor {
+            get {
+                return _Divisor;
+            }
+            set {
+                _Divisor = Arithmetic.Clamp(value, 1, 8);
+            }
+        }
 
         /// <summary>
         /// If false, particles for the pattern can be spawned incrementally across frames. If true, only an entire set of particles will be spawned.
@@ -43,21 +52,31 @@ namespace Squared.Illuminant.Particles.Transforms {
             return materials.SpawnPattern;
         }
 
-        private float EffectiveResolution {
+        private static int NextPowerOfTwo (int value) {
+            return (int)Math.Pow(2, Math.Ceiling(Math.Log(value, 2)));
+        }
+
+        private int EffectiveWidth {
             get {
-                return (float)Arithmetic.Clamp(Math.Round(Resolution, 2), 0.2, 1.0);
+                return NextPowerOfTwo(Texture.Instance.Height);
+            }
+        }
+
+        private int EffectiveHeight {
+            get {
+                return NextPowerOfTwo(Texture.Instance.Width);
             }
         }
 
         private int ParticlesPerRow {
             get {
-                return (int)Math.Ceiling(Texture.Instance.Width * EffectiveResolution);
+                return NextPowerOfTwo(EffectiveWidth / Divisor);
             }
         }
 
         private int RowsPerInstance {
             get {
-                return (int)Math.Ceiling(Texture.Instance.Height * EffectiveResolution);
+                return NextPowerOfTwo(EffectiveHeight / Divisor);
             }
         }
 
@@ -105,30 +124,31 @@ namespace Squared.Illuminant.Particles.Transforms {
             if (tex == null)
                 return;
 
-            var stepValue = (float)Math.Round(1.0 / EffectiveResolution);
+            var stepValue = Divisor;
             var currentRow =
                 WholeSpawn
                     ? 0
                     : (RowsSpawned++) % RowsPerInstance;
 
             var stepWidthAndSizeScale = new Vector4(
-                1.0f / EffectiveResolution, ParticlesPerRow, 
-                1.0f / tex.Width, 1.0f / tex.Height
+                Divisor, ParticlesPerRow, 
+                Divisor / (float)EffectiveWidth, Divisor / (float)EffectiveHeight
             );
 
-            var initialOffsetAndCoord = new Vector4(
-                0, stepValue * currentRow,
-                0, stepValue * currentRow / tex.Height
+            var yOffsetsAndCoordScale = new Vector4(
+                currentRow, (stepValue * currentRow / Divisor) / EffectiveHeight,
+                Divisor * ((float)tex.Width / EffectiveWidth),
+                Divisor * ((float)tex.Height / EffectiveHeight)
             );
 
-            var modulusesAndMipBias = new Vector4(
-                tex.Width, tex.Height, 1.0f, 
-                (float)Math.Log(1.0 / EffectiveResolution, 2)
+            var texelOffsetAndMipBias = new Vector4(
+                -0.5f / tex.Width, -0.5f / tex.Height, 0,
+                (float)Math.Log(Divisor, 2)
             );
 
-            parameters["StepWidthAndSizeScale"]?.SetValue(stepWidthAndSizeScale);
-            parameters["InitialOffsetAndCoord"]?.SetValue(initialOffsetAndCoord);
-            parameters["ModulusesAndMipBias"]?.SetValue(modulusesAndMipBias);
+            parameters["StepWidthAndSizeScale"].SetValue(stepWidthAndSizeScale);
+            parameters["YOffsetsAndCoordScale"].SetValue(yOffsetsAndCoordScale);
+            parameters["TexelOffsetAndMipBias"].SetValue(texelOffsetAndMipBias);
 
             var life = Life.Constant.Evaluate(now, engine.ResolveSingle);
             var position = Position.Constant.Evaluate(now, engine.ResolveVector3);
