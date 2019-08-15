@@ -70,9 +70,12 @@ namespace Squared.Illuminant.Particles.Transforms {
         public override void Reset () {
             base.Reset();
             RowsSpawned = 0;
+            PartialSpawnAllowed = false;
         }
 
         public override void BeginTick (ParticleSystem system, double now, double deltaTimeSeconds, out int spawnCount, out ParticleSystem.Chunk sourceChunk) {
+            PartialSpawnAllowed = false;
+
             if (Texture != null)
                 Texture.EnsureInitialized(system.Engine.Configuration.TextureLoader);
 

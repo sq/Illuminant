@@ -128,10 +128,14 @@ namespace Squared.Illuminant.Particles {
 
             bool needClear;
             var fs = spawner as Transforms.FeedbackSpawner;
-            var chunk = PickTargetForSpawn(fs != null, spawnCount, out needClear);
+            var chunk = PickTargetForSpawn(fs != null, spawnCount, out needClear, spawner.PartialSpawnAllowed);
 
-            if (spawnCount > chunk.Free)
-                spawnCount = chunk.Free;
+            if (spawnCount > chunk.Free) {
+                if (spawner.PartialSpawnAllowed)
+                    spawnCount = chunk.Free;
+                else
+                    return false;
+            }
 
             if (chunk == null)
                 throw new Exception("Failed to locate or create a chunk to spawn in");
@@ -180,14 +184,16 @@ namespace Squared.Illuminant.Particles {
             var isPartialSpawn = (requestedSpawnCount > spawnCount);
             return isPartialSpawn;
         }
+
         internal Chunk PickTargetForSpawn (
             bool feedback, int count, 
-            ref int currentTarget, out bool needClear
+            ref int currentTarget, out bool needClear,
+            bool partialSpawnAllowed
         ) {
             var chunk = ChunkFromID(currentTarget);
             // FIXME: Ideally we could split the spawn across this chunk and an old one.
             if (chunk != null) {
-                if (chunk.Free < 16) {
+                if (chunk.Free < (partialSpawnAllowed ? 16 : count)) {
                     chunk.NoLongerASpawnTarget = true;
                     currentTarget = -1;
                     chunk = null;
@@ -212,11 +218,11 @@ namespace Squared.Illuminant.Particles {
             return ChunkFromID(feedback ? CurrentFeedbackSpawnTarget : CurrentSpawnTarget);
         }
 
-        internal Chunk PickTargetForSpawn (bool feedback, int count, out bool needClear) {
+        internal Chunk PickTargetForSpawn (bool feedback, int count, out bool needClear, bool partialSpawnAllowed) {
             if (feedback)
-                return PickTargetForSpawn(true, count, ref CurrentFeedbackSpawnTarget, out needClear);
+                return PickTargetForSpawn(true, count, ref CurrentFeedbackSpawnTarget, out needClear, partialSpawnAllowed);
             else
-                return PickTargetForSpawn(false, count, ref CurrentSpawnTarget, out needClear);
+                return PickTargetForSpawn(false, count, ref CurrentSpawnTarget, out needClear, partialSpawnAllowed);
         }
 
         internal Chunk PickSourceForFeedback (int count) {
