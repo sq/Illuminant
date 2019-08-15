@@ -15,6 +15,8 @@ sampler LifeRampSampler {
 // ramp_strength, ramp_min, ramp_divisor, index_divisor
 uniform float4 LifeRampSettings;
 
+uniform float2 RotationFromLifeAndIndex;
+
 float3 applyFrictionAndMaximum (float3 velocity) {
     float l = length(velocity);
     // HACK: MojoShader and/or opengl don't like denormals much!
@@ -34,6 +36,11 @@ float3 applyFrictionAndMaximum (float3 velocity) {
 
 float4 readLifeRamp (float u, float v) {
     return tex2Dlod(LifeRampSampler, float4(u, v, 0, 0));
+}
+
+float getRotationForLifeAndIndex (float life, float index) {
+    return (life * RotationFromLifeAndIndex.x) + 
+        (index * RotationFromLifeAndIndex.y);
 }
 
 #ifdef INCLUDE_RAMPS
@@ -102,6 +109,7 @@ void computeRenderData (
     renderColor.rgb *= renderColor.a;
     renderData.x = getSizeForLifeAndVelocity(position.w, velocityLength);
     renderData.y = getRotationForVelocity(velocityLength, velocity) +
+        // FIXME: This doesn't work anymore, yay fxc
         getRotationForLifeAndIndex(position.w, index);
     renderData.z = velocityLength;
     renderData.w = velocity.w;

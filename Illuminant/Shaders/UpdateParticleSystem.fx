@@ -1,3 +1,5 @@
+#pragma fxcparams(/O3 /Zi)
+
 #define INCLUDE_RAMPS
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\CompilerWorkarounds.fxh"
 #include "Bezier.fxh"

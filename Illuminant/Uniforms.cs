@@ -188,7 +188,6 @@ namespace Squared.Illuminant.Uniforms {
         public Vector4 CollisionSettings;
         public Vector4 TexelAndSize;
         public Vector4 AnimationRateAndRotationAndZToY;
-        public Vector4 RotationFromLifeAndIndex;
 
         public ParticleSystem (
             Particles.ParticleEngineConfiguration Engine,
@@ -212,11 +211,6 @@ namespace Squared.Illuminant.Uniforms {
                 );
             else
                 CollisionSettings = Vector4.Zero;
-            RotationFromLifeAndIndex = new Vector4(
-                MathHelper.ToRadians(Configuration.RotationFromLife), 
-                MathHelper.ToRadians(Configuration.RotationFromIndex),
-                0, 0
-            );
             var ar = Configuration.Appearance != null ? Configuration.Appearance.AnimationRate : Vector2.Zero;
             AnimationRateAndRotationAndZToY = new Vector4(
                 (ar.X != 0) ? 1.0f / ar.X : 0, (ar.Y != 0) ? 1.0f / ar.Y : 0,

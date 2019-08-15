@@ -39,7 +39,6 @@ struct ParticleSystemSettings {
     float4 TexelAndSize;
     // rate_x, rate_y, velocityRotation, zToY
     float4 AnimationRateAndRotationAndZToY;
-    float4 RotationFromLifeAndIndex;
 };
 
 uniform ParticleSystemSettings System;
@@ -95,11 +94,6 @@ float getCollisionLifePenalty () {
 
 float2 getTexel () {
     return System.TexelAndSize.xy;
-}
-
-float getRotationForLifeAndIndex (float life, float index) {
-    return (life * System.RotationFromLifeAndIndex.x) + 
-        (index * System.RotationFromLifeAndIndex.y);
 }
 
 Texture2D PositionTexture;

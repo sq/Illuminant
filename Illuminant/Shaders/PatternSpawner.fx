@@ -1,6 +1,3 @@
-// In any mode other than /Od, evaluateFormula is completely broken and it seems like 'randomness' is sometimes zero too
-//  thanks fxc
-#pragma fxcparams(/Od /Zi)
 
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\CompilerWorkarounds.fxh"
 #include "ParticleCommon.fxh"

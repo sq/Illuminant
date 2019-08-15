@@ -150,6 +150,11 @@ namespace Squared.Illuminant.Particles.Transforms {
                         engine.uDistanceField.Set(m, ref dfu);
                     }
 
+                    m.Effect.Parameters["RotationFromLifeAndIndex"]?.SetValue(new Vector2(
+                        MathHelper.ToRadians(system.Configuration.RotationFromLife),
+                        MathHelper.ToRadians(system.Configuration.RotationFromIndex)
+                    ));
+
                     system.MaybeSetLifeRampParameters(p);
                     m.Flush();
                 }
