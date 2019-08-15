@@ -146,6 +146,9 @@ namespace Squared.Illuminant.Particles.Transforms {
                 (float)Math.Log(Divisor, 2)
             );
 
+            var centeringOffset = new Vector2(-tex.Width / 2, -tex.Height / 2);
+
+            parameters["CenteringOffset"].SetValue(centeringOffset);
             parameters["StepWidthAndSizeScale"].SetValue(stepWidthAndSizeScale);
             parameters["YOffsetsAndCoordScale"].SetValue(yOffsetsAndCoordScale);
             parameters["TexelOffsetAndMipBias"].SetValue(texelOffsetAndMipBias);

@@ -24,6 +24,7 @@ uniform float4 InlinePositionConstants[MAX_INLINE_POSITION_CONSTANTS];
 uniform float4 StepWidthAndSizeScale;
 uniform float4 YOffsetsAndCoordScale;
 uniform float4 TexelOffsetAndMipBias;
+uniform float2 CenteringOffset;
 
 Texture2D PositionConstantTexture;
 sampler PositionConstantSampler {
@@ -207,40 +208,33 @@ void PS_SpawnPattern (
     indexXy.y += YOffsetsAndCoordScale.x;
     float2 texCoordXy = (indexXy * StepWidthAndSizeScale.zw) + TexelOffsetAndMipBias.xy;
     texCoordXy.y += YOffsetsAndCoordScale.y;
-    float2 positionXy = indexXy * YOffsetsAndCoordScale.zw;
+    float2 positionXy = indexXy * YOffsetsAndCoordScale.zw + CenteringOffset;
 
     float4 patternColor = tex2Dlod(
         PatternSampler, float4(texCoordXy, 0, TexelOffsetAndMipBias.w)
-    ) + float4(0.2, 0, 0, 0.2);
+    );
 
     float4 random1, random2, random3;
     evaluateRandomForIndex(index, random1, random2, random3);
 
     float4 positionConstant = InlinePositionConstants[0];
-    // FIXME: Align around center
-    float4 pixelAlignment = float4(0, 0, 0, 0);
-    float4 tempPosition = evaluateFormula(0, positionConstant + pixelAlignment, Configuration[0], Configuration[1], random1, FormulaTypes.x);
+    float4 tempPosition = evaluateFormula(0, positionConstant, Configuration[0], Configuration[1], random1, FormulaTypes.x);
 
-    /*
+    tempPosition.xy += positionXy;
+
     float4 attributeConstant = patternColor;
     if (MultiplyAttributeConstant)
         attributeConstant *= Configuration[5];
     else
         attributeConstant += Configuration[5];
-    */
-    float4 attributeConstant = 0;
 
-    newPosition = mul(float4(tempPosition.xyz + float3(positionXy, 0), 1), PositionMatrix);
+    newPosition = mul(float4(tempPosition.xyz, 1), PositionMatrix);
     newPosition.w = tempPosition.w;
 
-    /*
     float4 velocityConstant = Configuration[2];
     newVelocity = evaluateFormula(newPosition, velocityConstant, Configuration[3], Configuration[4], random2, FormulaTypes.y);
 
     newAttributes = evaluateFormula(newPosition, attributeConstant, Configuration[6], Configuration[7], random3, FormulaTypes.z);
-    */
-    newVelocity = float4(0, 0, 0.1, 0);
-    newAttributes = patternColor;
 
     if (newAttributes.w < AttributeDiscardThreshold)
         discard;
