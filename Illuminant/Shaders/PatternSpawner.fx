@@ -43,6 +43,15 @@ void PS_SpawnPattern (
     texCoordXy.y += YOffsetsAndCoordScale.y;
     float2 positionXy = indexXy * YOffsetsAndCoordScale.zw + CenteringOffset;
 
+    // FIXME: HACK: UGH: The way the next-power-of-two compensation stuff works, we can
+    //  end up generating a TON of extra particles on the right and bottom sides of the
+    //  spawn rectangle. The centering offset and other stuff is still right.
+    // So for now, just reject the garbage particles.
+    if ((texCoordXy.x > 1) || (texCoordXy.y > 1)) {
+        discard;
+        return;
+    }
+
     float4 patternColor = tex2Dlod(
         PatternSampler, float4(texCoordXy, 0, TexelOffsetAndMipBias.w)
     );
