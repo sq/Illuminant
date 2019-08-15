@@ -23,14 +23,15 @@ namespace TestGame.Scenes {
     public class HueTest : Scene {
         Texture2D TestPattern;
 
-        Toggle ApplyShader;
+        Toggle ApplyShader, Sepia;
 
-        Slider Hue, Saturation, Luminance;
+        Slider Hue, Saturation, Luminance, SepiaWeight;
 
         public HueTest (TestGame game, int width, int height)
             : base(game, width, height) {
 
-            ApplyShader.Key = Keys.S;
+            Sepia.Key = Keys.S;
+            ApplyShader.Key = Keys.A;
             ApplyShader.Value = true;
             Hue.Min = -360;
             Hue.Max = 360;
@@ -41,6 +42,10 @@ namespace TestGame.Scenes {
             Luminance.Min = -1;
             Luminance.Max = 1;
             Luminance.Speed = 0.01f;
+            SepiaWeight.Min = 0;
+            SepiaWeight.Max = 1;
+            SepiaWeight.Speed = 0.01f;
+            SepiaWeight.Value = 1;
         }
 
         public override void LoadContent () {
@@ -51,14 +56,26 @@ namespace TestGame.Scenes {
         }
 
         public override void Draw (Squared.Render.Frame frame) {
-            var m = Game.Materials.Get(ApplyShader ? Game.Materials.ScreenSpaceHueBitmap : Game.Materials.ScreenSpaceBitmap, blendState: BlendState.AlphaBlend);
+            var baseMaterial = ApplyShader 
+                ? (
+                    Sepia
+                        ? Game.Materials.ScreenSpaceSepiaBitmap
+                        : Game.Materials.ScreenSpaceHueBitmap 
+                  )
+                : Game.Materials.ScreenSpaceBitmap;
+            var m = Game.Materials.Get(baseMaterial, blendState: BlendState.AlphaBlend);
 
             var ir = new ImperativeRenderer(frame, Game.Materials);
             ir.Clear(layer: 0, color: Color.DeepSkyBlue);
 
             var mc = Color.White;
 
-            var userData = new Vector4(Hue / 360, Saturation, Luminance, 0);
+            var userData = new Vector4(
+                Hue / 360, 
+                Sepia ? Saturation + 0.5f : Saturation, 
+                Sepia ? Luminance + 0.5f : Luminance, 
+                SepiaWeight
+            );
 
             ir.Draw(TestPattern, Vector2.Zero, layer: 1, scale: Vector2.One, multiplyColor: mc, material: m, userData: userData);
         }
