@@ -64,9 +64,8 @@ namespace TestGame.Scenes {
             var mc = Color.White;
             ir.Draw(PaletteTexture, Vector2.Zero, scale: Vector2.One * 3, layer: 1, blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp);
 
-            // Pack palette selector into R+G since R maxes out at 1
             float p = CyclePalettes ? (float)(Time.Seconds / 8) : 0;
-            var userData = new Color(p % 1, 0, 0, 0);
+            var userData = new Vector4(p % 1, 0, 0, 0);
 
             ir.Draw(PalettedImage, new Vector2(0, 3 * PaletteTexture.Height), layer: 1, scale: Vector2.One * 2, multiplyColor: mc, material: m, userData: userData);
         }

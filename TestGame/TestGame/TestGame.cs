@@ -26,7 +26,7 @@ using Nuke = NuklearDotNet.Nuklear;
 
 namespace TestGame {
     public class TestGame : MultithreadedGame, INuklearHost {
-        public int? DefaultScene = 14;
+        public int? DefaultScene = 17;
 
         public GraphicsDeviceManager Graphics;
         public DefaultMaterialSet Materials { get; private set; }
@@ -108,7 +108,8 @@ namespace TestGame {
 #endif
                 new Shapes(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new SystemStress(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new PaletteTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
+                new PaletteTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
+                new HueTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
             };
 
             KeyboardInputHandler = new KeyboardInput();

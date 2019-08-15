@@ -73,9 +73,6 @@ float4 getRampedColorForLifeValueAndIndex (float life, float velocityLength, flo
 }
 
 float getRotationForVelocity (float velocityLength, float3 velocity) {
-    if (velocityLength <= 0.001)
-        return 0;
-
     float2 absvel = abs(velocity.xy + float2(0, velocity.z * -getZToY()));
 
     float angle;
@@ -99,9 +96,7 @@ void computeRenderData (
     }
     // FIXME
     float index = vpos.x + (vpos.y * 256);
-    float velocityLength = 0;
-    if (any(abs(velocity.xyz)))
-        velocityLength = length(velocity.xyz);
+    float velocityLength = max(length(velocity.xyz), 0.0001);
     renderColor = attributes * getRampedColorForLifeValueAndIndex(position.w, velocityLength, index);
     renderColor.a = saturate(renderColor.a);
     renderColor.rgb *= renderColor.a;
