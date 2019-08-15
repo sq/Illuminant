@@ -199,21 +199,21 @@ void PS_SpawnPattern (
         return;
     }
 
-    float relativeIndex = index - ChunkSizeAndIndices.x;
+    float relativeIndex = index - ChunkSizeAndIndices.y;
 
-    float2 indexXy = floor(float2(
-        relativeIndex % StepWidthAndSizeScale.y, relativeIndex / StepWidthAndSizeScale.y
-    ));
-    float2 texCoordXy = indexXy * StepWidthAndSizeScale.zw + InitialOffsetAndCoord.zw;
+    float2 indexXy = float2(
+        relativeIndex % StepWidthAndSizeScale.y, floor(relativeIndex / StepWidthAndSizeScale.y)
+    );
+    float2 texCoordXy = (indexXy * StepWidthAndSizeScale.zw) + InitialOffsetAndCoord.zw;
     float2 positionXy = floor(indexXy * StepWidthAndSizeScale.x) + InitialOffsetAndCoord.xy;
 
     // FIXME: Mip bias
-    float4 patternColor = tex2D(PatternSampler, texCoordXy);
+    float4 patternColor = tex2D(PatternSampler, texCoordXy) + float4(0.3, 0, 0, 0.3);
 
+    /*
     float4 random1, random2, random3;
     evaluateRandomForIndex(index, random1, random2, random3);
 
-    /*
     float4 positionConstant = InlinePositionConstants[0];
     // FIXME: Align around center
     float4 pixelAlignment = float4(0, 0, 0, 0);
@@ -225,15 +225,20 @@ void PS_SpawnPattern (
     else
         attributeConstant += Configuration[5];
     */
+    float4 positionConstant = 0, attributeConstant = 0;
     float4 tempPosition = float4(positionXy, 0, 0);
 
     newPosition = mul(float4(tempPosition.xyz, 1), PositionMatrix);
-    newPosition.w = tempPosition.w;
+    newPosition.w = 128;
 
+    /*
     float4 velocityConstant = Configuration[2];
     newVelocity = evaluateFormula(newPosition, velocityConstant, Configuration[3], Configuration[4], random2, FormulaTypes.y);
 
     newAttributes = evaluateFormula(newPosition, attributeConstant, Configuration[6], Configuration[7], random3, FormulaTypes.z);
+    */
+    newVelocity = float4(0, 0, 0.1, 0);
+    newAttributes = patternColor;
 
     if (newAttributes.w < AttributeDiscardThreshold)
         discard;

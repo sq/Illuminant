@@ -112,7 +112,7 @@ namespace Squared.Illuminant.Particles.Transforms {
                     : (RowsSpawned++) % RowsPerInstance;
 
             var stepWidthAndSizeScale = new Vector4(
-                1.0f / EffectiveResolution, tex.Width, 
+                1.0f / EffectiveResolution, ParticlesPerRow, 
                 1.0f / tex.Width, 1.0f / tex.Height
             );
 

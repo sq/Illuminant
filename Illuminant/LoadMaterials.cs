@@ -285,9 +285,12 @@ namespace Squared.Illuminant.Particles {
         }
 
         private void LoadOneMaterial (out Material result, string fileName, string techniqueName, Action<DeviceManager>[] begin = null, Action<DeviceManager>[] end = null) {
+            var effect = Effects.Load(fileName);
+            if (effect == null)
+                throw new Exception("Failed to load shader " + fileName);
             try {
                 var m = new Material(
-                    Effects.Load(fileName), techniqueName,
+                    effect, techniqueName,
                     begin, end
                 );
                 result = m;
@@ -419,7 +422,7 @@ namespace Squared.Illuminant.Particles {
                 );
 
                 LoadOneMaterial(out ParticleMaterials.SpawnPattern,
-                    "SpawnParticles", "SpawnPatternParticles", dBegin, dEnd
+                    "PatternSpawner", "SpawnPatternParticles", dBegin, dEnd
                 );
                 
                 LoadOneMaterial(out ParticleMaterials.TextureLinear,
