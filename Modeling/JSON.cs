@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
@@ -33,7 +34,10 @@ namespace Squared.Illuminant.Modeling {
 
     public class IlluminantJsonConverter : JsonConverter {
         private const string FnaSuffix = ", FNA, Version=19.5.0.0, Culture=neutral, PublicKeyToken=null";
-        private const string XnaSuffix = ", Microsoft.Xna.Framework, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553";
+        private static readonly string[] XnaSuffixes = new string[] {
+            ", Microsoft.Xna.Framework, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553",
+            ", Microsoft.Xna.Framework.Graphics, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553"
+        };
 
         public override bool CanConvert (Type objectType) {
             switch (objectType.Name) {
@@ -53,15 +57,20 @@ namespace Squared.Illuminant.Modeling {
 
         private static Type ResolveTypeFromShortName (string name) {
 #if FNA
-            name = name.Replace(
-                XnaSuffix, FnaSuffix
-            );
+            foreach (var suffix in XnaSuffixes) {
+                name = name.Replace(
+                    suffix, FnaSuffix
+                );
+            }
 #else
             name = name.Replace(
-                FnaSuffix, XnaSuffix
+                FnaSuffix, ""
             );
 #endif
-            return Type.GetType(name, false) ?? typeof(ParticleSystem).Assembly.GetType(name, false) ?? typeof(Vector4).Assembly.GetType(name, false);
+            return Type.GetType(name, false) ?? 
+                typeof(ParticleSystem).Assembly.GetType(name, false) ?? 
+                typeof(Vector4).Assembly.GetType(name, false) ??
+                typeof(Texture2D).Assembly.GetType(name, false);
         }
 
         private IParameter ReadParameterFromJObject (JObject obj, JsonSerializer serializer) {
