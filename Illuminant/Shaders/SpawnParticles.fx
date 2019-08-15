@@ -1,4 +1,5 @@
-// In release mode all particles spawn from the same spot with the same velocity
+// In any mode other than /Od, evaluateFormula is completely broken and it seems like 'randomness' is sometimes zero too
+//  thanks fxc
 #pragma fxcparams(/Od /Zi)
 
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\CompilerWorkarounds.fxh"
@@ -171,7 +172,7 @@ void Spawn_Stage2(
     newAttributes = evaluateFormula(0, Configuration[5], Configuration[6], Configuration[7], random3, FormulaTypes.z);
     
     float towardsDistance = length(towardsNext);
-    if (towardsDistance > 0) {
+    if (towardsDistance > 0.0001) {
         // FIXME: float->float4, random3.w
         float towardsSpeed = evaluateFormula(0, Configuration[8].x, Configuration[8].y, Configuration[8].z, random3.w, FormulaTypes.w).x;
         newVelocity += towardsSpeed * (towardsNext / towardsDistance);
