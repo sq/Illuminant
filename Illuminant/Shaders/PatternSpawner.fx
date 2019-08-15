@@ -76,6 +76,12 @@ void PS_SpawnPattern (
     float4 velocityConstant = Configuration[2];
     newVelocity = evaluateFormula(newPosition, velocityConstant, Configuration[3], Configuration[4], random2, FormulaTypes.y);
 
+#if FNA
+    // HACK: Some garbage math semantics in GLSL mean particles with 0 velocity become invisible
+    if (length(newVelocity.xyz) < 1)
+        newVelocity.z += 0.01;
+#endif
+
     newAttributes = evaluateFormula(newPosition, attributeConstant, Configuration[6], Configuration[7], random3, FormulaTypes.z);
 
     if (newAttributes.w < AttributeDiscardThreshold)

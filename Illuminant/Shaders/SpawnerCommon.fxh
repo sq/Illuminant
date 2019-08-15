@@ -158,6 +158,12 @@ void Spawn_Stage2(
         newVelocity += towardsSpeed * (towardsNext / towardsDistance);
     }
 
+#if FNA
+    // HACK: Some garbage math semantics in GLSL mean particles with 0 velocity become invisible
+    if (length(newVelocity.xyz) < 1)
+        newVelocity.z += 0.01;
+#endif
+
     if (newAttributes.w < AttributeDiscardThreshold)
         discard;
 }
