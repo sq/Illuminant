@@ -91,9 +91,12 @@ namespace Squared.Illuminant.Modeling {
             Texture2D result;
             var path = ResolveFilename(name);
 
+            // Set this to true once everything can handle subrects
+            bool powerOfTwo = false;
+
             if (File.Exists(path)) {
                 using (var img = new Squared.Render.STB.Image(path, premultiply: true, asFloatingPoint: floatingPoint))
-                    result = img.CreateTexture(Coordinator, !floatingPoint);
+                    result = img.CreateTexture(Coordinator, !floatingPoint, powerOfTwo);
             } else {
                 // HACK: Create placeholder texture
                 lock (Coordinator.CreateResourceLock) {

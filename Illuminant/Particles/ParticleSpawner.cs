@@ -82,19 +82,21 @@ namespace Squared.Illuminant.Particles.Transforms {
         [NonSerialized]
         internal readonly UpdateHandler Handler2;
 
-        public bool PartialSpawnAllowed { get; protected set; }
+        public virtual bool PartialSpawnAllowed {
+            get {
+                return true;
+            }
+        }
 
         protected SpawnerBase ()
             : this(null) {
             IsAnalyzer = false;
-            PartialSpawnAllowed = true;
         }
 
         protected SpawnerBase (int? seed) {
             RNG = new MersenneTwister(seed.GetValueOrDefault(NextSeed++));
             ActiveStateChanged += Spawner_ActiveStateChanged;
             Handler2 = new UpdateHandler(this);
-            PartialSpawnAllowed = true;
         }
 
         private void Spawner_ActiveStateChanged () {

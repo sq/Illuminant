@@ -31,7 +31,7 @@ namespace Squared.Illuminant.Particles.Transforms {
                 return _Divisor;
             }
             set {
-                _Divisor = Arithmetic.Clamp(value, 1, 8);
+                _Divisor = Arithmetic.Clamp(value, 1, 10);
             }
         }
 
@@ -52,31 +52,27 @@ namespace Squared.Illuminant.Particles.Transforms {
             return materials.SpawnPattern;
         }
 
-        private static int NextPowerOfTwo (int value) {
-            return (int)Math.Pow(2, Math.Ceiling(Math.Log(value, 2)));
-        }
-
         private int NPOTWidth {
             get {
-                return NextPowerOfTwo(Texture.Instance.Width);
+                return Arithmetic.NextPowerOfTwo(Texture.Instance.Width);
             }
         }
 
         private int NPOTHeight {
             get {
-                return NextPowerOfTwo(Texture.Instance.Height);
+                return Arithmetic.NextPowerOfTwo(Texture.Instance.Height);
             }
         }
 
         private int ParticlesPerRow {
             get {
-                return NextPowerOfTwo(NPOTWidth / Divisor);
+                return Arithmetic.NextPowerOfTwo(NPOTWidth / Divisor);
             }
         }
 
         private int RowsPerInstance {
             get {
-                return NextPowerOfTwo(NPOTHeight / Divisor);
+                return Arithmetic.NextPowerOfTwo(NPOTHeight / Divisor);
             }
         }
 
@@ -95,15 +91,18 @@ namespace Squared.Illuminant.Particles.Transforms {
             }
         }
 
+        public override bool PartialSpawnAllowed {
+            get {
+                return false;
+            }
+        }
+
         public override void Reset () {
             base.Reset();
             RowsSpawned = 0;
-            PartialSpawnAllowed = false;
         }
 
         public override void BeginTick (ParticleSystem system, double now, double deltaTimeSeconds, out int spawnCount, out ParticleSystem.Chunk sourceChunk) {
-            PartialSpawnAllowed = false;
-
             if (Texture != null)
                 Texture.EnsureInitialized(system.Engine.Configuration.TextureLoader);
 
@@ -138,6 +137,9 @@ namespace Squared.Illuminant.Particles.Transforms {
                 WholeSpawn
                     ? 0
                     : (RowsSpawned++) % RowsPerInstance;
+
+            if (WholeSpawn)
+                RowsSpawned = 0;
 
             var stepWidthAndSizeScale = new Vector4(
                 Divisor, ParticlesPerRow, 

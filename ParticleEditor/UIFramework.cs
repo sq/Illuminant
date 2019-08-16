@@ -778,6 +778,10 @@ namespace Lumined {
             object instance, string parentType, string prefix,
             string valueType, string actualName, object value
         ) {
+            // HACK to avoid showing protected/internal bools with no setter
+            if ((valueType == "Boolean") && cpi?.IsWritable == false)
+                return false;
+
             var ctx = Nuklear.Context;
             bool changed = false, b;
 
