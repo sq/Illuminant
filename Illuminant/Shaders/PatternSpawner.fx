@@ -33,10 +33,12 @@ void PS_SpawnPattern (
         return;
     }
 
-    float relativeIndex = index - ChunkSizeAndIndices.y;
+    float relativeIndex = floor(index - ChunkSizeAndIndices.y);
+    float divisor = StepWidthAndSizeScale.x;
+    float particlesPerRow = StepWidthAndSizeScale.y;
 
     float2 indexXy = float2(
-        floor(relativeIndex % StepWidthAndSizeScale.y), floor(relativeIndex / StepWidthAndSizeScale.y)
+        floor(relativeIndex % particlesPerRow), floor(relativeIndex / particlesPerRow)
     );
     indexXy.y += YOffsetsAndCoordScale.x;
     float2 texCoordXy = (indexXy * StepWidthAndSizeScale.zw) + TexelOffsetAndMipBias.xy;
@@ -47,6 +49,7 @@ void PS_SpawnPattern (
     //  end up generating a TON of extra particles on the right and bottom sides of the
     //  spawn rectangle. The centering offset and other stuff is still right.
     // So for now, just reject the garbage particles.
+    // Incidentally this seems to also work around the bug in mojoshader's impl of tex2dlod. Yay!
     if ((texCoordXy.x > 1) || (texCoordXy.y > 1)) {
         discard;
         return;

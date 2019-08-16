@@ -152,7 +152,7 @@ namespace Squared.Illuminant.Particles.Transforms {
 
             var texelOffsetAndMipBias = new Vector4(
                 -0.5f / tex.Width, -0.5f / tex.Height, 0,
-                (float)Math.Log(Divisor, 2)
+                (float)Math.Log(Divisor, 2) - 0.5f
             );
 
             var centeringOffset = new Vector2(-tex.Width / 2, -tex.Height / 2);

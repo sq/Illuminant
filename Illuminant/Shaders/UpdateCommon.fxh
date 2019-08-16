@@ -108,8 +108,7 @@ void computeRenderData (
     renderColor.a = saturate(renderColor.a);
     renderColor.rgb *= renderColor.a;
     renderData.x = getSizeForLifeAndVelocity(position.w, velocityLength);
-    renderData.y = getRotationForVelocity(velocityLength, velocity) +
-        // FIXME: This doesn't work anymore, yay fxc
+    renderData.y = (getRotationForVelocity(velocityLength, velocity) * getVelocityRotation()) +
         getRotationForLifeAndIndex(position.w, index);
     renderData.z = velocityLength;
     renderData.w = velocity.w;
