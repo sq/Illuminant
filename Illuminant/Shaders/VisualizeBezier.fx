@@ -23,7 +23,7 @@ void BezierVisualizerPixelShader (
     ACCEPTS_VPOS,
     out float4 result : COLOR0
 ) {
-    float localT = (xy.x * 1.10) - 0.05;
+    float localT = (xy.x * 1.05) - 0.025;
 
     float count = Bezier.RangeAndCount.z;
     float4 minValues, maxValues;
@@ -64,13 +64,13 @@ void BezierVisualizerPixelShader (
     float2 scaledOneAndZero = saturate2((float2(1, 0) - minValues) / valueRange);
     float distanceAboveOne = saturate(((1 - xy.y) - scaledOneAndZero.x) / 0.015);
     float distanceBelowZero = saturate((scaledOneAndZero.y - (1 - xy.y)) / 0.015);
-    float outside = saturate(max(saturate(-localT) * 10, saturate(localT - 1) * 10));
-    float invDistanceToT = (1 - saturate(abs(localT - scaledT) / 0.01)) * 0.4;
+    float outside = saturate(max(saturate(-localT) * 100, saturate(localT - 1) * 100));
+    float invDistanceToT = (1 - saturate(abs(localT - scaledT) / 0.01)) * 0.5;
     invDistanceToT = pow(invDistanceToT, 1.5);
 
     scaledDistances = pow(scaledDistances, 1.8);
 
-    float4 w = (scaledDistances.a + invDistanceToT + (outside * 0.1)) * float4(1, 1, 1, 0);
+    float4 w = (scaledDistances.a + invDistanceToT + (outside * 0.2)) * float4(1, 1, 1, 0);
     float  alpha = (scaledDistances.r + scaledDistances.g + scaledDistances.b + scaledDistances.a) + invDistanceToT;
     float2 vpos = GET_VPOS;
     float  stipple = (vpos.x % 2) - (vpos.y % 2);
