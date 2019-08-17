@@ -154,7 +154,12 @@ namespace Squared.Illuminant.Particles.Transforms {
 
             var texelOffsetAndMipBias = new Vector4(
                 -0.5f / tex.Width, -0.5f / tex.Height, 0,
+#if FNA
+                // FIXME: tex2dlod in FNA doesn't actually work, it's more like bias
+                (float)Math.Log(Divisor, 2) - 1.5f
+#else
                 (float)Math.Log(Divisor, 2) - 0.5f
+#endif
             );
 
             var centeringOffset = new Vector2(-tex.Width / 2, -tex.Height / 2);

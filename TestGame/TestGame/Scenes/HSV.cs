@@ -43,7 +43,7 @@ namespace TestGame.Scenes {
             Luminance.Max = 1;
             Luminance.Speed = 0.01f;
             SepiaWeight.Min = 0;
-            SepiaWeight.Max = 1;
+            SepiaWeight.Max = 2;
             SepiaWeight.Speed = 0.01f;
             SepiaWeight.Value = 1;
         }
