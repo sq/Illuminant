@@ -1,9 +1,12 @@
 // In release FNA the texCoord of particles always has an x of 0
 #pragma fxcparams(if(FNA==1) /Od /Zi)
 
+#define ENABLE_DITHERING
+
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\CompilerWorkarounds.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\GeometryCommon.fxh"
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\DitherCommon.fxh"
 #include "Bezier.fxh"
 #include "ParticleCommon.fxh"
 
@@ -16,7 +19,8 @@ struct RasterizeParticleSystemSettings {
 
 uniform RasterizeParticleSystemSettings RasterizeSettings;
 uniform ClampedBezier1 RoundingPowerFromLife;
-uniform float Rounded, BitmapBilinear, ColumnFromVelocity, RowFromVelocity;
+// Rounded, dithered opacity, column from velocity, row from velocity
+uniform float4 RenderingOptions;
 
 Texture2D BitmapTexture;
 sampler BitmapSampler {
@@ -59,21 +63,21 @@ inline float3 ComputeRotatedAndNonRotatedCorner (
 }
 
 void VS_PosVelAttr(
-    in  float2 xy                    : POSITION0,
-    in  float3 offsetAndIndex        : POSITION1,
-    in  int2   cornerIndex           : BLENDINDICES0, // 0-3
-    out float4 result                : POSITION0,
-    out float2 texCoord              : TEXCOORD0,
-    out float3 positionXyAndRounding : TEXCOORD1,
-    out float4 renderData            : TEXCOORD2,
-    out float4 color                 : COLOR0
+    in  float2   xy                    : POSITION0,
+    inout float3 offsetAndIndex        : POSITION1,
+    in  int2     cornerIndex           : BLENDINDICES0, // 0-3
+    out float4   result                : POSITION0,
+    out float2   texCoord              : TEXCOORD0,
+    out float3   positionXyAndRounding : TEXCOORD1,
+    out float4   renderData            : TEXCOORD2,
+    out float4   color                 : COLOR0
 ) {
     float4 actualXy = float4(xy + offsetAndIndex.xy, 0, 0);
     float4 position;
     readStateUv(actualXy, position, renderData, color);
 
     float life = position.w;
-    if ((life <= 0) || stippleReject(offsetAndIndex.z)) {
+    if ((life <= 0) || StippleReject(offsetAndIndex.z, StippleFactor)) {
         result = float4(0, 0, 0, 0);
         return;
     }
@@ -113,9 +117,9 @@ void VS_PosVelAttr(
     float2 frameFromVelocity = round(frameAngle / maxAngleXy);
 
     frameIndexXy.y += floor(renderData.w);
-    if (ColumnFromVelocity)
+    if (RenderingOptions.z)
         frameIndexXy.x += frameFromVelocity.x;
-    if (RowFromVelocity)
+    if (RenderingOptions.w)
         frameIndexXy.y += frameFromVelocity.y;
 
     frameIndexXy.x = max(frameIndexXy.x, 0) % frameCountXy.x;
@@ -137,7 +141,7 @@ void VS_PosVelAttr(
 
 float computeCircularAlpha (float3 positionXyAndRounding) {
     float2 position = positionXyAndRounding.xy;
-    if (Rounded) {
+    if (RenderingOptions.x) {
         float distance = length(position);
         float power = max(positionXyAndRounding.z, 0.01);
         float divisor = saturate(1 - power);
@@ -148,10 +152,31 @@ float computeCircularAlpha (float3 positionXyAndRounding) {
         return 1;
 }
 
+float4 premultipliedToDithered (float4 color, float2 vpos, float index) {
+    // HACK: Without this, even at an opacity of 1/255 everything will be dithered at the lowest level.
+    // This ensures that extremely transparent pixels are just plain invisible
+    const float discardThreshold = (6.0 / 255.0);
+    // If userData.R >= 0.5, the dithering will shift from frame to frame. You probably don't want this
+    if (
+        color.a <= Dither64(vpos, floor(index % 4)) ||
+        (color.a <= discardThreshold)
+    ) {
+        return 0;
+    } else {
+        // FIXME: Should we be doing this?
+        float alpha = max(color.a, 0.0001);
+        color.rgb /= alpha;
+        color.a = 1;
+        return color;
+    }
+}
+
 void PS_Texture (
     in  float4 color                 : COLOR0,
     in  float2 texCoord              : TEXCOORD0,
     in  float3 positionXyAndRounding : TEXCOORD1,
+    in  float3 offsetAndIndex        : POSITION1,
+    ACCEPTS_VPOS,
     out float4 result                : COLOR0
 ) {
     // FIXME
@@ -162,6 +187,8 @@ void PS_Texture (
         result *= RasterizeSettings.GlobalColor;
     }
     result *= computeCircularAlpha(positionXyAndRounding);
+    if (RenderingOptions.y >= 0.5)
+        result = premultipliedToDithered(result, GET_VPOS, offsetAndIndex.z);
     if (result.a <= (1 / 512))
         discard;
 }
@@ -170,6 +197,8 @@ void PS_TexturePoint(
     in  float4 color                 : COLOR0,
     in  float2 texCoord              : TEXCOORD0,
     in  float3 positionXyAndRounding : TEXCOORD1,
+    in  float3 offsetAndIndex        : POSITION1,
+    ACCEPTS_VPOS,
     out float4 result                : COLOR0
 ) {
     // FIXME
@@ -182,6 +211,8 @@ void PS_TexturePoint(
     result *= computeCircularAlpha(positionXyAndRounding);
     // result += float4(0.1, 0, 0, 0.1);
     // result = float4(texCoord.x, texCoord.y, 0, 1);
+    if (RenderingOptions.y >= 0.5)
+        result = premultipliedToDithered(result, GET_VPOS, offsetAndIndex.z);
     if (result.a <= (1 / 512))
         discard;
 }
@@ -189,11 +220,15 @@ void PS_TexturePoint(
 void PS_NoTexture (
     in  float4 color                 : COLOR0,
     in  float3 positionXyAndRounding : TEXCOORD1,
+    in  float3 offsetAndIndex        : POSITION1,
+    ACCEPTS_VPOS,
     out float4 result                : COLOR0
 ) {
     result = color;
     result *= RasterizeSettings.GlobalColor;
     result *= computeCircularAlpha(positionXyAndRounding);
+    if (RenderingOptions.y >= 0.5)
+        result = premultipliedToDithered(result, GET_VPOS, offsetAndIndex.z);
     if (result.a <= (1 / 512))
         discard;
 }

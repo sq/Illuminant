@@ -71,6 +71,11 @@ namespace Squared.Illuminant.Particles {
         public bool Rounded;
 
         /// <summary>
+        /// When particles fade out that will be done via dithering instead of opacity.
+        /// </summary>
+        public bool DitheredOpacity;
+
+        /// <summary>
         /// Applies a gamma curve to the opacity of circular particles
         /// </summary>
         public BezierF RoundingPowerFromLife = new BezierF(0.8f);

@@ -126,13 +126,6 @@ sampler AttributeSampler {
     MagFilter = POINT;
 };
 
-static const float thresholdMatrix[] = {
-    1.0 / 17.0,  9.0 / 17.0,  3.0 / 17.0, 11.0 / 17.0,
-    13.0 / 17.0,  5.0 / 17.0, 15.0 / 17.0,  7.0 / 17.0,
-    4.0 / 17.0, 12.0 / 17.0,  2.0 / 17.0, 10.0 / 17.0,
-    16.0 / 17.0,  8.0 / 17.0, 14.0 / 17.0,  6.0 / 17.0
-};
-
 void VS_Update (
     in  float2 xy     : POSITION0,
     out float4 result : POSITION0
@@ -188,11 +181,6 @@ void readStateOrDiscard (
 
     velocity = tex2Dlod(VelocitySampler, uv);
     attributes = tex2Dlod(AttributeSampler, uv);
-}
-
-bool stippleReject (float vertexIndex) {
-    float stippleThreshold = thresholdMatrix[vertexIndex % 16];
-    return (StippleFactor - stippleThreshold) <= 0;
 }
 
 // Because w is used to store unrelated data, we split it out and store it

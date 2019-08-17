@@ -1,4 +1,5 @@
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\DitherCommon.fxh"
 #include "SphereLightCore.fxh"
 #include "Bezier.fxh"
 #include "ParticleCommon.fxh"
@@ -18,7 +19,7 @@ void ParticleLightVertexShader(
     out float4 lightColor            : COLOR0,
     out float4 result                : POSITION0
 ) {
-    if (stippleReject (offsetAndIndex.z)) {
+    if (StippleReject (offsetAndIndex.z, StippleFactor)) {
         result = float4(0, 0, 0, 0);
         lightColor = float4(0, 0, 0, 0);
         return;
