@@ -41,6 +41,11 @@ namespace Squared.Illuminant.Particles.Transforms {
         public bool WholeSpawn = false;
 
         /// <summary>
+        /// If enabled the first whole spawn will occur instantly on the first frame regardless of the current rate.
+        /// </summary>
+        public bool InstantInitialSpawn = true;
+
+        /// <summary>
         /// Multiplies the color Constant of new particles by the color of the source pixel instead of adding to it.
         /// </summary>
         public bool MultiplyColorConstant = true;
@@ -100,6 +105,26 @@ namespace Squared.Illuminant.Particles.Transforms {
         public override void Reset () {
             base.Reset();
             RowsSpawned = 0;
+        }
+
+        protected override double AdjustCurrentRate (double rate) {
+            if (
+                WholeSpawn && 
+                (TotalSpawned == 0) && 
+                (MaximumTotal > 0) &&
+                (rate >= 1) &&
+                InstantInitialSpawn
+            ) {
+                // HACK: In whole spawn mode, if the spawner is running at all 
+                //  then spawn an entire instance on the first frame. This allows
+                //  turning the spawner on with an immediate response.
+                var result = Math.Max(ParticlesPerInstance, rate);
+                var delta = rate - result;
+                // Make sure to bias the error down so we don't immediately spawn another one
+                RateError += delta;
+                return result;
+            } else
+                return rate;
         }
 
         public override void BeginTick (ParticleSystem system, double now, double deltaTimeSeconds, out int spawnCount, out ParticleSystem.Chunk sourceChunk) {

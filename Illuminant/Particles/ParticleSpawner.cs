@@ -70,7 +70,7 @@ namespace Squared.Illuminant.Particles.Transforms {
 
         private static int NextSeed = 1;
 
-        protected double  RateError    { get; private set; }
+        protected double  RateError    { get;         set; }
         protected Vector2 Indices      { get; private set; }
         public    int     TotalSpawned { get; private set; }
         [NonSerialized]
@@ -134,6 +134,10 @@ namespace Squared.Illuminant.Particles.Transforms {
             );
         }
 
+        protected virtual double AdjustCurrentRate (double rate) {
+            return rate;
+        }
+
         public virtual void BeginTick (ParticleSystem system, double now, double deltaTimeSeconds, out int spawnCount, out ParticleSystem.Chunk sourceChunk) {
             sourceChunk = null;
 
@@ -150,6 +154,8 @@ namespace Squared.Illuminant.Particles.Transforms {
                 minRate = maxRate;
             var currentRate = ((RNG.NextDouble() * (maxRate - minRate)) + minRate) * countScaler * deltaTimeSeconds;
             currentRate += RateError;
+            RateError = 0;
+            currentRate = AdjustCurrentRate(currentRate);
             if (currentRate < 1) {
                 RateError = Math.Max(currentRate, 0);
                 spawnCount = 0;
