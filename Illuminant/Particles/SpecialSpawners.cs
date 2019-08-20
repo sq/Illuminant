@@ -31,6 +31,12 @@ namespace Squared.Illuminant.Particles.Transforms {
         /// </summary>
         public Vector2? TextureSizePx;
 
+        /// <summary>
+        /// Allows you to adjust the mip map level used when selecting colors for the particles.
+        /// A higher mip bias will produce a blurrier image, and a lower one will produce sharp but aliased values.
+        /// </summary>
+        public float MipBiasBase = -0.5f;
+
         private int _Divisor = 1;
 
         /// <summary>
@@ -230,15 +236,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             // texCoordXy = (indexXy * StepWidthAndSizeScale.zw) + TexelOffsetAndMipBias.xy
             var texelOffsetAndMipBias = new Vector4(
                 -0.5f / tex.Width + baseX, -0.5f / tex.Height + baseY, 0,
-                -99
-                /*
-#if FNA
-                // FIXME: tex2dlod in FNA doesn't actually work, it's more like bias
-                (float)Math.Log(Divisor, 2) - 1.5f
-#else
-                (float)Math.Log(Divisor, 2) - 0.5f
-#endif
-                */
+                (float)Math.Log(Divisor, 2) + MipBiasBase
             );
 
             var centeringOffset = DirectTextureSize * -0.5f;
