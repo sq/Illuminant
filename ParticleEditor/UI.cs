@@ -220,6 +220,12 @@ namespace Lumined {
                 if (changed)
                     def.DefaultValue = p;
 
+                if (p.IsExpression || p.IsBezier) {
+                    Nuklear.NewRow(LineHeight, 1);
+                    var boxedValue = Game.View.Engine.ResolveBoxed(newName, (float)Game.View.Time.Seconds);
+                    Nuklear.Label(string.Format("= {0}", boxedValue), false);
+                }
+
                 NameStack.Clear();
             }
         }

@@ -14,6 +14,8 @@ namespace Squared.Illuminant.Configuration {
         Add = 1,
         Subtract = 2,
         Multiply = 3,
+
+        Normalize = 10
     }
 
     public interface IParameterExpression {
@@ -37,6 +39,7 @@ namespace Squared.Illuminant.Configuration {
         object Constant { get; set; }
         IBezier Bezier { get; set; }
         IParameterExpression Expression { get; set; }
+        object EvaluateBoxed (float t, Delegate nameResolver);
     }
 
     internal interface IInternalParameter : IParameter {
@@ -45,14 +48,63 @@ namespace Squared.Illuminant.Configuration {
 
     public delegate bool NamedConstantResolver<T> (string name, float t, out T result);
 
+    internal class SpecialOperatorImplementations {
+        public static Vector2 Normalize (Vector2 lhs, Vector2 rhs) {
+            lhs.Normalize();
+            return lhs;
+        }
+
+        public static Vector3 Normalize (Vector3 lhs, Vector3 rhs) {
+            lhs.Normalize();
+            return lhs;
+        }
+
+        public static Vector4 Normalize (Vector4 lhs, Vector4 rhs) {
+            lhs.Normalize();
+            return lhs;
+        }
+    }
+
     public class BinaryParameterExpression<T> : IParameterExpression
         where T : struct
     {
+        public static readonly Dictionary<Operators, int> OperandCounts = new Dictionary<Operators, int> {
+            {Operators.Identity, 1 },
+            {Operators.Add, 2 },
+            {Operators.Subtract, 3 },
+            {Operators.Multiply, 4 },
+            {Operators.Normalize, 10 },
+        };
+        private static readonly Dictionary<Operators, Func<T, T, T>> SpecialOperatorCache = new Dictionary<Operators, Func<T, T, T>>();
+
         public Operators Operator;
         public Parameter<T> LeftHandSide, RightHandSide;
 
         [NonSerialized]
         private bool _IsEvaluating;
+
+        static BinaryParameterExpression () {
+            var tImpl = typeof(SpecialOperatorImplementations);
+            var tDel = typeof(Func<T, T, T>);
+
+            foreach (var ov in Enum.GetValues(typeof(Operators))) {
+                var ev = (Operators)ov;
+                int iv = (int)ov;
+                if (iv < (int)Operators.Normalize)
+                    continue;
+
+                var methodName = ev.ToString();
+                var parameterTypes = new [] { typeof(T), typeof(T) };
+                var method = tImpl.GetMethod(
+                    methodName, 
+                    System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic,
+                    null, parameterTypes, null
+                );
+
+                if (method != null)
+                    SpecialOperatorCache[ev] = (Func<T, T, T>)Delegate.CreateDelegate(tDel, method);
+            }
+        }
 
         public BinaryParameterExpression (Parameter<T> lhs, Operators op, Parameter<T> rhs) {
             Operator = op;
@@ -61,8 +113,10 @@ namespace Squared.Illuminant.Configuration {
         }
 
         public T Evaluate (float t, NamedConstantResolver<T> nameResolver) {
-            if (_IsEvaluating)
-                throw new StackOverflowException("Recursion in parameter");
+            if (_IsEvaluating) {
+                // throw new StackOverflowException("Recursion in parameter");
+                return default(T);
+            }
 
             _IsEvaluating = true;
             try {
@@ -71,11 +125,31 @@ namespace Squared.Illuminant.Configuration {
                     return lhs;
 
                 var rhs = RightHandSide.Evaluate(t, nameResolver);
-                var result = Arithmetic.InvokeOperator((Arithmetic.Operators)(int)Operator, lhs, rhs);
+                T result;
+                if (Operator == Operators.Identity)
+                    result = lhs;
+                else if (TryInvokeSpecialOperator(Operator, ref lhs, ref rhs, out result))
+                    ;
+                else
+                    result = Arithmetic.InvokeOperator((Arithmetic.Operators)(int)Operator, lhs, rhs);
                 return result;
             } finally {
                 _IsEvaluating = false;
             }
+        }
+
+        public static bool TryInvokeSpecialOperator (Operators op, ref T lhs, ref T rhs, out T result) {
+            result = default(T);
+            if (op < Operators.Normalize)
+                return false;
+
+            Func<T, T, T> fn;
+            if (SpecialOperatorCache.TryGetValue(op, out fn)) {
+                result = fn(lhs, rhs);
+                return true;
+            }
+
+            return false;
         }
 
         public Type ValueType {
@@ -381,6 +455,10 @@ namespace Squared.Illuminant.Configuration {
                 return _Bezier.Evaluate(t);
             else
                 return _Constant;
+        }
+
+        public object EvaluateBoxed (float t, Delegate nameResolver) {
+            return Evaluate(t, (NamedConstantResolver<T>)nameResolver);
         }
 
         public static implicit operator Parameter<T> (T value) {

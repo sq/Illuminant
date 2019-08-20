@@ -1077,7 +1077,8 @@ namespace Lumined {
                     changed = true;
                     if ((selectedIndex >= 0) && (selectedIndex < names.Count)) {
                         p.Name = names[selectedIndex];
-                        Controller.SelectedVariableName = p.Name;
+                        // FIXME: This is annoying when building expressions
+                        // Controller.SelectedVariableName = p.Name;
                     }
                 }
                 if (ShowExpressionButton()) {

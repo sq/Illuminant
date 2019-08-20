@@ -59,6 +59,8 @@ namespace Squared.Illuminant.Particles {
         private readonly EmbeddedEffectProvider Effects;
         private readonly Dictionary<Type, Delegate> GenericResolvers = 
             new Dictionary<Type, Delegate>(new ReferenceComparer<Type>());
+        private readonly Dictionary<Type, Delegate> GenericBoxedResolvers = 
+            new Dictionary<Type, Delegate>(new ReferenceComparer<Type>());
 
         internal readonly TypedUniform<Uniforms.ParticleSystem> uSystem;
         internal readonly TypedUniform<Uniforms.RasterizeParticleSystem> uRasterize;
@@ -152,13 +154,19 @@ namespace Squared.Illuminant.Particles {
             }
         }
 
+        internal IParameter FindConstantBoxed (string name) {
+            if (Configuration.NamedVariableResolver == null)
+                return null;
+
+            var gen = Configuration.NamedVariableResolver(name);
+            return gen;
+        }
+
         internal bool FindConstant<T> (string name, out Parameter<T> result)
             where T : struct {
             result = default(Parameter<T>);
-            if (Configuration.NamedVariableResolver == null)
-                return false;
 
-            var gen = Configuration.NamedVariableResolver(name);
+            var gen = FindConstantBoxed(name);
             if (gen == null)
                 return false;
 
@@ -180,6 +188,16 @@ namespace Squared.Illuminant.Particles {
             var resolver = GenericResolvers[typeof(T)];
             result = constant.Evaluate(t, (NamedConstantResolver<T>)resolver);
             return true;
+        }
+
+        public object ResolveBoxed (string name, float t) {
+            var constant = FindConstantBoxed(name);
+            if (constant == null)
+                return null;
+
+            var resolverType = constant.ValueType;
+            var resolver = GenericResolvers[resolverType];
+            return constant.EvaluateBoxed(t, resolver);
         }
 
         internal void NextTurn (int frameIndex) {
