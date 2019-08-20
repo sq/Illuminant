@@ -71,7 +71,7 @@ namespace Lumined {
     }
 
     public class DirectoryName {
-        public string Path = ".";
+        public string Path = null;
     }
 
     public class EditorSprite {

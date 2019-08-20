@@ -36,9 +36,18 @@ namespace Lumined {
             return result;
         }
 
+        public string GetResourceDirectory () {
+            var fileDirectory = Path.GetDirectoryName(Path.GetFullPath(Model.Filename));
+            var resourceDirectory = Model.GetUserData<EditorData>("EditorData")?.ResourceDirectory?.Path;
+            if (resourceDirectory != null) {
+                if (!resourceDirectory.Contains(':'))
+                    resourceDirectory = Path.Combine(fileDirectory, resourceDirectory);
+            }
+            return resourceDirectory ?? fileDirectory;
+        }
+
         protected override string ResolveFilename (string name) {
-            var basePath = Path.GetFullPath(Model.GetUserData<EditorData>("EditorData")?.ResourceDirectory?.Path ?? ".");
-            return Path.Combine(basePath, name);
+            return Path.Combine(GetResourceDirectory(), name);
         }
 
         public void Initialize (EditorGame editor) {

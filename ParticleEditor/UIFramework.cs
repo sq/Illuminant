@@ -1636,7 +1636,7 @@ namespace Lumined {
             if (Nuklear.Button("Select")) {
                 Controller.SelectTexture(
                     cpi, instance, value,
-                    (Controller.Model.GetUserData<EditorData>("EditorData")?.ResourceDirectory?.Path ?? ".")
+                    Game.View.GetResourceDirectory()
                 );
                 changed = false;
             }

@@ -216,9 +216,21 @@ namespace Lumined {
                 if (Game.RightMouse)
                     SelectedProperty = null;
 
-                if ((SelectedProperty != null) && Game.LeftMouse) {
+                // Update the selected property if the left mouse button is held,
+                //  but only if the game is active & the mouse is within the game window
+                // If we don't do both checks the value will get set to random garbage when
+                //  the user clicks away since IsActive is delayed
+                if (
+                    (SelectedProperty != null) && Game.LeftMouse 
+                ) {
+                    var ms = Game.MouseState;
                     var pos = GetMouseWorldPosition();
-                    SelectedProperty.NewValue = pos;
+                    if (
+                        (ms.X >= 0) && (ms.Y >= 0) &&
+                        (ms.X <= Game.Graphics.PreferredBackBufferWidth) &&
+                        (ms.Y <= Game.Graphics.PreferredBackBufferHeight)
+                    )
+                        SelectedProperty.NewValue = pos;
                 }
             }
 
@@ -447,7 +459,7 @@ namespace Lumined {
 
                     var fullPath = Path.GetFullPath(dlg.FileName);
                     relativeTo = Path.GetFullPath(relativeTo);
-                    var offset = fullPath.IndexOf(relativeTo);
+                    var offset = fullPath.IndexOf(relativeTo, StringComparison.OrdinalIgnoreCase);
                     if (offset >= 0)
                         fullPath = fullPath.Substring(offset + relativeTo.Length, fullPath.Length - relativeTo.Length);
                     while (fullPath.StartsWith("\\") || fullPath.StartsWith("//"))

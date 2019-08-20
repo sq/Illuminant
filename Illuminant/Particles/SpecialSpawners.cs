@@ -21,6 +21,16 @@ namespace Squared.Illuminant.Particles.Transforms {
         /// </summary>
         public NullableLazyResource<Texture2D> Texture = new NullableLazyResource<Texture2D>();
 
+        /// <summary>
+        /// The top left corner of the pattern's region in the texture.
+        /// </summary>
+        public Vector2? TextureTopLeftPx;
+
+        /// <summary>
+        /// The size of the pattern's region in the texture.
+        /// </summary>
+        public Vector2? TextureSizePx;
+
         private int _Divisor = 1;
 
         /// <summary>
@@ -57,27 +67,50 @@ namespace Squared.Illuminant.Particles.Transforms {
             return materials.SpawnPattern;
         }
 
+        private Vector2 DirectTextureSize {
+            get {
+                var result = Vector2.Zero;
+
+                if ((Texture == null) || (Texture.Instance == null))
+                    return result;
+
+                result = new Vector2(Texture.Instance.Width, Texture.Instance.Height);
+
+                if (TextureSizePx.HasValue) {
+                    if (TextureSizePx.Value.X > 0)
+                        result.X = TextureSizePx.Value.X;
+                    if (TextureSizePx.Value.Y > 0)
+                        result.Y = TextureSizePx.Value.Y;
+                }
+
+                if (TextureTopLeftPx.HasValue)
+                    result -= TextureTopLeftPx.Value;
+
+                return result;
+            }
+        }
+
         private int NPOTWidth {
             get {
-                return Arithmetic.NextPowerOfTwo(Texture.Instance.Width);
+                return Arithmetic.NextPowerOfTwo((int)DirectTextureSize.X);
             }
         }
 
         private int NPOTHeight {
             get {
-                return Arithmetic.NextPowerOfTwo(Texture.Instance.Height);
+                return Arithmetic.NextPowerOfTwo((int)DirectTextureSize.Y);
             }
         }
 
         private int ParticlesPerRow {
             get {
-                return Arithmetic.NextPowerOfTwo(NPOTWidth / Divisor);
+                return Arithmetic.NextPowerOfTwo((int)DirectTextureSize.X / Divisor);
             }
         }
 
         private int RowsPerInstance {
             get {
-                return Arithmetic.NextPowerOfTwo(NPOTHeight / Divisor);
+                return Arithmetic.NextPowerOfTwo((int)DirectTextureSize.Y / Divisor);
             }
         }
 
@@ -140,6 +173,12 @@ namespace Squared.Illuminant.Particles.Transforms {
             base.BeginTick(system, now, deltaTimeSeconds, out spawnCount, out sourceChunk);
 
             var minCount = WholeSpawn ? ParticlesPerInstance : ParticlesPerRow;
+            if (minCount <= 0) {
+                spawnCount = 0;
+                sourceChunk = null;
+                return;
+            }
+
             var requestedSpawnCount = spawnCount;
             if (spawnCount < minCount) {
                 AddError(spawnCount);
@@ -166,28 +205,43 @@ namespace Squared.Illuminant.Particles.Transforms {
             if (WholeSpawn)
                 RowsSpawned = 0;
 
+            // float divisor = StepWidthAndSizeScale.x;
+            // float particlesPerRow = StepWidthAndSizeScale.y;
+            // texCoordXy = (indexXy * StepWidthAndSizeScale.zw) + TexelOffsetAndMipBias.xy
             var stepWidthAndSizeScale = new Vector4(
                 Divisor, ParticlesPerRow, 
-                Divisor / (float)NPOTWidth, Divisor / (float)NPOTHeight
+                Divisor / (float)tex.Width, Divisor / (float)tex.Height
             );
 
+            float baseX = 0, baseY = 0;
+            if (TextureTopLeftPx.HasValue) {
+                baseX = TextureTopLeftPx.Value.X / tex.Width;
+                baseY = TextureTopLeftPx.Value.Y / tex.Height;
+            }
+
+            // indexXy.y += yOffsetsAndCoordScale.x
+            // texCoordXy.y += yOffsetsAndCoordScale.y
+            // positionXy = YOffsetsAndCoordScale.zw * indexXy
             var yOffsetsAndCoordScale = new Vector4(
-                currentRow, (stepValue * currentRow / Divisor) / NPOTHeight,
-                Divisor * ((float)tex.Width / NPOTWidth),
-                Divisor * ((float)tex.Height / NPOTHeight)
+                currentRow, (currentRow * Divisor) / tex.Height,
+                Divisor, Divisor
             );
 
+            // texCoordXy = (indexXy * StepWidthAndSizeScale.zw) + TexelOffsetAndMipBias.xy
             var texelOffsetAndMipBias = new Vector4(
-                -0.5f / tex.Width, -0.5f / tex.Height, 0,
+                -0.5f / tex.Width + baseX, -0.5f / tex.Height + baseY, 0,
+                -99
+                /*
 #if FNA
                 // FIXME: tex2dlod in FNA doesn't actually work, it's more like bias
                 (float)Math.Log(Divisor, 2) - 1.5f
 #else
                 (float)Math.Log(Divisor, 2) - 0.5f
 #endif
+                */
             );
 
-            var centeringOffset = new Vector2(-tex.Width / 2, -tex.Height / 2);
+            var centeringOffset = DirectTextureSize * -0.5f;
 
             parameters["CenteringOffset"].SetValue(centeringOffset);
             parameters["StepWidthAndSizeScale"].SetValue(stepWidthAndSizeScale);
