@@ -4,6 +4,7 @@
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\BitmapCommon.fxh"
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\sRGBCommon.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\DitherCommon.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\LUTCommon.fxh"
 #include "LightCommon.fxh"
@@ -65,6 +66,8 @@ float4 LUTBlendedResolveWithAlbedoCommon(
 
     float4 light = tex2Dlod(TextureSampler2, float4(texCoord2, 0, 0));
     float4 albedo = tex2Dlod(TextureSampler, float4(texCoord1, 0, 0));
+    if (ResolveToSRGB)
+        albedo = pSRGBToPLinear(albedo);
 
     light *= InverseScaleFactor * 2;
 
@@ -124,7 +127,7 @@ void LUTBlendedLightingResolveWithAlbedoPixelShader(
     result.rgb *= (ExposureMinusOne + 1);
     result.rgb = pow(result.rgb, (GammaMinusOne + 1));
     if (ResolveToSRGB)
-        result.rgb = LinearToSRGB(result.rgb);
+        result = pLinearToPSRGB(result);
     result.rgb = ApplyDither(result.rgb, GET_VPOS);
 }
 
