@@ -28,11 +28,19 @@ void BezierVisualizerPixelShader (
     float count = Bezier.RangeAndCount.z;
     float4 minValues, maxValues;
     if (count <= 1.5) {
-        minValues = 0;
-        maxValues = 1;
+        minValues = min(0, Bezier.A);
+        maxValues = max(1, Bezier.A);
     } else {
-        minValues = min(Bezier.A, min(Bezier.B, min(Bezier.C, Bezier.D)));
-        maxValues = max(Bezier.A, max(Bezier.B, max(Bezier.C, Bezier.D)));
+        minValues = min(Bezier.A, Bezier.B);
+        maxValues = max(Bezier.A, Bezier.B);
+        if (count > 2.1) {
+            minValues = min(minValues, Bezier.C);
+            maxValues = max(maxValues, Bezier.C);
+        }
+        if (count > 3.1) {
+            minValues = min(minValues, Bezier.D);
+            maxValues = max(maxValues, Bezier.D);
+        }
     }
 
     /*
