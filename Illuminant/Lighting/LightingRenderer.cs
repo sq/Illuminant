@@ -773,7 +773,8 @@ namespace Squared.Illuminant {
                     // FIXME: Maybe don't do this until Present?
                     newLuminanceBuffer.Dispose();
                 },
-                name: name
+                name: name,
+                ignoreInvalidTargets: true
             )) {
                 if (RenderTrace.EnableTracing)
                     RenderTrace.Marker(copyGroup, -1, "LightingRenderer {0} : {1}", this.ToObjectID(), name);
@@ -896,7 +897,8 @@ namespace Squared.Illuminant {
                     outerGroup, 1, lightmap.Buffer,
                     before: BeginLightPass, after: EndLightPass,
                     userData: lightmap.Buffer,
-                    name: "Light Pass"
+                    name: "Light Pass",
+                    ignoreInvalidTargets: true
                 );
 
                 {

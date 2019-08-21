@@ -267,7 +267,8 @@ namespace Squared.Illuminant {
                     )
                         Environment.GIVolumes.IsDirty = false;
                 },
-                name: name
+                name: name,
+                ignoreInvalidTargets: true
             )) {
                 RenderTrace.Marker(rt, 0, name);
 
