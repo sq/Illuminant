@@ -25,6 +25,9 @@ namespace Squared.Illuminant.Particles {
 
             for (int i = 0; i < numToSpawn; i++) {
                 var c = CreateChunk();
+                if (c == null)
+                    return 0;
+
                 // RotateBuffers(c, renderManager.DeviceManager.FrameIndex);
                 // Console.WriteLine("Creating new chunk " + c.ID);
                 var offset = i * mc;
@@ -43,8 +46,11 @@ namespace Squared.Illuminant.Particles {
                 };
                 c.TotalSpawned = ChunkMaximumCount;
 
-                GetLivenessInfo(c).Count = ChunkMaximumCount;
-                ProcessLatestLivenessInfo(c);
+                var li = GetLivenessInfo(c);
+                if (li != null) {
+                    li.Count = ChunkMaximumCount;
+                    ProcessLatestLivenessInfo(c);
+                }
 
                 job.Run(g);
             }
@@ -129,6 +135,8 @@ namespace Squared.Illuminant.Particles {
             bool needClear;
             var fs = spawner as Transforms.FeedbackSpawner;
             var chunk = PickTargetForSpawn(fs != null, spawnCount, out needClear, spawner.PartialSpawnAllowed);
+            if (chunk == null)
+                return false;
 
             if (spawnCount > chunk.Free) {
                 if (spawner.PartialSpawnAllowed)
@@ -161,7 +169,8 @@ namespace Squared.Illuminant.Particles {
 
             if (spawnCount > 0) {
                 var li = GetLivenessInfo(chunk);
-                li.DeadFrameCount = 0;
+                if (li != null)
+                    li.DeadFrameCount = 0;
             }
 
             if (spawnCount > 0) {
@@ -202,6 +211,11 @@ namespace Squared.Illuminant.Particles {
 
             if (chunk == null) {
                 chunk = CreateChunk();
+                if (chunk == null) {
+                    needClear = false;
+                    return null;
+                }
+
                 chunk.IsFeedbackSource = feedback;
                 currentTarget = chunk.ID;
                 lock (Chunks)

@@ -46,7 +46,7 @@ namespace Squared.Illuminant.Particles {
     }
 
     public partial class ParticleSystem : IParticleSystems {
-        public const int MaxChunkCount = 128;
+        public const int MaxChunkCount = 64;
 
         internal class InternalRenderParameters {
             public DefaultMaterialSet DefaultMaterialSet;
@@ -393,7 +393,7 @@ namespace Squared.Illuminant.Particles {
         private Chunk CreateChunk () {
             lock (Chunks)
             if (Chunks.Count >= MaxChunkCount)
-                throw new Exception("Hit maximum chunk count");
+                return null;
 
             lock (Engine.Coordinator.CreateResourceLock) {
                 var result = new Chunk(this);
@@ -446,6 +446,9 @@ namespace Squared.Illuminant.Particles {
             var p = (e != null) ? e.Parameters : null;
 
             var li = GetLivenessInfo(chunk);
+            // FIXME
+            if (li == null)
+                return;
 
             var chunkMaterial = m;
             if (isSpawning)
@@ -510,9 +513,12 @@ namespace Squared.Illuminant.Particles {
             foreach (var xform in Transforms)
                 xform.Reset();
             lock (ChunksToReap) {
-                ChunksToReap.Clear();
-                foreach (var chunk in Chunks)
-                    ChunksToReap.Add(GetLivenessInfo(chunk));
+                foreach (var chunk in Chunks) {
+                    var li = GetLivenessInfo(chunk);
+
+                    if (li != null)
+                        ChunksToReap.Add(li);
+                }
             }
             LiveCount = 0;
         }

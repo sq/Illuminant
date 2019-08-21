@@ -30,6 +30,9 @@ namespace Squared.Illuminant.Particles {
             if (LivenessInfos.TryGetValue(chunk.ID, out result))
                 return result;
 
+            if (chunk.IsDisposed)
+                return null;
+
             LivenessInfos.Add(
                 chunk.ID, result = new LivenessInfo {
                     Chunk = chunk,
@@ -94,7 +97,8 @@ namespace Squared.Illuminant.Particles {
                     Reap(li.Chunk);
                 }
 
-                ChunksToReap.Clear();
+                if (ChunksToReap.Count > 0)
+                    ChunksToReap.Clear();
             }
         }
 
