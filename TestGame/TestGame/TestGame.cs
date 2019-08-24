@@ -110,7 +110,8 @@ namespace TestGame {
                 new SystemStress(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new PaletteTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new HueTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new BitmapShaders(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
+                new BitmapShaders(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
+                new RasterShapeSpeed(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
             };
 
             KeyboardInputHandler = new KeyboardInput();

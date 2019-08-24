@@ -419,7 +419,9 @@ namespace Framework {
             gb.AddLine(v3, v1, color);
             */
             PendingRenderer.RasterizeTriangle(
-                v1, v2, v3, 0, color, color, blendState: BlendState.AlphaBlend
+                v1, v2, v3, 0, color, color, blendState: BlendState.AlphaBlend,
+                // FIXME: Why is this needed suddenly?
+                layer: PendingRenderer.Layer + 5
             );
         }
 
