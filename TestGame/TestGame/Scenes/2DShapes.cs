@@ -23,14 +23,15 @@ using Nuke = NuklearDotNet.Nuklear;
 namespace TestGame.Scenes {
     // These aren't illuminant specific but who cares
     public class Shapes : Scene {
-        Toggle AnimateRadius, AnimateBezier, BlendInLinearSpace, GradientAlongLine, UseTexture, HardOutlines;
+        Toggle AnimateRadius, AnimateBezier, BlendInLinearSpace, GradientAlongLine, UseTexture, HardOutlines, WorldSpace;
         Slider Gamma, ArcLength, OutlineSize, FillOffset;
 
         [Items("Linear")]
         [Items("Radial")]
         [Items("Horizontal")]
         [Items("Vertical")]
-        Dropdown<string> RectangleFillMode;
+        [Items("LinearEnclosed")]
+        Dropdown<string> FillMode;
 
         Texture2D Texture;
 
@@ -50,7 +51,7 @@ namespace TestGame.Scenes {
             ArcLength.Value = 45f;
             ArcLength.Speed = 5f;
             HardOutlines.Value = true;
-            RectangleFillMode.Value = "Linear";
+            FillMode.Value = "Linear";
             FillOffset.Min = -1f;
             FillOffset.Max = 1f;
             FillOffset.Speed = 0.1f;
@@ -64,20 +65,33 @@ namespace TestGame.Scenes {
         }
 
         public override void Draw (Squared.Render.Frame frame) {
-            var ir = new ImperativeRenderer(frame, Game.Materials, blendState: BlendState.AlphaBlend);
+            var vt = Game.Materials.ViewTransform;
+            vt.Position = new Vector2(64, 64);
+            vt.Scale = Vector2.One * 1.2f;
+
+            var batch = BatchGroup.New(
+                frame, 0,
+                materialSet: Game.Materials,
+                viewTransform: vt
+            );
+
+            var ir = new ImperativeRenderer(batch, Game.Materials, blendState: BlendState.AlphaBlend);
             ir.Clear(layer: 0, color: new Color(0, 32, 48));
             ir.RasterOutlineGamma = Gamma.Value;
             ir.RasterBlendInLinearSpace = BlendInLinearSpace.Value;
             ir.RasterSoftOutlines = !HardOutlines.Value;
+            ir.WorldSpace = WorldSpace;
 
             var now = (float)Time.Seconds;
 
             ir.RasterizeEllipse(
-                Vector2.One * 500, new Vector2(420, 360), OutlineSize, 
-                new Color(0.0f, 0.0f, 0.0f, 0.4f), 
-                new Color(0.33f, 0.33f, 0.33f, 0.8f), 
+                Vector2.One * 600, new Vector2(420, 360), OutlineSize, 
+                Color.White, 
+                Color.Black, 
                 outlineColor: Color.White, 
-                layer: 1
+                layer: 1,
+                fillMode: (RasterFillMode)Enum.Parse(typeof(RasterFillMode), FillMode.Value),
+                fillOffset: FillOffset
             );
 
             ir.RasterizeLineSegment(
@@ -96,7 +110,7 @@ namespace TestGame.Scenes {
                     : 0f), OutlineSize * 2f, 
                 Color.Black, Color.White,
                 outlineColor: Color.Blue,
-                fillMode: (RectangleFillMode)Enum.Parse(typeof(RectangleFillMode), RectangleFillMode.Value),
+                fillMode: (RasterFillMode)Enum.Parse(typeof(RasterFillMode), FillMode.Value),
                 fillOffset: FillOffset,
                 layer: 1,
                 texture: UseTexture ? Texture : null
@@ -131,6 +145,7 @@ namespace TestGame.Scenes {
                 new Vector2(640, 96), new Vector2(1200, 256), new Vector2(800, 512), 
                 1, OutlineSize,
                 Color.Black, Color.White, outlineColor: Color.Blue,
+                fillOffset: FillOffset,
                 layer: 2,
                 texture: UseTexture ? Texture : null
             );

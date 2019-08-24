@@ -103,7 +103,6 @@ namespace Lumined {
 
             Content.RootDirectory = "Content";
 
-            UseThreadedDraw = true;
             IsFixedTimeStep = false;
 
             PreviousKeyboardState = Keyboard.GetState();
