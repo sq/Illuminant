@@ -6,7 +6,7 @@ uniform float  PolygonRate, SourceVelocityFactor, FeedbackSourceIndex, Attribute
 uniform float4 ChunkSizeAndIndices;
 uniform float4 Configuration[9];
 uniform float4 FormulaTypes;
-uniform float4x4 PositionMatrix;
+uniform float4x4 PositionMatrix, VelocityMatrix;
 uniform float3 SourceChunkSizeAndTexel;
 
 uniform float  PositionConstantCount;
@@ -35,6 +35,26 @@ void VS_Spawn (
 #define FormulaType_Towards 2
 #define FormulaType_Rectangular 3
 
+float3 generateRandomNormal2 (float randomness) {
+    float phi = randomness.x * PI * 2;
+
+    return float3(
+        sin(phi), cos(phi), 0
+    );
+}
+
+float3 generateRandomNormal3 (float2 randomness) {
+    float phi = randomness.x * PI * 2;
+    float costheta = (randomness.y - 0.5) * 2;
+    float theta = acos(costheta);
+
+    return float3(
+        sin(theta) * cos(phi),
+        sin(theta) * sin(phi),
+        cos(theta)
+    );
+}
+
 float4 evaluateFormula (float4 origin, float4 constant, float4 scale, float4 offset, float4 randomness, float type) {
     float4 nonCircular = (randomness + offset) * scale;
     float4 type0 = constant + nonCircular;
@@ -47,12 +67,13 @@ float4 evaluateFormula (float4 origin, float4 constant, float4 scale, float4 off
         }
         case FormulaType_Rectangular:
         case FormulaType_Spherical: {
-            float o = randomness.x * PI * 2;
-            float z = (randomness.y - 0.5) * 2;
-            if (ZeroZAxis)
-                z = 0;
-            float xyMultiplier = sqrt(1 - (z * z));
-            float3 randomNormal = float3(xyMultiplier * cos(o), xyMultiplier * sin(o), z);
+            float3 randomNormal;
+            if (ZeroZAxis) {
+                randomNormal = generateRandomNormal2(randomness.x);
+            } else {
+                randomNormal = generateRandomNormal3(randomness.xy);
+            }
+
             float3 circular = float3(
                 randomNormal.x * randomness.z * scale.x,
                 randomNormal.y * randomness.z * scale.y,
@@ -148,15 +169,18 @@ void Spawn_Stage2(
     newPosition = mul(float4(tempPosition.xyz, 1), PositionMatrix);
     newPosition.w = tempPosition.w;
 
-    newVelocity = evaluateFormula(newPosition, Configuration[2], Configuration[3], Configuration[4], random2, FormulaTypes.y);
+    float4 tempVelocity = evaluateFormula(tempPosition, Configuration[2], Configuration[3], Configuration[4], random2, FormulaTypes.y);
     newAttributes = evaluateFormula(0, Configuration[5], Configuration[6], Configuration[7], random3, FormulaTypes.z);
     
     float towardsDistance = length(towardsNext);
     if (towardsDistance > 0.0001) {
         // FIXME: float->float4, random3.w
         float towardsSpeed = evaluateFormula(0, Configuration[8].x, Configuration[8].y, Configuration[8].z, random3.w, FormulaTypes.w).x;
-        newVelocity += towardsSpeed * (towardsNext / towardsDistance);
+        tempVelocity += towardsSpeed * (towardsNext / towardsDistance);
     }
+
+    newVelocity = mul(float4(tempVelocity.xyz, 1), VelocityMatrix);
+    newVelocity.w = tempVelocity.w;
 
 #if FNA
     // HACK: Some garbage math semantics in GLSL mean particles with 0 velocity become invisible

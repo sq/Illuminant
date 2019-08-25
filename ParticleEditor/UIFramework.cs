@@ -1345,7 +1345,15 @@ namespace Lumined {
 
                     if (isGroupOpen || dm.IsGenerated) {
                         Nuklear.NewRow(LineHeight, 2);
-                        if (Nuklear.Property("#Angle", ref dm.Angle, -720, 720, 1f, 0.5f)) {
+                        if (Nuklear.Property("#Angle (X)", ref dm.AngleX, -720, 720, 1f, 0.5f)) {
+                            changed = true;
+                            dm.IsGenerated = true;
+                        }
+                        if (Nuklear.Property("#Angle (Y)", ref dm.AngleY, -720, 720, 1f, 0.5f)) {
+                            changed = true;
+                            dm.IsGenerated = true;
+                        }
+                        if (Nuklear.Property("#Angle (Z)", ref dm.AngleZ, -720, 720, 1f, 0.5f)) {
                             changed = true;
                             dm.IsGenerated = true;
                         }

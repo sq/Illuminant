@@ -489,15 +489,25 @@ namespace Squared.Illuminant.Configuration {
         public static readonly DynamicMatrix Identity = new DynamicMatrix(Matrix.Identity);
 
         public bool    IsGenerated;
-        public float   Angle;
+        public float   AngleX, AngleY, AngleZ;
         public float   Scale;
         public Vector3 Translation;
         public Matrix  Matrix;
 
+        public float Angle {
+            get {
+                return AngleZ;
+            }
+            set {
+                AngleZ = value;
+            }
+        }
+
         public DynamicMatrix (float angle, float scale, Vector3 translation) {
             Matrix = default(Matrix);
             Scale = scale;
-            Angle = angle;
+            AngleX = AngleY = 0;
+            AngleZ = angle;
             Translation = translation;
             IsGenerated = true;
         }
@@ -505,7 +515,8 @@ namespace Squared.Illuminant.Configuration {
         public DynamicMatrix (Matrix matrix) {
             Matrix = matrix;
             Scale = 1;
-            Angle = 0;
+            AngleX = AngleY = 0;
+            AngleZ = 0;
             Translation = Vector3.Zero;
             IsGenerated = false;
         }
@@ -514,7 +525,23 @@ namespace Squared.Illuminant.Configuration {
             if (!IsGenerated)
                 return;
 
-            var rot = Matrix.CreateRotationZ(MathHelper.ToRadians(Angle));
+            var rotation = new Vector3(
+                MathHelper.ToRadians(AngleX),
+                MathHelper.ToRadians(AngleY),
+                MathHelper.ToRadians(AngleZ)
+            );
+
+            Matrix rot;
+
+            if (rotation != Vector3.Zero) {
+                Quaternion quat;
+                Quaternion.CreateFromYawPitchRoll(rotation.Y, rotation.X, rotation.Z, out quat);
+                quat.Normalize();
+                rot = Matrix.CreateFromQuaternion(quat);
+            } else {
+                rot = Matrix.Identity;
+            }
+
             Matrix.Multiply(ref rot, Scale, out Matrix);
             Matrix *= Matrix.CreateTranslation(Translation);
         }

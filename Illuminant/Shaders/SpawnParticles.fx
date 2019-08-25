@@ -95,8 +95,11 @@ void PS_SpawnFeedback (
         newPosition.w *= sourcePosition.w;
 
     float4 velocityConstant = Configuration[2];
-    newVelocity = evaluateFormula(newPosition, velocityConstant, Configuration[3], Configuration[4], random2, FormulaTypes.y);
-    newVelocity += sourceVelocity * SourceVelocityFactor;
+    float4 tempVelocity = evaluateFormula(tempPosition, velocityConstant, Configuration[3], Configuration[4], random2, FormulaTypes.y);
+    tempVelocity += sourceVelocity * SourceVelocityFactor;
+
+    newVelocity = mul(float4(tempVelocity.xyz, 1), VelocityMatrix);
+    newVelocity.w = tempVelocity.w;
 
 #if FNA
     // HACK: Some garbage math semantics in GLSL mean particles with 0 velocity become invisible
@@ -104,7 +107,7 @@ void PS_SpawnFeedback (
         newVelocity.z += 0.01;
 #endif
 
-    newAttributes = evaluateFormula(newPosition, attributeConstant, Configuration[6], Configuration[7], random3, FormulaTypes.z);
+    newAttributes = evaluateFormula(tempPosition, attributeConstant, Configuration[6], Configuration[7], random3, FormulaTypes.z);
 
     if (newAttributes.w < AttributeDiscardThreshold)
         discard;

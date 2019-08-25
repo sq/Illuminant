@@ -80,7 +80,9 @@ float4 getRampedColorForLifeValueAndIndex (float life, float velocityLength, flo
 }
 
 float getRotationForVelocity (float velocityLength, float3 velocity) {
-    float2 absvel = abs(velocity.xy + float2(0, velocity.z * -getZToY()));
+    // FIXME: This trashes everything
+    // float2 absvel = abs(velocity.xy + float2(0, velocity.z * -getZToY()));
+    float2 absvel = abs(velocity.xy);
 
     float angle;
     if ((absvel.x < 0.01) && (absvel.y < 0.01))

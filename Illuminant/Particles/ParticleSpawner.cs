@@ -35,6 +35,10 @@ namespace Squared.Illuminant.Particles.Transforms {
         /// Applies a matrix transform to particle positions after the position formula has been evaluated.
         /// </summary>
         public Parameter<DynamicMatrix> PositionPostMatrix = DynamicMatrix.Identity;
+        /// <summary>
+        /// Applies a matrix transform to particle velocities after the velocity formula has been evaluated.
+        /// </summary>
+        public Parameter<DynamicMatrix> VelocityPostMatrix = DynamicMatrix.Identity;
 
         /// <summary>
         /// If set, the randomly selected normals for position and velocity will be identical.
@@ -233,6 +237,10 @@ namespace Squared.Illuminant.Particles.Transforms {
             var m = PositionPostMatrix.Evaluate(now, engine.ResolveDynamicMatrix);
             m.Regenerate();
             parameters["PositionMatrix"].SetValue(m.Matrix);
+
+            m = VelocityPostMatrix.Evaluate(now, engine.ResolveDynamicMatrix);
+            m.Regenerate();
+            parameters["VelocityMatrix"].SetValue(m.Matrix);
 
             parameters["AttributeDiscardThreshold"].SetValue(AlphaDiscardThreshold / 255f);
         }
