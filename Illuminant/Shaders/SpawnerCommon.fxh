@@ -1,13 +1,13 @@
 #define MAX_INLINE_POSITION_CONSTANTS 4
 
-uniform float  AlignVelocityAndPosition, ZeroZAxis, MultiplyLife, SpawnFromEntireWindow;
+uniform float  AlignVelocityAndPosition, MultiplyLife, SpawnFromEntireWindow;
 uniform float  AlignPositionConstant, MultiplyAttributeConstant, PolygonLoop;
 uniform float  PolygonRate, SourceVelocityFactor, FeedbackSourceIndex, AttributeDiscardThreshold, InstanceMultiplier;
 uniform float4 ChunkSizeAndIndices;
 uniform float4 Configuration[9];
 uniform float4 FormulaTypes;
 uniform float4x4 PositionMatrix, VelocityMatrix;
-uniform float3 SourceChunkSizeAndTexel;
+uniform float3 SourceChunkSizeAndTexel, AxisMask;
 
 uniform float  PositionConstantCount;
 uniform float2 PositionConstantTexel;
@@ -68,11 +68,7 @@ float4 evaluateFormula (float4 origin, float4 constant, float4 scale, float4 off
         case FormulaType_Rectangular:
         case FormulaType_Spherical: {
             float3 randomNormal;
-            if (ZeroZAxis) {
-                randomNormal = generateRandomNormal2(randomness.x);
-            } else {
-                randomNormal = generateRandomNormal3(randomness.xy);
-            }
+            randomNormal = normalize(generateRandomNormal3(randomness.xy) * AxisMask);
 
             float3 circular = float3(
                 randomNormal.x * randomness.z * scale.x,

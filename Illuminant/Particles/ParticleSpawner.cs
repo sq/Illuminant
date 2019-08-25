@@ -46,10 +46,19 @@ namespace Squared.Illuminant.Particles.Transforms {
         /// </summary>
         public bool AlignVelocityAndPosition = false;
         /// <summary>
-        /// If set, the Z axis of position and velocity normals will be zero - producing random XY normals.
-        /// If not set, random normals will be 3-dimensional.
+        /// Allows selecting two out of three axes to use for selected normals, producing a ring instead of a sphere.
         /// </summary>
-        public bool ZeroZAxis = false;
+        public Vector3 AxisMask = Vector3.One;
+
+        protected bool ZeroZAxis {
+            get {
+                return (AxisMask == new Vector3(1, 1, 0));
+            }
+            set {
+                if (value)
+                    AxisMask = new Vector3(1, 1, 0);
+            }
+        }
 
         /// <summary>
         /// The velocity of the particle.
@@ -230,7 +239,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             parameters["AlignVelocityAndPosition"].SetValue(
                 (AlignVelocityAndPosition && Position.Circular && Velocity.Circular) ? 1f : 0f
             );
-            parameters["ZeroZAxis"].SetValue(ZeroZAxis ? 1f : 0f);
+            parameters["AxisMask"].SetValue(AxisMask);
             parameters["Configuration"].SetValue(Temp);
             parameters["FormulaTypes"].SetValue(ft);
 

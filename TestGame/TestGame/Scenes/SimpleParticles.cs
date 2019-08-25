@@ -141,7 +141,7 @@ namespace TestGame.Scenes {
                         IsActive = false,
                         MinRate = 102400,
                         MaxRate = 409600,
-                        ZeroZAxis = true,
+                        AxisMask = new Vector3(1, 1, 0),
                         Life = new Formula1 {
                             Constant = (opacityFromLife) / 60f,
                             RandomScale = (MaxLife - opacityFromLife) / 60f
