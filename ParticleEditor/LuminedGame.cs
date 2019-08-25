@@ -426,9 +426,9 @@ namespace Lumined {
             if (View != null) {
                 MaybeDrawPreviousBitmaps(frame, 3);
                 View.Update(this, frame, -10, gameTime.ElapsedGameTime.Ticks);
-                ClearBatch.AddNew(frame, -2, Materials.Clear, View.GetData().BackgroundColor);
+                ClearBatch.AddNew(frame, -2, Materials.Clear, View.GetData().BackgroundColor, clearZ: 0);
             } else {
-                ClearBatch.AddNew(frame, -2, Materials.Clear, Color.Black);
+                ClearBatch.AddNew(frame, -2, Materials.Clear, Color.Black, clearZ: 0);
             }
 
             var ir = new ImperativeRenderer(

@@ -106,7 +106,8 @@ void VS_PosVelAttr(
     screenZ /= 1000;
 
     // HACK: Clamp the z to 0-1 so that particles don't become invisible.
-    screenZ = clamp(screenZ, 0, 1);
+    // FIXME: Why do we have to clamp to -1,1 to actually get depth values?
+    screenZ = clamp(screenZ, -1, 1);
 
     // FIXME
     result = TransformPosition(

@@ -285,6 +285,7 @@ namespace Squared.Illuminant.Particles {
         /// Specifies a depth/stencil mode to use for rasterizing particles.
         /// You can use this to depth test or stencil test particles.
         /// </summary>
+        [NonSerialized]
         public DepthStencilState DepthStencilState = DepthStencilState.None;
 
         public ParticleSystemConfiguration () {

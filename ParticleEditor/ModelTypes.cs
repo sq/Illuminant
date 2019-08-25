@@ -27,7 +27,9 @@ namespace Lumined {
             "ParticleCollision",
             "FMAParameters",
             "GTParameters",
-            "NoiseParameters`1",
+            "NoiseParameters3",
+            "NoiseParameters4",
+            "NoiseParametersF",
         };
 
         public static HashSet<string> GenericNullableObjectTypes = new HashSet<string> {
@@ -141,7 +143,17 @@ namespace Lumined {
                     }
                 },
                 {
-                    "NoiseParameters`1", new Dictionary<string, ModelTypeInfo> {
+                    "NoiseParameters3", new Dictionary<string, ModelTypeInfo> {
+                        {"Offset", new ModelTypeInfo { Min = -1, Max = 0 } }
+                    }
+                },
+                {
+                    "NoiseParameters4", new Dictionary<string, ModelTypeInfo> {
+                        {"Offset", new ModelTypeInfo { Min = -1, Max = 0 } }
+                    }
+                },
+                {
+                    "NoiseParametersF", new Dictionary<string, ModelTypeInfo> {
                         {"Offset", new ModelTypeInfo { Min = -1, Max = 0 } }
                     }
                 },

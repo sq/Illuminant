@@ -59,8 +59,17 @@ namespace Squared.Illuminant.Modeling {
 
         public static EngineModel Load (Stream s) {
             using (var reader = new StreamReader(s, Encoding.UTF8, false)) {
+                var text = reader.ReadToEnd();
+#if FNA
+                foreach (var suffix in IlluminantJsonConverter.XnaSuffixes)
+                    text = text.Replace(suffix, IlluminantJsonConverter.FnaSuffix);
+#else
+                // HACK
+                text = text.Replace(IlluminantJsonConverter.FnaSuffix, IlluminantJsonConverter.XnaSuffixes[0]);
+#endif
+                var stringReader = new StringReader(text);
                 var serializer = MakeSerializer();
-                using (var jreader = new JsonTextReader(reader)) {
+                using (var jreader = new JsonTextReader(stringReader)) {
                     var result = serializer.Deserialize<EngineModel>(jreader);
                     if (result != null)
                         result.Sort();

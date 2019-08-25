@@ -33,8 +33,8 @@ namespace Squared.Illuminant.Modeling {
     }
 
     public class IlluminantJsonConverter : JsonConverter {
-        private const string FnaSuffix = ", FNA, Version=19.5.0.0, Culture=neutral, PublicKeyToken=null";
-        private static readonly string[] XnaSuffixes = new string[] {
+        public const string FnaSuffix = ", FNA, Version=19.8.0.0, Culture=neutral, PublicKeyToken=null";
+        public static readonly string[] XnaSuffixes = new string[] {
             ", Microsoft.Xna.Framework, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553",
             ", Microsoft.Xna.Framework.Graphics, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553"
         };

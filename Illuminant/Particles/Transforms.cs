@@ -133,21 +133,43 @@ namespace Squared.Illuminant.Particles.Transforms {
     public class Noise : ParticleAreaTransform {
         public const float IntervalUnit = 1000;
 
-        public class NoiseParameters<T> where T : struct {
+        public class NoiseParameters4 {
             /// <summary>
             /// This value is subtracted from the noise value before it is scaled.
             /// </summary>
-            public Parameter<T> Offset;
+            public Parameter<Vector4> Offset;
             /// <summary>
             /// The noise value is scaled by this amount.
             /// </summary>
-            public Parameter<T> Scale;
+            public Parameter<Vector4> Scale;
+        }
+
+        public class NoiseParameters3 {
+            /// <summary>
+            /// This value is subtracted from the noise value before it is scaled.
+            /// </summary>
+            public Parameter<Vector3> Offset;
+            /// <summary>
+            /// The noise value is scaled by this amount.
+            /// </summary>
+            public Parameter<Vector3> Scale;
+        }
+
+        public class NoiseParametersF {
+            /// <summary>
+            /// This value is subtracted from the noise value before it is scaled.
+            /// </summary>
+            public Parameter<float> Offset;
+            /// <summary>
+            /// The noise value is scaled by this amount.
+            /// </summary>
+            public Parameter<float> Scale;
         }
 
         public float? CyclesPerSecond = 10;
-        public NoiseParameters<Vector4> Position;
-        public NoiseParameters<Vector3> Velocity;
-        public NoiseParameters<float>   Speed;
+        public NoiseParameters4 Position;
+        public NoiseParameters3 Velocity;
+        public NoiseParametersF Speed;
         /// <summary>
         /// The number of milliseconds between noise field changes. Changes occur smoothly over time. Set to 0 for no changes.
         /// </summary>
@@ -177,15 +199,15 @@ namespace Squared.Illuminant.Particles.Transforms {
             RNG = new MersenneTwister(seed.GetValueOrDefault(NextSeed++));
 
             Interval = IntervalUnit;
-            Position = new NoiseParameters<Vector4> {
+            Position = new NoiseParameters4 {
                 Offset = Vector4.One * -0.5f,
                 Scale = Vector4.Zero,
             };
-            Velocity = new NoiseParameters<Vector3> {
+            Velocity = new NoiseParameters3 {
                 Offset = Vector3.One * -0.5f,
                 Scale = Vector3.One,
             };
-            Speed = new NoiseParameters<float> {
+            Speed = new NoiseParametersF {
                 Offset = -0.5f,
                 Scale = 0
             };
