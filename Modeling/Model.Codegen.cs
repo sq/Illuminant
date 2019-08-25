@@ -25,6 +25,7 @@ namespace Squared.Illuminant.Modeling {
             typeof(FMA.FMAParameters),
             typeof(TransformArea),
             typeof(GeometricTransform.GTParameters),
+            typeof(Noise.NoiseParameters<>),
             typeof(Noise.NoiseParametersF),
             typeof(Noise.NoiseParameters3),
             typeof(Noise.NoiseParameters4),

@@ -133,37 +133,24 @@ namespace Squared.Illuminant.Particles.Transforms {
     public class Noise : ParticleAreaTransform {
         public const float IntervalUnit = 1000;
 
-        public class NoiseParameters4 {
+        public class NoiseParameters<T> where T : struct {
             /// <summary>
             /// This value is subtracted from the noise value before it is scaled.
             /// </summary>
-            public Parameter<Vector4> Offset;
+            public Parameter<T> Offset;
             /// <summary>
             /// The noise value is scaled by this amount.
             /// </summary>
-            public Parameter<Vector4> Scale;
+            public Parameter<T> Scale;
         }
 
-        public class NoiseParameters3 {
-            /// <summary>
-            /// This value is subtracted from the noise value before it is scaled.
-            /// </summary>
-            public Parameter<Vector3> Offset;
-            /// <summary>
-            /// The noise value is scaled by this amount.
-            /// </summary>
-            public Parameter<Vector3> Scale;
+        public class NoiseParameters4 : NoiseParameters<Vector4> {
         }
 
-        public class NoiseParametersF {
-            /// <summary>
-            /// This value is subtracted from the noise value before it is scaled.
-            /// </summary>
-            public Parameter<float> Offset;
-            /// <summary>
-            /// The noise value is scaled by this amount.
-            /// </summary>
-            public Parameter<float> Scale;
+        public class NoiseParameters3 : NoiseParameters<Vector3> {
+        }
+
+        public class NoiseParametersF : NoiseParameters<float> {
         }
 
         public float? CyclesPerSecond = 10;

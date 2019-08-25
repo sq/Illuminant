@@ -27,6 +27,7 @@ namespace Lumined {
             "ParticleCollision",
             "FMAParameters",
             "GTParameters",
+            "NoiseParameters`1",
             "NoiseParameters3",
             "NoiseParameters4",
             "NoiseParametersF",
@@ -140,6 +141,11 @@ namespace Lumined {
                 {
                     "FMA", new Dictionary<string, ModelTypeInfo> {
                         {"CyclesPerSecond", new ModelTypeInfo { Min = -1, Max = 60 } },
+                    }
+                },
+                {
+                    "NoiseParameters`1", new Dictionary<string, ModelTypeInfo> {
+                        {"Offset", new ModelTypeInfo { Min = -1, Max = 0 } }
                     }
                 },
                 {

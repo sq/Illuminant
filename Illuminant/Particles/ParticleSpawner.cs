@@ -299,7 +299,7 @@ namespace Squared.Illuminant.Particles.Transforms {
 
         protected override int CountScale {
             get {
-                return RatePerPosition ? AdditionalPositions.Count + (PolygonLoop ? 1 : 0) : 1;
+                return Math.Max(RatePerPosition ? AdditionalPositions.Count + (PolygonLoop ? 1 : 0) : 1, 1);
             }
         }
 

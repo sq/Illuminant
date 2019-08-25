@@ -150,7 +150,7 @@ float computeCircularAlpha (float3 positionXyAndRounding) {
     if (RenderingOptions.x) {
         float distance = length(position);
         float power = max(positionXyAndRounding.z, 0.01);
-        float divisor = saturate(1 - power);
+        float divisor = max(saturate(1 - power), 0.001);
         float distanceFromEdge = saturate(distance - power) / divisor;
         float powDistanceFromEdge = pow(distanceFromEdge, power);
         return saturate(1 - powDistanceFromEdge);
