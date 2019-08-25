@@ -169,7 +169,9 @@ namespace Squared.Illuminant.Modeling {
                     var typeName = obj["Type"].ToString();
                     var type = ResolveTypeFromShortName(typeName);
                     if (type == null)
-                        throw new Exception("Could not resolve type " + typeName); 
+                        // I hate you newtonsoft
+                        return null;
+                        // throw new Exception("Could not resolve type " + typeName); 
                     var result = new ModelProperty(
                         type, obj["Value"].ToObject(type, serializer)
                     );

@@ -214,6 +214,9 @@ namespace Squared.Illuminant.Modeling {
         private void CreateInstance () {
             Instance = (ParticleTransform)Activator.CreateInstance(Model.Type);
             foreach (var kvp in Model.Properties) {
+                if (kvp.Value == null)
+                    continue;
+
                 var m = Model.Type.GetMember(kvp.Key).FirstOrDefault();
                 if (m == null) {
                     Console.WriteLine("Type {0} has no property named {1}", Model.Type.Name, kvp.Key);
