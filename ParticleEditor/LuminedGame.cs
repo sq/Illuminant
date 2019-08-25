@@ -523,23 +523,10 @@ namespace Lumined {
 
             if (IsFirstFrame) {
                 IsFirstFrame = false;
-                RenderCoordinator.BeforeIssue(PreloadShaders);
+                RenderCoordinator.BeforeIssue(() => Materials.PreloadShaders(RenderCoordinator));
             }
 
-            ThreadPool.QueueUserWorkItem(GCAfterVsync, null);
-        }
-
-        private void PreloadShaders () {
-            var sw = Stopwatch.StartNew();
-            var dm = RenderCoordinator.Manager.DeviceManager;
-
-            // HACK: Applying a shader does an on-demand compile
-            foreach (var m in Materials.AllMaterials)
-                m.Begin(dm);
-
-            var elapsed = sw.Elapsed.TotalMilliseconds;
-            Debug.WriteLine(string.Format("Shader preload took {0:000.00}ms", elapsed));
-            Console.WriteLine("Shader preload took {0:000.00}ms", elapsed);
+            // ThreadPool.QueueUserWorkItem(GCAfterVsync, null);
         }
 
         private void UpdateLightingEnvironment () {

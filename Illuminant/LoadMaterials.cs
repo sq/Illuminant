@@ -22,7 +22,7 @@ namespace Squared.Illuminant {
             MaterialSet.Add(m);
         }
 
-        private void LoadOneMaterial (
+        private Material LoadOneMaterial (
             EmbeddedEffectProvider effects, out Material result, string fileName, string techniqueName, 
             Action<DeviceManager>[] begin = null, Action<DeviceManager>[] end = null
         ) {
@@ -33,9 +33,11 @@ namespace Squared.Illuminant {
                 );
                 result = m;
                 DefineMaterial(m);
+                return m;
             } catch (Exception exc) {
                 result = null;
                 Console.WriteLine("Failed to load shader {0} technique {1}: {2}", fileName, techniqueName, exc);
+                return null;
             }
         }
 
@@ -284,7 +286,7 @@ namespace Squared.Illuminant.Particles {
             Materials.Add(m);
         }
 
-        private void LoadOneMaterial (out Material result, string fileName, string techniqueName, Action<DeviceManager>[] begin = null, Action<DeviceManager>[] end = null) {
+        private Material LoadOneMaterial (out Material result, string fileName, string techniqueName, Action<DeviceManager>[] begin = null, Action<DeviceManager>[] end = null) {
             var effect = Effects.Load(fileName);
             if (effect == null)
                 throw new Exception("Failed to load shader " + fileName);
@@ -295,9 +297,11 @@ namespace Squared.Illuminant.Particles {
                 );
                 result = m;
                 DefineMaterial(m);
+                return m;
             } catch (Exception exc) {
                 result = null;
                 Console.WriteLine("Failed to load shader {0} technique {1}: {2}", fileName, techniqueName, exc);
+                return null;
             }
         }
 
@@ -424,16 +428,29 @@ namespace Squared.Illuminant.Particles {
                 LoadOneMaterial(out ParticleMaterials.SpawnPattern,
                     "PatternSpawner", "SpawnPatternParticles", dBegin, dEnd
                 );
+
+                var hint = new Material.PipelineHint {
+                    HasIndices = true,
+                    VertexFormats = new Type[] {
+                        typeof(ParticleSystemVertex),
+                        typeof(ParticleOffsetVertex)
+                    },
+                    VertexTextureFormats = new SurfaceFormat[] {
+                        SurfaceFormat.Vector4,
+                        SurfaceFormat.Vector4,
+                        SurfaceFormat.Vector4
+                    }
+                };
                 
                 LoadOneMaterial(out ParticleMaterials.TextureLinear,
                     "RasterizeParticleSystem", "RasterizeParticlesTextureLinear"
-                );
+                ).HintPipeline = hint;
                 LoadOneMaterial(out ParticleMaterials.TexturePoint,
                     "RasterizeParticleSystem", "RasterizeParticlesTexturePoint"
-                );
+                ).HintPipeline = hint;
                 LoadOneMaterial(out ParticleMaterials.NoTexture,
                     "RasterizeParticleSystem", "RasterizeParticlesNoTexture"
-                );
+                ).HintPipeline = hint;
 
                 ParticleMaterials.IsLoaded = true;
             }
