@@ -65,6 +65,11 @@ namespace Lumined {
         public bool FixedTimeStep = true;
 
         /// <summary>
+        /// If true, particles will write into the depth buffer and not overdraw. This will look wrong with transparency.
+        /// </summary>
+        public bool DepthWrite = false;
+
+        /// <summary>
         /// Specifies where to search for texture resources.
         /// </summary>
         public DirectoryName ResourceDirectory = new DirectoryName();
@@ -94,6 +99,11 @@ namespace Lumined {
         /// The size of the sprite's region in the texture.
         /// </summary>
         public Vector2? TextureSizePx;
+
+        /// <summary>
+        /// Writes a value to the depth buffer.
+        /// </summary>
+        public float? Z;
 
         public float Scale = 1;
     }

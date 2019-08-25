@@ -28,6 +28,12 @@ using Nuke = NuklearDotNet.Nuklear;
 
 namespace Lumined {
     public partial class EditorGame : MultithreadedGame, INuklearHost {
+        private readonly DepthStencilState SpriteDSS = new DepthStencilState {
+            DepthBufferEnable = true,
+            DepthBufferWriteEnable = true,
+            DepthBufferFunction = CompareFunction.Always
+        };
+
         public Squared.Task.TaskScheduler Scheduler;
         public GraphicsDeviceManager Graphics;
         public DefaultMaterialSet Materials { get; private set; }
@@ -436,9 +442,12 @@ namespace Lumined {
                 blendState: BlendState.AlphaBlend,
                 samplerState: SamplerState.LinearClamp,
                 worldSpace: false,
-                layer: 9999
+                layer: 9999,
+                depthStencilState: SpriteDSS
             );
-            
+            ir.UseZBuffer = true;
+            ir.UseDiscard = true;
+
             Materials.ViewportPosition = ViewOffset;
             Materials.ViewportScale = Zoom * Vector2.One;
 
@@ -475,6 +484,8 @@ namespace Lumined {
                             szPx / new Vector2(tex.Width, tex.Height)
                         ), Color.White, Vector2.One * spr.Scale, Vector2.One * 0.5f
                     );
+                    if (spr.Z.HasValue)
+                        dc.SortKey = spr.Z.Value / 1000;
                     ir.Draw(dc, layer: 0, worldSpace: true);
                 }
             }
@@ -482,7 +493,7 @@ namespace Lumined {
             var elapsedSeconds = TimeSpan.FromTicks(Time.Ticks - LastTimeOverUI).TotalSeconds;
             float uiOpacity = Arithmetic.Lerp(1.0f, 0.4f, (float)((elapsedSeconds - 0.66) * 2.25f));
 
-            ir.Draw(UIRenderTarget, Vector2.Zero, multiplyColor: Color.White * uiOpacity);
+            ir.Draw(UIRenderTarget, Vector2.Zero, multiplyColor: Color.White * uiOpacity, worldSpace: false);
 
             LightingRenderer.UpdateFields(frame, -11);
 
