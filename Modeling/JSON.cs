@@ -180,13 +180,17 @@ namespace Squared.Illuminant.Modeling {
                     if (obj.ContainsKey("Matrix"))
                         return new DynamicMatrix((Matrix)obj["Matrix"].ToObject(typeof(Matrix), serializer));
                     else {
-                        var a = obj["Angle"];
+                        var ax = obj["AngleX"];
+                        var ay = obj["AngleY"];
+                        var az = obj["AngleZ"] ?? obj["Angle"];
                         var s = obj["Scale"];
                         var t = obj["Translation"];
-                        var _a = (a != null) ? (float)a : 0;
+                        var _ax = (ax != null) ? (float)ax : 0;
+                        var _ay = (ay != null) ? (float)ay : 0;
+                        var _az = (az != null) ? (float)az : 0;
                         var _s = (s != null) ? (float)s : 1;
                         var _t = (t != null) ? t.ToObject<Vector3>(serializer) : Vector3.Zero;
-                        return new DynamicMatrix(_a, _s, _t);
+                        return new DynamicMatrix(_ax, _ay, _az, _s, _t);
                     }
                 }
                 case "Matrix":
@@ -279,7 +283,9 @@ namespace Squared.Illuminant.Modeling {
                     var dm = (DynamicMatrix)value;
                     if (dm.IsGenerated) {
                         serializer.Serialize(writer, new {
-                            Angle = dm.Angle,
+                            AngleX = dm.AngleX,
+                            AngleY = dm.AngleY,
+                            AngleZ = dm.AngleZ,
                             Scale = dm.Scale
                         });
                     } else {

@@ -503,11 +503,21 @@ namespace Squared.Illuminant.Configuration {
             }
         }
 
-        public DynamicMatrix (float angle, float scale, Vector3 translation) {
+        public DynamicMatrix (float angleX, float angleY, float angleZ, float scale, Vector3 translation) {
+            Matrix = default(Matrix);
+            Scale = scale;
+            AngleX = angleX;
+            AngleY = angleY;
+            AngleZ = angleZ;
+            Translation = translation;
+            IsGenerated = true;
+        }
+
+        public DynamicMatrix (float angleZ, float scale, Vector3 translation) {
             Matrix = default(Matrix);
             Scale = scale;
             AngleX = AngleY = 0;
-            AngleZ = angle;
+            AngleZ = angleZ;
             Translation = translation;
             IsGenerated = true;
         }
