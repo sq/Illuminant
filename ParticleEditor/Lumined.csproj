@@ -6,7 +6,7 @@
     <ProjectGuid>{B689A415-A94D-4B41-9DAE-8A542EFB76B5}</ProjectGuid>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
-    <OutputType>WinExe</OutputType>
+    <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>ParticleEditor</RootNamespace>
     <AssemblyName>ParticleEditor</AssemblyName>

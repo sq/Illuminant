@@ -89,6 +89,8 @@ namespace Lumined {
 
         private long LastViewRelease = 0;
 
+        private bool IsFirstFrame = true;
+
         public EditorGame () {
             // UniformBinding.ForceCompatibilityMode = true;
 
@@ -519,7 +521,25 @@ namespace Lumined {
             if (ShowPerformanceStats)
                 DrawPerformanceStats(ref ir);
 
+            if (IsFirstFrame) {
+                IsFirstFrame = false;
+                RenderCoordinator.BeforeIssue(PreloadShaders);
+            }
+
             ThreadPool.QueueUserWorkItem(GCAfterVsync, null);
+        }
+
+        private void PreloadShaders () {
+            var sw = Stopwatch.StartNew();
+            var dm = RenderCoordinator.Manager.DeviceManager;
+
+            // HACK: Applying a shader does an on-demand compile
+            foreach (var m in Materials.AllMaterials)
+                m.Begin(dm);
+
+            var elapsed = sw.Elapsed.TotalMilliseconds;
+            Debug.WriteLine(string.Format("Shader preload took {0:000.00}ms", elapsed));
+            Console.WriteLine("Shader preload took {0:000.00}ms", elapsed);
         }
 
         private void UpdateLightingEnvironment () {

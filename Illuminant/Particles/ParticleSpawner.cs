@@ -51,9 +51,6 @@ namespace Squared.Illuminant.Particles.Transforms {
         public Vector3 AxisMask = Vector3.One;
 
         protected bool ZeroZAxis {
-            get {
-                return (AxisMask == new Vector3(1, 1, 0));
-            }
             set {
                 if (value)
                     AxisMask = new Vector3(1, 1, 0);

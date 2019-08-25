@@ -146,7 +146,7 @@ namespace Squared.Illuminant.Modeling {
 
         public string Name, Tags;
         public int UpdateOrder, DrawOrder;
-        public BlendState BlendState;
+        public bool AdditiveBlend;
         public ParticleSystemConfiguration Configuration;
         public readonly List<TransformModel> Transforms = new List<TransformModel>();
 
@@ -162,12 +162,9 @@ namespace Squared.Illuminant.Modeling {
                 Sort();
         }
 
-        public bool AdditiveBlend {
+        public BlendState BlendState {
             get {
-                return (BlendState == BlendState.Additive);
-            }
-            set {
-                BlendState = (value ? BlendState.Additive : BlendState.AlphaBlend);
+                return AdditiveBlend ? BlendState.Additive : BlendState.AlphaBlend;
             }
         }
 
