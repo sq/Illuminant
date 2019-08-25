@@ -286,7 +286,8 @@ namespace Squared.Illuminant.Modeling {
                             AngleX = dm.AngleX,
                             AngleY = dm.AngleY,
                             AngleZ = dm.AngleZ,
-                            Scale = dm.Scale
+                            Scale = dm.Scale,
+                            Translation = dm.Translation
                         });
                     } else {
                         serializer.Serialize(writer, new {

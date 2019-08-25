@@ -450,6 +450,7 @@ namespace Lumined {
 
             Materials.ViewportPosition = ViewOffset;
             Materials.ViewportScale = Zoom * Vector2.One;
+            Materials.ViewportZRange = new Vector2(-1024, 1024);
 
             UpdateLightingEnvironment();
             var shouldRenderLighting = (LightingRenderer.Environment?.Lights.Count ?? 0) > 0;
@@ -458,7 +459,11 @@ namespace Lumined {
             if (View != null) {
                 var tloader = (View.Engine != null) ? View.Engine.Configuration.TextureLoader : null;
 
-                var bg = View.GetData().Background;
+                var zr = View.GetData()?.ZRange;
+                if (zr.HasValue)
+                    Materials.ViewportZRange = zr.Value;
+
+                var bg = View.GetData()?.Background;
                 if ((bg != null) && (tloader != null)) {
                     bg.EnsureInitialized(tloader);
                     if (bg.IsInitialized)
@@ -485,7 +490,7 @@ namespace Lumined {
                         ), Color.White, Vector2.One * spr.Scale, Vector2.One * 0.5f
                     );
                     if (spr.Z.HasValue)
-                        dc.SortKey = spr.Z.Value / 1000;
+                        dc.SortKey = spr.Z.Value;
                     ir.Draw(dc, layer: 0, worldSpace: true);
                 }
             }

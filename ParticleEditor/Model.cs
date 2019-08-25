@@ -70,6 +70,11 @@ namespace Lumined {
         public bool DepthWrite = false;
 
         /// <summary>
+        /// Specifies a custom minimum and maximum z value (after the ZFormula is applied).
+        /// </summary>
+        public Vector2? ZRange = null;
+
+        /// <summary>
         /// Specifies where to search for texture resources.
         /// </summary>
         public DirectoryName ResourceDirectory = new DirectoryName();

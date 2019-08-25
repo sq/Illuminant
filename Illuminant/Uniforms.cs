@@ -225,7 +225,7 @@ namespace Squared.Illuminant.Uniforms {
         Vector4 BitmapTextureRegion;
         Vector4 SizeFactorAndPosition;
         Vector4 Scale;
-        Vector4 ZFormulaTimes1000;
+        Vector4 ZFormula;
 
         public RasterizeParticleSystem (
             Particles.ParticleEngineConfiguration engine,
@@ -267,7 +267,7 @@ namespace Squared.Illuminant.Uniforms {
             gcolor.Z *= gcolor.W;
             GlobalColor = gcolor;
 
-            ZFormulaTimes1000 = configuration.ZFormulaTimes1000;
+            ZFormula = configuration.ZFormula;
         }
     }
 }

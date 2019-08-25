@@ -15,7 +15,7 @@ struct RasterizeParticleSystemSettings {
     float4 BitmapTextureRegion;
     float4 SizeFactorAndPosition;
     float4 Scale;
-    float4 ZFormulaTimes1000;
+    float4 ZFormula;
 };
 
 uniform RasterizeParticleSystemSettings RasterizeSettings;
@@ -101,11 +101,9 @@ void VS_PosVelAttr(
     float3 screenXyz = displayXyz - float3(GetViewportPosition(), 0) + rotatedCorner;
 
     // FIXME: What should W be?
-    float4 screenZElements = RasterizeSettings.ZFormulaTimes1000 * float4(position.xyz, 1);
+    float4 screenZElements = RasterizeSettings.ZFormula * float4(position.xyz, 1);
     float screenZ = screenZElements.r + screenZElements.g + screenZElements.b + screenZElements.w;
-    screenZ /= 1000;
-
-    screenZ = clamp(screenZ, 0, 1);
+    screenZ = ScaleZIntoViewTransformSpace(screenZ);
 
     // FIXME
     result = TransformPosition(

@@ -78,9 +78,9 @@ namespace Lumined {
                 foreach (var system in Systems) {
                     system.Instance.Configuration.AutoReadback = GetData().DrawAsBitmaps && (system.Model.Configuration.Appearance?.Texture?.IsInitialized ?? false);
 
-                    var zf = system.Instance.Configuration.ZFormulaTimes1000;
+                    var zf = system.Instance.Configuration.ZFormula;
                     var len = zf.LengthSquared();
-                    if (len >= 4) {
+                    if (len > 0.0001) {
                         if (GetData().DepthWrite)
                             system.Instance.Configuration.DepthStencilState = WriteDepthStencilState;
                         else
