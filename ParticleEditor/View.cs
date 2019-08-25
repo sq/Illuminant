@@ -18,6 +18,12 @@ using Squared.Util;
 
 namespace Lumined {
     public class View : ParticleEngineView {
+        public static readonly DepthStencilState DepthStencilState = new DepthStencilState {
+            DepthBufferEnable = true,
+            DepthBufferFunction = CompareFunction.Always,
+            DepthBufferWriteEnable = true
+        };
+
         public EditorGame Game { get; private set; }
         new public MockTimeProvider Time { get; private set; }
 
@@ -63,8 +69,10 @@ namespace Lumined {
                 return;
 
             if (Time.Ticks >= 0) {
-                foreach (var system in Systems)
+                foreach (var system in Systems) {
                     system.Instance.Configuration.AutoReadback = GetData().DrawAsBitmaps && (system.Model.Configuration.Appearance?.Texture?.IsInitialized ?? false);
+                    system.Instance.Configuration.DepthStencilState = DepthStencilState;
+                }
 
                 editor.Controller.StepPending = false;
 

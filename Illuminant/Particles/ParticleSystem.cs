@@ -624,6 +624,7 @@ namespace Squared.Illuminant.Particles {
                     lock (ReadbackLock)
                     if (Configuration.AutoReadback)
                         ReadbackFuture = new Future<ArraySegment<BitmapDrawCall>>();
+                    dm.Device.DepthStencilState = DepthStencilState.None;
                 },
                 (dm, _) => {
                     MaybePerformReadback((float)now);
@@ -907,7 +908,7 @@ namespace Squared.Illuminant.Particles {
             // FIXME: Race condition
             if (blendState != null)
                 material = Engine.Materials.Get(
-                    material, blendState: blendState
+                    material, blendState: blendState, depthStencilState: Configuration.DepthStencilState
                 );
             var e = material.Effect;
             var p = e.Parameters;

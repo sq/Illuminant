@@ -420,8 +420,8 @@ namespace Framework {
             */
             PendingRenderer.RasterizeTriangle(
                 v1, v2, v3, 0, color, color, blendState: BlendState.AlphaBlend,
-                // FIXME: Why is this needed suddenly?
-                layer: PendingRenderer.Layer + 5
+                // FIXME: The layering for this geometry is complete garbage so just draw them top most
+                layer: 9999
             );
         }
 
@@ -488,6 +488,8 @@ namespace Framework {
             })) {
                 PendingGroup = group;
                 PendingRenderer = new ImperativeRenderer(group, Game.Materials, 0, autoIncrementSortKey: true, worldSpace: false, blendState: BlendState.AlphaBlend);
+                // FIXME
+                PendingRenderer.RasterUseUbershader = true;
 
                 if (SceneBounds.HasValue) {
                     var sb = SceneBounds.Value;

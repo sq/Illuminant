@@ -273,6 +273,20 @@ namespace Squared.Illuminant.Particles {
         /// </summary>
         public bool          SortedReadback = true;
 
+        /// <summary>
+        /// Specifies the contribution of a particle's x, y, and z position elements to the Z value of
+        ///  the rasterized particle. This can be combined with depth testing to cull particles against
+        ///  other scene elements.
+        /// The formula is scaled by 1000 to reduce error.
+        /// </summary>
+        public Vector4       ZFormulaTimes1000 = Vector4.Zero;
+
+        /// <summary>
+        /// Specifies a depth/stencil mode to use for rasterizing particles.
+        /// You can use this to depth test or stencil test particles.
+        /// </summary>
+        public DepthStencilState DepthStencilState = DepthStencilState.None;
+
         public ParticleSystemConfiguration () {
         }
 
