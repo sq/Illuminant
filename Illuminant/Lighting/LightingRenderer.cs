@@ -696,10 +696,10 @@ namespace Squared.Illuminant {
                 lightSource.CastsShadows ? 1f : 0f
             ));
             p["MoreLightProperties"].SetValue(new Vector4(
-                lightSource.AmbientOcclusionRadius,
+                lightSource.AmbientOcclusionOpacity > 0.001 ? lightSource.AmbientOcclusionRadius : 0,
                 lightSource.ShadowDistanceFalloff.GetValueOrDefault(-99999),
                 lightSource.FalloffYFactor,
-                lightSource.AmbientOcclusionOpacity
+                Arithmetic.Clamp(lightSource.AmbientOcclusionOpacity, 0f, 1f)
             ));
             p["LightColor"].SetValue(lightSource.Color);
         }

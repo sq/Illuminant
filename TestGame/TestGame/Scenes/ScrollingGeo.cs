@@ -36,10 +36,11 @@ namespace TestGame.Scenes {
         [Group("Camera")]
         Slider CameraDistance, CameraX, CameraY;
 
+
         [Group("Lighting")]
-        Toggle Deterministic, DirectionalLight1, DirectionalLight2, AmbientOcclusion;
+        Toggle Deterministic, DirectionalLight1, DirectionalLight2;
         [Group("Lighting")]
-        Slider ZToYMultiplier;
+        Slider ZToYMultiplier, AmbientOcclusion;
 
         public ScrollingGeo (TestGame game, int width, int height)
             : base(game, 1024, 1024) {
@@ -47,7 +48,7 @@ namespace TestGame.Scenes {
             Deterministic.Value = true;
             DirectionalLight1.Value = false;
             DirectionalLight2.Value = true;
-            AmbientOcclusion.Value = true;
+            AmbientOcclusion.Value = 0.5f;
             CameraDistance.Value = 80;
 
             ShowGBuffer.Key = Keys.G;
@@ -56,8 +57,7 @@ namespace TestGame.Scenes {
             CameraDistance.MinusKey = Keys.OemMinus;
             CameraDistance.PlusKey = Keys.OemPlus;
             DirectionalLight1.Key = Keys.D1;
-            DirectionalLight2.Key = Keys.D2;
-            AmbientOcclusion.Key = Keys.A;
+            DirectionalLight2.Key = Keys.D2;            
 
             CameraDistance.Min = 10;
             CameraDistance.Max = 300;
@@ -68,8 +68,13 @@ namespace TestGame.Scenes {
 
             ZToYMultiplier.Min = 0.0f;
             ZToYMultiplier.Max = 1.0f;
-            ZToYMultiplier.Speed = 0.1f;
+            ZToYMultiplier.Speed = 0.05f;
             ZToYMultiplier.Value = 0.3f;
+
+            AmbientOcclusion.Min = 0f;
+            AmbientOcclusion.Max = 1f;
+            AmbientOcclusion.Speed = 0.01f;
+            AmbientOcclusion.Value = 0.5f;
         }
 
         private void CreateRenderTargets () {
@@ -188,8 +193,8 @@ namespace TestGame.Scenes {
             );
 
             foreach (var light in Environment.Lights) {
-                light.AmbientOcclusionOpacity = AmbientOcclusion ? 0.5f : 0;
-                light.AmbientOcclusionRadius = 3;
+                light.AmbientOcclusionOpacity = AmbientOcclusion.Value;
+                light.AmbientOcclusionRadius = 4;
             }
 
             Environment.Lights[1].Opacity = DirectionalLight1.Value ? 1 : 0;
