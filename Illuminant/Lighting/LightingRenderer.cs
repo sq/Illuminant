@@ -634,6 +634,7 @@ namespace Squared.Illuminant {
 
             vt.Position = PendingDrawViewportPosition.GetValueOrDefault(Materials.ViewportPosition);
             vt.Scale = PendingDrawViewportScale.GetValueOrDefault(Materials.ViewportScale);
+            vt.ResetZRanges();
 
             if (Configuration.ScaleCompensation)
                 vt.Position += coordOffset;

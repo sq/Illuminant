@@ -116,6 +116,9 @@ namespace Squared.Illuminant {
         private void RenderDistanceFieldHeightVolumes (
             int firstVirtualIndex, BatchGroup group, bool? dynamicFlagFilter
         ) {
+            if (Environment.HeightVolumes.Count <= 0)
+                return;
+
             int i = 1;
 
             var mat = IlluminantMaterials.DistanceToPolygon;
@@ -357,7 +360,9 @@ namespace Squared.Illuminant {
                 resultGroup, layerIndex++, renderTarget,
                 // HACK: Since we're mucking with view transforms, do a save and restore
                 (dm, _) => {
-                    Materials.PushViewTransform(Materials.ViewTransform);
+                    var vt = Materials.ViewTransform;
+                    vt.ResetZRanges();
+                    Materials.PushViewTransform(ref vt);
                 },
                 (dm, _) => {
                     Materials.PopViewTransform();

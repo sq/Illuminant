@@ -255,6 +255,9 @@ namespace Squared.Illuminant {
             BillboardScratch.AddRange(Environment.Billboards);
             BillboardScratch.FastCLRSortRef(new GBufferBillboardSorter());
 
+            if (BillboardScratch.Count <= 0)
+                return;
+
             BillboardVertexScratch.EnsureCapacity(BillboardScratch.Count * 4);
             BillboardVertexScratch.Clear();
 
