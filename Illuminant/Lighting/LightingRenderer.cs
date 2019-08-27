@@ -359,7 +359,9 @@ namespace Squared.Illuminant {
             BeginLightPass, EndLightPass, BeginLightProbePass, EndLightProbePass,
             IlluminationBatchSetup, LightProbeBatchSetup,
             GIProbeBatchSetup, EndGIProbePass,
-            ParticleLightBatchSetup;
+            ParticleLightBatchSetup, BeforeLuminanceBufferUpdate,
+            BeforeRenderGBuffer, AfterRenderGBuffer,
+            GBufferBillboardBatchSetup, AfterLuminanceBufferUpdate;
 
         // FIXME: Thread sync issue?
         private Vector2? PendingDrawViewportPosition, PendingDrawViewportScale;
@@ -416,6 +418,11 @@ namespace Squared.Illuminant {
             GIProbeBatchSetup             = _GIProbeBatchSetup;
             ParticleLightBatchSetup       = _ParticleLightBatchSetup;
             SetTextureForGBufferBillboard = _SetTextureForGBufferBillboard;
+            BeforeLuminanceBufferUpdate   = _BeforeLuminanceBufferUpdate;
+            AfterLuminanceBufferUpdate    = _AfterLuminanceBufferUpdate;
+            BeforeRenderGBuffer           = _BeforeRenderGBuffer;
+            AfterRenderGBuffer            = _AfterRenderGBuffer;
+            GBufferBillboardBatchSetup = _GBufferBillboardBatchSetup;
 
             InitBuffers(coordinator);
 
@@ -749,6 +756,22 @@ namespace Squared.Illuminant {
             return result;
         }
 
+        private void _BeforeLuminanceBufferUpdate (DeviceManager dm, object userData) {
+            int w, h;
+            Configuration.GetRenderSize(out w, out h);
+            w /= 2;
+            h /= 2;
+            dm.SetViewport(new Viewport(0, 0, w, h));
+            Materials.PushViewTransform(ViewTransform.CreateOrthographic(w, h));
+        }
+
+        private void _AfterLuminanceBufferUpdate (DeviceManager dm, object userData) {
+            Materials.PopViewTransform();
+            var ipr = (BufferRing.InProgressRender)userData;
+            // FIXME: Maybe don't do this until Present?
+            ipr.Dispose();
+        }
+
         private BufferRing.InProgressRender UpdateLuminanceBuffer (
             IBatchContainer container, int layer,
             RenderTarget2D lightmap, 
@@ -758,22 +781,17 @@ namespace Squared.Illuminant {
             if (!newLuminanceBuffer)
                 throw new Exception("Failed to get luminance buffer");
 
-            var name = "Generate HDR Buffer";
             int w, h;
             Configuration.GetRenderSize(out w, out h);
             w /= 2;
             h /= 2;
+
+            var name = "Generate HDR Buffer";
             using (var copyGroup = BatchGroup.ForRenderTarget(
                 container, layer, newLuminanceBuffer.Buffer,
-                (dm, _) => {
-                    dm.SetViewport(new Viewport(0, 0, w, h));
-                    Materials.PushViewTransform(ViewTransform.CreateOrthographic(w, h));
-                },
-                (dm, _) => {
-                    Materials.PopViewTransform();
-                    // FIXME: Maybe don't do this until Present?
-                    newLuminanceBuffer.Dispose();
-                },
+                before: BeforeLuminanceBufferUpdate, 
+                after: AfterLuminanceBufferUpdate,
+                userData: newLuminanceBuffer,
                 name: name,
                 ignoreInvalidTargets: true
             )) {

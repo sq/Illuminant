@@ -58,29 +58,40 @@ namespace Squared.Illuminant {
             }
         }
 
+        private class GBufferTransformArguments {
+            public int RenderWidth, RenderHeight;
+            public ViewTransform Transform;
+        }
+        private GBufferTransformArguments PendingGBufferArguments = new GBufferTransformArguments();
+
+        private void _BeforeRenderGBuffer (DeviceManager dm, object userData) {
+            dm.PushStates();
+            Materials.PushViewTransform(ref PendingGBufferArguments.Transform);
+            dm.AssertRenderTarget(_GBuffer.Texture.Get());
+            dm.Device.ScissorRectangle = new Rectangle(0, 0, PendingGBufferArguments.RenderWidth, PendingGBufferArguments.RenderHeight);
+        }
+
+        private void _AfterRenderGBuffer (DeviceManager dm, object userData) {
+            Materials.PopViewTransform();
+            dm.PopStates();
+        }
+
         private void RenderGBuffer (
             ref int layerIndex, IBatchContainer resultGroup,
             int renderWidth, int renderHeight,
             bool enableHeightVolumes = true, bool enableBillboards = true
         ) {
-            var vt = ViewTransform.CreateOrthographic(_GBuffer.Width, _GBuffer.Height);
-            vt.Position = PendingFieldViewportPosition.GetValueOrDefault(Vector2.Zero);
-            vt.Scale = PendingFieldViewportScale.GetValueOrDefault(Vector2.One) * Configuration.RenderScale;
+            PendingGBufferArguments.Transform = ViewTransform.CreateOrthographic(_GBuffer.Width, _GBuffer.Height);
+            PendingGBufferArguments.Transform.Position = PendingFieldViewportPosition.GetValueOrDefault(Vector2.Zero);
+            PendingGBufferArguments.Transform.Scale = PendingFieldViewportScale.GetValueOrDefault(Vector2.One) * Configuration.RenderScale;
+            PendingGBufferArguments.RenderWidth = renderWidth;
+            PendingGBufferArguments.RenderHeight = renderHeight;
 
             // FIXME: Is this right?
             using (var group = BatchGroup.ForRenderTarget(
                 resultGroup, layerIndex, _GBuffer.Texture,
                 // FIXME: Optimize this
-                (dm, _) => {
-                    dm.PushStates();
-                    Materials.PushViewTransform(ref vt);
-                    dm.AssertRenderTarget(_GBuffer.Texture.Get());
-                    dm.Device.ScissorRectangle = new Rectangle(0, 0, renderWidth, renderHeight);
-                },
-                (dm, _) => {
-                    Materials.PopViewTransform();
-                    dm.PopStates();
-                },
+                BeforeRenderGBuffer, AfterRenderGBuffer,
                 name: "Render G-Buffer"
             )) {
                 if (RenderTrace.EnableTracing)
@@ -246,6 +257,14 @@ namespace Squared.Illuminant {
 
         private short[] BillboardQuadIndices;
 
+        private void _GBufferBillboardBatchSetup (DeviceManager dm, object userData) {
+            var m = (Material)userData;
+            var p = m.Effect.Parameters;
+            p["DistanceFieldExtent"].SetValue(Extent3);
+            p["SelfOcclusionHack"].SetValue(ComputeSelfOcclusionHack());
+            EnvironmentUniforms.SetIntoParameters(p);
+        }
+
         private void RenderGBufferBillboards (IBatchContainer container, int layerIndex) {
             if (Environment.Billboards == null)
                 return;
@@ -288,13 +307,9 @@ namespace Squared.Illuminant {
                     depthStencilState: DepthStencilState.None,
                     rasterizerState: RenderStates.ScissorOnly,
                     blendState: BlendState.Opaque
-                ), (dm, _) => {
-                    var material = IlluminantMaterials.MaskBillboard;
-                    var p = material.Effect.Parameters;
-                    p["DistanceFieldExtent"].SetValue(Extent3);
-                    p["SelfOcclusionHack"].SetValue(ComputeSelfOcclusionHack());
-                    EnvironmentUniforms.SetIntoParameters(p);
-                }
+                ),
+                batchSetup: GBufferBillboardBatchSetup,
+                userData: IlluminantMaterials.MaskBillboard
             )) 
             using (var gDataBatch = PrimitiveBatch<BillboardVertex>.New(
                 container, layerIndex++, Materials.Get(
@@ -302,13 +317,9 @@ namespace Squared.Illuminant {
                     depthStencilState: DepthStencilState.None,
                     rasterizerState: RenderStates.ScissorOnly,
                     blendState: BlendState.Opaque
-                ), (dm, _) => {
-                    var material = IlluminantMaterials.GDataBillboard;
-                    var p = material.Effect.Parameters;
-                    p["DistanceFieldExtent"].SetValue(Extent3);
-                    p["SelfOcclusionHack"].SetValue(ComputeSelfOcclusionHack());
-                    EnvironmentUniforms.SetIntoParameters(p);
-                }
+                ), 
+                batchSetup: GBufferBillboardBatchSetup,
+                userData: IlluminantMaterials.GDataBillboard
             )) {
                 Action flushBatch = () => {
                     var runLength = i - runStartedAt;
