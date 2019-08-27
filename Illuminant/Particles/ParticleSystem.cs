@@ -343,6 +343,13 @@ namespace Squared.Illuminant.Particles {
         private readonly Action<DeviceManager, object> BeforeSystemUpdate, AfterSystemUpdate, RenderChunkSetup;
         private readonly Action UpdateAfterPresentHandler;
 
+        private SynchronizationContext LastUpdateSyncContext;
+
+        private readonly UnorderedList<Transforms.ParticleTransformUpdateParameters> _UpdateParameterPool = 
+            new UnorderedList<Particles.Transforms.ParticleTransformUpdateParameters>();
+        private readonly UnorderedList<Transforms.ParticleTransformUpdateParameters> _UpdateParametersInUse = 
+            new UnorderedList<Particles.Transforms.ParticleTransformUpdateParameters>();
+
         public ParticleSystem (
             ParticleEngine engine, ParticleSystemConfiguration configuration
         ) {
@@ -472,23 +479,26 @@ namespace Squared.Illuminant.Particles {
             curr.LastTurnUsed = Engine.CurrentTurn;
 
             if (e != null)
-                RenderTrace.Marker(container, layer++, "System {0:X8} Transform {1} Chunk {2}", GetHashCode(), e.CurrentTechnique.Name, chunk.ID);
+                RenderTrace.Marker(container, layer++, "System {0:X8} Transform {1} Chunk {2}", GetHashCode(), m.Name, chunk.ID);
 
-            var up = new Transforms.ParticleTransformUpdateParameters {
-                System = this,
-                Material = m,
-                Prev = prev,
-                Curr = curr,
-                IsUpdate = isUpdate,
-                IsSpawning = isSpawning,
-                ShouldClear = shouldClear,
-                Chunk = chunk,
-                SourceChunk = sourceChunk,
-                SourceData = sourceChunk?.Previous ?? sourceChunk?.Current,
-                Now = (float)now,
-                DeltaTimeSeconds = deltaTimeSeconds,
-                CurrentFrameIndex = CurrentFrameIndex
-            };
+            Transforms.ParticleTransformUpdateParameters up;
+            if (!_UpdateParameterPool.TryPopFront(out up))
+                up = new Particles.Transforms.ParticleTransformUpdateParameters();
+            _UpdateParametersInUse.Add(up);
+
+            up.System = this;
+            up.Material = m;
+            up.Prev = prev;
+            up.Curr = curr;
+            up.IsUpdate = isUpdate;
+            up.IsSpawning = isSpawning;
+            up.ShouldClear = shouldClear;
+            up.Chunk = chunk;
+            up.SourceChunk = sourceChunk;
+            up.SourceData = sourceChunk?.Previous ?? sourceChunk?.Current;
+            up.Now = (float)now;
+            up.DeltaTimeSeconds = deltaTimeSeconds;
+            up.CurrentFrameIndex = CurrentFrameIndex;
 
             using (var batch = NativeBatch.New(
                 container, layer++, m,
@@ -638,6 +648,7 @@ namespace Squared.Illuminant.Particles {
 
             var pm = Engine.ParticleMaterials;
 
+            lock (_UpdateParameterPool)
             using (var group = BatchGroup.ForRenderTarget(
                 container, layer, (RenderTarget2D)null,
                 BeforeSystemUpdate,
@@ -716,19 +727,25 @@ namespace Squared.Illuminant.Particles {
             return new UpdateResult(this, true, (float)now);
         }
 
-        private SynchronizationContext LastUpdateSyncContext;
+        private void _AfterFrameHandler (object _) {
+            foreach (var t in Transforms)
+                t.AfterFrame(Engine);
+
+            lock (_UpdateParameterPool) {
+                _UpdateParameterPool.Clear();
+                foreach (var up in _UpdateParametersInUse)
+                    _UpdateParameterPool.Add(up);
+                _UpdateParametersInUse.Clear();
+            }
+        }
 
         private void _UpdateAfterPresentHandler () {
             var sc = LastUpdateSyncContext;
-            var cbk = (SendOrPostCallback)((_) => {
-                foreach (var t in Transforms)
-                    t.AfterFrame(Engine);
-            });
 
             if (sc != null)
-                sc.Post(cbk, null);
+                sc.Post(_AfterFrameHandler, null);
             else
-                cbk(null);
+                _AfterFrameHandler(null);
         }
 
         internal void NotifyDeviceReset () {
