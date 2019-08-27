@@ -980,12 +980,7 @@ namespace Squared.Illuminant.Particles {
             }
         }
 
-        public void Dispose () {
-            if (IsDisposed)
-                return;
-
-            IsDisposed = true;
-
+        internal void ResetInternalState () {
             // FIXME: Release buffers
             foreach (var chunk in Chunks) {
                 if (chunk.Previous != null)
@@ -994,8 +989,17 @@ namespace Squared.Illuminant.Particles {
                     Engine.DiscardedBuffers.Add(chunk.Current);
                 Engine.Coordinator.DisposeResource(chunk);
             }
-            Engine.Systems.Remove(this);
             LivenessInfos.Clear();
+        }
+
+        public void Dispose () {
+            if (IsDisposed)
+                return;
+
+            IsDisposed = true;
+
+            ResetInternalState();
+            Engine.Systems.Remove(this);
         }
 
         void IParticleSystems.Update (IBatchContainer container, int layer) {

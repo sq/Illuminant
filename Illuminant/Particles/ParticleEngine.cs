@@ -567,7 +567,7 @@ namespace Squared.Illuminant.Particles {
 
         private void ResetInternalState () {
             foreach (var sys in Systems.ToArray())
-                sys.Dispose();
+                sys.ResetInternalState();
 
             foreach (var buf in AllBuffers.ToArray())
                 Coordinator.DisposeResource(buf);
