@@ -314,6 +314,8 @@ namespace Squared.Illuminant {
                         RenderTrace.Marker(group, (i * 2) + 3, "LightingRenderer {0} : Render {1}(s) to {2} buffer", this.ToObjectID(), (LightObstructionType)i, (buffer == DynamicDistanceFunctions) ? "dynamic" : "static");
 
                     setup = (dm, _) => {
+                        dm.Device.RasterizerState = RenderStates.ScissorOnly;
+                        dm.Device.DepthStencilState = DepthStencilState.None;
                         m.Effect.Parameters["SliceZ"].SetValue(sliceZ);
 
                         lock (buffer)
