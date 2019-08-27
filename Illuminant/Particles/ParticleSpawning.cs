@@ -246,11 +246,17 @@ namespace Squared.Illuminant.Particles {
                     cfs = null;
             }
             lock (Chunks) {
-                var newChunk = Chunks.FirstOrDefault(
-                    c => (c.AvailableForFeedback >= count / 2) && !c.IsFeedbackSource
-                );
+                Chunk newChunk = null;
+                foreach (var c in Chunks) {
+                    if ((c.AvailableForFeedback >= count / 2) && !c.IsFeedbackSource) {
+                        newChunk = c;
+                        break;
+                    }
+                }
+
                 if (newChunk != null)
                     CurrentFeedbackSource = newChunk.ID;
+
                 return newChunk;
             }
         }

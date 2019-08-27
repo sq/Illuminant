@@ -340,6 +340,9 @@ namespace Squared.Illuminant.Particles {
 
         public long TotalSpawnCount { get; private set; }
 
+        private readonly Action<DeviceManager, object> BeforeSystemUpdate, AfterSystemUpdate, RenderChunkSetup;
+        private readonly Action UpdateAfterPresentHandler;
+
         public ParticleSystem (
             ParticleEngine engine, ParticleSystemConfiguration configuration
         ) {
@@ -351,6 +354,11 @@ namespace Squared.Illuminant.Particles {
             LiveCount = 0;
             Renderer = new RenderHandler(this);
             Updater = new Transforms.ParticleTransform.UpdateHandler(null);
+
+            BeforeSystemUpdate = _BeforeSystemUpdate;
+            AfterSystemUpdate = _AfterSystemUpdate;
+            UpdateAfterPresentHandler = _UpdateAfterPresentHandler;
+            RenderChunkSetup = _RenderChunkSetup;
 
             engine.Systems.Add(this);
         }
@@ -571,6 +579,18 @@ namespace Squared.Illuminant.Particles {
                 Engine.DiscardedBuffers.Add(prev);
         }
 
+        private void _BeforeSystemUpdate (DeviceManager dm, object userData) {
+            lock (ReadbackLock)
+            if (Configuration.AutoReadback)
+                ReadbackFuture = new Future<ArraySegment<BitmapDrawCall>>();
+            dm.Device.DepthStencilState = DepthStencilState.None;
+        }
+
+        private void _AfterSystemUpdate (DeviceManager dm, object userData) {
+            var now = TimeProvider.Seconds;
+            MaybePerformReadback((float)now);
+        }
+
         public UpdateResult Update (IBatchContainer container, int layer) {
             var lastUpdateTimeSeconds = LastUpdateTimeSeconds;
             var updateError = UpdateErrorAccumulator;
@@ -620,15 +640,8 @@ namespace Squared.Illuminant.Particles {
 
             using (var group = BatchGroup.ForRenderTarget(
                 container, layer, (RenderTarget2D)null,
-                (dm, _) => {
-                    lock (ReadbackLock)
-                    if (Configuration.AutoReadback)
-                        ReadbackFuture = new Future<ArraySegment<BitmapDrawCall>>();
-                    dm.Device.DepthStencilState = DepthStencilState.None;
-                },
-                (dm, _) => {
-                    MaybePerformReadback((float)now);
-                },
+                BeforeSystemUpdate,
+                AfterSystemUpdate,
                 name: "Update particle system"
             )) {
                 int i = 0;
@@ -694,23 +707,28 @@ namespace Squared.Illuminant.Particles {
 
             var ts = Time.Ticks;
 
-            var cbk = (SendOrPostCallback)((_) => {
-                foreach (var t in Transforms)
-                    t.AfterFrame(Engine);
-            });
-
-            var sc = SynchronizationContext.Current;
-            Engine.Coordinator.AfterPresent(() => {
-                if (sc != null)
-                    sc.Post(cbk, null);
-                else
-                    cbk(null);
-            });
+            LastUpdateSyncContext = SynchronizationContext.Current;
+            Engine.Coordinator.AfterPresent(UpdateAfterPresentHandler);
 
             Engine.EndOfUpdate(container, layer, initialTurn, container.RenderManager.DeviceManager.FrameIndex);
 
             LastResetCount = Engine.ResetCount;
             return new UpdateResult(this, true, (float)now);
+        }
+
+        private SynchronizationContext LastUpdateSyncContext;
+
+        private void _UpdateAfterPresentHandler () {
+            var sc = LastUpdateSyncContext;
+            var cbk = (SendOrPostCallback)((_) => {
+                foreach (var t in Transforms)
+                    t.AfterFrame(Engine);
+            });
+
+            if (sc != null)
+                sc.Post(cbk, null);
+            else
+                cbk(null);
         }
 
         internal void NotifyDeviceReset () {
@@ -804,6 +822,29 @@ namespace Squared.Illuminant.Particles {
             return isValid;
         }
 
+        private class RenderChunkHandlerState {
+            public Material Material;
+            public BufferSet Source;
+            public Chunk Chunk;
+        }
+
+        private void _RenderChunkSetup (DeviceManager dm, object userData) {
+            var state = (RenderChunkHandlerState)userData;
+
+            if (!IsChunkValidSource(state.Source, state.Chunk))
+                return;
+            var p = state.Material.Effect.Parameters;
+            p["PositionTexture"].SetValue(state.Source.PositionAndLife);
+            // HACK
+            p["VelocityTexture"].SetValue(state.Chunk.RenderData);
+            p["AttributeTexture"].SetValue(state.Chunk.RenderColor);
+            state.Material.Flush();
+            p["PositionTexture"].SetValue(state.Source.PositionAndLife);
+            // HACK
+            p["VelocityTexture"].SetValue(state.Chunk.RenderData);
+            p["AttributeTexture"].SetValue(state.Chunk.RenderColor);
+        }
+
         private void RenderChunk (
             BatchGroup group, Chunk chunk, Material m, int layer, bool usePreviousData
         ) {
@@ -812,23 +853,16 @@ namespace Squared.Illuminant.Particles {
 
             var src = usePreviousData ? chunk.Previous : chunk.Current;
 
+            var state = new RenderChunkHandlerState {
+                Material = m,
+                Source = src,
+                Chunk = chunk
+            };
+
             // Console.WriteLine("Draw {0}", curr.ID);
 
             using (var batch = NativeBatch.New(
-                group, layer, m, (dm, _) => {
-                    if (!IsChunkValidSource(src, chunk))
-                        return;
-                    var p = m.Effect.Parameters;
-                    p["PositionTexture"].SetValue(src.PositionAndLife);
-                    // HACK
-                    p["VelocityTexture"].SetValue(chunk.RenderData);
-                    p["AttributeTexture"].SetValue(chunk.RenderColor);
-                    m.Flush();
-                    p["PositionTexture"].SetValue(src.PositionAndLife);
-                    // HACK
-                    p["VelocityTexture"].SetValue(chunk.RenderData);
-                    p["AttributeTexture"].SetValue(chunk.RenderColor);
-                }
+                group, layer, m, RenderChunkSetup, userData: state
             )) {
                 if (IsChunkValidSource(src, chunk))
                     batch.Add(new NativeDrawCall(
