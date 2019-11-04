@@ -53,27 +53,6 @@ void HeightVolumeFaceVertexShader(
     dead = false;
 }
 
-float4 encodeSample (
-    float3 normal, float relativeY, float z, bool dead
-) {
-    if (dead) {
-        return float4(
-            0, 0,
-            -99999,
-            -99999
-        );
-    } else {
-        // HACK: We drop the world x axis and the normal y axis,
-        //  and reconstruct those two values when sampling the g-buffer
-        return float4(
-            (normal.x / 2) + 0.5,
-            (normal.z / 2) + 0.5,
-            (relativeY / RELATIVEY_SCALE),
-            (z / 512)
-        );
-    }
-}
-
 void GroundPlanePixelShader (
     in float3  worldPosition : TEXCOORD1,
     in bool    dead          : TEXCOORD2,
@@ -85,7 +64,7 @@ void GroundPlanePixelShader (
     }
 
     float3 normal = float3(0, 0, 1);
-    result = encodeSample(normal, 0, worldPosition.z, dead); 
+    result = encodeGBufferSample(normal, 0, worldPosition.z, dead); 
 }
 
 void HeightVolumePixelShader(
@@ -98,7 +77,7 @@ void HeightVolumePixelShader(
     float3 selfOcclusionBias = float3(0, 0, ZSelfOcclusionHack);
 
     float relativeY = ((worldPosition.z * getZToYMultiplier()) * GetViewportScale() / getEnvironmentRenderScale()) + selfOcclusionBias.y;
-    result = encodeSample(normal, relativeY, worldPosition.z + selfOcclusionBias.z, dead);
+    result = encodeGBufferSample(normal, relativeY, worldPosition.z + selfOcclusionBias.z, dead);
 }
 
 void HeightVolumeFacePixelShader(
@@ -116,7 +95,7 @@ void HeightVolumeFacePixelShader(
     float3 selfOcclusionBias = float3(SelfOcclusionHack, SelfOcclusionHack, ZSelfOcclusionHack) * normal;
 
     float relativeY = ((worldPosition.z * getZToYMultiplier()) * GetViewportScale() / getEnvironmentRenderScale()) + selfOcclusionBias.y;
-    result = encodeSample(normal, relativeY, worldPosition.z + selfOcclusionBias.z, dead);
+    result = encodeGBufferSample(normal, relativeY, worldPosition.z + selfOcclusionBias.z, dead);
 }
 
 technique GroundPlane

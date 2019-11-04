@@ -53,12 +53,15 @@ namespace TestGame.Scenes {
             ir.Clear(layer: 0, color: new Color(0, 32, 48));
             ir.RasterBlendInLinearSpace = BlendInLinearSpace.Value;
 
-            for (int y = 0; y < 64; y++) {
-                for (int x = 0; x < 64; x++) {
+            for (int y = 0; y < 32; y++) {
+                for (int x = 0; x < 32; x++) {
                     var center = new Vector2(x * 36, y * 36);
                     var radius = Vector2.One * (10 + (x + y) / 2);
 
-                    ir.RasterizeEllipse(center, radius, Color.White, Color.Black, texture: UseTexture ? Texture : null);
+                    if (UseGeometry)
+                        ir.FillCircle(center, 0, radius.X, Color.White, Color.Black);
+                    else
+                        ir.RasterizeEllipse(center, radius, Color.White, Color.Black, texture: UseTexture ? Texture : null);
                 }
             }
         }
