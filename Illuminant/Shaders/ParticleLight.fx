@@ -1,3 +1,6 @@
+// Results in /Od are sometimes incorrect
+#pragma fxcparams(/O3 /Zi)
+
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\DitherCommon.fxh"
 #include "SphereLightCore.fxh"
@@ -12,7 +15,7 @@ void ParticleLightVertexShader(
     in int2 cornerIndex              : BLENDINDICES0,
     in float2 xy                     : POSITION0,
     in float3 offsetAndIndex         : POSITION1,
-    out float3 lightCenter           : TEXCOORD0,
+    out float4 lightCenter           : TEXCOORD0,
     out float3 worldPosition         : TEXCOORD1,
     out float4 lightProperties       : TEXCOORD2,
     out float4 moreLightProperties   : TEXCOORD3,
@@ -46,7 +49,7 @@ void ParticleLightVertexShader(
         return;
     }
 
-    lightCenter = position.xyz;
+    lightCenter = float4(position.xyz, 0);
     float  radius = LightProperties.x + LightProperties.y + 1;
     float3 radius3 = float3(radius, radius, 0);
     float3 tl = lightCenter - radius3, br = lightCenter + radius3;
@@ -76,7 +79,7 @@ void ParticleLightVertexShader(
 }
 
 void ParticleLightPixelShader(
-    in  float3 lightCenter         : TEXCOORD0,
+    in  float4 lightCenter         : TEXCOORD0,
     in  float3 worldPosition       : TEXCOORD1,
     in  float4 lightProperties     : TEXCOORD2,
     in  float4 moreLightProperties : TEXCOORD3,
@@ -92,16 +95,16 @@ void ParticleLightPixelShader(
     );
 
     float opacity = SphereLightPixelCore(
-        shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties
+        shadedPixelPosition, shadedPixelNormal, lightCenter.xyz, lightProperties, moreLightProperties
     );
 
     result = float4(lightColor.rgb * lightColor.a * opacity, 1);
 }
 
 void ParticleLightWithoutDistanceFieldPixelShader(
-    in  float3 lightCenter         : TEXCOORD0,
-    in  float3 worldPosition : TEXCOORD1,
-    in  float4 lightProperties : TEXCOORD2,
+    in  float4 lightCenter         : TEXCOORD0,
+    in  float3 worldPosition       : TEXCOORD1,
+    in  float4 lightProperties     : TEXCOORD2,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 lightColor : COLOR0,
     ACCEPTS_VPOS,
@@ -115,7 +118,7 @@ void ParticleLightWithoutDistanceFieldPixelShader(
     );
 
     float opacity = SphereLightPixelCoreNoDF(
-        shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties
+        shadedPixelPosition, shadedPixelNormal, lightCenter.xyz, lightProperties, moreLightProperties
     );
 
     result = float4(lightColor.rgb * lightColor.a * opacity, 1);

@@ -27,6 +27,7 @@ namespace Squared.Illuminant.Particles {
         public readonly RenderCoordinator           Coordinator;
 
         public readonly DefaultMaterialSet          Materials;
+        public readonly bool                        OwnsMaterials;
         public          ParticleMaterials           ParticleMaterials { get; private set; }
 
         public readonly ParticleEngineConfiguration Configuration;
@@ -96,6 +97,7 @@ namespace Squared.Illuminant.Particles {
 
             Effects = new EmbeddedEffectProvider(coordinator);
 
+            OwnsMaterials = (particleMaterials == null);
             ParticleMaterials = particleMaterials ?? new ParticleMaterials(materials);
             Configuration = configuration;
 
@@ -592,7 +594,9 @@ namespace Squared.Illuminant.Particles {
             IsDisposed = true;
 
             ResetInternalState();
-            Effects.Dispose();
+            // FIXME: We leak the effects provider here
+            if (OwnsMaterials)
+                Effects.Dispose();
         }
     }
 
