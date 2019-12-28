@@ -504,6 +504,21 @@ namespace TestGame {
             HasLoadedContent = false;
         }
 
+        protected void SetAO (List<LightSource> lights, float opacity = 1, float radius = 0) {
+            foreach (var light in lights) {
+                var dl = light as DirectionalLightSource;
+                var sl = light as SphereLightSource;
+                if (dl != null) {
+                    dl.AmbientOcclusionOpacity = opacity;
+                    dl.AmbientOcclusionRadius = radius;
+                }
+                if (sl != null) {
+                    sl.AmbientOcclusionOpacity = opacity;
+                    sl.AmbientOcclusionRadius = radius;
+                }
+            }
+        }
+
         public abstract void LoadContent ();
         public abstract void UnloadContent ();
         public abstract void Draw (Frame frame);

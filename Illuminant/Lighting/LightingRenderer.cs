@@ -709,7 +709,7 @@ namespace Squared.Illuminant {
                 new LightTypeRenderStateKey {
                     Type = ls.TypeID,
                     BlendState = ls.BlendMode,
-                    RampTexture = ls.RampTexture ?? Configuration.DefaultRampTexture,
+                    RampTexture = ls.TextureRef ?? Configuration.DefaultRampTexture,
                     Quality = ls.Quality ?? Configuration.DefaultQuality,
                     ParticleLightSource = ls as ParticleLightSource
                 };
@@ -867,7 +867,7 @@ namespace Squared.Illuminant {
             PendingDrawViewportScale = viewportScale;
 
             foreach (var ls in Environment.Lights)
-                ls.RampTexture?.EnsureInitialized(Configuration.RampTextureLoader);
+                ls.TextureRef?.EnsureInitialized(Configuration.RampTextureLoader);
 
             BatchGroup resultGroup;
 
@@ -1730,10 +1730,10 @@ namespace Squared.Illuminant {
                 yBlendID = y.BlendMode.GetHashCode();
 
             int xTexID = 0, yTexID = 0;
-            if (x.RampTexture != null)
-                xTexID = x.RampTexture.GetHashCode();
-            if (y.RampTexture != null)
-                yTexID = y.RampTexture.GetHashCode();
+            if (x.TextureRef != null)
+                xTexID = x.TextureRef.GetHashCode();
+            if (y.TextureRef != null)
+                yTexID = y.TextureRef.GetHashCode();
 
             result = xBlendID - yBlendID;
             if (result == 0)

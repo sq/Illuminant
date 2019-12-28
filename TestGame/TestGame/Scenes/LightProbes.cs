@@ -275,8 +275,8 @@ namespace TestGame.Scenes {
                 }
 
                 var l = Environment.Lights.Last();
-                l.RampTexture.Set(UseRampTexture ? Game.RampTexture : null);
-                (l as SphereLightSource).RampMode = ExponentialRamp ? LightSourceRampMode.Exponential : LightSourceRampMode.Linear;
+                ((SphereLightSource)l).RampTexture.Set(UseRampTexture ? Game.RampTexture : null);
+                ((SphereLightSource)l).RampMode = ExponentialRamp ? LightSourceRampMode.Exponential : LightSourceRampMode.Linear;
 
                 foreach (var p in Renderer.Probes)
                     p.EnableShadows = EnableProbeShadows;

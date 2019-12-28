@@ -450,15 +450,11 @@ namespace TestGame.Scenes {
             Renderer.Configuration.EnableGBuffer = 
                 ForegroundRenderer.Configuration.EnableGBuffer = EnableGBuffer.Value;
 
-            foreach (var l in Environment.Lights) {
-                l.CastsShadows = CastShadows.Value;
-                l.AmbientOcclusionRadius = AmbientOcclusion.Value ? 8f : 0f;
-            }
+            SetAO(Environment.Lights, radius: AmbientOcclusion.Value ? 8f : 0f);
+            SetAO(ForegroundEnvironment.Lights, radius: AmbientOcclusion.Value ? 8f : 0f);
 
-            foreach (var l in ForegroundEnvironment.Lights) {
+            foreach (var l in Environment.Lights)
                 l.CastsShadows = CastShadows.Value;
-                l.AmbientOcclusionRadius = AmbientOcclusion.Value ? 8f : 0f;
-            }
 
             Environment.ZToYMultiplier = ForegroundEnvironment.ZToYMultiplier = ZToYMultiplier.Value;
 

@@ -92,7 +92,7 @@ void ParticleLightPixelShader(
     );
 
     float opacity = SphereLightPixelCore(
-        shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties, false
+        shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties
     );
 
     result = float4(lightColor.rgb * lightColor.a * opacity, 1);
@@ -115,7 +115,7 @@ void ParticleLightWithoutDistanceFieldPixelShader(
     );
 
     float opacity = SphereLightPixelCoreNoDF(
-        shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties, false
+        shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties
     );
 
     result = float4(lightColor.rgb * lightColor.a * opacity, 1);

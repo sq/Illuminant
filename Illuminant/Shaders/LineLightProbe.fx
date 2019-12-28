@@ -46,7 +46,7 @@ void LineLightProbePixelShader(
     moreLightProperties.x = moreLightProperties.w = 0;
 
     opacity *= SphereLightPixelCore(
-        shadedPixelPosition, shadedPixelNormal.xyz, lightCenter, lightProperties, moreLightProperties, false
+        shadedPixelPosition, shadedPixelNormal.xyz, lightCenter, lightProperties, moreLightProperties
     );
 
     result = float4(color.rgb * color.a * opacity, 1);

@@ -21,7 +21,7 @@ void SphereLightPixelShader (
     );
 
     float opacity = SphereLightPixelCore(
-        shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties, false
+        shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties
     );
 
     result = float4(color.rgb * color.a * opacity, 1);
@@ -43,8 +43,8 @@ void SphereLightWithDistanceRampPixelShader(
         shadedPixelPosition, shadedPixelNormal
     );
 
-    float opacity = SphereLightPixelCore(
-        shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties, true
+    float opacity = SphereLightPixelCoreWithRamp(
+        shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties
     );
 
     result = float4(color.rgb * color.a * opacity, 1);

@@ -192,10 +192,7 @@ namespace TestGame.Scenes {
                 out cvp, out uvo
             );
 
-            foreach (var light in Environment.Lights) {
-                light.AmbientOcclusionOpacity = AmbientOcclusion.Value;
-                light.AmbientOcclusionRadius = 4;
-            }
+            SetAO(Environment.Lights, AmbientOcclusion.Value, 4);
 
             Environment.Lights[1].Opacity = DirectionalLight1.Value ? 1 : 0;
             Environment.Lights[2].Opacity = DirectionalLight2.Value ? 1 : 0;

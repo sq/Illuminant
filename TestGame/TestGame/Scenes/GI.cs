@@ -328,8 +328,7 @@ namespace TestGame.Scenes {
             Renderer.Configuration.GIBounceSearchDistance = BounceDistance.Value;
             Renderer.Configuration.GICaching = CacheProbes;
 
-            foreach (var ls in Environment.Lights)
-                ls.AmbientOcclusionRadius = EdgeShadows ? AORadius : 0.0f;
+            SetAO(Environment.Lights, radius: EdgeShadows ? AORadius : 0.0f);
 
             // Renderer.InvalidateFields();
             Renderer.UpdateFields(frame, -2);

@@ -81,16 +81,22 @@ float SphereLightPixelPrologue (
 float SphereLightPixelEpilogue (
     in float preTraceOpacity, 
     in float coneOpacity,
-    in bool  visible,
-    in bool  useDistanceRamp
+    in bool  visible
 ) {
-    float lightOpacity = preTraceOpacity;
+    float lightOpacity = preTraceOpacity * coneOpacity;
 
-    PREFER_BRANCH
-    if (useDistanceRamp)
-        lightOpacity = SampleFromRamp(preTraceOpacity);
+    // HACK: Don't cull pixels unless they were killed by distance falloff.
+    // This ensures that billboards are always lit.
+    clip(visible ? 1 : -1);
+    return visible ? lightOpacity : 0;
+}
 
-    lightOpacity *= coneOpacity;
+float SphereLightPixelEpilogueWithRamp (
+    in float preTraceOpacity, 
+    in float coneOpacity,
+    in bool  visible
+) {
+    float lightOpacity = SampleFromRamp(preTraceOpacity) * coneOpacity;
 
     // HACK: Don't cull pixels unless they were killed by distance falloff.
     // This ensures that billboards are always lit.
@@ -105,8 +111,7 @@ float SphereLightPixelCore (
     // radius, ramp length, ramp mode, enable shadows
     in float4 lightProperties,
     // ao radius, distance falloff, y falloff factor, ao opacity
-    in float4 moreLightProperties,
-    in bool   useDistanceRamp
+    in float4 moreLightProperties
 ) {
     bool visible;
     float distanceOpacity = SphereLightPixelPrologue(
@@ -131,8 +136,43 @@ float SphereLightPixelCore (
     );
 
     return SphereLightPixelEpilogue(
-        preTraceOpacity, coneOpacity, visible,
-        useDistanceRamp
+        preTraceOpacity, coneOpacity, visible
+    );
+}
+
+float SphereLightPixelCoreWithRamp (
+    in float3 shadedPixelPosition,
+    in float3 shadedPixelNormal,
+    in float3 lightCenter,
+    // radius, ramp length, ramp mode, enable shadows
+    in float4 lightProperties,
+    // ao radius, distance falloff, y falloff factor, ao opacity
+    in float4 moreLightProperties
+) {
+    bool visible;
+    float distanceOpacity = SphereLightPixelPrologue(
+        shadedPixelPosition, shadedPixelNormal,
+        lightCenter, lightProperties,
+        moreLightProperties, visible
+    );
+
+    clip(visible ? 1 : -1);
+
+    DistanceFieldConstants vars = makeDistanceFieldConstants();
+
+    float aoOpacity = computeAO(shadedPixelPosition, shadedPixelNormal, moreLightProperties, vars, visible);
+    float preTraceOpacity = distanceOpacity * aoOpacity;
+
+    bool traceShadows = visible && lightProperties.w && (preTraceOpacity >= SHADOW_OPACITY_THRESHOLD);
+    float coneOpacity = coneTrace(
+        lightCenter, lightProperties.xy, 
+        float2(getConeGrowthFactor(), moreLightProperties.y),
+        shadedPixelPosition + (SELF_OCCLUSION_HACK * shadedPixelNormal),
+        vars, traceShadows
+    );
+
+    return SphereLightPixelEpilogueWithRamp(
+        preTraceOpacity, coneOpacity, visible
     );
 }
 
@@ -143,8 +183,7 @@ float SphereLightPixelCoreNoDF (
     // radius, ramp length, ramp mode, enable shadows
     in float4 lightProperties,
     // ao radius, distance falloff, y falloff factor, ao opacity
-    in float4 moreLightProperties,
-    in bool   useDistanceRamp
+    in float4 moreLightProperties
 ) {
     bool visible;
     float distanceOpacity = SphereLightPixelPrologue(
@@ -154,7 +193,27 @@ float SphereLightPixelCoreNoDF (
     );
 
     return SphereLightPixelEpilogue(
-        distanceOpacity, 1, visible,
-        useDistanceRamp
+        distanceOpacity, 1, visible
+    );
+}
+
+float SphereLightPixelCoreNoDFWithRamp (
+    in float3 shadedPixelPosition,
+    in float3 shadedPixelNormal,
+    in float3 lightCenter,
+    // radius, ramp length, ramp mode, enable shadows
+    in float4 lightProperties,
+    // ao radius, distance falloff, y falloff factor, ao opacity
+    in float4 moreLightProperties
+) {
+    bool visible;
+    float distanceOpacity = SphereLightPixelPrologue(
+        shadedPixelPosition, shadedPixelNormal,
+        lightCenter, lightProperties,
+        moreLightProperties, visible
+    );
+
+    return SphereLightPixelEpilogue(
+        distanceOpacity, 1, visible
     );
 }

@@ -149,11 +149,13 @@ namespace TestGame.Scenes {
             MovableLight = new SphereLightSource {
                 Color = new Vector4(1f, 0.22f, 0.22f, 0.9f),
                 RampMode = LightSourceRampMode.Exponential,
-                RampLength = 128
+                Radius = 32,
+                RampLength = 256
             };
 
             Environment.Lights.Add(new DirectionalLightSource {
-                Color = new Vector4(0.1f, 0.1f, 0.1f, 1f),
+                Color = new Vector4(0.2f, 0.2f, 0.2f, 1f),
+                Direction = new Vector3(-0.1f, -1, -0.5f)
             });
 
             Environment.Lights.Add(MovableLight);
@@ -259,11 +261,16 @@ namespace TestGame.Scenes {
 
                 MovableLight.CastsShadows = Shadows;
 
+                var z = (ms.ScrollWheelValue / 4096.0f) * Environment.MaximumZ;
+
+                if (z < 0.01f)
+                    z = 0.01f;
+
                 if (Deterministic && false) {
                 } else {
                     MovableLight.Position.X = ms.X;
                     MovableLight.Position.Y = ms.Y;
-                    MovableLight.Position.Z = 16;
+                    MovableLight.Position.Z = z;
                 }
             }
         }

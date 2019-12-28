@@ -14,6 +14,7 @@ namespace Squared.Illuminant {
         Directional = 2,
         Particle = 3,
         Line = 4,
+        Projector = 5
     }
 
     public abstract class LightSource {
@@ -46,12 +47,9 @@ namespace Squared.Illuminant {
         /// </summary>
         public bool       CastsShadows = true;
         public float?     ShadowDistanceFalloff = null;
-        /// <summary>
-        /// Uniformly obscures light if it is within N pixels of any obstacle. This produces
-        ///  a 'blob shadow' around volumes within the distance field.
-        /// </summary>
-        public float      AmbientOcclusionRadius = 0;
-        public float      AmbientOcclusionOpacity = 1;
+
+        internal float    AmbientOcclusionRadius = 0;
+        internal float    AmbientOcclusionOpacity = 1;
         /// <summary>
         /// Allows you to scale the falloff of the light along the Y axis to fake foreshortening,
         ///  turning a spherical light into an ellipse. Isometric or 2.5D perspectives may look
@@ -61,7 +59,7 @@ namespace Squared.Illuminant {
         /// <summary>
         /// Allows you to optionally set a ramp texture to control the appearance of light falloff.
         /// </summary>
-        public NullableLazyResource<Texture2D> RampTexture = new NullableLazyResource<Texture2D>();
+        internal NullableLazyResource<Texture2D> TextureRef = new NullableLazyResource<Texture2D>();
         /// <summary>
         /// Allows you to optionally override quality settings for this light.
         /// It is *much* faster to share a single settings instance for many lights!
@@ -120,9 +118,42 @@ namespace Squared.Illuminant {
         /// Alpha is *not* premultiplied (maybe it should be?)
         /// </summary>
         public Vector4   Color = Vector4.One;
+        /// <summary>
+        /// Uniformly obscures light if it is within N pixels of any obstacle. This produces
+        ///  a 'blob shadow' around volumes within the distance field.
+        /// </summary>
+        new public float AmbientOcclusionRadius {
+            get {
+                return base.AmbientOcclusionRadius;
+            }
+            set {
+                base.AmbientOcclusionRadius = value;
+            }
+        }
+        /// <summary>
+        /// Uniformly obscures light if it is within N pixels of any obstacle. This produces
+        ///  a 'blob shadow' around volumes within the distance field.
+        /// </summary>
+        new public float AmbientOcclusionOpacity {
+            get {
+                return base.AmbientOcclusionOpacity;
+            }
+            set {
+                base.AmbientOcclusionOpacity = value;
+            }
+        }
 
         public DirectionalLightSource ()
             : base (LightSourceTypeID.Directional) {
+        }
+
+        public NullableLazyResource<Texture2D> RampTexture {
+            get {
+                return TextureRef;
+            }
+            set {
+                TextureRef = value;
+            }
         }
 
         public DirectionalLightSource Clone () {
@@ -139,7 +170,7 @@ namespace Squared.Illuminant {
                 AmbientOcclusionOpacity = AmbientOcclusionOpacity,
                 Quality = Quality,
                 FalloffYFactor = FalloffYFactor,
-                RampTexture = RampTexture,
+                TextureRef = TextureRef,
                 ShadowDistanceFalloff = ShadowDistanceFalloff
             };
             return result;
@@ -170,9 +201,42 @@ namespace Squared.Illuminant {
         /// Alpha is *not* premultiplied (maybe it should be?)
         /// </summary>
         public Vector4   Color = Vector4.One;
+        /// <summary>
+        /// Uniformly obscures light if it is within N pixels of any obstacle. This produces
+        ///  a 'blob shadow' around volumes within the distance field.
+        /// </summary>
+        new public float AmbientOcclusionRadius {
+            get {
+                return base.AmbientOcclusionRadius;
+            }
+            set {
+                base.AmbientOcclusionRadius = value;
+            }
+        }
+        /// <summary>
+        /// Uniformly obscures light if it is within N pixels of any obstacle. This produces
+        ///  a 'blob shadow' around volumes within the distance field.
+        /// </summary>
+        new public float AmbientOcclusionOpacity {
+            get {
+                return base.AmbientOcclusionOpacity;
+            }
+            set {
+                base.AmbientOcclusionOpacity = value;
+            }
+        }
 
         public SphereLightSource ()
             : base (LightSourceTypeID.Sphere) {
+        }
+
+        public NullableLazyResource<Texture2D> RampTexture {
+            get {
+                return TextureRef;
+            }
+            set {
+                TextureRef = value;
+            }
         }
 
         public SphereLightSource Clone () {
@@ -190,7 +254,7 @@ namespace Squared.Illuminant {
                 ShadowDistanceFalloff = ShadowDistanceFalloff,
                 AmbientOcclusionOpacity = AmbientOcclusionOpacity,
                 Quality = Quality,
-                RampTexture = RampTexture,
+                TextureRef = TextureRef,
             };
             return result;
         }
@@ -247,7 +311,7 @@ namespace Squared.Illuminant {
                 ShadowDistanceFalloff = ShadowDistanceFalloff,
                 AmbientOcclusionOpacity = AmbientOcclusionOpacity,
                 Quality = Quality,
-                RampTexture = RampTexture,
+                TextureRef = TextureRef,
             };
             return result;
         }
