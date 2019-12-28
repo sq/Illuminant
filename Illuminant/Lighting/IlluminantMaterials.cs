@@ -7,9 +7,9 @@ namespace Squared.Illuminant {
     public partial class IlluminantMaterials {
         public readonly DefaultMaterialSet MaterialSet;
 
-        public Material SphereLight, DirectionalLight, ParticleSystemSphereLight, LineLight;
+        public Material SphereLight, DirectionalLight, ParticleSystemSphereLight, LineLight, ProjectorLight;
         public Material SphereLightWithDistanceRamp, DirectionalLightWithRamp;
-        public Material SphereLightProbe, DirectionalLightProbe, LineLightProbe;
+        public Material SphereLightProbe, DirectionalLightProbe, LineLightProbe, ProjectorLightProbe;
         public Material SphereLightProbeWithDistanceRamp, 
             DirectionalLightProbeWithRamp;
         public Material SphereLightWithoutDistanceField, ParticleSystemSphereLightWithoutDistanceField;

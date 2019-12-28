@@ -23,10 +23,13 @@ namespace Squared.Illuminant {
         }
 
         private Material LoadOneMaterial (
-            EmbeddedEffectProvider effects, out Material result, string fileName, string techniqueName, 
+            EmbeddedEffectProvider effects, out Material result, string fileName, string techniqueName = null, 
             Action<DeviceManager>[] begin = null, Action<DeviceManager>[] end = null
         ) {
             try {
+                if (techniqueName == null)
+                    techniqueName = fileName;
+
                 var m = new Material(
                     effects.Load(fileName), techniqueName,
                     begin, end
@@ -64,19 +67,19 @@ namespace Squared.Illuminant {
                 Action<DeviceManager>[] dEnd = null;
 
                 LoadOneMaterial(effects, out SphereLight,
-                    "SphereLight", "SphereLight", dBegin, dEnd
+                    "SphereLight", null, dBegin, dEnd
                 );
 
                 LoadOneMaterial(effects, out SphereLightWithoutDistanceField,
-                    "SphereLightWithoutDistanceField", "SphereLightWithoutDistanceField", dBegin, dEnd
+                    "SphereLightWithoutDistanceField", null, dBegin, dEnd
                 );
 
                 LoadOneMaterial(effects, out DirectionalLight,
-                    "DirectionalLight", "DirectionalLight", dBegin, dEnd
+                    "DirectionalLight", null, dBegin, dEnd
                 );
 
                 LoadOneMaterial(effects, out ParticleSystemSphereLight,
-                    "ParticleLight", "ParticleLight", dBegin, dEnd
+                    "ParticleLight", null, dBegin, dEnd
                 );
 
                 LoadOneMaterial(effects, out ParticleSystemSphereLightWithoutDistanceField,
@@ -84,7 +87,11 @@ namespace Squared.Illuminant {
                 );
 
                 LoadOneMaterial(effects, out LineLight,
-                    "LineLight", "LineLight", dBegin, dEnd
+                    "LineLight", null, dBegin, dEnd
+                );
+
+                LoadOneMaterial(effects, out ProjectorLight,
+                    "ProjectorLight", null, dBegin, dEnd
                 );
 
                 LoadOneMaterial(effects, out SphereLightWithDistanceRamp,
@@ -96,7 +103,7 @@ namespace Squared.Illuminant {
                 );
 
                 LoadOneMaterial(effects, out SphereLightProbe,
-                    "SphereLightProbe", "SphereLightProbe", dBegin, dEnd
+                    "SphereLightProbe", null, dBegin, dEnd
                 );
 
                 LoadOneMaterial(effects, out SphereLightProbeWithDistanceRamp,
@@ -104,7 +111,7 @@ namespace Squared.Illuminant {
                 );
 
                 LoadOneMaterial(effects, out DirectionalLightProbe,
-                    "DirectionalLight", "DirectionalLightProbe", dBegin, dEnd
+                    "DirectionalLight", null, dBegin, dEnd
                 );
 
                 LoadOneMaterial(effects, out DirectionalLightProbeWithRamp,
@@ -112,7 +119,11 @@ namespace Squared.Illuminant {
                 );
 
                 LoadOneMaterial(effects, out LineLightProbe,
-                    "LineLightProbe", "LineLightProbe", dBegin, dEnd
+                    "LineLightProbe", null, dBegin, dEnd
+                );
+
+                LoadOneMaterial(effects, out ProjectorLightProbe,
+                    "ProjectorLightProbe", null, dBegin, dEnd
                 );
 
                 LoadOneMaterial(effects, out GIProbeSelector,
@@ -141,7 +152,7 @@ namespace Squared.Illuminant {
                 );
 
                 LoadOneMaterial(effects, out ClearDistanceFieldSlice,
-                    "ClearDistanceField", "ClearDistanceField",
+                    "ClearDistanceField", null,
                     new[] { MaterialUtil.MakeDelegate(BlendState.Opaque) }
                 );
 
@@ -273,6 +284,8 @@ namespace Squared.Illuminant.Particles {
                 );
                 result = m;
                 DefineMaterial(m);
+                if (result == null)
+                    Console.WriteLine("Failed to load shader {0} technique {1}", fileName, techniqueName);
                 return m;
             } catch (Exception exc) {
                 result = null;
@@ -328,7 +341,7 @@ namespace Squared.Illuminant.Particles {
                 };
 
                 LoadOneMaterial(out ParticleMaterials.CountLiveParticles,
-                    "CountLiveParticles", "CountLiveParticles", new[] {
+                    "CountLiveParticles", null, new[] {
                         MaterialUtil.MakeDelegate(
                             rasterizerState: RasterizerState.CullNone,
                             depthStencilState: DepthStencilState.None,
@@ -338,7 +351,7 @@ namespace Squared.Illuminant.Particles {
                 );
 
                 LoadOneMaterial(out ParticleMaterials.CountLiveParticlesFast,
-                    "CountLiveParticles", "CountLiveParticles", new[] {
+                    "CountLiveParticles", null, new[] {
                         MaterialUtil.MakeDelegate(
                             rasterizerState: RasterizerState.CullNone,
                             depthStencilState: ParticleMaterials.CountDepthStencilState,
@@ -348,7 +361,7 @@ namespace Squared.Illuminant.Particles {
                 );
 
                 LoadOneMaterial(out ParticleMaterials.CollectParticles,
-                    "CollectParticles", "CollectParticles", new[] {
+                    "CollectParticles", null, new[] {
                         MaterialUtil.MakeDelegate(
                             rasterizerState: RasterizerState.CullNone,
                             depthStencilState: DepthStencilState.None,
@@ -370,15 +383,15 @@ namespace Squared.Illuminant.Particles {
                 );
 
                 LoadOneMaterial(out ParticleMaterials.FMA,
-                    "FMA", "FMA", dBegin, dEnd
+                    "FMA", null, dBegin, dEnd
                 );
 
                 LoadOneMaterial(out ParticleMaterials.MatrixMultiply,
-                    "MatrixMultiply", "MatrixMultiply", dBegin, dEnd
+                    "MatrixMultiply", null, dBegin, dEnd
                 );
 
                 LoadOneMaterial(out ParticleMaterials.Noise,
-                    "Noise", "Noise", dBegin, dEnd
+                    "Noise", null, dBegin, dEnd
                 );
 
                 LoadOneMaterial(out ParticleMaterials.SpatialNoise,
@@ -386,11 +399,11 @@ namespace Squared.Illuminant.Particles {
                 );
 
                 LoadOneMaterial(out ParticleMaterials.Gravity,
-                    "Gravity", "Gravity", dBegin, dEnd
+                    "Gravity", null, dBegin, dEnd
                 );
 
                 LoadOneMaterial(out ParticleMaterials.Spawn,
-                    "SpawnParticles", "SpawnParticles", dBegin, dEnd
+                    "SpawnParticles", null, dBegin, dEnd
                 );
 
                 LoadOneMaterial(out ParticleMaterials.SpawnFromPositionTexture,

@@ -348,6 +348,39 @@ namespace Squared.Illuminant {
         }
     }
 
+    public class ProjectorLightSource : LightSource {
+        public Matrix Transform = Matrix.Identity;
+
+        public ProjectorLightSource ()
+            : base (LightSourceTypeID.Projector) {
+        }
+
+        public ProjectorLightSource Clone () {
+            return new ProjectorLightSource {
+                UserData = UserData,
+                Transform = Transform,
+                Opacity = Opacity,
+                CastsShadows = CastsShadows,
+                AmbientOcclusionRadius = 0,
+                AmbientOcclusionOpacity = 0,
+                FalloffYFactor = FalloffYFactor,
+                ShadowDistanceFalloff = ShadowDistanceFalloff,
+                Quality = Quality,
+                TextureRef = TextureRef,
+            };
+        }
+
+        public NullableLazyResource<Texture2D> Texture {
+            get {
+                return TextureRef;
+            }
+            set {
+                TextureRef = value;
+            }
+        }
+
+    }
+
     public enum LightSourceRampMode {
         // Linear falloff once outside radius
         Linear,

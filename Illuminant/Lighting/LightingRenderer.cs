@@ -144,6 +144,10 @@ namespace Squared.Illuminant {
                         Material = parent.IlluminantMaterials.LineLight;
                         ProbeMaterial = parent.IlluminantMaterials.LineLightProbe;
                         break;
+                    case LightSourceTypeID.Projector:
+                        Material = parent.IlluminantMaterials.ProjectorLight;
+                        ProbeMaterial = parent.IlluminantMaterials.ProjectorLightProbe;
+                        break;
                     default:
                         throw new NotImplementedException(key.Type.ToString());
                 }
@@ -937,11 +941,16 @@ namespace Squared.Illuminant {
                                 var directionalLightSource = lightSource as DirectionalLightSource;
                                 var particleLightSource = lightSource as ParticleLightSource;
                                 var lineLightSource = lightSource as LineLightSource;
+                                var projectorLightSource = lightSource as ProjectorLightSource;
 
                                 var ltrs = GetLightRenderState(lightSource);
                                 DeadRenderStates.Remove(ltrs.Key);
 
                                 if (particleLightSource != null)
+                                    continue;
+
+                                // FIXME: render projector light source
+                                if (projectorLightSource != null)
                                     continue;
 
                                 if (pointLightSource != null)
