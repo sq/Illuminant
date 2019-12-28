@@ -18,7 +18,7 @@ void SphereLightWithoutDistanceFieldPixelShader (
     );
 
     float opacity = SphereLightPixelCoreNoDF(
-        shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties, false, false
+        shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties, false
     );
 
     result = float4(color.rgb * color.a * opacity, 1);

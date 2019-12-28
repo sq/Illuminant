@@ -26,7 +26,7 @@ void LineLightPixelShader(
     float opacity = LineLightPixelCore(
         shadedPixelPosition, shadedPixelNormal,
         startPosition, endPosition, u,
-        lightProperties, moreLightProperties, false, false
+        lightProperties, moreLightProperties
     );
 
     float4 color = lerp(startColor, endColor, u);

@@ -112,7 +112,8 @@ namespace TestGame {
                 new HueTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new BitmapShaders(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
                 new RasterShapeSpeed(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new BitmapBillboards(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
+                new BitmapBillboards(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
+                new ProjectorLight(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
             };
 
             KeyboardInputHandler = new KeyboardInput();

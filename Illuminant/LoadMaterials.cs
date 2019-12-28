@@ -91,20 +91,8 @@ namespace Squared.Illuminant {
                     "SphereLight", "SphereLightWithDistanceRamp", dBegin, dEnd
                 );
 
-                LoadOneMaterial(effects, out SphereLightWithOpacityRamp,
-                    "SphereLight", "SphereLightWithOpacityRamp", dBegin, dEnd
-                );
-
                 LoadOneMaterial(effects, out DirectionalLightWithRamp,
                     "DirectionalLight", "DirectionalLightWithRamp", dBegin, dEnd
-                );
-
-                LoadOneMaterial(effects, out LineLightWithDistanceRamp,
-                    "LineLightEx", "LineLightWithDistanceRamp", dBegin, dEnd
-                );
-
-                LoadOneMaterial(effects, out LineLightWithOpacityRamp,
-                    "LineLightEx", "LineLightWithOpacityRamp", dBegin, dEnd
                 );
 
                 LoadOneMaterial(effects, out SphereLightProbe,
@@ -113,10 +101,6 @@ namespace Squared.Illuminant {
 
                 LoadOneMaterial(effects, out SphereLightProbeWithDistanceRamp,
                     "SphereLightProbe", "SphereLightProbeWithDistanceRamp", dBegin, dEnd
-                );
-
-                LoadOneMaterial(effects, out SphereLightProbeWithOpacityRamp,
-                    "SphereLightProbe", "SphereLightProbeWithOpacityRamp", dBegin, dEnd
                 );
 
                 LoadOneMaterial(effects, out DirectionalLightProbe,
@@ -129,14 +113,6 @@ namespace Squared.Illuminant {
 
                 LoadOneMaterial(effects, out LineLightProbe,
                     "LineLightProbe", "LineLightProbe", dBegin, dEnd
-                );
-
-                LoadOneMaterial(effects, out LineLightProbeWithDistanceRamp,
-                    "LineLightProbe", "LineLightProbeWithDistanceRamp", dBegin, dEnd
-                );
-
-                LoadOneMaterial(effects, out LineLightProbeWithOpacityRamp,
-                    "LineLightProbe", "LineLightProbeWithOpacityRamp", dBegin, dEnd
                 );
 
                 LoadOneMaterial(effects, out GIProbeSelector,

@@ -76,9 +76,7 @@ float LineLightPixelCore(
     // radius, ramp length, ramp mode, enable shadows
     in float4 lightProperties,
     // ao radius, distance falloff, y falloff factor, ao opacity
-    in float4 moreLightProperties,
-    in bool   useDistanceRamp,
-    in bool   useOpacityRamp
+    in float4 moreLightProperties
 ) {
     float4 coneLightProperties = lightProperties;
 

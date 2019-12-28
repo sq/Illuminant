@@ -38,8 +38,7 @@ namespace TestGame.Scenes {
 
         [Group("Lighting")]
         Toggle TwoPointFiveD,
-            UseRampTexture,
-            UseDistanceRamp;
+            UseRampTexture;
         [Group("Lighting")]
         Slider MaximumLightStrength;
         [Group("Dithering")]
@@ -496,7 +495,6 @@ namespace TestGame.Scenes {
                 var mousePos = new Vector3(ms.X, ms.Y, LightZ);
 
                 MovableLight.RampTexture.Set(UseRampTexture ? Game.RampTexture : null);
-                MovableLight.UseDistanceForRampTexture = UseDistanceRamp;
 
                 if (Deterministic) {
                     MovableLight.Position = new Vector3(740, 540, 130f);

@@ -82,20 +82,13 @@ float SphereLightPixelEpilogue (
     in float preTraceOpacity, 
     in float coneOpacity,
     in bool  visible,
-    in bool  useDistanceRamp,
-    in bool  useOpacityRamp
+    in bool  useDistanceRamp
 ) {
-    bool useRamp = useOpacityRamp || useDistanceRamp;
     float lightOpacity = preTraceOpacity;
 
     PREFER_BRANCH
-    if (useRamp) {
-        float rampInput = useOpacityRamp 
-            ? preTraceOpacity * coneOpacity
-            : preTraceOpacity;
-        lightOpacity = SampleFromRamp(rampInput);
-        coneOpacity = useOpacityRamp ? 1 : coneOpacity;
-    }
+    if (useDistanceRamp)
+        lightOpacity = SampleFromRamp(preTraceOpacity);
 
     lightOpacity *= coneOpacity;
 
@@ -113,8 +106,7 @@ float SphereLightPixelCore (
     in float4 lightProperties,
     // ao radius, distance falloff, y falloff factor, ao opacity
     in float4 moreLightProperties,
-    in bool   useDistanceRamp,
-    in bool   useOpacityRamp
+    in bool   useDistanceRamp
 ) {
     bool visible;
     float distanceOpacity = SphereLightPixelPrologue(
@@ -140,7 +132,7 @@ float SphereLightPixelCore (
 
     return SphereLightPixelEpilogue(
         preTraceOpacity, coneOpacity, visible,
-        useDistanceRamp, useOpacityRamp
+        useDistanceRamp
     );
 }
 
@@ -152,8 +144,7 @@ float SphereLightPixelCoreNoDF (
     in float4 lightProperties,
     // ao radius, distance falloff, y falloff factor, ao opacity
     in float4 moreLightProperties,
-    in bool   useDistanceRamp,
-    in bool   useOpacityRamp
+    in bool   useDistanceRamp
 ) {
     bool visible;
     float distanceOpacity = SphereLightPixelPrologue(
@@ -164,6 +155,6 @@ float SphereLightPixelCoreNoDF (
 
     return SphereLightPixelEpilogue(
         distanceOpacity, 1, visible,
-        useDistanceRamp, useOpacityRamp
+        useDistanceRamp
     );
 }

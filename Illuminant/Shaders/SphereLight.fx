@@ -21,7 +21,7 @@ void SphereLightPixelShader (
     );
 
     float opacity = SphereLightPixelCore(
-        shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties, false, false
+        shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties, false
     );
 
     result = float4(color.rgb * color.a * opacity, 1);
@@ -44,30 +44,7 @@ void SphereLightWithDistanceRampPixelShader(
     );
 
     float opacity = SphereLightPixelCore(
-        shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties, true, false
-    );
-
-    result = float4(color.rgb * color.a * opacity, 1);
-}
-
-void SphereLightWithOpacityRampPixelShader(
-    in  float3 worldPosition       : POSITION1,
-    in  float3 lightCenter         : TEXCOORD0,
-    in  float4 lightProperties     : TEXCOORD2,
-    in  float4 moreLightProperties : TEXCOORD3,
-    in  float4 color               : TEXCOORD4,
-    ACCEPTS_VPOS,
-    out float4 result              : COLOR0
-) {
-    float3 shadedPixelPosition;
-    float3 shadedPixelNormal;
-    sampleGBuffer(
-        GET_VPOS,
-        shadedPixelPosition, shadedPixelNormal
-    );
-
-    float opacity = SphereLightPixelCore(
-        shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties, false, true
+        shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties, true
     );
 
     result = float4(color.rgb * color.a * opacity, 1);
@@ -86,13 +63,5 @@ technique SphereLightWithDistanceRamp {
     {
         vertexShader = compile vs_3_0 SphereLightVertexShader();
         pixelShader  = compile ps_3_0 SphereLightWithDistanceRampPixelShader();
-    }
-}
-
-technique SphereLightWithOpacityRamp {
-    pass P0
-    {
-        vertexShader = compile vs_3_0 SphereLightVertexShader();
-        pixelShader = compile ps_3_0 SphereLightWithOpacityRampPixelShader();
     }
 }

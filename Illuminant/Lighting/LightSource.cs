@@ -165,11 +165,6 @@ namespace Squared.Illuminant {
         /// </summary>
         public LightSourceRampMode RampMode = LightSourceRampMode.Linear;
         /// <summary>
-        /// If using a ramp texture, this selects values from the ramp based on distance from light instead of light brightness.
-        /// Non-linear ramps (with weird patterns or what have you) will look really weird unless you set this to true.
-        /// </summary>
-        public bool UseDistanceForRampTexture = false;
-        /// <summary>
         /// The color of the light's illumination.
         /// Note that this color is a Vector4 so that you can use HDR (greater than one) lighting values.
         /// Alpha is *not* premultiplied (maybe it should be?)
@@ -196,7 +191,6 @@ namespace Squared.Illuminant {
                 AmbientOcclusionOpacity = AmbientOcclusionOpacity,
                 Quality = Quality,
                 RampTexture = RampTexture,
-                UseDistanceForRampTexture = UseDistanceForRampTexture
             };
             return result;
         }
@@ -220,11 +214,6 @@ namespace Squared.Illuminant {
         /// Exponential produces falloff that is more realistic (square of distance or whatever) but not necessarily as expected. 
         /// </summary>
         public LightSourceRampMode RampMode = LightSourceRampMode.Linear;
-        /// <summary>
-        /// If using a ramp texture, this selects values from the ramp based on distance from light instead of light brightness.
-        /// Non-linear ramps (with weird patterns or what have you) will look really weird unless you set this to true.
-        /// </summary>
-        public bool UseDistanceForRampTexture = false;
         /// <summary>
         /// The color of the light's illumination.
         /// Note that this color is a Vector4 so that you can use HDR (greater than one) lighting values.
@@ -259,7 +248,6 @@ namespace Squared.Illuminant {
                 AmbientOcclusionOpacity = AmbientOcclusionOpacity,
                 Quality = Quality,
                 RampTexture = RampTexture,
-                UseDistanceForRampTexture = UseDistanceForRampTexture
             };
             return result;
         }

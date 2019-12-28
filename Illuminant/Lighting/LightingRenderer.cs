@@ -44,11 +44,10 @@ namespace Squared.Illuminant {
             public Texture2D               RampTexture;
             public BlendState              BlendState;
             public RendererQualitySettings Quality;
-            public bool                    DistanceRamp;
             public ParticleLightSource     ParticleLightSource;
 
             public override int GetHashCode () {
-                var result = ((int)Type) ^ (DistanceRamp ? 2057 : 16593);
+                var result = (int)Type;
                 if (BlendState != null)
                     result ^= BlendState.GetHashCode() << 2;
                 if (RampTexture != null)
@@ -70,7 +69,6 @@ namespace Squared.Illuminant {
             public bool Equals (LightTypeRenderStateKey ltrsk) {
                 return (ParticleLightSource == ltrsk.ParticleLightSource) &&
                     (Type == ltrsk.Type) &&
-                    (DistanceRamp == ltrsk.DistanceRamp) &&
                     (RampTexture == ltrsk.RampTexture) &&
                     (BlendState == ltrsk.BlendState) &&
                     (Quality == ltrsk.Quality);
@@ -115,16 +113,12 @@ namespace Squared.Illuminant {
                                     : parent.IlluminantMaterials.SphereLight
                             )
                             : (
-                                key.DistanceRamp
-                                    ? parent.IlluminantMaterials.SphereLightWithDistanceRamp
-                                    : parent.IlluminantMaterials.SphereLightWithOpacityRamp
+                                parent.IlluminantMaterials.SphereLightWithDistanceRamp
                             );
                         ProbeMaterial = (key.RampTexture == null)
                             ? parent.IlluminantMaterials.SphereLightProbe
                             : (
-                                key.DistanceRamp
-                                    ? parent.IlluminantMaterials.SphereLightProbeWithDistanceRamp
-                                    : parent.IlluminantMaterials.SphereLightProbeWithOpacityRamp
+                                parent.IlluminantMaterials.SphereLightProbeWithDistanceRamp
                             );
                         break;
                     case LightSourceTypeID.Directional:
@@ -147,20 +141,8 @@ namespace Squared.Illuminant {
                         ProbeMaterial = null;
                         break;
                     case LightSourceTypeID.Line:
-                        Material = (key.RampTexture == null)
-                            ? parent.IlluminantMaterials.LineLight
-                            : (
-                                key.DistanceRamp
-                                    ? parent.IlluminantMaterials.LineLightWithDistanceRamp
-                                    : parent.IlluminantMaterials.LineLightWithOpacityRamp
-                            );
-                        ProbeMaterial = (key.RampTexture == null)
-                            ? parent.IlluminantMaterials.LineLightProbe
-                            : (
-                                key.DistanceRamp
-                                    ? parent.IlluminantMaterials.LineLightProbeWithDistanceRamp
-                                    : parent.IlluminantMaterials.LineLightProbeWithOpacityRamp
-                            );
+                        Material = parent.IlluminantMaterials.LineLight;
+                        ProbeMaterial = parent.IlluminantMaterials.LineLightProbe;
                         break;
                     default:
                         throw new NotImplementedException(key.Type.ToString());
@@ -743,8 +725,6 @@ namespace Squared.Illuminant {
                 ltk.RampTexture = null;
 
             var sls = ls as SphereLightSource;
-            if (sls != null)
-                ltk.DistanceRamp = sls.UseDistanceForRampTexture;
 
             LightTypeRenderState result;
             if (!LightRenderStates.TryGetValue(ltk, out result)) {

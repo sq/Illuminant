@@ -46,61 +46,7 @@ void LineLightProbePixelShader(
     moreLightProperties.x = moreLightProperties.w = 0;
 
     opacity *= SphereLightPixelCore(
-        shadedPixelPosition, shadedPixelNormal.xyz, lightCenter, lightProperties, moreLightProperties, false, false
-    );
-
-    result = float4(color.rgb * color.a * opacity, 1);
-}
-
-void LineLightProbeWithDistanceRampPixelShader(
-    in  float3 lightCenter         : TEXCOORD0,
-    in  float4 lightProperties     : TEXCOORD2,
-    in  float4 moreLightProperties : TEXCOORD3,
-    in  float4 color               : TEXCOORD4,
-    ACCEPTS_VPOS,
-    out float4 result              : COLOR0
-) {
-    float3 shadedPixelPosition;
-    float3 shadedPixelNormal;
-    float opacity, enableShadows;
-
-    sampleLightProbeBuffer(
-        GET_VPOS,
-        shadedPixelPosition, shadedPixelNormal, opacity, enableShadows
-    );
-
-    lightProperties.w *= enableShadows;
-    moreLightProperties.x = moreLightProperties.w = 0;
-
-    opacity *= SphereLightPixelCore(
-        shadedPixelPosition, shadedPixelNormal.xyz, lightCenter, lightProperties, moreLightProperties, true, false
-    );
-
-    result = float4(color.rgb * color.a * opacity, 1);
-}
-
-void LineLightProbeWithOpacityRampPixelShader(
-    in  float3 lightCenter         : TEXCOORD0,
-    in  float4 lightProperties     : TEXCOORD2,
-    in  float4 moreLightProperties : TEXCOORD3,
-    in  float4 color               : TEXCOORD4,
-    ACCEPTS_VPOS,
-    out float4 result              : COLOR0
-) {
-    float3 shadedPixelPosition;
-    float3 shadedPixelNormal;
-    float opacity, enableShadows;
-
-    sampleLightProbeBuffer(
-        GET_VPOS,
-        shadedPixelPosition, shadedPixelNormal, opacity, enableShadows
-    );
-
-    lightProperties.w *= enableShadows;
-    moreLightProperties.x = moreLightProperties.w = 0;
-
-    opacity *= SphereLightPixelCore(
-        shadedPixelPosition, shadedPixelNormal.xyz, lightCenter, lightProperties, moreLightProperties, false, true
+        shadedPixelPosition, shadedPixelNormal.xyz, lightCenter, lightProperties, moreLightProperties, false
     );
 
     result = float4(color.rgb * color.a * opacity, 1);
@@ -111,21 +57,5 @@ technique LineLightProbe {
     {
         vertexShader = compile vs_3_0 LineLightProbeVertexShader();
         pixelShader  = compile ps_3_0 LineLightProbePixelShader();
-    }
-}
-
-technique LineLightProbeWithDistanceRamp {
-    pass P0
-    {
-        vertexShader = compile vs_3_0 LineLightProbeVertexShader();
-        pixelShader  = compile ps_3_0 LineLightProbeWithDistanceRampPixelShader();
-    }
-}
-
-technique LineLightProbeWithOpacityRamp {
-    pass P0
-    {
-        vertexShader = compile vs_3_0 LineLightProbeVertexShader();
-        pixelShader  = compile ps_3_0 LineLightProbeWithOpacityRampPixelShader();
     }
 }
