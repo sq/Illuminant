@@ -12,10 +12,10 @@
 float ProjectorLightPixelCore(
     in float3 shadedPixelPosition,
     in float3 shadedPixelNormal,
-    in float3 mat1, 
-    in float3 mat2, 
-    in float3 mat3, 
-    in float3 mat4,
+    in float4 mat1, 
+    in float4 mat2, 
+    in float4 mat3, 
+    in float4 mat4,
     // radius, ramp length, ramp mode, enable shadows
     in float4 lightProperties,
     // ao radius, distance falloff, y falloff factor, ao opacity
@@ -64,10 +64,10 @@ float ProjectorLightPixelCore(
 
 void ProjectorLightVertexShader(
     in int2 vertexIndex              : BLENDINDICES0,
-    inout float3 mat1                : TEXCOORD0, 
-    inout float3 mat2                : TEXCOORD1, 
-    inout float3 mat3                : TEXCOORD4, 
-    inout float3 mat4                : TEXCOORD5,
+    inout float4 mat1                : TEXCOORD0, 
+    inout float4 mat2                : TEXCOORD1, 
+    inout float4 mat3                : TEXCOORD4, 
+    inout float4 mat4                : TEXCOORD5,
     // radius, ramp length, ramp mode, enable shadows
     inout float4 lightProperties     : TEXCOORD2,
     // ao radius, distance falloff, y falloff factor, ao opacity

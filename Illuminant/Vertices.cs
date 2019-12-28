@@ -9,8 +9,7 @@ using Microsoft.Xna.Framework.Graphics;
 namespace Squared.Illuminant {
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct LightVertex : IVertexType {
-        // FIXME: Shouldn't this be V3? Blech
-        public Vector3 LightPosition1, LightPosition2;
+        public Vector4 LightPosition1, LightPosition2;
         public Vector4 LightProperties;
         public Vector4 MoreLightProperties;
         public Vector4 Color1, Color2;
@@ -21,8 +20,8 @@ namespace Squared.Illuminant {
             var tThis = typeof(LightVertex);
 
             _VertexDeclaration = new VertexDeclaration(
-                new VertexElement(Marshal.OffsetOf(tThis, "LightPosition1").ToInt32(), VertexElementFormat.Vector3, VertexElementUsage.TextureCoordinate, 0),
-                new VertexElement(Marshal.OffsetOf(tThis, "LightPosition2").ToInt32(), VertexElementFormat.Vector3, VertexElementUsage.TextureCoordinate, 1),
+                new VertexElement(Marshal.OffsetOf(tThis, "LightPosition1").ToInt32(), VertexElementFormat.Vector4, VertexElementUsage.TextureCoordinate, 0),
+                new VertexElement(Marshal.OffsetOf(tThis, "LightPosition2").ToInt32(), VertexElementFormat.Vector4, VertexElementUsage.TextureCoordinate, 1),
                 new VertexElement(Marshal.OffsetOf(tThis, "LightProperties").ToInt32(), VertexElementFormat.Vector4, VertexElementUsage.TextureCoordinate, 2),
                 new VertexElement(Marshal.OffsetOf(tThis, "MoreLightProperties").ToInt32(), VertexElementFormat.Vector4, VertexElementUsage.TextureCoordinate, 3),
                 // VertexElementUsage.Color tends to have lower precision for some reason

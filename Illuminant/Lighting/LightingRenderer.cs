@@ -949,16 +949,14 @@ namespace Squared.Illuminant {
                                 if (particleLightSource != null)
                                     continue;
 
-                                // FIXME: render projector light source
-                                if (projectorLightSource != null)
-                                    continue;
-
                                 if (pointLightSource != null)
                                     RenderSphereLightSource(pointLightSource, intensityScale, ltrs);
                                 else if (directionalLightSource != null)
                                     RenderDirectionalLightSource(directionalLightSource, intensityScale, ltrs);
                                 else if (lineLightSource != null)
                                     RenderLineLightSource(lineLightSource, intensityScale, ltrs);
+                                else if (projectorLightSource != null)
+                                    RenderProjectorLightSource(projectorLightSource, intensityScale, ltrs);
                                 else
                                     throw new NotSupportedException(lightSource.GetType().Name);
                             };
@@ -1055,7 +1053,7 @@ namespace Squared.Illuminant {
 
         private void RenderSphereLightSource (SphereLightSource lightSource, float intensityScale, LightTypeRenderState ltrs) {
             LightVertex vertex;
-            vertex.LightPosition2 = vertex.LightPosition1 = lightSource.Position;
+            vertex.LightPosition2 = vertex.LightPosition1 = new Vector4(lightSource.Position, 0);
             var color = lightSource.Color;
             color.W *= (lightSource.Opacity * intensityScale);
             vertex.Color2 = vertex.Color1 = color;
@@ -1076,11 +1074,11 @@ namespace Squared.Illuminant {
             LightVertex vertex;
             if (lightSource.Bounds.HasValue) {
                 // FIXME: 3D bounds?
-                vertex.LightPosition1 = new Vector3(lightSource.Bounds.Value.TopLeft, 0);
-                vertex.LightPosition2 = new Vector3(lightSource.Bounds.Value.BottomRight, 0);
+                vertex.LightPosition1 = new Vector4(lightSource.Bounds.Value.TopLeft, 0, 0);
+                vertex.LightPosition2 = new Vector4(lightSource.Bounds.Value.BottomRight, 0, 0);
             } else {
-                vertex.LightPosition1 = new Vector3(-99999, -99999, 0);
-                vertex.LightPosition2 = new Vector3(99999, 99999, 0);
+                vertex.LightPosition1 = new Vector4(-99999, -99999, 0, 0);
+                vertex.LightPosition2 = new Vector4(99999, 99999, 0, 0);
             }
             var color = lightSource.Color;
             color.W *= (lightSource.Opacity * intensityScale);
@@ -1118,8 +1116,8 @@ namespace Squared.Illuminant {
 
         private void RenderLineLightSource (LineLightSource lightSource, float intensityScale, LightTypeRenderState ltrs) {
             LightVertex vertex;
-            vertex.LightPosition1 = lightSource.StartPosition;
-            vertex.LightPosition2 = lightSource.EndPosition;
+            vertex.LightPosition1 = new Vector4(lightSource.StartPosition, 0);
+            vertex.LightPosition2 = new Vector4(lightSource.EndPosition, 0);
             Vector4 color1 = lightSource.StartColor, color2 = lightSource.EndColor;
             color1.W *= (lightSource.Opacity * intensityScale);
             color2.W *= (lightSource.Opacity * intensityScale);
@@ -1128,6 +1126,29 @@ namespace Squared.Illuminant {
             vertex.LightProperties.X = lightSource.Radius;
             vertex.LightProperties.Y = 0;
             vertex.LightProperties.Z = (int)lightSource.RampMode;
+            vertex.LightProperties.W = lightSource.CastsShadows ? 1f : 0f;
+            vertex.MoreLightProperties.X = lightSource.AmbientOcclusionRadius;
+            vertex.MoreLightProperties.Y = lightSource.ShadowDistanceFalloff.GetValueOrDefault(-99999);
+            vertex.MoreLightProperties.Z = lightSource.FalloffYFactor;
+            vertex.MoreLightProperties.W = lightSource.AmbientOcclusionOpacity;
+            ltrs.LightVertices.Add(ref vertex);
+
+            ltrs.LightCount++;
+        }
+
+        private void RenderProjectorLightSource (ProjectorLightSource lightSource, float intensityScale, LightTypeRenderState ltrs) {
+            LightVertex vertex;
+            var m = lightSource.Transform;
+            vertex.LightPosition1 = new Vector4(m.M11, m.M12, m.M13, m.M14);
+            vertex.LightPosition2 = new Vector4(m.M21, m.M22, m.M23, m.M24);
+            vertex.Color1         = new Vector4(m.M31, m.M32, m.M33, m.M34);
+            vertex.Color2         = new Vector4(m.M41, m.M42, m.M43, m.M44);
+            // FIXME: projector Radius
+            vertex.LightProperties.X = 0;
+            // FIXME: ?
+            vertex.LightProperties.Y = 0;
+            // FIXME: projector RampMode
+            vertex.LightProperties.Z = 0;
             vertex.LightProperties.W = lightSource.CastsShadows ? 1f : 0f;
             vertex.MoreLightProperties.X = lightSource.AmbientOcclusionRadius;
             vertex.MoreLightProperties.Y = lightSource.ShadowDistanceFalloff.GetValueOrDefault(-99999);
