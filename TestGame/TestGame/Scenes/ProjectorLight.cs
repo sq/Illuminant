@@ -22,7 +22,7 @@ namespace TestGame.Scenes {
 
         RenderTarget2D Lightmap;
 
-        public SphereLightSource MovableLight;
+        public ProjectorLightSource MovableLight;
 
         const float LightScaleFactor = 4;
 
@@ -146,11 +146,8 @@ namespace TestGame.Scenes {
 
             CreateDistanceField();
 
-            MovableLight = new SphereLightSource {
-                Color = new Vector4(1f, 0.22f, 0.22f, 0.9f),
-                RampMode = LightSourceRampMode.Exponential,
-                Radius = 32,
-                RampLength = 256
+            MovableLight = new ProjectorLightSource {
+                Texture = (NullableLazyResource<Texture2D>)Game.TextureLoader.Load("vector-field")
             };
 
             Environment.Lights.Add(new DirectionalLightSource {
@@ -268,9 +265,9 @@ namespace TestGame.Scenes {
 
                 if (Deterministic && false) {
                 } else {
-                    MovableLight.Position.X = ms.X;
-                    MovableLight.Position.Y = ms.Y;
-                    MovableLight.Position.Z = z;
+                    MovableLight.Transform = Matrix.CreateTranslation(
+                        ms.X, ms.Y, z
+                    );
                 }
             }
         }
