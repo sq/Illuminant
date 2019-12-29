@@ -111,7 +111,7 @@ namespace Squared.Illuminant {
                 );
 
                 LoadOneMaterial(effects, out DirectionalLightProbe,
-                    "DirectionalLight", null, dBegin, dEnd
+                    "DirectionalLight", "DirectionalLightProbe", dBegin, dEnd
                 );
 
                 LoadOneMaterial(effects, out DirectionalLightProbeWithRamp,
