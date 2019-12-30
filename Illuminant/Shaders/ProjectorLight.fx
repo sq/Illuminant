@@ -4,6 +4,15 @@
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "ProjectorLightCore.fxh"
 
+sampler ProjectorTextureSampler : register(s5) {
+    Texture = (RampTexture);
+    AddressU = WRAP;
+    AddressV = WRAP;
+    MipFilter = POINT;
+    MinFilter = POINT;
+    MagFilter = POINT;
+};
+
 void ProjectorLightPixelShader(
     in  float3 worldPosition       : POSITION1,
     in  float4 mat1                : TEXCOORD0,
@@ -19,6 +28,7 @@ void ProjectorLightPixelShader(
 ) {
     float3 shadedPixelPosition;
     float3 shadedPixelNormal;
+    float4 projectorSpacePosition;
     sampleGBuffer(
         GET_VPOS,
         shadedPixelPosition, shadedPixelNormal
@@ -27,11 +37,16 @@ void ProjectorLightPixelShader(
     float opacity = ProjectorLightPixelCore(
         shadedPixelPosition, shadedPixelNormal,
         mat1, mat2, mat3, mat4,
-        lightProperties, moreLightProperties
+        lightProperties, moreLightProperties,
+        projectorSpacePosition
     );
 
+    projectorSpacePosition.z = 0;
+    projectorSpacePosition.w = 0;
+    float4 texColor = tex2Dlod(ProjectorTextureSampler, projectorSpacePosition);
+
     // FIXME: color
-    float4 color = float4(0.8, 0.1, 0.1, 1);
+    float4 color = texColor * float4(0.33, 0.33, 0.33, 1);
     result = float4(color.rgb * color.a * opacity, 1);
 }
 

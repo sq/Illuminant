@@ -19,12 +19,23 @@ float ProjectorLightPixelCore(
     // radius, ramp length, ramp mode, enable shadows
     in float4 lightProperties,
     // ao radius, distance falloff, y falloff factor, ao opacity
-    in float4 moreLightProperties
+    in float4 moreLightProperties,
+    out float4 projectorSpacePosition
 ) {
     float4 coneLightProperties = lightProperties;
 
+    float4x4 invMatrix = float4x4(
+        mat1, mat2, mat3, mat4
+    );
+    projectorSpacePosition = mul(float4(shadedPixelPosition, 1), invMatrix);
+
     // FIXME: Projector falloff/clamping?
     float distanceOpacity = 1;
+    /*
+    if ((projectorSpacePosition.x < 0) || (projectorSpacePosition.y < 0) ||
+        (projectorSpacePosition.x > 1) || (projectorSpacePosition.y > 1))
+        distanceOpacity = 0;
+    */
 
     bool visible = (distanceOpacity > 0) && 
         (shadedPixelPosition.x > -9999);

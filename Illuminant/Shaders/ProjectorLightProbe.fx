@@ -37,6 +37,7 @@ void ProjectorLightProbePixelShader(
 ) {
     float3 shadedPixelPosition;
     float3 shadedPixelNormal;
+    float4 projectorSpacePosition;
     float opacity, enableShadows;
 
     sampleLightProbeBuffer(
@@ -49,7 +50,8 @@ void ProjectorLightProbePixelShader(
 
     opacity *= ProjectorLightPixelCore(
         shadedPixelPosition, shadedPixelNormal.xyz, 
-        mat1, mat2, mat3, mat4, lightProperties, moreLightProperties
+        mat1, mat2, mat3, mat4, lightProperties, moreLightProperties,
+        projectorSpacePosition
     );
 
     // FIXME: color

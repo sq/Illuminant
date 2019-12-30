@@ -1138,11 +1138,16 @@ namespace Squared.Illuminant {
 
         private void RenderProjectorLightSource (ProjectorLightSource lightSource, float intensityScale, LightTypeRenderState ltrs) {
             LightVertex vertex;
-            var m = lightSource.Transform;
-            vertex.LightPosition1 = new Vector4(m.M11, m.M12, m.M13, m.M14);
-            vertex.LightPosition2 = new Vector4(m.M21, m.M22, m.M23, m.M24);
-            vertex.Color1         = new Vector4(m.M31, m.M32, m.M33, m.M34);
-            vertex.Color2         = new Vector4(m.M41, m.M42, m.M43, m.M44);
+            Matrix m = lightSource.Transform, invM;
+            var tex = lightSource.TextureRef.Instance;
+            if (tex == null)
+                return;
+            m *= Matrix.CreateScale(tex.Width, tex.Height, 1);
+            Matrix.Invert(ref m, out invM);
+            vertex.LightPosition1 = new Vector4(invM.M11, invM.M12, invM.M13, invM.M14);
+            vertex.LightPosition2 = new Vector4(invM.M21, invM.M22, invM.M23, invM.M24);
+            vertex.Color1         = new Vector4(invM.M31, invM.M32, invM.M33, invM.M34);
+            vertex.Color2         = new Vector4(invM.M41, invM.M42, invM.M43, invM.M44);
             // FIXME: projector Radius
             vertex.LightProperties.X = 0;
             // FIXME: ?
