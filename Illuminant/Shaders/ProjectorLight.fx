@@ -4,15 +4,6 @@
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "ProjectorLightCore.fxh"
 
-sampler ProjectorTextureSampler : register(s5) {
-    Texture = (RampTexture);
-    AddressU = WRAP;
-    AddressV = WRAP;
-    MipFilter = POINT;
-    MinFilter = POINT;
-    MagFilter = POINT;
-};
-
 void ProjectorLightPixelShader(
     in  float3 worldPosition       : POSITION1,
     in  float4 mat1                : TEXCOORD0,
@@ -41,13 +32,7 @@ void ProjectorLightPixelShader(
         projectorSpacePosition
     );
 
-    projectorSpacePosition.z = 0;
-    projectorSpacePosition.w = 0;
-    float4 texColor = tex2Dlod(ProjectorTextureSampler, projectorSpacePosition);
-
-    // FIXME: color
-    float4 color = texColor * float4(0.33, 0.33, 0.33, 1);
-    result = float4(color.rgb * color.a * opacity, 1);
+    result = ProjectorLightColorCore(projectorSpacePosition, opacity);
 }
 
 technique ProjectorLight {

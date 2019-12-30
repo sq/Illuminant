@@ -31,6 +31,9 @@ namespace Squared.Illuminant {
         // Offsets Y coordinates by (Z * -ZToYMultiplier) if TwoPointFiveD is enabled
         public float ZToYMultiplier = 0f;
 
+        // Ambient light color
+        public Color Ambient = Color.Black;
+
         public void Clear () {
             Lights.Clear();
             Obstructions.Clear();

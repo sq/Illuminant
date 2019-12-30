@@ -29,8 +29,10 @@ namespace TestGame.Scenes {
         Toggle ShowGBuffer,
             ShowDistanceField,
             Deterministic,
-            Shadows;
+            Shadows, 
+            Wrap;
 
+        Slider Scale;
         Slider DistanceFieldResolution;
 
         public ProjectorLight (TestGame game, int width, int height)
@@ -39,17 +41,25 @@ namespace TestGame.Scenes {
             Deterministic.Value = true;
             DistanceFieldResolution.Value = 0.5f;
             Shadows.Value = true;
+            Scale.Value = 1f;
 
             ShowGBuffer.Key = Keys.G;
             ShowDistanceField.Key = Keys.D;
             Deterministic.Key = Keys.R;
             Shadows.Key = Keys.S;
+            Wrap.Key = Keys.W;
 
             DistanceFieldResolution.MinusKey = Keys.D5;
             DistanceFieldResolution.PlusKey = Keys.D6;
             DistanceFieldResolution.Min = 0.1f;
             DistanceFieldResolution.Max = 1.0f;
             DistanceFieldResolution.Speed = 0.05f;
+
+            Scale.MinusKey = Keys.OemSemicolon;
+            Scale.PlusKey = Keys.OemQuotes;
+            Scale.Min = 0.1f;
+            Scale.Max = 4f;
+            Scale.Speed = 0.05f;
 
             DistanceFieldResolution.Changed += (s, e) => CreateDistanceField();
         }
@@ -149,11 +159,6 @@ namespace TestGame.Scenes {
             MovableLight = new ProjectorLightSource {
                 Texture = (NullableLazyResource<Texture2D>)Game.TextureLoader.Load("vector-field")
             };
-
-            Environment.Lights.Add(new DirectionalLightSource {
-                Color = new Vector4(0.2f, 0.2f, 0.2f, 1f),
-                Direction = new Vector3(-0.1f, -1, -0.5f)
-            });
 
             Environment.Lights.Add(MovableLight);
 
@@ -256,18 +261,23 @@ namespace TestGame.Scenes {
                 var ms = Game.MouseState;
                 Game.IsMouseVisible = true;
 
+                Environment.Ambient = new Color(127, 127, 127, 255);
                 MovableLight.CastsShadows = Shadows;
 
-                var z = (ms.ScrollWheelValue / 4096.0f) * Environment.MaximumZ;
-
-                if (z < 0.01f)
-                    z = 0.01f;
+                var opacity = (ms.ScrollWheelValue / 4096.0f) + 0.5f;
+                if (opacity > 4)
+                    opacity = 4;
+                if (opacity < -2)
+                    opacity = -2;
 
                 if (Deterministic && false) {
                 } else {
-                    MovableLight.Transform = Matrix.CreateTranslation(
-                        ms.X, ms.Y, z
-                    );
+                    MovableLight.Wrap = Wrap;
+                    MovableLight.Scale = new Vector2(Scale);
+                    MovableLight.BlendMode = (opacity < 0) ? RenderStates.SubtractiveBlend : RenderStates.AdditiveBlend;
+                    MovableLight.Opacity = Math.Abs(opacity);
+                    if (!Game.IsMouseOverUI)
+                        MovableLight.Position = new Vector2(ms.X, ms.Y);
                 }
             }
         }

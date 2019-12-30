@@ -906,7 +906,7 @@ namespace Squared.Illuminant {
 
                 {
                     ClearBatch.AddNew(
-                        resultGroup, -1, Materials.Clear, new Color(0, 0, 0, Configuration.RenderGroundPlane ? 1f : 0f)
+                        resultGroup, -1, Materials.Clear, Environment.Ambient * intensityScale
                     );
 
                     // TODO: Use threads?
@@ -1142,16 +1142,16 @@ namespace Squared.Illuminant {
             var tex = lightSource.TextureRef.Instance;
             if (tex == null)
                 return;
-            m *= Matrix.CreateScale(tex.Width, tex.Height, 1);
+            var texSize = new Vector2(tex.Width, tex.Height) * lightSource.Scale;
+            m *= Matrix.CreateScale(texSize.X, texSize.Y, 1);
+            m *= Matrix.CreateTranslation(new Vector3(lightSource.Position, 0));
             Matrix.Invert(ref m, out invM);
             vertex.LightPosition1 = new Vector4(invM.M11, invM.M12, invM.M13, invM.M14);
             vertex.LightPosition2 = new Vector4(invM.M21, invM.M22, invM.M23, invM.M24);
             vertex.Color1         = new Vector4(invM.M31, invM.M32, invM.M33, invM.M34);
             vertex.Color2         = new Vector4(invM.M41, invM.M42, invM.M43, invM.M44);
-            // FIXME: projector Radius
-            vertex.LightProperties.X = 0;
-            // FIXME: ?
-            vertex.LightProperties.Y = 0;
+            vertex.LightProperties.X = lightSource.Opacity;
+            vertex.LightProperties.Y = lightSource.Wrap ? 0 : 1;
             // FIXME: projector RampMode
             vertex.LightProperties.Z = 0;
             vertex.LightProperties.W = lightSource.CastsShadows ? 1f : 0f;

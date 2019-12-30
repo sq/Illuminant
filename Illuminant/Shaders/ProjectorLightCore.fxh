@@ -9,6 +9,15 @@
 #define SELF_OCCLUSION_HACK 1.5
 #define SHADOW_OPACITY_THRESHOLD (0.75 / 255.0)
 
+sampler ProjectorTextureSampler : register(s5) {
+    Texture = (RampTexture);
+    AddressU = WRAP;
+    AddressV = WRAP;
+    MipFilter = POINT;
+    MinFilter = POINT;
+    MagFilter = POINT;
+};
+
 float ProjectorLightPixelCore(
     in float3 shadedPixelPosition,
     in float3 shadedPixelNormal,
@@ -16,7 +25,7 @@ float ProjectorLightPixelCore(
     in float4 mat2, 
     in float4 mat3, 
     in float4 mat4,
-    // radius, ramp length, ramp mode, enable shadows
+    // opacity, clamping factor, ramp mode, enable shadows
     in float4 lightProperties,
     // ao radius, distance falloff, y falloff factor, ao opacity
     in float4 moreLightProperties,
@@ -28,7 +37,9 @@ float ProjectorLightPixelCore(
         mat1, mat2, mat3, mat4
     );
     projectorSpacePosition = mul(float4(shadedPixelPosition, 1), invMatrix);
+    projectorSpacePosition.xy = lerp(projectorSpacePosition.xy, clamp(projectorSpacePosition.xy, 0, 1), lightProperties.y);
 
+    float constantOpacity = lightProperties.x;
     // FIXME: Projector falloff/clamping?
     float distanceOpacity = 1;
     /*
@@ -38,7 +49,8 @@ float ProjectorLightPixelCore(
     */
 
     bool visible = (distanceOpacity > 0) && 
-        (shadedPixelPosition.x > -9999);
+        (shadedPixelPosition.x > -9999) &&
+        (constantOpacity > 0);
 
     clip(visible ? 1 : -1);
 
@@ -66,6 +78,7 @@ float ProjectorLightPixelCore(
 
     float lightOpacity = preTraceOpacity;
     lightOpacity *= coneOpacity;
+    lightOpacity *= constantOpacity;
 
     // HACK: Don't cull pixels unless they were killed by distance falloff.
     // This ensures that billboards are always lit.
@@ -100,4 +113,15 @@ void ProjectorLightVertexShader(
     screenPosition.xy *= GetViewportScale() * getEnvironmentRenderScale();
     float4 transformedPosition = mul(mul(float4(screenPosition.xyz, 1), Viewport.ModelView), Viewport.Projection);
     result = float4(transformedPosition.xy, 0, transformedPosition.w);
+}
+
+float4 ProjectorLightColorCore(
+    float4 projectorSpacePosition,
+    float opacity
+) {
+    projectorSpacePosition.z = 0;
+    projectorSpacePosition.w = 0;
+    float4 texColor = tex2Dlod(ProjectorTextureSampler, projectorSpacePosition);
+
+    return float4(texColor.rgb * texColor.a * opacity, 1);
 }

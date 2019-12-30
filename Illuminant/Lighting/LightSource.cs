@@ -350,6 +350,9 @@ namespace Squared.Illuminant {
 
     public class ProjectorLightSource : LightSource {
         public Matrix Transform = Matrix.Identity;
+        public Vector2 Scale = Vector2.One;
+        public Vector2 Position = Vector2.Zero;
+        public bool Wrap = true;
 
         public ProjectorLightSource ()
             : base (LightSourceTypeID.Projector) {
@@ -359,6 +362,9 @@ namespace Squared.Illuminant {
             return new ProjectorLightSource {
                 UserData = UserData,
                 Transform = Transform,
+                Scale = Scale,
+                Position = Position,
+                Wrap = Wrap,
                 Opacity = Opacity,
                 CastsShadows = CastsShadows,
                 AmbientOcclusionRadius = 0,
