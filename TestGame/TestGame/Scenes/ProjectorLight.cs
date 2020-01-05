@@ -264,7 +264,7 @@ namespace TestGame.Scenes {
                 Environment.Ambient = new Color(127, 127, 127, 255);
                 MovableLight.CastsShadows = Shadows;
 
-                var opacity = (ms.ScrollWheelValue / 4096.0f) + 0.5f;
+                var opacity = (ms.ScrollWheelValue / 4096.0f) + 0.33f;
                 if (opacity > 4)
                     opacity = 4;
                 if (opacity < -2)
