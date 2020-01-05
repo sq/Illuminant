@@ -182,8 +182,10 @@ namespace TestGame.Scenes {
 
             Environment.ZToYMultiplier = ZToYMultiplier.Value;
 
-            var cz = new Vector2(100f / CameraDistance.Value);
+            var cscalef = 100f / CameraDistance.Value;
+            var cscale = new Vector2(cscalef);
             var cp = new Vector2(CameraX, CameraY);
+
             Vector2 cvp, uvo;
             Renderer.ComputeViewPositionAndUVOffset(
                 cp,
@@ -199,14 +201,12 @@ namespace TestGame.Scenes {
 
             // Renderer.InvalidateFields();
 
-            Renderer.UpdateFields(frame, -2, viewportPosition: cvp, viewportScale: cz);
+            Renderer.UpdateFields(frame, -2, viewportPosition: cvp, viewportScale: cscale);
 
             var setLightingTransform = (Action<DeviceManager, object>)((dm, _) => {
                 var vt = ViewTransform.CreateOrthographic(
                     Width, Height
                 );
-                vt.Position = cvp;
-                vt.Scale = cz;
                 Game.Materials.PushViewTransform(vt);
             });
             var popViewTransform = (Action<DeviceManager, object>)((dm, _) => {
@@ -215,11 +215,12 @@ namespace TestGame.Scenes {
 
             using (var bg = BatchGroup.ForRenderTarget(
                 frame, -1, Lightmap,
-                setLightingTransform, popViewTransform                
+                setLightingTransform,
+                popViewTransform
             )) {
                 ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black);
 
-                var lighting = Renderer.RenderLighting(bg, 1);
+                var lighting = Renderer.RenderLighting(bg, 1, viewportPosition: cvp, viewportScale: cscale);
                 lighting.Resolve(bg, 2, Width, Height);
             };
 
@@ -264,24 +265,6 @@ namespace TestGame.Scenes {
                             Renderer.GBuffer.Texture.Get(), Vector2.Zero, new Bounds(Vector2.Zero, Vector2.One), 
                             Color.White, LightmapScaleRatio
                         ));
-                }
-
-                if (false)
-                using (var gbg = BatchGroup.New(group, 5, 
-                    before: (dm, _) => {
-                        var vt = Game.Materials.ViewTransform;
-                        vt.Position = cp;
-                        vt.Scale = cz;
-                        Game.Materials.PushViewTransform(vt);
-                    },
-                    after: popViewTransform
-                ))
-                using (var gb = GeometryBatch.New(
-                    gbg, 0,
-                    Game.Materials.Get(Game.Materials.WorldSpaceGeometry, blendState: BlendState.Opaque)
-                )) {
-                    foreach (var o in Environment.Obstructions)
-                        gb.AddFilledQuad(o.Bounds3.XY, Color.White);
                 }
             }
         }
