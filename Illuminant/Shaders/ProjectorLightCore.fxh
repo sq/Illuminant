@@ -8,14 +8,15 @@
 
 #define SELF_OCCLUSION_HACK 1.5
 #define SHADOW_OPACITY_THRESHOLD (0.75 / 255.0)
+#define PROJECTOR_FILTERING POINT
 
 sampler ProjectorTextureSampler : register(s5) {
     Texture = (RampTexture);
     AddressU = WRAP;
     AddressV = WRAP;
-    MipFilter = POINT;
-    MinFilter = POINT;
-    MagFilter = POINT;
+    MipFilter = PROJECTOR_FILTERING;
+    MinFilter = PROJECTOR_FILTERING;
+    MagFilter = PROJECTOR_FILTERING;
 };
 
 float ProjectorLightPixelCore(
