@@ -158,6 +158,7 @@ namespace Squared.Illuminant {
 
         public DirectionalLightSource Clone () {
             var result = new DirectionalLightSource {
+                BlendMode = BlendMode,
                 UserData = UserData,
                 _Direction = _Direction,
                 ShadowTraceLength = ShadowTraceLength,
@@ -241,6 +242,7 @@ namespace Squared.Illuminant {
 
         public SphereLightSource Clone () {
             var result = new SphereLightSource {
+                BlendMode = BlendMode,
                 UserData = UserData,
                 Position = Position,
                 Radius = Radius,
@@ -297,6 +299,7 @@ namespace Squared.Illuminant {
 
         public LineLightSource Clone () {
             var result = new LineLightSource {
+                BlendMode = BlendMode,
                 UserData = UserData,
                 StartPosition = StartPosition,
                 EndPosition = EndPosition,
@@ -360,6 +363,7 @@ namespace Squared.Illuminant {
 
         public ProjectorLightSource Clone () {
             return new ProjectorLightSource {
+                BlendMode = BlendMode,
                 UserData = UserData,
                 Transform = Transform,
                 Scale = Scale,

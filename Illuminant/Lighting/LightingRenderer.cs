@@ -1150,7 +1150,7 @@ namespace Squared.Illuminant {
             vertex.LightPosition2 = new Vector4(invM.M21, invM.M22, invM.M23, invM.M24);
             vertex.Color1         = new Vector4(invM.M31, invM.M32, invM.M33, invM.M34);
             vertex.Color2         = new Vector4(invM.M41, invM.M42, invM.M43, invM.M44);
-            vertex.LightProperties.X = lightSource.Opacity;
+            vertex.LightProperties.X = lightSource.Opacity * intensityScale;
             vertex.LightProperties.Y = lightSource.Wrap ? 0 : 1;
             // FIXME: projector RampMode
             vertex.LightProperties.Z = 0;
