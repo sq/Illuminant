@@ -59,7 +59,7 @@ namespace TestGame.Scenes {
             Scale.Min = 0.05f;
             Scale.Max = 4f;
             Scale.Speed = 0.05f;
-            Scale.Value = 0.25f;
+            Scale.Value = 0.4f;
 
             Rotation.MinusKey = Keys.T;
             Rotation.PlusKey = Keys.Y;
@@ -164,10 +164,20 @@ namespace TestGame.Scenes {
             CreateDistanceField();
 
             MovableLight = new ProjectorLightSource {
-                Texture = (NullableLazyResource<Texture2D>)Game.TextureLoader.Load("vector-field-background")
+                Texture = (NullableLazyResource<Texture2D>)Game.TextureLoader.Load("test pattern")
             };
 
             Environment.Lights.Add(MovableLight);
+
+            Environment.Lights.Add(new DirectionalLightSource {
+                Direction = new Vector3(-0.75f, -0.7f, -0.33f),
+                Color = new Vector4(0.2f, 0.4f, 0.6f, 0.4f) * 0.7f,
+            });
+
+            Environment.Lights.Add(new DirectionalLightSource {
+                Direction = new Vector3(0.35f, -0.05f, -0.75f),
+                Color = new Vector4(0.5f, 0.3f, 0.15f, 0.3f) * 0.7f,
+            });
 
             Rect(new Vector2(330, 347), new Vector2(Width, 388), 0f, 55f);
 
@@ -268,10 +278,10 @@ namespace TestGame.Scenes {
                 var ms = Game.MouseState;
                 Game.IsMouseVisible = true;
 
-                Environment.Ambient = new Color(127, 127, 127, 255);
+                Environment.Ambient = new Color(32, 32, 32, 255);
                 MovableLight.CastsShadows = Shadows;
 
-                var opacity = (ms.ScrollWheelValue / 4096.0f) + 0.33f;
+                var opacity = (ms.ScrollWheelValue / 4096.0f) + 0.2f;
                 if (opacity > 4)
                     opacity = 4;
                 if (opacity < -2)
@@ -285,8 +295,10 @@ namespace TestGame.Scenes {
                     MovableLight.BlendMode = (opacity < 0) ? RenderStates.SubtractiveBlend : RenderStates.AdditiveBlend;
                     MovableLight.Opacity = Math.Abs(opacity);
                     var tex = MovableLight.Texture.Instance;
+                    int w = 656, h = 884;
+                    MovableLight.TextureRegion = MovableLight.Texture.Instance.BoundsFromRectangle(new Rectangle(25, 36, w, h));
                     if (!Game.IsMouseOverUI)
-                        MovableLight.Position = new Vector2(ms.X - tex.Width / 2 * Scale, ms.Y - tex.Height / 2 * Scale);
+                        MovableLight.Position = new Vector2(ms.X - w / 2 * Scale, ms.Y - h / 2 * Scale);
                 }
             }
         }

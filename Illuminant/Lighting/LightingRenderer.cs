@@ -1150,12 +1150,21 @@ namespace Squared.Illuminant {
 
             Matrix.Invert(ref m, out invM);
 
-            // Once the screen coordinates have been converted into texture space, 
-            //  rotate around the center of the texture
-            // FIXME: This does not maintain the size of the texture
-            invM *= Matrix.CreateTranslation(new Vector3(-lightSource.TextureRegion.Size * 0.5f, 0));
-            invM *= Matrix.CreateFromQuaternion(lightSource.Rotation);
-            invM *= Matrix.CreateTranslation(new Vector3(lightSource.TextureRegion.Size * 0.5f, 0));
+            if (lightSource.Rotation != Quaternion.Identity) {
+                // Once the screen coordinates have been converted into texture space, 
+                //  rotate around the center of the texture
+
+                // Compute an aspect ratio factor and apply it before performing the rotation so that
+                //  the aspect ratio and size of the texture are preserved
+                var rgnSize = texSize * lightSource.TextureRegion.Size;
+                var aspect = rgnSize.Y / (float)rgnSize.X;
+
+                invM *= Matrix.CreateTranslation(new Vector3(-lightSource.TextureRegion.Size * 0.5f, 0));
+                invM *= Matrix.CreateScale(aspect, 1, 1);
+                invM *= Matrix.CreateFromQuaternion(lightSource.Rotation);
+                invM *= Matrix.CreateScale(1.0f / aspect, 1, 1);
+                invM *= Matrix.CreateTranslation(new Vector3(lightSource.TextureRegion.Size * 0.5f, 0));
+            }
 
             vertex.LightPosition1 = new Vector4(invM.M11, invM.M12, invM.M13, invM.M14);
             vertex.LightPosition2 = new Vector4(invM.M21, invM.M22, invM.M23, invM.M24);
