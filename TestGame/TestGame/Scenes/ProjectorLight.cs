@@ -32,8 +32,10 @@ namespace TestGame.Scenes {
             Shadows, 
             Wrap;
 
-        Slider Scale, Rotation;
+        Slider Scale, Rotation, Depth, Elevation;
         Slider DistanceFieldResolution;
+
+        const float MaximumZ = 128;
 
         public ProjectorLight (TestGame game, int width, int height)
             : base(game, 1024, 1024) {
@@ -67,6 +69,17 @@ namespace TestGame.Scenes {
             Rotation.Max = 3600;
             Rotation.Speed = 2;
             Rotation.Integral = false;
+
+            Elevation.Min = -MaximumZ;
+            Elevation.Max = MaximumZ;
+            Elevation.Speed = 2;
+            Elevation.MinusKey = Keys.D8;
+            Elevation.PlusKey = Keys.D9;
+
+            Depth.Min = 1;
+            Depth.Max = MaximumZ * 2;
+            Depth.Value = MaximumZ;
+            Depth.Speed = 2;
 
             DistanceFieldResolution.Changed += (s, e) => CreateDistanceField();
         }
@@ -141,7 +154,7 @@ namespace TestGame.Scenes {
             Environment = new LightingEnvironment();
 
             Environment.GroundZ = 0;
-            Environment.MaximumZ = 128;
+            Environment.MaximumZ = MaximumZ;
             Environment.ZToYMultiplier = 1.5f;
 
             Renderer = new LightingRenderer(
@@ -292,7 +305,7 @@ namespace TestGame.Scenes {
 
                 if (Deterministic && false) {
                 } else {
-                    MovableLight.Depth = Environment.MaximumZ;
+                    MovableLight.Depth = Depth;
                     MovableLight.Rotation = Quaternion.CreateFromAxisAngle(Vector3.UnitX, MathHelper.ToRadians(Rotation.Value));
                     MovableLight.Wrap = Wrap;
                     MovableLight.Scale = new Vector2(Scale);
@@ -302,7 +315,7 @@ namespace TestGame.Scenes {
                     int w = 656, h = 884;
                     MovableLight.TextureRegion = MovableLight.Texture.Instance.BoundsFromRectangle(new Rectangle(25, 36, w, h));
                     if (!Game.IsMouseOverUI)
-                        MovableLight.Position = new Vector2(ms.X - w / 2 * Scale, ms.Y - h / 2 * Scale);
+                        MovableLight.Position = new Vector3(ms.X - w / 2 * Scale, ms.Y - h / 2 * Scale, Elevation);
                 }
             }
         }

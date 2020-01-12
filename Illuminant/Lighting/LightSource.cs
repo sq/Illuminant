@@ -355,7 +355,7 @@ namespace Squared.Illuminant {
         public Matrix Transform = Matrix.Identity;
         public Quaternion Rotation = Quaternion.Identity;
         public Vector2 Scale = Vector2.One;
-        public Vector2 Position = Vector2.Zero;
+        public Vector3 Position = Vector3.Zero;
         /// <summary>
         /// Configures the height of the projection (on the Z axis) in environment space.
         /// If unset, defaults to Environment.MaximumZ.
