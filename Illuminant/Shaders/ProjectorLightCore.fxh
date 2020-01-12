@@ -8,7 +8,7 @@
 
 #define SELF_OCCLUSION_HACK 1.5
 #define SHADOW_OPACITY_THRESHOLD (0.75 / 255.0)
-#define PROJECTOR_FILTERING POINT
+#define PROJECTOR_FILTERING LINEAR
 
 sampler ProjectorTextureSampler : register(s5) {
     Texture = (RampTexture);
