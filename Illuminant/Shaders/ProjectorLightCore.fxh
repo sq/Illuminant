@@ -26,9 +26,9 @@ float ProjectorLightPixelCore(
     in float4 mat2, 
     in float4 mat3, 
     in float4 mat4,
-    // opacity, clamping factor, ramp mode, enable shadows
+    // radius, ramp length, texX1, texY1
     in float4 lightProperties,
-    // ao radius, distance falloff, y falloff factor, ao opacity
+    // ao radius, texX2, texY2, ao opacity
     in float4 moreLightProperties,
     out float4 projectorSpacePosition
 ) {
@@ -38,22 +38,32 @@ float ProjectorLightPixelCore(
         mat1, mat2, mat3, mat4
     );
     projectorSpacePosition = mul(float4(shadedPixelPosition, 1), invMatrix);
-    projectorSpacePosition.xy = lerp(projectorSpacePosition.xy, clamp(projectorSpacePosition.xy, 0, 1), lightProperties.y);
+    // Offset into texture region
+    projectorSpacePosition.xy += lightProperties.zw;
+
+    coneLightProperties.z = 0;
+    coneLightProperties.w = 0;
+    moreLightProperties.y = 0;
+    moreLightProperties.z = 0;
 
     float constantOpacity = lightProperties.x;
-    // FIXME: Projector falloff/clamping?
+
     float distanceOpacity = 1;
-    /*
-    if ((projectorSpacePosition.x < 0) || (projectorSpacePosition.y < 0) ||
-        (projectorSpacePosition.x > 1) || (projectorSpacePosition.y > 1))
-        distanceOpacity = 0;
-    */
+    // If lamp is clamped, apply distance falloff
+    if (lightProperties.y > 0.5) {
+        if ((projectorSpacePosition.x < lightProperties.z) || (projectorSpacePosition.y < lightProperties.w) ||
+            (projectorSpacePosition.x > moreLightProperties.y) || (projectorSpacePosition.y > moreLightProperties.z))
+            distanceOpacity = 0.5;
+    }
 
     bool visible = (distanceOpacity > 0) && 
         (shadedPixelPosition.x > -9999) &&
         (constantOpacity > 0);
 
     clip(visible ? 1 : -1);
+
+    // Optionally clamp to texture region
+    projectorSpacePosition.xy = lerp(projectorSpacePosition.xy, clamp(projectorSpacePosition.xy, lightProperties.zw, moreLightProperties.yz), lightProperties.y);
 
     DistanceFieldConstants vars = makeDistanceFieldConstants();
 
@@ -93,9 +103,9 @@ void ProjectorLightVertexShader(
     inout float4 mat2                : TEXCOORD1, 
     inout float4 mat3                : TEXCOORD4, 
     inout float4 mat4                : TEXCOORD5,
-    // radius, ramp length, ramp mode, enable shadows
+    // radius, ramp length, texX1, texY1
     inout float4 lightProperties     : TEXCOORD2,
-    // ao radius, distance falloff, y falloff factor, ao opacity
+    // ao radius, texX2, texY2, ao opacity
     inout float4 moreLightProperties : TEXCOORD3,
     out float3 worldPosition         : POSITION1,
     out float4 result                : POSITION0

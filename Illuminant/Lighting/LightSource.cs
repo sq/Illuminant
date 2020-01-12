@@ -355,6 +355,7 @@ namespace Squared.Illuminant {
         public Matrix Transform = Matrix.Identity;
         public Vector2 Scale = Vector2.One;
         public Vector2 Position = Vector2.Zero;
+        public Bounds TextureRegion = Bounds.Unit;
         public bool Wrap = true;
 
         public ProjectorLightSource ()
@@ -377,6 +378,7 @@ namespace Squared.Illuminant {
                 ShadowDistanceFalloff = ShadowDistanceFalloff,
                 Quality = Quality,
                 TextureRef = TextureRef,
+                TextureRegion = TextureRegion
             };
         }
 

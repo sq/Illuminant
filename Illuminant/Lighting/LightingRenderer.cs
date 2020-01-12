@@ -1143,6 +1143,7 @@ namespace Squared.Illuminant {
             if (tex == null)
                 return;
             var texSize = new Vector2(tex.Width, tex.Height) * lightSource.Scale;
+            var regionSize = texSize * lightSource.TextureRegion.Size;
             m *= Matrix.CreateScale(texSize.X, texSize.Y, 1);
             m *= Matrix.CreateTranslation(new Vector3(lightSource.Position, 0));
             Matrix.Invert(ref m, out invM);
@@ -1152,12 +1153,11 @@ namespace Squared.Illuminant {
             vertex.Color2         = new Vector4(invM.M41, invM.M42, invM.M43, invM.M44);
             vertex.LightProperties.X = lightSource.Opacity * intensityScale;
             vertex.LightProperties.Y = lightSource.Wrap ? 0 : 1;
-            // FIXME: projector RampMode
-            vertex.LightProperties.Z = 0;
-            vertex.LightProperties.W = lightSource.CastsShadows ? 1f : 0f;
+            vertex.LightProperties.Z = lightSource.TextureRegion.TopLeft.X;
+            vertex.LightProperties.W = lightSource.TextureRegion.TopLeft.Y;
             vertex.MoreLightProperties.X = lightSource.AmbientOcclusionRadius;
-            vertex.MoreLightProperties.Y = lightSource.ShadowDistanceFalloff.GetValueOrDefault(-99999);
-            vertex.MoreLightProperties.Z = lightSource.FalloffYFactor;
+            vertex.MoreLightProperties.Y = lightSource.TextureRegion.BottomRight.X;
+            vertex.MoreLightProperties.Z = lightSource.TextureRegion.BottomRight.Y;
             vertex.MoreLightProperties.W = lightSource.AmbientOcclusionOpacity;
             ltrs.LightVertices.Add(ref vertex);
 

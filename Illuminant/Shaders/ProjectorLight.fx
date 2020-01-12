@@ -10,7 +10,7 @@ void ProjectorLightPixelShader(
     in  float4 mat2                : TEXCOORD1,
     in  float4 mat3                : TEXCOORD4,
     in  float4 mat4                : TEXCOORD5,
-    // radius, ramp length, ramp mode, enable shadows
+    // radius, ramp length, texXOffset, texYOffset
     in  float4 lightProperties     : TEXCOORD2,
     // ao radius, distance falloff, y falloff factor, ao opacity
     in  float4 moreLightProperties : TEXCOORD3,
