@@ -43,8 +43,6 @@ float ProjectorLightPixelCore(
 
     coneLightProperties.z = 0;
     coneLightProperties.w = 0;
-    moreLightProperties.y = 0;
-    moreLightProperties.z = 0;
 
     float constantOpacity = lightProperties.x;
 
@@ -53,7 +51,7 @@ float ProjectorLightPixelCore(
     if (lightProperties.y > 0.5) {
         if ((projectorSpacePosition.x < lightProperties.z) || (projectorSpacePosition.y < lightProperties.w) ||
             (projectorSpacePosition.x > moreLightProperties.y) || (projectorSpacePosition.y > moreLightProperties.z))
-            distanceOpacity = 0.5;
+            distanceOpacity = 0;
     }
 
     bool visible = (distanceOpacity > 0) && 
@@ -64,6 +62,10 @@ float ProjectorLightPixelCore(
 
     // Optionally clamp to texture region
     projectorSpacePosition.xy = lerp(projectorSpacePosition.xy, clamp(projectorSpacePosition.xy, lightProperties.zw, moreLightProperties.yz), lightProperties.y);
+
+    // Zero out y/z before we pass them into AO
+    moreLightProperties.y = 0;
+    moreLightProperties.z = 0;
 
     DistanceFieldConstants vars = makeDistanceFieldConstants();
 
