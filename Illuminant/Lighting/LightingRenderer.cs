@@ -1142,11 +1142,21 @@ namespace Squared.Illuminant {
             var tex = lightSource.TextureRef.Instance;
             if (tex == null)
                 return;
-            var texSize = new Vector2(tex.Width, tex.Height) * lightSource.Scale;
-            var regionSize = texSize * lightSource.TextureRegion.Size;
-            m *= Matrix.CreateScale(texSize.X, texSize.Y, 1);
+
+            var texSize = new Vector2(tex.Width, tex.Height);
+
+            m *= Matrix.CreateScale(texSize.X * lightSource.Scale.X, texSize.Y * lightSource.Scale.Y, 1);
             m *= Matrix.CreateTranslation(new Vector3(lightSource.Position, 0));
+
             Matrix.Invert(ref m, out invM);
+
+            // Once the screen coordinates have been converted into texture space, 
+            //  rotate around the center of the texture
+            // FIXME: This does not maintain the size of the texture
+            invM *= Matrix.CreateTranslation(new Vector3(-lightSource.TextureRegion.Size * 0.5f, 0));
+            invM *= Matrix.CreateFromQuaternion(lightSource.Rotation);
+            invM *= Matrix.CreateTranslation(new Vector3(lightSource.TextureRegion.Size * 0.5f, 0));
+
             vertex.LightPosition1 = new Vector4(invM.M11, invM.M12, invM.M13, invM.M14);
             vertex.LightPosition2 = new Vector4(invM.M21, invM.M22, invM.M23, invM.M24);
             vertex.Color1         = new Vector4(invM.M31, invM.M32, invM.M33, invM.M34);

@@ -32,7 +32,7 @@ namespace TestGame.Scenes {
             Shadows, 
             Wrap;
 
-        Slider Scale;
+        Slider Scale, Rotation;
         Slider DistanceFieldResolution;
 
         public ProjectorLight (TestGame game, int width, int height)
@@ -41,7 +41,6 @@ namespace TestGame.Scenes {
             Deterministic.Value = true;
             DistanceFieldResolution.Value = 0.5f;
             Shadows.Value = true;
-            Scale.Value = 1f;
 
             ShowGBuffer.Key = Keys.G;
             ShowDistanceField.Key = Keys.D;
@@ -57,9 +56,17 @@ namespace TestGame.Scenes {
 
             Scale.MinusKey = Keys.OemSemicolon;
             Scale.PlusKey = Keys.OemQuotes;
-            Scale.Min = 0.1f;
+            Scale.Min = 0.05f;
             Scale.Max = 4f;
             Scale.Speed = 0.05f;
+            Scale.Value = 0.25f;
+
+            Rotation.MinusKey = Keys.T;
+            Rotation.PlusKey = Keys.Y;
+            Rotation.Min = -3600;
+            Rotation.Max = 3600;
+            Rotation.Speed = 10;
+            Rotation.Integral = false;
 
             DistanceFieldResolution.Changed += (s, e) => CreateDistanceField();
         }
@@ -157,7 +164,7 @@ namespace TestGame.Scenes {
             CreateDistanceField();
 
             MovableLight = new ProjectorLightSource {
-                Texture = (NullableLazyResource<Texture2D>)Game.TextureLoader.Load("vector-field")
+                Texture = (NullableLazyResource<Texture2D>)Game.TextureLoader.Load("vector-field-background")
             };
 
             Environment.Lights.Add(MovableLight);
@@ -272,12 +279,14 @@ namespace TestGame.Scenes {
 
                 if (Deterministic && false) {
                 } else {
+                    MovableLight.Rotation = Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathHelper.ToRadians(Rotation.Value));
                     MovableLight.Wrap = Wrap;
                     MovableLight.Scale = new Vector2(Scale);
                     MovableLight.BlendMode = (opacity < 0) ? RenderStates.SubtractiveBlend : RenderStates.AdditiveBlend;
                     MovableLight.Opacity = Math.Abs(opacity);
+                    var tex = MovableLight.Texture.Instance;
                     if (!Game.IsMouseOverUI)
-                        MovableLight.Position = new Vector2(ms.X, ms.Y);
+                        MovableLight.Position = new Vector2(ms.X - tex.Width / 2 * Scale, ms.Y - tex.Height / 2 * Scale);
                 }
             }
         }

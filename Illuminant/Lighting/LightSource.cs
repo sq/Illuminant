@@ -353,6 +353,7 @@ namespace Squared.Illuminant {
 
     public class ProjectorLightSource : LightSource {
         public Matrix Transform = Matrix.Identity;
+        public Quaternion Rotation = Quaternion.Identity;
         public Vector2 Scale = Vector2.One;
         public Vector2 Position = Vector2.Zero;
         public Bounds TextureRegion = Bounds.Unit;
@@ -367,6 +368,7 @@ namespace Squared.Illuminant {
                 BlendMode = BlendMode,
                 UserData = UserData,
                 Transform = Transform,
+                Rotation = Rotation,
                 Scale = Scale,
                 Position = Position,
                 Wrap = Wrap,
