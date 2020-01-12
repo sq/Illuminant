@@ -6,6 +6,7 @@
 #include "RampCommon.fxh"
 #include "AOCommon.fxh"
 
+#define DEBUG_COORDS 0
 #define SELF_OCCLUSION_HACK 1.5
 #define SHADOW_OPACITY_THRESHOLD (0.75 / 255.0)
 #define PROJECTOR_FILTERING LINEAR
@@ -40,6 +41,9 @@ float ProjectorLightPixelCore(
     projectorSpacePosition = mul(float4(shadedPixelPosition, 1), invMatrix);
     // Offset into texture region
     projectorSpacePosition.xy += lightProperties.zw;
+    // If the projector space position drops below 0 on the z axis just force it up to 0 since the light would hit
+    //  the ground
+    projectorSpacePosition.z = max(0, projectorSpacePosition.z);
 
     coneLightProperties.z = 0;
     coneLightProperties.w = 0;
@@ -48,10 +52,14 @@ float ProjectorLightPixelCore(
 
     float distanceOpacity = 1;
     // If lamp is clamped, apply distance falloff
-    if (lightProperties.y > 0.5) {
-        if ((projectorSpacePosition.x < lightProperties.z) || (projectorSpacePosition.y < lightProperties.w) ||
-            (projectorSpacePosition.x > moreLightProperties.y) || (projectorSpacePosition.y > moreLightProperties.z))
-            distanceOpacity = 0;
+    if (!DEBUG_COORDS) {
+        float2 sz = moreLightProperties.yz - lightProperties.zw;
+        float3 clampedPosition = clamp3(projectorSpacePosition, float3(lightProperties.zw, 0), float3(moreLightProperties.yz, 1));
+        float threshold = 0.001;
+        float distanceToVolume = min(length(clampedPosition - projectorSpacePosition), threshold) * (1 / threshold);
+
+        if (lightProperties.y > 0.5)
+            distanceOpacity = max(1 - distanceToVolume, 0);
     }
 
     bool visible = (distanceOpacity > 0) && 
@@ -132,6 +140,10 @@ float4 ProjectorLightColorCore(
     float4 projectorSpacePosition,
     float opacity
 ) {
+    if (DEBUG_COORDS) {
+        return float4(clamp(projectorSpacePosition.xyz, 0, 1), 1);
+    }
+
     projectorSpacePosition.z = 0;
     projectorSpacePosition.w = 0;
     float4 texColor = tex2Dlod(ProjectorTextureSampler, projectorSpacePosition);

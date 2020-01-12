@@ -356,6 +356,11 @@ namespace Squared.Illuminant {
         public Quaternion Rotation = Quaternion.Identity;
         public Vector2 Scale = Vector2.One;
         public Vector2 Position = Vector2.Zero;
+        /// <summary>
+        /// Configures the height of the projection (on the Z axis) in environment space.
+        /// If unset, defaults to Environment.MaximumZ.
+        /// </summary>
+        public float? Depth = null;
         public Bounds TextureRegion = Bounds.Unit;
         public bool Wrap = true;
 
@@ -373,6 +378,7 @@ namespace Squared.Illuminant {
                 Position = Position,
                 Wrap = Wrap,
                 Opacity = Opacity,
+                Depth = Depth,
                 CastsShadows = CastsShadows,
                 AmbientOcclusionRadius = 0,
                 AmbientOcclusionOpacity = 0,

@@ -24,7 +24,7 @@ namespace TestGame.Scenes {
 
         public ProjectorLightSource MovableLight;
 
-        const float LightScaleFactor = 4;
+        const float LightScaleFactor = 1;
 
         Toggle ShowGBuffer,
             ShowDistanceField,
@@ -65,7 +65,7 @@ namespace TestGame.Scenes {
             Rotation.PlusKey = Keys.Y;
             Rotation.Min = -3600;
             Rotation.Max = 3600;
-            Rotation.Speed = 10;
+            Rotation.Speed = 2;
             Rotation.Integral = false;
 
             DistanceFieldResolution.Changed += (s, e) => CreateDistanceField();
@@ -169,15 +169,19 @@ namespace TestGame.Scenes {
 
             Environment.Lights.Add(MovableLight);
 
-            Environment.Lights.Add(new DirectionalLightSource {
-                Direction = new Vector3(-0.75f, -0.7f, -0.33f),
-                Color = new Vector4(0.2f, 0.4f, 0.6f, 0.4f) * 0.7f,
-            });
+            if (false) {
+                Environment.Lights.Add(new DirectionalLightSource {
+                    Direction = new Vector3(-0.75f, -0.7f, -0.33f),
+                    Color = new Vector4(0.2f, 0.4f, 0.6f, 0.4f) * 0.7f,
+                });
 
-            Environment.Lights.Add(new DirectionalLightSource {
-                Direction = new Vector3(0.35f, -0.05f, -0.75f),
-                Color = new Vector4(0.5f, 0.3f, 0.15f, 0.3f) * 0.7f,
-            });
+                Environment.Lights.Add(new DirectionalLightSource {
+                    Direction = new Vector3(0.35f, -0.05f, -0.75f),
+                    Color = new Vector4(0.5f, 0.3f, 0.15f, 0.3f) * 0.7f,
+                });
+
+                Environment.Ambient = new Color(32, 32, 32, 255);
+            }
 
             Rect(new Vector2(330, 347), new Vector2(Width, 388), 0f, 55f);
 
@@ -278,7 +282,6 @@ namespace TestGame.Scenes {
                 var ms = Game.MouseState;
                 Game.IsMouseVisible = true;
 
-                Environment.Ambient = new Color(32, 32, 32, 255);
                 MovableLight.CastsShadows = Shadows;
 
                 var opacity = (ms.ScrollWheelValue / 4096.0f) + 0.2f;
@@ -289,7 +292,8 @@ namespace TestGame.Scenes {
 
                 if (Deterministic && false) {
                 } else {
-                    MovableLight.Rotation = Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathHelper.ToRadians(Rotation.Value));
+                    MovableLight.Depth = Environment.MaximumZ;
+                    MovableLight.Rotation = Quaternion.CreateFromAxisAngle(Vector3.UnitX, MathHelper.ToRadians(Rotation.Value));
                     MovableLight.Wrap = Wrap;
                     MovableLight.Scale = new Vector2(Scale);
                     MovableLight.BlendMode = (opacity < 0) ? RenderStates.SubtractiveBlend : RenderStates.AdditiveBlend;

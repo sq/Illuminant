@@ -1145,7 +1145,7 @@ namespace Squared.Illuminant {
 
             var texSize = new Vector2(tex.Width, tex.Height);
 
-            m *= Matrix.CreateScale(texSize.X * lightSource.Scale.X, texSize.Y * lightSource.Scale.Y, 1);
+            m *= Matrix.CreateScale(texSize.X * lightSource.Scale.X, texSize.Y * lightSource.Scale.Y, lightSource.Depth.GetValueOrDefault(Environment.MaximumZ));
             m *= Matrix.CreateTranslation(new Vector3(lightSource.Position, 0));
 
             Matrix.Invert(ref m, out invM);
