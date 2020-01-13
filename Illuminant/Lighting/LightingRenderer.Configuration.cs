@@ -180,6 +180,13 @@ namespace Squared.Illuminant {
         /// </summary>
         public Func<string, Texture2D> RampTextureLoader = null;
 
+        /// <summary>
+        /// Biases the mip level used by projector light sources.
+        /// A negative bias will produce sharper projected textures at the cost of aliasing,
+        ///  while a positive bias will induce blurring.
+        /// </summary>
+        public float ProjectorMipBias = -0.33f;
+
         public RendererConfiguration (
             int maxWidth, int maxHeight, bool highQuality,
             bool enableBrightnessEstimation = false,

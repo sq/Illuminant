@@ -12,7 +12,7 @@ using Squared.Util;
 namespace Squared.Illuminant.Uniforms {
     [StructLayout(LayoutKind.Sequential)]
     public struct Environment {
-        // GroundZ, ZToYMultiplier, InvZToYMultiplier
+        // GroundZ, MaximumZ, ZToYMultiplier, InvZToYMultiplier
         internal Vector4 _ZAndScale;
         internal Vector4 _ZToY;
 
@@ -29,6 +29,15 @@ namespace Squared.Illuminant.Uniforms {
                 if (!Arithmetic.IsFinite(value))
                     throw new ArgumentOutOfRangeException("value");
                 _ZAndScale.X = value;
+            }
+        }
+
+        public float MaximumZ {
+            get {
+                return _ZAndScale.Y;
+            }
+            set {
+                _ZAndScale.Y = value;
             }
         }
 

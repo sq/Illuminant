@@ -611,6 +611,7 @@ namespace Squared.Illuminant {
         private void ComputeUniforms () {
             EnvironmentUniforms = new Uniforms.Environment {
                 GroundZ = Environment.GroundZ,
+                MaximumZ = Environment.MaximumZ,
                 ZToYMultiplier = Configuration.TwoPointFiveD
                     ? Environment.ZToYMultiplier
                     : 0.0f,
@@ -1156,19 +1157,21 @@ namespace Squared.Illuminant {
 
                 // Compute an aspect ratio factor and apply it before performing the rotation so that
                 //  the aspect ratio and size of the texture are preserved
-                var rgnSize = texSize * lightSource.TextureRegion.Size;
-                var aspect = rgnSize.Y / (float)rgnSize.X;
+                // FIXME: This isn't necessary or helpful anymore?
+                // var rgnSize = texSize * lightSource.TextureRegion.Size;
+                // var aspect = rgnSize.Y / (float)rgnSize.X;
 
                 invM *= Matrix.CreateTranslation(new Vector3(-lightSource.TextureRegion.Size * 0.5f, 0));
-                invM *= Matrix.CreateScale(aspect, 1, 1);
+                // invM *= Matrix.CreateScale(aspect, 1, 1);
                 invM *= Matrix.CreateFromQuaternion(lightSource.Rotation);
-                invM *= Matrix.CreateScale(1.0f / aspect, 1, 1);
+                // invM *= Matrix.CreateScale(1.0f / aspect, 1, 1);
                 invM *= Matrix.CreateTranslation(new Vector3(lightSource.TextureRegion.Size * 0.5f, 0));
             }
 
-            var approximateScale = (lightSource.Scale.X + lightSource.Scale.Y) / 2.0;
+            var effectiveScale2 = lightSource.Scale * Configuration.RenderScale;
+            var approximateScale = (effectiveScale2.X + effectiveScale2.Y) / 2.0;
             var invApproximateScale = 1.0 / approximateScale;
-            var mipBias = (float)Math.Max(0, Math.Log(invApproximateScale, 2));
+            var mipBias = (float)Math.Max(0, Math.Log(invApproximateScale, 2) + Configuration.ProjectorMipBias);
 
             vertex.LightPosition1 = new Vector4(invM.M11, invM.M12, invM.M13, invM.M14);
             vertex.LightPosition2 = new Vector4(invM.M21, invM.M22, invM.M23, invM.M24);

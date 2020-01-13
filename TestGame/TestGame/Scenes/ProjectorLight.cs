@@ -36,6 +36,8 @@ namespace TestGame.Scenes {
         Slider Scale, Rotation, Depth, Elevation;
         Slider DistanceFieldResolution;
 
+        const int LightmapScaleFactor = 1;
+        const float LightmapScaleRatio = 1.0f / LightmapScaleFactor;
         const float MaximumZ = 128;
 
         public ProjectorLight (TestGame game, int width, int height)
@@ -61,15 +63,15 @@ namespace TestGame.Scenes {
             Scale.MinusKey = Keys.OemSemicolon;
             Scale.PlusKey = Keys.OemQuotes;
             Scale.Min = 0.05f;
-            Scale.Max = 4f;
+            Scale.Max = 16f;
             Scale.Speed = 0.05f;
-            Scale.Value = 1f;
+            Scale.Value = 4f;
 
             Rotation.MinusKey = Keys.T;
             Rotation.PlusKey = Keys.Y;
             Rotation.Min = -3600;
             Rotation.Max = 3600;
-            Rotation.Speed = 2;
+            Rotation.Speed = 5;
             Rotation.Integral = false;
 
             Elevation.Min = -MaximumZ;
@@ -92,7 +94,7 @@ namespace TestGame.Scenes {
                     Lightmap.Dispose();
 
                 Lightmap = new RenderTarget2D(
-                    Game.GraphicsDevice, Width, Height, false,
+                    Game.GraphicsDevice, Width / LightmapScaleFactor, Height / LightmapScaleFactor, false,
                     SurfaceFormat.Color, DepthFormat.None, 1, 
                     RenderTargetUsage.PlatformContents
                 );
@@ -128,7 +130,7 @@ namespace TestGame.Scenes {
         }
 
         void Pillar (Vector2 center) {
-            const float totalHeight = 0.5f;
+            const float totalHeight = 0.55f;
 
             var scale = 0.25f;
             var baseSizeTL = new Vector2(62, 65) * scale;
@@ -162,7 +164,7 @@ namespace TestGame.Scenes {
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(
-                    1024, 1024, true
+                    Width, Height, true
                 ) {
                     MaximumFieldUpdatesPerFrame = 9,
                     DefaultQuality = {
@@ -179,7 +181,7 @@ namespace TestGame.Scenes {
             CreateDistanceField();
 
             MovableLight = new ProjectorLightSource {
-                Texture = (NullableLazyResource<Texture2D>)Game.TextureLoader.Load("test pattern")
+                Texture = (NullableLazyResource<Texture2D>)Game.TextureLoader.Load("precision-test")
             };
 
             Environment.Lights.Add(MovableLight);
@@ -187,15 +189,15 @@ namespace TestGame.Scenes {
             if (true) {
                 Environment.Lights.Add(new DirectionalLightSource {
                     Direction = new Vector3(-0.75f, -0.7f, -0.33f),
-                    Color = new Vector4(0.2f, 0.4f, 0.6f, 0.4f) * 0.7f,
+                    Color = new Vector4(0.2f, 0.4f, 0.6f, 0.4f),
                 });
 
                 Environment.Lights.Add(new DirectionalLightSource {
                     Direction = new Vector3(0.35f, -0.05f, -0.75f),
-                    Color = new Vector4(0.5f, 0.3f, 0.15f, 0.3f) * 0.7f,
+                    Color = new Vector4(0.5f, 0.3f, 0.15f, 0.3f),
                 });
 
-                Environment.Ambient = new Color(32, 32, 32, 255);
+                Environment.Ambient = new Color(8, 8, 8, 255);
             }
 
             Rect(new Vector2(330, 347), new Vector2(Width, 388), 0f, 55f);
@@ -212,9 +214,7 @@ namespace TestGame.Scenes {
         public override void Draw (Squared.Render.Frame frame) {
             CreateRenderTargets();
 
-            var scaleRatio = 1.0f;
-
-            Renderer.Configuration.SetScale(scaleRatio);
+            Renderer.Configuration.SetScale(LightmapScaleRatio);
 
             Renderer.UpdateFields(frame, -2);
 
@@ -263,6 +263,7 @@ namespace TestGame.Scenes {
                         var dc = new BitmapDrawCall(
                             Lightmap, Vector2.Zero, Color.White
                         );
+                        dc.ScaleF = LightmapScaleFactor;
                         bb.Add(dc);
                     }
                 }
@@ -308,15 +309,15 @@ namespace TestGame.Scenes {
                 MovableLight.AmbientOcclusionRadius = AO.Value ? 16 : 0;
                 MovableLight.AmbientOcclusionOpacity = AO.Value ? 0.4f : 0;
                 MovableLight.Depth = Depth;
-                MovableLight.Rotation = Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathHelper.ToRadians(Rotation.Value));
+                MovableLight.Rotation = Quaternion.CreateFromAxisAngle(Vector3.UnitX, MathHelper.ToRadians(Rotation.Value));
                 MovableLight.Wrap = Wrap;
                 MovableLight.Scale = new Vector2(Scale);
                 MovableLight.BlendMode = (opacity < 0) ? RenderStates.SubtractiveBlend : RenderStates.AdditiveBlend;
                 MovableLight.Opacity = Math.Abs(opacity);
 
                 var tex = MovableLight.Texture.Instance;
-                int w = 656, h = 884;
-                MovableLight.TextureRegion = MovableLight.Texture.Instance.BoundsFromRectangle(new Rectangle(25, 36, w, h));
+                int w = 30, h = 15;
+                MovableLight.TextureRegion = MovableLight.Texture.Instance.BoundsFromRectangle(new Rectangle(1, 1, w, h));
 
                 if (Deterministic) {
                     MovableLight.Position = new Vector3(64, 64, 0);

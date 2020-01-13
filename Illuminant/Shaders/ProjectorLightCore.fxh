@@ -8,6 +8,7 @@
 
 #define DEBUG_COORDS 0
 #define ALLOW_DISCARD 1
+#define BOUNDING_BOX 1
 #define SELF_OCCLUSION_HACK 1.5
 #define SHADOW_OPACITY_THRESHOLD (0.75 / 255.0)
 #define PROJECTOR_FILTERING LINEAR
@@ -39,12 +40,17 @@ float ProjectorLightPixelCore(
     float4x4 invMatrix = float4x4(
         mat1, mat2, mat3, mat4
     );
+
+    // Map into projector space so the xy are texture coordinates
     projectorSpacePosition = mul(float4(shadedPixelPosition, 1), invMatrix);
     projectorSpacePosition /= projectorSpacePosition.w;
     // Offset into texture region
     projectorSpacePosition.xy += lightProperties.zw;
-    // If the projector space position drops below 0 on the z axis just force it up to 0 since the light would hit
+
+    // HACK: If the projector space position drops below 0 on the z axis just force it up to 0 since the light would hit
     //  the ground
+    // Disabling this allows a projection to be elevated off the ground but breaks slanted rotation because some of the 
+    //  projected points end up below 0
     projectorSpacePosition.z = max(0, projectorSpacePosition.z);
 
     coneLightProperties.z = 0;
@@ -56,7 +62,7 @@ float ProjectorLightPixelCore(
     float3 clampedPosition = clamp3(projectorSpacePosition, float3(lightProperties.zw, 0), float3(moreLightProperties.yz, 1));
 
     // If lamp is clamped, apply distance falloff
-    if (!DEBUG_COORDS && ALLOW_DISCARD) {
+    if (ALLOW_DISCARD) {
         float2 sz = moreLightProperties.yz - lightProperties.zw;
         float threshold = 0.001;
         float distanceToVolume = min(length(clampedPosition - projectorSpacePosition), threshold) * (1 / threshold);
@@ -149,7 +155,36 @@ float4x4 invertMatrix (float4x4 m) {
     return ret;
 }
 
-void ProjectorLightVertexShader(
+float3 projectBoundingBoxEdge (
+    in float4x4 projectorSpaceToWorldSpace,
+    in float3 corner, in float3 interpCorner
+) {
+    // Project the corners of the bounding box through the transformation matrix
+    //  at the edges of the Z volume (0 and max) to estimate the maximum
+    //  possible bounding box since some transforms will cause a skew or other weird
+    //  transformation that doesn't behave as expected if you just project at one Z
+    float4 transformed = mul(
+        float4(interpCorner, 1), 
+        projectorSpaceToWorldSpace
+    );
+    float3 worldPosition1 = transformed.xyz / transformed.w;
+
+    interpCorner.z = 1;
+    transformed = mul(
+        float4(interpCorner, 1), 
+        projectorSpaceToWorldSpace
+    );
+    float3 worldPosition2 = transformed.xyz / transformed.w;
+
+    // Select the min/max of the two projected points depending on where our current
+    //  corner lies
+    return float3(
+        lerp(min(worldPosition1.xy, worldPosition2.xy), max(worldPosition1.xy, worldPosition2.xy), corner.xy),
+        0
+    );
+}
+
+void ProjectorLightVertexShader (
     in int2 vertexIndex              : BLENDINDICES0,
     inout float4 mat1                : TEXCOORD0, 
     inout float4 mat2                : TEXCOORD1, 
@@ -173,23 +208,38 @@ void ProjectorLightVertexShader(
         mat1, mat2, mat3, mat4
     );
 
-    if (lightProperties.y > 0.5) {
+    if ((lightProperties.y > 0.5) && BOUNDING_BOX) {
         float4x4 projectorSpaceToWorldSpace = invertMatrix(invMatrix);
         float2 tl = lightProperties.zw, br = moreLightProperties.yz;
-        float3 corner = LightCorners[vertexIndex.x];
-        float2 interpCorner = lerp(0, br - tl, corner.xy);
-        float4 transformed = mul(
-            float4(interpCorner.x, interpCorner.y, corner.z, 1), 
-            projectorSpaceToWorldSpace
-        );
-        worldPosition = transformed.xyz / transformed.w;
+
+        // HACK: Project each corner of the bounding cube of the projector, then create a 2d
+        //  x/y bounding box that encloses all those corners' projected points
+        // This ensures we generate a nice uniform quad that definitely covers the whole projection
+        // We could just pass the projected points directly through but this interacts poorly with
+        //  rotation because we end up sort of rotating everything twice. Oops.
+        float2 bboxTl = 999999, bboxBr = -999999;
+        float3 corner;
+
+        for (int i = 0; i < 4; i++) {
+            corner = LightCorners[i];
+            float3 interpCorner = float3(lerp(0, br - tl, corner.xy), 0);
+            float3 proj = projectBoundingBoxEdge(projectorSpaceToWorldSpace, corner, interpCorner);
+            bboxTl = min(bboxTl, proj.xy);
+            bboxBr = max(bboxBr, proj.xy);
+        }
+
+        corner = LightCorners[vertexIndex.x];
+        worldPosition.xy = lerp(bboxTl, bboxBr, corner.xy);
+        worldPosition.z = 0;
+
+        // Pad the bounding box at top and bottom to compensate for any 2.5D effect
+        float zOffset = getMaximumZ() * getZToYMultiplier();
+        worldPosition.y += (zOffset * ((corner.y * 2) - 1));
     } else {
         float3 tl = -9999, br = 9999;
         float3 vertex = LightCorners[vertexIndex.x];
         worldPosition = lerp(tl, br, vertex);
     }
-
-    // FIXME: z offset
 
     float3 screenPosition = (worldPosition - float3(GetViewportPosition(), 0));
     screenPosition.xy *= GetViewportScale() * getEnvironmentRenderScale();
@@ -201,9 +251,8 @@ float4 ProjectorLightColorCore(
     float4 projectorSpacePosition,
     float mip, float opacity
 ) {
-    if (DEBUG_COORDS) {
-        return float4(clamp(projectorSpacePosition.xyz, 0, 1), 1);
-    }
+    if (DEBUG_COORDS)
+        return float4(clamp(projectorSpacePosition.xyz, 0, 1), 1) * opacity;
 
     projectorSpacePosition.z = 0;
     projectorSpacePosition.w = mip;

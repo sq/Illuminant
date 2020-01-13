@@ -8,6 +8,10 @@ float getGroundZ () {
     return EnvironmentZAndScale.x;
 }
 
+float getMaximumZ () {
+    return EnvironmentZAndScale.y;
+}
+
 float getZToYMultiplier () {
     return EnvironmentZToY.x;
 }
