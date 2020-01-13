@@ -182,7 +182,7 @@ namespace TestGame.Scenes {
 
             Environment.Lights.Add(MovableLight);
 
-            if (false) {
+            if (true) {
                 Environment.Lights.Add(new DirectionalLightSource {
                     Direction = new Vector3(-0.75f, -0.7f, -0.33f),
                     Color = new Vector4(0.2f, 0.4f, 0.6f, 0.4f) * 0.7f,
@@ -306,7 +306,7 @@ namespace TestGame.Scenes {
                 if (Deterministic && false) {
                 } else {
                     MovableLight.Depth = Depth;
-                    MovableLight.Rotation = Quaternion.CreateFromAxisAngle(Vector3.UnitX, MathHelper.ToRadians(Rotation.Value));
+                    MovableLight.Rotation = Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathHelper.ToRadians(Rotation.Value));
                     MovableLight.Wrap = Wrap;
                     MovableLight.Scale = new Vector2(Scale);
                     MovableLight.BlendMode = (opacity < 0) ? RenderStates.SubtractiveBlend : RenderStates.AdditiveBlend;
