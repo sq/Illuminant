@@ -30,7 +30,8 @@ namespace TestGame.Scenes {
             ShowDistanceField,
             Deterministic,
             Shadows, 
-            Wrap;
+            Wrap,
+            AO;
 
         Slider Scale, Rotation, Depth, Elevation;
         Slider DistanceFieldResolution;
@@ -49,6 +50,7 @@ namespace TestGame.Scenes {
             Deterministic.Key = Keys.R;
             Shadows.Key = Keys.S;
             Wrap.Key = Keys.W;
+            AO.Key = Keys.A;
 
             DistanceFieldResolution.MinusKey = Keys.D5;
             DistanceFieldResolution.PlusKey = Keys.D6;
@@ -305,6 +307,8 @@ namespace TestGame.Scenes {
 
                 if (Deterministic && false) {
                 } else {
+                    MovableLight.AmbientOcclusionRadius = AO.Value ? 16 : 0;
+                    MovableLight.AmbientOcclusionOpacity = AO.Value ? 0.4f : 0;
                     MovableLight.Depth = Depth;
                     MovableLight.Rotation = Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathHelper.ToRadians(Rotation.Value));
                     MovableLight.Wrap = Wrap;

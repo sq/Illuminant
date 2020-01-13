@@ -364,6 +364,31 @@ namespace Squared.Illuminant {
         public Bounds TextureRegion = Bounds.Unit;
         public bool Wrap = true;
 
+        /// <summary>
+        /// Uniformly obscures light if it is within N pixels of any obstacle. This produces
+        ///  a 'blob shadow' around volumes within the distance field.
+        /// </summary>
+        new public float AmbientOcclusionRadius {
+            get {
+                return base.AmbientOcclusionRadius;
+            }
+            set {
+                base.AmbientOcclusionRadius = value;
+            }
+        }
+        /// <summary>
+        /// Uniformly obscures light if it is within N pixels of any obstacle. This produces
+        ///  a 'blob shadow' around volumes within the distance field.
+        /// </summary>
+        new public float AmbientOcclusionOpacity {
+            get {
+                return base.AmbientOcclusionOpacity;
+            }
+            set {
+                base.AmbientOcclusionOpacity = value;
+            }
+        }
+
         public ProjectorLightSource ()
             : base (LightSourceTypeID.Projector) {
         }
@@ -380,8 +405,8 @@ namespace Squared.Illuminant {
                 Opacity = Opacity,
                 Depth = Depth,
                 CastsShadows = CastsShadows,
-                AmbientOcclusionRadius = 0,
-                AmbientOcclusionOpacity = 0,
+                AmbientOcclusionRadius = AmbientOcclusionRadius,
+                AmbientOcclusionOpacity = AmbientOcclusionOpacity,
                 FalloffYFactor = FalloffYFactor,
                 ShadowDistanceFalloff = ShadowDistanceFalloff,
                 Quality = Quality,
