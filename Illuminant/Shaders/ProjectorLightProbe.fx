@@ -6,15 +6,23 @@
 
 void ProjectorLightProbeVertexShader(
     in int2 cornerIndex              : BLENDINDICES0,
-    inout float3 lightCenter         : TEXCOORD0,
-    // radius, ramp length, ramp mode, enable shadows
+    inout float4 mat1                : TEXCOORD0, 
+    inout float4 mat2                : TEXCOORD1, 
+    inout float4 mat3                : TEXCOORD4, 
+    // HACK: mip bias in w, w is always 1
+    inout float4 mat4                : TEXCOORD5,
+    // opacity, wrap, texX1, texY1
     inout float4 lightProperties     : TEXCOORD2,
-    // ao radius, distance falloff, y falloff factor, ao opacity
+    // ao radius, texX2, texY2, ao opacity
     inout float4 moreLightProperties : TEXCOORD3,
-    inout float4 color               : TEXCOORD4,
+    out float mipBias                : TEXCOORD6,
     out float4 result                : POSITION0
 ) {
     DEFINE_LightCorners
+
+    mipBias = mat4.w;
+    mat4.w = 1;
+
     if (cornerIndex.x > 3) {
         result = float4(-9999, -9999, 0, 0);
     } else {
@@ -28,10 +36,11 @@ void ProjectorLightProbePixelShader(
     in  float4 mat2                : TEXCOORD1,
     in  float4 mat3                : TEXCOORD4,
     in  float4 mat4                : TEXCOORD5,
-    // radius, ramp length, ramp mode, enable shadows
+    // opacity, wrap, texX1, texY1
     in  float4 lightProperties     : TEXCOORD2,
     // ao radius, distance falloff, y falloff factor, ao opacity
     in  float4 moreLightProperties : TEXCOORD3,
+    in  float  mipBias             : TEXCOORD6,
     ACCEPTS_VPOS,
     out float4 result              : COLOR0
 ) {

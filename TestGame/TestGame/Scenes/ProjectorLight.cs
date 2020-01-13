@@ -63,7 +63,7 @@ namespace TestGame.Scenes {
             Scale.Min = 0.05f;
             Scale.Max = 4f;
             Scale.Speed = 0.05f;
-            Scale.Value = 0.4f;
+            Scale.Value = 1f;
 
             Rotation.MinusKey = Keys.T;
             Rotation.PlusKey = Keys.Y;
@@ -305,19 +305,22 @@ namespace TestGame.Scenes {
                 if (opacity < -2)
                     opacity = -2;
 
-                if (Deterministic && false) {
+                MovableLight.AmbientOcclusionRadius = AO.Value ? 16 : 0;
+                MovableLight.AmbientOcclusionOpacity = AO.Value ? 0.4f : 0;
+                MovableLight.Depth = Depth;
+                MovableLight.Rotation = Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathHelper.ToRadians(Rotation.Value));
+                MovableLight.Wrap = Wrap;
+                MovableLight.Scale = new Vector2(Scale);
+                MovableLight.BlendMode = (opacity < 0) ? RenderStates.SubtractiveBlend : RenderStates.AdditiveBlend;
+                MovableLight.Opacity = Math.Abs(opacity);
+
+                var tex = MovableLight.Texture.Instance;
+                int w = 656, h = 884;
+                MovableLight.TextureRegion = MovableLight.Texture.Instance.BoundsFromRectangle(new Rectangle(25, 36, w, h));
+
+                if (Deterministic) {
+                    MovableLight.Position = new Vector3(64, 64, 0);
                 } else {
-                    MovableLight.AmbientOcclusionRadius = AO.Value ? 16 : 0;
-                    MovableLight.AmbientOcclusionOpacity = AO.Value ? 0.4f : 0;
-                    MovableLight.Depth = Depth;
-                    MovableLight.Rotation = Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathHelper.ToRadians(Rotation.Value));
-                    MovableLight.Wrap = Wrap;
-                    MovableLight.Scale = new Vector2(Scale);
-                    MovableLight.BlendMode = (opacity < 0) ? RenderStates.SubtractiveBlend : RenderStates.AdditiveBlend;
-                    MovableLight.Opacity = Math.Abs(opacity);
-                    var tex = MovableLight.Texture.Instance;
-                    int w = 656, h = 884;
-                    MovableLight.TextureRegion = MovableLight.Texture.Instance.BoundsFromRectangle(new Rectangle(25, 36, w, h));
                     if (!Game.IsMouseOverUI)
                         MovableLight.Position = new Vector3(ms.X - w / 2 * Scale, ms.Y - h / 2 * Scale, Elevation);
                 }

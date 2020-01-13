@@ -28,7 +28,7 @@ float ProjectorLightPixelCore(
     in float4 mat2, 
     in float4 mat3, 
     in float4 mat4,
-    // radius, ramp length, texX1, texY1
+    // radius, mip level, texX1, texY1
     in float4 lightProperties,
     // ao radius, texX2, texY2, ao opacity
     in float4 moreLightProperties,
@@ -154,20 +154,26 @@ void ProjectorLightVertexShader(
     inout float4 mat1                : TEXCOORD0, 
     inout float4 mat2                : TEXCOORD1, 
     inout float4 mat3                : TEXCOORD4, 
+    // HACK: mip bias in w, w is always 1
     inout float4 mat4                : TEXCOORD5,
-    // radius, ramp length, texX1, texY1
+    // opacity, wrap, texX1, texY1
     inout float4 lightProperties     : TEXCOORD2,
     // ao radius, texX2, texY2, ao opacity
     inout float4 moreLightProperties : TEXCOORD3,
+    out float  mipBias               : TEXCOORD6,
     out float3 worldPosition         : POSITION1,
     out float4 result                : POSITION0
 ) {
     DEFINE_LightCorners
 
+    mipBias = mat4.w;
+    mat4.w = 1;
+
+    float4x4 invMatrix = float4x4(
+        mat1, mat2, mat3, mat4
+    );
+
     if (lightProperties.y > 0.5) {
-        float4x4 invMatrix = float4x4(
-            mat1, mat2, mat3, mat4
-        );
         float4x4 projectorSpaceToWorldSpace = invertMatrix(invMatrix);
         float2 tl = lightProperties.zw, br = moreLightProperties.yz;
         float3 corner = LightCorners[vertexIndex.x];
@@ -193,14 +199,14 @@ void ProjectorLightVertexShader(
 
 float4 ProjectorLightColorCore(
     float4 projectorSpacePosition,
-    float opacity
+    float mip, float opacity
 ) {
     if (DEBUG_COORDS) {
         return float4(clamp(projectorSpacePosition.xyz, 0, 1), 1);
     }
 
     projectorSpacePosition.z = 0;
-    projectorSpacePosition.w = 0;
+    projectorSpacePosition.w = mip;
     float4 texColor = tex2Dlod(ProjectorTextureSampler, projectorSpacePosition);
 
     return float4(texColor.rgb * texColor.a * opacity, 1);

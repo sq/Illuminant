@@ -1166,10 +1166,14 @@ namespace Squared.Illuminant {
                 invM *= Matrix.CreateTranslation(new Vector3(lightSource.TextureRegion.Size * 0.5f, 0));
             }
 
+            var approximateScale = (lightSource.Scale.X + lightSource.Scale.Y) / 2.0;
+            var invApproximateScale = 1.0 / approximateScale;
+            var mipBias = (float)Math.Max(0, Math.Log(invApproximateScale, 2));
+
             vertex.LightPosition1 = new Vector4(invM.M11, invM.M12, invM.M13, invM.M14);
             vertex.LightPosition2 = new Vector4(invM.M21, invM.M22, invM.M23, invM.M24);
             vertex.Color1         = new Vector4(invM.M31, invM.M32, invM.M33, invM.M34);
-            vertex.Color2         = new Vector4(invM.M41, invM.M42, invM.M43, invM.M44);
+            vertex.Color2         = new Vector4(invM.M41, invM.M42, invM.M43, mipBias);
             vertex.LightProperties.X = lightSource.Opacity * intensityScale;
             vertex.LightProperties.Y = lightSource.Wrap ? 0 : 1;
             vertex.LightProperties.Z = lightSource.TextureRegion.TopLeft.X;
