@@ -1166,10 +1166,6 @@ namespace Squared.Illuminant {
                 invM *= Matrix.CreateTranslation(new Vector3(lightSource.TextureRegion.Size * 0.5f, 0));
             }
 
-            var test = Matrix.Invert(invM);
-            var test2 = test * invM;
-            ;
-
             vertex.LightPosition1 = new Vector4(invM.M11, invM.M12, invM.M13, invM.M14);
             vertex.LightPosition2 = new Vector4(invM.M21, invM.M22, invM.M23, invM.M24);
             vertex.Color1         = new Vector4(invM.M31, invM.M32, invM.M33, invM.M34);

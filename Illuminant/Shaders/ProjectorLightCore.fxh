@@ -6,7 +6,8 @@
 #include "RampCommon.fxh"
 #include "AOCommon.fxh"
 
-#define DEBUG_COORDS 1
+#define DEBUG_COORDS 0
+#define ALLOW_DISCARD 1
 #define SELF_OCCLUSION_HACK 1.5
 #define SHADOW_OPACITY_THRESHOLD (0.75 / 255.0)
 #define PROJECTOR_FILTERING LINEAR
@@ -39,6 +40,7 @@ float ProjectorLightPixelCore(
         mat1, mat2, mat3, mat4
     );
     projectorSpacePosition = mul(float4(shadedPixelPosition, 1), invMatrix);
+    projectorSpacePosition /= projectorSpacePosition.w;
     // Offset into texture region
     projectorSpacePosition.xy += lightProperties.zw;
     // If the projector space position drops below 0 on the z axis just force it up to 0 since the light would hit
@@ -54,7 +56,7 @@ float ProjectorLightPixelCore(
     float3 clampedPosition = clamp3(projectorSpacePosition, float3(lightProperties.zw, 0), float3(moreLightProperties.yz, 1));
 
     // If lamp is clamped, apply distance falloff
-    if (!DEBUG_COORDS) {
+    if (!DEBUG_COORDS && ALLOW_DISCARD) {
         float2 sz = moreLightProperties.yz - lightProperties.zw;
         float threshold = 0.001;
         float distanceToVolume = min(length(clampedPosition - projectorSpacePosition), threshold) * (1 / threshold);
@@ -167,8 +169,14 @@ void ProjectorLightVertexShader(
             mat1, mat2, mat3, mat4
         );
         float4x4 projectorSpaceToWorldSpace = invertMatrix(invMatrix);
+        float2 tl = lightProperties.zw, br = moreLightProperties.yz;
         float3 corner = LightCorners[vertexIndex.x];
-        worldPosition = mul(corner, projectorSpaceToWorldSpace);
+        float2 interpCorner = lerp(0, br - tl, corner.xy);
+        float4 transformed = mul(
+            float4(interpCorner.x, interpCorner.y, corner.z, 1), 
+            projectorSpaceToWorldSpace
+        );
+        worldPosition = transformed.xyz / transformed.w;
     } else {
         float3 tl = -9999, br = 9999;
         float3 vertex = LightCorners[vertexIndex.x];
