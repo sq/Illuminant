@@ -235,6 +235,10 @@ namespace Squared.Illuminant {
             SliceInfo.ValidSliceCount = Math.Max(SliceInfo.ValidSliceCount, index);
         }
 
+        protected virtual void DisposeResources () {
+            Coordinator.DisposeResource(Texture);
+        }
+
         public void Dispose () {
             if (IsDisposed)
                 return;
@@ -243,7 +247,7 @@ namespace Squared.Illuminant {
 
             IsDisposed = true;
 
-            Coordinator.DisposeResource(Texture);
+            DisposeResources();
         }
     }
 
@@ -313,6 +317,11 @@ namespace Squared.Illuminant {
         protected override void Coordinator_DeviceReset (object sender, EventArgs e) {
             base.Coordinator_DeviceReset(sender, e);
             DeviceResetImpl(StaticSliceInfo);
+        }
+
+        protected override void DisposeResources () {
+            base.DisposeResources();
+            Coordinator.DisposeResource(StaticTexture);
         }
     }
 }
