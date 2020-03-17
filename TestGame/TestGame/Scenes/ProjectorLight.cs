@@ -184,12 +184,15 @@ namespace TestGame.Scenes {
             CreateDistanceField();
 
             MovableLight = new ProjectorLightSource {
-                Texture = (NullableLazyResource<Texture2D>)Game.TextureLoader.Load("test pattern")
+                Texture = (NullableLazyResource<Texture2D>)Game.TextureLoader.Load("test pattern"),
+                Radius = 24,
+                RampLength = 550,
+                RampMode = LightSourceRampMode.Linear
             };
 
             Environment.Lights.Add(MovableLight);
 
-            if (false) {
+            if (true) {
                 Environment.Lights.Add(new DirectionalLightSource {
                     Direction = new Vector3(-0.75f, -0.7f, -0.33f),
                     Color = new Vector4(0.2f, 0.4f, 0.6f, 0.4f),
@@ -303,7 +306,7 @@ namespace TestGame.Scenes {
 
                 MovableLight.CastsShadows = Shadows;
 
-                var opacity = (ms.ScrollWheelValue / 4096.0f) + 0.2f;
+                var opacity = (ms.ScrollWheelValue / 4096.0f) + 0.5f;
                 if (opacity > 4)
                     opacity = 4;
                 if (opacity < -2)
@@ -324,11 +327,11 @@ namespace TestGame.Scenes {
 
                 if (Deterministic) {
                     MovableLight.Position = new Vector3(64, 64, 0);
-                    MovableLight.Origin = HasOrigin ? new Vector3(64, 128, 32) : (Vector3?)null;
+                    MovableLight.Origin = HasOrigin ? new Vector3(64, 64, 64) : (Vector3?)null;
                 } else {
                     if (!Game.IsMouseOverUI) {
                         MovableLight.Position = new Vector3(ms.X - w / 2 * Scale, ms.Y - h / 2 * Scale, Elevation);
-                        MovableLight.Origin = HasOrigin ? new Vector3(ms.X, ms.Y + 64, Elevation + 32) : (Vector3?)null;
+                        MovableLight.Origin = HasOrigin ? new Vector3(ms.X, ms.Y, Elevation + 64) : (Vector3?)null;
                     }
                 }
             }
