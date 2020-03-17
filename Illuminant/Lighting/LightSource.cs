@@ -357,6 +357,11 @@ namespace Squared.Illuminant {
         public Vector2 Scale = Vector2.One;
         public Vector3 Position = Vector3.Zero;
         /// <summary>
+        /// If set, the light is projected from the origin position and will be affected by
+        ///  shadowing and surface normals.
+        /// </summary>
+        public Vector3? Origin = null;
+        /// <summary>
         /// Configures the height of the projection (on the Z axis) in environment space.
         /// If unset, defaults to Environment.MaximumZ.
         /// </summary>

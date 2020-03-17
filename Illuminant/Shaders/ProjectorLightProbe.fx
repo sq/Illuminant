@@ -15,7 +15,7 @@ void ProjectorLightProbeVertexShader(
     inout float4 lightProperties     : TEXCOORD2,
     // ao radius, texX2, texY2, ao opacity
     inout float4 moreLightProperties : TEXCOORD3,
-    out float mipBias                : TEXCOORD6,
+    out float mipBias                : TEXCOORD7,
     out float4 result                : POSITION0
 ) {
     DEFINE_LightCorners
@@ -40,7 +40,8 @@ void ProjectorLightProbePixelShader(
     in  float4 lightProperties     : TEXCOORD2,
     // ao radius, distance falloff, y falloff factor, ao opacity
     in  float4 moreLightProperties : TEXCOORD3,
-    in  float  mipBias             : TEXCOORD6,
+    in  float4 projectorOrigin     : TEXCOORD6,
+    in  float  mipBias             : TEXCOORD7,
     ACCEPTS_VPOS,
     out float4 result              : COLOR0
 ) {
@@ -60,7 +61,7 @@ void ProjectorLightProbePixelShader(
     opacity *= ProjectorLightPixelCore(
         shadedPixelPosition, shadedPixelNormal.xyz, 
         mat1, mat2, mat3, mat4, lightProperties, moreLightProperties,
-        projectorSpacePosition
+        projectorOrigin, projectorSpacePosition
     );
 
     // FIXME: color

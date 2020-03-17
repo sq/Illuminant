@@ -14,7 +14,8 @@ void ProjectorLightPixelShader(
     in  float4 lightProperties     : TEXCOORD2,
     // ao radius, distance falloff, y falloff factor, ao opacity
     in  float4 moreLightProperties : TEXCOORD3,
-    in  float  mipBias             : TEXCOORD6,
+    in  float4 projectorOrigin     : TEXCOORD6,
+    in  float  mipBias             : TEXCOORD7,
     ACCEPTS_VPOS,
     out float4 result              : COLOR0
 ) {
@@ -30,7 +31,7 @@ void ProjectorLightPixelShader(
         shadedPixelPosition, shadedPixelNormal,
         mat1, mat2, mat3, mat4,
         lightProperties, moreLightProperties,
-        projectorSpacePosition
+        projectorOrigin, projectorSpacePosition
     );
 
     result = ProjectorLightColorCore(projectorSpacePosition, mipBias, opacity);

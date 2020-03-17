@@ -9,7 +9,7 @@ using Microsoft.Xna.Framework.Graphics;
 namespace Squared.Illuminant {
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct LightVertex : IVertexType {
-        public Vector4 LightPosition1, LightPosition2;
+        public Vector4 LightPosition1, LightPosition2, LightPosition3;
         public Vector4 LightProperties;
         public Vector4 MoreLightProperties;
         public Vector4 Color1, Color2;
@@ -26,7 +26,8 @@ namespace Squared.Illuminant {
                 new VertexElement(Marshal.OffsetOf(tThis, "MoreLightProperties").ToInt32(), VertexElementFormat.Vector4, VertexElementUsage.TextureCoordinate, 3),
                 // VertexElementUsage.Color tends to have lower precision for some reason
                 new VertexElement(Marshal.OffsetOf(tThis, "Color1").ToInt32(), VertexElementFormat.Vector4, VertexElementUsage.TextureCoordinate, 4),
-                new VertexElement(Marshal.OffsetOf(tThis, "Color2").ToInt32(), VertexElementFormat.Vector4, VertexElementUsage.TextureCoordinate, 5)
+                new VertexElement(Marshal.OffsetOf(tThis, "Color2").ToInt32(), VertexElementFormat.Vector4, VertexElementUsage.TextureCoordinate, 5),
+                new VertexElement(Marshal.OffsetOf(tThis, "LightPosition3").ToInt32(), VertexElementFormat.Vector4, VertexElementUsage.TextureCoordinate, 6)
             );
         }
 

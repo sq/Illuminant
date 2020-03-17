@@ -1054,7 +1054,7 @@ namespace Squared.Illuminant {
 
         private void RenderSphereLightSource (SphereLightSource lightSource, float intensityScale, LightTypeRenderState ltrs) {
             LightVertex vertex;
-            vertex.LightPosition2 = vertex.LightPosition1 = new Vector4(lightSource.Position, 0);
+            vertex.LightPosition3 = vertex.LightPosition2 = vertex.LightPosition1 = new Vector4(lightSource.Position, 0);
             var color = lightSource.Color;
             color.W *= (lightSource.Opacity * intensityScale);
             vertex.Color2 = vertex.Color1 = color;
@@ -1081,6 +1081,7 @@ namespace Squared.Illuminant {
                 vertex.LightPosition1 = new Vector4(-99999, -99999, 0, 0);
                 vertex.LightPosition2 = new Vector4(99999, 99999, 0, 0);
             }
+            vertex.LightPosition3 = Vector4.Zero;
             var color = lightSource.Color;
             color.W *= (lightSource.Opacity * intensityScale);
             vertex.Color1 = color;
@@ -1119,6 +1120,7 @@ namespace Squared.Illuminant {
             LightVertex vertex;
             vertex.LightPosition1 = new Vector4(lightSource.StartPosition, 0);
             vertex.LightPosition2 = new Vector4(lightSource.EndPosition, 0);
+            vertex.LightPosition3 = Vector4.Zero;
             Vector4 color1 = lightSource.StartColor, color2 = lightSource.EndColor;
             color1.W *= (lightSource.Opacity * intensityScale);
             color2.W *= (lightSource.Opacity * intensityScale);
@@ -1175,6 +1177,9 @@ namespace Squared.Illuminant {
 
             vertex.LightPosition1 = new Vector4(invM.M11, invM.M12, invM.M13, invM.M14);
             vertex.LightPosition2 = new Vector4(invM.M21, invM.M22, invM.M23, invM.M24);
+            vertex.LightPosition3 = lightSource.Origin.HasValue
+                ? new Vector4(lightSource.Origin.Value, 1)
+                : Vector4.Zero;
             vertex.Color1         = new Vector4(invM.M31, invM.M32, invM.M33, invM.M34);
             vertex.Color2         = new Vector4(invM.M41, invM.M42, invM.M43, mipBias);
             vertex.LightProperties.X = lightSource.Opacity * intensityScale;

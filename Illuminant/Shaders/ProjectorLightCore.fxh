@@ -29,10 +29,11 @@ float ProjectorLightPixelCore(
     in float4 mat2, 
     in float4 mat3, 
     in float4 mat4,
-    // radius, mip level, texX1, texY1
+    // opacity, wrap, texX1, texY1
     in float4 lightProperties,
     // ao radius, texX2, texY2, ao opacity
     in float4 moreLightProperties,
+    in float4 projectorOrigin,
     out float4 projectorSpacePosition
 ) {
     float4 coneLightProperties = lightProperties;
@@ -91,7 +92,10 @@ float ProjectorLightPixelCore(
 
     float aoOpacity = computeAO(shadedPixelPosition, shadedPixelNormal, moreLightProperties, vars, visible);
 
-    float preTraceOpacity = distanceOpacity * aoOpacity;
+    float3 lightNormal = normalize(shadedPixelPosition - projectorOrigin.xyz);
+    float normalOpacity = lerp(1, computeNormalFactor(lightNormal, shadedPixelNormal), projectorOrigin.w);
+
+    float preTraceOpacity = distanceOpacity * aoOpacity * normalOpacity;
 
     // FIXME: Projector shadows?
     /*
@@ -195,7 +199,8 @@ void ProjectorLightVertexShader (
     inout float4 lightProperties     : TEXCOORD2,
     // ao radius, texX2, texY2, ao opacity
     inout float4 moreLightProperties : TEXCOORD3,
-    out float  mipBias               : TEXCOORD6,
+    inout float4 origin              : TEXCOORD6,
+    out float  mipBias               : TEXCOORD7,
     out float3 worldPosition         : POSITION1,
     out float4 result                : POSITION0
 ) {
@@ -247,7 +252,7 @@ void ProjectorLightVertexShader (
     result = float4(transformedPosition.xy, 0, transformedPosition.w);
 }
 
-float4 ProjectorLightColorCore(
+float4 ProjectorLightColorCore (
     float4 projectorSpacePosition,
     float mip, float opacity
 ) {

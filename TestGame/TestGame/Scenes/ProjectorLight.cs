@@ -31,7 +31,8 @@ namespace TestGame.Scenes {
             Deterministic,
             Shadows, 
             Wrap,
-            AO;
+            AO,
+            HasOrigin;
 
         Slider Scale, Rotation, Depth, Elevation;
         Slider DistanceFieldResolution;
@@ -65,7 +66,7 @@ namespace TestGame.Scenes {
             Scale.Min = 0.05f;
             Scale.Max = 16f;
             Scale.Speed = 0.05f;
-            Scale.Value = 4f;
+            Scale.Value = 0.66f;
 
             Rotation.MinusKey = Keys.T;
             Rotation.PlusKey = Keys.Y;
@@ -84,6 +85,8 @@ namespace TestGame.Scenes {
             Depth.Max = MaximumZ * 2;
             Depth.Value = MaximumZ;
             Depth.Speed = 2;
+
+            HasOrigin.Key = Keys.O;
 
             DistanceFieldResolution.Changed += (s, e) => CreateDistanceField();
         }
@@ -181,7 +184,7 @@ namespace TestGame.Scenes {
             CreateDistanceField();
 
             MovableLight = new ProjectorLightSource {
-                Texture = (NullableLazyResource<Texture2D>)Game.TextureLoader.Load("precision-test")
+                Texture = (NullableLazyResource<Texture2D>)Game.TextureLoader.Load("test pattern")
             };
 
             Environment.Lights.Add(MovableLight);
@@ -316,14 +319,17 @@ namespace TestGame.Scenes {
                 MovableLight.Opacity = Math.Abs(opacity);
 
                 var tex = MovableLight.Texture.Instance;
-                int w = 30, h = 15;
-                MovableLight.TextureRegion = MovableLight.Texture.Instance.BoundsFromRectangle(new Rectangle(1, 1, w, h));
+                int w = tex.Width, h = tex.Height;
+                // MovableLight.TextureRegion = MovableLight.Texture.Instance.BoundsFromRectangle(new Rectangle(1, 1, w, h));
 
                 if (Deterministic) {
                     MovableLight.Position = new Vector3(64, 64, 0);
+                    MovableLight.Origin = HasOrigin ? new Vector3(64, 128, 32) : (Vector3?)null;
                 } else {
-                    if (!Game.IsMouseOverUI)
+                    if (!Game.IsMouseOverUI) {
                         MovableLight.Position = new Vector3(ms.X - w / 2 * Scale, ms.Y - h / 2 * Scale, Elevation);
+                        MovableLight.Origin = HasOrigin ? new Vector3(ms.X, ms.Y + 64, Elevation + 32) : (Vector3?)null;
+                    }
                 }
             }
         }
