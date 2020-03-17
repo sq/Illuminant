@@ -1,5 +1,5 @@
-// Results in /Od are sometimes incorrect
-#pragma fxcparams(/Od /Zi)
+// Results in /Od are completely incorrect
+#pragma fxcparams(/O3 /Zi)
 
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "ProjectorLightCore.fxh"

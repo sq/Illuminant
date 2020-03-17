@@ -92,14 +92,12 @@ float ProjectorLightPixelCore(
 
     float aoOpacity = computeAO(shadedPixelPosition, shadedPixelNormal, moreLightProperties, vars, visible);
 
-    bool hasOrigin = projectorOrigin.w > 0;
-
-    float3 lightNormal = normalize(projectorOrigin.xyz - shadedPixelPosition);
-    float normalOpacity = 1; // hasOrigin ? computeNormalFactor(lightNormal, shadedPixelNormal) : 1;
+    float3 lightNormal = normalize(shadedPixelPosition - projectorOrigin.xyz);
+    float normalOpacity = lerp(1, computeNormalFactor(lightNormal, shadedPixelNormal), projectorOrigin.w);
 
     float preTraceOpacity = distanceOpacity * aoOpacity * normalOpacity;
 
-    bool traceShadows = visible && lightProperties.w && (preTraceOpacity >= SHADOW_OPACITY_THRESHOLD) && hasOrigin;
+    bool traceShadows = visible && lightProperties.w && (preTraceOpacity >= SHADOW_OPACITY_THRESHOLD);
     float coneOpacity = coneTrace(
         projectorOrigin.xyz, lightProperties.xy, 
         float2(getConeGrowthFactor(), -99999),
