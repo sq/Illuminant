@@ -68,7 +68,7 @@ float ProjectorLightPixelCore(
         float threshold = 0.001;
         float distanceToVolume = min(length(clampedPosition - projectorSpacePosition), threshold) * (1 / threshold);
 
-        if (lightProperties.y > 0.5)
+        if (moreLightProperties.z > 0.5)
             distanceOpacity = max(1 - distanceToVolume, 0);
     }
 
@@ -216,9 +216,9 @@ void ProjectorLightVertexShader (
         mat1, mat2, mat3, mat4
     );
 
-    if ((lightProperties.y > 0.5) && BOUNDING_BOX) {
+    if ((moreLightProperties.z > 0.5) && BOUNDING_BOX) {
         float4x4 projectorSpaceToWorldSpace = invertMatrix(invMatrix);
-        float2 tl = lightProperties.zw, br = moreLightProperties.yz;
+        float2 tl = evenMoreLightProperties.xy, br = evenMoreLightProperties.zw;
 
         // HACK: Project each corner of the bounding cube of the projector, then create a 2d
         //  x/y bounding box that encloses all those corners' projected points
