@@ -57,9 +57,6 @@ float ProjectorLightPixelCore(
     //  projected points end up below 0
     projectorSpacePosition.z = max(0, projectorSpacePosition.z);
 
-    coneLightProperties.z = 0;
-    coneLightProperties.w = 0;
-
     float constantOpacity = moreLightProperties.y;
 
     float distanceOpacity = 1;

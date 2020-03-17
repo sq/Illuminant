@@ -370,6 +370,20 @@ namespace Squared.Illuminant {
         public bool Wrap = true;
 
         /// <summary>
+        /// The size of the light source.
+        /// </summary>
+        public float   Radius = 0;
+        /// <summary>
+        /// The size of the falloff around the light source.
+        /// </summary>
+        public float   RampLength = 1;
+        /// <summary>
+        /// Controls the nature of the light's distance falloff.
+        /// Exponential produces falloff that is more realistic (square of distance or whatever) but not necessarily as expected. 
+        /// </summary>
+        public LightSourceRampMode RampMode = LightSourceRampMode.Linear;
+
+        /// <summary>
         /// Uniformly obscures light if it is within N pixels of any obstacle. This produces
         ///  a 'blob shadow' around volumes within the distance field.
         /// </summary>

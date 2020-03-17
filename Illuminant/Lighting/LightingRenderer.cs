@@ -1181,20 +1181,24 @@ namespace Squared.Illuminant {
             vertex.LightPosition1 = new Vector4(invM.M11, invM.M12, invM.M13, invM.M14);
             vertex.LightPosition2 = new Vector4(invM.M21, invM.M22, invM.M23, invM.M24);
             vertex.LightPosition3 = lightSource.Origin.HasValue
-                ? new Vector4(lightSource.Origin.Value, lightSource.CastsShadows ? 1 : 0)
-                : new Vector4(-999999, -999999, -999999, 0);
+                ? new Vector4(lightSource.Origin.Value, 1)
+                : Vector4.Zero;
             vertex.Color1         = new Vector4(invM.M31, invM.M32, invM.M33, invM.M34);
             vertex.Color2         = new Vector4(invM.M41, invM.M42, invM.M43, mipBias);
-            vertex.LightProperties.X = lightSource.Opacity * intensityScale;
-            vertex.LightProperties.Y = lightSource.Wrap ? 0 : 1;
-            vertex.LightProperties.Z = lightSource.TextureRegion.TopLeft.X;
-            vertex.LightProperties.W = lightSource.TextureRegion.TopLeft.Y;
+            vertex.LightProperties.X = lightSource.Radius;
+            vertex.LightProperties.Y = lightSource.RampLength;
+            vertex.LightProperties.Z = (int)lightSource.RampMode;
+            vertex.LightProperties.W = lightSource.CastsShadows && lightSource.Origin.HasValue ? 1f : 0f;
             vertex.MoreLightProperties.X = lightSource.AmbientOcclusionRadius;
-            vertex.MoreLightProperties.Y = lightSource.TextureRegion.BottomRight.X;
-            vertex.MoreLightProperties.Z = lightSource.TextureRegion.BottomRight.Y;
+            vertex.MoreLightProperties.Y = lightSource.Opacity * intensityScale;
+            vertex.MoreLightProperties.Z = lightSource.Wrap ? 0 : 1;
             vertex.MoreLightProperties.W = lightSource.AmbientOcclusionOpacity;
-            // FIXME
-            vertex.EvenMoreLightProperties = Vector4.Zero;
+            vertex.EvenMoreLightProperties = new Vector4(
+                lightSource.TextureRegion.TopLeft.X,
+                lightSource.TextureRegion.TopLeft.Y,
+                lightSource.TextureRegion.BottomRight.X,
+                lightSource.TextureRegion.BottomRight.Y
+            );
             ltrs.LightVertices.Add(ref vertex);
 
             ltrs.LightCount++;
