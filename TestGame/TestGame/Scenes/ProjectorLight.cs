@@ -189,7 +189,7 @@ namespace TestGame.Scenes {
 
             Environment.Lights.Add(MovableLight);
 
-            if (true) {
+            if (false) {
                 Environment.Lights.Add(new DirectionalLightSource {
                     Direction = new Vector3(-0.75f, -0.7f, -0.33f),
                     Color = new Vector4(0.2f, 0.4f, 0.6f, 0.4f),

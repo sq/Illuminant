@@ -1066,6 +1066,7 @@ namespace Squared.Illuminant {
             vertex.MoreLightProperties.Y = lightSource.ShadowDistanceFalloff.GetValueOrDefault(-99999);
             vertex.MoreLightProperties.Z = lightSource.FalloffYFactor;
             vertex.MoreLightProperties.W = lightSource.AmbientOcclusionOpacity;
+            vertex.EvenMoreLightProperties = Vector4.Zero;
             ltrs.LightVertices.Add(ref vertex);
 
             ltrs.LightCount++;
@@ -1101,6 +1102,7 @@ namespace Squared.Illuminant {
                 0,
                 lightSource.AmbientOcclusionOpacity
             );
+            vertex.EvenMoreLightProperties = Vector4.Zero;
 
             var lightBounds = new Bounds(
                 Vector2.Zero,
@@ -1134,6 +1136,7 @@ namespace Squared.Illuminant {
             vertex.MoreLightProperties.Y = lightSource.ShadowDistanceFalloff.GetValueOrDefault(-99999);
             vertex.MoreLightProperties.Z = lightSource.FalloffYFactor;
             vertex.MoreLightProperties.W = lightSource.AmbientOcclusionOpacity;
+            vertex.EvenMoreLightProperties = Vector4.Zero;
             ltrs.LightVertices.Add(ref vertex);
 
             ltrs.LightCount++;
@@ -1178,8 +1181,8 @@ namespace Squared.Illuminant {
             vertex.LightPosition1 = new Vector4(invM.M11, invM.M12, invM.M13, invM.M14);
             vertex.LightPosition2 = new Vector4(invM.M21, invM.M22, invM.M23, invM.M24);
             vertex.LightPosition3 = lightSource.Origin.HasValue
-                ? new Vector4(lightSource.Origin.Value, 1)
-                : Vector4.Zero;
+                ? new Vector4(lightSource.Origin.Value, lightSource.CastsShadows ? 1 : 0)
+                : new Vector4(-999999, -999999, -999999, 0);
             vertex.Color1         = new Vector4(invM.M31, invM.M32, invM.M33, invM.M34);
             vertex.Color2         = new Vector4(invM.M41, invM.M42, invM.M43, mipBias);
             vertex.LightProperties.X = lightSource.Opacity * intensityScale;
@@ -1190,6 +1193,8 @@ namespace Squared.Illuminant {
             vertex.MoreLightProperties.Y = lightSource.TextureRegion.BottomRight.X;
             vertex.MoreLightProperties.Z = lightSource.TextureRegion.BottomRight.Y;
             vertex.MoreLightProperties.W = lightSource.AmbientOcclusionOpacity;
+            // FIXME
+            vertex.EvenMoreLightProperties = Vector4.Zero;
             ltrs.LightVertices.Add(ref vertex);
 
             ltrs.LightCount++;

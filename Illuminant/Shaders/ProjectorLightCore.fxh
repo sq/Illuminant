@@ -29,10 +29,13 @@ float ProjectorLightPixelCore(
     in float4 mat2, 
     in float4 mat3, 
     in float4 mat4,
-    // opacity, wrap, texX1, texY1
+    // radius, ramp length, ramp mode, enable shadows
     in float4 lightProperties,
-    // ao radius, texX2, texY2, ao opacity
+    // ao radius, opacity, wrap, ao opacity
     in float4 moreLightProperties,
+    // texX1, texY1, texX2, texY2,
+    in float4 evenMoreLightProperties,
+    // x, y, z, hasOrigin
     in float4 projectorOrigin,
     out float4 projectorSpacePosition
 ) {
@@ -46,7 +49,7 @@ float ProjectorLightPixelCore(
     projectorSpacePosition = mul(float4(shadedPixelPosition, 1), invMatrix);
     projectorSpacePosition /= projectorSpacePosition.w;
     // Offset into texture region
-    projectorSpacePosition.xy += lightProperties.zw;
+    projectorSpacePosition.xy += evenMoreLightProperties.xy;
 
     // HACK: If the projector space position drops below 0 on the z axis just force it up to 0 since the light would hit
     //  the ground
@@ -57,14 +60,14 @@ float ProjectorLightPixelCore(
     coneLightProperties.z = 0;
     coneLightProperties.w = 0;
 
-    float constantOpacity = lightProperties.x;
+    float constantOpacity = moreLightProperties.y;
 
     float distanceOpacity = 1;
-    float3 clampedPosition = clamp3(projectorSpacePosition, float3(lightProperties.zw, 0), float3(moreLightProperties.yz, 1));
+    float3 clampedPosition = clamp3(projectorSpacePosition, float3(evenMoreLightProperties.xy, 0), float3(evenMoreLightProperties.zw, 1));
 
     // If lamp is clamped, apply distance falloff
     if (ALLOW_DISCARD) {
-        float2 sz = moreLightProperties.yz - lightProperties.zw;
+        float2 sz = evenMoreLightProperties.zw - evenMoreLightProperties.xy;
         float threshold = 0.001;
         float distanceToVolume = min(length(clampedPosition - projectorSpacePosition), threshold) * (1 / threshold);
 
@@ -79,7 +82,7 @@ float ProjectorLightPixelCore(
     clip(visible ? 1 : -1);
 
     // Optionally clamp to texture region
-    projectorSpacePosition.xy = lerp(projectorSpacePosition.xy, clampedPosition.xy, lightProperties.y);
+    projectorSpacePosition.xy = lerp(projectorSpacePosition.xy, clampedPosition.xy, moreLightProperties.z);
 
     // Zero out y/z before we pass them into AO
     moreLightProperties.y = 0;
@@ -92,18 +95,18 @@ float ProjectorLightPixelCore(
 
     float aoOpacity = computeAO(shadedPixelPosition, shadedPixelNormal, moreLightProperties, vars, visible);
 
+    bool hasOrigin = projectorOrigin.w > 0;
+
     float3 lightNormal = normalize(shadedPixelPosition - projectorOrigin.xyz);
-    float normalOpacity = lerp(1, computeNormalFactor(lightNormal, shadedPixelNormal), projectorOrigin.w);
+    float normalOpacity = hasOrigin ? computeNormalFactor(lightNormal, shadedPixelNormal) : 1;
 
     float preTraceOpacity = distanceOpacity * aoOpacity * normalOpacity;
 
-    // FIXME: Projector shadows?
     /*
-    bool traceShadows = visible && lightProperties.w && (preTraceOpacity >= SHADOW_OPACITY_THRESHOLD);
-    float coneOpacity = lineConeTrace(
-        startPosition, endPosition, u,
-        coneLightProperties.xy, 
-        float2(getConeGrowthFactor(), moreLightProperties.y),
+    bool traceShadows = visible && lightProperties.w && (preTraceOpacity >= SHADOW_OPACITY_THRESHOLD) && hasOrigin;
+    float coneOpacity = coneTrace(
+        projectorOrigin.xyz, lightProperties.xy, 
+        float2(getConeGrowthFactor(), -99999),
         shadedPixelPosition + (SELF_OCCLUSION_HACK * shadedPixelNormal),
         vars, traceShadows
     );
@@ -195,12 +198,15 @@ void ProjectorLightVertexShader (
     inout float4 mat3                : TEXCOORD4, 
     // HACK: mip bias in w, w is always 1
     inout float4 mat4                : TEXCOORD5,
-    // opacity, wrap, texX1, texY1
+    // radius, ramp length, ramp mode, enable shadows
     inout float4 lightProperties     : TEXCOORD2,
-    // ao radius, texX2, texY2, ao opacity
+    // ao radius, opacity, wrap, ao opacity
     inout float4 moreLightProperties : TEXCOORD3,
+    // texX1, texY1, texX2, texY2,
+    inout float4 evenMoreLightProperties : TEXCOORD7,
+    // x, y, z, hasOrigin
     inout float4 origin              : TEXCOORD6,
-    out float  mipBias               : TEXCOORD7,
+    out float  mipBias               : TEXCOORD8,
     out float3 worldPosition         : POSITION1,
     out float4 result                : POSITION0
 ) {

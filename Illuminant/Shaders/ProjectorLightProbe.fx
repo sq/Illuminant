@@ -15,7 +15,8 @@ void ProjectorLightProbeVertexShader(
     inout float4 lightProperties     : TEXCOORD2,
     // ao radius, texX2, texY2, ao opacity
     inout float4 moreLightProperties : TEXCOORD3,
-    out float mipBias                : TEXCOORD7,
+    inout float4 evenMoreLightProperties : TEXCOORD7,
+    out float mipBias                : TEXCOORD8,
     out float4 result                : POSITION0
 ) {
     DEFINE_LightCorners
@@ -36,12 +37,15 @@ void ProjectorLightProbePixelShader(
     in  float4 mat2                : TEXCOORD1,
     in  float4 mat3                : TEXCOORD4,
     in  float4 mat4                : TEXCOORD5,
-    // opacity, wrap, texX1, texY1
+    // radius, ramp length, ramp mode, enable shadows
     in  float4 lightProperties     : TEXCOORD2,
-    // ao radius, distance falloff, y falloff factor, ao opacity
+    // ao radius, opacity, wrap, ao opacity
     in  float4 moreLightProperties : TEXCOORD3,
+    // texX1, texY1, texX2, texY2,
+    in  float4 evenMoreLightProperties : TEXCOORD7,
+    // x, y, z, hasOrigin
     in  float4 projectorOrigin     : TEXCOORD6,
-    in  float  mipBias             : TEXCOORD7,
+    in  float  mipBias             : TEXCOORD8,
     ACCEPTS_VPOS,
     out float4 result              : COLOR0
 ) {
@@ -60,7 +64,8 @@ void ProjectorLightProbePixelShader(
 
     opacity *= ProjectorLightPixelCore(
         shadedPixelPosition, shadedPixelNormal.xyz, 
-        mat1, mat2, mat3, mat4, lightProperties, moreLightProperties,
+        mat1, mat2, mat3, mat4, 
+        lightProperties, moreLightProperties, evenMoreLightProperties,
         projectorOrigin, projectorSpacePosition
     );
 
