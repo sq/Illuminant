@@ -105,13 +105,4 @@
   <Import Project="$(SquaredPath)\Squared\SquaredGameLibraries.targets" />
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SquaredPath)\Squared\XNAFramework.targets" />
-  <PropertyGroup>
-    <PreBuildEvent>
-      <!-- thanks xna -->
-    del /s/q $(ProjectDir)\*.cachefile
-    del /s/q $(ProjectDir)\cachefile-*.*
-    del /s/q $(ProjectDir)\ContentPipeline-*.xml
-    del /s/q $(ProjectDir)\*.FileListAbsolute.txt
-    </PreBuildEvent>
-  </PropertyGroup>
 </Project>
