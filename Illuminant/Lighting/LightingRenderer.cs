@@ -45,6 +45,7 @@ namespace Squared.Illuminant {
             public BlendState              BlendState;
             public RendererQualitySettings Quality;
             public ParticleLightSource     ParticleLightSource;
+            public bool                    CastsShadows;
 
             public override int GetHashCode () {
                 var result = (int)Type;
@@ -71,7 +72,8 @@ namespace Squared.Illuminant {
                     (Type == ltrsk.Type) &&
                     (RampTexture == ltrsk.RampTexture) &&
                     (BlendState == ltrsk.BlendState) &&
-                    (Quality == ltrsk.Quality);
+                    (Quality == ltrsk.Quality) &&
+                    (CastsShadows == ltrsk.CastsShadows);
             }
         }
 
@@ -84,7 +86,7 @@ namespace Squared.Illuminant {
 
             internal int                                LightCount = 0;
             private DynamicVertexBuffer                 LightVertexBuffer = null;
-            private bool                                HadDistanceField;
+            private bool                                HadDistanceField, CastedShadows;
 
             public LightTypeRenderState (LightingRenderer parent, LightTypeRenderStateKey key) {
                 Parent = parent;
@@ -99,7 +101,7 @@ namespace Squared.Illuminant {
             internal void SelectMaterial () {
                 var hasDistanceField = Parent.DistanceField != null;
 
-                if ((Material != null) && (hasDistanceField == HadDistanceField))
+                if ((Material != null) && (hasDistanceField == HadDistanceField) && (Key.CastsShadows == CastedShadows))
                     return;
 
                 var key = Key;
@@ -108,7 +110,7 @@ namespace Squared.Illuminant {
                     case LightSourceTypeID.Sphere:
                         Material = (key.RampTexture == null)
                             ? (
-                                (parent.DistanceField == null)
+                                ((parent.DistanceField == null) || !key.CastsShadows)
                                     ? parent.IlluminantMaterials.SphereLightWithoutDistanceField
                                     : parent.IlluminantMaterials.SphereLight
                             )
@@ -133,7 +135,7 @@ namespace Squared.Illuminant {
                         // FIXME
                         if (key.RampTexture != null)
                             throw new NotImplementedException("Ramp textures");
-                        Material = (parent.DistanceField == null)
+                        Material = ((parent.DistanceField == null) || !key.CastsShadows)
                             ? parent.IlluminantMaterials.ParticleSystemSphereLight
                             : parent.IlluminantMaterials.ParticleSystemSphereLightWithoutDistanceField;
                         if (parent.Configuration.EnableGlobalIllumination)
@@ -716,7 +718,8 @@ namespace Squared.Illuminant {
                     BlendState = ls.BlendMode,
                     RampTexture = ls.TextureRef ?? Configuration.DefaultRampTexture,
                     Quality = ls.Quality ?? Configuration.DefaultQuality,
-                    ParticleLightSource = ls as ParticleLightSource
+                    ParticleLightSource = ls as ParticleLightSource,
+                    CastsShadows = ls.CastsShadows
                 };
 
             // A 1x1 ramp is treated as no ramp at all.
