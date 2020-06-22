@@ -192,6 +192,8 @@ float SphereLightPixelCoreNoDF (
         moreLightProperties, visible
     );
 
+    clip(visible ? 1 : -1);
+
     return SphereLightPixelEpilogue(
         distanceOpacity, 1, visible
     );
@@ -213,7 +215,9 @@ float SphereLightPixelCoreNoDFWithRamp (
         moreLightProperties, visible
     );
 
-    return SphereLightPixelEpilogue(
+    clip(visible ? 1 : -1);
+
+    return SphereLightPixelEpilogueWithRamp(
         distanceOpacity, 1, visible
     );
 }

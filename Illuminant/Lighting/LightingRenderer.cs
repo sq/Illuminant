@@ -82,11 +82,11 @@ namespace Squared.Illuminant {
             public  readonly LightTypeRenderStateKey    Key;
             public  readonly object                     Lock = new object();
             public  readonly UnorderedList<LightVertex> LightVertices = null;
-            public           Material                   Material, ProbeMaterial;
+            private          Material                   _Material, _ProbeMaterial;
 
             internal int                                LightCount = 0;
             private DynamicVertexBuffer                 LightVertexBuffer = null;
-            private bool                                HadDistanceField, CastedShadows;
+            private bool                                HadDistanceField;
 
             public LightTypeRenderState (LightingRenderer parent, LightTypeRenderStateKey key) {
                 Parent = parent;
@@ -98,36 +98,52 @@ namespace Squared.Illuminant {
                 SelectMaterial();
             }
 
-            internal void SelectMaterial () {
+            public Material Material {
+                get {
+                    SelectMaterial();
+                    return _Material;
+                }
+            }
+
+            public Material ProbeMaterial {
+                get {
+                    SelectMaterial();
+                    return _ProbeMaterial;
+                }
+            }
+
+            private void SelectMaterial () {
                 var hasDistanceField = Parent.DistanceField != null;
 
-                if ((Material != null) && (hasDistanceField == HadDistanceField) && (Key.CastsShadows == CastedShadows))
+                if ((_Material != null) && (hasDistanceField == HadDistanceField))
                     return;
+
+                var castsShadows = Key.CastsShadows && hasDistanceField;
 
                 var key = Key;
                 var parent = Parent;
                 switch (key.Type) {
                     case LightSourceTypeID.Sphere:
-                        Material = (key.RampTexture == null)
+                        _Material = (key.RampTexture == null)
                             ? (
-                                ((parent.DistanceField == null) || !key.CastsShadows)
+                                !castsShadows
                                     ? parent.IlluminantMaterials.SphereLightWithoutDistanceField
                                     : parent.IlluminantMaterials.SphereLight
                             )
                             : (
                                 parent.IlluminantMaterials.SphereLightWithDistanceRamp
                             );
-                        ProbeMaterial = (key.RampTexture == null)
+                        _ProbeMaterial = (key.RampTexture == null)
                             ? parent.IlluminantMaterials.SphereLightProbe
                             : (
                                 parent.IlluminantMaterials.SphereLightProbeWithDistanceRamp
                             );
                         break;
                     case LightSourceTypeID.Directional:
-                        Material = (key.RampTexture == null)
+                        _Material = (key.RampTexture == null)
                             ? parent.IlluminantMaterials.DirectionalLight
                             : parent.IlluminantMaterials.DirectionalLightWithRamp;
-                        ProbeMaterial = (key.RampTexture == null)
+                        _ProbeMaterial = (key.RampTexture == null)
                             ? parent.IlluminantMaterials.DirectionalLightProbe
                             : parent.IlluminantMaterials.DirectionalLightProbeWithRamp;
                         break;
@@ -135,32 +151,32 @@ namespace Squared.Illuminant {
                         // FIXME
                         if (key.RampTexture != null)
                             throw new NotImplementedException("Ramp textures");
-                        Material = ((parent.DistanceField == null) || !key.CastsShadows)
+                        _Material = !castsShadows
                             ? parent.IlluminantMaterials.ParticleSystemSphereLight
                             : parent.IlluminantMaterials.ParticleSystemSphereLightWithoutDistanceField;
                         if (parent.Configuration.EnableGlobalIllumination)
                             throw new NotImplementedException("GI");
-                        ProbeMaterial = null;
+                        _ProbeMaterial = null;
                         break;
                     case LightSourceTypeID.Line:
-                        Material = parent.IlluminantMaterials.LineLight;
-                        ProbeMaterial = parent.IlluminantMaterials.LineLightProbe;
+                        _Material = parent.IlluminantMaterials.LineLight;
+                        _ProbeMaterial = parent.IlluminantMaterials.LineLightProbe;
                         break;
                     case LightSourceTypeID.Projector:
-                        Material = parent.IlluminantMaterials.ProjectorLight;
-                        ProbeMaterial = parent.IlluminantMaterials.ProjectorLightProbe;
+                        _Material = parent.IlluminantMaterials.ProjectorLight;
+                        _ProbeMaterial = parent.IlluminantMaterials.ProjectorLightProbe;
                         break;
                     default:
                         throw new NotImplementedException(key.Type.ToString());
                 }
 
                 if (Key.BlendState != null) {
-                    Material = parent.Materials.Get(Material, blendState: Key.BlendState);
-                    if (ProbeMaterial != null)
-                        ProbeMaterial = parent.Materials.Get(ProbeMaterial, blendState: Key.BlendState);
+                    _Material = parent.Materials.Get(_Material, blendState: Key.BlendState);
+                    if (_ProbeMaterial != null)
+                        _ProbeMaterial = parent.Materials.Get(_ProbeMaterial, blendState: Key.BlendState);
                 }
 
-                if (Material == null)
+                if (_Material == null)
                     throw new Exception("No material found");
 
                 HadDistanceField = hasDistanceField;
@@ -689,7 +705,7 @@ namespace Squared.Illuminant {
                 lightSource.Radius,
                 lightSource.RampLength,
                 (int)lightSource.RampMode,
-                lightSource.CastsShadows ? 1f : 0f
+                (lightSource.CastsShadows && (DistanceField != null)) ? 1f : 0f
             ));
             p["MoreLightProperties"].SetValue(new Vector4(
                 lightSource.AmbientOcclusionOpacity > 0.001 ? lightSource.AmbientOcclusionRadius : 0,
@@ -719,7 +735,11 @@ namespace Squared.Illuminant {
                     RampTexture = ls.TextureRef ?? Configuration.DefaultRampTexture,
                     Quality = ls.Quality ?? Configuration.DefaultQuality,
                     ParticleLightSource = ls as ParticleLightSource,
-                    CastsShadows = ls.CastsShadows
+                    CastsShadows = (DistanceField != null) && 
+                    (
+                        ls.CastsShadows || 
+                        ((ls.AmbientOcclusionOpacity > 0) && (ls.AmbientOcclusionRadius > 0))
+                    )
                 };
 
             // A 1x1 ramp is treated as no ramp at all.
@@ -934,10 +954,13 @@ namespace Squared.Illuminant {
                         }
 
                         using (var buffer = BufferPool<LightSource>.Allocate(Environment.Lights.Count)) {
+                            Array.Clear(buffer.Data, 0, buffer.Data.Length);
                             Environment.Lights.CopyTo(buffer.Data);
                             Squared.Util.Sort.FastCLRSortRef(
                                 buffer.Data, LightSorter.Instance, 0, Environment.Lights.Count
                             );
+
+                            // var renderedLights = new HashSet<LightSource>(new ReferenceComparer<LightSource>());
 
                             for (var i = 0; i < Environment.Lights.Count; i++) {
                                 var lightSource = buffer.Data[i];
@@ -946,6 +969,12 @@ namespace Squared.Illuminant {
                                 var particleLightSource = lightSource as ParticleLightSource;
                                 var lineLightSource = lightSource as LineLightSource;
                                 var projectorLightSource = lightSource as ProjectorLightSource;
+
+                                /*
+                                if (renderedLights.Contains(lightSource))
+                                    throw new Exception("Duplicate light in Environment.Lights");
+                                renderedLights.Add(lightSource);
+                                */
 
                                 var ltrs = GetLightRenderState(lightSource);
                                 DeadRenderStates.Remove(ltrs.Key);
@@ -979,8 +1008,6 @@ namespace Squared.Illuminant {
 
                             if (RenderTrace.EnableTracing)
                                 RenderTrace.Marker(resultGroup, layerIndex++, "LightingRenderer {0} : Render {1} {2} light(s)", this.ToObjectID(), count, ltrs.Key.Type);
-
-                            ltrs.SelectMaterial();
 
                             var pls = ltrs.Key.ParticleLightSource;
                             if (pls != null) {
@@ -1064,7 +1091,7 @@ namespace Squared.Illuminant {
             vertex.LightProperties.X = lightSource.Radius;
             vertex.LightProperties.Y = lightSource.RampLength;
             vertex.LightProperties.Z = (int)lightSource.RampMode;
-            vertex.LightProperties.W = lightSource.CastsShadows ? 1f : 0f;
+            vertex.LightProperties.W = (lightSource.CastsShadows && (DistanceField != null)) ? 1f : 0f;
             vertex.MoreLightProperties.X = lightSource.AmbientOcclusionRadius;
             vertex.MoreLightProperties.Y = lightSource.ShadowDistanceFalloff.GetValueOrDefault(-99999);
             vertex.MoreLightProperties.Z = lightSource.FalloffYFactor;
@@ -1134,7 +1161,7 @@ namespace Squared.Illuminant {
             vertex.LightProperties.X = lightSource.Radius;
             vertex.LightProperties.Y = 0;
             vertex.LightProperties.Z = (int)lightSource.RampMode;
-            vertex.LightProperties.W = lightSource.CastsShadows ? 1f : 0f;
+            vertex.LightProperties.W = (lightSource.CastsShadows && (DistanceField != null)) ? 1f : 0f;
             vertex.MoreLightProperties.X = lightSource.AmbientOcclusionRadius;
             vertex.MoreLightProperties.Y = lightSource.ShadowDistanceFalloff.GetValueOrDefault(-99999);
             vertex.MoreLightProperties.Z = lightSource.FalloffYFactor;
@@ -1191,7 +1218,7 @@ namespace Squared.Illuminant {
             vertex.LightProperties.X = lightSource.Radius;
             vertex.LightProperties.Y = lightSource.RampLength;
             vertex.LightProperties.Z = (int)lightSource.RampMode;
-            vertex.LightProperties.W = lightSource.CastsShadows && lightSource.Origin.HasValue ? 1f : 0f;
+            vertex.LightProperties.W = (lightSource.CastsShadows && (DistanceField != null) && lightSource.Origin.HasValue) ? 1f : 0f;
             vertex.MoreLightProperties.X = lightSource.AmbientOcclusionRadius;
             vertex.MoreLightProperties.Y = lightSource.Opacity * intensityScale;
             vertex.MoreLightProperties.Z = lightSource.Wrap ? 0 : 1;
