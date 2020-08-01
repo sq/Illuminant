@@ -38,7 +38,9 @@ namespace TestGame.Scenes {
 
         [Group("Lighting")]
         Toggle TwoPointFiveD,
-            UseRampTexture;
+            UseRampTexture,
+            GroundPlaneShadows,
+            TopFaceShadows;
         [Group("Lighting")]
         Slider MaximumLightStrength;
         [Group("Dithering")]
@@ -148,6 +150,8 @@ namespace TestGame.Scenes {
             DistanceFieldResolution.Changed += (s, e) => CreateDistanceField();
 
             DarkLUT.Value = BrightLUT.Value = "Identity";
+
+            GroundPlaneShadows.Value = TopFaceShadows.Value = true;
         }
 
         private void InitUnitSlider (params Slider[] sliders) {
@@ -467,6 +471,11 @@ namespace TestGame.Scenes {
                 var dl = (DirectionalLightSource)
                     Environment.Lights[1];
                 dl.Bounds = Clipping ? new Bounds(new Vector2(16, 32), new Vector2(620, 550)) : (Bounds?)null;
+
+                foreach (var hv in Environment.HeightVolumes)
+                    hv.TopFaceEnableShadows = TopFaceShadows;
+
+                Environment.EnableGroundShadows = GroundPlaneShadows;
 
                 Renderer.Configuration.DefaultQuality.MaxStepCount =
                     (Timelapse & !Deterministic)

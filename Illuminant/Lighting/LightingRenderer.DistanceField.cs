@@ -175,10 +175,10 @@ namespace Squared.Illuminant {
                         HeightVolumeCache[p] = cacheData;
                 }
 
-                cacheData.BoundingBoxVertices[0] = new HeightVolumeVertex(new Vector3(b.TopLeft, 0), Vector3.Up, zRange);
-                cacheData.BoundingBoxVertices[1] = new HeightVolumeVertex(new Vector3(b.TopRight, 0), Vector3.Up, zRange);
-                cacheData.BoundingBoxVertices[2] = new HeightVolumeVertex(new Vector3(b.BottomRight, 0), Vector3.Up, zRange);
-                cacheData.BoundingBoxVertices[3] = new HeightVolumeVertex(new Vector3(b.BottomLeft, 0), Vector3.Up, zRange);
+                cacheData.BoundingBoxVertices[0] = new HeightVolumeVertex(new Vector3(b.TopLeft, 0), Vector3.Up, zRange, true);
+                cacheData.BoundingBoxVertices[1] = new HeightVolumeVertex(new Vector3(b.TopRight, 0), Vector3.Up, zRange, true);
+                cacheData.BoundingBoxVertices[2] = new HeightVolumeVertex(new Vector3(b.BottomRight, 0), Vector3.Up, zRange, true);
+                cacheData.BoundingBoxVertices[3] = new HeightVolumeVertex(new Vector3(b.BottomLeft, 0), Vector3.Up, zRange, true);
 
                 using (var batch = PrimitiveBatch<HeightVolumeVertex>.New(
                     innerGroup, i, mat,

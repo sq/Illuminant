@@ -9,6 +9,7 @@ void GroundPlaneVertexShader (
     inout float3   normal        : NORMAL0, 
     out   bool     dead          : TEXCOORD2,
     out   float3   worldPosition : TEXCOORD1,
+    inout float    enableShadows : TEXCOORD4,
     out   float4   result        : POSITION0
 ) {
     worldPosition = position;
@@ -23,6 +24,7 @@ void HeightVolumeVertexShader (
     out   float3 worldPosition : TEXCOORD1,
     out   bool   dead          : TEXCOORD2,
     out   float4 midTransform  : TEXCOORD3,
+    inout float  enableShadows : TEXCOORD4,
     out   float4 result        : POSITION0
 ) {
     worldPosition = position;
@@ -41,6 +43,7 @@ void HeightVolumeFaceVertexShader(
     out   float3 worldPosition : TEXCOORD1,
     out   bool   dead          : TEXCOORD2,
     out   float4 midTransform  : TEXCOORD3,
+    inout float  enableShadows : TEXCOORD4,
     out   float4 result        : POSITION0
 ) {
     worldPosition = position;
@@ -56,6 +59,7 @@ void HeightVolumeFaceVertexShader(
 void GroundPlanePixelShader (
     in float3  worldPosition : TEXCOORD1,
     in bool    dead          : TEXCOORD2,
+    in float   enableShadows : TEXCOORD4,
     out float4 result        : COLOR0
 ) {
     if (worldPosition.z < getGroundZ()) {
@@ -64,26 +68,28 @@ void GroundPlanePixelShader (
     }
 
     float3 normal = float3(0, 0, 1);
-    result = encodeGBufferSample(normal, 0, worldPosition.z, dead, true); 
+    result = encodeGBufferSample(normal, 0, worldPosition.z, dead, enableShadows > 0.5); 
 }
 
 void HeightVolumePixelShader(
     in float3  normal        : NORMAL0,
     in float3  worldPosition : TEXCOORD1,
     in bool    dead          : TEXCOORD2,
+    in float   enableShadows : TEXCOORD4,
     out float4 result        : COLOR0
 ) {
     // HACK: Offset away from the surface to prevent self occlusion
     float3 selfOcclusionBias = float3(0, 0, ZSelfOcclusionHack);
 
     float relativeY = ((worldPosition.z * getZToYMultiplier()) * GetViewportScale() / getEnvironmentRenderScale()) + selfOcclusionBias.y;
-    result = encodeGBufferSample(normal, relativeY, worldPosition.z + selfOcclusionBias.z, dead, true);
+    result = encodeGBufferSample(normal, relativeY, worldPosition.z + selfOcclusionBias.z, dead, enableShadows > 0.5);
 }
 
 void HeightVolumeFacePixelShader(
     in float3  normal        : NORMAL0,
     in float3  worldPosition : TEXCOORD1,
     in bool    dead          : TEXCOORD2,
+    in float   enableShadows : TEXCOORD4,
     out float4 result        : COLOR0
 ) {
     if (worldPosition.z < getGroundZ()) {
@@ -95,7 +101,7 @@ void HeightVolumeFacePixelShader(
     float3 selfOcclusionBias = float3(SelfOcclusionHack, SelfOcclusionHack, ZSelfOcclusionHack) * normal;
 
     float relativeY = ((worldPosition.z * getZToYMultiplier()) * GetViewportScale() / getEnvironmentRenderScale()) + selfOcclusionBias.y;
-    result = encodeGBufferSample(normal, relativeY, worldPosition.z + selfOcclusionBias.z, dead, true);
+    result = encodeGBufferSample(normal, relativeY, worldPosition.z + selfOcclusionBias.z, dead, enableShadows > 0.5);
 }
 
 technique GroundPlane

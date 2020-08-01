@@ -22,7 +22,9 @@ float4 encodeGBufferSample (
             (normal.x / 2) + 0.5,
             (normal.z / 2) + 0.5,
             (relativeY / RELATIVEY_SCALE),
-            (z / 512) * (enableShadows ? 1 : -1)
+            // If shadows are disabled we negate the Z value, and bias it by -1
+            // This ensures that shadows can be disabled for a Z of 0
+            ((z / 512) * (enableShadows ? 1 : -1)) + (enableShadows ? 0 : -1)
         );
     }
 }

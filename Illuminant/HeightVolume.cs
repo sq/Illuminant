@@ -14,6 +14,11 @@ namespace Squared.Illuminant {
     public abstract class HeightVolumeBase : IHasBounds {
         public bool IsObstruction = true;
 
+        // Configures whether the 'enable shadows' flag is set in the g-buffer for the top face of this volume
+        public bool TopFaceEnableShadows = true;
+        // Configures whether the 'enable shadows' flag is set in the g-buffer for the front face of this volume
+        public bool FrontFaceEnableShadows = true;
+
         // If false, this height volume will be rendered into the static distance field (if any) instead of the dynamic distance field
         public bool IsDynamic = true;
 
@@ -109,13 +114,14 @@ namespace Squared.Illuminant {
                         from p in Geometry.Triangulate(Polygon) 
                         from v in p
                         select new HeightVolumeVertex(
-                            new Vector3(v, h2), Vector3.UnitZ, range
+                            new Vector3(v, h2), Vector3.UnitZ, range, TopFaceEnableShadows
                         )
                     ).ToArray();
                 } else {
                     for (var i = 0; i < _Mesh3D.Length; i++) {
                         _Mesh3D[i].Position.Z = h2;
                         _Mesh3D[i].ZRange = range;
+                        _Mesh3D[i].EnableShadows = TopFaceEnableShadows ? 1 : 0;
                     }
                 }
 
@@ -131,7 +137,8 @@ namespace Squared.Illuminant {
             if (_FrontFaceMesh3D != null) {
                 if (
                     (_FrontFaceMesh3D[0].ZRange != zRange) ||
-                    (_FrontFaceMesh3D[1].ZRange != zRange)
+                    (_FrontFaceMesh3D[1].ZRange != zRange) ||
+                    (_FrontFaceMesh3D[0].EnableShadows != (FrontFaceEnableShadows ? 1 : 0))
                 )
                     throw new InvalidDataException();
 
@@ -203,12 +210,12 @@ namespace Squared.Illuminant {
                 var bTop    = new Vector3(b, h2);
                 var bBottom = new Vector3(b, h1);
 
-                _FrontFaceMesh3D[i + 0] = new HeightVolumeVertex(aTop,    aNormal, zRange);
-                _FrontFaceMesh3D[i + 1] = new HeightVolumeVertex(bTop,    bNormal, zRange);
-                _FrontFaceMesh3D[i + 2] = new HeightVolumeVertex(aBottom, aNormal, zRange);
-                _FrontFaceMesh3D[i + 3] = new HeightVolumeVertex(bTop,    bNormal, zRange);
-                _FrontFaceMesh3D[i + 4] = new HeightVolumeVertex(bBottom, bNormal, zRange);
-                _FrontFaceMesh3D[i + 5] = new HeightVolumeVertex(aBottom, aNormal, zRange);
+                _FrontFaceMesh3D[i + 0] = new HeightVolumeVertex(aTop,    aNormal, zRange, FrontFaceEnableShadows);
+                _FrontFaceMesh3D[i + 1] = new HeightVolumeVertex(bTop,    bNormal, zRange, FrontFaceEnableShadows);
+                _FrontFaceMesh3D[i + 2] = new HeightVolumeVertex(aBottom, aNormal, zRange, FrontFaceEnableShadows);
+                _FrontFaceMesh3D[i + 3] = new HeightVolumeVertex(bTop,    bNormal, zRange, FrontFaceEnableShadows);
+                _FrontFaceMesh3D[i + 4] = new HeightVolumeVertex(bBottom, bNormal, zRange, FrontFaceEnableShadows);
+                _FrontFaceMesh3D[i + 5] = new HeightVolumeVertex(aBottom, aNormal, zRange, FrontFaceEnableShadows);
 
                 i += 6;
                 actualCount += 6;

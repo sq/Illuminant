@@ -34,6 +34,8 @@ namespace Squared.Illuminant {
         // Ambient light color
         public Color Ambient = Color.Black;
 
+        public bool EnableGroundShadows = true;
+
         public void Clear () {
             Lights.Clear();
             Obstructions.Clear();

@@ -43,6 +43,7 @@ namespace Squared.Illuminant {
         public Vector3 Position;
         public Vector3 Normal;
         public Vector2 ZRange;
+        public float   EnableShadows;
 
         public static VertexDeclaration _VertexDeclaration;
 
@@ -52,14 +53,16 @@ namespace Squared.Illuminant {
             _VertexDeclaration = new VertexDeclaration(
                 new VertexElement(Marshal.OffsetOf(tThis, "Position").ToInt32(), VertexElementFormat.Vector3, VertexElementUsage.Position, 0),
                 new VertexElement(Marshal.OffsetOf(tThis, "Normal").ToInt32(),   VertexElementFormat.Vector3, VertexElementUsage.Normal, 0),
-                new VertexElement(Marshal.OffsetOf(tThis, "ZRange").ToInt32(),   VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 0)
+                new VertexElement(Marshal.OffsetOf(tThis, "ZRange").ToInt32(),   VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 0),
+                new VertexElement(Marshal.OffsetOf(tThis, "EnableShadows").ToInt32(),   VertexElementFormat.Single, VertexElementUsage.TextureCoordinate, 4)
             );
         }
 
-        public HeightVolumeVertex (Vector3 position, Vector3 normal, Vector2 zRange) {
+        public HeightVolumeVertex (Vector3 position, Vector3 normal, Vector2 zRange, bool enableShadows) {
             Position = position;
             Normal = normal;
             ZRange = zRange;
+            EnableShadows = enableShadows ? 1 : 0;
         }
 
         public VertexDeclaration VertexDeclaration {

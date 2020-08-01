@@ -224,10 +224,10 @@ namespace Squared.Illuminant {
             }
 
             var verts = new HeightVolumeVertex[] {
-                new HeightVolumeVertex(tl, Vector3.UnitZ, zRange),
-                new HeightVolumeVertex(tr, Vector3.UnitZ, zRange),
-                new HeightVolumeVertex(br, Vector3.UnitZ, zRange),
-                new HeightVolumeVertex(bl, Vector3.UnitZ, zRange)
+                new HeightVolumeVertex(tl, Vector3.UnitZ, zRange, Environment.EnableGroundShadows),
+                new HeightVolumeVertex(tr, Vector3.UnitZ, zRange, Environment.EnableGroundShadows),
+                new HeightVolumeVertex(br, Vector3.UnitZ, zRange, Environment.EnableGroundShadows),
+                new HeightVolumeVertex(bl, Vector3.UnitZ, zRange, Environment.EnableGroundShadows)
             };
 
             batch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(

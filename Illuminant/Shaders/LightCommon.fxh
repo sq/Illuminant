@@ -88,11 +88,15 @@ void sampleGBuffer (
         float4 sample = tex2Dlod(GBufferSampler, float4(uv, 0, 0));
 
         float relativeY = sample.z * RELATIVEY_SCALE;
-        float worldZ    = sample.w * 512;
+        float worldZ    = sample.w;
         if (worldZ < 0) {
+            // To ensure shadows can be disabled for the ground plane, unshadowed pixels have their Z biased by -1
+            worldZ += 1;
+            // Unshadowed pixels have their Z negated
             worldZ = -worldZ;
             enableShadows = false;
         }
+        worldZ *= 512;
 
         screenPositionPx /= getEnvironmentRenderScale();
 
