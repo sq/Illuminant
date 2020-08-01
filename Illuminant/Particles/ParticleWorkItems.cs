@@ -132,10 +132,11 @@ namespace Squared.Illuminant.Particles {
                     if (NeedResourceLock)
                         Monitor.Enter(Engine.Coordinator.UseResourceLock);
                     try {
-                        RenderTrace.ImmediateMarker("Read liveness data from previous frame");
+                        var device = Engine.Coordinator.Device;
+                        RenderTrace.ImmediateMarker(device, "Read liveness data from previous frame");
                         RenderTarget.GetDataFast(buffer.Data);
                         var elapsedMs = (Time.Ticks - startedWhen) / (double)Time.MillisecondInTicks;
-                        RenderTrace.ImmediateMarker("Readback took {0:000.0}ms", elapsedMs);
+                        RenderTrace.ImmediateMarker(device, "Readback took {0:000.0}ms", elapsedMs);
                     } finally {
                         if (NeedResourceLock)
                             Monitor.Exit(Engine.Coordinator.UseResourceLock);

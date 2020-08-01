@@ -18,7 +18,10 @@ void AutoGBufferBitmapPixelShader (
 
     bool isDead = texColor.a < 0.5;
 
-    float3 normal = float3(0, 1 - abs(userData.x), userData.x);
+    float3 normal = (userData.x < -900)
+        // Use massively negative Z normal to represent 'I don't want directional light occlusion at all, thanks'
+        ? float3(0, 0, 0)
+        : float3(0, 1 - abs(userData.x), userData.x);
     float relativeY = originalPositionData.y - originalPositionData.w;
     float z = userData.z + (userData.y * relativeY);
     result = encodeGBufferSample(

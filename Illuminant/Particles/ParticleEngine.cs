@@ -285,7 +285,9 @@ namespace Squared.Illuminant.Particles {
             var nextBuffer = wt.Target;
             var previousBuffer = wt.Previous;
 
-            RenderTrace.ImmediateMarker("Compute liveness for {0} system(s)", LivenessQueryRequests.Count);
+            var dm = Coordinator.Manager.DeviceManager;
+
+            RenderTrace.ImmediateMarker(dm.Device, "Compute liveness for {0} system(s)", LivenessQueryRequests.Count);
             var m = Configuration.AccurateLivenessCounts
                 ? ParticleMaterials.CountLiveParticles
                 : ParticleMaterials.CountLiveParticlesFast;
@@ -298,7 +300,6 @@ namespace Squared.Illuminant.Particles {
             var p = m.Effect.Parameters;
             p["PositionTexture"].SetValue((Texture2D)null);
 
-            var dm = Coordinator.Manager.DeviceManager;
             dm.PushRenderTarget(nextBuffer);
             dm.Device.Clear(
                 ClearOptions.Target | ClearOptions.DepthBuffer, 
@@ -328,7 +329,7 @@ namespace Squared.Illuminant.Particles {
                     Coordinator.BeforePresent(wi.Execute);
                 }
 
-                RenderTrace.ImmediateMarker("Compute liveness for {0} chunk(s)", chunkList.Data.Length);
+                RenderTrace.ImmediateMarker(dm.Device, "Compute liveness for {0} chunk(s)", chunkList.Data.Length);
                 foreach (var chunk in chunkList.Data) {
                     if (chunk.TotalSpawned == 0) {
                         i++;
