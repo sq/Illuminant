@@ -7,7 +7,7 @@ uniform float  SelfOcclusionHack;
 uniform float3 DistanceFieldExtent;
 
 float4 encodeGBufferSample (
-    float3 normal, float relativeY, float z, bool dead
+    float3 normal, float relativeY, float z, bool dead, bool enableShadows
 ) {
     if (dead) {
         return float4(
@@ -22,7 +22,7 @@ float4 encodeGBufferSample (
             (normal.x / 2) + 0.5,
             (normal.z / 2) + 0.5,
             (relativeY / RELATIVEY_SCALE),
-            (z / 512)
+            (z / 512) * (enableShadows ? 1 : -1)
         );
     }
 }

@@ -168,12 +168,13 @@ namespace TestGame.Scenes {
 
             const float angleStep = (float)(Math.PI / 128);
             const int   heightTiers = 8;
-            const float minHeight = 0f;
-            const float maxHeight = 120f;
+            const float minHeight = 8f;
+            const float heightStep = 11f;
+            const float maxHeight = minHeight + (heightTiers * heightStep);
 
             var points = new List<Vector2>();
 
-            for (float r = 0.9f, hs = (maxHeight - minHeight) / heightTiers, rs = -r / (heightTiers + 1), h = minHeight + hs; h <= maxHeight; h += hs, r += rs) {
+            for (float r = 0.9f, rs = -r / (heightTiers + 1), h = minHeight; h <= maxHeight; h += heightStep, r += rs) {
                 points.Clear();
 
                 var rX = r * Width / 2f;

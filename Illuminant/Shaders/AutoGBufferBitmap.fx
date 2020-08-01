@@ -15,7 +15,7 @@ void AutoGBufferBitmapPixelShader (
     bool isDead = texColor.a < 0.5;
     float relativeY = 0, z = 0;
     result = encodeGBufferSample(
-        (normal.xyz - 0.5) * 2, relativeY, z, isDead
+        (normal.xyz - 0.5) * 2, relativeY, z, isDead, true
     );
 
     if (isDead)

@@ -107,10 +107,13 @@ void DirectionalLightPixelShader(
 ) {
     float3 shadedPixelPosition;
     float3 shadedPixelNormal;
+    bool enableShadows;
     sampleGBuffer(
         GET_VPOS,
-        shadedPixelPosition, shadedPixelNormal
+        shadedPixelPosition, shadedPixelNormal, enableShadows
     );
+
+    lightProperties.x *= enableShadows;
 
     float opacity = DirectionalLightPixelCore(
         shadedPixelPosition, shadedPixelNormal, lightDirection, lightProperties, moreLightProperties, false
@@ -131,10 +134,13 @@ void DirectionalLightWithRampPixelShader(
 ) {
     float3 shadedPixelPosition;
     float3 shadedPixelNormal;
+    bool enableShadows;
     sampleGBuffer(
         GET_VPOS,
-        shadedPixelPosition, shadedPixelNormal
+        shadedPixelPosition, shadedPixelNormal, enableShadows
     );
+
+    lightProperties.x *= enableShadows;
 
     float opacity = DirectionalLightPixelCore(
         shadedPixelPosition, shadedPixelNormal, lightDirection, lightProperties, moreLightProperties, true

@@ -22,14 +22,16 @@ void ProjectorLightPixelShader(
     ACCEPTS_VPOS,
     out float4 result              : COLOR0
 ) {
-    float3 shadedPixelPosition;
-    float3 shadedPixelNormal;
-    float4 projectorSpacePosition;
+    float3 shadedPixelPosition, shadedPixelNormal;
+    bool enableShadows;
     sampleGBuffer(
         GET_VPOS,
-        shadedPixelPosition, shadedPixelNormal
+        shadedPixelPosition, shadedPixelNormal, enableShadows
     );
 
+    lightProperties.w *= enableShadows;
+
+    float4 projectorSpacePosition;
     float opacity = ProjectorLightPixelCore(
         shadedPixelPosition, shadedPixelNormal,
         mat1, mat2, mat3, mat4,

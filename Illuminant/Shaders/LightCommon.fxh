@@ -70,8 +70,11 @@ sampler LightProbeNormalSampler : register(s4) {
 void sampleGBuffer (
     float2 screenPositionPx,
     out float3 worldPosition,
-    out float3 normal
+    out float3 normal,
+    out bool enableShadows
 ) {
+    enableShadows = true;
+
     PREFER_BRANCH
     if (any(GBufferTexelSizeAndMisc.xy)) {
         // FIXME: Should we be offsetting distance field samples too?
@@ -86,6 +89,10 @@ void sampleGBuffer (
 
         float relativeY = sample.z * RELATIVEY_SCALE;
         float worldZ    = sample.w * 512;
+        if (worldZ < 0) {
+            worldZ = -worldZ;
+            enableShadows = false;
+        }
 
         screenPositionPx /= getEnvironmentRenderScale();
 

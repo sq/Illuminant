@@ -15,12 +15,14 @@ void LineLightPixelShader(
     ACCEPTS_VPOS,
     out float4 result              : COLOR0
 ) {
-    float3 shadedPixelPosition;
-    float3 shadedPixelNormal;
+    float3 shadedPixelPosition, shadedPixelNormal;
+    bool enableShadows;
     sampleGBuffer(
         GET_VPOS,
-        shadedPixelPosition, shadedPixelNormal
+        shadedPixelPosition, shadedPixelNormal, enableShadows
     );
+
+    lightProperties.w *= enableShadows;
 
     float u;
     float opacity = LineLightPixelCore(

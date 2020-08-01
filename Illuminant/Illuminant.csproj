@@ -98,8 +98,6 @@
   </ItemGroup>
   <PropertyGroup>
     <SquaredPath>..\..\Fracture</SquaredPath>
-    <FNAPath>..\..\FNA\</FNAPath>
-    <FNALibPath>..\..\FNA\fnalibs</FNALibPath>
     <ShaderDirectory>shaders</ShaderDirectory>
   </PropertyGroup>
   <Import Project="$(SquaredPath)\Squared\SquaredGameLibraries.targets" />

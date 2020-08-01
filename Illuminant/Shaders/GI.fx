@@ -154,6 +154,7 @@ float4 computeProbeRadiance(
     in float2 probeIndexXy,
     in float4 probeOffsetAndBaseIndex,
     in float4 probeIntervalAndCount,
+    in bool   enableShadows,
     in SH9 cos,
     in DistanceFieldConstants vars
 ) {
@@ -176,7 +177,7 @@ float4 computeProbeRadiance(
         probePosition, float2(ConeShadowRadius, ConeShadowRamp),
         float2(getConeGrowthFactor(), 1),
         shadedPixelPosition + (SELF_OCCLUSION_HACK * normalToProbe),
-        vars, ProbeLightCastsShadows
+        vars, ProbeLightCastsShadows && enableShadows
     );
 
     if (ProbeDistanceFalloff) {
@@ -206,7 +207,8 @@ float4 SHRendererPixelShaderCore(
     float3 shadedPixelPosition,
     float3 shadedPixelNormal,
     float4 probeOffsetAndBaseIndex,
-    float4 probeIntervalAndCount
+    float4 probeIntervalAndCount,
+    bool   enableShadows
 ) {
     float2 probeInterval = probeIntervalAndCount.xy;
     float2 probeCount = probeIntervalAndCount.zw;
@@ -244,7 +246,7 @@ float4 SHRendererPixelShaderCore(
 
     [loop]
     for (int i = 0; i < 4; i++) {
-        float4 localRadiance = computeProbeRadiance(shadedPixelPosition, probeIndices[i], probeOffsetAndBaseIndex, probeIntervalAndCount, cos, vars);
+        float4 localRadiance = computeProbeRadiance(shadedPixelPosition, probeIndices[i], probeOffsetAndBaseIndex, probeIntervalAndCount, enableShadows, cos, vars);
         irradiance += localRadiance.rgb * weights[i];
         maxDistanceWeight = max(maxDistanceWeight, localRadiance.a);
     }
@@ -260,13 +262,14 @@ void SHRendererPixelShader(
 ) {
     float3 shadedPixelPosition;
     float3 shadedPixelNormal;
+    bool enableShadows;
     sampleGBuffer(
         GET_VPOS,
-        shadedPixelPosition, shadedPixelNormal
+        shadedPixelPosition, shadedPixelNormal, enableShadows
     );
 
     float4 irradiance = SHRendererPixelShaderCore(
-        shadedPixelPosition, shadedPixelNormal, probeOffsetAndBaseIndex, probeIntervalAndCount
+        shadedPixelPosition, shadedPixelNormal, probeOffsetAndBaseIndex, probeIntervalAndCount, enableShadows
     );
 
     if (ProbeDistanceFalloff && (irradiance.a < 1))
@@ -291,7 +294,7 @@ void LightProbeSHRendererPixelShader(
     );
 
     float4 irradiance = SHRendererPixelShaderCore(
-        shadedPixelPosition, shadedPixelNormal, probeOffsetAndBaseIndex, probeIntervalAndCount
+        shadedPixelPosition, shadedPixelNormal, probeOffsetAndBaseIndex, probeIntervalAndCount, enableShadows
     );
 
     result = float4(irradiance.rgb * opacity * Brightness, 1);

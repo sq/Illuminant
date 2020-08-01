@@ -25,10 +25,18 @@ namespace TestGame.Scenes {
     public class RasterShapeSpeed : Scene {
         Toggle BlendInLinearSpace, UseTexture, UseGeometry;
 
+        Slider FillPower1, FillPower2, FillOffset;
+
         Texture2D Texture;
 
         public RasterShapeSpeed (TestGame game, int width, int height)
             : base(game, width, height) {
+
+            FillOffset.Min = -1;
+            FillOffset.Speed = 0.05f;
+            FillPower1.Value = FillPower2.Value = 1;
+            FillPower1.Max = FillPower2.Max = 5;
+            FillPower1.Speed = FillPower2.Speed = 0.05f;
         }
 
         public override void LoadContent () {
@@ -53,15 +61,26 @@ namespace TestGame.Scenes {
             ir.Clear(layer: 0, color: new Color(0, 32, 48));
             ir.RasterBlendInLinearSpace = BlendInLinearSpace.Value;
 
-            for (int y = 0; y < 32; y++) {
-                for (int x = 0; x < 32; x++) {
-                    var center = new Vector2(x * 36, y * 36);
-                    var radius = Vector2.One * (10 + (x + y) / 2);
+            const int count = 32;
+            const float step = 44;
+            const float radiusBase = 12;
+
+            for (int y = 0; y < count; y++) {
+                for (int x = 0; x < count; x++) {
+                    var center = new Vector2(x * step, y * step);
+                    var radius = Vector2.One * (radiusBase + (x + y) / 2);
+
+                    var c1 = new Color(y % 2 == 0 ? 1.0f : 0.0f, x % 2 == 0 ? 1.0f : 0.0f, 1.0f, 1.0f);
+                    var c2 = Color.Black;
 
                     if (UseGeometry)
-                        ir.FillCircle(center, 0, radius.X, Color.White, Color.Black);
+                        ir.FillCircle(center, 0, radius.X, c1, c2);
                     else
-                        ir.RasterizeEllipse(center, radius, Color.White, Color.Black, texture: UseTexture ? Texture : null);
+                        ir.RasterizeEllipse(
+                            center, radius, c1, c2, texture: UseTexture ? Texture : null, 
+                            fillOffset: FillOffset.Value,
+                            fillGradientPower: new Vector2(FillPower1.Value, FillPower2.Value)
+                        );
                 }
             }
         }
