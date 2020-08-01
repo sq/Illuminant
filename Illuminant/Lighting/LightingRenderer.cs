@@ -668,6 +668,8 @@ namespace Squared.Illuminant {
             device.PushStates();
             PushLightingViewTransform(buffer);
 
+            device.Device.ScissorRectangle = new Rectangle(0, 0, Math.Min(renderWidth + 2, buffer.Width), Math.Min(renderHeight + 2, buffer.Height));
+
             device.Device.RasterizerState = RenderStates.ScissorOnly;
         }
 
@@ -683,6 +685,8 @@ namespace Squared.Illuminant {
             device.PopStates();
 
             var buffer = (RenderTarget2D)userData;
+            device.Device.ScissorRectangle = new Rectangle(0, 0, buffer.Width, buffer.Height);
+
             _Lightmaps.MarkRenderComplete(buffer);
         }
 
