@@ -257,7 +257,11 @@ namespace Squared.Illuminant {
                     "HDRBitmap", "WorldSpaceToneMappedBitmap"
                 );
 
-                LoadOneMaterial(effects, out ScreenSpaceVectorWarp,                    
+                LoadOneMaterial(effects, out AutoGBufferBitmap,
+                    "AutoGBufferBitmap", "AutoGBufferBitmap"
+                );
+
+                LoadOneMaterial(effects, out ScreenSpaceVectorWarp,
                     "VectorWarp", "ScreenSpaceVectorWarp", 
                     new [] { MaterialUtil.MakeDelegate(BlendState.AlphaBlend) }
                 );

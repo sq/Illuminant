@@ -154,7 +154,7 @@ namespace Squared.Illuminant {
                         useZBuffer: true
                     ) {
                         UseDiscard = true,
-                        // DefaultBitmapMaterial = IlluminantMaterials.MaskBillboard
+                        DefaultBitmapMaterial = IlluminantMaterials.AutoGBufferBitmap
                     };
 
                     OnRenderGBuffer(this, ref ir);

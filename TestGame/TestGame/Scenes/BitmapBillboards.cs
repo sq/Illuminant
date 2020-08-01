@@ -42,7 +42,8 @@ namespace TestGame.Scenes {
             LightmapScaleRatio,
             MaximumEncodedDistance;
 
-        Toggle Deterministic;
+        Toggle Deterministic, EnableTreeShadows;
+        Slider TreeNormal;
 
         Texture2D Tree;
 
@@ -52,7 +53,7 @@ namespace TestGame.Scenes {
             Deterministic.Value = true;
             DistanceFieldResolution.Value = 0.25f;
             LightmapScaleRatio.Value = 1.0f;
-            MaximumLightStrength.Value = 4f;
+            MaximumLightStrength.Value = 2f;
             MaximumEncodedDistance.Value = 128;
             ShowLightmap.Value = false;
 
@@ -61,6 +62,7 @@ namespace TestGame.Scenes {
             ShowDistanceField.Key = Keys.D;
             Deterministic.Key = Keys.R;
             ShowBillboards.Key = Keys.B;
+            EnableTreeShadows.Key = Keys.S;
 
             DistanceFieldResolution.MinusKey = Keys.D5;
             DistanceFieldResolution.PlusKey = Keys.D6;
@@ -85,6 +87,11 @@ namespace TestGame.Scenes {
             MaximumEncodedDistance.Changed += (s, e) => CreateDistanceField();
 
             DistanceFieldResolution.Changed += (s, e) => CreateDistanceField();
+
+            TreeNormal.Min = -1;
+            TreeNormal.Max = 1;
+            TreeNormal.Value = 0;
+            TreeNormal.Speed = 0.02f;
         }
 
         private void InitUnitSlider (params Slider[] sliders) {
@@ -167,14 +174,14 @@ namespace TestGame.Scenes {
                 Position = new Vector3(64, 64, 0.7f),
                 Color = new Vector4(1f, 1f, 1f, 0.5f),
                 Radius = 48,
-                RampLength = 1024,
+                RampLength = 4,
                 RampMode = LightSourceRampMode.Linear
             };
 
             Environment.Lights.Add(MovableLight);
 
             Environment.Lights.Add(new DirectionalLightSource {
-                Color = new Vector4(0.1f, 0.1f, 0.1f, 1f),
+                Color = new Vector4(0.2f, 0.2f, 0.2f, 1f),
                 BlendMode = RenderStates.AdditiveBlend,
                 SortKey = 1
             });
@@ -189,7 +196,19 @@ namespace TestGame.Scenes {
         }
 
         private void DrawTrees (ref ImperativeRenderer ir) {
-            ir.Draw(Tree, new Vector2(64, 64));
+            var zMultiplier = 1.0f / Environment.ZToYMultiplier;
+            var z = 10;
+
+            for (int x = 400; x < 1100; x += 80) {
+                ir.Draw(
+                    Tree, new Vector2(x + 10, 250), userData: new Vector4(TreeNormal, zMultiplier, z, EnableTreeShadows ? 1 : 0),
+                    origin: new Vector2(0, 1)
+                );
+                ir.Draw(
+                    Tree, new Vector2(x, 500), sortKey: 30, userData: new Vector4(TreeNormal, zMultiplier, z, EnableTreeShadows ? 1 : 0),
+                    origin: new Vector2(0, 1)
+                );
+            }
         }
         
         public override void Draw (Squared.Render.Frame frame) {
