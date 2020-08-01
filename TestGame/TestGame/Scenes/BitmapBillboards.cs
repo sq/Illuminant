@@ -31,7 +31,8 @@ namespace TestGame.Scenes {
         [Group("Visualization")]
         Toggle ShowGBuffer,
             ShowDistanceField,
-            ShowLightmap;
+            ShowLightmap,
+            ShowBillboards;
 
         [Group("Lighting")]
         Slider MaximumLightStrength;
@@ -42,6 +43,8 @@ namespace TestGame.Scenes {
             MaximumEncodedDistance;
 
         Toggle Deterministic;
+
+        Texture2D Tree;
 
         public BitmapBillboards (TestGame game, int width, int height)
             : base(game, 1024, 1024) {
@@ -57,6 +60,7 @@ namespace TestGame.Scenes {
             ShowGBuffer.Key = Keys.G;
             ShowDistanceField.Key = Keys.D;
             Deterministic.Key = Keys.R;
+            ShowBillboards.Key = Keys.B;
 
             DistanceFieldResolution.MinusKey = Keys.D5;
             DistanceFieldResolution.PlusKey = Keys.D6;
@@ -138,7 +142,7 @@ namespace TestGame.Scenes {
             Background = Game.TextureLoader.Load("sc3test");
 
             Renderer = new LightingRenderer(
-                Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
+                Game.Content, Game.RenderCoordinator, Game.Materials, Environment,
                 new RendererConfiguration(
                     1024, 1024, true, true
                 ) {
@@ -153,13 +157,17 @@ namespace TestGame.Scenes {
                 }, Game.IlluminantMaterials
             );
 
+            Renderer.OnRenderGBuffer += (LightingRenderer lr, ref ImperativeRenderer ir) => {
+                DrawTrees(ref ir);
+            };
+
             CreateDistanceField();
 
             MovableLight = new SphereLightSource {
                 Position = new Vector3(64, 64, 0.7f),
                 Color = new Vector4(1f, 1f, 1f, 0.5f),
-                Radius = 24,
-                RampLength = 550,
+                Radius = 48,
+                RampLength = 1024,
                 RampMode = LightSourceRampMode.Linear
             };
 
@@ -173,15 +181,15 @@ namespace TestGame.Scenes {
 
             Rect(new Vector2(330, 337), new Vector2(Width, 394), 0f, 55f);
 
-            if (true)
-                Environment.Obstructions.Add(new LightObstruction(
-                    LightObstructionType.Box, 
-                    new Vector3(500, 750, 0), new Vector3(50, 100, 15f)
-                ));
+            Tree = Game.TextureLoader.Load("tree1");
         }
 
         public override void UnloadContent () {
             Renderer?.Dispose(); Renderer = null;
+        }
+
+        private void DrawTrees (ref ImperativeRenderer ir) {
+            ir.Draw(Tree, new Vector2(64, 64));
         }
         
         public override void Draw (Squared.Render.Frame frame) {
@@ -276,6 +284,11 @@ namespace TestGame.Scenes {
                             Renderer.GBuffer.Texture.Get(), Vector2.Zero, new Bounds(Vector2.Zero, Vector2.One), 
                             Color.White, LightmapScaleRatio
                         ));
+                }
+
+                if (ShowBillboards) {
+                    var ir = new ImperativeRenderer(group, Game.Materials, 10);
+                    DrawTrees(ref ir);
                 }
             }
         }

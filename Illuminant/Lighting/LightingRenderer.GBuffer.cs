@@ -12,7 +12,11 @@ using Squared.Render.Tracing;
 using Squared.Util;
 
 namespace Squared.Illuminant {
+    public delegate void UserGBufferRenderer (LightingRenderer lightingRenderer, ref ImperativeRenderer billboardRenderer);
+
     public sealed partial class LightingRenderer : IDisposable, INameableGraphicsObject {
+        public event UserGBufferRenderer OnRenderGBuffer;
+
         public GBuffer GBuffer {
             get {
                 return _GBuffer;
@@ -137,6 +141,24 @@ namespace Squared.Illuminant {
                 }
 
                 // TODO: Update the heightmap using any SDF light obstructions (maybe only if they're flagged?)
+
+                if (OnRenderGBuffer != null) {
+                    if (RenderTrace.EnableTracing)
+                        RenderTrace.Marker(group, 100, "LightingRenderer {0} : Begin User G-Buffer Content", this.ToObjectID());
+
+                    var ir = new ImperativeRenderer(
+                        group, Materials,
+                        layer: 101,
+                        depthStencilState: FrontFaceDepthStencilState,
+                        blendState: BlendState.Opaque,
+                        useZBuffer: true
+                    ) {
+                        UseDiscard = true,
+                        // DefaultBitmapMaterial = IlluminantMaterials.MaskBillboard
+                    };
+
+                    OnRenderGBuffer(this, ref ir);
+                }
 
                 if (RenderTrace.EnableTracing)
                     RenderTrace.Marker(group, 9999, "LightingRenderer {0} : End G-Buffer", this.ToObjectID());
