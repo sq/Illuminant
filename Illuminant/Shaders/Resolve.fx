@@ -12,13 +12,6 @@
 
 const float3 RgbToGray = float3(0.299, 0.587, 0.144);
 
-sampler LinearSampler : register(s6) {
-    Texture = (BitmapTexture);
-    MipFilter = POINT;
-    MinFilter = LINEAR;
-    MagFilter = LINEAR;
-};
-
 sampler PointSampler : register(s7) {
     Texture = (BitmapTexture);
     MipFilter = POINT;
@@ -38,10 +31,9 @@ float4 ResolveCommon (
 
     float4 coord = float4(clamp2(texCoord + LightmapUVOffset, texRgn.xy, texRgn.zw), 0, 0);
 
-    float4 sampleLinear = tex2Dlod(LinearSampler, coord);
+    float4 color = tex2Dlod(TextureSampler, coord);
 
-    result = sampleLinear;
-    result *= InverseScaleFactor;
+    result = color * InverseScaleFactor;
     result.a = 1;
     return result;
 }

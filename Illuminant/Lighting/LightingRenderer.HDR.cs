@@ -102,7 +102,7 @@ namespace Squared.Illuminant {
             public void Resolve (
                 IBatchContainer container, int layer,
                 float width, float height, Texture2D albedo = null,
-                Bounds? albedoTextureRegion = null, SamplerState albedoSamplerState = null,
+                Bounds? albedoTextureRegion = null, SamplerState albedoSamplerState = null, SamplerState lightmapSamplerState = null,
                 Vector2? uvOffset = null, HDRConfiguration? hdr = null, 
                 LUTBlendingConfiguration? lutBlending = null,
                 BlendState blendState = null, bool worldSpace = false
@@ -122,7 +122,7 @@ namespace Squared.Illuminant {
                 Renderer.ResolveLighting(
                     container, layer,
                     Lightmap, Vector2.Zero, scale, 
-                    albedo, albedoTextureRegion, albedoSamplerState,
+                    albedo, albedoTextureRegion, albedoSamplerState, lightmapSamplerState,
                     uvOffset.GetValueOrDefault(Vector2.Zero), hdr, lutBlending,
                     blendState, worldSpace
                 );
@@ -131,7 +131,7 @@ namespace Squared.Illuminant {
             public void Resolve (
                 IBatchContainer container, int layer,
                 Vector2 position, Vector2? scale = null, Texture2D albedo = null,
-                Bounds? albedoTextureRegion = null, SamplerState albedoSamplerState = null,
+                Bounds? albedoTextureRegion = null, SamplerState albedoSamplerState = null, SamplerState lightmapSamplerState = null,
                 Vector2? uvOffset = null, HDRConfiguration? hdr = null, 
                 LUTBlendingConfiguration? lutBlending = null,
                 BlendState blendState = null, bool worldSpace = false
@@ -147,7 +147,7 @@ namespace Squared.Illuminant {
                 Renderer.ResolveLighting(
                     container, layer,
                     Lightmap, position, scale.GetValueOrDefault(Vector2.One),
-                    albedo, albedoTextureRegion, albedoSamplerState,
+                    albedo, albedoTextureRegion, albedoSamplerState, lightmapSamplerState,
                     uvOffset.GetValueOrDefault(Vector2.Zero), hdr, lutBlending,
                     blendState, worldSpace
                 );

@@ -106,10 +106,15 @@ void sampleGBuffer (
         );
 
         // HACK: Reconstruct the y normal from the z normal
-        float normalZ = (sample.y - 0.5) * 2;
-        normal = normalize(float3(
-            (sample.x - 0.5) * 2, 1 - abs(normalZ), normalZ
-        ));
+        if (any(sample.xy)) {
+            float normalZ = (sample.y - 0.5) * 2;
+            normal = normalize(float3(
+                (sample.x - 0.5) * 2, 1 - abs(normalZ), normalZ
+            ));
+        } else {
+            // HACK: If the x and y normals are both 0, the normal is intended to be 0 (to disable directional occlusion)
+            normal = float3(0, 0, 0);
+        }
     } else {
         screenPositionPx /= getEnvironmentRenderScale();
 

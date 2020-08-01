@@ -1322,7 +1322,7 @@ namespace Squared.Illuminant {
             IBatchContainer container, int layer,
             RenderTarget2D lightmap,
             Vector2 position, Vector2 scale, 
-            Texture2D albedo, Bounds? albedoRegion, SamplerState albedoSamplerState,
+            Texture2D albedo, Bounds? albedoRegion, SamplerState albedoSamplerState, SamplerState lightmapSamplerState,
             Vector2 uvOffset, HDRConfiguration? hdr, LUTBlendingConfiguration? lutBlending,
             BlendState blendState, bool worldSpace
         ) {
@@ -1402,7 +1402,7 @@ namespace Squared.Illuminant {
                 using (var bb = BitmapBatch.New(
                     group, 0, m, 
                     samplerState: albedoSamplerState ?? SamplerState.LinearClamp,
-                    samplerState2: SamplerState.LinearClamp
+                    samplerState2: lightmapSamplerState ?? SamplerState.LinearClamp
                 )) {
                     BitmapDrawCall dc;
                     if (albedo != null) {
