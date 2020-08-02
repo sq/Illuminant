@@ -43,7 +43,8 @@ namespace Squared.Illuminant.Particles {
         internal const int              RandomnessTextureWidth = 807,
                                         RandomnessTextureHeight = 653;
         internal          Texture2D     RandomnessTexture, 
-            LowPrecisionRandomnessTexture;
+            LowPrecisionRandomnessTexture,
+            DummyRampTexture;
 
         internal         RenderTarget2D ScratchTexture;
 
@@ -561,6 +562,8 @@ namespace Squared.Illuminant.Particles {
                     coordinator.Device, Configuration.ChunkSize, Configuration.ChunkSize, 
                     false, SurfaceFormat.Alpha8, DepthFormat.None, 0, RenderTargetUsage.PreserveContents
                 );
+
+                DummyRampTexture = new Texture2D(coordinator.Device, 1, 1, false, SurfaceFormat.Color);
             }
 
             FillIndexBuffer();

@@ -906,7 +906,7 @@ namespace Squared.Illuminant.Particles {
             var lifeRampTexture =
                 (lifeRamp != null)
                     ? lifeRamp.Instance
-                    : null;
+                    : Engine.DummyRampTexture;
             rt.SetValue(lifeRampTexture);
 
             if ((lr != null) && (lifeRampTexture != null)) {
