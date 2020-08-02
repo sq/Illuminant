@@ -582,6 +582,7 @@ namespace Squared.Illuminant.Particles {
             AvailableBuffers.Clear();
             DiscardedBuffers.Clear();
 
+            Coordinator.DisposeResource(DummyRampTexture);
             Coordinator.DisposeResource(TriIndexBuffer);
             Coordinator.DisposeResource(TriVertexBuffer);
             Coordinator.DisposeResource(RasterizeIndexBuffer);

@@ -601,6 +601,7 @@ namespace Squared.Illuminant {
 
             Effects.Dispose();
 
+            Coordinator.DisposeResource(ref _DummyGBufferTexture);
             Coordinator.DisposeResource(ref QuadIndexBuffer);
             Coordinator.DisposeResource(ref CornerBuffer);
             Coordinator.DisposeResource(ref SphereBuffer);
