@@ -218,7 +218,7 @@ namespace Squared.Illuminant {
             using (var batch = PrimitiveBatch<VertexPositionColor>.New(
                 container, layer, material,
                 (dm, _) => {
-                    material.Effect.Parameters["ClearTexture"].SetValue(clearTexture);
+                    material.Effect.Parameters["ClearTexture"].SetValue(clearTexture ?? _DummyDistanceFieldTexture);
                     material.Effect.Parameters["ClearMultiplier"].SetValue(clearTexture != null ? Vector4.One : Vector4.Zero);
                     material.Effect.Parameters["ClearInverseScale"].SetValue(new Vector2(
                         1.0f / (_DistanceField.SliceWidth * _DistanceField.ColumnCount), 

@@ -18,7 +18,7 @@ namespace Squared.Illuminant {
     public class DistanceField : IDisposable {
         public const int DefaultMaximumEncodedDistance = 128;
 
-        public readonly SurfaceFormat Format = SurfaceFormat.Rgba64;
+        public const SurfaceFormat Format = SurfaceFormat.Rgba64;
 
         public bool IsDisposed { get; private set; }
 
