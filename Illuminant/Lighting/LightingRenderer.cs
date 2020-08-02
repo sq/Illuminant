@@ -354,6 +354,7 @@ namespace Squared.Illuminant {
 
         private DistanceField _DistanceField;
         private GBuffer _GBuffer;
+        private Texture2D _DummyGBufferTexture;
 
         private          BufferRing _LuminanceBuffers;
         private readonly object     _LuminanceReadbackArrayLock = new object();
@@ -455,6 +456,7 @@ namespace Squared.Illuminant {
                     Configuration.MaximumLightProbeCount,
                     1, false, SurfaceFormat.Vector4
                 );
+                _DummyGBufferTexture = new Texture2D(coordinator.Device, 1, 1, false, SurfaceFormat.HalfVector4);
             }
 
             _LightProbeValueBuffers = new BufferRing(

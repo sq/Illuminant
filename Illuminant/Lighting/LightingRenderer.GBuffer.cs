@@ -477,7 +477,7 @@ namespace Squared.Illuminant {
                 ));
                 p["GBuffer"].SetValue(_GBuffer.Texture.Get());
             } else {
-                p.ClearTexture("GBuffer");
+                p["GBuffer"].SetValue(_DummyGBufferTexture);
                 p["GBufferTexelSizeAndMisc"].SetValue(new Vector4(
                     0, 0, ViewportScaleX(), ViewportScaleY()
                 ));
