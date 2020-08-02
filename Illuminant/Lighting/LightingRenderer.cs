@@ -462,7 +462,7 @@ namespace Squared.Illuminant {
                 Configuration.MaximumLightProbeCount, 
                 1,
                 false,
-                SurfaceFormat.HdrBlendable,
+                SurfaceFormat.HalfVector4,
                 Configuration.RingBufferSize
             );
 
