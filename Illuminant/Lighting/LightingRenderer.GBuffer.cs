@@ -75,6 +75,12 @@ namespace Squared.Illuminant {
             dm.Device.ScissorRectangle = new Rectangle(0, 0, PendingGBufferArguments.RenderWidth, PendingGBufferArguments.RenderHeight);
         }
 
+        private void UpdateScaleFactorForGBufferBitmapMaterial (DeviceManager dm, object userData) {
+            var scaleFactor = (Vector2)userData;
+            var invScaleFactor = new Vector2(1.0f / scaleFactor.X, 1.0f / scaleFactor.Y);
+            IlluminantMaterials.AutoGBufferBitmap.Effect.Parameters["ViewCoordinateScaleFactor"].SetValue(invScaleFactor);
+        }
+
         private void _AfterRenderGBuffer (DeviceManager dm, object userData) {
             Materials.PopViewTransform();
             dm.PopStates();
@@ -85,9 +91,10 @@ namespace Squared.Illuminant {
             int renderWidth, int renderHeight,
             bool enableHeightVolumes = true, bool enableBillboards = true
         ) {
+            var actualScaleFactor = PendingFieldViewportScale.GetValueOrDefault(Vector2.One) * Configuration.RenderScale;
             PendingGBufferArguments.Transform = ViewTransform.CreateOrthographic(_GBuffer.Width, _GBuffer.Height);
             PendingGBufferArguments.Transform.Position = PendingFieldViewportPosition.GetValueOrDefault(Vector2.Zero);
-            PendingGBufferArguments.Transform.Scale = PendingFieldViewportScale.GetValueOrDefault(Vector2.One) * Configuration.RenderScale;
+            PendingGBufferArguments.Transform.Scale = actualScaleFactor;
             PendingGBufferArguments.RenderWidth = renderWidth;
             PendingGBufferArguments.RenderHeight = renderHeight;
 
@@ -143,21 +150,24 @@ namespace Squared.Illuminant {
                 // TODO: Update the heightmap using any SDF light obstructions (maybe only if they're flagged?)
 
                 if (OnRenderGBuffer != null) {
-                    if (RenderTrace.EnableTracing)
-                        RenderTrace.Marker(group, 100, "LightingRenderer {0} : Begin User G-Buffer Content", this.ToObjectID());
+                    // FIXME: Memory leak for the delegate and boxed value here
+                    using (var userContentGroup = BatchGroup.New(group, 100, UpdateScaleFactorForGBufferBitmapMaterial, userData: Configuration.RenderScale)) {
+                        if (RenderTrace.EnableTracing)
+                                RenderTrace.Marker(userContentGroup, -999, "LightingRenderer {0} : Begin User G-Buffer Content", this.ToObjectID());
 
-                    var ir = new ImperativeRenderer(
-                        group, Materials,
-                        layer: 101,
-                        depthStencilState: FrontFaceDepthStencilState,
-                        blendState: BlendState.Opaque,
-                        useZBuffer: true
-                    ) {
-                        UseDiscard = true,
-                        DefaultBitmapMaterial = IlluminantMaterials.AutoGBufferBitmap
-                    };
+                        var ir = new ImperativeRenderer(
+                            userContentGroup, Materials,
+                            layer: 0,
+                            depthStencilState: FrontFaceDepthStencilState,
+                            blendState: BlendState.Opaque,
+                            useZBuffer: true
+                        ) {
+                            UseDiscard = true,
+                            DefaultBitmapMaterial = IlluminantMaterials.AutoGBufferBitmap
+                        };
 
-                    OnRenderGBuffer(this, ref ir);
+                        OnRenderGBuffer(this, ref ir);
+                    }
                 }
 
                 if (RenderTrace.EnableTracing)

@@ -3,6 +3,8 @@
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\BitmapCommon.fxh"
 #include "GBufferShaderCommon.fxh"
 
+uniform float2 ViewCoordinateScaleFactor;
+
 void AutoGBufferBitmapPixelShader (
     in float4 color : COLOR0,
     // originX, originY, vertexX, vertexY
@@ -22,7 +24,7 @@ void AutoGBufferBitmapPixelShader (
         // Use massively negative Z normal to represent 'I don't want directional light occlusion at all, thanks'
         ? float3(0, 0, 0)
         : float3(0, 1 - abs(userData.x), userData.x);
-    float relativeY = originalPositionData.y - originalPositionData.w;
+    float relativeY = (originalPositionData.y - originalPositionData.w) * ViewCoordinateScaleFactor.y;
     float z = userData.z + (userData.y * relativeY);
     result = encodeGBufferSample(
         (normal.xyz - 0.5) * 2, relativeY, z, isDead, userData.w > 0.5
