@@ -396,6 +396,7 @@ namespace TestGame.Scenes {
 
                 var oldCenter = obs.Center;
                 var oldSize = obs.Size;
+                var oldRotation = obs.Rotation;
 
                 Game.Nuklear.Property("x", ref obs.Center.X, min, max, 1f, 0.1f);
                 Game.Nuklear.Property("y", ref obs.Center.Y, min, max, 1f, 0.1f);
@@ -405,9 +406,12 @@ namespace TestGame.Scenes {
                 Game.Nuklear.Property("sizey", ref obs.Size.Y, 1f, maxSize, 1f, 0.1f);
                 Game.Nuklear.Property("sizez", ref obs.Size.Z, 1f, maxSize, 1f, 0.1f);
 
+                Game.Nuklear.Property("rotation", ref obs.Rotation, -(float)Math.PI, (float)Math.PI, 0.1f, 0.01f);
+
                 if (
                     ((obs.Center - oldCenter).Length() >= 0.5f) ||
-                    ((obs.Size - oldSize).Length() >= 0.5f)
+                    ((obs.Size - oldSize).Length() >= 0.5f) ||
+                    (Math.Abs(obs.Rotation - oldRotation) > 0.01f)
                 )
                     Renderer.InvalidateFields();
 

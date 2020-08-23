@@ -3,7 +3,7 @@
 
 uniform int    AreaType;
 uniform float3 AreaCenter, AreaSize;
-uniform float  AreaFalloff;
+uniform float  AreaFalloff, AreaRotation;
 
 void PS_CollectParticles (
     ACCEPTS_VPOS,
@@ -15,7 +15,7 @@ void PS_CollectParticles (
     float4 worldPosition = tex2Dlod(PositionSampler, uv);
 
     float distance = evaluateByTypeId(
-        AreaType, worldPosition, AreaCenter, AreaSize
+        AreaType, worldPosition, AreaCenter, AreaSize, AreaRotation
     );
     float scaledDistance = (1 - saturate(distance / AreaFalloff));
 

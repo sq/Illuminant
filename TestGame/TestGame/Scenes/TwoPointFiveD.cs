@@ -489,6 +489,7 @@ namespace TestGame.Scenes {
                     var obs = Environment.Obstructions[0];
                     obs.Center =
                         new Vector3(500, 750, Arithmetic.Pulse(time / 10, 0, 40));
+                    obs.Rotation = time * 0.1f;
 
                     Renderer.InvalidateFields();
                 }

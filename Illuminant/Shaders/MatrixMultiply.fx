@@ -7,11 +7,11 @@ uniform float  TimeDivisor;
 uniform float  Strength;
 uniform int    AreaType;
 uniform float3 AreaCenter, AreaSize;
-uniform float  AreaFalloff;
+uniform float  AreaFalloff, AreaRotation;
 
 float computeWeight (float3 worldPosition) {
     float distance = evaluateByTypeId(
-        AreaType, worldPosition, AreaCenter, AreaSize
+        AreaType, worldPosition, AreaCenter, AreaSize, AreaRotation
     );
     return (1 - clamp(distance / AreaFalloff, 0, 1)) * Strength;
 }

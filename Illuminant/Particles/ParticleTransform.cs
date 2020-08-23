@@ -33,6 +33,7 @@ namespace Squared.Illuminant.Particles.Transforms {
         public Parameter<Vector3> Center;
         public Parameter<Vector3> Size = Vector3.One;
         public Parameter<float> Falloff = 1;
+        public Parameter<float> Rotation = 0;
 
         public TransformArea Clone () {
             return (TransformArea)MemberwiseClone();
@@ -303,6 +304,8 @@ namespace Squared.Illuminant.Particles.Transforms {
                 var falloff = area.Falloff.Evaluate(now, engine.ResolveSingle);
                 falloff = Math.Max(1, falloff);
                 parameters["AreaFalloff"].SetValue(falloff);
+                var rotation = area.Rotation.Evaluate(now, engine.ResolveSingle);
+                parameters["AreaRotation"].SetValue(rotation);
             } else {
                 parameters["AreaType"].SetValue(0);
             }

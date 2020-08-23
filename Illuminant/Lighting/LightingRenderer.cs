@@ -1634,6 +1634,7 @@ namespace Squared.Illuminant {
                         p["FunctionType"].SetValue((int)singleObject.Type);
                         p["FunctionCenter"].SetValue(singleObject.Center);
                         p["FunctionSize"].SetValue(singleObject.Size);
+                        p["FunctionRotation"].SetValue(singleObject.Rotation);
                     }
 
                     p["OutlineSize"]?.SetValue(Math.Max(outlineSize, 1f));

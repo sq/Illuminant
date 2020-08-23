@@ -5,15 +5,26 @@
 #define DISTANCE_FUNCTION_DEFINED
 
 float evaluateNone (
-    float3 worldPosition, float3 center, float3 size
+    float3 worldPosition, float3 center, float3 size, float rotation
 ) {
     return 0;
 }
 
+float3 rotateLocalPosition (float3 localPosition, float rotation) {
+    float _sin, _cos;
+    sincos(-rotation, _sin, _cos);
+    return float3(
+        (_cos * localPosition.x) - (_sin * localPosition.y),
+        (_sin * localPosition.x) + (_cos * localPosition.y),
+        localPosition.z
+    );
+}
+
 float evaluateBox (
-    float3 worldPosition, float3 center, float3 size
+    float3 worldPosition, float3 center, float3 size, float rotation
 ) {
     float3 position = worldPosition - center;
+    position = rotateLocalPosition(position, rotation);
 
     float3 d = abs(position) - size;
     float resultDistance =
@@ -27,7 +38,7 @@ float evaluateBox (
 }
 
 float evaluateEllipsoid (
-    float3 worldPosition, float3 center, float3 size
+    float3 worldPosition, float3 center, float3 size, float rotation
 ) {
     float3 position = worldPosition - center;
 
@@ -38,28 +49,28 @@ float evaluateEllipsoid (
 }
 
 float evaluateCylinder (
-    float3 worldPosition, float3 center, float3 size
+    float3 worldPosition, float3 center, float3 size, float rotation
 ) {
     const float bigValue = 65536.0;
-    float bigEllipsoid = evaluateEllipsoid(worldPosition, center, float3(size.x, size.y, bigValue));
-    float boxCap       = evaluateBox(worldPosition, center, float3(bigValue, bigValue, size.z));
+    float bigEllipsoid = evaluateEllipsoid(worldPosition, center, float3(size.x, size.y, bigValue), rotation);
+    float boxCap       = evaluateBox(worldPosition, center, float3(bigValue, bigValue, size.z), rotation);
     return max(bigEllipsoid, boxCap);
 }
 
 float evaluateByTypeId (
-    int typeId, float3 worldPosition, float3 center, float3 size
+    int typeId, float3 worldPosition, float3 center, float3 size, float rotation
 ) {
     // HACK: The compiler insists that typeId must be known-positive, so we force it
     switch (abs(typeId)) {
         case 1:
-            return evaluateEllipsoid(worldPosition, center, size);
+            return evaluateEllipsoid(worldPosition, center, size, rotation);
         case 2:
-            return evaluateBox(worldPosition, center, size);
+            return evaluateBox(worldPosition, center, size, rotation);
         case 3:
-            return evaluateCylinder(worldPosition, center, size);
+            return evaluateCylinder(worldPosition, center, size, rotation);
         default:
         case 0:
-            return evaluateNone(worldPosition, center, size);
+            return evaluateNone(worldPosition, center, size, rotation);
     }
 }
 

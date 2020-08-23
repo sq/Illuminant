@@ -22,19 +22,23 @@ namespace Squared.Illuminant {
 
         public Vector3 Center;
         public Vector3 Size;
+        public float   Rotation;
 
         public LightObstruction (
             LightObstructionType type,
-            Vector3? center = null,
-            Vector3? radius = null
+            Vector3? center   = null,
+            Vector3? radius   = null,
+            float    rotation = 0
         ) {
             Type = type;
             Center = center.GetValueOrDefault(Vector3.Zero);
             Size = radius.GetValueOrDefault(Vector3.Zero);
+            Rotation = rotation;
         }
 
         public Bounds3 Bounds3 {
             get {
+                // FIXME: rotation
                 return new Bounds3(
                     Center - Size,
                     Center + Size
@@ -42,20 +46,20 @@ namespace Squared.Illuminant {
             }
         }
 
-        public static LightObstruction Box (Vector3 center, Vector3 size) {
-            return new LightObstruction(LightObstructionType.Box, center, size);
+        public static LightObstruction Box (Vector3 center, Vector3 size, float rotation = 0) {
+            return new LightObstruction(LightObstructionType.Box, center, size, rotation);
         }
 
-        public static LightObstruction Ellipsoid (Vector3 center, Vector3 size) {
-            return new LightObstruction(LightObstructionType.Ellipsoid, center, size);
+        public static LightObstruction Ellipsoid (Vector3 center, Vector3 size, float rotation = 0) {
+            return new LightObstruction(LightObstructionType.Ellipsoid, center, size, rotation);
         }
 
-        public static LightObstruction Cylinder (Vector3 center, Vector3 size) {
-            return new LightObstruction(LightObstructionType.Cylinder, center, size);
+        public static LightObstruction Cylinder (Vector3 center, Vector3 size, float rotation = 0) {
+            return new LightObstruction(LightObstructionType.Cylinder, center, size, rotation);
         }
 
         public override string ToString () {
-            return string.Format("{3}{0}@{1} size={2}", Type, Center, Size, IsDynamic ? "dynamic " : "");
+            return string.Format("{4}{0}@{1} size={2} rotation={3}", Type, Center, Size, Rotation, IsDynamic ? "dynamic " : "");
         }
     }
 }

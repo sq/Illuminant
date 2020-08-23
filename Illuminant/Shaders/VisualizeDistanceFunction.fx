@@ -25,6 +25,7 @@ uniform float3 LightColor;
 uniform int    FunctionType;
 uniform float3 FunctionCenter;
 uniform float3 FunctionSize;
+uniform float  FunctionRotation;
 
 #include "VisualizeCommon.fxh"
 
@@ -49,11 +50,11 @@ void VisualizeVertexShader(
 [call]
 float evaluateFunctions (float3 worldPosition, float vars) {
     if (FunctionType < 1) {
-        return evaluateEllipsoid(worldPosition, FunctionCenter, FunctionSize);
+        return evaluateEllipsoid(worldPosition, FunctionCenter, FunctionSize, FunctionRotation);
     } else if (FunctionType < 2) {
-        return evaluateBox(worldPosition, FunctionCenter, FunctionSize);
+        return evaluateBox(worldPosition, FunctionCenter, FunctionSize, FunctionRotation);
     } else {
-        return evaluateCylinder(worldPosition, FunctionCenter, FunctionSize);
+        return evaluateCylinder(worldPosition, FunctionCenter, FunctionSize, FunctionRotation);
     }
 }
 

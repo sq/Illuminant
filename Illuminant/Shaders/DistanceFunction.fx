@@ -23,6 +23,7 @@ void DistanceFunctionVertexShader(
     in int2 cornerIndex   : BLENDINDICES0,
     inout float3 center   : TEXCOORD0,
     inout float3 size     : TEXCOORD1,
+    inout float  rotation : TEXCOORD2,
     out   float4 result   : POSITION0
 ) {
     float msize = max(max(abs(size.x), abs(size.y)), abs(size.z)) + getMaximumEncodedDistance() + 0.5;
@@ -40,45 +41,48 @@ float2 getPositionXy (in float2 __vpos__) {
 void BoxPixelShader (
     out float4 color  : COLOR0,
     ACCEPTS_VPOS,
-    in  float3 center : TEXCOORD0,
-    in  float3 size   : TEXCOORD1
+    in  float3 center   : TEXCOORD0,
+    in  float3 size     : TEXCOORD1,
+    in  float  rotation : TEXCOORD2
 ) {
     float2 vpos = GET_VPOS;
     color = float4(
-        encodeDistance(evaluateBox(float3(getPositionXy(vpos), SliceZ.x), center, size)),
-        encodeDistance(evaluateBox(float3(getPositionXy(vpos), SliceZ.y), center, size)),
-        encodeDistance(evaluateBox(float3(getPositionXy(vpos), SliceZ.z), center, size)),
-        encodeDistance(evaluateBox(float3(getPositionXy(vpos), SliceZ.w), center, size))
+        encodeDistance(evaluateBox(float3(getPositionXy(vpos), SliceZ.x), center, size, rotation)),
+        encodeDistance(evaluateBox(float3(getPositionXy(vpos), SliceZ.y), center, size, rotation)),
+        encodeDistance(evaluateBox(float3(getPositionXy(vpos), SliceZ.z), center, size, rotation)),
+        encodeDistance(evaluateBox(float3(getPositionXy(vpos), SliceZ.w), center, size, rotation))
     );
 }
 
 void EllipsoidPixelShader(
     out float4 color  : COLOR0,
     ACCEPTS_VPOS,
-    in  float3 center : TEXCOORD0,
-    in  float3 size : TEXCOORD1
+    in  float3 center   : TEXCOORD0,
+    in  float3 size     : TEXCOORD1,
+    in  float  rotation : TEXCOORD2
 ) {
     float2 vpos = GET_VPOS;
     color = float4(
-        encodeDistance(evaluateEllipsoid(float3(getPositionXy(vpos), SliceZ.x), center, size)),
-        encodeDistance(evaluateEllipsoid(float3(getPositionXy(vpos), SliceZ.y), center, size)),
-        encodeDistance(evaluateEllipsoid(float3(getPositionXy(vpos), SliceZ.z), center, size)),
-        encodeDistance(evaluateEllipsoid(float3(getPositionXy(vpos), SliceZ.w), center, size))
+        encodeDistance(evaluateEllipsoid(float3(getPositionXy(vpos), SliceZ.x), center, size, rotation)),
+        encodeDistance(evaluateEllipsoid(float3(getPositionXy(vpos), SliceZ.y), center, size, rotation)),
+        encodeDistance(evaluateEllipsoid(float3(getPositionXy(vpos), SliceZ.z), center, size, rotation)),
+        encodeDistance(evaluateEllipsoid(float3(getPositionXy(vpos), SliceZ.w), center, size, rotation))
     );
 }
 
 void CylinderPixelShader(
     out float4 color  : COLOR0,
     ACCEPTS_VPOS,
-    in  float3 center : TEXCOORD0,
-    in  float3 size : TEXCOORD1
+    in  float3 center   : TEXCOORD0,
+    in  float3 size     : TEXCOORD1,
+    in  float  rotation : TEXCOORD2
 ) {
     float2 vpos = GET_VPOS;
     color = float4(
-        encodeDistance(evaluateCylinder(float3(getPositionXy(vpos), SliceZ.x), center, size)),
-        encodeDistance(evaluateCylinder(float3(getPositionXy(vpos), SliceZ.y), center, size)),
-        encodeDistance(evaluateCylinder(float3(getPositionXy(vpos), SliceZ.z), center, size)),
-        encodeDistance(evaluateCylinder(float3(getPositionXy(vpos), SliceZ.w), center, size))
+        encodeDistance(evaluateCylinder(float3(getPositionXy(vpos), SliceZ.x), center, size, rotation)),
+        encodeDistance(evaluateCylinder(float3(getPositionXy(vpos), SliceZ.y), center, size, rotation)),
+        encodeDistance(evaluateCylinder(float3(getPositionXy(vpos), SliceZ.z), center, size, rotation)),
+        encodeDistance(evaluateCylinder(float3(getPositionXy(vpos), SliceZ.w), center, size, rotation))
     );
 }
 
