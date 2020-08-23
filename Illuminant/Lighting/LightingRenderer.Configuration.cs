@@ -116,6 +116,12 @@ namespace Squared.Illuminant {
         public bool RenderGroundPlane = true;
 
         /// <summary>
+        /// Hack to enable setting individual pixels as fullbright so they are unaffected
+        ///  by the lightmap during lightmap+albedo resolve. Will have awful side effects.
+        /// </summary>
+        public bool AllowFullbright = false;
+
+        /// <summary>
         /// Used to load lazy texture resources.
         /// </summary>
         public Func<string, Texture2D> RampTextureLoader = null;

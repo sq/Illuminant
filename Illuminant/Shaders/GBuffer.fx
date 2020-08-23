@@ -68,7 +68,7 @@ void GroundPlanePixelShader (
     }
 
     float3 normal = float3(0, 0, 1);
-    result = encodeGBufferSample(normal, 0, worldPosition.z, dead, enableShadows > 0.5); 
+    result = encodeGBufferSample(normal, 0, worldPosition.z, dead, enableShadows > 0.5, false); 
 }
 
 void HeightVolumePixelShader(
@@ -82,7 +82,7 @@ void HeightVolumePixelShader(
     float3 selfOcclusionBias = float3(0, 0, ZSelfOcclusionHack);
 
     float relativeY = ((worldPosition.z * getZToYMultiplier()) * GetViewportScale() / getEnvironmentRenderScale()) + selfOcclusionBias.y;
-    result = encodeGBufferSample(normal, relativeY, worldPosition.z + selfOcclusionBias.z, dead, enableShadows > 0.5);
+    result = encodeGBufferSample(normal, relativeY, worldPosition.z + selfOcclusionBias.z, dead, enableShadows > 0.5, false);
 }
 
 void HeightVolumeFacePixelShader(
@@ -101,7 +101,7 @@ void HeightVolumeFacePixelShader(
     float3 selfOcclusionBias = float3(SelfOcclusionHack, SelfOcclusionHack, ZSelfOcclusionHack) * normal;
 
     float relativeY = ((worldPosition.z * getZToYMultiplier()) * GetViewportScale() / getEnvironmentRenderScale()) + selfOcclusionBias.y;
-    result = encodeGBufferSample(normal, relativeY, worldPosition.z + selfOcclusionBias.z, dead, enableShadows > 0.5);
+    result = encodeGBufferSample(normal, relativeY, worldPosition.z + selfOcclusionBias.z, dead, enableShadows > 0.5, false);
 }
 
 technique GroundPlane

@@ -7,7 +7,7 @@ uniform float  SelfOcclusionHack;
 uniform float3 DistanceFieldExtent;
 
 float4 encodeGBufferSample (
-    float3 normal, float relativeY, float z, bool dead, bool enableShadows
+    float3 normal, float relativeY, float z, bool dead, bool enableShadows, bool fullbright
 ) {
     if (dead) {
         return float4(
@@ -22,9 +22,12 @@ float4 encodeGBufferSample (
             (normal.x / 2) + 0.5,
             (normal.z / 2) + 0.5,
             (relativeY / RELATIVEY_SCALE),
-            // If shadows are disabled we negate the Z value, and bias it by -1
-            // This ensures that shadows can be disabled for a Z of 0
-            ((z / 512) * (enableShadows ? 1 : -1)) + (enableShadows ? 0 : -1)
+            fullbright
+                // for a fullbright pixel we just make the w value total garbage
+                ? 99999
+                // If shadows are disabled we negate the Z value, and bias it by -1
+                // This ensures that shadows can be disabled for a Z of 0
+                : ((z / 512) * (enableShadows ? 1 : -1)) + (enableShadows ? 0 : -1)
         );
     }
 }

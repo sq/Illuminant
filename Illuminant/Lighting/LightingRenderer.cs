@@ -925,8 +925,13 @@ namespace Squared.Illuminant {
                 );
 
                 {
+                    var ambient = Environment.Ambient * intensityScale;
+                    // Zero out the alpha value because we use it to indicate whether a pixel is fullbright
+                    if (Configuration.AllowFullbright)
+                        ambient.A = 0;
+
                     ClearBatch.AddNew(
-                        resultGroup, -1, Materials.Clear, Environment.Ambient * intensityScale
+                        resultGroup, -1, Materials.Clear, ambient
                     );
 
                     // TODO: Use threads?

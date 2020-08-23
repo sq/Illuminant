@@ -54,8 +54,9 @@ float4 ResolveWithAlbedoCommon (
 
     light *= InverseScaleFactor * 2;
 
-    float4 result = albedo;
-    result.rgb *= light.rgb;
+    float4 result = float4(
+        lerp(albedo.rgb, albedo.rgb * light.rgb, light.a), albedo.a
+    );
     return result;
 }
 
