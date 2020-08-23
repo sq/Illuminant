@@ -71,9 +71,11 @@ void sampleGBuffer (
     float2 screenPositionPx,
     out float3 worldPosition,
     out float3 normal,
-    out bool enableShadows
+    out bool enableShadows,
+    out bool fullbright
 ) {
     enableShadows = true;
+    fullbright = false;
 
     PREFER_BRANCH
     if (any(GBufferTexelSizeAndMisc.xy)) {
@@ -95,6 +97,11 @@ void sampleGBuffer (
             // Unshadowed pixels have their Z negated
             worldZ = -worldZ;
             enableShadows = false;
+        } else if (worldZ >= 9999) {
+            // Fullbright pixels have 99999 added to their Z
+            worldZ = 0;
+            enableShadows = false;
+            fullbright = true;
         }
         worldZ *= 512;
 

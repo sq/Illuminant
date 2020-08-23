@@ -23,11 +23,17 @@ void ProjectorLightPixelShader(
     out float4 result              : COLOR0
 ) {
     float3 shadedPixelPosition, shadedPixelNormal;
-    bool enableShadows;
+    bool enableShadows, fullbright;
     sampleGBuffer(
         GET_VPOS,
-        shadedPixelPosition, shadedPixelNormal, enableShadows
+        shadedPixelPosition, shadedPixelNormal, enableShadows, fullbright
     );
+
+    if (fullbright) {
+        result = 0;
+        discard;
+        return;
+    }
 
     lightProperties.w *= enableShadows;
 
