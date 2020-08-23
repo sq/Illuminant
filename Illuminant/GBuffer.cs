@@ -10,7 +10,6 @@ using Squared.Render;
 namespace Squared.Illuminant {
     public class GBuffer : IDisposable {
         public bool IsDisposed { get; private set; }
-        public bool IsValid    { get; internal set; }
 
         public readonly RenderCoordinator Coordinator;
         public readonly AutoRenderTarget Texture;
@@ -37,18 +36,6 @@ namespace Squared.Illuminant {
                         : SurfaceFormat.HalfVector4,
                     DepthFormat.Depth24, 0
                 );
-
-            coordinator.DeviceReset += Coordinator_DeviceReset;
-
-            Invalidate();
-        }
-
-        private void Coordinator_DeviceReset (object sender, EventArgs e) {
-            Invalidate();
-        }
-
-        public void Invalidate () {
-            IsValid = false;
         }
 
         public void Dispose () {

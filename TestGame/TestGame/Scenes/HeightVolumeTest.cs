@@ -127,7 +127,6 @@ namespace TestGame.Scenes {
                     Width, Height, true
                 ) {
                     RenderScale = Vector2.One * LightmapScaleRatio,
-                    GBufferCaching = true,
                     DefaultQuality = {
                         LongStepFactor = 0.95f
                     }

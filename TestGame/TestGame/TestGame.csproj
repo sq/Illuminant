@@ -69,7 +69,28 @@
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Program.cs" />
-    <Compile Include="Scenes\*.cs" />
+    <Compile Include="Scenes\2DShapes.cs" />
+    <Compile Include="Scenes\BitmapBillboards.cs" />
+    <Compile Include="Scenes\BitmapShaders.cs" />
+    <Compile Include="Scenes\DistanceFieldEditor.cs" />
+    <Compile Include="Scenes\Dithering.cs" />
+    <Compile Include="Scenes\DynamicObstructions.cs" />
+    <Compile Include="Scenes\HeightVolumeTest.cs" />
+    <Compile Include="Scenes\HSV.cs" />
+    <Compile Include="Scenes\LightProbes.cs" />
+    <Compile Include="Scenes\LineLight.cs" />
+    <Compile Include="Scenes\LoadCompiledModel.cs" />
+    <Compile Include="Scenes\LUTTest.cs" />
+    <Compile Include="Scenes\ManySystemsManySpawners.cs" />
+    <Compile Include="Scenes\Palette.cs" />
+    <Compile Include="Scenes\ParticleLights.cs" />
+    <Compile Include="Scenes\ProjectorLight.cs" />
+    <Compile Include="Scenes\RasterShapeSpeed.cs" />
+    <Compile Include="Scenes\SC3.cs" />
+    <Compile Include="Scenes\ScrollingGeo.cs" />
+    <Compile Include="Scenes\SimpleParticles.cs" />
+    <Compile Include="Scenes\TwoPointFiveD.cs" />
+    <Compile Include="Scenes\VectorFieldTest.cs" />
     <Compile Include="TestGame.cs" />
   </ItemGroup>
   <ItemGroup>

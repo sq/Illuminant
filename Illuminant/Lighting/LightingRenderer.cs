@@ -154,8 +154,6 @@ namespace Squared.Illuminant {
                         _Material = !castsShadows
                             ? parent.IlluminantMaterials.ParticleSystemSphereLight
                             : parent.IlluminantMaterials.ParticleSystemSphereLightWithoutDistanceField;
-                        if (parent.Configuration.EnableGlobalIllumination)
-                            throw new NotImplementedException("GI");
                         _ProbeMaterial = null;
                         break;
                     case LightSourceTypeID.Line:
@@ -411,16 +409,12 @@ namespace Squared.Illuminant {
 
             IlluminantMaterials = illuminantMaterials ?? new IlluminantMaterials(materials);
 
-            _GIBounces = new GIBounce[Configuration.MaximumGIBounceCount];
-
             BeginLightPass                = _BeginLightPass;
             EndLightPass                  = _EndLightPass;
             BeginLightProbePass           = _BeginLightProbePass;
             EndLightProbePass             = _EndLightProbePass;
-            EndGIProbePass                = _EndGIProbePass;
             IlluminationBatchSetup        = _IlluminationBatchSetup;
             LightProbeBatchSetup          = _LightProbeBatchSetup;
-            GIProbeBatchSetup             = _GIProbeBatchSetup;
             ParticleLightBatchSetup       = _ParticleLightBatchSetup;
             SetTextureForGBufferBillboard = _SetTextureForGBufferBillboard;
             BeforeLuminanceBufferUpdate   = _BeforeLuminanceBufferUpdate;
@@ -468,9 +462,6 @@ namespace Squared.Illuminant {
                 SurfaceFormat.HalfVector4,
                 Configuration.RingBufferSize
             );
-
-            if (Configuration.EnableGlobalIllumination)
-                CreateGIProbeResources();
 
             if (Configuration.EnableBrightnessEstimation) {
                 var width = Configuration.MaximumRenderSize.First / 2;
@@ -559,7 +550,6 @@ namespace Squared.Illuminant {
         }
 
         private void Coordinator_DeviceReset (object sender, EventArgs e) {
-            Environment.GIVolumes.IsDirty = true;
             InitBuffers(Coordinator);
         }
 
@@ -614,8 +604,6 @@ namespace Squared.Illuminant {
             Coordinator.DisposeResource(ref _LightProbePositions);
             Coordinator.DisposeResource(ref _LightProbeNormals);
             Coordinator.DisposeResource(ref _LightProbeValueBuffers);
-
-            ReleaseGIProbeResources();
 
             foreach (var kvp in HeightVolumeCache)
                 Coordinator.DisposeResource(kvp.Value);
@@ -848,7 +836,6 @@ namespace Squared.Illuminant {
             IBatchContainer container, int layer, 
             float intensityScale = 1.0f, 
             bool paintDirectIllumination = true,
-            GIRenderSettings indirectIlluminationSettings = null,
             Vector2? viewportPosition = null,
             Vector2? viewportScale = null
         ) {
@@ -1053,18 +1040,6 @@ namespace Squared.Illuminant {
                                 }
                             }
                         }
-
-                        if (
-                            Configuration.EnableGlobalIllumination &&
-                            (GIProbeCount > 0) &&
-                            (indirectIlluminationSettings != null) &&
-                            (indirectIlluminationSettings.Brightness > 0)
-                        )
-                            RenderGlobalIllumination(
-                                resultGroup, layerIndex++,
-                                indirectIlluminationSettings.Brightness, indirectIlluminationSettings.BounceIndex,
-                                intensityScale
-                            );
                     }
                 }
 
@@ -1079,8 +1054,6 @@ namespace Squared.Illuminant {
                         }
                         UpdateLightProbes(outerGroup, baseLayer, lightProbe.Buffer, false, intensityScale);
                     }
-
-                    UpdateGIProbes(outerGroup, baseLayer + 1, intensityScale);
                 }
 
                 if (RenderTrace.EnableTracing)
@@ -1726,27 +1699,10 @@ namespace Squared.Illuminant {
         }
 
         public void InvalidateFields (
-            bool invalidateGBuffer = true,
-            bool invalidateDistanceField = true,
-            bool rebuildGI = true
+            bool invalidateDistanceField = true
         ) {
-            if (invalidateGBuffer) {
-                EnsureGBuffer();
-                if (_GBuffer != null)
-                    _GBuffer.Invalidate();
-            }
-
-            if ((_DistanceField != null) && invalidateDistanceField)
-                _DistanceField.Invalidate();
-
-            // FIXME: rebuildGI only?
-            Environment.GIVolumes.IsDirty = true;
-
-            if (rebuildGI)
-            foreach (var b in _GIBounces) {
-                if (b != null)
-                    b.Invalidate();
-            }
+            if (invalidateDistanceField)
+                _DistanceField?.Invalidate();
         }
 
         public void UpdateFields (
@@ -1764,14 +1720,11 @@ namespace Squared.Illuminant {
             PendingFieldViewportScale = viewportScale;
             PreviousZToYMultiplier = Environment.ZToYMultiplier;
 
-            if ((_GBuffer != null) && (!_GBuffer.IsValid || viewportChanged || paramsChanged)) {
+            if (_GBuffer != null) {
                 var renderWidth = (int)(Configuration.MaximumRenderSize.First * Configuration.RenderScale.X);
                 var renderHeight = (int)(Configuration.MaximumRenderSize.Second * Configuration.RenderScale.Y);
 
                 RenderGBuffer(ref layer, container, renderWidth, renderHeight);
-
-                if (Configuration.GBufferCaching)
-                    _GBuffer.IsValid = true;
             }
 
             if ((_DistanceField != null) && _DistanceField.NeedsRasterize) {

@@ -20,8 +20,6 @@ namespace Squared.Illuminant {
         //  instead of maintaining a separate list.
         public IEnumerable<Billboard> Billboards = null;
 
-        public readonly GIVolumeCollection GIVolumes = new GIVolumeCollection();
-
         // The Z value of the ground plane.
         public float GroundZ = 0f;
 

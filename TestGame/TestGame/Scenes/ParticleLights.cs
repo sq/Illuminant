@@ -183,9 +183,6 @@ namespace TestGame.Scenes {
             Environment.MaximumZ = 128;
             Environment.ZToYMultiplier = 1.9f;
 
-            for (int i = 0; i < 4; i++)
-                Environment.GIVolumes.Add(new GIVolume());
-
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment, 
                 new RendererConfiguration(

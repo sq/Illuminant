@@ -65,7 +65,6 @@
     <Compile Include="Lighting\LightingRenderer.Configuration.cs" />
     <Compile Include="Lighting\LightingRenderer.GBuffer.cs" />
     <Compile Include="Lighting\LightingRenderer.DistanceField.cs" />
-    <Compile Include="Lighting\LightingRenderer.GI.cs" />
     <Compile Include="Lighting\LightingRenderer.HDR.cs" />
     <Compile Include="Lighting\LightingRenderer.LightProbes.cs" />
     <Compile Include="Lighting\LightProbe.cs" />

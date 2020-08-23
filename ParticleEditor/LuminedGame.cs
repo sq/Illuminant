@@ -211,7 +211,6 @@ namespace Lumined {
                 new LightingEnvironment(), new RendererConfiguration(4000, 4000, false) {
                     /*
                     EnableGBuffer = true,
-                    GBufferCaching = false,
                     GBufferViewportRelative = true,
                     TwoPointFiveD = true
                     */
