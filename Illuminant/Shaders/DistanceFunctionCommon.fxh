@@ -74,4 +74,19 @@ float evaluateByTypeId (
     }
 }
 
+// To use these you'll want the 2D distance field functions from SDF2D.fxh in Squared.Render
+
+float _extrude2D (float3 worldPosition, float d, float h) {
+    float2 w = float2(d, abs(worldPosition.z) - h);
+    return min(max(w.x, w.y), 0.0) + length(max(w, 0.0));
+}
+
+float2 _revolve2D (float3 worldPosition, float o) {
+    return float2(length(worldPosition.xz) - o, worldPosition.y);
+}
+
+#define extrudeSDF2D(func, worldPosition, center, size, rotation) _extrude2D(worldPosition - center, func(worldPosition.xy, center.xy, size.xy, rotation), size.z)
+// FIXME: Probably incorrect for rotation != 0
+#define revolveSDF2D(func, worldPosition, center, size, rotation) func(_revolve2D(worldPosition - center, size.z), 0, size.xy, rotation)
+
 #endif
