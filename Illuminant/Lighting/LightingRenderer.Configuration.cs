@@ -116,8 +116,10 @@ namespace Squared.Illuminant {
         public bool RenderGroundPlane = true;
 
         /// <summary>
-        /// Hack to enable setting individual pixels as fullbright so they are unaffected
-        ///  by the lightmap during lightmap+albedo resolve. Will have awful side effects.
+        /// Hack to enable setting individual pixels as fullbright so they are unaffected by
+        ///  the lightmap in the lightmap + albedo resolve mode.
+        /// This requires the g-buffer to be enabled and flagging pixels as fullbright is done 
+        ///  through writing special data to the g-buffer. (docs for that tbd)
         /// </summary>
         public bool AllowFullbright = false;
 

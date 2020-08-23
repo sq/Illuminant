@@ -21,6 +21,10 @@ namespace Squared.Illuminant {
         [NonSerialized]
         public readonly LightSourceTypeID TypeID;
 
+        [NonSerialized]
+        public bool       Enabled = true;
+
+        [NonSerialized]
         public object     UserData;
 
         /// <summary>
@@ -65,7 +69,6 @@ namespace Squared.Illuminant {
         /// It is *much* faster to share a single settings instance for many lights!
         /// </summary>
         public RendererQualitySettings Quality = null;
-
 
         protected LightSource (LightSourceTypeID typeID) {
             TypeID = typeID;

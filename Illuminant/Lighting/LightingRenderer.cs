@@ -823,6 +823,11 @@ namespace Squared.Illuminant {
         // FIXME: This is awful
         private readonly HashSet<LightTypeRenderStateKey> DeadRenderStates = new HashSet<LightTypeRenderStateKey>();
 
+        private readonly DirectionalLightSource DummyDirectionalLightForFullbrightMode = new DirectionalLightSource {
+            Color = new Vector4(0, 0, 0, 1),
+            CastsShadows = false
+        };
+
         /// <summary>
         /// Updates the lightmap in the target batch container on the specified layer.
         /// To display lighting, call RenderedLighting.Resolve on the result.
@@ -927,7 +932,7 @@ namespace Squared.Illuminant {
                 {
                     var ambient = Environment.Ambient * intensityScale;
                     // Zero out the alpha value because we use it to indicate whether a pixel is fullbright
-                    if (Configuration.AllowFullbright)
+                    if (Configuration.AllowFullbright && Configuration.EnableGBuffer)
                         ambient.A = 0;
 
                     ClearBatch.AddNew(
@@ -965,6 +970,9 @@ namespace Squared.Illuminant {
 
                             for (var i = 0; i < Environment.Lights.Count; i++) {
                                 var lightSource = buffer.Data[i];
+                                if (!lightSource.Enabled)
+                                    continue;
+
                                 var pointLightSource = lightSource as SphereLightSource;
                                 var directionalLightSource = lightSource as DirectionalLightSource;
                                 var particleLightSource = lightSource as ParticleLightSource;
@@ -996,6 +1004,15 @@ namespace Squared.Illuminant {
                             };
                         }
 
+                        // HACK: In fullbright mode, the lightmap will have an alpha value of 0 for any pixels
+                        //  that have not been touched by a light source. Compensate by using a dummy directional light
+                        //  to set the alpha value of any pixels that are not marked as fullbright by the g-buffer.
+                        if (Configuration.AllowFullbright && Configuration.EnableGBuffer) {
+                            var ltrs = GetLightRenderState(DummyDirectionalLightForFullbrightMode);
+                            DeadRenderStates.Remove(ltrs.Key);
+                            RenderDirectionalLightSource(DummyDirectionalLightForFullbrightMode, 1, ltrs);
+                        }
+
                         foreach (var kvp in LightRenderStates)
                             kvp.Value.UpdateVertexBuffer();
 
@@ -1012,6 +1029,9 @@ namespace Squared.Illuminant {
 
                             var pls = ltrs.Key.ParticleLightSource;
                             if (pls != null) {
+                                if (!pls.Enabled)
+                                    continue;
+
                                 if (!pls.IsActive)
                                     continue;
 

@@ -40,7 +40,9 @@ namespace TestGame.Scenes {
         Toggle TwoPointFiveD,
             UseRampTexture,
             GroundPlaneShadows,
-            TopFaceShadows;
+            TopFaceShadows,
+            EnableDirectionalLights,
+            EnablePointLight;
         [Group("Lighting")]
         Slider MaximumLightStrength;
         [Group("Dithering")]
@@ -146,6 +148,9 @@ namespace TestGame.Scenes {
             DarkLevel.Value = 0f;
             BrightLevel.Value = 1f;
             NeutralBandSize.Value = 0.2f;
+
+            EnableDirectionalLights.Value = true;
+            EnablePointLight.Value = true;
 
             DistanceFieldResolution.Changed += (s, e) => CreateDistanceField();
 
@@ -484,6 +489,12 @@ namespace TestGame.Scenes {
 
                 DirectionalQuality.MaxStepCount =
                     (int)(Renderer.Configuration.DefaultQuality.MaxStepCount * 0.75f) + 1;
+
+                foreach (var dls in Environment.Lights.OfType<DirectionalLightSource>())
+                    dls.Enabled = EnableDirectionalLights.Value;
+
+                foreach (var pls in Environment.Lights.OfType<SphereLightSource>())
+                    pls.Enabled = EnablePointLight.Value;
 
                 if (!Deterministic) {
                     var obs = Environment.Obstructions[0];
