@@ -126,26 +126,6 @@ namespace Squared.Illuminant {
                     "ProjectorLightProbe", null, dBegin, dEnd
                 );
 
-                LoadOneMaterial(effects, out GIProbeSelector,
-                    "GIProbe", "ProbeSelector", dBegin, dEnd
-                );
-
-                LoadOneMaterial(effects, out GIProbeSHGenerator,
-                    "GIProbe", "SHGenerator", dBegin, dEnd
-                );
-
-                LoadOneMaterial(effects, out VisualizeGI,
-                    "GI", "VisualizeGI", dBegin, dEnd
-                );
-
-                LoadOneMaterial(effects, out RenderGI,
-                    "GI", "RenderGI", dBegin, dEnd
-                );
-
-                LoadOneMaterial(effects, out RenderLightProbesFromGI,
-                    "GI", "RenderLightProbesFromGI", dBegin, dEnd
-                );
-
                 LoadOneMaterial(effects, out DistanceToPolygon, 
                     "DistanceField", "DistanceToPolygon",
                     new[] { MaterialUtil.MakeDelegate(RenderStates.MaxBlendValue) }

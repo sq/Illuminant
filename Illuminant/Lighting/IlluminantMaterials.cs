@@ -38,9 +38,6 @@ namespace Squared.Illuminant {
         public Material ObjectSurfaces, ObjectOutlines;
         public Material FunctionSurface, FunctionOutline;
         public Material CalculateLuminance;
-        public Material GIProbeSelector, GIProbeSHGenerator;
-        public Material VisualizeGI;
-        public Material RenderGI, RenderLightProbesFromGI;
         public Material ScreenSpaceVectorWarp;
 
         public bool IsLoaded { get; internal set; }
