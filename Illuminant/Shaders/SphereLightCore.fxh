@@ -87,8 +87,12 @@ float SphereLightPixelEpilogue (
 
     // HACK: Don't cull pixels unless they were killed by distance falloff.
     // This ensures that billboards are always lit.
-    clip(visible ? 1 : -1);
-    return visible ? lightOpacity : 0;
+    if (!visible) {
+        discard;
+        return 0;
+    }
+
+    return lightOpacity;
 }
 
 float SphereLightPixelEpilogueWithRamp (
@@ -100,8 +104,12 @@ float SphereLightPixelEpilogueWithRamp (
 
     // HACK: Don't cull pixels unless they were killed by distance falloff.
     // This ensures that billboards are always lit.
-    clip(visible ? 1 : -1);
-    return visible ? lightOpacity : 0;
+    if (!visible) {
+        discard;
+        return 0;
+    }
+
+    return lightOpacity;
 }
 
 float SphereLightPixelCore (
@@ -120,7 +128,10 @@ float SphereLightPixelCore (
         moreLightProperties, visible
     );
 
-    clip(visible ? 1 : -1);
+    if (!visible) {
+        discard;
+        return 0;
+    }
 
     DistanceFieldConstants vars = makeDistanceFieldConstants();
 
@@ -156,7 +167,10 @@ float SphereLightPixelCoreWithRamp (
         moreLightProperties, visible
     );
 
-    clip(visible ? 1 : -1);
+    if (!visible) {
+        discard;
+        return 0;
+    }
 
     DistanceFieldConstants vars = makeDistanceFieldConstants();
 
@@ -192,8 +206,6 @@ float SphereLightPixelCoreNoDF (
         moreLightProperties, visible
     );
 
-    clip(visible ? 1 : -1);
-
     return SphereLightPixelEpilogue(
         distanceOpacity, 1, visible
     );
@@ -214,8 +226,6 @@ float SphereLightPixelCoreNoDFWithRamp (
         lightCenter, lightProperties,
         moreLightProperties, visible
     );
-
-    clip(visible ? 1 : -1);
 
     return SphereLightPixelEpilogueWithRamp(
         distanceOpacity, 1, visible

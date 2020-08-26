@@ -1055,13 +1055,18 @@ namespace Squared.Illuminant {
                                     resultGroup, layerIndex++, ltrs.Material, IlluminationBatchSetup, userData: ltrs
                                 )) {
                                     var cornerBuffer = ltrs.GetCornerBuffer(false);
-                                    nb.Add(new NativeDrawCall(
-                                        PrimitiveType.TriangleList,
-                                        cornerBuffer, 0,
-                                        ltrs.GetVertexBuffer(), 0,
-                                        null, 0,
-                                        QuadIndexBuffer, 0, 0, cornerBuffer.VertexCount, 0, cornerBuffer.VertexCount / 2, ltrs.LightCount
-                                    ));
+                                    // HACK: Split large numbers of lights into smaller draw operations
+                                    const int step = 128;
+                                    for (int i = 0; i < ltrs.LightCount; i += step) {
+                                        int instanceCount = Math.Min(ltrs.LightCount - i, step);
+                                        nb.Add(new NativeDrawCall(
+                                            PrimitiveType.TriangleList,
+                                            cornerBuffer, 0,
+                                            ltrs.GetVertexBuffer(), i,
+                                            null, 0,
+                                            QuadIndexBuffer, 0, 0, cornerBuffer.VertexCount, 0, cornerBuffer.VertexCount / 2, instanceCount
+                                        ));
+                                    }
                                 }
                             }
                         }
