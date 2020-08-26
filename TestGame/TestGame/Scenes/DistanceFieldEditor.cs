@@ -306,7 +306,7 @@ namespace TestGame.Scenes {
 
                 if ((ms.LeftButton == ButtonState.Released) && (ms.RightButton == ButtonState.Released)) {
                     ActiveViewportIndex = null;
-                } else if (ActiveViewportIndex.HasValue) {
+                } else if (ActiveViewportIndex.HasValue && !Game.IsMouseOverUI) {
                     var viewport = Viewports[ActiveViewportIndex.Value];
                     var delta = new Vector2(ms.X - Game.PreviousMouseState.X, ms.Y - Game.PreviousMouseState.Y);
                     delta.X *= (Renderer.Configuration.MaximumRenderSize.First / viewport.Rectangle.Size.X);

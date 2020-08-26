@@ -244,6 +244,7 @@ namespace Squared.Illuminant {
             lock (result) {
                 result.IsDirty = true;
                 result.EnsureSize(items.Count);
+                result.PrimCount = 0;
 
                 int j = 0;
                 for (int i = 0; i < items.Count; i++) {
@@ -253,8 +254,8 @@ namespace Squared.Illuminant {
                     if ((dynamicFlagFilter != null) && (item.IsDynamic != dynamicFlagFilter.Value))
                         continue;
 
-                    result.PrimCount++;
                     result.Vertices[j++] = new DistanceFunctionVertex(item.Center, item.Size, item.Rotation, (short)item.Type);
+                    result.PrimCount++;
                 }
 
                 result.EnsureVertexBuffer();

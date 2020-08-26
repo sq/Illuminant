@@ -52,13 +52,7 @@ void VisualizeVertexShader(
 
 [call]
 float evaluateFunctions (float3 worldPosition, float vars) {
-    if (FunctionType < 1) {
-        return evaluateEllipsoid(worldPosition, FunctionCenter, FunctionSize, FunctionRotation);
-    } else if (FunctionType < 2) {
-        return evaluateBox(worldPosition, FunctionCenter, FunctionSize, FunctionRotation);
-    } else {
-        return evaluateCylinder(worldPosition, FunctionCenter, FunctionSize, FunctionRotation);
-    }
+    return evaluateByTypeId(FunctionType, worldPosition, FunctionCenter, FunctionSize, FunctionRotation);
 }
 
 void FunctionSurfacePixelShader(
