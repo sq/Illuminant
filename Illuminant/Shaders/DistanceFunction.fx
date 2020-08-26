@@ -8,9 +8,6 @@
 #include "DistanceFieldCommon.fxh"
 #include "DistanceFunctionCommon.fxh"
 
-// HACK: For some reason we need to expand the function boxes for things to work right?
-#define FUNCTION_SIZE_HACK 1
-
 uniform float2 PixelSize;
 uniform float4 SliceZ;
 
@@ -30,8 +27,8 @@ void DistanceFunctionVertexShader(
     out   float4 result   : POSITION0
 ) {
     // FIXME: Is this right when the shape is rotated?
-    float msize = max(max(abs(size.x), abs(size.y)), abs(size.z)) + getMaximumEncodedDistance() + 2;
-    float2 position = (FunctionCorners[cornerIndex.x] * (msize * FUNCTION_SIZE_HACK)) + center.xy;
+    float msize = max(max(abs(size.x), abs(size.y)), abs(size.z)) + getMaximumEncodedDistance() + 3;
+    float2 position = (FunctionCorners[cornerIndex.x] * msize) + center.xy;
     result = TransformPosition(float4(position - GetViewportPosition(), 0, 1), 0);
     result.z = 0;
     result.w = 1;

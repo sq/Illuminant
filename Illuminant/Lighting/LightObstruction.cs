@@ -10,7 +10,8 @@ namespace Squared.Illuminant {
         Ellipsoid = 1,
         Box = 2,
         Cylinder = 3,
-        Sphere = 4
+        Sphere = 4,
+        Octagon = 5
     }
 
     public class LightObstruction {
@@ -52,10 +53,6 @@ namespace Squared.Illuminant {
 
         public static LightObstruction Ellipsoid (Vector3 center, Vector3 size, float rotation = 0) {
             return new LightObstruction(LightObstructionType.Ellipsoid, center, size, rotation);
-        }
-
-        public static LightObstruction Sphere (Vector3 center, Vector3 size, float rotation = 0) {
-            return new LightObstruction(LightObstructionType.Sphere, center, size, rotation);
         }
 
         public static LightObstruction Cylinder (Vector3 center, Vector3 size, float rotation = 0) {

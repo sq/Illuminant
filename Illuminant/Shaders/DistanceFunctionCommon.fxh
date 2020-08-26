@@ -114,6 +114,30 @@ float evaluateCylinder (
     */
 }
 
+float sdOctogonPrism( float3 p, float r, float h )
+{
+  const float3 k = float3(-0.9238795325,   // sqrt(2+sqrt(2))/2 
+                       0.3826834323,   // sqrt(2-sqrt(2))/2
+                       0.4142135623 ); // sqrt(2)-1 
+  // reflections
+  p = abs(p);
+  p.xy -= 2.0*min(dot(float2( k.x,k.y),p.xy),0.0)*float2( k.x,k.y);
+  p.xy -= 2.0*min(dot(float2(-k.x,k.y),p.xy),0.0)*float2(-k.x,k.y);
+  // polygon side
+  p.xy -= float2(clamp(p.x, -k.z*r, k.z*r), r);
+  float2 d = float2( length(p.xy)*sign(p.y), p.z-h );
+  return min(max(d.x,d.y),0.0) + length(max(d,0.0));
+}
+
+float evaluateOctagon (
+    float3 worldPosition, float3 center, float3 size, float rotation
+) {
+    float3 position = worldPosition - center;
+    position = rotateLocalPosition(position, rotation);
+
+    return sdOctogonPrism(position, length(size.xy), size.z);
+}
+
 float evaluateByTypeId (
     int typeId, float3 worldPosition, float3 center, float3 size, float rotation
 ) {
@@ -127,6 +151,8 @@ float evaluateByTypeId (
             return evaluateCylinder(worldPosition, center, size, rotation);
         case 4:
             return evaluateSphere(worldPosition, center, size, rotation);
+        case 5:
+            return evaluateOctagon(worldPosition, center, size, rotation);
         default:
         case 0:
             return evaluateNone(worldPosition, center, size, rotation);
