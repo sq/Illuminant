@@ -1,3 +1,6 @@
+// FIXME: In some backends the function visualization just completely breaks to bits in O3
+#pragma fxcparams(/Od /Zi)
+
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\CompilerWorkarounds.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"

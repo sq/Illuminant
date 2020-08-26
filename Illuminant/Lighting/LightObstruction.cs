@@ -6,16 +6,17 @@ using Microsoft.Xna.Framework;
 using Squared.Game;
 
 namespace Squared.Illuminant {
-    public enum LightObstructionType {
-        Ellipsoid = 0,
-        Box = 1,
-        Cylinder = 2,
-
-        MAX = Cylinder
+    public enum LightObstructionType : short {
+        Ellipsoid = 1,
+        Box = 2,
+        Cylinder = 3,
+        RoundedCylinder = 4,
+        Sphere = 5
     }
 
     public class LightObstruction {
-        public readonly LightObstructionType Type;
+        internal const LightObstructionType MAX_Type = LightObstructionType.Sphere;
+        public LightObstructionType Type;
 
         // If false, this obstruction will be rendered into the static distance field (if any) instead of the dynamic distance field
         public bool IsDynamic = true;
@@ -54,8 +55,16 @@ namespace Squared.Illuminant {
             return new LightObstruction(LightObstructionType.Ellipsoid, center, size, rotation);
         }
 
+        public static LightObstruction Sphere (Vector3 center, Vector3 size, float rotation = 0) {
+            return new LightObstruction(LightObstructionType.Sphere, center, size, rotation);
+        }
+
         public static LightObstruction Cylinder (Vector3 center, Vector3 size, float rotation = 0) {
             return new LightObstruction(LightObstructionType.Cylinder, center, size, rotation);
+        }
+
+        public static LightObstruction RoundedCylinder (Vector3 center, Vector3 size, float rotation = 0) {
+            return new LightObstruction(LightObstructionType.RoundedCylinder, center, size, rotation);
         }
 
         public override string ToString () {

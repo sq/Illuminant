@@ -31,7 +31,6 @@ namespace TestGame.Scenes {
         [Group("Visualization")]
         Toggle ShowSurfaces, ShowOutlines, ShowDistanceField;
 
-        [Group("Edit")]
         Slider SelectedObject;
 
         int?       ActiveViewportIndex = null;
@@ -41,13 +40,10 @@ namespace TestGame.Scenes {
         public DistanceFieldEditor (TestGame game, int width, int height)
             : base(game, 256, 256) {
 
-            ShowSurfaces.Key = Keys.D1;
             ShowSurfaces.Value = true;
 
-            ShowOutlines.Key = Keys.D2;
-            ShowDistanceField.Key = Keys.D3;
-
             SelectedObject.Integral = true;
+            SelectedObject.Value = 3;
         }
 
         public override void LoadContent () {
@@ -157,7 +153,7 @@ namespace TestGame.Scenes {
 
             Environment.Obstructions.Add(new LightObstruction(
                 LightObstructionType.Ellipsoid,
-                offset, new Vector3(32, 16, 16)
+                new Vector3(60, 170, 180), new Vector3(32, 16, 16)
             ));
 
             offset.X += 24;
@@ -407,6 +403,12 @@ namespace TestGame.Scenes {
                 Game.Nuklear.Property("sizez", ref obs.Size.Z, 1f, maxSize, 1f, 0.1f);
 
                 Game.Nuklear.Property("rotation", ref obs.Rotation, -(float)Math.PI, (float)Math.PI, 0.1f, 0.01f);
+
+                object type = obs.Type;
+                if (Game.Nuklear.EnumCombo(ref type, typeof(LightObstructionType))) {
+                    obs.Type = (LightObstructionType)type;
+                    Renderer.InvalidateFields();
+                }
 
                 if (
                     ((obs.Center - oldCenter).Length() >= 0.5f) ||

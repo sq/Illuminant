@@ -74,10 +74,8 @@ namespace Squared.Illuminant {
                     Materials.ApplyViewTransformToMaterial(m, ref viewTransform);
                     SetDistanceFieldParameters(m, false, Configuration.DefaultQuality);
 
-                    foreach (var m2 in IlluminantMaterials.DistanceFunctionTypes) {
-                        Materials.ApplyViewTransformToMaterial(m2, ref viewTransform);
-                        SetDistanceFieldParameters(m2, false, Configuration.DefaultQuality);
-                    }
+                    Materials.ApplyViewTransformToMaterial(IlluminantMaterials.DistanceFunction, ref viewTransform);
+                    SetDistanceFieldParameters(IlluminantMaterials.DistanceFunction, false, Configuration.DefaultQuality);
                 };
 
             var lastVirtualSliceIndex = firstVirtualSliceIndex + 2;
@@ -243,34 +241,20 @@ namespace Squared.Illuminant {
             var result = PickDistanceFunctionBuffer(dynamicFlagFilter);
             var items = Environment.Obstructions;
 
-            // HACK: Sort all the functions by type, fill the VB with each group,
-            //  then issue a single draw for each
-            using (var buffer = BufferPool<LightObstruction>.Allocate(items.Count))
             lock (result) {
-                for (int i = 0; i < result.FirstOffset.Length; i++)
-                    result.FirstOffset[i] = -1;
-                Array.Clear(result.PrimCount, 0, result.PrimCount.Length);
-
-                items.CopyTo(buffer.Data);
-                Sort.FastCLRSortRef(buffer.Data, LightObstructionTypeComparer.Instance, 0, items.Count);
-                
                 result.IsDirty = true;
                 result.EnsureSize(items.Count);
 
                 int j = 0;
                 for (int i = 0; i < items.Count; i++) {
-                    var item = buffer.Data[i];
+                    var item = items[i];
                     var type = (int)item.Type;
 
                     if ((dynamicFlagFilter != null) && (item.IsDynamic != dynamicFlagFilter.Value))
                         continue;
 
-                    if (result.FirstOffset[type] == -1)
-                        result.FirstOffset[type] = j;
-
-                    result.PrimCount[type]++;
-
-                    result.Vertices[j++] = new DistanceFunctionVertex(item.Center, item.Size, item.Rotation);
+                    result.PrimCount++;
+                    result.Vertices[j++] = new DistanceFunctionVertex(item.Center, item.Size, item.Rotation, (short)item.Type);
                 }
 
                 result.EnsureVertexBuffer();
@@ -293,9 +277,6 @@ namespace Squared.Illuminant {
                 SliceIndexToZ(firstVirtualIndex + 3)
             );
 
-            var numTypes = (int)LightObstructionType.MAX + 1;
-            var batches  = new NativeBatch[numTypes];
-
             Action<DeviceManager, object> setup = null;
 
             for (int k = 0; k < 2; k++) {
@@ -304,14 +285,13 @@ namespace Squared.Illuminant {
                     continue;
 
                 var buffer = PickDistanceFunctionBuffer(dynamicFlag);
-                lock (buffer)
-                for (int i = 0; i < numTypes; i++) {
-                    if (buffer.PrimCount[i] <= 0)
+                lock (buffer) {
+                    if (buffer.PrimCount <= 0)
                         continue;
 
-                    var m = IlluminantMaterials.DistanceFunctionTypes[i];
+                    var m = IlluminantMaterials.DistanceFunction;
                     if (RenderTrace.EnableTracing)
-                        RenderTrace.Marker(group, (i * 2) + 3, "LightingRenderer {0} : Render {1}(s) to {2} buffer", this.ToObjectID(), (LightObstructionType)i, (buffer == DynamicDistanceFunctions) ? "dynamic" : "static");
+                        RenderTrace.Marker(group, 3, "LightingRenderer {0} : Render distance functions to {1} buffer", this.ToObjectID(), (buffer == DynamicDistanceFunctions) ? "dynamic" : "static");
 
                     setup = (dm, _) => {
                         dm.Device.RasterizerState = RenderStates.ScissorOnly;
@@ -323,16 +303,16 @@ namespace Squared.Illuminant {
                     };
 
                     using (var batch = NativeBatch.New(
-                        group, (i * 2) + 4, m, setup
+                        group, 4, m, setup
                     )) {
                         batch.Add(new NativeDrawCall(
                             PrimitiveType.TriangleList,
                             CornerBuffer, 0, 
-                            buffer.VertexBuffer, buffer.FirstOffset[i], 
+                            buffer.VertexBuffer, 0, 
                             null, 0,
                             QuadIndexBuffer, 0, 0, 
                             4, 0, 
-                            2, buffer.PrimCount[i]
+                            2, buffer.PrimCount
                         ));
                     }
                 }
