@@ -94,7 +94,7 @@ float evaluateEllipsoid (
 }
 
 float sdCappedCylinder (float3 p, float h, float r) {
-    float2 d = abs(float2(length(p.xz),p.y)) - float2(h,r);
+    float2 d = abs(float2(length(p.xy),p.z)) - float2(r,h);
     return min(max(d.x,d.y),0.0) + length(max(d,0.0));
 }
 
@@ -127,6 +127,7 @@ float evaluateByTypeId (
             return evaluateCylinder(worldPosition, center, size, rotation);
         case 4:
 //            return evaluateRoundedCylinder(worldPosition, center, size, rotation);
+            return evaluateCylinder(worldPosition, center, size, rotation);
         case 5:
             return evaluateSphere(worldPosition, center, size, rotation);
         default:

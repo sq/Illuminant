@@ -411,8 +411,8 @@ namespace TestGame.Scenes {
                 }
 
                 if (
-                    ((obs.Center - oldCenter).Length() >= 0.5f) ||
-                    ((obs.Size - oldSize).Length() >= 0.5f) ||
+                    ((obs.Center - oldCenter).Length() >= 0.01f) ||
+                    ((obs.Size - oldSize).Length() >= 0.01f) ||
                     (Math.Abs(obs.Rotation - oldRotation) > 0.01f)
                 )
                     Renderer.InvalidateFields();

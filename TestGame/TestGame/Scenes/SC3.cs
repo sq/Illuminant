@@ -348,7 +348,7 @@ namespace TestGame.Scenes {
                 LightObstructionType.Cylinder,
                 // HACK: Is it right to need a fudge factor here?
                 new Vector3(x, y - fudgeFactor, Environment.GroundZ),
-                new Vector3(16, 9, tex.Height)
+                new Vector3(9, 9, tex.Height)
             );
             Environment.Obstructions.Add(obs);
             ForegroundEnvironment.Obstructions.Add(obs);
