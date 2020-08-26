@@ -56,7 +56,8 @@ float evaluateSphere (
     float3 worldPosition, float3 center, float3 size, float rotation
 ) {
     float3 position = worldPosition - center;
-    float radius = length(size);
+    // FIXME: Why is this slightly too small?
+    float radius = length(size) / 2;
     return length(position) - radius;
 }
 
@@ -135,7 +136,8 @@ float evaluateOctagon (
     float3 position = worldPosition - center;
     position = rotateLocalPosition(position, rotation);
 
-    return sdOctogonPrism(position, length(size.xy), size.z);
+    // HACK: Divide size by sqrt(2)
+    return sdOctogonPrism(position, length(size.xy) / 1.4142, size.z);
 }
 
 float evaluateByTypeId (
