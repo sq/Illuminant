@@ -10,8 +10,7 @@ namespace Squared.Illuminant {
         Ellipsoid = 1,
         Box = 2,
         Cylinder = 3,
-        RoundedCylinder = 4,
-        Sphere = 5
+        Sphere = 4
     }
 
     public class LightObstruction {
@@ -61,10 +60,6 @@ namespace Squared.Illuminant {
 
         public static LightObstruction Cylinder (Vector3 center, Vector3 size, float rotation = 0) {
             return new LightObstruction(LightObstructionType.Cylinder, center, size, rotation);
-        }
-
-        public static LightObstruction RoundedCylinder (Vector3 center, Vector3 size, float rotation = 0) {
-            return new LightObstruction(LightObstructionType.RoundedCylinder, center, size, rotation);
         }
 
         public override string ToString () {

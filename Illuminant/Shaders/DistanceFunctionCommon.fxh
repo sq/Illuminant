@@ -126,9 +126,6 @@ float evaluateByTypeId (
         case 3:
             return evaluateCylinder(worldPosition, center, size, rotation);
         case 4:
-//            return evaluateRoundedCylinder(worldPosition, center, size, rotation);
-            return evaluateCylinder(worldPosition, center, size, rotation);
-        case 5:
             return evaluateSphere(worldPosition, center, size, rotation);
         default:
         case 0:
