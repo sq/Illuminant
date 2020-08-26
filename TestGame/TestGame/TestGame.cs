@@ -64,6 +64,33 @@ namespace TestGame {
         public readonly Dictionary<string, ColorLUT> LUTs = 
             new Dictionary<string, ColorLUT>(StringComparer.OrdinalIgnoreCase);
 
+        public static readonly Type[] SceneTypes = new[] {
+            typeof(HeightVolumeTest),
+            typeof(TwoPointFiveDTest),
+            typeof(SC3),
+            typeof(DistanceFieldEditor),
+            typeof(ScrollingGeo),
+            typeof(SimpleParticles),
+            typeof(LightProbeTest),
+            typeof(ParticleLights),
+            typeof(DynamicObstructions),
+            typeof(DitheringTest),
+            typeof(LineLight),
+            typeof(VectorFieldTest),
+            typeof(LUTTest),
+#if compiled_model
+            typeof(LoadCompiledModel),
+#endif
+            typeof(Shapes),
+            typeof(SystemStress),
+            typeof(PaletteTest),
+            typeof(HueTest),
+            typeof(BitmapShaders),
+            typeof(RasterShapeSpeed),
+            typeof(BitmapBillboards),
+            typeof(ProjectorLight)
+        };
+
         public TestGame () {
             // UniformBinding.ForceCompatibilityMode = true;
 
@@ -87,33 +114,7 @@ namespace TestGame {
 
             PreviousKeyboardState = Keyboard.GetState();
 
-            Scenes = new Scene[] {
-                new HeightVolumeTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new TwoPointFiveDTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new SC3(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new DistanceFieldEditor(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new ScrollingGeo(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new SimpleParticles(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new LightProbeTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new ParticleLights(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new DynamicObstructions(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new DitheringTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new LineLight(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                // FIXME
-                new VectorFieldTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new LUTTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-#if compiled_model
-                new LoadCompiledModel(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-#endif
-                new Shapes(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new SystemStress(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new PaletteTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new HueTest(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new BitmapShaders(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new RasterShapeSpeed(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new BitmapBillboards(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight),
-                new ProjectorLight(this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)
-            };
+            Scenes = SceneTypes.Select(t => (Scene)Activator.CreateInstance(t, this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)).ToArray();
 
             KeyboardInputHandler = new KeyboardInput();
             KeyboardInputHandler.Install();
@@ -309,7 +310,20 @@ namespace TestGame {
             LastTimeOverUI = Time.Ticks;
 
             _ActiveSceneIndex = -1;
-            SetActiveScene(DefaultScene ?? Scenes.Length - 1);
+
+            var sceneNameArg = Environment.GetCommandLineArgs().FirstOrDefault(a => a.StartsWith("--scene:"));
+            if (sceneNameArg != null) {
+                sceneNameArg = sceneNameArg.Substring(sceneNameArg.IndexOf(":") + 1);
+                foreach (var s in Scenes)
+                    if (s.GetType().Name.Equals(sceneNameArg, StringComparison.OrdinalIgnoreCase)) {
+                        SetActiveScene(Array.IndexOf(Scenes, s));
+                        return;
+                    }
+
+                throw new Exception("Could not find a scene with the name " + sceneNameArg);
+            } else {
+                SetActiveScene(DefaultScene ?? Scenes.Length - 1);
+            }
         }
 
         protected override void OnUnloadContent () {
