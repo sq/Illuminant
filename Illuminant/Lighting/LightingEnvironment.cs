@@ -72,6 +72,18 @@ namespace Squared.Illuminant {
             Items.Remove(value);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void RemoveAt (int index) {
+            var oldValue = Items[index];
+
+            if (oldValue.IsDynamic)
+                IsInvalidDynamic = true;
+            else
+                IsInvalid = true;
+
+            Items.RemoveAt(index);
+        }
+
         public void Clear () {
             IsInvalid = true;
             Items.Clear();
