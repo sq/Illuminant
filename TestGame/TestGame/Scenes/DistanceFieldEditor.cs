@@ -320,13 +320,15 @@ namespace TestGame.Scenes {
                         if (Game.LeftMouse)
                             obs.Center += posChange;
                         if (Game.RightMouse) {
-                            obs.Size += posChange;
-                            if (obs.Size.X < 2)
-                                obs.Size.X = 2;
-                            if (obs.Size.Y < 2)
-                                obs.Size.Y = 2;
-                            if (obs.Size.Z < 2)
-                                obs.Size.Z = 2;
+                            var sz = obs.Size;
+                            sz += posChange;
+                            if (sz.X < 2)
+                                sz.X = 2;
+                            if (sz.Y < 2)
+                                sz.Y = 2;
+                            if (sz.Z < 2)
+                                sz.Z = 2;
+                            obs.Size = sz;
                         }
 
                         Renderer.InvalidateFields();
@@ -394,28 +396,26 @@ namespace TestGame.Scenes {
                 var oldSize = obs.Size;
                 var oldRotation = obs.Rotation;
 
-                Game.Nuklear.Property("x", ref obs.Center.X, min, max, 1f, 0.1f);
-                Game.Nuklear.Property("y", ref obs.Center.Y, min, max, 1f, 0.1f);
-                Game.Nuklear.Property("z", ref obs.Center.Z, min, max, 1f, 0.1f);
+                var center = obs.Center;
+                var size = obs.Size;
+                var rotation = obs.Rotation;
+                Game.Nuklear.Property("x", ref center.X, min, max, 1f, 0.1f);
+                Game.Nuklear.Property("y", ref center.Y, min, max, 1f, 0.1f);
+                Game.Nuklear.Property("z", ref center.Z, min, max, 1f, 0.1f);
 
-                Game.Nuklear.Property("sizex", ref obs.Size.X, 1f, maxSize, 1f, 0.1f);
-                Game.Nuklear.Property("sizey", ref obs.Size.Y, 1f, maxSize, 1f, 0.1f);
-                Game.Nuklear.Property("sizez", ref obs.Size.Z, 1f, maxSize, 1f, 0.1f);
+                Game.Nuklear.Property("sizex", ref size.X, 1f, maxSize, 1f, 0.1f);
+                Game.Nuklear.Property("sizey", ref size.Y, 1f, maxSize, 1f, 0.1f);
+                Game.Nuklear.Property("sizez", ref size.Z, 1f, maxSize, 1f, 0.1f);
 
-                Game.Nuklear.Property("rotation", ref obs.Rotation, -(float)Math.PI, (float)Math.PI, 0.1f, 0.01f);
+                Game.Nuklear.Property("rotation", ref rotation, -(float)Math.PI, (float)Math.PI, 0.1f, 0.01f);
+
+                obs.Center = center;
+                obs.Size = size;
+                obs.Rotation = rotation;
 
                 object type = obs.Type;
-                if (Game.Nuklear.EnumCombo(ref type, typeof(LightObstructionType))) {
+                if (Game.Nuklear.EnumCombo(ref type, typeof(LightObstructionType)))
                     obs.Type = (LightObstructionType)type;
-                    Renderer.InvalidateFields();
-                }
-
-                if (
-                    ((obs.Center - oldCenter).Length() >= 0.01f) ||
-                    ((obs.Size - oldSize).Length() >= 0.01f) ||
-                    (Math.Abs(obs.Rotation - oldRotation) > 0.01f)
-                )
-                    Renderer.InvalidateFields();
 
                 Nuke.nk_tree_pop(ctx);
             }

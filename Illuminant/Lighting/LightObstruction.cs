@@ -16,14 +16,68 @@ namespace Squared.Illuminant {
 
     public class LightObstruction {
         internal const LightObstructionType MAX_Type = LightObstructionType.Octagon;
-        public LightObstructionType Type;
 
         // If false, this obstruction will be rendered into the static distance field (if any) instead of the dynamic distance field
-        public bool IsDynamic = true;
+        private bool _IsDynamic;
+        public bool IsDynamic {
+            get {
+                return _IsDynamic;
+            }
+            set {
+                if (_IsDynamic != value)
+                    HasDynamicityChanged = true;
+                _IsDynamic = value;
+            }
+        }
 
-        public Vector3 Center;
-        public Vector3 Size;
-        public float   Rotation;
+        internal bool IsValid = false;
+        internal bool HasDynamicityChanged = true;
+        internal DistanceFunctionVertex Vertex;
+
+        private LightObstructionType _Type;
+        public LightObstructionType Type {
+            get {
+                return _Type;
+            }
+            set {
+                if (_Type != value)
+                    Invalidate();
+                _Type = value;
+            }
+        }
+
+        public Vector3 Center {
+            get {
+                return Vertex.Center;
+            }
+            set {
+                if (Vertex.Center != value)
+                    Invalidate();
+                Vertex.Center = value;
+            }
+        }
+
+        public Vector3 Size {
+            get {
+                return Vertex.Size;
+            }
+            set {
+                if (Vertex.Size != value)
+                    Invalidate();
+                Vertex.Size = value;
+            }
+        }
+
+        public float Rotation {
+            get {
+                return Vertex.Rotation;
+            }
+            set {
+                if (Vertex.Rotation != value)
+                    Invalidate();
+                Vertex.Rotation = value;
+            }
+        }
 
         public LightObstruction (
             LightObstructionType type,
@@ -31,10 +85,16 @@ namespace Squared.Illuminant {
             Vector3? radius   = null,
             float    rotation = 0
         ) {
+            Vertex = default(DistanceFunctionVertex);
+
             Type = type;
             Center = center.GetValueOrDefault(Vector3.Zero);
             Size = radius.GetValueOrDefault(Vector3.Zero);
             Rotation = rotation;
+        }
+
+        internal void Invalidate () {
+            IsValid = false;
         }
 
         public Bounds3 Bounds3 {

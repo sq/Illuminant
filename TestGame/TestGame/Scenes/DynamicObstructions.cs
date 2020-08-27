@@ -188,7 +188,9 @@ namespace TestGame.Scenes {
                 Centers[i] = new Vector3(rng.NextFloat(0, Width), rng.NextFloat(0, Height), 0);
                 var obs = new LightObstruction(
                     LightObstructionType.Ellipsoid, Centers[i], new Vector3(size)
-                );
+                ) {
+                    IsDynamic = true
+                };
                 Obstructions.Add(obs);
                 Environment.Obstructions.Add(obs);
             }
@@ -287,11 +289,6 @@ namespace TestGame.Scenes {
                         var obs = Obstructions[i];
                         obs.Center = Centers[i] + new Vector3(x * 24, y * 24, 0);
                     }
-
-                    if (EfficientUpdates)
-                        DistanceField.Invalidate(false);
-                    else
-                        DistanceField.Invalidate();
                 }
 
                 var ms = Game.MouseState;

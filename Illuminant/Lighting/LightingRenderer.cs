@@ -1758,8 +1758,51 @@ namespace Squared.Illuminant {
                 RenderGBuffer(ref layer, container, renderWidth, renderHeight);
             }
 
-            if ((_DistanceField != null) && _DistanceField.NeedsRasterize) {
-                RenderDistanceField(ref layer, container);
+            if (_DistanceField != null) {
+                AutoInvalidateDistanceField();
+
+                if (_DistanceField.NeedsRasterize)
+                    RenderDistanceField(ref layer, container);
+            }
+        }
+
+        private void AutoInvalidateDistanceField () {
+            var ddf = (_DistanceField as DynamicDistanceField);
+            bool hasInvalidatedStatic = false, hasInvalidatedDynamic = false;
+
+            if (Environment.Obstructions.IsInvalidDynamic) {
+                ddf?.Invalidate(false);
+                hasInvalidatedDynamic = true;
+            }
+
+            if (Environment.Obstructions.IsInvalid) {
+                _DistanceField.Invalidate();
+                hasInvalidatedStatic = true;
+            }
+
+            Environment.Obstructions.IsInvalid = Environment.Obstructions.IsInvalidDynamic = false;
+
+            foreach (var obs in Environment.Obstructions) {
+                if (obs.HasDynamicityChanged) {
+                    obs.HasDynamicityChanged = false;
+                    if (!hasInvalidatedStatic) {
+                        hasInvalidatedStatic = hasInvalidatedDynamic = true;
+                        _DistanceField.Invalidate();
+                    }
+                }
+
+                if (!obs.IsValid) {
+                    obs.IsValid = true;
+                    if ((ddf != null) && obs.IsDynamic) {
+                        if (!hasInvalidatedDynamic) {
+                            hasInvalidatedDynamic = true;
+                            ddf.Invalidate(false);
+                        }
+                    } else if (!hasInvalidatedStatic) {
+                        hasInvalidatedStatic = hasInvalidatedDynamic = true;
+                        _DistanceField.Invalidate();
+                    }
+                }
             }
         }
 

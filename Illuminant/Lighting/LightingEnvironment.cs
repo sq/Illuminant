@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,7 +12,7 @@ namespace Squared.Illuminant {
     public class LightingEnvironment {
         public readonly List<LightSource> Lights = new List<LightSource>();
         // SDF objects that define obstructions to be rendered into the distance field
-        public readonly List<LightObstruction> Obstructions = new List<LightObstruction>();
+        public readonly LightObstructionCollection Obstructions = new LightObstructionCollection();
         // Polygonal meshes that define 3D volumes that are rendered into the distance field
         // In 2.5d mode the volumes' top and front faces are also rendered directly into the scene
         public readonly List<HeightVolumeBase> HeightVolumes = new List<HeightVolumeBase>();
@@ -39,6 +40,69 @@ namespace Squared.Illuminant {
             Obstructions.Clear();
             HeightVolumes.Clear();
             // FIXME: Set billboards to null?
+        }
+    }
+
+    public class LightObstructionCollection : IEnumerable<LightObstruction> {
+        internal bool IsInvalid, IsInvalidDynamic;
+        internal readonly List<LightObstruction> Items = new List<LightObstruction>();
+
+        public void Add (LightObstruction value) {
+            if (value.IsDynamic)
+                IsInvalidDynamic = true;
+            else
+                IsInvalid = true;
+            Items.Add(value);
+        }
+
+        public void Remove (LightObstruction value) {
+            if (value.IsDynamic)
+                IsInvalidDynamic = true;
+            else
+                IsInvalid = true;
+
+            Items.Remove(value);
+        }
+
+        public void Clear () {
+            IsInvalid = true;
+            Items.Clear();
+        }
+
+        public int Count {
+            get {
+                return Items.Count;
+            }
+        }
+
+        public LightObstruction this [int index] { 
+            get {
+                return Items[index];
+            }
+            set {
+                var oldValue = Items[index];
+                Items[index] = value;
+                if (oldValue.IsDynamic || value.IsDynamic)
+                    IsInvalidDynamic = true;
+                if (!oldValue.IsDynamic || !value.IsDynamic)
+                    IsInvalid = true;
+            }
+        }
+
+        public void CopyTo (LightObstruction[] array) {
+            Items.CopyTo(array);
+        }
+
+        public List<LightObstruction>.Enumerator GetEnumerator () {
+            return Items.GetEnumerator();
+        }
+
+        IEnumerator<LightObstruction> IEnumerable<LightObstruction>.GetEnumerator () {
+            return ((IEnumerable<LightObstruction>)Items).GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator () {
+            return ((IEnumerable<LightObstruction>)Items).GetEnumerator();
         }
     }
 }
