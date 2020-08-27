@@ -1,7 +1,14 @@
 // Results in /Od are sometimes incorrect
 #pragma fxcparams(/O3 /Zi)
 
+#define ENABLE_DISTANCE_FIELD 1
+
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\CompilerWorkarounds.fxh"
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"
+#include "DistanceFieldCommon.fxh"
+#include "ConeTrace.fxh"
+#include "AOCommon.fxh"
 #include "ProjectorLightCore.fxh"
 
 void ProjectorLightProbeVertexShader(

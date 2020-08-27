@@ -1,10 +1,4 @@
-#include "..\..\..\Fracture\Squared\RenderLib\Shaders\CompilerWorkarounds.fxh"
-#include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"
 #include "LightCommon.fxh"
-#include "DistanceFieldCommon.fxh"
-#include "ConeTrace.fxh"
-#include "RampCommon.fxh"
-#include "AOCommon.fxh"
 
 #define DEBUG_COORDS 0
 #define ALLOW_DISCARD 1
@@ -89,6 +83,8 @@ float ProjectorLightPixelCoreNoDF(
     return distanceOpacity * normalOpacity * constantOpacity;
 }
 
+#if ENABLE_DISTANCE_FIELD
+
 float ProjectorLightPixelCore(
     in float3 shadedPixelPosition,
     in float3 shadedPixelNormal,
@@ -152,6 +148,8 @@ float ProjectorLightPixelCore(
     } else
         return lightOpacity;
 }
+
+#endif
 
 float4x4 invertMatrix (float4x4 m) {
     float n11 = m[0][0], n12 = m[1][0], n13 = m[2][0], n14 = m[3][0];

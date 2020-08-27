@@ -1,17 +1,12 @@
 // Results in /Od are completely incorrect
 #pragma fxcparams(/O3 /Zi)
 
-#define ENABLE_DISTANCE_FIELD 1
-
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\CompilerWorkarounds.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"
-#include "DistanceFieldCommon.fxh"
-#include "ConeTrace.fxh"
-#include "AOCommon.fxh"
 #include "ProjectorLightCore.fxh"
 
-void ProjectorLightPixelShader(
+void ProjectorLightPixelShaderNoDF (
     in  float3 worldPosition       : POSITION1,
     in  float4 mat1                : TEXCOORD0,
     in  float4 mat2                : TEXCOORD1,
@@ -42,23 +37,26 @@ void ProjectorLightPixelShader(
         return;
     }
 
+    enableShadows = 0;
+
     lightProperties.w *= enableShadows;
 
     float4 projectorSpacePosition;
-    float opacity = ProjectorLightPixelCore(
+    bool visible;
+    float opacity = ProjectorLightPixelCoreNoDF(
         shadedPixelPosition, shadedPixelNormal,
         mat1, mat2, mat3, mat4,
         lightProperties, moreLightProperties, evenMoreLightProperties,
-        projectorOrigin, projectorSpacePosition
+        projectorOrigin, projectorSpacePosition, visible
     );
 
     result = ProjectorLightColorCore(projectorSpacePosition, mipBias, opacity);
 }
 
-technique ProjectorLight {
+technique ProjectorLightNoDF {
     pass P0
     {
         vertexShader = compile vs_3_0 ProjectorLightVertexShader();
-        pixelShader  = compile ps_3_0 ProjectorLightPixelShader();
+        pixelShader  = compile ps_3_0 ProjectorLightPixelShaderNoDF();
     }
 }
