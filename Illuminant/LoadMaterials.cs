@@ -78,6 +78,10 @@ namespace Squared.Illuminant {
                     "DirectionalLight", null, dBegin, dEnd
                 );
 
+                LoadOneMaterial(effects, out DirectionalLightWithoutDistanceField,
+                    "DirectionalLightWithoutDistanceField", null, dBegin, dEnd
+                );
+
                 LoadOneMaterial(effects, out ParticleSystemSphereLight,
                     "ParticleLight", null, dBegin, dEnd
                 );

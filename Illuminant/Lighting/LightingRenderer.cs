@@ -141,7 +141,11 @@ namespace Squared.Illuminant {
                         break;
                     case LightSourceTypeID.Directional:
                         _Material = (key.RampTexture == null)
-                            ? parent.IlluminantMaterials.DirectionalLight
+                            ? ( 
+                                castsShadows
+                                ? parent.IlluminantMaterials.DirectionalLight
+                                : parent.IlluminantMaterials.DirectionalLightWithoutDistanceField
+                            )
                             : parent.IlluminantMaterials.DirectionalLightWithRamp;
                         _ProbeMaterial = (key.RampTexture == null)
                             ? parent.IlluminantMaterials.DirectionalLightProbe
