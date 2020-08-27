@@ -136,10 +136,18 @@ namespace Squared.Illuminant {
                     new[] { MaterialUtil.MakeDelegate(BlendState.Opaque) }
                 );
 
-                LoadOneMaterial(effects, out DistanceFunction,
-                        "DistanceFunction", null,
-                        new[] { MaterialUtil.MakeDelegate(RenderStates.MaxBlendValue) }
-                );
+                DistanceFunctionTypes = new Render.Material[(int)LightObstruction.MAX_Type + 1];
+
+                foreach (var i in Enum.GetValues(typeof(LightObstructionType))) {
+                    var name = Enum.GetName(typeof(LightObstructionType), i);
+                    if (name == "MAX")
+                        continue;
+
+                    LoadOneMaterial(effects, out DistanceFunctionTypes[(short)i],
+                        "DistanceFunction", name,
+                            new[] { MaterialUtil.MakeDelegate(RenderStates.MaxBlendValue) }
+                    );
+                }
 
                 LoadOneMaterial(effects, out GroundPlane,
                     "GBuffer", "GroundPlane");

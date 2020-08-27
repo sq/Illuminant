@@ -294,13 +294,16 @@ namespace Squared.Illuminant {
             public readonly LightingRenderer Renderer;
             public DynamicVertexBuffer VertexBuffer;
             public DistanceFunctionVertex[] Vertices;
-            public int PrimCount;
+            public int[] FirstOffset, PrimCount;
             public bool IsDirty;
 
             public DistanceFunctionBuffer (LightingRenderer renderer, int initialSize) {
                 Renderer = renderer;
                 Vertices = new DistanceFunctionVertex[initialSize];
                 IsDirty = true;
+                var numTypes = (int)LightObstruction.MAX_Type + 1;
+                FirstOffset = new int[numTypes];
+                PrimCount   = new int[numTypes];
             }
 
             public void EnsureSize (int size) {
@@ -1658,7 +1661,7 @@ namespace Squared.Illuminant {
                     p["LightColor"].SetValue(lc);
 
                     if (singleObject != null) {
-                        p["FunctionType"].SetValue((int)singleObject.Type);
+                        p["FunctionType"].SetValue((int)singleObject.Type + 1);
                         p["FunctionCenter"].SetValue(singleObject.Center);
                         p["FunctionSize"].SetValue(singleObject.Size);
                         p["FunctionRotation"].SetValue(singleObject.Rotation);

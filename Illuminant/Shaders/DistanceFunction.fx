@@ -1,5 +1,3 @@
-#pragma fxcparams(/O3 /Zi)
-
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\CompilerWorkarounds.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"
@@ -7,6 +5,9 @@
 #include "LightCommon.fxh"
 #include "DistanceFieldCommon.fxh"
 #include "DistanceFunctionCommon.fxh"
+
+// HACK: For some reason we need to expand the function boxes for things to work right?
+#define FUNCTION_SIZE_HACK 1
 
 uniform float2 PixelSize;
 uniform float4 SliceZ;
@@ -23,12 +24,10 @@ void DistanceFunctionVertexShader(
     inout float3 center   : TEXCOORD0,
     inout float3 size     : TEXCOORD1,
     inout float  rotation : TEXCOORD2,
-    inout int2   typeId   : BLENDINDICES1,
     out   float4 result   : POSITION0
 ) {
-    // FIXME: Is this right when the shape is rotated?
-    float msize = max(max(abs(size.x), abs(size.y)), abs(size.z)) + getMaximumEncodedDistance() + 3;
-    float2 position = (FunctionCorners[cornerIndex.x] * msize) + center.xy;
+    float msize = max(max(abs(size.x), abs(size.y)), abs(size.z)) + getMaximumEncodedDistance() + 4;
+    float2 position = (FunctionCorners[cornerIndex.x] * (msize * FUNCTION_SIZE_HACK)) + center.xy;
     result = TransformPosition(float4(position - GetViewportPosition(), 0, 1), 0);
     result.z = 0;
     result.w = 1;
@@ -39,29 +38,127 @@ float2 getPositionXy (in float2 __vpos__) {
     return vp;
 }
 
-void DistanceFunctionPixelShader (
+void BoxPixelShader (
     out float4 color  : COLOR0,
     ACCEPTS_VPOS,
     in  float3 center   : TEXCOORD0,
     in  float3 size     : TEXCOORD1,
-    in  float  rotation : TEXCOORD2,
-    in  int2   typeId   : BLENDINDICES1
+    in  float  rotation : TEXCOORD2
 ) {
     float2 vpos = GET_VPOS;
-    float2 positionXy = getPositionXy(vpos);
     color = float4(
-        encodeDistance(evaluateByTypeId(typeId.x, float3(positionXy, SliceZ.x), center, size, rotation)),
-        encodeDistance(evaluateByTypeId(typeId.x, float3(positionXy, SliceZ.y), center, size, rotation)),
-        encodeDistance(evaluateByTypeId(typeId.x, float3(positionXy, SliceZ.z), center, size, rotation)),
-        encodeDistance(evaluateByTypeId(typeId.x, float3(positionXy, SliceZ.w), center, size, rotation))
+        encodeDistance(evaluateBox(float3(getPositionXy(vpos), SliceZ.x), center, size, rotation)),
+        encodeDistance(evaluateBox(float3(getPositionXy(vpos), SliceZ.y), center, size, rotation)),
+        encodeDistance(evaluateBox(float3(getPositionXy(vpos), SliceZ.z), center, size, rotation)),
+        encodeDistance(evaluateBox(float3(getPositionXy(vpos), SliceZ.w), center, size, rotation))
     );
 }
 
-technique DistanceFunction
+void EllipsoidPixelShader(
+    out float4 color  : COLOR0,
+    ACCEPTS_VPOS,
+    in  float3 center   : TEXCOORD0,
+    in  float3 size     : TEXCOORD1,
+    in  float  rotation : TEXCOORD2
+) {
+    float2 vpos = GET_VPOS;
+    color = float4(
+        encodeDistance(evaluateEllipsoid(float3(getPositionXy(vpos), SliceZ.x), center, size, rotation)),
+        encodeDistance(evaluateEllipsoid(float3(getPositionXy(vpos), SliceZ.y), center, size, rotation)),
+        encodeDistance(evaluateEllipsoid(float3(getPositionXy(vpos), SliceZ.z), center, size, rotation)),
+        encodeDistance(evaluateEllipsoid(float3(getPositionXy(vpos), SliceZ.w), center, size, rotation))
+    );
+}
+
+void CylinderPixelShader(
+    out float4 color  : COLOR0,
+    ACCEPTS_VPOS,
+    in  float3 center   : TEXCOORD0,
+    in  float3 size     : TEXCOORD1,
+    in  float  rotation : TEXCOORD2
+) {
+    float2 vpos = GET_VPOS;
+    color = float4(
+        encodeDistance(evaluateCylinder(float3(getPositionXy(vpos), SliceZ.x), center, size, rotation)),
+        encodeDistance(evaluateCylinder(float3(getPositionXy(vpos), SliceZ.y), center, size, rotation)),
+        encodeDistance(evaluateCylinder(float3(getPositionXy(vpos), SliceZ.z), center, size, rotation)),
+        encodeDistance(evaluateCylinder(float3(getPositionXy(vpos), SliceZ.w), center, size, rotation))
+    );
+}
+
+void SpheroidPixelShader(
+    out float4 color  : COLOR0,
+    ACCEPTS_VPOS,
+    in  float3 center   : TEXCOORD0,
+    in  float3 size     : TEXCOORD1,
+    in  float  rotation : TEXCOORD2
+) {
+    float2 vpos = GET_VPOS;
+    color = float4(
+        encodeDistance(evaluateSpheroid(float3(getPositionXy(vpos), SliceZ.x), center, size, rotation)),
+        encodeDistance(evaluateSpheroid(float3(getPositionXy(vpos), SliceZ.y), center, size, rotation)),
+        encodeDistance(evaluateSpheroid(float3(getPositionXy(vpos), SliceZ.z), center, size, rotation)),
+        encodeDistance(evaluateSpheroid(float3(getPositionXy(vpos), SliceZ.w), center, size, rotation))
+    );
+}
+
+void OctagonPixelShader(
+    out float4 color  : COLOR0,
+    ACCEPTS_VPOS,
+    in  float3 center   : TEXCOORD0,
+    in  float3 size     : TEXCOORD1,
+    in  float  rotation : TEXCOORD2
+) {
+    float2 vpos = GET_VPOS;
+    color = float4(
+        encodeDistance(evaluateOctagon(float3(getPositionXy(vpos), SliceZ.x), center, size, rotation)),
+        encodeDistance(evaluateOctagon(float3(getPositionXy(vpos), SliceZ.y), center, size, rotation)),
+        encodeDistance(evaluateOctagon(float3(getPositionXy(vpos), SliceZ.z), center, size, rotation)),
+        encodeDistance(evaluateOctagon(float3(getPositionXy(vpos), SliceZ.w), center, size, rotation))
+    );
+}
+
+technique Box
 {
     pass P0
     {
         vertexShader = compile vs_3_0 DistanceFunctionVertexShader();
-        pixelShader  = compile ps_3_0 DistanceFunctionPixelShader();
+        pixelShader  = compile ps_3_0 BoxPixelShader();
+    }
+}
+
+technique Ellipsoid
+{
+    pass P0
+    {
+        vertexShader = compile vs_3_0 DistanceFunctionVertexShader();
+        pixelShader  = compile ps_3_0 EllipsoidPixelShader();
+    }
+}
+
+technique Cylinder
+{
+    pass P0
+    {
+        vertexShader = compile vs_3_0 DistanceFunctionVertexShader();
+        pixelShader  = compile ps_3_0 CylinderPixelShader();
+    }
+}
+
+technique Spheroid
+{
+    pass P0
+    {
+        vertexShader = compile vs_3_0 DistanceFunctionVertexShader();
+        pixelShader = compile ps_3_0 SpheroidPixelShader();
+    }
+}
+
+technique Octagon
+{
+    pass P0
+    {
+        vertexShader = compile vs_3_0 DistanceFunctionVertexShader();
+        pixelShader = compile ps_3_0 OctagonPixelShader();
     }
 }

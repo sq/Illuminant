@@ -7,11 +7,11 @@ using Squared.Game;
 
 namespace Squared.Illuminant {
     public enum LightObstructionType : short {
-        Ellipsoid = 1,
-        Box = 2,
-        Cylinder = 3,
-        Spheroid = 4,
-        Octagon = 5
+        Ellipsoid = 0,
+        Box = 1,
+        Cylinder = 2,
+        Spheroid = 3,
+        Octagon = 4
     }
 
     public class LightObstruction {

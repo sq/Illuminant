@@ -106,7 +106,7 @@ namespace Squared.Illuminant {
         public Vector3 Center;
         public Vector3 Size;
         public float Rotation;
-        public short Type, Unused;
+        // public short Type, Unused;
 
         public static VertexDeclaration _VertexDeclaration;
 
@@ -116,16 +116,16 @@ namespace Squared.Illuminant {
             _VertexDeclaration = new VertexDeclaration(
                 new VertexElement(Marshal.OffsetOf(tThis, "Center").ToInt32(),   VertexElementFormat.Vector3, VertexElementUsage.TextureCoordinate, 0),
                 new VertexElement(Marshal.OffsetOf(tThis, "Size").ToInt32(),     VertexElementFormat.Vector3, VertexElementUsage.TextureCoordinate, 1),
-                new VertexElement(Marshal.OffsetOf(tThis, "Rotation").ToInt32(), VertexElementFormat.Single,  VertexElementUsage.TextureCoordinate, 2),
-                new VertexElement(Marshal.OffsetOf(tThis, "Type").ToInt32(),     VertexElementFormat.Short2,  VertexElementUsage.BlendIndices, 1)
+                new VertexElement(Marshal.OffsetOf(tThis, "Rotation").ToInt32(), VertexElementFormat.Single,  VertexElementUsage.TextureCoordinate, 2)
+//                new VertexElement(Marshal.OffsetOf(tThis, "Type").ToInt32(),     VertexElementFormat.Short2,  VertexElementUsage.BlendIndices, 1)
             );
         }
 
-        public DistanceFunctionVertex (Vector3 center, Vector3 size, float rotation, short type) {
+        public DistanceFunctionVertex (Vector3 center, Vector3 size, float rotation, LightObstructionType type) {
             Center = center;
             Size = size;
             Rotation = rotation;
-            Unused = Type = type;
+            // Unused = Type = (short)(((short)type) + 1);
         }
 
         public VertexDeclaration VertexDeclaration {
