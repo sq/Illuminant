@@ -35,6 +35,11 @@ float2 _revolve2D (float3 worldPosition, float o) {
 // FIXME: Probably incorrect for rotation != 0
 #define revolveSDF2D(func, worldPosition, center, size, rotation) func(_revolve2D(worldPosition - center, size.z), 0, size.xy, rotation)
 
+float4 opElongate (float3 p, float3 h) {
+    float3 q = abs(p) - h;
+    return float4(sign(p) * max(q, 0.0), min(max(q.x, max(q.y, q.z)), 0.0));
+}
+
 float evaluateBox (
     float3 worldPosition, float3 center, float3 size, float rotation
 ) {
@@ -52,13 +57,16 @@ float evaluateBox (
     return resultDistance;
 }
 
-float evaluateSphere (
+float evaluateSpheroid (
     float3 worldPosition, float3 center, float3 size, float rotation
 ) {
     float3 position = worldPosition - center;
-    // FIXME: Why is this slightly too small?
-    float radius = length(size) / 2;
-    return length(position) - radius;
+    position = rotateLocalPosition(position, rotation);
+
+    float minSize = min(size.x, min(size.y, size.z));
+    float3 elongation = size - minSize;
+    float4 w = opElongate(position, elongation);
+    return w.w + (length(w.xyz) - minSize);
 }
 
 // generic ellipsoid - simple but bad approximated distance
@@ -107,6 +115,14 @@ float evaluateCylinder (
 
     return sdCappedCylinder(position, size.z, length(size.xy));
 
+    /* FIXME: This doesn't work, but should
+    float minSize = min(size.x, size.y);
+    float3 elongation = float3(size.xy - minSize, 0);
+    float4 w = opElongate(position, elongation);
+
+    return w.w + sdCappedCylinder(w.xyz, size.z, minSize);
+    */
+
     /* FIXME: This enables independent x/y size but has other garbage side effects
     const float bigValue = 65536.0;
     float bigEllipsoid = evaluateEllipsoid(worldPosition, center, float3(size.x, size.y, bigValue), rotation);
@@ -136,8 +152,11 @@ float evaluateOctagon (
     float3 position = worldPosition - center;
     position = rotateLocalPosition(position, rotation);
 
-    // HACK: Divide size by sqrt(2)
-    return sdOctogonPrism(position, length(size.xy) / 1.4142, size.z);
+    float minSize = min(size.x, size.y);
+    float3 elongation = float3(size.xy - minSize, 0);
+    float4 w = opElongate(position, elongation);
+
+    return w.w + sdOctogonPrism(w.xyz, minSize, size.z);
 }
 
 float evaluateByTypeId (
@@ -152,7 +171,7 @@ float evaluateByTypeId (
         case 3:
             return evaluateCylinder(worldPosition, center, size, rotation);
         case 4:
-            return evaluateSphere(worldPosition, center, size, rotation);
+            return evaluateSpheroid(worldPosition, center, size, rotation);
         case 5:
             return evaluateOctagon(worldPosition, center, size, rotation);
         default:

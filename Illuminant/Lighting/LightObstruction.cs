@@ -10,12 +10,12 @@ namespace Squared.Illuminant {
         Ellipsoid = 1,
         Box = 2,
         Cylinder = 3,
-        Sphere = 4,
+        Spheroid = 4,
         Octagon = 5
     }
 
     public class LightObstruction {
-        internal const LightObstructionType MAX_Type = LightObstructionType.Sphere;
+        internal const LightObstructionType MAX_Type = LightObstructionType.Octagon;
         public LightObstructionType Type;
 
         // If false, this obstruction will be rendered into the static distance field (if any) instead of the dynamic distance field

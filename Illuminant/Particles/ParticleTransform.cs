@@ -16,7 +16,8 @@ namespace Squared.Illuminant.Particles.Transforms {
         Ellipsoid = 1,
         Box = 2,
         Cylinder = 3,
-        Sphere = 4
+        Spheroid = 4,
+        Octagon = 5
     }
 
     internal interface IParticleTransform {
