@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using Microsoft.Xna.Framework;
@@ -44,9 +45,10 @@ namespace Squared.Illuminant {
     }
 
     public class LightObstructionCollection : IEnumerable<LightObstruction> {
-        internal bool IsInvalid, IsInvalidDynamic;
+        internal bool IsInvalid = true, IsInvalidDynamic = true;
         internal readonly List<LightObstruction> Items = new List<LightObstruction>();
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Add (LightObstruction value) {
             if (value.IsDynamic)
                 IsInvalidDynamic = true;
@@ -55,6 +57,12 @@ namespace Squared.Illuminant {
             Items.Add(value);
         }
 
+        public void AddRange (IEnumerable<LightObstruction> items) {
+            foreach (var item in items)
+                Add(item);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Remove (LightObstruction value) {
             if (value.IsDynamic)
                 IsInvalidDynamic = true;
@@ -70,12 +78,14 @@ namespace Squared.Illuminant {
         }
 
         public int Count {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get {
                 return Items.Count;
             }
         }
 
         public LightObstruction this [int index] { 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get {
                 return Items[index];
             }

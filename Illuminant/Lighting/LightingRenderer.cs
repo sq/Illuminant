@@ -546,6 +546,8 @@ namespace Squared.Illuminant {
             }
             set {
                 _DistanceField = value;
+                // FIXME: This would be convenient, but it's possible you'd want to reuse an existing field unmodified? Maybe???
+                // InvalidateFields();
             }
         }
 

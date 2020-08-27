@@ -270,7 +270,7 @@ namespace Squared.Illuminant {
 
                     result.PrimCount[type]++;
 
-                    result.Vertices[j++] = new DistanceFunctionVertex(item.Center, item.Size, item.Rotation, item.Type);
+                    result.Vertices[j++] = item.Vertex;
                 }
 
                 result.EnsureVertexBuffer();

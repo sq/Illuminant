@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Microsoft.Xna.Framework;
 using Squared.Game;
@@ -36,9 +37,11 @@ namespace Squared.Illuminant {
 
         private LightObstructionType _Type;
         public LightObstructionType Type {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get {
                 return _Type;
             }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set {
                 if (_Type != value)
                     Invalidate();
@@ -47,9 +50,11 @@ namespace Squared.Illuminant {
         }
 
         public Vector3 Center {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get {
                 return Vertex.Center;
             }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set {
                 if (Vertex.Center != value)
                     Invalidate();
@@ -58,9 +63,11 @@ namespace Squared.Illuminant {
         }
 
         public Vector3 Size {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get {
                 return Vertex.Size;
             }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set {
                 if (Vertex.Size != value)
                     Invalidate();
@@ -69,9 +76,11 @@ namespace Squared.Illuminant {
         }
 
         public float Rotation {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get {
                 return Vertex.Rotation;
             }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set {
                 if (Vertex.Rotation != value)
                     Invalidate();

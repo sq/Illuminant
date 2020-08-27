@@ -330,8 +330,6 @@ namespace TestGame.Scenes {
                                 sz.Z = 2;
                             obs.Size = sz;
                         }
-
-                        Renderer.InvalidateFields();
                     }
                 } else {
                     var mousePos = new Vector2(ms.X, ms.Y);
@@ -368,7 +366,6 @@ namespace TestGame.Scenes {
                         Math.Max(2, obs.Size.Y + growth.Y),
                         Math.Max(2, obs.Size.Z + growth.Z)
                     );
-                    Renderer.InvalidateFields();
                 }
 
                 /*

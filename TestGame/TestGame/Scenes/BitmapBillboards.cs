@@ -217,7 +217,6 @@ namespace TestGame.Scenes {
             Renderer.Configuration.TwoPointFiveD = true;
             Renderer.Configuration.SetScale(LightmapScaleRatio);
 
-            Renderer.InvalidateFields(invalidateDistanceField: !Deterministic.Value);
             Renderer.UpdateFields(frame, -2);
 
             using (var bg = BatchGroup.ForRenderTarget(

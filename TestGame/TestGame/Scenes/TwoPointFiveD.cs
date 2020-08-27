@@ -338,7 +338,6 @@ namespace TestGame.Scenes {
             Renderer.Configuration.TwoPointFiveD = TwoPointFiveD;
             Renderer.Configuration.SetScale(LightmapScaleRatio);
 
-            Renderer.InvalidateFields(invalidateDistanceField: !Deterministic.Value);
             Renderer.UpdateFields(frame, -2);
 
             LUTBlendingConfiguration? lutBlending = null;
@@ -501,8 +500,6 @@ namespace TestGame.Scenes {
                     obs.Center =
                         new Vector3(500, 750, Arithmetic.Pulse(time / 10, 0, 40));
                     obs.Rotation = time * 0.1f;
-
-                    Renderer.InvalidateFields();
                 }
 
                 var ms = Game.MouseState;
