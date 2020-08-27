@@ -15,6 +15,10 @@ void AutoGBufferBitmapPixelShader (
     in float4 texRgn : TEXCOORD1,
     out float4 result : COLOR0
 ) {
+    // FIXME: Without this we get weird acne at the top/left edges of billboards.
+    texRgn.xy += HalfTexel;
+    texRgn.zw += HalfTexel;
+
     float4 texColor = tex2D(TextureSampler, clamp2(texCoord, texRgn.xy, texRgn.zw));
     texColor.a *= color.a;
 
