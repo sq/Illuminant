@@ -1,3 +1,4 @@
+#include "RampCommon.fxh"
 #include "LightCommon.fxh"
 
 #define DEBUG_COORDS 0

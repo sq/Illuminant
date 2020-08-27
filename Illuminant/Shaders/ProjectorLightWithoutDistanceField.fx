@@ -53,7 +53,7 @@ void ProjectorLightPixelShaderNoDF (
     result = ProjectorLightColorCore(projectorSpacePosition, mipBias, opacity);
 }
 
-technique ProjectorLightNoDF {
+technique ProjectorLightWithoutDistanceField {
     pass P0
     {
         vertexShader = compile vs_3_0 ProjectorLightVertexShader();

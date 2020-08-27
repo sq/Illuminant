@@ -151,7 +151,7 @@ namespace Squared.Illuminant {
                         // FIXME
                         if (key.RampTexture != null)
                             throw new NotImplementedException("Ramp textures");
-                        _Material = !castsShadows
+                        _Material = castsShadows
                             ? parent.IlluminantMaterials.ParticleSystemSphereLight
                             : parent.IlluminantMaterials.ParticleSystemSphereLightWithoutDistanceField;
                         _ProbeMaterial = null;
@@ -161,7 +161,9 @@ namespace Squared.Illuminant {
                         _ProbeMaterial = parent.IlluminantMaterials.LineLightProbe;
                         break;
                     case LightSourceTypeID.Projector:
-                        _Material = parent.IlluminantMaterials.ProjectorLight;
+                        _Material = castsShadows
+                            ? parent.IlluminantMaterials.ProjectorLight
+                            : parent.IlluminantMaterials.ProjectorLightWithoutDistanceField;
                         _ProbeMaterial = parent.IlluminantMaterials.ProjectorLightProbe;
                         break;
                     default:
@@ -1700,7 +1702,7 @@ namespace Squared.Illuminant {
                 dfu.InvScaleFactorX = dfu.InvScaleFactorY = 1;
                 dfu.Extent.Z = Environment.MaximumZ;
                 uDistanceField.TrySet(m, ref dfu);
-                p["DistanceFieldPacked1"].SetValue(Vector4.Zero);
+                p["DistanceFieldPacked1"]?.SetValue(Vector4.Zero);
                 p.ClearTexture("DistanceFieldTexture");
                 return;
             }
@@ -1720,7 +1722,7 @@ namespace Squared.Illuminant {
             uDistanceField.TrySet(m, ref dfu);
 
             if (setDistanceTexture)
-                p["DistanceFieldTexture"].SetValue(_DistanceField.Texture.Get());
+                p["DistanceFieldTexture"]?.SetValue(_DistanceField.Texture.Get());
 
             p["DistanceFieldPacked1"]?.SetValue(new Vector4(
                 // FIXME: Surprisingly, using double precision for 1/3 here breaks

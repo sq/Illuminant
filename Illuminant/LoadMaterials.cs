@@ -94,6 +94,10 @@ namespace Squared.Illuminant {
                     "ProjectorLight", null, dBegin, dEnd
                 );
 
+                LoadOneMaterial(effects, out ProjectorLightWithoutDistanceField,
+                    "ProjectorLightWithoutDistanceField", null, dBegin, dEnd
+                );
+
                 LoadOneMaterial(effects, out SphereLightWithDistanceRamp,
                     "SphereLight", "SphereLightWithDistanceRamp", dBegin, dEnd
                 );
