@@ -198,7 +198,7 @@ namespace Squared.Illuminant {
                 RenderTrace.Marker(group, 6, "LightingRenderer {0} : G-Buffer Billboards", this.ToObjectID());
             }
 
-            if (enableHeightVolumes)
+            if (enableHeightVolumes && Environment.HeightVolumes.Count > 0)
                 using (var topBatch = PrimitiveBatch<HeightVolumeVertex>.New(
                     group, 3, Materials.Get(
                         IlluminantMaterials.HeightVolume,
