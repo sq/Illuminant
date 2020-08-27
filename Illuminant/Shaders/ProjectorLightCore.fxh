@@ -22,7 +22,7 @@ sampler ProjectorTextureSampler : register(s5) {
     MagFilter = PROJECTOR_FILTERING;
 };
 
-float ProjectorLightPixelCore(
+float ProjectorLightPixelCoreNoDF(
     in float3 shadedPixelPosition,
     in float3 shadedPixelNormal,
     in float4 mat1, 
@@ -37,10 +37,9 @@ float ProjectorLightPixelCore(
     in float4 evenMoreLightProperties,
     // x, y, z, hasOrigin
     in float4 projectorOrigin,
-    out float4 projectorSpacePosition
+    out float4 projectorSpacePosition,
+    out bool visible
 ) {
-    float4 coneLightProperties = lightProperties;
-
     float4x4 invMatrix = float4x4(
         mat1, mat2, mat3, mat4
     );
@@ -72,30 +71,67 @@ float ProjectorLightPixelCore(
             distanceOpacity = max(1 - distanceToVolume, 0);
     }
 
-    bool visible = (distanceOpacity > 0) && 
+    visible = (distanceOpacity > 0) && 
         (shadedPixelPosition.x > -9999) &&
         (constantOpacity > 0);
-
-    clip(visible ? 1 : -1);
 
     // Optionally clamp to texture region
     projectorSpacePosition.xy = lerp(projectorSpacePosition.xy, clampedPosition.xy, moreLightProperties.z);
 
+    float3 lightNormal = normalize(shadedPixelPosition - projectorOrigin.xyz);
+    float normalOpacity = lerp(1, computeNormalFactor(lightNormal, shadedPixelNormal), projectorOrigin.w);
+
+    if (!visible) {
+        discard;
+        return 0;
+    }
+
+    return distanceOpacity * normalOpacity * constantOpacity;
+}
+
+float ProjectorLightPixelCore(
+    in float3 shadedPixelPosition,
+    in float3 shadedPixelNormal,
+    in float4 mat1, 
+    in float4 mat2, 
+    in float4 mat3, 
+    in float4 mat4,
+    // radius, ramp length, ramp mode, enable shadows
+    in float4 lightProperties,
+    // ao radius, opacity, wrap, ao opacity
+    in float4 moreLightProperties,
+    // texX1, texY1, texX2, texY2,
+    in float4 evenMoreLightProperties,
+    // x, y, z, hasOrigin
+    in float4 projectorOrigin,
+    out float4 projectorSpacePosition
+) {
+    bool visible;
+
+    float preTraceOpacity = ProjectorLightPixelCoreNoDF(
+        shadedPixelPosition, shadedPixelNormal,
+        mat1, mat2, mat3, mat4,
+        lightProperties, moreLightProperties,
+        evenMoreLightProperties,
+        projectorOrigin,
+        projectorSpacePosition,
+        visible
+    );
+
+    DistanceFieldConstants vars = makeDistanceFieldConstants();
+
+    float4 coneLightProperties = lightProperties;
+
     // Zero out y/z before we pass them into AO
     moreLightProperties.y = 0;
     moreLightProperties.z = 0;
-
-    DistanceFieldConstants vars = makeDistanceFieldConstants();
 
     // HACK: AO is only on upward-facing surfaces
     moreLightProperties.x *= max(0, shadedPixelNormal.z);
 
     float aoOpacity = computeAO(shadedPixelPosition, shadedPixelNormal, moreLightProperties, vars, visible);
 
-    float3 lightNormal = normalize(shadedPixelPosition - projectorOrigin.xyz);
-    float normalOpacity = lerp(1, computeNormalFactor(lightNormal, shadedPixelNormal), projectorOrigin.w);
-
-    float preTraceOpacity = distanceOpacity * aoOpacity * normalOpacity;
+    preTraceOpacity *= aoOpacity;
 
     bool traceShadows = visible && lightProperties.w && (preTraceOpacity >= SHADOW_OPACITY_THRESHOLD);
     float coneOpacity = coneTrace(
@@ -107,12 +143,14 @@ float ProjectorLightPixelCore(
 
     float lightOpacity = preTraceOpacity;
     lightOpacity *= coneOpacity;
-    lightOpacity *= constantOpacity;
 
     // HACK: Don't cull pixels unless they were killed by distance falloff.
     // This ensures that billboards are always lit.
-    clip(visible ? 1 : -1);
-    return visible ? lightOpacity : 0;
+    if (!visible) {
+        discard;
+        return 0;
+    } else
+        return lightOpacity;
 }
 
 float4x4 invertMatrix (float4x4 m) {
