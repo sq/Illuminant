@@ -438,13 +438,16 @@ namespace Squared.Illuminant.Particles {
         private void FillVertexBuffer () {
             var buf = new ParticleSystemVertex[4];
             int i = 0;
-            var v = new ParticleSystemVertex();
+            var v = new ParticleSystemVertex ();
             buf[i++] = v;
             v.Corner = v.Unused = 1;
+            v.CornerWeights = new Vector3(1, 0, 0);
             buf[i++] = v;
             v.Corner = v.Unused = 2;
+            v.CornerWeights = new Vector3(1, 1, 0);
             buf[i++] = v;
             v.Corner = v.Unused = 3;
+            v.CornerWeights = new Vector3(0, 1, 0);
             buf[i++] = v;
 
             RasterizeVertexBuffer = new VertexBuffer(
