@@ -221,7 +221,7 @@ float3 projectBoundingBoxEdge (
 }
 
 void ProjectorLightVertexShader (
-    in int2 vertexIndex              : BLENDINDICES0,
+    in    float3 cornerWeights       : NORMAL2,
     inout float4 mat1                : TEXCOORD0, 
     inout float4 mat2                : TEXCOORD1, 
     inout float4 mat3                : TEXCOORD4, 
@@ -268,7 +268,7 @@ void ProjectorLightVertexShader (
             bboxBr = max(bboxBr, proj.xy);
         }
 
-        corner = LightCorners[vertexIndex.x];
+        corner = cornerWeights.xyz;
         worldPosition.xy = lerp(bboxTl, bboxBr, corner.xy);
         worldPosition.z = 0;
 
@@ -277,7 +277,7 @@ void ProjectorLightVertexShader (
         worldPosition.y += (zOffset * ((corner.y * 2) - 1));
     } else {
         float3 tl = -9999, br = 9999;
-        float3 vertex = LightCorners[vertexIndex.x];
+        float3 vertex = cornerWeights.xyz;
         worldPosition = lerp(tl, br, vertex);
     }
 

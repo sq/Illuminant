@@ -1,18 +1,11 @@
 #include "ParticleCommon.fxh"
 
-static const float3 Corners[] = {
-    { 0, 0, 0 },
-    { 1, 0, 0 },
-    { 1, 1, 0 },
-    { 0, 1, 0 }
-};
-
 uniform float2 ChunkIndexAndMaxIndex;
 
 void VS_CountLiveParticles (
     in  float2 xy             : POSITION0,
     in  float3 offsetAndIndex : POSITION1,
-    in  int2   cornerIndex    : BLENDINDICES0, // 0-3
+    in  float2 cornerWeights  : NORMAL2,
     out float4 result : POSITION0,
     out float4 position : TEXCOORD1
 ) {
@@ -28,7 +21,7 @@ void VS_CountLiveParticles (
     float widthPx = ChunkIndexAndMaxIndex.y;
     float2 tl = float2(-1 + (xPx / widthPx * 2), -1);
     float2 br = float2(-1 + ((xPx + 1) / widthPx * 2), 1);
-    float2 corner = Corners[cornerIndex.x].xy;
+    float2 corner = cornerWeights.xy;
     float2 pos = lerp(tl, br, corner);
 
     result = float4(pos * scale, 0.5 * scale, scale);

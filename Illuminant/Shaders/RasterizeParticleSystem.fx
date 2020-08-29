@@ -42,17 +42,10 @@ sampler BitmapPointSampler {
 };
 
 inline float3 ComputeRotatedAndNonRotatedCorner (
-    in int cornerIndex, in float angle, in float2 size, out float2 nonRotatedUnit
+    in float3 cornerWeights, in float angle, in float2 size, out float2 nonRotatedUnit
 ) {    
-    const float3 Corners[] = {
-        { -1, -1, 0 },
-        { 1, -1, 0 },
-        { 1, 1, 0 },
-        { -1, 1, 0 }
-    };
-
-    float3 corner = Corners[cornerIndex.x] * float3(size.x, size.y, 1), sinCos;
-    nonRotatedUnit = Corners[cornerIndex.x].xy;
+    float3 corner = cornerWeights.xyz * float3(size.x, size.y, 1), sinCos;
+    nonRotatedUnit = cornerWeights.xy;
 
     sincos(angle, sinCos.x, sinCos.y);
 
@@ -66,7 +59,7 @@ inline float3 ComputeRotatedAndNonRotatedCorner (
 void VS_PosVelAttr(
     in  float2   xy                    : POSITION0,
     inout float3 offsetAndIndex        : POSITION1,
-    in  int2     cornerIndex           : BLENDINDICES0, // 0-3
+    in  float3   cornerWeights         : NORMAL2,
     out float4   result                : POSITION0,
     out float2   texCoord              : TEXCOORD0,
     out float3   positionXyAndRounding : TEXCOORD1,
@@ -88,7 +81,7 @@ void VS_PosVelAttr(
 
     float2 size = renderData.x * System.TexelAndSize.zw * RasterizeSettings.SizeFactorAndPosition.xy;
     float2 nonRotatedUnitCorner;
-    float3 rotatedCorner = ComputeRotatedAndNonRotatedCorner(cornerIndex.x, angle, size, nonRotatedUnitCorner);
+    float3 rotatedCorner = ComputeRotatedAndNonRotatedCorner(cornerWeights, angle, size, nonRotatedUnitCorner);
     float2 positionXy = nonRotatedUnitCorner;
 
     // HACK: Discard Z

@@ -12,8 +12,8 @@
 #include "ProjectorLightCore.fxh"
 
 void ProjectorLightProbeVertexShader(
-    in int2 cornerIndex              : BLENDINDICES0,
-    inout float4 mat1                : TEXCOORD0, 
+    in    float3 cornerWeights       : NORMAL2,
+    inout float4 mat1                : TEXCOORD0,
     inout float4 mat2                : TEXCOORD1, 
     inout float4 mat3                : TEXCOORD4, 
     // HACK: mip bias in w, w is always 1
@@ -26,15 +26,13 @@ void ProjectorLightProbeVertexShader(
     out float mipBias                : TEXCOORD8,
     out float4 result                : POSITION0
 ) {
-    DEFINE_LightCorners
-
     mipBias = mat4.w;
     mat4.w = 1;
 
     if (cornerIndex.x > 3) {
         result = float4(-9999, -9999, 0, 0);
     } else {
-        float2 clipPosition = (LightCorners[cornerIndex.x] * 9999) - 1;
+        float2 clipPosition = (cornerWeights.xy * 9999) - 1;
         result = float4(clipPosition.xy, 0, 1);
     }
 }

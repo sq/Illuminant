@@ -12,7 +12,7 @@ uniform float4 MoreLightProperties;
 uniform float4 LightColor;
 
 void ParticleLightVertexShader(
-    in int2 cornerIndex              : BLENDINDICES0,
+    in float3 cornerWeights          : NORMAL2,
     in float2 xy                     : POSITION0,
     in float3 offsetAndIndex         : POSITION1,
     out float4 lightCenter           : TEXCOORD0,
@@ -28,8 +28,7 @@ void ParticleLightVertexShader(
         return;
     }
 
-    DEFINE_LightCorners
-    float3 corner = LightCorners[cornerIndex.x];
+    float3 corner = cornerWeights.xyz;
 
     float4 actualXy = float4(xy + offsetAndIndex.xy, 0, 0);
     float4 position, renderData, renderColor;

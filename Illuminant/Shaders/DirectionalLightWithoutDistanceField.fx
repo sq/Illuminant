@@ -13,7 +13,7 @@ float4 ApplyTransform (float3 position) {
 }
 
 void DirectionalLightVertexShader(
-    in int2 cornerIndex              : BLENDINDICES0,
+    in    float3 cornerWeights       : NORMAL2,
     inout float3 lightPositionMin    : TEXCOORD0,
     inout float3 lightPositionMax    : TEXCOORD1,
     inout float4 lightProperties     : TEXCOORD2,
@@ -24,8 +24,7 @@ void DirectionalLightVertexShader(
     out float4   result              : POSITION0
 ) {
     // FIXME: Z
-    DEFINE_LightCorners
-    worldPosition = lerp(lightPositionMin, lightPositionMax, LightCorners[cornerIndex.x]);
+    worldPosition = lerp(lightPositionMin, lightPositionMax, cornerWeights.xyz);
     float3 screenPosition = (worldPosition - float3(GetViewportPosition(), 0));
     screenPosition.xy *= GetViewportScale() * getEnvironmentRenderScale();
     float4 transformedPosition = mul(mul(float4(screenPosition.xyz, 1), Viewport.ModelView), Viewport.Projection);

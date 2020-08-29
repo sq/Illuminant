@@ -282,6 +282,9 @@ namespace TestGame.Scenes {
                 
                 var time = (float)Time.Seconds;
 
+                if (!EfficientUpdates)
+                    Renderer.DistanceField.Invalidate();
+
                 if (!Deterministic) {
                     for (int i = 0; i < Centers.Length; i++) {
                         var angle = time * 0.33f;

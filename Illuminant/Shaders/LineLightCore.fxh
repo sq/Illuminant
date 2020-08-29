@@ -120,7 +120,7 @@ float LineLightPixelCore(
 }
 
 void LineLightVertexShader(
-    in int2 vertexIndex              : BLENDINDICES0,
+    in    float3 cornerWeights       : NORMAL2,
     inout float3 startPosition       : TEXCOORD0,
     inout float3 endPosition         : TEXCOORD1,
     // radius, ramp length, ramp mode, enable shadows
@@ -132,9 +132,7 @@ void LineLightVertexShader(
     out float3 worldPosition         : POSITION1,
     out float4 result                : POSITION0
 ) {
-    DEFINE_LightCorners
-
-    float3 vertex = LightCorners[vertexIndex.x];
+    float3 vertex = cornerWeights;
 
     float  radius = lightProperties.x + lightProperties.y + 1;
     float  deltaY = (radius) - (radius / moreLightProperties.z);

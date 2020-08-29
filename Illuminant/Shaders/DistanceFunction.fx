@@ -12,22 +12,15 @@
 uniform float2 PixelSize;
 uniform float4 SliceZ;
 
-static const float2 FunctionCorners[] = {
-    { -1, -1 },
-    { 1, -1 },
-    { 1, 1 },
-    { -1, 1 }
-};
-
 void DistanceFunctionVertexShader(
-    in int2 cornerIndex   : BLENDINDICES0,
-    inout float3 center   : TEXCOORD0,
-    inout float3 size     : TEXCOORD1,
-    inout float  rotation : TEXCOORD2,
-    out   float4 result   : POSITION0
+    in    float3 cornerWeights       : NORMAL2,
+    inout float3 center              : TEXCOORD0,
+    inout float3 size                : TEXCOORD1,
+    inout float  rotation            : TEXCOORD2,
+    out   float4 result              : POSITION0
 ) {
     float msize = max(max(abs(size.x), abs(size.y)), abs(size.z)) + getMaximumEncodedDistance() + 4;
-    float2 position = (FunctionCorners[cornerIndex.x] * (msize * FUNCTION_SIZE_HACK)) + center.xy;
+    float2 position = ((cornerWeights.xy * 2 - 1) * (msize * FUNCTION_SIZE_HACK)) + center.xy;
     result = TransformPosition(float4(position - GetViewportPosition(), 0, 1), 0);
     result.z = 0;
     result.w = 1;

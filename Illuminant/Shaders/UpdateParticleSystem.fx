@@ -13,6 +13,8 @@ void PS_Update (
     out float4 renderColor : COLOR2,
     out float4 renderData  : COLOR3
 ) {
+    newPosition = newVelocity = renderColor = renderData = 0;
+
     float2 xy = GET_VPOS;
     float4 oldPosition, oldVelocity, attributes;
     readStateOrDiscard(

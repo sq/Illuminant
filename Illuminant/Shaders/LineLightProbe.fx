@@ -7,7 +7,7 @@
 #include "SphereLightCore.fxh"
 
 void LineLightProbeVertexShader(
-    in int2 cornerIndex              : BLENDINDICES0,
+    in    float3 cornerWeights       : NORMAL2,
     inout float3 lightCenter         : TEXCOORD0,
     // radius, ramp length, ramp mode, enable shadows
     inout float4 lightProperties     : TEXCOORD2,
@@ -16,11 +16,10 @@ void LineLightProbeVertexShader(
     inout float4 color               : TEXCOORD4,
     out float4 result                : POSITION0
 ) {
-    DEFINE_LightCorners
     if (cornerIndex.x > 3) {
         result = float4(-9999, -9999, 0, 0);
     } else {
-        float2 clipPosition = (LightCorners[cornerIndex.x] * 9999) - 1;
+        float2 clipPosition = (cornerWeights.xy * 9999) - 1;
         result = float4(clipPosition.xy, 0, 1);
     }
 }

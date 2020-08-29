@@ -16,21 +16,14 @@ uniform float2 MinAndMaxZ;
 uniform float2 PixelSize;
 uniform float4 SliceZ;
 
-static const float2 FunctionCorners[] = {
-    { -1, -1 },
-    { 1, -1 },
-    { 1, 1 },
-    { -1, 1 }
-};
-
 void DistancePolygonVertexShader(
-    in int2 cornerIndex   : BLENDINDICES0,
-    out   float4 result   : POSITION0
+    in    float3 cornerWeights : NORMAL2,
+    out   float4 result        : POSITION0
 ) {
     // FIXME: Compute accurate size
     // float msize = max(max(abs(size.x), abs(size.y)), abs(size.z)) + getMaximumEncodedDistance() + 0.5;
     float msize = 99999;
-    float2 position = (FunctionCorners[cornerIndex.x] * msize);
+    float2 position = ((cornerWeights.xy * 2 - 1) * msize);
     result = TransformPosition(float4(position - GetViewportPosition(), 0, 1), 0);
     result.z = 0;
     result.w = 1;
