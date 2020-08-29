@@ -580,9 +580,6 @@ namespace Squared.Illuminant {
 
         private void FillCornerBuffer () {
             var buf = new CornerVertex[CornerBuffer.VertexCount];
-            for (int i = 0; i < buf.Length; i++)
-                buf[i] = new CornerVertex { Corner = (short)i, Unused = (short)i };
-
             buf[0].CornerWeights = new Vector3(0, 0, 0);
             buf[1].CornerWeights = new Vector3(1, 0, 0);
             buf[2].CornerWeights = new Vector3(1, 1, 0);
@@ -609,11 +606,6 @@ namespace Squared.Illuminant {
                 new CornerVertex { CornerWeights = new Vector3( cOne, mOne, 0 ) },
                 new CornerVertex { CornerWeights = new Vector3( 0, mOne, 0 ) }
             };
-
-            for (int i = 0; i < buf.Length; i++) {
-                buf[i].Corner = (short)i;
-                buf[i].Unused = (short)i;
-            }
 
             SphereBuffer.SetData(buf);
         }

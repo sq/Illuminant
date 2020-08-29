@@ -2,7 +2,7 @@
 #include "SphereLightCore.fxh"
 
 void SphereLightProbeVertexShader(
-    in int2 cornerIndex              : BLENDINDICES0,
+    in float3 cornerWeights              : NORMAL2,
     inout float3 lightCenter         : TEXCOORD0,
     // radius, ramp length, ramp mode, enable shadows
     inout float4 lightProperties     : TEXCOORD2,
@@ -11,13 +11,8 @@ void SphereLightProbeVertexShader(
     inout float4 color               : TEXCOORD4,
     out float4 result                : POSITION0
 ) {
-    if (cornerIndex.x > 3) {
-        result = float4(-9999, -9999, 0, 0);
-    } else {
-        DEFINE_LightCorners
-        float2 clipPosition = (LightCorners[cornerIndex.x] * 9999).xy - 1;
-        result = float4(clipPosition.xy, 0, 1);
-    }
+    float2 clipPosition = (cornerWeights.xy * 9999) - 1;
+    result = float4(clipPosition.xy, 0, 1);
 }
 
 void SphereLightProbePixelShader(
