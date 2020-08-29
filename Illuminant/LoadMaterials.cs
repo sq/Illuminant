@@ -136,12 +136,12 @@ namespace Squared.Illuminant {
 
                 LoadOneMaterial(effects, out DistanceToPolygon, 
                     "DistanceField", "DistanceToPolygon",
-                    new[] { MaterialUtil.MakeDelegate(RenderStates.MaxBlendValue) }
+                    new[] { MaterialUtil.MakeDelegate(blendState: RenderStates.MaxBlendValue) }
                 );
 
                 LoadOneMaterial(effects, out ClearDistanceFieldSlice,
                     "ClearDistanceField", null,
-                    new[] { MaterialUtil.MakeDelegate(BlendState.Opaque) }
+                    new[] { MaterialUtil.MakeDelegate(blendState: BlendState.Opaque) }
                 );
 
                 DistanceFunctionTypes = new Render.Material[(int)LightObstruction.MAX_Type + 1];
@@ -153,7 +153,7 @@ namespace Squared.Illuminant {
 
                     LoadOneMaterial(effects, out DistanceFunctionTypes[(short)i],
                         "DistanceFunction", name,
-                            new[] { MaterialUtil.MakeDelegate(RenderStates.MaxBlendValue) }
+                            new[] { MaterialUtil.MakeDelegate(blendState: RenderStates.MaxBlendValue) }
                     );
                 }
 
@@ -251,7 +251,7 @@ namespace Squared.Illuminant {
 
                 LoadOneMaterial(effects, out ScreenSpaceVectorWarp,
                     "VectorWarp", "ScreenSpaceVectorWarp", 
-                    new [] { MaterialUtil.MakeDelegate(BlendState.AlphaBlend) }
+                    new [] { MaterialUtil.MakeDelegate(blendState: BlendState.AlphaBlend) }
                 );
             }
         }
