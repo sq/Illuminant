@@ -28,7 +28,6 @@ void DirectionalLightVertexShader(
     out float4   result              : POSITION0
 ) {
     // FIXME: Z
-    DEFINE_LightCorners
     worldPosition = lerp(lightPositionMin, lightPositionMax, cornerWeights.xyz);
     float3 screenPosition = (worldPosition - float3(GetViewportPosition(), 0));
     screenPosition.xy *= GetViewportScale() * getEnvironmentRenderScale();
@@ -44,13 +43,8 @@ void DirectionalLightProbeVertexShader(
     inout float4 color               : TEXCOORD4,
     out float4   result              : POSITION0
 ) {
-    if (cornerIndex.x > 3) {
-        result = float4(-9999, -9999, 0, 0);
-    } else {
-        DEFINE_LightCorners
-        float2 clipPosition = (cornerWeights.xy * 99999) - 1;
-        result = float4(clipPosition.xy, 0, 1);
-    }
+    float2 clipPosition = (cornerWeights.xy * 99999) - 1;
+    result = float4(clipPosition.xy, 0, 1);
 }
 
 float DirectionalLightPixelCore(

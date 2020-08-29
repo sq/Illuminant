@@ -16,12 +16,8 @@ void LineLightProbeVertexShader(
     inout float4 color               : TEXCOORD4,
     out float4 result                : POSITION0
 ) {
-    if (cornerIndex.x > 3) {
-        result = float4(-9999, -9999, 0, 0);
-    } else {
-        float2 clipPosition = (cornerWeights.xy * 9999) - 1;
-        result = float4(clipPosition.xy, 0, 1);
-    }
+    float2 clipPosition = (cornerWeights.xy * 9999) - 1;
+    result = float4(clipPosition.xy, 0, 1);
 }
 
 void LineLightProbePixelShader(

@@ -106,7 +106,6 @@ namespace Squared.Illuminant {
         public Vector3 Center;
         public Vector3 Size;
         public float Rotation;
-        // public short Type, Unused;
 
         public static VertexDeclaration _VertexDeclaration;
 
@@ -117,7 +116,6 @@ namespace Squared.Illuminant {
                 new VertexElement(Marshal.OffsetOf(tThis, "Center").ToInt32(),   VertexElementFormat.Vector3, VertexElementUsage.TextureCoordinate, 0),
                 new VertexElement(Marshal.OffsetOf(tThis, "Size").ToInt32(),     VertexElementFormat.Vector3, VertexElementUsage.TextureCoordinate, 1),
                 new VertexElement(Marshal.OffsetOf(tThis, "Rotation").ToInt32(), VertexElementFormat.Single,  VertexElementUsage.TextureCoordinate, 2)
-//                new VertexElement(Marshal.OffsetOf(tThis, "Type").ToInt32(),     VertexElementFormat.Short2,  VertexElementUsage.BlendIndices, 1)
             );
         }
 
@@ -173,6 +171,7 @@ namespace Squared.Illuminant {
         public Vector2 Position;
         public short Corner;
         public short Unused;
+        public Vector3 CornerWeights;
 
         public static VertexDeclaration _VertexDeclaration;
 
@@ -180,6 +179,11 @@ namespace Squared.Illuminant {
             Position = new Vector2(x, y);
             Corner = corner;
             Unused = corner;
+            CornerWeights = new Vector3(
+                (corner == 1) || (corner == 2) ? 1 : 0,
+                (corner >= 2) ? 1 : 0,
+                0
+            );
         }
 
         static ParticleSystemVertex () {
@@ -188,7 +192,9 @@ namespace Squared.Illuminant {
             _VertexDeclaration = new VertexDeclaration(
                 new VertexElement(Marshal.OffsetOf(tThis, "Position").ToInt32(),  VertexElementFormat.Vector2, VertexElementUsage.Position, 0),
                 new VertexElement(Marshal.OffsetOf(tThis, "Corner").ToInt32(), 
-                    VertexElementFormat.Short2, VertexElementUsage.BlendIndices, 0 )
+                    VertexElementFormat.Short2, VertexElementUsage.BlendIndices, 0 ),
+                new VertexElement(Marshal.OffsetOf(tThis, "CornerWeights").ToInt32(),
+                    VertexElementFormat.Vector3, VertexElementUsage.Normal, 2)
             );
         }
 

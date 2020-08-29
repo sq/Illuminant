@@ -11,7 +11,7 @@
 #define SHADOW_OPACITY_THRESHOLD (0.75 / 255.0)
 
 void SphereLightVertexShader(
-    in int2 vertexIndex              : BLENDINDICES0,
+    in float3 cornerWeights          : NORMAL2,
     inout float3 lightCenter         : TEXCOORD0,
     // radius, ramp length, ramp mode, enable shadows
     inout float4 lightProperties     : TEXCOORD2,
@@ -21,8 +21,7 @@ void SphereLightVertexShader(
     out float3 worldPosition         : POSITION1,
     out float4 result                : POSITION0
 ) {
-    DEFINE_ClippedLightVertices
-    float3 vertex = ClippedLightVertices[vertexIndex.x];
+    float3 vertex = cornerWeights.xyz;
 
     float  radius = lightProperties.x + lightProperties.y + 1;
     float  deltaY = (radius) - (radius / moreLightProperties.z);
