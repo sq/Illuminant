@@ -151,9 +151,7 @@ void readState (
     out float4 attributes
 ) {
     float4 uv = float4(xy * getTexel(), 0, 0);
-    position = tex2Dlod(PositionSampler, uv);
-    velocity = tex2Dlod(VelocitySampler, uv);
-    attributes = tex2Dlod(AttributeSampler, uv);
+    readStateUv(uv, position, velocity, attributes);
 }
 
 void readStatePV (
@@ -176,8 +174,12 @@ void readStateOrDiscard (
     position = tex2Dlod(PositionSampler, uv);
 
     // To support occlusion queries and reduce bandwidth used by dead particles
-    if (position.w <= 0)
+    if (position.w <= 0) {
+        velocity = 0;
+        attributes = 1;
         discard;
+        return;
+    }
 
     velocity = tex2Dlod(VelocitySampler, uv);
     attributes = tex2Dlod(AttributeSampler, uv);

@@ -1,5 +1,5 @@
 // In release FNA the texCoord of particles always has an x of 0
-#pragma fxcparams(if(FNA==1) /Od /Zi)
+#pragma fxcparams(/O3 /Zi)
 
 #define ENABLE_DITHERING
 
@@ -44,15 +44,16 @@ sampler BitmapPointSampler {
 inline float3 ComputeRotatedAndNonRotatedCorner (
     in float3 cornerWeights, in float angle, in float2 size, out float2 nonRotatedUnit
 ) {    
-    float3 corner = (cornerWeights.xyz * 2 - 1) * float3(size.x, size.y, 1), sinCos;
+    float2 corner = (cornerWeights.xy * 2 - 1) * size;
     nonRotatedUnit = cornerWeights.xy;
 
+    float2 sinCos;
     sincos(angle, sinCos.x, sinCos.y);
 
     return float3(
         (sinCos.y * corner.x) - (sinCos.x * corner.y),
         (sinCos.x * corner.x) + (sinCos.y * corner.y),
-        corner.z
+        0
     );
 }
 
