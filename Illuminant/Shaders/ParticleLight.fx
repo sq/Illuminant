@@ -1,6 +1,8 @@
 // Results in /Od are sometimes incorrect
 #pragma fxcparams(/O3 /Zi)
 
+#define ENABLE_STIPPLE 1
+
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\DitherCommon.fxh"
 #include "SphereLightCore.fxh"
