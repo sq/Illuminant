@@ -252,7 +252,7 @@ namespace Squared.Illuminant {
                 Array.Clear(result.PrimCount, 0, result.PrimCount.Length);
 
                 items.CopyTo(buffer.Data);
-                Sort.FastCLRSortRef(buffer.Data, LightObstructionTypeComparer.Instance, 0, items.Count);
+                Sort.FastCLRSortRef(new ArraySegment<LightObstruction>(buffer.Data), LightObstructionTypeComparer.Instance, 0, items.Count);
                 
                 result.IsDirty = true;
                 result.EnsureSize(items.Count);

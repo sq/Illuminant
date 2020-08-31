@@ -312,7 +312,7 @@ namespace Squared.Illuminant {
             BillboardVertexScratch.EnsureCapacity(BillboardScratch.Count * 4);
             BillboardVertexScratch.Clear();
 
-            var verts = BillboardVertexScratch.GetBuffer();
+            var verts = BillboardVertexScratch.GetBufferArray();
 
             Texture2D previousTexture = null;
             BillboardType previousType = (BillboardType)(int)-99;

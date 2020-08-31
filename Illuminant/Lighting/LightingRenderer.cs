@@ -230,7 +230,7 @@ namespace Squared.Illuminant {
                     }
 
                     if (vertexCapacity > 0)
-                        LightVertexBuffer.SetData(LightVertices.GetBuffer(), 0, vertexCapacity, SetDataOptions.Discard);
+                        LightVertexBuffer.SetData(LightVertices.GetBufferArray(), 0, vertexCapacity, SetDataOptions.Discard);
                 }
             }
 
@@ -986,8 +986,8 @@ namespace Squared.Illuminant {
                         using (var buffer = BufferPool<LightSource>.Allocate(Environment.Lights.Count)) {
                             Array.Clear(buffer.Data, 0, buffer.Data.Length);
                             Environment.Lights.CopyTo(buffer.Data);
-                            Squared.Util.Sort.FastCLRSortRef(
-                                buffer.Data, LightSorter.Instance, 0, Environment.Lights.Count
+                            Sort.FastCLRSortRef(
+                                new ArraySegment<LightSource>(buffer.Data), LightSorter.Instance, 0, Environment.Lights.Count
                             );
 
                             // var renderedLights = new HashSet<LightSource>(new ReferenceComparer<LightSource>());
