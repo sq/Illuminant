@@ -33,6 +33,42 @@ namespace Squared.Illuminant {
             return sliceZ * Environment.MaximumZ;
         }
 
+        private class BeginSliceBatchArgs {
+            public AutoRenderTarget RenderTarget;
+            public int SliceX, SliceY;
+            public ViewTransform ViewTransform;
+        }
+
+        private void _BeginSliceBatch (DeviceManager dm, object userData) {
+            var args = (BeginSliceBatchArgs)userData;
+            var df = _DistanceField;
+            var ddf = _DistanceField as DynamicDistanceField;
+
+            // FIXME: dynamic/static split
+            if (df.NeedClear) {
+                df.NeedClear = false;
+                dm.Device.Clear(Color.Transparent);
+            }
+
+            dm.AssertRenderTarget(args.RenderTarget.Get());
+
+            // TODO: Optimize this
+            dm.Device.ScissorRectangle = new Rectangle(
+                args.SliceX, args.SliceY, df.SliceWidth, df.SliceHeight
+            );
+
+            var m = IlluminantMaterials.DistanceToPolygon;
+
+            Materials.ApplyViewTransformToMaterial(IlluminantMaterials.ClearDistanceFieldSlice, ref args.ViewTransform);
+            Materials.ApplyViewTransformToMaterial(m, ref args.ViewTransform);
+            SetDistanceFieldParameters(m, false, Configuration.DefaultQuality);
+
+            foreach (var m2 in IlluminantMaterials.DistanceFunctionTypes) {
+                Materials.ApplyViewTransformToMaterial(m2, ref args.ViewTransform);
+                SetDistanceFieldParameters(m2, false, Configuration.DefaultQuality);
+            }
+        }
+
         private void RenderDistanceFieldSliceTriplet (
             AutoRenderTarget renderTarget, BatchGroup rtGroup, 
             int physicalSliceIndex, int firstVirtualSliceIndex, 
@@ -55,35 +91,17 @@ namespace Squared.Illuminant {
             );
             viewTransform.Position = new Vector2(-sliceXVirtual, -sliceYVirtual);
 
-            Action<DeviceManager, object> beginSliceBatch =
-                (dm, _) => {
-                    // FIXME: dynamic/static split
-                    if (df.NeedClear) {
-                        df.NeedClear = false;
-                        dm.Device.Clear(Color.Transparent);
-                    }
-
-                    dm.AssertRenderTarget(renderTarget.Get());
-
-                    // TODO: Optimize this
-                    dm.Device.ScissorRectangle = new Rectangle(
-                        sliceX, sliceY, df.SliceWidth, df.SliceHeight
-                    );
-
-                    Materials.ApplyViewTransformToMaterial(IlluminantMaterials.ClearDistanceFieldSlice, ref viewTransform);
-                    Materials.ApplyViewTransformToMaterial(m, ref viewTransform);
-                    SetDistanceFieldParameters(m, false, Configuration.DefaultQuality);
-
-                    foreach (var m2 in IlluminantMaterials.DistanceFunctionTypes) {
-                        Materials.ApplyViewTransformToMaterial(m2, ref viewTransform);
-                        SetDistanceFieldParameters(m2, false, Configuration.DefaultQuality);
-                    }
-                };
-
             var lastVirtualSliceIndex = firstVirtualSliceIndex + 2;
+            var args = new BeginSliceBatchArgs {
+                RenderTarget = renderTarget,
+                ViewTransform = viewTransform,
+                SliceX = sliceX,
+                SliceY = sliceY
+            };
 
-            using (var group = BatchGroup.New(rtGroup, layer++,
-                beginSliceBatch, null
+            using (var group = BatchGroup.New(
+                rtGroup, layer++,
+                BeginSliceBatch, null, args
             )) {
                 if (RenderTrace.EnableTracing)
                     RenderTrace.Marker(group, -2, "LightingRenderer {0} : Begin Distance Field Slices [{1}-{2}]", this.ToObjectID(), firstVirtualSliceIndex, lastVirtualSliceIndex);
@@ -201,6 +219,17 @@ namespace Squared.Illuminant {
             }
         }
 
+        private void _BeginClearSliceBatch (DeviceManager dm, object userData) {
+            var material = IlluminantMaterials.ClearDistanceFieldSlice;
+            var clearTexture = (Texture2D)userData;
+            material.Effect.Parameters["ClearTexture"].SetValue(clearTexture ?? _DummyDistanceFieldTexture);
+            material.Effect.Parameters["ClearMultiplier"].SetValue(clearTexture != null ? Vector4.One : Vector4.Zero);
+            material.Effect.Parameters["ClearInverseScale"].SetValue(new Vector2(
+                1.0f / (_DistanceField.SliceWidth * _DistanceField.ColumnCount), 
+                1.0f / (_DistanceField.SliceHeight * _DistanceField.RowCount)
+            ));
+        }
+
         private void ClearDistanceFieldSlice (
             short[] indices, IBatchContainer container, int layer, int firstSliceIndex, Texture2D clearTexture
         ) {
@@ -214,17 +243,8 @@ namespace Squared.Illuminant {
                 new VertexPositionColor(new Vector3(0, _DistanceField.VirtualHeight, 0), color)
             };
 
-            var material = IlluminantMaterials.ClearDistanceFieldSlice;
             using (var batch = PrimitiveBatch<VertexPositionColor>.New(
-                container, layer, material,
-                (dm, _) => {
-                    material.Effect.Parameters["ClearTexture"].SetValue(clearTexture ?? _DummyDistanceFieldTexture);
-                    material.Effect.Parameters["ClearMultiplier"].SetValue(clearTexture != null ? Vector4.One : Vector4.Zero);
-                    material.Effect.Parameters["ClearInverseScale"].SetValue(new Vector2(
-                        1.0f / (_DistanceField.SliceWidth * _DistanceField.ColumnCount), 
-                        1.0f / (_DistanceField.SliceHeight * _DistanceField.RowCount)
-                    ));
-                }
+                container, layer, IlluminantMaterials.ClearDistanceFieldSlice, BeginClearSliceBatch, clearTexture
             ))
                 batch.Add(new PrimitiveDrawCall<VertexPositionColor>(
                     PrimitiveType.TriangleList,

@@ -45,14 +45,14 @@ namespace Squared.Illuminant {
             _LightProbeValueBuffers.MarkRenderComplete(buffer);
         }
 
-        private void UpdateLightProbes (IBatchContainer container, int layer, RenderTarget2D renderTarget, bool isForGi, float intensityScale) {
+        private void UpdateLightProbes (IBatchContainer container, int layer, RenderTarget2D renderTarget, float intensityScale) {
             using (var lightProbeGroup = BatchGroup.ForRenderTarget(
                 container, layer, renderTarget, 
-                before: BeginLightProbePass, after: isForGi ? EndGIProbePass : EndLightProbePass,
+                before: BeginLightProbePass, after: EndLightProbePass,
                 userData: renderTarget, name: "Update light probes"
             )) {
                 if (RenderTrace.EnableTracing)
-                    RenderTrace.Marker(lightProbeGroup, -2, "LightingRenderer {0} : Update {1} probes", this.ToObjectID(), isForGi ? "GI" : "Light");
+                    RenderTrace.Marker(lightProbeGroup, -2, "LightingRenderer {0} : Update light probes", this.ToObjectID());
 
                 ClearBatch.AddNew(
                     lightProbeGroup, -1, Materials.Clear, Color.Transparent
@@ -69,7 +69,7 @@ namespace Squared.Illuminant {
                         RenderTrace.Marker(lightProbeGroup, layerIndex++, "LightingRenderer {0} : Render {1} {2} light(s)", this.ToObjectID(), count, ltrs.Key.Type);
 
                     using (var nb = NativeBatch.New(
-                        lightProbeGroup, layerIndex++, ltrs.ProbeMaterial, isForGi ? GIProbeBatchSetup : LightProbeBatchSetup, userData: ltrs
+                        lightProbeGroup, layerIndex++, ltrs.ProbeMaterial, LightProbeBatchSetup, userData: ltrs
                     )) {
                         var cornerBuffer = ltrs.GetCornerBuffer(true);
                         nb.Add(new NativeDrawCall(

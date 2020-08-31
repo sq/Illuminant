@@ -367,10 +367,10 @@ namespace Squared.Illuminant {
         private readonly Action<DeviceManager, object>
             BeginLightPass, EndLightPass, BeginLightProbePass, EndLightProbePass,
             IlluminationBatchSetup, LightProbeBatchSetup,
-            GIProbeBatchSetup, EndGIProbePass,
             ParticleLightBatchSetup, BeforeLuminanceBufferUpdate,
             BeforeRenderGBuffer, AfterRenderGBuffer,
-            GBufferBillboardBatchSetup, AfterLuminanceBufferUpdate;
+            GBufferBillboardBatchSetup, AfterLuminanceBufferUpdate,
+            BeginSliceBatch, BeginClearSliceBatch;
 
         // FIXME: Thread sync issue?
         private Vector2? PendingDrawViewportPosition, PendingDrawViewportScale;
@@ -427,7 +427,9 @@ namespace Squared.Illuminant {
             AfterLuminanceBufferUpdate    = _AfterLuminanceBufferUpdate;
             BeforeRenderGBuffer           = _BeforeRenderGBuffer;
             AfterRenderGBuffer            = _AfterRenderGBuffer;
-            GBufferBillboardBatchSetup = _GBufferBillboardBatchSetup;
+            GBufferBillboardBatchSetup    = _GBufferBillboardBatchSetup;
+            BeginSliceBatch               = _BeginSliceBatch;
+            BeginClearSliceBatch          = _BeginClearSliceBatch;
 
             InitBuffers(coordinator);
 
@@ -1106,7 +1108,7 @@ namespace Squared.Illuminant {
                             UpdateLightProbeTexture();
                             Probes.IsDirty = false;
                         }
-                        UpdateLightProbes(outerGroup, baseLayer, lightProbe.Buffer, false, intensityScale);
+                        UpdateLightProbes(outerGroup, baseLayer, lightProbe.Buffer, intensityScale);
                     }
                 }
 
