@@ -11,6 +11,7 @@ using Squared.Game;
 using Squared.Illuminant;
 using Squared.Render;
 using Squared.Render.Convenience;
+using Squared.Render.RasterShape;
 using Squared.Util;
 
 namespace TestGame.Scenes {
@@ -27,7 +28,8 @@ namespace TestGame.Scenes {
             BandSize,
             RangeMin,
             RangeMax,
-            LightSize;
+            LightSize,
+            Zoom;
 
         public DitheringTest (TestGame game, int width, int height)
             : base(game, width, height) {
@@ -37,6 +39,7 @@ namespace TestGame.Scenes {
             BandSize.Value = 1;
             RangeMax.Value = 1;
             LightSize.Value = 0.95f;
+            Zoom.Value = 3;
 
             sRGB.Key = Keys.S;
 
@@ -47,6 +50,10 @@ namespace TestGame.Scenes {
 
             LightSize.Speed = 0.05f;
             LightSize.Max = 2.0f;
+
+            Zoom.Min = 1;
+            Zoom.Max = 4;
+            Zoom.Integral = true;
 
             InitUnitSlider(Strength, BandSize, RangeMax, RangeMin);
         }
@@ -97,7 +104,6 @@ namespace TestGame.Scenes {
             // Renderer.DistanceField = new DistanceField(Game.RenderCoordinator, 1024, 1024, 128, 3);
 
             Environment.Lights.Add(new SphereLightSource {
-                Position = new Vector3(Width / 2f, Height / 2f, 0),
                 Radius = 4,
                 Color = Vector4.One * 1f
             });
@@ -111,8 +117,8 @@ namespace TestGame.Scenes {
             CreateRenderTargets();
 
             var l = Environment.Lights.OfType<SphereLightSource>().First();
-            l.RampLength = Width * LightSize;
-            l.Position.X = Width * (1 - LightSize);
+            l.RampLength = Width * LightSize / Zoom * 0.85f;
+            l.Position = new Vector3(Width / Zoom / 2f * 0.33f, Height / Zoom / 2f * 0.8f, 0);
 
             Renderer.UpdateFields(frame, -2);
             Environment.Lights.OfType<SphereLightSource>().First().RampMode =
@@ -151,6 +157,19 @@ namespace TestGame.Scenes {
                     bg, 2, Width, Height, 
                     hdr: hdr
                 );
+
+                var ir = new ImperativeRenderer(bg, Game.Materials, layer: 3, blendState: BlendState.Opaque);
+                ir.RasterBlendInLinearSpace = false;
+                ir.RasterizeRectangle(
+                    new Vector2(4, 4), new Vector2(512, 24), radius: 2, outlineRadius: 2, 
+                    outlineColor: Color.Black, innerColor: Color.Black, outerColor: Color.White, 
+                    fillMode: RasterFillMode.Horizontal
+                );
+                ir.RasterizeRectangle(
+                    new Vector2(4, 28), new Vector2(512, 48), radius: 2, outlineRadius: 2, 
+                    outlineColor: Color.Black, innerColor: Color.Red, outerColor: Color.Blue, 
+                    fillMode: RasterFillMode.Horizontal
+                );
             };
 
             using (var group = BatchGroup.New(frame, 0)) {
@@ -159,9 +178,9 @@ namespace TestGame.Scenes {
                 using (var bb = BitmapBatch.New(
                     group, 1,
                     Game.Materials.Get(Game.Materials.ScreenSpaceBitmap, blendState: BlendState.Opaque),
-                    samplerState: SamplerState.LinearClamp
+                    samplerState: SamplerState.PointClamp
                 ))
-                    bb.Add(new BitmapDrawCall(Lightmap, Vector2.Zero));
+                    bb.Add(new BitmapDrawCall(Lightmap, Vector2.Zero, scale: Zoom));
             }
         }
 
