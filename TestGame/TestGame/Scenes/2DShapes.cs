@@ -23,14 +23,19 @@ using Nuke = NuklearDotNet.Nuklear;
 namespace TestGame.Scenes {
     // These aren't illuminant specific but who cares
     public class Shapes : Scene {
-        Toggle AnimateRadius, AnimateBezier, BlendInLinearSpace, GradientAlongLine, UseTexture, HardOutlines, WorldSpace;
-        Slider Gamma, ArcLength, OutlineSize, FillOffset;
+        Toggle AnimateRadius, AnimateBezier, BlendInLinearSpace, GradientAlongLine, UseTexture, HardOutlines, WorldSpace, RepeatFill;
+        Slider Gamma, ArcLength, OutlineSize, FillOffset, FillSize, FillAngle, AnnularRadius;
 
+        [Items("Natural")]
         [Items("Linear")]
+        [Items("LinearEnclosed")]
+        [Items("LinearEnclosing")]
         [Items("Radial")]
+        [Items("RadialEnclosed")]
+        [Items("RadialEnclosing")]
         [Items("Horizontal")]
         [Items("Vertical")]
-        [Items("LinearEnclosed")]
+        [Items("Angular")]
         Dropdown<string> FillMode;
 
         Texture2D Texture;
@@ -51,10 +56,21 @@ namespace TestGame.Scenes {
             ArcLength.Value = 45f;
             ArcLength.Speed = 5f;
             HardOutlines.Value = true;
-            FillMode.Value = "Linear";
+            FillMode.Value = "Natural";
             FillOffset.Min = -1f;
             FillOffset.Max = 1f;
             FillOffset.Speed = 0.1f;
+            FillSize.Value = 1f;
+            FillSize.Min = 0.05f;
+            FillSize.Max = 4f;
+            FillSize.Speed = 0.05f;
+            AnnularRadius.Value = 0f;
+            AnnularRadius.Min = 0f;
+            AnnularRadius.Max = 32f;
+            AnnularRadius.Speed = 0.25f;
+            FillAngle.Min = 0f;
+            FillAngle.Max = 360f;
+            FillAngle.Speed = 2f;
         }
 
         public override void LoadContent () {
@@ -75,6 +91,9 @@ namespace TestGame.Scenes {
                 viewTransform: vt
             );
 
+            var fillSize = FillSize * (RepeatFill ? -1 : 1);
+            var fillMode = (RasterFillMode)Enum.Parse(typeof(RasterFillMode), FillMode.Value);
+
             var ir = new ImperativeRenderer(batch, Game.Materials, blendState: BlendState.AlphaBlend);
             ir.Clear(layer: 0, color: new Color(0, 32, 48));
             ir.RasterOutlineGamma = Gamma.Value;
@@ -86,32 +105,47 @@ namespace TestGame.Scenes {
 
             ir.RasterizeEllipse(
                 Vector2.One * 600, new Vector2(420, 360), OutlineSize, 
-                Color.White, 
-                Color.Black, 
+                innerColor: Color.White, 
+                outerColor: Color.Black, 
                 outlineColor: Color.White, 
                 layer: 1,
-                fillMode: (RasterFillMode)Enum.Parse(typeof(RasterFillMode), FillMode.Value),
-                fillOffset: FillOffset
+                fillMode: fillMode,
+                fillOffset: FillOffset,
+                fillSize: fillSize,
+                fillAngle: FillAngle,
+                annularRadius: AnnularRadius
             );
 
             ir.RasterizeLineSegment(
                 new Vector2(32, 32), new Vector2(1024, 64), 1, 8, OutlineSize, 
-                Color.White, Color.Black,
+                innerColor: Color.White, 
+                outerColor: Color.Black, 
                 outlineColor: Color.Red,
+                fillMode: fillMode,
+                fillOffset: FillOffset,
+                fillSize: fillSize,
+                fillAngle: FillAngle,
+                annularRadius: AnnularRadius,
                 gradientAlongLine: GradientAlongLine, 
                 layer: 1
             );
 
+            float animatedRadius = (AnimateRadius.Value
+                    ? Arithmetic.PulseSine(now / 3f, 0, 32)
+                    : 0f);
+
             var tl = new Vector2(80, 112);
             var br = new Vector2(512, 400);
             ir.RasterizeRectangle(
-                tl, br, (AnimateRadius.Value 
-                    ? Arithmetic.PulseSine(now / 3f, 0, 32)
-                    : 0f), OutlineSize * 2f, 
-                Color.Black, Color.White,
+                tl, br, animatedRadius, OutlineSize, 
+                innerColor: Color.White, 
+                outerColor: Color.Black, 
                 outlineColor: Color.Blue,
-                fillMode: (RasterFillMode)Enum.Parse(typeof(RasterFillMode), FillMode.Value),
+                fillMode: fillMode,
                 fillOffset: FillOffset,
+                fillSize: fillSize,
+                fillAngle: FillAngle,
+                annularRadius: AnnularRadius,
                 layer: 1,
                 texture: UseTexture ? Texture : null
             );
@@ -143,18 +177,33 @@ namespace TestGame.Scenes {
 
             ir.RasterizeTriangle(
                 new Vector2(640, 96), new Vector2(1200, 256), new Vector2(800, 512), 
-                1, OutlineSize,
-                Color.Black, Color.White, outlineColor: Color.Blue,
+                animatedRadius, OutlineSize,
+                innerColor: Color.White, 
+                outerColor: Color.Black, 
+                outlineColor: Color.Blue,
+                fillMode: fillMode,
                 fillOffset: FillOffset,
+                fillSize: fillSize,
+                fillAngle: FillAngle,
+                annularRadius: AnnularRadius,
                 layer: 2,
                 texture: UseTexture ? Texture : null
             );
+
+            ir.RasterizeEllipse(new Vector2(200, 860), Vector2.One * 3, Color.Yellow, layer: 4);
 
             ir.RasterizeArc(
                 new Vector2(200, 860),
                 AnimateBezier ? (float)(Time.Seconds) * 60f : 0f, ArcLength,
                 120, 8, OutlineSize,
-                Color.White, Color.Black, Color.Blue,
+                innerColor: Color.White, 
+                outerColor: Color.Black, 
+                outlineColor: Color.Blue,
+                fillMode: fillMode,
+                fillOffset: FillOffset,
+                fillSize: fillSize,
+                fillAngle: FillAngle,
+                annularRadius: AnnularRadius,
                 layer: 2
             );
 
@@ -168,7 +217,15 @@ namespace TestGame.Scenes {
                 b = new Vector2(1200, 64);
 
             ir.RasterizeQuadraticBezier(
-                a, b, c, 8, OutlineSize, Color.White, Color.Black, Color.Red,
+                a, b, c, 8, OutlineSize,
+                innerColor: Color.White, 
+                outerColor: Color.Black, 
+                outlineColor: Color.Red,
+                fillMode: fillMode,
+                fillOffset: FillOffset,
+                fillSize: fillSize,
+                fillAngle: FillAngle,
+                annularRadius: AnnularRadius,
                 layer: 3
             );
 

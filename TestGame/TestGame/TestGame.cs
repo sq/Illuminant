@@ -180,7 +180,7 @@ namespace TestGame {
             var settings = scene.Settings;
 
             var isWindowOpen = Nuke.nk_begin(
-                ctx, "Settings", new NuklearDotNet.NkRect(Graphics.PreferredBackBufferWidth - 504, Graphics.PreferredBackBufferHeight - 454, 500, 450),
+                ctx, "Settings", new NuklearDotNet.NkRect(Graphics.PreferredBackBufferWidth - 508, Graphics.PreferredBackBufferHeight - 758, 500, 750),
                 (uint)(NuklearDotNet.NkPanelFlags.Title | NuklearDotNet.NkPanelFlags.Border |
                 NuklearDotNet.NkPanelFlags.Movable | NuklearDotNet.NkPanelFlags.Minimizable |
                 NuklearDotNet.NkPanelFlags.Scalable)
