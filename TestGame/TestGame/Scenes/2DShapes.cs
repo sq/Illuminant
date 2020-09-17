@@ -24,7 +24,7 @@ namespace TestGame.Scenes {
     // These aren't illuminant specific but who cares
     public class Shapes : Scene {
         Toggle AnimateRadius, AnimateBezier, BlendInLinearSpace, GradientAlongLine, UseTexture, HardOutlines, WorldSpace, RepeatFill;
-        Slider Gamma, ArcLength, OutlineSize, FillOffset, FillSize, FillAngle, AnnularRadius;
+        Slider Gamma, ArcLength, OutlineSize, FillOffset, FillSize, FillAngle, AnnularRadius, ShadowSoftness, ShadowOffset, ShadowOpacity;
 
         [Items("Natural")]
         [Items("Linear")]
@@ -71,6 +71,18 @@ namespace TestGame.Scenes {
             FillAngle.Min = 0f;
             FillAngle.Max = 360f;
             FillAngle.Speed = 2f;
+            ShadowOffset.Min = -16f;
+            ShadowOffset.Max = 16f;
+            ShadowOffset.Value = 2f;
+            ShadowOffset.Speed = 0.5f;
+            ShadowOpacity.Min = 0f;
+            ShadowOpacity.Max = 1f;
+            ShadowOpacity.Value = 1f;
+            ShadowOpacity.Speed = 0.1f;
+            ShadowSoftness.Min = 0f;
+            ShadowSoftness.Max = 32f;
+            ShadowSoftness.Speed = 0.25f;
+            ShadowSoftness.Value = 4f;
         }
 
         public override void LoadContent () {
@@ -100,6 +112,10 @@ namespace TestGame.Scenes {
             ir.RasterBlendInLinearSpace = BlendInLinearSpace.Value;
             ir.RasterSoftOutlines = !HardOutlines.Value;
             ir.WorldSpace = WorldSpace;
+
+            ir.RasterShadow.Color = new pSRGBColor(0.2f, 0f, 0.1f, 1f) * ShadowOpacity;
+            ir.RasterShadow.Softness = ShadowSoftness;
+            ir.RasterShadow.Offset = new Vector2(ShadowOffset);
 
             var now = (float)Time.Seconds;
 
