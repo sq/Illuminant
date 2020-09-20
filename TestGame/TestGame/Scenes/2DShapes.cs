@@ -245,6 +245,8 @@ namespace TestGame.Scenes {
                 layer: 3
             );
 
+            ir.RasterShadow = default(RasterShadowSettings);
+
             ir.RasterizeEllipse(a, Vector2.One * 3, Color.Yellow, layer: 4);
             ir.RasterizeEllipse(b, Vector2.One * 3, Color.Yellow, layer: 4);
             ir.RasterizeEllipse(c, Vector2.One * 3, Color.Yellow, layer: 4);
