@@ -16,6 +16,7 @@ using Squared.Util;
 using Microsoft.Xna.Framework.Input;
 using System.Threading;
 using System.Collections;
+using Squared.Util.Text;
 
 namespace Framework {
     public interface INuklearHost {

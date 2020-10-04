@@ -483,7 +483,7 @@ namespace TestGame.Scenes {
 
                 Renderer.Configuration.DefaultQuality.MaxStepCount =
                     (Timelapse & !Deterministic)
-                        ? (int)Arithmetic.Wrap(time * (MaxStepCount / 8.0f), 1, MaxStepCount)
+                        ? (int)Arithmetic.WrapExclusive(time * (MaxStepCount / 8.0f), 1, MaxStepCount)
                         : MaxStepCount;
 
                 DirectionalQuality.MaxStepCount =

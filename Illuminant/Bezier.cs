@@ -769,18 +769,18 @@ namespace Squared.Illuminant.Uniforms {
 
                 if (invDivisor < 0) {
                     // FIXME: Not sure this is right
-                    t = 2 - Arithmetic.Wrap(t, 0, 2);
+                    t = 2 - Arithmetic.WrapExclusive(t, 0, 2);
                 } else
-                    t = Arithmetic.Wrap(t, 0, 2);
+                    t = Arithmetic.WrapExclusive(t, 0, 2);
 
                 if (t > 1)
                     t = 1 - (t - 1);
             } else if (repeating) {
                 if (invDivisor < 0) {
                     // FIXME: Not sure this is right
-                    t = 1 - Arithmetic.Wrap(t, 0, 1);
+                    t = 1 - Arithmetic.WrapExclusive(t, 0, 1);
                 } else
-                    t = Arithmetic.Wrap(t, 0, 1);
+                    t = Arithmetic.WrapExclusive(t, 0, 1);
             } else {
                 if (invDivisor < 0)
                     t = 1 - Arithmetic.Clamp(t, 0, 1);

@@ -23,7 +23,7 @@ using Nuke = NuklearDotNet.Nuklear;
 namespace TestGame.Scenes {
     // These aren't illuminant specific but who cares
     public class Shapes : Scene {
-        Toggle AnimateRadius, AnimateBezier, BlendInLinearSpace, GradientAlongLine, UseTexture, HardOutlines, WorldSpace, RepeatFill;
+        Toggle AnimateRadius, AnimateBezier, BlendInLinearSpace, GradientAlongLine, UseTexture, UseRamp, HardOutlines, WorldSpace, RepeatFill, ShadowInside;
         Slider Gamma, ArcLength, OutlineSize, FillOffset, FillSize, FillAngle, AnnularRadius, ShadowSoftness, ShadowOffset, ShadowOpacity;
 
         [Items("Natural")]
@@ -38,7 +38,7 @@ namespace TestGame.Scenes {
         [Items("Angular")]
         Dropdown<string> FillMode;
 
-        Texture2D Texture;
+        Texture2D Texture, RampTexture;
 
         public Shapes (TestGame game, int width, int height)
             : base(game, width, height) {
@@ -87,6 +87,7 @@ namespace TestGame.Scenes {
 
         public override void LoadContent () {
             Texture = Game.TextureLoader.Load("template");
+            RampTexture = Game.TextureLoader.Load("custom-gradient");
         }
 
         public override void UnloadContent () {
@@ -116,6 +117,7 @@ namespace TestGame.Scenes {
             ir.RasterShadow.Color = new pSRGBColor(0.2f, 0f, 0.1f, 1f) * ShadowOpacity;
             ir.RasterShadow.Softness = ShadowSoftness;
             ir.RasterShadow.Offset = new Vector2(ShadowOffset);
+            ir.RasterShadow.Inside = ShadowInside;
 
             var now = (float)Time.Seconds;
 
@@ -129,7 +131,9 @@ namespace TestGame.Scenes {
                 fillOffset: FillOffset,
                 fillSize: fillSize,
                 fillAngle: FillAngle,
-                annularRadius: AnnularRadius
+                annularRadius: AnnularRadius,
+                texture: UseTexture ? Texture : null,
+                rampTexture: UseRamp ? RampTexture : null
             );
 
             ir.RasterizeLineSegment(
@@ -143,17 +147,20 @@ namespace TestGame.Scenes {
                 fillAngle: FillAngle,
                 annularRadius: AnnularRadius,
                 gradientAlongLine: GradientAlongLine, 
+                rampTexture: UseRamp ? RampTexture : null,
                 layer: 1
             );
 
             float animatedRadius = (AnimateRadius.Value
-                    ? Arithmetic.PulseSine(now / 3f, 0, 32)
-                    : 0f);
+                    ? Arithmetic.PulseSine(now / 3f, 2, 32)
+                    : 2f);
 
             var tl = new Vector2(80, 112);
             var br = new Vector2(512, 400);
             ir.RasterizeRectangle(
-                tl, br, animatedRadius, OutlineSize, 
+                tl, br, 
+                radiusCW: new Vector4(animatedRadius + 4, animatedRadius, animatedRadius * 2, 0), 
+                outlineRadius: OutlineSize, 
                 innerColor: Color.White, 
                 outerColor: Color.Black, 
                 outlineColor: Color.Blue,
@@ -163,31 +170,32 @@ namespace TestGame.Scenes {
                 fillAngle: FillAngle,
                 annularRadius: AnnularRadius,
                 layer: 1,
-                texture: UseTexture ? Texture : null
+                texture: UseTexture ? Texture : null,
+                rampTexture: UseRamp ? RampTexture : null
             );
 
             ir.RasterizeRectangle(
-                new Vector2(32, 256), new Vector2(32, 512), 4.5f, new Color(1f, 0, 0, 1), new Color(0.5f, 0, 0, 1),
+                new Vector2(32, 256), new Vector2(32 + 6, 512), 4.5f, new Color(1f, 0, 0, 1), new Color(0.5f, 0, 0, 1),
                 layer: 2
             );
 
             ir.RasterizeRectangle(
-                new Vector2(48, 256), new Vector2(48, 512), 4.5f, new Color(1f, 1f, 0, 1), new Color(0.5f, 0.5f, 0, 1),
+                new Vector2(48, 256), new Vector2(48 + 6, 512), 4.5f, new Color(1f, 1f, 0, 1), new Color(0.5f, 0.5f, 0, 1),
                 layer: 2
             );
 
             ir.RasterizeRectangle(
-                new Vector2(64, 256), new Vector2(64, 512), 4.5f, new Color(0f, 1f, 0, 1), new Color(0f, 0.5f, 0, 1),
+                new Vector2(64, 256), new Vector2(64 + 6, 512), 4.5f, new Color(0f, 1f, 0, 1), new Color(0f, 0.5f, 0, 1),
                 layer: 2
             );
 
             ir.RasterizeRectangle(
-                new Vector2(80, 256), new Vector2(80, 512), 4.5f, new Color(0f, 1f, 1f, 1), new Color(0f, 0.5f, 0.5f, 1),
+                new Vector2(80, 256), new Vector2(80 + 6, 512), 4.5f, new Color(0f, 1f, 1f, 1), new Color(0f, 0.5f, 0.5f, 1),
                 layer: 2
             );
 
             ir.RasterizeRectangle(
-                new Vector2(96, 256), new Vector2(96, 512), 4.5f, new Color(0f, 0f, 1f, 1), new Color(0f, 0f, 0.5f, 1),
+                new Vector2(96, 256), new Vector2(96 + 6, 512), 4.5f, new Color(0f, 0f, 1f, 1), new Color(0f, 0f, 0.5f, 1),
                 layer: 2
             );
 
@@ -203,7 +211,8 @@ namespace TestGame.Scenes {
                 fillAngle: FillAngle,
                 annularRadius: AnnularRadius,
                 layer: 2,
-                texture: UseTexture ? Texture : null
+                texture: UseTexture ? Texture : null,
+                rampTexture: UseRamp ? RampTexture : null
             );
 
             ir.RasterizeEllipse(new Vector2(200, 860), Vector2.One * 3, Color.Yellow, layer: 4);
@@ -227,7 +236,7 @@ namespace TestGame.Scenes {
                 b, c = new Vector2(1400, 256);
             if (AnimateBezier) {
                 float t = now / 2;
-                float r = 140;
+                float r = 160;
                 b = new Vector2(1220 + (float)Math.Cos(t) * r, 180 + (float)Math.Sin(t) * r);
             } else
                 b = new Vector2(1200, 64);

@@ -23,7 +23,7 @@ using Nuke = NuklearDotNet.Nuklear;
 namespace TestGame.Scenes {
     // These aren't illuminant specific but who cares
     public class RasterShapeSpeed : Scene {
-        Toggle BlendInLinearSpace, UseTexture, UseGeometry;
+        Toggle BlendInLinearSpace, UseTexture, UseGeometry, Simple;
 
         Slider FillPower1, FillPower2, FillOffset;
 
@@ -61,7 +61,7 @@ namespace TestGame.Scenes {
             ir.Clear(layer: 0, color: new Color(0, 32, 48));
             ir.RasterBlendInLinearSpace = BlendInLinearSpace.Value;
 
-            const int count = 32;
+            int count = UseGeometry ? 32 : 48;
             const float step = 44;
             const float radiusBase = 12;
 
@@ -71,13 +71,13 @@ namespace TestGame.Scenes {
                     var radius = Vector2.One * (radiusBase + (x + y) / 2);
 
                     var c1 = new Color(y % 2 == 0 ? 1.0f : 0.0f, x % 2 == 0 ? 1.0f : 0.0f, 1.0f, 1.0f);
-                    var c2 = Color.Black;
+                    var c2 = Simple ? c1 : Color.Black;
 
                     if (UseGeometry)
                         ir.FillCircle(center, 0, radius.X, c1, c2);
                     else
                         ir.RasterizeEllipse(
-                            center, radius, c1, c2, texture: UseTexture ? Texture : null, 
+                            center, radius, c1, c2, texture: (UseTexture && !Simple) ? Texture : null, 
                             fillOffset: FillOffset.Value,
                             fillGradientPower: new Vector2(FillPower1.Value, FillPower2.Value)
                         );
