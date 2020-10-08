@@ -150,7 +150,7 @@ namespace Squared.Illuminant.Particles {
 
                 dc.Position = new Vector2(pAndL.X, pAndL.Y);
                 if (sr)
-                    dc.SortKey.Order = pAndL.Y + zToY;
+                    dc.SortOrder = pAndL.Y + zToY;
                 dc.Scale = pSize * sz;
                 c.R = (byte)(rc.X * 255);
                 c.G = (byte)(rc.Y * 255);
