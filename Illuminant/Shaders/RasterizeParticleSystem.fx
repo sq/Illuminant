@@ -45,8 +45,8 @@ sampler BitmapPointSampler {
 inline float3 ComputeRotatedAndNonRotatedCorner (
     in float3 cornerWeights, in float angle, in float2 size, out float2 nonRotatedUnit
 ) {    
-    float2 corner = (cornerWeights.xy * 2 - 1) * size;
-    nonRotatedUnit = cornerWeights.xy;
+    nonRotatedUnit = ((cornerWeights.xy * 2) - 1);
+    float2 corner = nonRotatedUnit * size;
 
     float2 sinCos;
     sincos(angle, sinCos.x, sinCos.y);

@@ -276,6 +276,7 @@ namespace TestGame {
             FontLoader = new EmbeddedFreeTypeFontProvider(RenderCoordinator);
 
             Font = FontLoader.Load("FiraSans-Medium");
+            Font.MipMapping = false; // FIXME: We're really blurry without this and I'm too lazy to fix it right now
             Font.SizePoints = 16f;
             Font.GlyphMargin = 2;
 

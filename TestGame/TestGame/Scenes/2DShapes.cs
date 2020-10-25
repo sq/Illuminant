@@ -24,7 +24,7 @@ namespace TestGame.Scenes {
     // These aren't illuminant specific but who cares
     public class Shapes : Scene {
         Toggle AnimateRadius, AnimateBezier, BlendInLinearSpace, GradientAlongLine, UseTexture, UseRamp, HardOutlines, WorldSpace, RepeatFill, ShadowInside;
-        Slider Gamma, ArcLength, OutlineSize, FillOffset, FillSize, FillAngle, AnnularRadius, ShadowSoftness, ShadowOffset, ShadowOpacity;
+        Slider Gamma, ArcLength, OutlineSize, FillOffset, FillSize, FillAngle, AnnularRadius, ShadowSoftness, ShadowOffset, ShadowOpacity, ShadowExpansion;
 
         [Items("Natural")]
         [Items("Linear")]
@@ -83,6 +83,9 @@ namespace TestGame.Scenes {
             ShadowSoftness.Max = 32f;
             ShadowSoftness.Speed = 0.25f;
             ShadowSoftness.Value = 4f;
+            ShadowExpansion.Min = -2f;
+            ShadowExpansion.Max = 8f;
+            ShadowExpansion.Speed = 0.1f;
         }
 
         public override void LoadContent () {
@@ -108,16 +111,17 @@ namespace TestGame.Scenes {
             var fillMode = (RasterFillMode)Enum.Parse(typeof(RasterFillMode), FillMode.Value);
 
             var ir = new ImperativeRenderer(batch, Game.Materials, blendState: BlendState.AlphaBlend);
-            ir.Clear(layer: 0, color: new Color(0, 32, 48));
+            ir.Clear(layer: 0, color: new Color(0, 96, 128));
             ir.RasterOutlineGamma = Gamma.Value;
             ir.RasterBlendInLinearSpace = BlendInLinearSpace.Value;
             ir.RasterSoftOutlines = !HardOutlines.Value;
             ir.WorldSpace = WorldSpace;
 
-            ir.RasterShadow.Color = new pSRGBColor(0.2f, 0f, 0.1f, 1f) * ShadowOpacity;
+            ir.RasterShadow.Color = new pSRGBColor(0.4f, 0.02f, 0.22f, 1f) * ShadowOpacity;
             ir.RasterShadow.Softness = ShadowSoftness;
             ir.RasterShadow.Offset = new Vector2(ShadowOffset);
             ir.RasterShadow.Inside = ShadowInside;
+            ir.RasterShadow.Expansion = ShadowExpansion;
 
             var now = (float)Time.Seconds;
 
@@ -229,7 +233,9 @@ namespace TestGame.Scenes {
                 fillSize: fillSize,
                 fillAngle: FillAngle,
                 annularRadius: AnnularRadius,
-                layer: 2
+                layer: 2,
+                texture: UseTexture ? Texture : null,
+                rampTexture: UseRamp ? RampTexture : null
             );
 
             Vector2 a = new Vector2(1024, 64),
@@ -251,7 +257,9 @@ namespace TestGame.Scenes {
                 fillSize: fillSize,
                 fillAngle: FillAngle,
                 annularRadius: AnnularRadius,
-                layer: 3
+                layer: 3,
+                texture: UseTexture ? Texture : null,
+                rampTexture: UseRamp ? RampTexture : null
             );
 
             ir.RasterShadow = default(RasterShadowSettings);

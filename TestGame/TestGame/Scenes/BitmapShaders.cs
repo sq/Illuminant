@@ -29,9 +29,10 @@ namespace TestGame.Scenes {
         [Items("HorizontalBlur")]
         [Items("VerticalBlur")]
         [Items("RadialBlur")]
+        [Items("HighlightColor")]
         Dropdown<string> Shader;
 
-        Slider Opacity, Brightness, ShadowOffset, DitherGamma, StippleRatio, BlurSigma, BlurSampleRadius;
+        Slider Opacity, Brightness, ShadowOffset, DitherGamma, StippleRatio, BlurSigma, BlurSampleRadius, HighlightTolerance;
 
         public BitmapShaders (TestGame game, int width, int height)
             : base(game, width, height) {
@@ -63,6 +64,10 @@ namespace TestGame.Scenes {
             BlurSampleRadius.Max = 9;
             BlurSampleRadius.Value = 3;
             BlurSampleRadius.Speed = 1;
+            HighlightTolerance.Max = 2;
+            HighlightTolerance.Min = 0;
+            HighlightTolerance.Value = 0.1f;
+            HighlightTolerance.Speed = 0.01f;
         }
 
         public override void LoadContent () {
@@ -94,6 +99,12 @@ namespace TestGame.Scenes {
                     break;
                 case "RadialBlur":
                     material = Game.Materials.ScreenSpaceRadialGaussianBlur;
+                    break;
+                case "HighlightColor":
+                    material = Game.Materials.HighlightColorBitmap;
+                    var c = new Color(42, 8, 25);
+                    userData = c.ToVector4();
+                    userData.W = HighlightTolerance;
                     break;
                 default:
                     material = Game.Materials.ScreenSpaceBitmap;

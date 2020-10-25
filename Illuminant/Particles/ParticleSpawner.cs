@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Squared.Game;
 using Squared.Illuminant.Configuration;
 using Squared.Illuminant.Uniforms;
 using Squared.Illuminant.Util;
@@ -335,7 +336,7 @@ namespace Squared.Illuminant.Particles.Transforms {
                 for (var i = 0; i < AdditionalPositions.Count; i++) {
                     var ap = AdditionalPositions[i];
                     v = new Vector4(ap, life);
-                    if (Temp4[i + 1] == v)
+                    if (Temp4[i + 1].FastEquals(ref v))
                         continue;
 
                     Temp4[i + 1] = v;
