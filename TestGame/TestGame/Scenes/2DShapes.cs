@@ -23,9 +23,15 @@ using Nuke = NuklearDotNet.Nuklear;
 namespace TestGame.Scenes {
     // These aren't illuminant specific but who cares
     public class Shapes : Scene {
-        Toggle AnimateRadius, AnimateBezier, BlendInLinearSpace, GradientAlongLine, UseTexture, UseRamp, HardOutlines, WorldSpace, RepeatFill, ShadowInside;
-        Slider Gamma, ArcLength, OutlineSize, FillOffset, FillSize, FillAngle, AnnularRadius, ShadowSoftness, ShadowOffset, ShadowOpacity, ShadowExpansion;
+        Toggle Animate, BlendInLinearSpace, WorldSpace;
+        Slider ArcLength, AnnularRadius;
 
+        [Group("Outline")]
+        Toggle HardOutlines;
+        [Group("Outline")]
+        Slider Gamma, OutlineSize;
+
+        [Group("Fill")]
         [Items("Natural")]
         [Items("Linear")]
         [Items("LinearEnclosed")]
@@ -38,7 +44,24 @@ namespace TestGame.Scenes {
         [Items("Angular")]
         Dropdown<string> FillMode;
 
+        [Group("Fill")]
+        Toggle RepeatFill, GradientAlongLine, UseRamp;
+        [Group("Fill")]
+        Slider FillOffset, FillSize, FillAngle;
+
+        [Group("Shadow")]
+        Toggle ShadowInside;
+        [Group("Shadow")]
+        Slider ShadowSoftness, ShadowOffset, ShadowOpacity, ShadowExpansion;
+
+        [Group("Texture")]
+        Toggle UseTexture, CompositeTexture, PreserveAspectRatio;
+        [Group("Texture")]
+        Slider TextureSize, TextureOrigin, TexturePosition;
+
         Texture2D Texture, RampTexture;
+
+        AutoRenderTarget Scratch, RenderTo;
 
         public Shapes (TestGame game, int width, int height)
             : base(game, width, height) {
@@ -86,23 +109,40 @@ namespace TestGame.Scenes {
             ShadowExpansion.Min = -2f;
             ShadowExpansion.Max = 8f;
             ShadowExpansion.Speed = 0.1f;
+            TextureSize.Value = 1;
+            TextureSize.Max = 4;
+            TextureSize.Min = 0.1f;
+            TextureSize.Speed = 0.1f;
+            TextureOrigin.Max = 1;
+            TextureOrigin.Speed = 0.01f;
+            TexturePosition.Min = -4;
+            TexturePosition.Max = 4;
+            TexturePosition.Speed = 0.01f;
         }
 
         public override void LoadContent () {
-            Texture = Game.TextureLoader.Load("template");
+            Texture = Game.TextureLoader.Load(
+                "shape-texture", 
+                new TextureLoadOptions { Premultiply = true, GenerateMips = true }, 
+                cached: true
+            );
             RampTexture = Game.TextureLoader.Load("custom-gradient");
+            if (Scratch == null)
+                Scratch = new AutoRenderTarget(Game.RenderCoordinator, 110, 110);
+            if (RenderTo == null)
+                RenderTo = new AutoRenderTarget(Game.RenderCoordinator, Width, Height, preferredFormat: SurfaceFormat.Color);
         }
 
         public override void UnloadContent () {
         }
 
         public override void Draw (Squared.Render.Frame frame) {
-            var vt = Game.Materials.ViewTransform;
+            var vt = ViewTransform.CreateOrthographic(RenderTo.Width, RenderTo.Height);
             vt.Position = new Vector2(64, 64);
             vt.Scale = Vector2.One * 1.2f;
 
-            var batch = BatchGroup.New(
-                frame, 0,
+            var batch = BatchGroup.ForRenderTarget(
+                frame, -9900, RenderTo,
                 materialSet: Game.Materials,
                 viewTransform: vt
             );
@@ -110,7 +150,7 @@ namespace TestGame.Scenes {
             var fillSize = FillSize * (RepeatFill ? -1 : 1);
             var fillMode = (RasterFillMode)Enum.Parse(typeof(RasterFillMode), FillMode.Value);
 
-            var ir = new ImperativeRenderer(batch, Game.Materials, blendState: BlendState.AlphaBlend);
+            var ir = new ImperativeRenderer(batch, Game.Materials, blendState: BlendState.NonPremultiplied);
             ir.Clear(layer: 0, color: new Color(0, 96, 128));
             ir.RasterOutlineGamma = Gamma.Value;
             ir.RasterBlendInLinearSpace = BlendInLinearSpace.Value;
@@ -123,13 +163,21 @@ namespace TestGame.Scenes {
             ir.RasterShadow.Inside = ShadowInside;
             ir.RasterShadow.Expansion = ShadowExpansion;
 
+            var textureSettings = new RasterTextureSettings {
+                Mode = CompositeTexture ? RasterTextureCompositeMode.Over : RasterTextureCompositeMode.Multiply,
+                PreserveAspectRatio = PreserveAspectRatio,
+                Origin = new Vector2(TextureOrigin.Value),
+                Scale = new Vector2(TextureSize.Value),
+                Position = new Vector2(TexturePosition.Value)
+            };
+
             var now = (float)Time.Seconds;
 
             ir.RasterizeEllipse(
-                Vector2.One * 600, new Vector2(420, 360), OutlineSize, 
-                innerColor: Color.White, 
-                outerColor: Color.Black, 
-                outlineColor: Color.White, 
+                Vector2.One * 600, new Vector2(420, 360), OutlineSize,
+                innerColor: Color.White,
+                outerColor: Color.Black,
+                outlineColor: Color.White,
                 layer: 1,
                 fillMode: fillMode,
                 fillOffset: FillOffset,
@@ -137,6 +185,7 @@ namespace TestGame.Scenes {
                 fillAngle: FillAngle,
                 annularRadius: AnnularRadius,
                 texture: UseTexture ? Texture : null,
+                textureSettings: textureSettings,
                 rampTexture: UseRamp ? RampTexture : null
             );
 
@@ -155,7 +204,7 @@ namespace TestGame.Scenes {
                 layer: 1
             );
 
-            float animatedRadius = (AnimateRadius.Value
+            float animatedRadius = (Animate.Value
                     ? Arithmetic.PulseSine(now / 3f, 2, 32)
                     : 2f);
 
@@ -175,6 +224,7 @@ namespace TestGame.Scenes {
                 annularRadius: AnnularRadius,
                 layer: 1,
                 texture: UseTexture ? Texture : null,
+                textureSettings: textureSettings,
                 rampTexture: UseRamp ? RampTexture : null
             );
 
@@ -216,6 +266,7 @@ namespace TestGame.Scenes {
                 annularRadius: AnnularRadius,
                 layer: 2,
                 texture: UseTexture ? Texture : null,
+                textureSettings: textureSettings,
                 rampTexture: UseRamp ? RampTexture : null
             );
 
@@ -223,7 +274,7 @@ namespace TestGame.Scenes {
 
             ir.RasterizeArc(
                 new Vector2(200, 860),
-                AnimateBezier ? (float)(Time.Seconds) * 60f : 0f, ArcLength,
+                Animate ? (float)(Time.Seconds) * 60f : 0f, ArcLength,
                 120, 8, OutlineSize,
                 innerColor: Color.White, 
                 outerColor: Color.Black, 
@@ -235,12 +286,13 @@ namespace TestGame.Scenes {
                 annularRadius: AnnularRadius,
                 layer: 2,
                 texture: UseTexture ? Texture : null,
+                textureSettings: textureSettings,
                 rampTexture: UseRamp ? RampTexture : null
             );
 
             Vector2 a = new Vector2(1024, 64),
                 b, c = new Vector2(1400, 256);
-            if (AnimateBezier) {
+            if (Animate) {
                 float t = now / 2;
                 float r = 160;
                 b = new Vector2(1220 + (float)Math.Cos(t) * r, 180 + (float)Math.Sin(t) * r);
@@ -259,6 +311,7 @@ namespace TestGame.Scenes {
                 annularRadius: AnnularRadius,
                 layer: 3,
                 texture: UseTexture ? Texture : null,
+                textureSettings: textureSettings,
                 rampTexture: UseRamp ? RampTexture : null
             );
 
@@ -267,6 +320,32 @@ namespace TestGame.Scenes {
             ir.RasterizeEllipse(a, Vector2.One * 3, Color.Yellow, layer: 4);
             ir.RasterizeEllipse(b, Vector2.One * 3, Color.Yellow, layer: 4);
             ir.RasterizeEllipse(c, Vector2.One * 3, Color.Yellow, layer: 4);
+
+            var scratchGroup = BatchGroup.ForRenderTarget(
+                frame, -9999, Scratch, 
+                materialSet: Game.Materials, 
+                viewTransform: ViewTransform.CreateOrthographic(Scratch.Width, Scratch.Height)
+            );
+            using (scratchGroup) {
+                var sir = new ImperativeRenderer(scratchGroup, Game.Materials);
+                sir.Clear(color: Color.Black);
+                for (float x = 0; x <= 1; x += 0.1f) {
+                    for (float y = 0; y <= 1; y += 0.1f) {
+                        var pos = new Vector2((x * 100) + x + 2, (y * 100) + y + 2);
+                        sir.RasterizeRectangle(
+                            pos, pos + new Vector2(7), 
+                            radius: 3.5f, outlineRadius: 1f, 
+                            innerColor: Color.White, outerColor: Color.White,
+                            outlineColor: Color.White
+                        );
+                    }
+                }
+            }
+
+            ir.Draw(Scratch, new Vector2(900, 700), scale: new Vector2(3), samplerState: SamplerState.PointClamp, layer: 5);
+
+            var fir = new ImperativeRenderer(frame, Game.Materials);
+            fir.Draw(RenderTo, Vector2.Zero, layer: 0, blendState: BlendState.Opaque);
         }
 
         public override void Update (GameTime gameTime) {

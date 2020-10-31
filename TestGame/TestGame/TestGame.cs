@@ -26,7 +26,7 @@ using Nuke = NuklearDotNet.Nuklear;
 
 namespace TestGame {
     public class TestGame : MultithreadedGame, INuklearHost {
-        public int? DefaultScene = 20;
+        public int? DefaultScene = null;
 
         public GraphicsDeviceManager Graphics;
         public DefaultMaterialSet Materials { get; private set; }
@@ -276,7 +276,8 @@ namespace TestGame {
             FontLoader = new EmbeddedFreeTypeFontProvider(RenderCoordinator);
 
             Font = FontLoader.Load("FiraSans-Medium");
-            Font.MipMapping = false; // FIXME: We're really blurry without this and I'm too lazy to fix it right now
+            Font.MipMapping = true; // FIXME: We're really blurry without this and I'm too lazy to fix it right now
+            Font.sRGB = true;
             Font.SizePoints = 16f;
             Font.GlyphMargin = 2;
 
@@ -288,7 +289,8 @@ namespace TestGame {
 
             TextMaterial = Materials.Get(Materials.ScreenSpaceShadowedBitmap, blendState: BlendState.AlphaBlend);
             TextMaterial.Parameters.ShadowColor.SetValue(new Vector4(0, 0, 0, 0.5f));
-            TextMaterial.Parameters.ShadowOffset.SetValue(Vector2.One);
+            TextMaterial.Parameters.ShadowOffset.SetValue(Vector2.One * 0.66f);
+            TextMaterial.Parameters.ShadowMipBias.SetValue(1.5f);
 
             UIRenderTarget = new AutoRenderTarget(
                 RenderCoordinator,
@@ -298,7 +300,8 @@ namespace TestGame {
 
             Nuklear = new NuklearService(this) {
                 Font = Font,
-                Scene = UIScene
+                Scene = UIScene,
+                TextBrightnessMultiplier = 1.25f
             };
 
             LoadLUTs();

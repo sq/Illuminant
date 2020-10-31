@@ -122,6 +122,7 @@ namespace Framework {
         private int NextTextLayer;
 
         public float VerticalPadding = 0;
+        public float TextBrightnessMultiplier = 1;
 
         private float _FontScale = 1.0f;
         private IGlyphSource _Font;
@@ -304,6 +305,17 @@ namespace Framework {
             return new Color(c.R * c.A / 255, c.G * c.A / 255, c.B * c.A / 255, c.A);
         }
 
+        private Color ConvertColor (NkColor c, float multiplier) {
+            float r = c.R / 255.0f,
+                g = c.G / 255.0f,
+                b = c.B / 255.0f,
+                a = c.A / 255.0f;
+            r *= multiplier;
+            g *= multiplier;
+            b *= multiplier;
+            return new Color(r * a, g * a, b * a, a);
+        }
+
         private Bounds ConvertBounds (float x, float y, float w, float h) {
             return Bounds.FromPositionAndSize(new Vector2(x, y), new Vector2(w, h));
         }
@@ -358,10 +370,12 @@ namespace Framework {
                 fixed (char* pChars = charBuffer.Data)
                     charsDecoded = Encoding.UTF8.GetChars(pTextUtf8, c->length, pChars, charBuffer.Data.Length);
                 var str = new AbstractString(new ArraySegment<char>(charBuffer.Data, 0, charsDecoded));
-                var color = ConvertColor(c->foreground);
 
+                float multiplier = TextBrightnessMultiplier;
                 if (c->header.mtype == nk_meta_type.NK_META_PROPERTY_LABEL)
-                    color *= 0.66f;
+                    multiplier *= 0.75f;
+
+                var color = ConvertColor(c->foreground, multiplier);
 
                 using (var layoutBuffer = BufferPool<BitmapDrawCall>.Allocate(c->length + 64)) {
                     var layout = _Font.LayoutString(
