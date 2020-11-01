@@ -228,7 +228,7 @@ namespace TestGame {
                 window = new Window {
                     Title = "Settings",
                     FixedWidth = 500,
-                    MinimumHeight = 750,
+                    MinimumHeight = 400,
                     MaximumHeight = UIRenderTarget.Height - 200,
                     AllowDrag = true,
                     AllowMaximize = false,
@@ -528,7 +528,10 @@ namespace TestGame {
             KeyboardState = Keyboard.GetState();
             MouseState = Mouse.GetState();
 
+            UpdatePRGUI();
+
             if (IsActive) {
+                PRGUIContext.UpdateInput(MouseState, KeyboardState);
                 var alt = KeyboardState.IsKeyDown(Keys.LeftAlt) || KeyboardState.IsKeyDown(Keys.RightAlt);
                 var wasAlt = PreviousKeyboardState.IsKeyDown(Keys.LeftAlt) || PreviousKeyboardState.IsKeyDown(Keys.RightAlt);
 
@@ -556,8 +559,6 @@ namespace TestGame {
             scene.Settings.Update(scene);
             scene.Update(gameTime);
 
-            UpdatePRGUI();
-            PRGUIContext.UpdateInput(MouseState, KeyboardState);
             PRGUIContext.Update();
             IsMouseOverUI = ((PRGUIContext.MouseOver ?? PRGUIContext.MouseCaptured) != null);
             if (IsMouseOverUI)
