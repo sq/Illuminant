@@ -5,7 +5,6 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using Framework;
 using Microsoft.Xna.Framework.Input;
 
 namespace TestGame {
@@ -14,7 +13,6 @@ namespace TestGame {
         void Update (Scene s);
         string Name { get; set; }
         string Group { get; set; }
-        NString GetLabelUTF8 ();
         string GetFormattedValue ();
     }
 
@@ -46,8 +44,6 @@ namespace TestGame {
         public string Group { get; set; }
         protected T _Value;
 
-        private NString LabelUTF8;
-
         public virtual T Value { 
             get { return _Value; }
             set {
@@ -58,13 +54,6 @@ namespace TestGame {
                         Changed(this, value);
                 }
             }
-        }
-
-        public NString GetLabelUTF8 () {
-            if (LabelUTF8.Length == 0)
-                LabelUTF8 = new NString(GetLabelText());
-
-            return LabelUTF8;
         }
 
         protected abstract string GetLabelText ();
@@ -188,7 +177,8 @@ namespace TestGame {
     }
 
     public interface IDropdown : ISetting {
-        NuklearDotNet.nk_item_getter_fun Getter { get; }
+        object GetItem (int index);
+        object SelectedItem { get; set; }
         int SelectedIndex { get; set; }
         int Count { get; }
     }
@@ -198,25 +188,29 @@ namespace TestGame {
     {
         public Keys Key;
 
-        private NuklearDotNet.nk_item_getter_fun _Getter;
         public readonly List<Item> Items = new List<Item>();
 
         public class Item {
             public T Value;
             public string Label;
 
-            private NString _LabelString;
-
-            public unsafe byte* GetLabelUTF8 () {
-                if (_LabelString.Length <= 0)
-                    _LabelString = new NString(Label ?? Value.ToString());
-                return _LabelString.pText;
+            public override string ToString () {
+                return Label;
             }
         }
 
         public int Count {
             get {
                 return Items.Count;
+            }
+        }
+
+        public T SelectedItem {
+            get {
+                return Value;
+            }
+            set {
+                Value = value;
             }
         }
 
@@ -230,9 +224,14 @@ namespace TestGame {
             }
         }
 
-        NuklearDotNet.nk_item_getter_fun IDropdown.Getter {
-            get {
-                return _Getter;
+        object IDropdown.SelectedItem {
+            get => Value;
+            set {
+                var i = value as Item;
+                if (i == null)
+                    Value = default(T);
+                else
+                    Value = i.Value;
             }
         }
 
@@ -258,13 +257,6 @@ namespace TestGame {
         }
 
         public unsafe override void Initialize (FieldInfo f) {
-            _Getter = (user, index, result) => {
-                if ((index < 0) || (index >= Items.Count))
-                    *result = null;
-
-                *result = Items[index].GetLabelUTF8();
-            };
-
             var cas = f.GetCustomAttributes<ItemsAttribute>();
             foreach (var ca in cas)
                 Add((T)ca.Value, ca.Label);
@@ -300,23 +292,19 @@ namespace TestGame {
         IEnumerator IEnumerable.GetEnumerator () {
             return Items.GetEnumerator();
         }
+
+        object IDropdown.GetItem (int index) {
+            return Items[index];
+        }
     }
 
     public class SettingCollection : List<ISetting> {
         public class Group : List<ISetting> {
             public readonly string Name;
             public bool Visible = true;
-            private NString NameUTF8;
 
             public Group (string name) {
                 Name = name;
-            }
-
-            public NString GetNameUTF8 () {
-                if (NameUTF8.Length == 0)
-                    NameUTF8 = new NString(Name);
-
-                return NameUTF8;
             }
         }
 

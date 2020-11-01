@@ -8,7 +8,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>TestGame</RootNamespace>
     <AssemblyName>TestGame</AssemblyName>
-    <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
     <OutputPath>bin\$(Platform)\$(Configuration)</OutputPath>
@@ -18,6 +18,7 @@
     <WarningLevel>4</WarningLevel>
     <DebugType>full</DebugType>
     <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Platform)' == 'x86'">
     <EnableFNA>false</EnableFNA>
@@ -58,9 +59,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\..\AppCommon\NuklearService.cs">
-      <Link>NuklearService.cs</Link>
-    </Compile>
     <Compile Include="..\..\AppCommon\PerformanceStats.cs">
       <Link>PerformanceStats.cs</Link>
     </Compile>
@@ -94,13 +92,13 @@
     <Compile Include="TestGame.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Fracture\Squared\PRGUI\PRGUI.csproj">
+      <Project>{36463aee-e309-43a6-bcfa-a69944390aa7}</Project>
+      <Name>PRGUI</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\Illuminant\Illuminant.csproj">
       <Project>{E86544AD-5974-4FEE-B96F-71331EFAB054}</Project>
       <Name>Illuminant</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\Squared.Nuklear\Nuklear\Nuklear.vcxproj">
-      <Project>{6ef251c3-0cf3-4e0c-907b-11bd3deba8e6}</Project>
-      <Name>Nuklear</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\Squared.Nuklear\Squared.Nuklear\Squared.Nuklear.csproj">
       <Project>{bdb132a4-22a1-479d-a4d0-0a2b00021f16}</Project>
@@ -128,6 +126,9 @@
     <EmbeddedResource Include="@(LUT)">
       <LogicalName>LUTs\%(Filename)</LogicalName>
     </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
   </ItemGroup>
   <PropertyGroup>
     <SquaredPath>..\..\..\Fracture</SquaredPath>

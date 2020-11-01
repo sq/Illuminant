@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Framework;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Graphics.PackedVector;
@@ -17,7 +16,6 @@ using Squared.Illuminant.Util;
 using Squared.Render;
 using Squared.Render.Convenience;
 using Squared.Util;
-using Nuke = NuklearDotNet.Nuklear;
 
 namespace TestGame.Scenes {
     public class SimpleParticles : Scene {
@@ -475,6 +473,7 @@ namespace TestGame.Scenes {
             SpawnOffset += totalSpawned;
         }
 
+        /* FIXME: Custom UI
         NString Transforms = new NString("Transforms");
 
         public unsafe override void UIScene () {
@@ -492,5 +491,6 @@ namespace TestGame.Scenes {
                 Nuke.nk_tree_pop(ctx);
             }
         }
+        */
     }
 }

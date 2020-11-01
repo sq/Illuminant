@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Framework;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -13,7 +12,6 @@ using Squared.Illuminant;
 using Squared.Render;
 using Squared.Render.Convenience;
 using Squared.Util;
-using Nuke = NuklearDotNet.Nuklear;
 
 namespace TestGame.Scenes {
     public class DistanceFieldEditor : Scene {
@@ -378,8 +376,8 @@ namespace TestGame.Scenes {
             }
         }
 
-        NString sSelectedObject = new NString("Selected Object");
-
+        // FIXME: Custom UI
+        /*
         public unsafe override void UIScene () {
             var ctx = Game.Nuklear.Context;
             const float min = -128f;
@@ -417,5 +415,6 @@ namespace TestGame.Scenes {
                 Nuke.nk_tree_pop(ctx);
             }
         }
+        */
     }
 }

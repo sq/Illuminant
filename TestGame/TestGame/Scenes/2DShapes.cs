@@ -326,6 +326,8 @@ namespace TestGame.Scenes {
                 materialSet: Game.Materials, 
                 viewTransform: ViewTransform.CreateOrthographic(Scratch.Width, Scratch.Height)
             );
+            var fillColor = Color.White;
+
             using (scratchGroup) {
                 var sir = new ImperativeRenderer(scratchGroup, Game.Materials);
                 sir.Clear(color: Color.Black);
@@ -334,8 +336,8 @@ namespace TestGame.Scenes {
                         var pos = new Vector2((x * 100) + x + 2, (y * 100) + y + 2);
                         sir.RasterizeRectangle(
                             pos, pos + new Vector2(7), 
-                            radius: 3.5f, outlineRadius: 1f, 
-                            innerColor: Color.White, outerColor: Color.White,
+                            radiusCW: new Vector4(3.5f, 3.5f, 0f, 0f), outlineRadius: 1f, 
+                            innerColor: fillColor, outerColor: fillColor,
                             outlineColor: Color.White
                         );
                     }

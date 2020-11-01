@@ -7,7 +7,6 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using System.Threading;
-using Framework;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Content;
@@ -16,21 +15,27 @@ using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Media;
 using Squared.Game;
 using Squared.Illuminant;
+using Squared.PRGUI;
+using Squared.PRGUI.Controls;
+using Squared.PRGUI.Decorations;
+using Squared.PRGUI.Layout;
 using Squared.Render;
 using Squared.Render.Convenience;
 using Squared.Render.Text;
 using Squared.Util;
+using Squared.Util.Event;
 using TestGame.Scenes;
 using ThreefoldTrials.Framework;
 using Nuke = NuklearDotNet.Nuklear;
+using PRGUISlider = Squared.PRGUI.Controls.Slider;
 
 namespace TestGame {
-    public class TestGame : MultithreadedGame, INuklearHost {
+    public class TestGame : MultithreadedGame {
         public int? DefaultScene = null;
 
         public GraphicsDeviceManager Graphics;
         public DefaultMaterialSet Materials { get; private set; }
-        public NuklearService Nuklear;
+        public UIContext PRGUIContext;
         public IlluminantMaterials IlluminantMaterials;
         public ParticleMaterials ParticleMaterials;
 
@@ -128,49 +133,7 @@ namespace TestGame {
 
         const float settingRowHeight = 26;
 
-        protected unsafe void RenderSetting (ISetting s) {
-            var ctx = Nuklear.Context;
-
-            Nuklear.NewRow(settingRowHeight);
-            var name = s.GetLabelUTF8();
-            var dropdown = s as IDropdown;
-            var toggle = s as Toggle;
-            var slider = s as Slider;
-            if (dropdown != null) {
-                Nuke.nk_label(ctx, name.pText, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
-                int selected = dropdown.SelectedIndex;
-                var rect = Nuke.nk_layout_space_bounds(ctx);
-                Nuke.nk_combobox_callback(ctx, dropdown.Getter, IntPtr.Zero, ref selected, dropdown.Count, 32, new NuklearDotNet.nk_vec2(rect.W, 512));
-                dropdown.SelectedIndex = selected;
-            } else if (toggle != null) {
-                // FIXME: Why is this backwards?
-                int result = Nuke.nk_check_text(ctx, name.pText, name.Length, toggle.Value ? 0 : 1);
-                toggle.Value = result == 0;
-            } else if (slider != null) {
-                var min = slider.Min.GetValueOrDefault(0);
-                var max = slider.Max.GetValueOrDefault(1);
-                float value = slider.Value, newValue = value;
-                if (slider.AsProperty) {
-                    if (slider.Integral) {
-                        newValue = Nuke.nk_propertyi(ctx, name.pText, (int)min, (int)value, (int)max, (int)slider.Speed, (int)slider.Speed);
-                    } else {
-                        newValue = Nuke.nk_propertyf(ctx, name.pText, min, value, max, slider.Speed, slider.Integral ? 1 : slider.Speed * 0.1f);
-                    }
-                } else {
-                    Nuke.nk_label(ctx, name.pText, (uint)NuklearDotNet.NkTextAlignment.NK_TEXT_LEFT);
-                    var bounds = Nuke.nk_widget_bounds(ctx);
-                    newValue = Nuke.nk_slide_float(ctx, min, value, max, slider.Speed);
-                    if (Nuke.nk_input_is_mouse_hovering_rect(&ctx->input, bounds) != 0) {
-                        using (var utf8 = new NString("    " + slider.GetFormattedValue()))
-                            Nuke.nk_tooltip(ctx, utf8.pText);
-                    }
-                }
-                if (newValue != value) {
-                    slider.Value = newValue;
-                }
-            }
-        }
-
+        /*
         private NString Other;
 
         protected unsafe void UIScene () {
@@ -226,6 +189,7 @@ namespace TestGame {
             Nuke.nk_end(ctx);
         }
 
+        FIXME: Global settings
         NString sSystem = new NString("System");
 
         private unsafe void RenderGlobalSettings () {
@@ -250,6 +214,148 @@ namespace TestGame {
 
                 Nuke.nk_tree_pop(ctx);
             }
+        }
+        */
+
+        private Dictionary<string, Container> SettingGroups = new Dictionary<string, Container>();
+        private Dictionary<ISetting, Control> SettingControls = new Dictionary<ISetting, Control>();
+
+        private void UpdatePRGUI () {
+            // TODO: Immediate mode
+            PRGUIContext.CanvasSize = new Vector2(UIRenderTarget.Width, UIRenderTarget.Height);
+            var window = PRGUIContext.Controls.Cast<Window>().FirstOrDefault();
+            if (window == null) {
+                window = new Window {
+                    Title = "Settings",
+                    FixedWidth = 500,
+                    MinimumHeight = 750,
+                    MaximumHeight = UIRenderTarget.Height - 200,
+                    AllowDrag = true,
+                    AllowMaximize = false,
+                    BackgroundColor = new Color(70, 70, 70),
+                    ScreenAlignment = new Vector2(0.99f, 0.9f),
+                    ContainerFlags = ControlFlags.Container_Wrap | ControlFlags.Container_Row | ControlFlags.Container_Align_Start,
+                    Scrollable = true,
+                    ShowHorizontalScrollbar = false,
+                    ClipChildren = true,
+                };
+                PRGUIContext.Controls.Add(window);
+            }
+
+            var scene = Scenes[ActiveSceneIndex];
+            var settings = scene.Settings;
+
+            if (scene != window.Data.Get<Scene>()) {
+                window.Children.Clear();
+                window.Data.Set(scene);
+                SettingGroups.Clear();
+                SettingControls.Clear();
+            }
+
+            foreach (var s in settings)
+                RenderSetting(s, window);
+
+            foreach (var kvp in settings.Groups.OrderBy(kvp => kvp.Key)) {
+                Container c;
+                if (!SettingGroups.TryGetValue(kvp.Key, out c)) {
+                    c = new Container {
+                        // Title = kvp.Key
+                        ContainerFlags = ControlFlags.Container_Wrap | ControlFlags.Container_Row | ControlFlags.Container_Align_Start,
+                        LayoutFlags = ControlFlags.Layout_Fill_Row | ControlFlags.Layout_ForceBreak
+                    };
+                    SettingGroups[kvp.Key] = c;
+                    window.Children.Add(c);
+                }
+
+                foreach (var s in kvp.Value)
+                    RenderSetting(s, c);
+            }
+        }
+
+        protected void RenderSetting (ISetting s, IControlContainer container) {
+            if (MouseState.LeftButton == ButtonState.Pressed)
+                return;
+
+            var name = s.Name;
+            var dropdown = s as IDropdown;
+            var toggle = s as Toggle;
+            var slider = s as Slider;
+            var lflags = ControlFlags.Layout_ForceBreak | ControlFlags.Layout_Fill_Row;
+
+            StaticText label = null;
+            Control control;
+            SettingControls.TryGetValue(s, out control);
+
+            if (dropdown != null) {
+                Button bControl = control as Button;
+                if (bControl == null) {
+                    var menu = new Menu();
+                    menu.Data.Set(s);
+                    for (var i = 0; i < dropdown.Count; i++) {
+                        var item = dropdown.GetItem(i);
+                        var st = new StaticText {
+                            Text = item.ToString()
+                        };
+                        st.Data.Set("value", item);
+                        menu.Children.Add(st);
+                    }
+
+                    label = new StaticText {
+                        Text = name,
+                        LayoutFlags = lflags
+                    };
+
+                    control = bControl = new Button {
+                        AutoSizeWidth = false,
+                        Menu = menu,
+                        TextAlignment = HorizontalAlignment.Left
+                    };
+
+                    label.FocusBeneficiary = control;
+                    SettingControls[s] = control;
+                    container.Children.Add(label);
+                    container.Children.Add(control);
+                }
+
+                bControl.TooltipContent = name;
+                bControl.Text = dropdown.SelectedItem.ToString();
+            } else if (toggle != null) {
+                Checkbox cControl = control as Checkbox;
+                if (cControl == null) {
+                    control = cControl = new Checkbox {
+                        AutoSizeWidth = false,
+                        LayoutFlags = lflags
+                    };
+                    SettingControls[s] = control;
+                    container.Children.Add(control);
+                }
+                cControl.Text = name;
+                cControl.Checked = toggle.Value;
+            } else if (slider != null) {
+                var sControl = control as PRGUISlider;
+                if (sControl == null) {
+                    label = new StaticText {
+                        Text = name,
+                        LayoutFlags = lflags
+                    };
+                    control = sControl = new PRGUISlider {
+                    };
+                    label.FocusBeneficiary = control;
+                    SettingControls[s] = control;
+                    container.Children.Add(label);
+                    container.Children.Add(control);
+                }
+
+                // FIXME: Use property editor when appropriate
+                sControl.NotchInterval = slider.Speed;
+                sControl.Minimum = slider.Min.GetValueOrDefault(0);
+                sControl.Maximum = slider.Max.GetValueOrDefault(1);
+                sControl.Value = slider.Value;
+                sControl.Integral = slider.Integral;
+                sControl.KeyboardSpeed = slider.Speed;
+            }
+
+            control?.Data.Set(s);
         }
 
         public bool LeftMouse {
@@ -295,14 +401,13 @@ namespace TestGame {
             UIRenderTarget = new AutoRenderTarget(
                 RenderCoordinator,
                 Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight, 
-                false, SurfaceFormat.Color, DepthFormat.None, 1
+                false, SurfaceFormat.Color, DepthFormat.Depth24Stencil8, 1
             );
 
-            Nuklear = new NuklearService(this) {
-                Font = Font,
-                Scene = UIScene,
-                TextBrightnessMultiplier = 1.25f
-            };
+            PRGUIContext = new UIContext(Materials, font: Font);
+            PRGUIContext.EventBus.Subscribe(null, UIEvents.ItemChosen, PRGUI_OnItemChosen);
+            PRGUIContext.EventBus.Subscribe(null, UIEvents.CheckedChanged, PRGUI_OnCheckedChanged);
+            PRGUIContext.EventBus.Subscribe(null, UIEvents.ValueChanged, PRGUI_OnValueChanged);
 
             LoadLUTs();
 
@@ -328,6 +433,34 @@ namespace TestGame {
             } else {
                 SetActiveScene(DefaultScene ?? Scenes.Length - 1);
             }
+        }
+
+        private void PRGUI_OnItemChosen (IEventInfo ei) {
+            var m = (Menu)ei.Source;
+            var s = m.Data.Get<ISetting>(null, null);
+            if (s == null)
+                return;
+            var item = (StaticText)ei.Arguments;
+            var d = (IDropdown)s;
+            d.SelectedItem = item.Data.Get<object>("value");
+        }
+
+        private void PRGUI_OnCheckedChanged (IEventInfo ei) {
+            var c = (Checkbox)ei.Source;
+            var s = c.Data.Get<ISetting>(null, null);
+            if (s == null)
+                return;
+            var t = (Toggle)s;
+            t.Value = c.Checked;
+        }
+
+        private void PRGUI_OnValueChanged (IEventInfo ei) {
+            var prsl = (PRGUISlider)ei.Source;
+            var s = prsl.Data.Get<ISetting>(null, null);
+            if (s == null)
+                return;
+            var sl = (Slider)s;
+            sl.Value = prsl.Value;
         }
 
         protected override void OnUnloadContent () {
@@ -423,6 +556,13 @@ namespace TestGame {
             scene.Settings.Update(scene);
             scene.Update(gameTime);
 
+            UpdatePRGUI();
+            PRGUIContext.UpdateInput(MouseState, KeyboardState);
+            PRGUIContext.Update();
+            IsMouseOverUI = ((PRGUIContext.MouseOver ?? PRGUIContext.MouseCaptured) != null);
+            if (IsMouseOverUI)
+                LastTimeOverUI = Time.Ticks;
+
             PerformanceStats.Record(this);
 
             Window.Title = String.Format("Scene {0}: {1}", ActiveSceneIndex, scene.GetType().Name);
@@ -431,7 +571,7 @@ namespace TestGame {
         }
 
         public override void Draw (GameTime gameTime, Frame frame) {
-            Nuklear.UpdateInput(IsActive, PreviousMouseState, MouseState, PreviousKeyboardState, KeyboardState, IsMouseOverUI, KeyboardInputHandler.Buffer);
+            // Nuklear.UpdateInput(IsActive, PreviousMouseState, MouseState, PreviousKeyboardState, KeyboardState, IsMouseOverUI, KeyboardInputHandler.Buffer);
 
             KeyboardInputHandler.Buffer.Clear();
 
@@ -441,8 +581,10 @@ namespace TestGame {
                 name: "Render UI"
             )) {
                 ClearBatch.AddNew(group, -1, Materials.Clear, clearColor: Color.Transparent);
-                Nuklear.Render(gameTime.ElapsedGameTime.Seconds, group, 1);
+                // Nuklear.Render(gameTime.ElapsedGameTime.Seconds, group, 1);
             }
+
+            PRGUIContext.Rasterize(frame, UIRenderTarget, -9900, -9800);
 
             ClearBatch.AddNew(frame, -1, Materials.Clear, Color.Black);
             Scenes[ActiveSceneIndex].Draw(frame);
