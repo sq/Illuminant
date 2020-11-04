@@ -100,10 +100,6 @@
       <Project>{E86544AD-5974-4FEE-B96F-71331EFAB054}</Project>
       <Name>Illuminant</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\Squared.Nuklear\Squared.Nuklear\Squared.Nuklear.csproj">
-      <Project>{bdb132a4-22a1-479d-a4d0-0a2b00021f16}</Project>
-      <Name>Squared.Nuklear</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <TTF Include="..\..\AppCommon\Fonts\*.otf;..\..\AppCommon\Fonts\*.ttf;..\..\AppCommon\Fonts\*.ttc">

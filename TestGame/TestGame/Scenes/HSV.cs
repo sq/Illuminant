@@ -17,7 +17,6 @@ using Squared.Illuminant.Util;
 using Squared.Render;
 using Squared.Render.Convenience;
 using Squared.Util;
-using Nuke = NuklearDotNet.Nuklear;
 
 namespace TestGame.Scenes {
     public class HueTest : Scene {

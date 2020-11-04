@@ -18,7 +18,6 @@ using Squared.Render;
 using Squared.Render.Convenience;
 using Squared.Render.RasterShape;
 using Squared.Util;
-using Nuke = NuklearDotNet.Nuklear;
 
 namespace TestGame.Scenes {
     // These aren't illuminant specific but who cares

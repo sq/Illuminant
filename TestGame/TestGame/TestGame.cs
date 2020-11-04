@@ -26,8 +26,8 @@ using Squared.Util;
 using Squared.Util.Event;
 using TestGame.Scenes;
 using ThreefoldTrials.Framework;
-using Nuke = NuklearDotNet.Nuklear;
 using PRGUISlider = Squared.PRGUI.Controls.Slider;
+using PRGUIDropdown = Squared.PRGUI.Controls.Dropdown<object>;
 
 namespace TestGame {
     public class TestGame : MultithreadedGame {
@@ -65,6 +65,7 @@ namespace TestGame {
 
         public bool IsMouseOverUI = false, TearingTest = false;
         public long LastTimeOverUI;
+        bool UpdatingSettings;
 
         public readonly Dictionary<string, ColorLUT> LUTs = 
             new Dictionary<string, ColorLUT>(StringComparer.OrdinalIgnoreCase);
@@ -228,7 +229,7 @@ namespace TestGame {
                 window = new Window {
                     Title = "Settings",
                     FixedWidth = 500,
-                    MinimumHeight = 400,
+                    MinimumHeight = 200,
                     MaximumHeight = UIRenderTarget.Height - 200,
                     AllowDrag = true,
                     AllowMaximize = false,
@@ -252,6 +253,8 @@ namespace TestGame {
                 SettingControls.Clear();
             }
 
+            UpdatingSettings = true;
+
             foreach (var s in settings)
                 RenderSetting(s, window);
 
@@ -270,6 +273,8 @@ namespace TestGame {
                 foreach (var s in kvp.Value)
                     RenderSetting(s, c);
             }
+
+            UpdatingSettings = false;
         }
 
         protected void RenderSetting (ISetting s, IControlContainer container) {
@@ -287,38 +292,26 @@ namespace TestGame {
             SettingControls.TryGetValue(s, out control);
 
             if (dropdown != null) {
-                Button bControl = control as Button;
-                if (bControl == null) {
-                    var menu = new Menu();
-                    menu.Data.Set(s);
-                    for (var i = 0; i < dropdown.Count; i++) {
-                        var item = dropdown.GetItem(i);
-                        var st = new StaticText {
-                            Text = item.ToString()
-                        };
-                        st.Data.Set("value", item);
-                        menu.Children.Add(st);
-                    }
-
+                var dControl = control as PRGUIDropdown;
+                if (dControl == null) {
                     label = new StaticText {
                         Text = name,
                         LayoutFlags = lflags
                     };
 
-                    control = bControl = new Button {
+                    control = dControl = new PRGUIDropdown {
                         AutoSizeWidth = false,
-                        Menu = menu,
                         TextAlignment = HorizontalAlignment.Left
                     };
+
+                    for (var i = 0; i < dropdown.Count; i++)
+                        dControl.Items.Add(dropdown.GetItem(i));
 
                     label.FocusBeneficiary = control;
                     SettingControls[s] = control;
                     container.Children.Add(label);
                     container.Children.Add(control);
                 }
-
-                bControl.TooltipContent = name;
-                bControl.Text = dropdown.SelectedItem.ToString();
             } else if (toggle != null) {
                 Checkbox cControl = control as Checkbox;
                 if (cControl == null) {
@@ -347,7 +340,7 @@ namespace TestGame {
                 }
 
                 // FIXME: Use property editor when appropriate
-                sControl.NotchInterval = slider.Speed;
+                // sControl.NotchInterval = slider.Speed;
                 sControl.Minimum = slider.Min.GetValueOrDefault(0);
                 sControl.Maximum = slider.Max.GetValueOrDefault(1);
                 sControl.Value = slider.Value;
@@ -405,7 +398,6 @@ namespace TestGame {
             );
 
             PRGUIContext = new UIContext(Materials, font: Font);
-            PRGUIContext.EventBus.Subscribe(null, UIEvents.ItemChosen, PRGUI_OnItemChosen);
             PRGUIContext.EventBus.Subscribe(null, UIEvents.CheckedChanged, PRGUI_OnCheckedChanged);
             PRGUIContext.EventBus.Subscribe(null, UIEvents.ValueChanged, PRGUI_OnValueChanged);
 
@@ -435,17 +427,10 @@ namespace TestGame {
             }
         }
 
-        private void PRGUI_OnItemChosen (IEventInfo ei) {
-            var m = (Menu)ei.Source;
-            var s = m.Data.Get<ISetting>(null, null);
-            if (s == null)
-                return;
-            var item = (StaticText)ei.Arguments;
-            var d = (IDropdown)s;
-            d.SelectedItem = item.Data.Get<object>("value");
-        }
-
         private void PRGUI_OnCheckedChanged (IEventInfo ei) {
+            if (UpdatingSettings)
+                return;
+
             var c = (Checkbox)ei.Source;
             var s = c.Data.Get<ISetting>(null, null);
             if (s == null)
@@ -455,12 +440,20 @@ namespace TestGame {
         }
 
         private void PRGUI_OnValueChanged (IEventInfo ei) {
-            var prsl = (PRGUISlider)ei.Source;
-            var s = prsl.Data.Get<ISetting>(null, null);
+            if (UpdatingSettings)
+                return;
+
+            var ctl = (Control)ei.Source;
+            var s = ctl.Data.Get<ISetting>(null, null);
             if (s == null)
                 return;
-            var sl = (Slider)s;
-            sl.Value = prsl.Value;
+
+            var prsl = (ctl as PRGUISlider);
+            var prd = (ctl as PRGUIDropdown);
+            if (prsl != null)
+                ((Slider)s).Value = prsl.Value;
+            else if (prd != null)
+                ((IDropdown)s).SelectedItem = prd.SelectedItem;
         }
 
         protected override void OnUnloadContent () {
@@ -483,6 +476,10 @@ namespace TestGame {
                     oldScene.DoUnloadContent();
                 newScene.DoLoadContent();
             }
+
+            var window = PRGUIContext.Controls.OfType<Window>().FirstOrDefault();
+            if (window != null)
+                window.ScreenAlignment = window.ScreenAlignment;
         }
 
         private void LoadLUTs () {
