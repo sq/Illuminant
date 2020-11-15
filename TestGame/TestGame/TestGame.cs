@@ -114,9 +114,8 @@ namespace TestGame {
 
             IsFixedTimeStep = false;
 
-            if (IsFixedTimeStep) {
+            if (IsFixedTimeStep)
                 TargetElapsedTime = TimeSpan.FromSeconds(1.0 / 30);
-            }
 
             PreviousKeyboardState = Keyboard.GetState();
 
@@ -233,7 +232,7 @@ namespace TestGame {
                     MaximumHeight = UIRenderTarget.Height - 200,
                     AllowDrag = true,
                     AllowMaximize = false,
-                    BackgroundColor = new Color(70, 70, 70),
+                    BackgroundColor = new Color(80, 80, 80),
                     ScreenAlignment = new Vector2(0.99f, 0.9f),
                     ContainerFlags = ControlFlags.Container_Wrap | ControlFlags.Container_Row | ControlFlags.Container_Align_Start,
                     Scrollable = true,
@@ -312,6 +311,9 @@ namespace TestGame {
                     container.Children.Add(label);
                     container.Children.Add(control);
                 }
+
+                if (dControl != PRGUIContext.Focused)
+                    dControl.SelectedItem = dropdown.GetItem(dropdown.SelectedIndex);
             } else if (toggle != null) {
                 Checkbox cControl = control as Checkbox;
                 if (cControl == null) {
@@ -325,27 +327,28 @@ namespace TestGame {
                 cControl.Text = name;
                 cControl.Checked = toggle.Value;
             } else if (slider != null) {
-                var sControl = control as PRGUISlider;
+                var sControl = control as ParameterEditor<double>;
                 if (sControl == null) {
-                    label = new StaticText {
-                        Text = name,
-                        LayoutFlags = lflags
+                    control = sControl = new ParameterEditor<double> {
+                        LayoutFlags = lflags,
+                        HorizontalAlignment = HorizontalAlignment.Right
                     };
-                    control = sControl = new PRGUISlider {
-                    };
-                    label.FocusBeneficiary = control;
                     SettingControls[s] = control;
-                    container.Children.Add(label);
                     container.Children.Add(control);
                 }
 
                 // FIXME: Use property editor when appropriate
                 // sControl.NotchInterval = slider.Speed;
-                sControl.Minimum = slider.Min.GetValueOrDefault(0);
-                sControl.Maximum = slider.Max.GetValueOrDefault(1);
-                sControl.Value = slider.Value;
-                sControl.Integral = slider.Integral;
-                sControl.KeyboardSpeed = slider.Speed;
+                if (sControl != PRGUIContext.Focused) {
+                    sControl.IntegerOnly = slider.Integral;
+                    sControl.DoubleOnly = !slider.Integral;
+                    sControl.Minimum = slider.Min;
+                    sControl.Maximum = slider.Max;
+                    sControl.Value = slider.Value;
+                    sControl.Description = name;
+                }
+                // sControl.Integral = slider.Integral;
+                // sControl.KeyboardSpeed = slider.Speed;
             }
 
             control?.Data.Set(s);
@@ -397,7 +400,7 @@ namespace TestGame {
                 false, SurfaceFormat.Color, DepthFormat.Depth24Stencil8, 1
             );
 
-            PRGUIContext = new UIContext(Materials, font: Font);
+            PRGUIContext = new UIContext(Materials, new DefaultDecorations(3, 1) { DefaultFont = Font });
             PRGUIContext.EventBus.Subscribe(null, UIEvents.CheckedChanged, PRGUI_OnCheckedChanged);
             PRGUIContext.EventBus.Subscribe(null, UIEvents.ValueChanged, PRGUI_OnValueChanged);
 
@@ -450,10 +453,13 @@ namespace TestGame {
 
             var prsl = (ctl as PRGUISlider);
             var prd = (ctl as PRGUIDropdown);
+            var prp = (ctl as ParameterEditor<double>);
             if (prsl != null)
                 ((Slider)s).Value = prsl.Value;
             else if (prd != null)
                 ((IDropdown)s).SelectedItem = prd.SelectedItem;
+            else if (prp != null)
+                ((Slider)s).Value = (float)prp.Value;
         }
 
         protected override void OnUnloadContent () {
@@ -573,16 +579,7 @@ namespace TestGame {
 
             KeyboardInputHandler.Buffer.Clear();
 
-            using (KeyboardInputHandler.Deactivate())
-            using (var group = BatchGroup.ForRenderTarget(
-                frame, -9990, UIRenderTarget,
-                name: "Render UI"
-            )) {
-                ClearBatch.AddNew(group, -1, Materials.Clear, clearColor: Color.Transparent);
-                // Nuklear.Render(gameTime.ElapsedGameTime.Seconds, group, 1);
-            }
-
-            PRGUIContext.Rasterize(frame, UIRenderTarget, -9900, -9800);
+            PRGUIContext.Rasterize(frame, UIRenderTarget, -9900);
 
             ClearBatch.AddNew(frame, -1, Materials.Clear, Color.Black);
             Scenes[ActiveSceneIndex].Draw(frame);

@@ -45,6 +45,8 @@ namespace TestGame.Scenes {
             Background = Game.TextureLoader.Load("test pattern");
 
             var keys = Game.LUTs.Keys.OrderBy(n => n).ToArray();
+            LUT1.Clear();
+            LUT2.Clear();
             LUT1.AddRange(keys);
             LUT2.AddRange(keys);
         }
