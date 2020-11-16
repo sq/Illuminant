@@ -132,6 +132,7 @@ namespace TestGame.Scenes {
             MaximumEncodedDistance.Min = 32;
             MaximumEncodedDistance.Max = 512;
             MaximumEncodedDistance.Speed = 16;
+            MaximumEncodedDistance.Integral = true;
             MaximumEncodedDistance.Changed += (s, e) => CreateDistanceField();
 
             InitUnitSlider(DitherStrength, DitherBandSize, DitherRangeMax, DitherRangeMin);

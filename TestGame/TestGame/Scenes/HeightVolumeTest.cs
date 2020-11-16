@@ -70,6 +70,7 @@ namespace TestGame.Scenes {
             MaximumEncodedDistance.Min = 16;
             MaximumEncodedDistance.Max = 320;
             MaximumEncodedDistance.Speed = 8;
+            MaximumEncodedDistance.Integral = true;
             MaximumEncodedDistance.Changed += (s, e) => CreateDistanceField();
 
             MaxStepCount.Max = 128;

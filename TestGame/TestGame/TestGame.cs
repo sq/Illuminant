@@ -284,18 +284,29 @@ namespace TestGame {
             var dropdown = s as IDropdown;
             var toggle = s as Toggle;
             var slider = s as Slider;
-            var lflags = ControlFlags.Layout_ForceBreak | ControlFlags.Layout_Fill_Row;
+            var breakFlags = ControlFlags.Layout_ForceBreak | ControlFlags.Layout_Fill_Row;
 
             StaticText label = null;
             Control control;
             SettingControls.TryGetValue(s, out control);
+
+            var smartBreakFlags = breakFlags;
+            var myIndex = container.Children.IndexOf(control);
+            Control predecessor;
+            if (myIndex > 0)
+                predecessor = container.Children[myIndex - 1];
+            else
+                predecessor = container.Children.LastOrDefault();
+
+            if (predecessor is Checkbox)
+                smartBreakFlags = ControlFlags.Layout_Fill_Row;
 
             if (dropdown != null) {
                 var dControl = control as PRGUIDropdown;
                 if (dControl == null) {
                     label = new StaticText {
                         Text = name,
-                        LayoutFlags = lflags
+                        LayoutFlags = breakFlags
                     };
 
                     control = dControl = new PRGUIDropdown {
@@ -318,40 +329,39 @@ namespace TestGame {
                 Checkbox cControl = control as Checkbox;
                 if (cControl == null) {
                     control = cControl = new Checkbox {
-                        AutoSizeWidth = false,
-                        LayoutFlags = lflags
+                        AutoSizeWidth = true
                     };
                     SettingControls[s] = control;
                     container.Children.Add(control);
                 }
+                cControl.LayoutFlags = smartBreakFlags;
                 cControl.Text = name;
                 cControl.Checked = toggle.Value;
             } else if (slider != null) {
                 var sControl = control as ParameterEditor<double>;
                 if (sControl == null) {
                     control = sControl = new ParameterEditor<double> {
-                        LayoutFlags = lflags,
-                        HorizontalAlignment = HorizontalAlignment.Right
+                        HorizontalAlignment = HorizontalAlignment.Right,
+                        LayoutFlags = breakFlags
                     };
                     SettingControls[s] = control;
                     container.Children.Add(control);
                 }
 
-                // FIXME: Use property editor when appropriate
-                // sControl.NotchInterval = slider.Speed;
                 if (sControl != PRGUIContext.Focused) {
                     sControl.IntegerOnly = slider.Integral;
                     sControl.DoubleOnly = !slider.Integral;
+                    if (slider.Integral)
+                        sControl.ValueFilter = (d) => Math.Round(d, 0, MidpointRounding.AwayFromZero);
+                    else
+                        sControl.ValueFilter = (d) => Math.Round(d, 3, MidpointRounding.AwayFromZero);
                     sControl.Minimum = slider.Min;
                     sControl.Maximum = slider.Max;
                     sControl.Value = slider.Value;
                     sControl.Increment = slider.Speed;
                     sControl.Description = name;
-                    sControl.ValueFilter = (d) => Math.Round(d, 2, MidpointRounding.AwayFromZero);
                     sControl.Exponential = slider.Exponential;
                 }
-                // sControl.Integral = slider.Integral;
-                // sControl.KeyboardSpeed = slider.Speed;
             }
 
             control?.Data.Set(s);

@@ -70,9 +70,10 @@ namespace TestGame.Scenes {
             Gamma.Speed = 0.1f;
             BlendInLinearSpace.Value = true;
             OutlineSize.Min = 0f;
-            OutlineSize.Max = 10f;
+            OutlineSize.Max = 16f;
             OutlineSize.Value = 1f;
             OutlineSize.Speed = 0.5f;
+            OutlineSize.Exponential = true;
             ArcLength.Min = 5f;
             ArcLength.Max = 360f;
             ArcLength.Value = 45f;
@@ -91,6 +92,7 @@ namespace TestGame.Scenes {
             AnnularRadius.Min = 0f;
             AnnularRadius.Max = 32f;
             AnnularRadius.Speed = 0.25f;
+            AnnularRadius.Exponential = true;
             FillAngle.Min = 0f;
             FillAngle.Max = 360f;
             FillAngle.Speed = 2f;
