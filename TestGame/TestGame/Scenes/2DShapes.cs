@@ -86,6 +86,7 @@ namespace TestGame.Scenes {
             FillSize.Min = 0.05f;
             FillSize.Max = 4f;
             FillSize.Speed = 0.05f;
+            FillSize.Exponential = true;
             AnnularRadius.Value = 0f;
             AnnularRadius.Min = 0f;
             AnnularRadius.Max = 32f;
@@ -105,9 +106,11 @@ namespace TestGame.Scenes {
             ShadowSoftness.Max = 32f;
             ShadowSoftness.Speed = 0.25f;
             ShadowSoftness.Value = 4f;
-            ShadowExpansion.Min = -2f;
+            ShadowSoftness.Exponential = true;
+            ShadowExpansion.Min = 0f;
             ShadowExpansion.Max = 8f;
             ShadowExpansion.Speed = 0.1f;
+            ShadowExpansion.Exponential = true;
             TextureSize.Value = 1;
             TextureSize.Max = 4;
             TextureSize.Min = 0.1f;

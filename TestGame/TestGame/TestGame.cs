@@ -345,7 +345,10 @@ namespace TestGame {
                     sControl.Minimum = slider.Min;
                     sControl.Maximum = slider.Max;
                     sControl.Value = slider.Value;
+                    sControl.Increment = slider.Speed;
                     sControl.Description = name;
+                    sControl.ValueFilter = (d) => Math.Round(d, 2, MidpointRounding.AwayFromZero);
+                    sControl.Exponential = slider.Exponential;
                 }
                 // sControl.Integral = slider.Integral;
                 // sControl.KeyboardSpeed = slider.Speed;
