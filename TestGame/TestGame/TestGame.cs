@@ -240,6 +240,8 @@ namespace TestGame {
                     ClipChildren = true,
                 };
                 PRGUIContext.Controls.Add(window);
+                // FIXME: This should work
+                PRGUIContext.TrySetFocus(window, true);
             }
 
             var scene = Scenes[ActiveSceneIndex];
@@ -576,7 +578,7 @@ namespace TestGame {
             scene.Update(gameTime);
 
             PRGUIContext.Update();
-            IsMouseOverUI = ((PRGUIContext.MouseOver ?? PRGUIContext.MouseCaptured) != null);
+            IsMouseOverUI = PRGUIContext.IsActive;
             if (IsMouseOverUI)
                 LastTimeOverUI = Time.Ticks;
 
