@@ -262,10 +262,11 @@ namespace TestGame {
             foreach (var kvp in settings.Groups.OrderBy(kvp => kvp.Key)) {
                 Container c;
                 if (!SettingGroups.TryGetValue(kvp.Key, out c)) {
-                    c = new Container {
-                        // Title = kvp.Key
+                    c = new TitledContainer {
+                        Title = kvp.Key,
                         ContainerFlags = ControlFlags.Container_Wrap | ControlFlags.Container_Row | ControlFlags.Container_Align_Start,
-                        LayoutFlags = ControlFlags.Layout_Fill_Row | ControlFlags.Layout_ForceBreak
+                        LayoutFlags = ControlFlags.Layout_Fill_Row | ControlFlags.Layout_ForceBreak,
+                        Collapsible = true
                     };
                     SettingGroups[kvp.Key] = c;
                     window.Children.Add(c);
