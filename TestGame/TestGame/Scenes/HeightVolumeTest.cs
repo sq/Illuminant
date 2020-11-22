@@ -22,7 +22,7 @@ namespace TestGame.Scenes {
 
         public readonly List<SphereLightSource> Lights = new List<SphereLightSource>();
 
-        Toggle ShowGBuffer, ShowDistanceField, TwoPointFiveD, Deterministic, Shadows;
+        Toggle ShowGBuffer, ShowDistanceField, GroundIsOpaque, TwoPointFiveD, Deterministic, Shadows;
         Slider LightmapScaleRatio, MaxStepCount, MinStepSize, DistanceFieldResolution, DistanceSliceCount, MaximumEncodedDistance;
 
         public const int RotatingLightCount = 1024;
@@ -43,6 +43,7 @@ namespace TestGame.Scenes {
             DistanceSliceCount.Value = 7;
             MaximumEncodedDistance.Value = 128;
             Shadows.Value = true;
+            GroundIsOpaque.Value = true;
 
             ShowGBuffer.Key = Keys.G;
             TwoPointFiveD.Key = Keys.D2;
@@ -213,6 +214,8 @@ namespace TestGame.Scenes {
             Renderer.Configuration.SetScale(LightmapScaleRatio);
             Renderer.Configuration.DefaultQuality.MinStepSize = MinStepSize;
             Renderer.Configuration.DefaultQuality.MaxStepCount = (int)MaxStepCount;
+            Renderer.Configuration.RenderGroundPlane = GroundIsOpaque;
+            Renderer.Environment.EnableGroundShadows = GroundIsOpaque;
 
             CreateRenderTargets();
 

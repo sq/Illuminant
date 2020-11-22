@@ -185,12 +185,24 @@ namespace TestGame {
                 .SetTitle("System")
                 .SetCollapsible(true)
                 .Children();
+            var apply = false;
+            var vsync = Graphics.SynchronizeWithVerticalRetrace;
+            var fullscreen = Graphics.IsFullScreen;
             c.Text<Checkbox>("VSync")
-                .SetValue(Graphics.SynchronizeWithVerticalRetrace);
+                .SetValue(ref vsync, out bool changed);
+            if (changed) {
+                Graphics.SynchronizeWithVerticalRetrace = vsync;
+                apply = true;
+            }
             c.Text<Checkbox>("Fullscreen")
-                .SetValue(Graphics.IsFullScreen);
-            c.Text<Checkbox>("Tearing Test")
-                .SetValue(TearingTest);
+                .SetValue(ref fullscreen, out changed);
+            if (changed) {
+                Graphics.IsFullScreen = fullscreen;
+                apply = true;
+            }
+
+            if (apply)
+                Graphics.ApplyChangesAfterPresent(RenderCoordinator);
         }
 
         private void RenderSettingGroup (KeyValuePair<string, SettingCollection.Group> kvp, ref ContainerBuilder builder) {

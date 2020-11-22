@@ -248,7 +248,7 @@ namespace Squared.Illuminant {
             var bl = new Vector3(-999999, 999999, Environment.GroundZ);
 
             if (Configuration.RenderGroundPlane == false) {
-                var huge = new Vector3(0, 0, -99999);
+                var huge = new Vector3(0, 0, 99999);
                 tl += huge;
                 tr += huge;
                 br += huge;
