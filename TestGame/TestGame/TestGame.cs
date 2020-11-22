@@ -226,7 +226,6 @@ namespace TestGame {
             var settings = scene.Settings;
 
             if (scene != window.Data.Get<Scene>()) {
-                window.Children.Clear();
                 window.Data.Set(scene);
                 SettingGroups.Clear();
                 SettingControls.Clear();
@@ -261,7 +260,7 @@ namespace TestGame {
             */
         }
 
-        private void BuildSettingsWindow (ref ContainerBuilder<Container> builder) {
+        private void BuildSettingsWindow (ref ContainerBuilder builder) {
             UpdatingSettings = true;
             var scene = Scenes[ActiveSceneIndex];
             var settings = scene.Settings;
@@ -275,9 +274,12 @@ namespace TestGame {
             BuildGlobalSettings(ref builder);
             UpdatingSettings = false;
         }
-        
-        private void BuildGlobalSettings (ref ContainerBuilder<Container> builder) {
-            var c = builder.TitledContainer("System", collapsible: true);
+
+        private void BuildGlobalSettings (ref ContainerBuilder builder) {
+            var c = builder.Data<TitledContainer, string>("System")
+                .SetTitle("System")
+                .SetCollapsible(true)
+                .Children();
             c.Text<Checkbox>("VSync")
                 .SetValue(Graphics.SynchronizeWithVerticalRetrace);
             c.Text<Checkbox>("Fullscreen")
@@ -286,11 +288,20 @@ namespace TestGame {
                 .SetValue(TearingTest);
         }
 
-        protected void RenderSetting (ISetting s, IControlContainer container) {
-            if (MouseState.LeftButton == ButtonState.Pressed)
-                return;
+        private void RenderSettingGroup (KeyValuePair<string, SettingCollection.Group> kvp, ref ContainerBuilder builder) {
+            var container = builder.Data<TitledContainer, string>(kvp.Key)
+                .SetTitle(kvp.Key)
+                .SetCollapsible(true)
+                .Children();
+            foreach (var s in kvp.Value)
+                RenderSetting(s, ref container);
+        }
 
+        protected void RenderSetting (ISetting s, ref ContainerBuilder builder) {
             var name = s.Name;
+            builder.Text(name);
+            // builder.
+            /*
             var dropdown = s as IDropdown;
             var toggle = s as Toggle;
             var slider = s as Slider;
@@ -375,6 +386,7 @@ namespace TestGame {
             }
 
             control?.Data.Set(s);
+            */
         }
 
         public bool LeftMouse {
