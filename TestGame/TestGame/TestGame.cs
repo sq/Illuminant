@@ -230,34 +230,6 @@ namespace TestGame {
                 SettingGroups.Clear();
                 SettingControls.Clear();
             }
-
-            /*
-
-            UpdatingSettings = true;
-
-            foreach (var s in settings)
-                RenderSetting(s, window);
-
-            foreach (var kvp in settings.Groups.OrderBy(kvp => kvp.Key)) {
-                Container c;
-                if (!SettingGroups.TryGetValue(kvp.Key, out c)) {
-                    c = new TitledContainer {
-                        Title = kvp.Key,
-                        ContainerFlags = ControlFlags.Container_Wrap | ControlFlags.Container_Row | ControlFlags.Container_Align_Start,
-                        LayoutFlags = ControlFlags.Layout_Fill_Row | ControlFlags.Layout_ForceBreak,
-                        Collapsible = true
-                    };
-                    SettingGroups[kvp.Key] = c;
-                    window.Children.Add(c);
-                }
-
-                foreach (var s in kvp.Value)
-                    RenderSetting(s, c);
-            }
-
-            UpdatingSettings = false;
-
-            */
         }
 
         private void BuildSettingsWindow (ref ContainerBuilder builder) {
@@ -265,8 +237,9 @@ namespace TestGame {
             var scene = Scenes[ActiveSceneIndex];
             var settings = scene.Settings;
 
+            bool smartBreakAllowed = false;
             foreach (var s in settings)
-                RenderSetting(s, ref builder);
+                RenderSetting(s, ref builder, ref smartBreakAllowed);
 
             foreach (var kvp in settings.Groups.OrderBy(kvp => kvp.Key))
                 RenderSettingGroup(kvp, ref builder);
@@ -293,100 +266,69 @@ namespace TestGame {
                 .SetTitle(kvp.Key)
                 .SetCollapsible(true)
                 .Children();
+
+            bool smartBreakAllowed = false;
             foreach (var s in kvp.Value)
-                RenderSetting(s, ref container);
+                RenderSetting(s, ref container, ref smartBreakAllowed);
         }
 
-        protected void RenderSetting (ISetting s, ref ContainerBuilder builder) {
+        protected void RenderSetting (ISetting s, ref ContainerBuilder builder, ref bool smartBreakAllowed) {
             var name = s.Name;
-            builder.Text(name);
-            // builder.
-            /*
             var dropdown = s as IDropdown;
             var toggle = s as Toggle;
             var slider = s as Slider;
             var breakFlags = ControlFlags.Layout_ForceBreak | ControlFlags.Layout_Fill_Row;
 
-            StaticText label = null;
-            Control control;
-            SettingControls.TryGetValue(s, out control);
-
             var smartBreakFlags = breakFlags;
-            var myIndex = container.Children.IndexOf(control);
-            Control predecessor;
-            if (myIndex > 0)
-                predecessor = container.Children[myIndex - 1];
-            else
-                predecessor = container.Children.LastOrDefault();
-
-            if (predecessor is Checkbox)
+            if (smartBreakAllowed)
                 smartBreakFlags = ControlFlags.Layout_Fill_Row;
 
             if (dropdown != null) {
-                var dControl = control as PRGUIDropdown;
-                if (dControl == null) {
-                    label = new StaticText {
-                        Text = name,
-                        LayoutFlags = breakFlags
-                    };
+                smartBreakAllowed = false;
+                var label = builder.Text(name).SetLayoutFlags(breakFlags);
+                var control = builder.New<PRGUIDropdown>()
+                    .SetAutoSize(false, true)
+                    .SetTextAlignment(HorizontalAlignment.Left)
+                    .Control;
+                label.SetFocusBeneficiary(control);
 
-                    control = dControl = new PRGUIDropdown {
-                        AutoSizeWidth = false,
-                        TextAlignment = HorizontalAlignment.Left
-                    };
-
+                if (control.Data.Get<ISetting>() != dropdown) {
+                    control.Items.Clear();
                     for (var i = 0; i < dropdown.Count; i++)
-                        dControl.Items.Add(dropdown.GetItem(i));
-
-                    label.FocusBeneficiary = control;
-                    SettingControls[s] = control;
-                    container.Children.Add(label);
-                    container.Children.Add(control);
+                        control.Items.Add(dropdown.GetItem(i));
+                    control.Data.Set<ISetting>(dropdown);
                 }
 
-                if (dControl != PRGUIContext.Focused)
-                    dControl.SelectedItem = dropdown.GetItem(dropdown.SelectedIndex);
+                if (control != PRGUIContext.Focused)
+                    control.SelectedItem = dropdown.GetItem(dropdown.SelectedIndex);
             } else if (toggle != null) {
-                Checkbox cControl = control as Checkbox;
-                if (cControl == null) {
-                    control = cControl = new Checkbox {
-                        AutoSizeWidth = true
-                    };
-                    SettingControls[s] = control;
-                    container.Children.Add(control);
-                }
-                cControl.LayoutFlags = smartBreakFlags;
-                cControl.Text = name;
-                cControl.Checked = toggle.Value;
+                smartBreakAllowed = true;
+                var control = builder.Text<Checkbox>(name)
+                    .SetAutoSize(true)
+                    .SetLayoutFlags(smartBreakFlags)
+                    .SetValue(toggle.Value);
             } else if (slider != null) {
-                var sControl = control as ParameterEditor<double>;
-                if (sControl == null) {
-                    control = sControl = new ParameterEditor<double> {
-                        HorizontalAlignment = HorizontalAlignment.Right,
-                        LayoutFlags = breakFlags
-                    };
-                    SettingControls[s] = control;
-                    container.Children.Add(control);
-                }
+                smartBreakAllowed = false;
+                var control = builder.New<ParameterEditor<double>>()
+                    .SetLayoutFlags(breakFlags)
+                    .Control;
 
-                if (sControl != PRGUIContext.Focused) {
-                    sControl.IntegerOnly = slider.Integral;
-                    sControl.DoubleOnly = !slider.Integral;
+                if (control != PRGUIContext.Focused) {
+                    control.HorizontalAlignment = HorizontalAlignment.Right;
+                    control.IntegerOnly = slider.Integral;
+                    control.DoubleOnly = !slider.Integral;
                     if (slider.Integral)
-                        sControl.ValueFilter = (d) => Math.Round(d, 0, MidpointRounding.AwayFromZero);
+                        control.ValueFilter = (d) => Math.Round(d, 0, MidpointRounding.AwayFromZero);
                     else
-                        sControl.ValueFilter = (d) => Math.Round(d, 3, MidpointRounding.AwayFromZero);
-                    sControl.Minimum = slider.Min;
-                    sControl.Maximum = slider.Max;
-                    sControl.Value = slider.Value;
-                    sControl.Increment = slider.Speed;
-                    sControl.Description = name;
-                    sControl.Exponential = slider.Exponential;
+                        control.ValueFilter = (d) => Math.Round(d, 3, MidpointRounding.AwayFromZero);
+                    control.Minimum = slider.Min;
+                    control.Maximum = slider.Max;
+                    control.Value = slider.Value;
+                    control.Increment = slider.Speed;
+                    control.Description = name;
+                    control.Exponential = slider.Exponential;
                 }
             }
-
-            control?.Data.Set(s);
-            */
         }
 
         public bool LeftMouse {
