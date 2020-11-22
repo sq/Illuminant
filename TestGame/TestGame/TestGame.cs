@@ -134,66 +134,6 @@ namespace TestGame {
 
         const float settingRowHeight = 26;
 
-        /*
-        private NString Other;
-
-        protected unsafe void UIScene () {
-            var ctx = Nuklear.Context;
-
-            var scene = Scenes[ActiveSceneIndex];
-            var settings = scene.Settings;
-
-            var isWindowOpen = Nuke.nk_begin(
-                ctx, "Settings", new NuklearDotNet.NkRect(Graphics.PreferredBackBufferWidth - 508, Graphics.PreferredBackBufferHeight - 758, 500, 750),
-                (uint)(NuklearDotNet.NkPanelFlags.Title | NuklearDotNet.NkPanelFlags.Border |
-                NuklearDotNet.NkPanelFlags.Movable | NuklearDotNet.NkPanelFlags.Minimizable |
-                NuklearDotNet.NkPanelFlags.Scalable)
-            ) != 0;
-
-            if (isWindowOpen) {
-                int i = 0;
-
-                foreach (var s in settings)
-                    RenderSetting(s);
-
-                foreach (var kvp in settings.Groups.OrderBy(kvp => kvp.Key)) {
-                    var g = kvp.Value;
-                    var state = g.Visible
-                        ? NuklearDotNet.nk_collapse_states.NK_MAXIMIZED
-                        : NuklearDotNet.nk_collapse_states.NK_MINIMIZED;
-                    var nameUtf = g.GetNameUTF8();
-                    if (Nuke.nk_tree_push_hashed(
-                        ctx, NuklearDotNet.nk_tree_type.NK_TREE_TAB,
-                        nameUtf.pText, state, nameUtf.pText, nameUtf.Length, i
-                    ) != 0) {
-                        foreach (var s in g)
-                            RenderSetting(s);
-                        Nuke.nk_tree_state_pop(ctx);
-                        // Padding
-                        Nuklear.NewRow(3);
-                        g.Visible = (state == NuklearDotNet.nk_collapse_states.NK_MAXIMIZED);
-                    }
-                    i++;
-                }
-
-                i++;
-
-                scene.UIScene();
-
-                RenderGlobalSettings();
-            }
-
-            IsMouseOverUI = Nuke.nk_item_is_any_active(ctx) != 0;
-            if (IsMouseOverUI)
-                LastTimeOverUI = Time.Ticks;
-
-            Nuke.nk_end(ctx);
-        }
-
-        FIXME: Global settings
-        NString sSystem = new NString("System");
-        */
-
         private Dictionary<string, Container> SettingGroups = new Dictionary<string, Container>();
         private Dictionary<ISetting, Control> SettingControls = new Dictionary<ISetting, Control>();
 
@@ -299,6 +239,7 @@ namespace TestGame {
                     control.Data.Set<ISetting>(dropdown);
                 }
 
+                SettingControls[s] = control;
                 if (control != PRGUIContext.Focused)
                     control.SelectedItem = dropdown.GetItem(dropdown.SelectedIndex);
             } else if (toggle != null) {
@@ -306,7 +247,11 @@ namespace TestGame {
                 var control = builder.Text<Checkbox>(name)
                     .SetAutoSize(true)
                     .SetLayoutFlags(smartBreakFlags)
-                    .SetValue(toggle.Value);
+                    .SetValue(toggle.Value)
+                    .Control;
+
+                control.Data.Set<ISetting>(toggle);
+                SettingControls[s] = control;
             } else if (slider != null) {
                 smartBreakAllowed = false;
                 var control = builder.New<ParameterEditor<double>>()
@@ -328,6 +273,9 @@ namespace TestGame {
                     control.Description = name;
                     control.Exponential = slider.Exponential;
                 }
+
+                control.Data.Set<ISetting>(slider);
+                SettingControls[s] = control;
             }
         }
 
