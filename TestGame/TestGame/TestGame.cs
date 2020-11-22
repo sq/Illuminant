@@ -134,9 +134,6 @@ namespace TestGame {
 
         const float settingRowHeight = 26;
 
-        private Dictionary<string, Container> SettingGroups = new Dictionary<string, Container>();
-        private Dictionary<ISetting, Control> SettingControls = new Dictionary<ISetting, Control>();
-
         private void UpdatePRGUI () {
             // TODO: Immediate mode
             PRGUIContext.CanvasSize = new Vector2(UIRenderTarget.Width, UIRenderTarget.Height);
@@ -164,12 +161,7 @@ namespace TestGame {
 
             var scene = Scenes[ActiveSceneIndex];
             var settings = scene.Settings;
-
-            if (scene != window.Data.Get<Scene>()) {
-                window.Data.Set(scene);
-                SettingGroups.Clear();
-                SettingControls.Clear();
-            }
+            window.Data.Set(scene);
         }
 
         private void BuildSettingsWindow (ref ContainerBuilder builder) {
@@ -239,7 +231,6 @@ namespace TestGame {
                     control.Data.Set<ISetting>(dropdown);
                 }
 
-                SettingControls[s] = control;
                 if (control != PRGUIContext.Focused)
                     control.SelectedItem = dropdown.GetItem(dropdown.SelectedIndex);
             } else if (toggle != null) {
@@ -251,7 +242,6 @@ namespace TestGame {
                     .Control;
 
                 control.Data.Set<ISetting>(toggle);
-                SettingControls[s] = control;
             } else if (slider != null) {
                 smartBreakAllowed = false;
                 var control = builder.New<ParameterEditor<double>>()
@@ -275,7 +265,6 @@ namespace TestGame {
                 }
 
                 control.Data.Set<ISetting>(slider);
-                SettingControls[s] = control;
             }
         }
 
