@@ -28,6 +28,7 @@ using TestGame.Scenes;
 using ThreefoldTrials.Framework;
 using PRGUISlider = Squared.PRGUI.Controls.Slider;
 using PRGUIDropdown = Squared.PRGUI.Controls.Dropdown<object>;
+using Squared.PRGUI.Imperative;
 
 namespace TestGame {
     public class TestGame : MultithreadedGame {
@@ -191,30 +192,6 @@ namespace TestGame {
 
         FIXME: Global settings
         NString sSystem = new NString("System");
-
-        private unsafe void RenderGlobalSettings () {
-            var ctx = Nuklear.Context;
-
-            if (Nuke.nk_tree_push_hashed(ctx, NuklearDotNet.nk_tree_type.NK_TREE_TAB, sSystem.pText, NuklearDotNet.nk_collapse_states.NK_MAXIMIZED, sSystem.pText, sSystem.Length, 256) != 0) {
-                Nuklear.NewRow(Font.LineSpacing, 3);
-
-                bool vsync = Graphics.SynchronizeWithVerticalRetrace;
-                if (Nuklear.Checkbox("VSync", ref vsync)) {
-                    Graphics.SynchronizeWithVerticalRetrace = vsync;
-                    Graphics.ApplyChangesAfterPresent(RenderCoordinator);
-                }
-
-                bool fs = Graphics.IsFullScreen;
-                if (Nuklear.Checkbox("Fullscreen", ref fs)) {
-                    Graphics.IsFullScreen = fs;
-                    Graphics.ApplyChangesAfterPresent(RenderCoordinator);
-                }
-
-                Nuklear.Checkbox("TearingTest", ref TearingTest);
-
-                Nuke.nk_tree_pop(ctx);
-            }
-        }
         */
 
         private Dictionary<string, Container> SettingGroups = new Dictionary<string, Container>();
@@ -238,6 +215,7 @@ namespace TestGame {
                     Scrollable = true,
                     ShowHorizontalScrollbar = false,
                     ClipChildren = true,
+                    DynamicContents = BuildSettingsWindow
                 };
                 PRGUIContext.Controls.Add(window);
                 // FIXME: This should work
@@ -253,6 +231,8 @@ namespace TestGame {
                 SettingGroups.Clear();
                 SettingControls.Clear();
             }
+
+            /*
 
             UpdatingSettings = true;
 
@@ -277,6 +257,33 @@ namespace TestGame {
             }
 
             UpdatingSettings = false;
+
+            */
+        }
+
+        private void BuildSettingsWindow (ref ContainerBuilder<Container> builder) {
+            UpdatingSettings = true;
+            var scene = Scenes[ActiveSceneIndex];
+            var settings = scene.Settings;
+
+            foreach (var s in settings)
+                RenderSetting(s, ref builder);
+
+            foreach (var kvp in settings.Groups.OrderBy(kvp => kvp.Key))
+                RenderSettingGroup(kvp, ref builder);
+
+            BuildGlobalSettings(ref builder);
+            UpdatingSettings = false;
+        }
+        
+        private void BuildGlobalSettings (ref ContainerBuilder<Container> builder) {
+            var c = builder.TitledContainer("System", collapsible: true);
+            c.Text<Checkbox>("VSync")
+                .SetValue(Graphics.SynchronizeWithVerticalRetrace);
+            c.Text<Checkbox>("Fullscreen")
+                .SetValue(Graphics.IsFullScreen);
+            c.Text<Checkbox>("Tearing Test")
+                .SetValue(TearingTest);
         }
 
         protected void RenderSetting (ISetting s, IControlContainer container) {
