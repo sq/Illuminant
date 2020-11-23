@@ -152,7 +152,8 @@ namespace TestGame {
                     Scrollable = true,
                     ShowHorizontalScrollbar = false,
                     ClipChildren = true,
-                    DynamicContents = BuildSettingsWindow
+                    DynamicContents = BuildSettingsWindow,
+                    Collapsible = true
                 };
                 PRGUIContext.Controls.Add(window);
                 // FIXME: This should work
@@ -175,6 +176,8 @@ namespace TestGame {
 
             foreach (var kvp in settings.Groups.OrderBy(kvp => kvp.Key))
                 RenderSettingGroup(kvp, ref builder);
+
+            scene.UIScene(ref builder);
 
             BuildGlobalSettings(ref builder);
             UpdatingSettings = false;
@@ -247,6 +250,8 @@ namespace TestGame {
                     control.SelectedItem = dropdown.GetItem(dropdown.SelectedIndex);
             } else if (toggle != null) {
                 smartBreakAllowed = true;
+                if (toggle.Key != default(Keys))
+                    name = $"{toggle.Key} {name}";
                 var control = builder.Text<Checkbox>(name)
                     .SetAutoSize(true)
                     .SetLayoutFlags(smartBreakFlags)
@@ -327,6 +332,7 @@ namespace TestGame {
             );
 
             PRGUIContext = new UIContext(Materials, new DefaultDecorations(3, 1) { DefaultFont = Font });
+            PRGUIContext.OnKeyEvent += PRGUIContext_OnKeyEvent;
             PRGUIContext.EventBus.Subscribe(null, UIEvents.CheckedChanged, PRGUI_OnCheckedChanged);
             PRGUIContext.EventBus.Subscribe(null, UIEvents.ValueChanged, PRGUI_OnValueChanged);
 
@@ -354,6 +360,22 @@ namespace TestGame {
             } else {
                 SetActiveScene(DefaultScene ?? Scenes.Length - 1);
             }
+        }
+
+        private bool PRGUIContext_OnKeyEvent (string name, Keys? key, char? ch) {
+            if (name == UIEvents.KeyDown) {
+                foreach (var setting in Scenes[_ActiveSceneIndex].Settings) {
+                    var toggle = setting as Toggle;
+                    if (toggle == null)
+                        continue;
+                    if (toggle.Key == key) {
+                        toggle.Value = !toggle.Value;
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
         private void PRGUI_OnCheckedChanged (IEventInfo ei) {
@@ -604,11 +626,12 @@ namespace TestGame {
         public abstract void Draw (Frame frame);
         public abstract void Update (GameTime gameTime);
 
-        public virtual void UIScene () {
+        public virtual void UIScene (ref ContainerBuilder builder) {
         }
 
         internal bool KeyWasPressed (Keys key) {
-            return Game.KeyboardState.IsKeyDown(key) && Game.PreviousKeyboardState.IsKeyUp(key);
+            return Game.KeyboardState.IsKeyDown(key) && 
+                Game.PreviousKeyboardState.IsKeyUp(key);
         }
     }
 }

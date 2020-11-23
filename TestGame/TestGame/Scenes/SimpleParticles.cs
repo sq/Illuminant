@@ -13,6 +13,8 @@ using Squared.Illuminant;
 using Squared.Illuminant.Particles;
 using Squared.Illuminant.Particles.Transforms;
 using Squared.Illuminant.Util;
+using Squared.PRGUI.Controls;
+using Squared.PRGUI.Imperative;
 using Squared.Render;
 using Squared.Render.Convenience;
 using Squared.Util;
@@ -473,24 +475,16 @@ namespace TestGame.Scenes {
             SpawnOffset += totalSpawned;
         }
 
-        /* FIXME: Custom UI
-        NString Transforms = new NString("Transforms");
-
-        public unsafe override void UIScene () {
-            var ctx = Game.Nuklear.Context;
-
-            if (Nuke.nk_tree_push_hashed(ctx, NuklearDotNet.nk_tree_type.NK_TREE_TAB, Transforms.pText, NuklearDotNet.nk_collapse_states.NK_MAXIMIZED, Transforms.pText, Transforms.Length, 64) != 0) {
-                int i = 0;
-                foreach (var t in System.Transforms) {
-                    using (var temp = new NString(t.GetType().Name)) {
-                        var newActive = Nuke.nk_check_text(ctx, temp.pText, temp.Length, t.IsActive ? 0 : 1);
-                        t.IsActive = newActive == 0;
-                    }
-                }
-
-                Nuke.nk_tree_pop(ctx);
+        public override void UIScene (ref ContainerBuilder builder) {
+            var c = builder.TitledContainer("Transforms", collapsible: true);
+            foreach (var t in System.Transforms) {
+                var name = t.GetType().Name;
+                bool active = t.IsActive;
+                c.Text<Checkbox>(name)
+                    .SetValue(ref active, out bool changed);
+                if (changed)
+                    t.IsActive = active;
             }
         }
-        */
     }
 }

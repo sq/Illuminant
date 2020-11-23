@@ -106,8 +106,6 @@ namespace TestGame {
         public Keys Key;
 
         public override void Update (Scene s) {
-            if (s.KeyWasPressed(Key))
-                Value = !Value;
         }
 
         protected override string GetLabelText () {

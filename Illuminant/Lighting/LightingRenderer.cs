@@ -582,10 +582,10 @@ namespace Squared.Illuminant {
 
         private void FillCornerBuffer () {
             var buf = new CornerVertex[CornerBuffer.VertexCount];
-            buf[0].CornerWeights = new Vector3(0, 0, 0);
-            buf[1].CornerWeights = new Vector3(1, 0, 0);
-            buf[2].CornerWeights = new Vector3(1, 1, 0);
-            buf[3].CornerWeights = new Vector3(0, 1, 0);
+            buf[0].CornerWeightsAndIndex = new Vector4(0, 0, 0, 0);
+            buf[1].CornerWeightsAndIndex = new Vector4(1, 0, 0, 0);
+            buf[2].CornerWeightsAndIndex = new Vector4(1, 1, 0, 0);
+            buf[3].CornerWeightsAndIndex = new Vector4(0, 1, 0, 0);
 
             CornerBuffer.SetData(buf);
         }
@@ -595,18 +595,18 @@ namespace Squared.Illuminant {
             const float mOne = 6.0f / 7.0f;
 
             var buf = new [] {
-                new CornerVertex { CornerWeights = new Vector3( cOne, 0, 0 ) },
-                new CornerVertex { CornerWeights = new Vector3( mOne, 0, 0 ) },
-                new CornerVertex { CornerWeights = new Vector3( mOne, 1, 0 ) },
-                new CornerVertex { CornerWeights = new Vector3( cOne, 1, 0 ) },
-                new CornerVertex { CornerWeights = new Vector3( mOne, cOne, 0 ) },
-                new CornerVertex { CornerWeights = new Vector3( 1, cOne, 0 ) },
-                new CornerVertex { CornerWeights = new Vector3( 1, mOne, 0 ) },
-                new CornerVertex { CornerWeights = new Vector3( mOne, mOne, 0 ) },
-                new CornerVertex { CornerWeights = new Vector3( 0, cOne, 0 ) },
-                new CornerVertex { CornerWeights = new Vector3( cOne, cOne, 0 ) },
-                new CornerVertex { CornerWeights = new Vector3( cOne, mOne, 0 ) },
-                new CornerVertex { CornerWeights = new Vector3( 0, mOne, 0 ) }
+                new CornerVertex { CornerWeightsAndIndex = new Vector4( cOne, 0, 0, 0 ) },
+                new CornerVertex { CornerWeightsAndIndex = new Vector4( mOne, 0, 0, 0 ) },
+                new CornerVertex { CornerWeightsAndIndex = new Vector4( mOne, 1, 0, 0 ) },
+                new CornerVertex { CornerWeightsAndIndex = new Vector4( cOne, 1, 0, 0 ) },
+                new CornerVertex { CornerWeightsAndIndex = new Vector4( mOne, cOne, 0, 0 ) },
+                new CornerVertex { CornerWeightsAndIndex = new Vector4( 1, cOne, 0, 0 ) },
+                new CornerVertex { CornerWeightsAndIndex = new Vector4( 1, mOne, 0, 0 ) },
+                new CornerVertex { CornerWeightsAndIndex = new Vector4( mOne, mOne, 0, 0 ) },
+                new CornerVertex { CornerWeightsAndIndex = new Vector4( 0, cOne, 0, 0 ) },
+                new CornerVertex { CornerWeightsAndIndex = new Vector4( cOne, cOne, 0, 0 ) },
+                new CornerVertex { CornerWeightsAndIndex = new Vector4( cOne, mOne, 0, 0 ) },
+                new CornerVertex { CornerWeightsAndIndex = new Vector4( 0, mOne, 0, 0 ) }
             };
 
             SphereBuffer.SetData(buf);

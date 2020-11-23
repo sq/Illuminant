@@ -44,7 +44,7 @@ namespace TestGame.Scenes {
         Dropdown<string> FillMode;
 
         [Group("Fill")]
-        Toggle RepeatFill, GradientAlongLine, UseRamp;
+        Toggle RepeatFill, GradientAlongLine, UseRamp, Hollow;
         [Group("Fill")]
         Slider FillOffset, FillSize, FillAngle;
 
@@ -179,8 +179,8 @@ namespace TestGame.Scenes {
 
             ir.RasterizeEllipse(
                 Vector2.One * 600, new Vector2(420, 360), OutlineSize,
-                innerColor: Color.White,
-                outerColor: Color.Black,
+                innerColor: Hollow ? Color.Transparent : Color.White,
+                outerColor: Hollow ? Color.Transparent : Color.Black,
                 outlineColor: Color.White,
                 layer: 1,
                 fillMode: fillMode,
@@ -218,8 +218,8 @@ namespace TestGame.Scenes {
                 tl, br, 
                 radiusCW: new Vector4(animatedRadius + 4, animatedRadius, animatedRadius * 2, 0), 
                 outlineRadius: OutlineSize, 
-                innerColor: Color.White, 
-                outerColor: Color.Black, 
+                innerColor: Hollow ? Color.Transparent : Color.White, 
+                outerColor: Hollow ? Color.Transparent : Color.Black, 
                 outlineColor: Color.Blue,
                 fillMode: fillMode,
                 fillOffset: FillOffset,
@@ -260,8 +260,8 @@ namespace TestGame.Scenes {
             ir.RasterizeTriangle(
                 new Vector2(640, 96), new Vector2(1200, 256), new Vector2(800, 512), 
                 animatedRadius, OutlineSize,
-                innerColor: Color.White, 
-                outerColor: Color.Black, 
+                innerColor: Hollow ? Color.Transparent : Color.White, 
+                outerColor: Hollow ? Color.Transparent : Color.Black, 
                 outlineColor: Color.Blue,
                 fillMode: fillMode,
                 fillOffset: FillOffset,
