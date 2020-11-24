@@ -331,7 +331,7 @@ namespace TestGame {
                 false, SurfaceFormat.Color, DepthFormat.Depth24Stencil8, 1
             );
 
-            PRGUIContext = new UIContext(Materials, new DefaultDecorations(3, 1) { DefaultFont = Font });
+            PRGUIContext = new UIContext(Materials, new DefaultDecorations(Materials, 3, 1) { DefaultFont = Font });
             PRGUIContext.OnKeyEvent += PRGUIContext_OnKeyEvent;
             PRGUIContext.EventBus.Subscribe(null, UIEvents.CheckedChanged, PRGUI_OnCheckedChanged);
             PRGUIContext.EventBus.Subscribe(null, UIEvents.ValueChanged, PRGUI_OnValueChanged);
@@ -558,7 +558,6 @@ namespace TestGame {
         private void DrawPerformanceStats (ref ImperativeRenderer ir) {
             const float scale = 0.75f;
             var text = PerformanceStats.GetText(this, -LastPerformanceStatPrimCount);
-            text += string.Format("{0}VSync {1}", Environment.NewLine, Graphics.SynchronizeWithVerticalRetrace ? "On" : "Off");
 
             using (var buffer = BufferPool<BitmapDrawCall>.Allocate(text.Length)) {
                 var layout = Font.LayoutString(text, buffer, scale: scale);
