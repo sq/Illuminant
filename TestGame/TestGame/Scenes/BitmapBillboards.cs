@@ -32,10 +32,12 @@ namespace TestGame.Scenes {
         Toggle ShowGBuffer,
             ShowDistanceField,
             ShowLightmap,
-            ShowBillboards;
+            ShowBillboards,
+            UnlitBillboards;
 
         [Group("Lighting")]
-        Slider MaximumLightStrength;
+        Slider MaximumLightStrength,
+            LightSize;
 
         [Group("Resolution")]
         Slider DistanceFieldResolution,
@@ -80,6 +82,10 @@ namespace TestGame.Scenes {
             MaximumLightStrength.Min = 1.0f;
             MaximumLightStrength.Max = 6.0f;
             MaximumLightStrength.Speed = 0.1f;
+
+            LightSize.Value = 48;
+            LightSize.Max = 1024;
+            LightSize.Min = 4;
 
             MaximumEncodedDistance.Min = 32;
             MaximumEncodedDistance.Max = 512;
@@ -152,7 +158,7 @@ namespace TestGame.Scenes {
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment,
                 new RendererConfiguration(
-                    1024, 1024, true, true
+                    1024, 1024, true, enableBrightnessEstimation: false, stencilCulling: true
                 ) {
                     MaximumFieldUpdatesPerFrame = 3,
                     DefaultQuality = {
@@ -200,13 +206,18 @@ namespace TestGame.Scenes {
             var zMultiplier = 1.0f / Environment.ZToYMultiplier;
             var z = 10;
 
+            var w = 
+                UnlitBillboards
+                    ? -1
+                    : (EnableTreeShadows ? 1 : 0);
+
             for (int x = 400; x < 1100; x += 80) {
                 ir.Draw(
-                    Tree, new Vector2(x + 10, 250), userData: new Vector4(TreeNormal, zMultiplier, z, EnableTreeShadows ? 1 : 0),
+                    Tree, new Vector2(x + 10, 250), userData: new Vector4(TreeNormal, zMultiplier, z, w),
                     origin: new Vector2(0, 1)
                 );
                 ir.Draw(
-                    Tree, new Vector2(x, 500), sortKey: 30, userData: new Vector4(TreeNormal, zMultiplier, z, EnableTreeShadows ? 1 : 0),
+                    Tree, new Vector2(x, 500), sortKey: 30, userData: new Vector4(TreeNormal, zMultiplier, z, w),
                     origin: new Vector2(0, 1)
                 );
             }
@@ -214,6 +225,8 @@ namespace TestGame.Scenes {
         
         public override void Draw (Squared.Render.Frame frame) {
             CreateRenderTargets();
+
+            MovableLight.Radius = LightSize;
 
             Renderer.Configuration.TwoPointFiveD = true;
             Renderer.Configuration.SetScale(LightmapScaleRatio);

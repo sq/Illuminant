@@ -36,6 +36,7 @@ namespace Squared.Illuminant {
         public Material ScreenSpaceGammaCompressedBitmap, WorldSpaceGammaCompressedBitmap;
         public Material ScreenSpaceToneMappedBitmap, WorldSpaceToneMappedBitmap;
         public Material AutoGBufferBitmap;
+        public Material GBufferMask;
         public Material ObjectSurfaces, ObjectOutlines;
         public Material FunctionSurface, FunctionOutline;
         public Material CalculateLuminance;

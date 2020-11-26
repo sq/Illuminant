@@ -31,7 +31,11 @@ void AutoGBufferBitmapPixelShader (
     float relativeY = (originalPositionData.y - originalPositionData.w) * ViewCoordinateScaleFactor.y;
     float z = userData.z + (userData.y * relativeY);
     result = encodeGBufferSample(
-        (normal.xyz - 0.5) * 2, relativeY, z, isDead, userData.w > 0.5, (userData.w < -0.5)
+        (normal.xyz - 0.5) * 2, relativeY, z, isDead, 
+        // enable shadows
+        userData.w > 0.5,
+        // fullbright
+        (userData.w < -0.5)
     );
 
     if (isDead)

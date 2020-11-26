@@ -249,6 +249,10 @@ namespace Squared.Illuminant {
                     "AutoGBufferBitmap", "AutoGBufferBitmap"
                 );
 
+                LoadOneMaterial(effects, out GBufferMask,
+                    "GBufferMask", "GBufferMask"
+                );
+
                 LoadOneMaterial(effects, out ScreenSpaceVectorWarp,
                     "VectorWarp", "ScreenSpaceVectorWarp", 
                     new [] { MaterialUtil.MakeDelegate(blendState: BlendState.AlphaBlend) }

@@ -26,6 +26,12 @@ namespace Squared.Illuminant {
         public readonly bool       HighQuality;
 
         /// <summary>
+        /// Performs a pre-pass to mask out invisible parts of the scene for 
+        ///  more efficient rendering
+        /// </summary>
+        public readonly bool       StencilCulling;
+
+        /// <summary>
         /// Generates downscaled versions of the internal lightmap that the
         ///  renderer can use to estimate the brightness of the scene for HDR.
         /// This property enables use of RenderedLighting.TryComputeHistogram.
@@ -138,10 +144,12 @@ namespace Squared.Illuminant {
         public RendererConfiguration (
             int maxWidth, int maxHeight, bool highQuality,
             bool enableBrightnessEstimation = false,
+            bool stencilCulling = false,
             int ringBufferSize = 2,
             int maximumLightProbeCount = 256
         ) {
             HighQuality = highQuality;
+            StencilCulling = stencilCulling;
             AdjustMaximumRenderSize(maxWidth, maxHeight);
             EnableBrightnessEstimation = enableBrightnessEstimation;
             RingBufferSize = ringBufferSize;

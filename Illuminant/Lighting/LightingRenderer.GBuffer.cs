@@ -493,5 +493,37 @@ namespace Squared.Illuminant {
                 ));
             }
         }
+
+        private static readonly DepthStencilState MaskDepthStencilState = new DepthStencilState {
+            ReferenceStencil = 1,
+            StencilEnable = true,
+            StencilFail = StencilOperation.Zero,
+            StencilPass = StencilOperation.Replace,
+            StencilFunction = CompareFunction.Always
+        };
+
+        private void UpdateMaskFromGBuffer (IBatchContainer container, int layer) {
+            var material = Materials.Get(
+                IlluminantMaterials.GBufferMask,
+                depthStencilState: MaskDepthStencilState,
+                blendState: RenderStates.DrawNone
+            );
+            using (var batch = PrimitiveBatch<VertexPositionTexture>.New(
+                container, layer, material,
+                (dm, _) => dm.Device.Textures[0] = GBuffer.Texture.Get()
+            )) {
+                var verts = new[] {
+                    new VertexPositionTexture(new Vector3(-1, -1, Environment.GroundZ), Vector2.Zero),
+                    new VertexPositionTexture(new Vector3(1, -1, Environment.GroundZ), new Vector2(1, 0)),
+                    new VertexPositionTexture(new Vector3(1, 1, Environment.GroundZ), Vector2.One),
+                    new VertexPositionTexture(new Vector3(-1, -1, Environment.GroundZ), Vector2.Zero),
+                    new VertexPositionTexture(new Vector3(1, 1, Environment.GroundZ), Vector2.One),
+                    new VertexPositionTexture(new Vector3(-1, 1, Environment.GroundZ), new Vector2(0, 1))
+                };
+                batch.Add(new PrimitiveDrawCall<VertexPositionTexture>(
+                    PrimitiveType.TriangleList, verts, 0, 2
+                ));
+            }
+        }
     }
 }

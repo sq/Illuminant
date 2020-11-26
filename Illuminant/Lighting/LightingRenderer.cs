@@ -78,6 +78,18 @@ namespace Squared.Illuminant {
         }
 
         private class LightTypeRenderState : IDisposable {
+            public static readonly DepthStencilState LightDepthStencilState =
+                new DepthStencilState {
+                    DepthBufferEnable = false,
+                    StencilEnable = true,
+                    StencilFail = StencilOperation.Keep,
+                    StencilPass = StencilOperation.Keep,
+                    StencilFunction = CompareFunction.Equal,
+                    ReferenceStencil = 1,
+                    StencilWriteMask = 0,
+                    StencilDepthBufferFail = StencilOperation.Keep
+                };
+
             public  readonly LightingRenderer           Parent;
             public  readonly LightTypeRenderStateKey    Key;
             public  readonly object                     Lock = new object();
@@ -174,11 +186,10 @@ namespace Squared.Illuminant {
                         throw new NotImplementedException(key.Type.ToString());
                 }
 
-                if (Key.BlendState != null) {
-                    _Material = parent.Materials.Get(_Material, blendState: Key.BlendState);
-                    if (_ProbeMaterial != null)
-                        _ProbeMaterial = parent.Materials.Get(_ProbeMaterial, blendState: Key.BlendState);
-                }
+                var blendState = Key.BlendState ?? BlendState.Additive;
+                _Material = parent.Materials.Get(_Material, blendState: blendState, depthStencilState: LightDepthStencilState);
+                if (_ProbeMaterial != null)
+                    _ProbeMaterial = parent.Materials.Get(_ProbeMaterial, blendState: blendState, depthStencilState: DepthStencilState.None);
 
                 if (_Material == null)
                     throw new Exception("No material found");
@@ -444,6 +455,9 @@ namespace Squared.Illuminant {
                 Configuration.HighQuality
                     ? SurfaceFormat.Rgba64
                     : SurfaceFormat.Color,
+                Configuration.StencilCulling
+                    ? DepthFormat.Depth24Stencil8
+                    : DepthFormat.None,
                 Configuration.RingBufferSize
             );
 
@@ -468,6 +482,7 @@ namespace Squared.Illuminant {
                 1,
                 false,
                 SurfaceFormat.HalfVector4,
+                DepthFormat.None,
                 Configuration.RingBufferSize
             );
 
@@ -475,7 +490,11 @@ namespace Squared.Illuminant {
                 var width = Configuration.MaximumRenderSize.First / 2;
                 var height = Configuration.MaximumRenderSize.Second / 2;
 
-                _LuminanceBuffers = new BufferRing(coordinator, width, height, true, SurfaceFormat.Single, Configuration.RingBufferSize);
+                _LuminanceBuffers = new BufferRing(
+                    coordinator, width, height, true, 
+                    SurfaceFormat.Single, DepthFormat.None, 
+                    Configuration.RingBufferSize
+                );
             }
 
             EnsureGBuffer();
@@ -708,8 +727,6 @@ namespace Squared.Illuminant {
             var ltrs = (LightTypeRenderState)userData;
             lock (_LightStateLock)
                 ltrs.UpdateVertexBuffer();
-
-            device.Device.BlendState = RenderStates.AdditiveBlend;
 
             SetLightShaderParameters(ltrs.Material, ltrs.Key.Quality);
             var p = ltrs.Material.Effect.Parameters;
@@ -962,8 +979,15 @@ namespace Squared.Illuminant {
                         ambient.A = 0;
 
                     ClearBatch.AddNew(
-                        resultGroup, -1, Materials.Clear, ambient
+                        resultGroup, -2, Materials.Clear, 
+                        clearColor: ambient,
+                        // If the g-buffer is disabled, initialize the whole lightmap so that it is already stencil selected
+                        // When the g-buffer is enabled we will do a prepass to mark every pixel we want to light
+                        clearStencil: Configuration.EnableGBuffer ? 0 : 1
                     );
+
+                    if (Configuration.EnableGBuffer && Configuration.StencilCulling)
+                        UpdateMaskFromGBuffer(resultGroup, -1);
 
                     // TODO: Use threads?
                     lock (_LightStateLock) {

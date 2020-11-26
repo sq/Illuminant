@@ -22,7 +22,7 @@ namespace TestGame.Scenes {
 
         public readonly List<SphereLightSource> Lights = new List<SphereLightSource>();
 
-        Toggle ShowGBuffer, ShowDistanceField, GroundIsOpaque, TwoPointFiveD, Deterministic, Shadows;
+        Toggle ShowGBuffer, ShowDistanceField, GroundIsOpaque, TwoPointFiveD, Deterministic, Shadows, GroundShadows;
         Slider LightmapScaleRatio, MaxStepCount, MinStepSize, DistanceFieldResolution, DistanceSliceCount, MaximumEncodedDistance;
 
         public const int RotatingLightCount = 1024;
@@ -36,14 +36,15 @@ namespace TestGame.Scenes {
 
             Deterministic.Value = true;
             TwoPointFiveD.Value = true;
-            LightmapScaleRatio.Value = 0.5f;
+            LightmapScaleRatio.Value = 1f;
             MaxStepCount.Value = 64;
             MinStepSize.Value = 2f;
             DistanceFieldResolution.Value = 0.5f;
             DistanceSliceCount.Value = 7;
             MaximumEncodedDistance.Value = 128;
             Shadows.Value = true;
-            GroundIsOpaque.Value = true;
+            GroundIsOpaque.Value = false;
+            GroundShadows.Value = true;
 
             ShowGBuffer.Key = Keys.G;
             TwoPointFiveD.Key = Keys.D2;
@@ -126,12 +127,12 @@ namespace TestGame.Scenes {
             Renderer = new LightingRenderer(
                 Game.Content, Game.RenderCoordinator, Game.Materials, Environment,
                 new RendererConfiguration(
-                    Width, Height, true
+                    Width, Height, highQuality: true, stencilCulling: true
                 ) {
                     RenderScale = Vector2.One * LightmapScaleRatio,
                     DefaultQuality = {
                         LongStepFactor = 0.95f
-                    }
+                    },
                 }, Game.IlluminantMaterials
             ) {
                 DistanceField = DistanceField
@@ -215,7 +216,8 @@ namespace TestGame.Scenes {
             Renderer.Configuration.DefaultQuality.MinStepSize = MinStepSize;
             Renderer.Configuration.DefaultQuality.MaxStepCount = (int)MaxStepCount;
             Renderer.Configuration.RenderGroundPlane = GroundIsOpaque;
-            Renderer.Environment.EnableGroundShadows = GroundIsOpaque;
+            // FIXME
+            Renderer.Environment.EnableGroundShadows = GroundShadows && GroundIsOpaque;
 
             CreateRenderTargets();
 
