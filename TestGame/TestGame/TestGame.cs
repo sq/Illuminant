@@ -331,7 +331,9 @@ namespace TestGame {
                 false, SurfaceFormat.Color, DepthFormat.Depth24Stencil8, 1
             );
 
-            PRGUIContext = new UIContext(Materials, new DefaultDecorations(Materials, 3, 1) { DefaultFont = Font });
+            PRGUIContext = new UIContext(Materials, new DefaultDecorations(Materials, 3, 1) { DefaultFont = Font }) {
+                AllowNullFocus = false
+            };
             PRGUIContext.OnKeyEvent += PRGUIContext_OnKeyEvent;
             PRGUIContext.EventBus.Subscribe(null, UIEvents.CheckedChanged, PRGUI_OnCheckedChanged);
             PRGUIContext.EventBus.Subscribe(null, UIEvents.ValueChanged, PRGUI_OnValueChanged);
