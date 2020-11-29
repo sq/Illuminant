@@ -10,6 +10,12 @@ using Squared.Util;
 
 namespace Squared.Illuminant {
     public class RendererConfiguration {
+#if FNA
+        public const int MaxSurfaceSize = 8192;
+#else
+        public const int MaxSurfaceSize = 4096;
+#endif
+
         /// <summary>
         /// The maximum width and height of the viewport.
         /// </summary>
@@ -186,9 +192,9 @@ namespace Squared.Illuminant {
         public void AdjustMaximumRenderSize (int newWidth, int newHeight) {
             var oldSize = MaximumRenderSize;
 
-            if (newWidth <= 0 || newWidth > 4096)
+            if (newWidth <= 0 || newWidth > MaxSurfaceSize)
                 throw new ArgumentOutOfRangeException("newWidth");
-            if (newHeight <= 0 || newHeight > 4096)
+            if (newHeight <= 0 || newHeight > MaxSurfaceSize)
                 throw new ArgumentOutOfRangeException("newHeight");
 
             MaximumRenderSize = new Pair<int>(newWidth, newHeight);

@@ -16,6 +16,12 @@ namespace Squared.Illuminant {
     }
 
     public class DistanceField : IDisposable {
+#if FNA
+        public const int MaxSurfaceSize = 8192;
+#else
+        public const int MaxSurfaceSize = 4096;
+#endif
+
         public const int DefaultMaximumEncodedDistance = 128;
 
         public const SurfaceFormat Format = SurfaceFormat.Rgba64;
@@ -74,8 +80,8 @@ namespace Squared.Illuminant {
             SliceWidth = (int)Math.Round(VirtualWidth * Resolution);
             SliceHeight = (int)Math.Round(VirtualHeight * Resolution);
 
-            int maxSlicesX = 4096 / SliceWidth;
-            int maxSlicesY = 4096 / SliceHeight;
+            int maxSlicesX = MaxSurfaceSize / SliceWidth;
+            int maxSlicesY = MaxSurfaceSize / SliceHeight;
             int maxSlices = (maxSlicesX * maxSlicesY * LightingRenderer.PackedSliceCount);
 
             var sliceCount = Math.Max(3, requestedSliceCount);
