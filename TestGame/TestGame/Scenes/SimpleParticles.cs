@@ -481,7 +481,7 @@ namespace TestGame.Scenes {
                 var name = t.GetType().Name;
                 bool active = t.IsActive;
                 c.Text<Checkbox>(name)
-                    .SetValue(ref active, out bool changed);
+                    .Value(ref active, out bool changed);
                 if (changed)
                     t.IsActive = active;
             }

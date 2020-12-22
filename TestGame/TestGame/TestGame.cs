@@ -116,7 +116,7 @@ namespace TestGame {
             IsFixedTimeStep = false;
 
             if (IsFixedTimeStep)
-                TargetElapsedTime = TimeSpan.FromSeconds(1.0 / 30);
+                TargetElapsedTime = TimeSpan.FromSeconds(1.0 / 2);
 
             PreviousKeyboardState = Keyboard.GetState();
 
@@ -141,12 +141,11 @@ namespace TestGame {
             if (window == null) {
                 window = new Window {
                     Title = "Settings",
-                    FixedWidth = 500,
-                    MinimumHeight = 200,
-                    MaximumHeight = UIRenderTarget.Height - 200,
+                    Width = { Fixed = 500 },
+                    Height = { Minimum = 200, Maximum = UIRenderTarget.Height - 200 },
                     AllowDrag = true,
                     AllowMaximize = false,
-                    BackgroundColor = new Color(80, 80, 80),
+                    Appearance = { BackgroundColor = new Color(80, 80, 80) },
                     ScreenAlignment = new Vector2(0.99f, 0.9f),
                     ContainerFlags = ControlFlags.Container_Wrap | ControlFlags.Container_Row | ControlFlags.Container_Align_Start,
                     Scrollable = true,
@@ -192,13 +191,13 @@ namespace TestGame {
             var vsync = Graphics.SynchronizeWithVerticalRetrace;
             var fullscreen = Graphics.IsFullScreen;
             c.Text<Checkbox>("VSync")
-                .SetValue(ref vsync, out bool changed);
+                .Value(ref vsync, out bool changed);
             if (changed) {
                 Graphics.SynchronizeWithVerticalRetrace = vsync;
                 apply = true;
             }
             c.Text<Checkbox>("Fullscreen")
-                .SetValue(ref fullscreen, out changed);
+                .Value(ref fullscreen, out changed);
             if (changed) {
                 Graphics.IsFullScreen = fullscreen;
                 apply = true;
@@ -232,7 +231,9 @@ namespace TestGame {
 
             if (dropdown != null) {
                 smartBreakAllowed = false;
-                var label = builder.Text(name).SetLayoutFlags(breakFlags);
+                var label = builder.Text(name).SetLayoutFlags(breakFlags)
+                    .SetWrap(false)
+                    .SetMultiline(false);
                 var control = builder.New<PRGUIDropdown>()
                     .SetAutoSize(false, true)
                     .SetTextAlignment(HorizontalAlignment.Left)
@@ -344,8 +345,6 @@ namespace TestGame {
             foreach (var scene in Scenes)
                 scene.LoadContent();
             */
-
-            LastTimeOverUI = Time.Ticks;
 
             _ActiveSceneIndex = -1;
 
