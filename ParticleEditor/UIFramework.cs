@@ -12,6 +12,7 @@ using Framework;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Squared.Game;
+using Squared.Game.Input;
 using Squared.Illuminant;
 using Squared.Illuminant.Configuration;
 using Squared.Illuminant.Modeling;
@@ -57,7 +58,7 @@ namespace Lumined {
             DocumentProperties = new PropertyGridCache();
         private List<Type> TransformTypes = GetTransformTypes().ToList();
 
-        internal KeyboardInput KeyboardInputHandler;
+        internal KeyboardInputProvider KeyboardInputHandler;
         internal Stack<string> NameStack = new Stack<string>();
 
         public readonly EditorGame Game;

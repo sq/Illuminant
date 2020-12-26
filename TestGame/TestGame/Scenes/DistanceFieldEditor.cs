@@ -306,7 +306,7 @@ namespace TestGame.Scenes {
                     ActiveViewportIndex = null;
                 } else if (ActiveViewportIndex.HasValue && !Game.IsMouseOverUI) {
                     var viewport = Viewports[ActiveViewportIndex.Value];
-                    var delta = new Vector2(ms.X - Game.PreviousMouseState.X, ms.Y - Game.PreviousMouseState.Y);
+                    var delta = new Vector2(ms.X - Game.Mouse.PreviousState.X, ms.Y - Game.Mouse.PreviousState.Y);
                     delta.X *= (Renderer.Configuration.MaximumRenderSize.First / viewport.Rectangle.Size.X);
                     delta.Y *= (Renderer.Configuration.MaximumRenderSize.Second / viewport.Rectangle.Size.Y);
 

@@ -29,6 +29,7 @@ using ThreefoldTrials.Framework;
 using PRGUISlider = Squared.PRGUI.Controls.Slider;
 using PRGUIDropdown = Squared.PRGUI.Controls.Dropdown<object>;
 using Squared.PRGUI.Imperative;
+using Squared.PRGUI.Input;
 
 namespace TestGame {
     public class TestGame : MultithreadedGame {
@@ -43,9 +44,8 @@ namespace TestGame {
         public EmbeddedTexture2DProvider TextureLoader { get; private set; }
         public EmbeddedFreeTypeFontProvider FontLoader { get; private set; }
 
-        internal KeyboardInput KeyboardInputHandler;
-        public KeyboardState PreviousKeyboardState, KeyboardState;
-        public MouseState PreviousMouseState, MouseState;
+        public KeyboardInputSource Keyboard = new KeyboardInputSource();
+        public MouseInputSource Mouse = new MouseInputSource();
 
         public Material TextMaterial { get; private set; }
 
@@ -118,12 +118,7 @@ namespace TestGame {
             if (IsFixedTimeStep)
                 TargetElapsedTime = TimeSpan.FromSeconds(1.0 / 2);
 
-            PreviousKeyboardState = Keyboard.GetState();
-
             Scenes = SceneTypes.Select(t => (Scene)Activator.CreateInstance(t, this, Graphics.PreferredBackBufferWidth, Graphics.PreferredBackBufferHeight)).ToArray();
-
-            KeyboardInputHandler = new KeyboardInput();
-            KeyboardInputHandler.Install();
         }
 
         protected override void Initialize () {
@@ -162,6 +157,8 @@ namespace TestGame {
             var scene = Scenes[ActiveSceneIndex];
             var settings = scene.Settings;
             window.Data.Set(scene);
+
+            PRGUIContext.UpdateInput(IsActive);
         }
 
         private void BuildSettingsWindow (ref ContainerBuilder builder) {
@@ -286,15 +283,18 @@ namespace TestGame {
             }
         }
 
+        public KeyboardState KeyboardState => Keyboard.CurrentState;
+        public MouseState MouseState => Mouse.CurrentState;
+
         public bool LeftMouse {
             get {
-                return (MouseState.LeftButton == ButtonState.Pressed) && !IsMouseOverUI;
+                return (Mouse.CurrentState.LeftButton == ButtonState.Pressed) && !IsMouseOverUI;
             }
         }
 
         public bool RightMouse {
             get {
-                return (MouseState.RightButton == ButtonState.Pressed) && !IsMouseOverUI;
+                return (Mouse.CurrentState.RightButton == ButtonState.Pressed) && !IsMouseOverUI;
             }
         }
 
@@ -333,6 +333,10 @@ namespace TestGame {
             );
 
             PRGUIContext = new UIContext(Materials, new DefaultDecorations(Materials, 3, 1) { DefaultFont = Font }) {
+                InputSources = {
+                    Keyboard,
+                    Mouse
+                },
                 AllowNullFocus = false
             };
             PRGUIContext.OnKeyEvent += PRGUIContext_OnKeyEvent;
@@ -475,34 +479,31 @@ namespace TestGame {
         }
 
         protected override void Update (GameTime gameTime) {
-            PreviousKeyboardState = KeyboardState;
-            PreviousMouseState = MouseState;
-            KeyboardState = Keyboard.GetState();
-            MouseState = Mouse.GetState();
-
             UpdatePRGUI();
 
             if (IsActive) {
-                PRGUIContext.UpdateInput(MouseState, KeyboardState);
-                var alt = KeyboardState.IsKeyDown(Keys.LeftAlt) || KeyboardState.IsKeyDown(Keys.RightAlt);
-                var wasAlt = PreviousKeyboardState.IsKeyDown(Keys.LeftAlt) || PreviousKeyboardState.IsKeyDown(Keys.RightAlt);
+                var ks = Keyboard.CurrentState;
+                var pks = Keyboard.PreviousState;
 
-                if (KeyboardState.IsKeyDown(Keys.OemOpenBrackets) && !PreviousKeyboardState.IsKeyDown(Keys.OemOpenBrackets))
+                var alt = ks.IsKeyDown(Keys.LeftAlt) || ks.IsKeyDown(Keys.RightAlt);
+                var wasAlt = pks.IsKeyDown(Keys.LeftAlt) || pks.IsKeyDown(Keys.RightAlt);
+
+                if (ks.IsKeyDown(Keys.OemOpenBrackets) && !pks.IsKeyDown(Keys.OemOpenBrackets))
                     SetActiveScene(Arithmetic.Wrap(ActiveSceneIndex - 1, 0, Scenes.Length - 1));
-                else if (KeyboardState.IsKeyDown(Keys.OemCloseBrackets) && !PreviousKeyboardState.IsKeyDown(Keys.OemCloseBrackets))
+                else if (ks.IsKeyDown(Keys.OemCloseBrackets) && !pks.IsKeyDown(Keys.OemCloseBrackets))
                     SetActiveScene(Arithmetic.Wrap(ActiveSceneIndex + 1, 0, Scenes.Length - 1));
-                else if (KeyboardState.IsKeyDown(Keys.OemTilde) && !PreviousKeyboardState.IsKeyDown(Keys.OemTilde)) {
+                else if (ks.IsKeyDown(Keys.OemTilde) && !pks.IsKeyDown(Keys.OemTilde)) {
                     Graphics.SynchronizeWithVerticalRetrace = !Graphics.SynchronizeWithVerticalRetrace;
                     Graphics.ApplyChangesAfterPresent(RenderCoordinator);
                 }
                 else if (
-                    (KeyboardState.IsKeyDown(Keys.Enter) && alt) &&
-                    (!PreviousKeyboardState.IsKeyDown(Keys.Enter) || !wasAlt)
+                    (ks.IsKeyDown(Keys.Enter) && alt) &&
+                    (!pks.IsKeyDown(Keys.Enter) || !wasAlt)
                 ) {
                     Graphics.IsFullScreen = !Graphics.IsFullScreen;
                     Graphics.ApplyChangesAfterPresent(RenderCoordinator);
                 }
-                else if (KeyboardState.IsKeyDown(Keys.OemPipe) && !PreviousKeyboardState.IsKeyDown(Keys.OemPipe)) {
+                else if (ks.IsKeyDown(Keys.OemPipe) && !pks.IsKeyDown(Keys.OemPipe)) {
                     UniformBinding.ForceCompatibilityMode = !UniformBinding.ForceCompatibilityMode;
                 }
             }
@@ -524,10 +525,6 @@ namespace TestGame {
         }
 
         public override void Draw (GameTime gameTime, Frame frame) {
-            // Nuklear.UpdateInput(IsActive, PreviousMouseState, MouseState, PreviousKeyboardState, KeyboardState, IsMouseOverUI, KeyboardInputHandler.Buffer);
-
-            KeyboardInputHandler.Buffer.Clear();
-
             PRGUIContext.Rasterize(frame, UIRenderTarget, -9900);
 
             ClearBatch.AddNew(frame, -1, Materials.Clear, Color.Black);
@@ -630,8 +627,8 @@ namespace TestGame {
         }
 
         internal bool KeyWasPressed (Keys key) {
-            return Game.KeyboardState.IsKeyDown(key) && 
-                Game.PreviousKeyboardState.IsKeyUp(key);
+            return Game.Keyboard.CurrentState.IsKeyDown(key) && 
+                Game.Keyboard.PreviousState.IsKeyUp(key);
         }
     }
 }
