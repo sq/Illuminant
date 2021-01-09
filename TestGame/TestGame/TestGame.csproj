@@ -80,7 +80,6 @@
     <Compile Include="Scenes\LoadCompiledModel.cs" />
     <Compile Include="Scenes\LUTTest.cs" />
     <Compile Include="Scenes\ManySystemsManySpawners.cs" />
-    <Compile Include="Scenes\Palette.cs" />
     <Compile Include="Scenes\ParticleLights.cs" />
     <Compile Include="Scenes\ProjectorLight.cs" />
     <Compile Include="Scenes\RasterShapeSpeed.cs" />

@@ -46,6 +46,7 @@ namespace TestGame {
 
         public KeyboardInputSource Keyboard = new KeyboardInputSource();
         public MouseInputSource Mouse = new MouseInputSource();
+        public GamepadVirtualKeyboardAndCursor GamePad = new GamepadVirtualKeyboardAndCursor();
 
         public Material TextMaterial { get; private set; }
 
@@ -89,11 +90,10 @@ namespace TestGame {
             typeof(LoadCompiledModel),
 #endif
             typeof(Shapes),
+            typeof(RasterShapeSpeed),
             typeof(SystemStress),
-            typeof(PaletteTest),
             typeof(HueTest),
             typeof(BitmapShaders),
-            typeof(RasterShapeSpeed),
             typeof(BitmapBillboards),
             typeof(ProjectorLight)
         };
@@ -276,7 +276,7 @@ namespace TestGame {
                     control.Value = slider.Value;
                     control.Increment = slider.Speed;
                     control.Description = name;
-                    control.Exponential = slider.Exponential;
+                    control.Exponent = slider.Exponent;
                 }
 
                 control.Data.Set<ISetting>(slider);
@@ -333,10 +333,7 @@ namespace TestGame {
             );
 
             PRGUIContext = new UIContext(Materials, new DefaultDecorations(Materials, 3, 1) { DefaultFont = Font }) {
-                InputSources = {
-                    Keyboard,
-                    Mouse
-                },
+                InputSources = { Keyboard, Mouse, GamePad },
                 AllowNullFocus = false
             };
             PRGUIContext.OnKeyEvent += PRGUIContext_OnKeyEvent;

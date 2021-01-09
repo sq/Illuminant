@@ -22,7 +22,7 @@ using Squared.Util;
 namespace TestGame.Scenes {
     // These aren't illuminant specific but who cares
     public class RasterShapeSpeed : Scene {
-        Toggle BlendInLinearSpace, UseTexture, UseGeometry, Simple;
+        Toggle BlendInLinearSpace, UseTexture, UseGeometry, Simple, Rectangles;
 
         Slider FillPower1, FillPower2, FillOffset;
 
@@ -60,9 +60,9 @@ namespace TestGame.Scenes {
             ir.Clear(layer: 0, color: new Color(0, 32, 48));
             ir.RasterBlendInLinearSpace = BlendInLinearSpace.Value;
 
-            int count = UseGeometry ? 32 : 48;
-            const float step = 44;
-            const float radiusBase = 12;
+            int count = UseGeometry ? 32 : 64;
+            const float step = 40;
+            const float radiusBase = 10;
 
             for (int y = 0; y < count; y++) {
                 for (int x = 0; x < count; x++) {
@@ -74,6 +74,14 @@ namespace TestGame.Scenes {
 
                     if (UseGeometry)
                         ir.FillCircle(center, 0, radius.X, c1, c2);
+                    else if (Rectangles)
+                        ir.RasterizeRectangle(
+                            center - radius, center + radius, 0f, 
+                            c1, c2, 
+                            texture: (UseTexture && !Simple) ? Texture : null, 
+                            fillOffset: FillOffset.Value,
+                            fillGradientPower: new Vector2(FillPower1.Value, FillPower2.Value)
+                        );
                     else
                         ir.RasterizeEllipse(
                             center, radius, c1, c2, texture: (UseTexture && !Simple) ? Texture : null, 

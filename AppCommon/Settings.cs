@@ -124,10 +124,10 @@ namespace TestGame {
     public class Slider : Setting<float> {
         public bool AsProperty = true;
         public bool Integral = false;
-        public bool Exponential = false;
         public Keys MinusKey, PlusKey;
         public float? Min, Max;
         public float Speed = 1;
+        public double? Exponent;
 
         public override void Update (Scene s) {
             float delta = 0;

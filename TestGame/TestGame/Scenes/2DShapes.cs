@@ -73,7 +73,7 @@ namespace TestGame.Scenes {
             OutlineSize.Max = 16f;
             OutlineSize.Value = 1f;
             OutlineSize.Speed = 0.5f;
-            OutlineSize.Exponential = true;
+            OutlineSize.Exponent = 2;
             ArcLength.Min = 5f;
             ArcLength.Max = 360f;
             ArcLength.Value = 45f;
@@ -87,12 +87,12 @@ namespace TestGame.Scenes {
             FillSize.Min = 0.05f;
             FillSize.Max = 4f;
             FillSize.Speed = 0.05f;
-            FillSize.Exponential = true;
+            FillSize.Exponent = 4;
             AnnularRadius.Value = 0f;
             AnnularRadius.Min = 0f;
             AnnularRadius.Max = 32f;
             AnnularRadius.Speed = 0.25f;
-            AnnularRadius.Exponential = true;
+            AnnularRadius.Exponent = 2;
             FillAngle.Min = 0f;
             FillAngle.Max = 360f;
             FillAngle.Speed = 2f;
@@ -108,11 +108,11 @@ namespace TestGame.Scenes {
             ShadowSoftness.Max = 32f;
             ShadowSoftness.Speed = 0.25f;
             ShadowSoftness.Value = 4f;
-            ShadowSoftness.Exponential = true;
+            ShadowSoftness.Exponent = 2;
             ShadowExpansion.Min = 0f;
             ShadowExpansion.Max = 8f;
             ShadowExpansion.Speed = 0.1f;
-            ShadowExpansion.Exponential = true;
+            ShadowExpansion.Exponent = 2;
             TextureSize.Value = 1;
             TextureSize.Max = 4;
             TextureSize.Min = 0.1f;
