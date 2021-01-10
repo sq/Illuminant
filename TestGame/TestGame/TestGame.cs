@@ -147,7 +147,7 @@ namespace TestGame {
                     ShowHorizontalScrollbar = false,
                     ClipChildren = true,
                     DynamicContents = BuildSettingsWindow,
-                    Collapsible = true
+                    Collapsible = true,
                 };
                 PRGUIContext.Controls.Add(window);
                 // FIXME: This should work
@@ -332,7 +332,10 @@ namespace TestGame {
                 false, SurfaceFormat.Color, DepthFormat.Depth24Stencil8, 1
             );
 
-            PRGUIContext = new UIContext(Materials, new DefaultDecorations(Materials, 3, 1) { DefaultFont = Font }) {
+            var decorations = new DefaultDecorations(Materials, 3, 1) {
+                DefaultFont = Font                
+            };
+            PRGUIContext = new UIContext(Materials, decorations) {
                 InputSources = { Keyboard, Mouse, GamePad },
                 AllowNullFocus = false
             };
