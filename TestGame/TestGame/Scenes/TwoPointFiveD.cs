@@ -72,6 +72,8 @@ namespace TestGame.Scenes {
         [Group("LUTs")]
         Slider DarkLevel, BrightLevel, NeutralBandSize;
 
+        Slider Gamma;
+
         Toggle Timelapse,
             Deterministic,
             sRGB, Clipping;
@@ -140,6 +142,12 @@ namespace TestGame.Scenes {
             DitherPower.Max = 12;
             DitherPower.Min = 1;
             DitherPower.Speed = 1;
+
+            Gamma.Min = 0.1f;
+            Gamma.Max = 4f;
+            Gamma.Exponent = 2;
+            Gamma.Value = 1;
+            Gamma.Speed = 0.1f;
 
             DitherRangeMin.Max =
                 DitherRangeMax.Max = 2.0f;
@@ -374,7 +382,8 @@ namespace TestGame.Scenes {
                     albedo: (dmode == "Merged") && !ShowLightmap ? Background : null,
                     hdr: new HDRConfiguration {
                         InverseScaleFactor = LightScaleFactor,
-                        Gamma = sRGB ? 2.3f : 1.0f,
+                        Gamma = Gamma,
+                        AlbedoIsSRGB = sRGB,
                         ResolveToSRGB = sRGB,
                         Dithering = new DitheringSettings {
                             Strength = doResolveDither ? DitherStrength : 0f,

@@ -1322,6 +1322,11 @@ namespace Squared.Illuminant {
                         ? ((hdr.Value.InverseScaleFactor != 0) ? hdr.Value.InverseScaleFactor : 1.0f)
                         : 1.0f
                 );
+                p["AlbedoIsSRGB"].SetValue(
+                    hdr.HasValue
+                        ? (hdr.Value.AlbedoIsSRGB ? 1f : 0f)
+                        : 0f
+                );
                 p["ResolveToSRGB"].SetValue(
                     hdr.HasValue
                         ? (hdr.Value.ResolveToSRGB ? 1f : 0f)

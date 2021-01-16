@@ -213,9 +213,18 @@ namespace Squared.Illuminant {
         public GammaCompressionConfiguration GammaCompression;
         public ToneMappingConfiguration ToneMapping;
         public DitheringSettings? Dithering;
-        private bool? _ResolveToSRGB;
+        private bool? _ResolveToSRGB, _AlbedoIsSRGB;
 
         private float ExposureMinusOne, GammaMinusOne;
+
+        public bool AlbedoIsSRGB {
+            get {
+                return _AlbedoIsSRGB.GetValueOrDefault(false);
+            }
+            set {
+                _AlbedoIsSRGB = value;
+            }
+        }
 
         public bool ResolveToSRGB {
             get {

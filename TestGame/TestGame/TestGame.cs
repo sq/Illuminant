@@ -454,9 +454,9 @@ namespace TestGame {
             Squared.Render.STB.ImageWrite.WriteImage(
                 identityF, File.OpenWrite("lut-identity.hdr"), Squared.Render.STB.ImageWriteFormat.HDR
             );
-#if !FNA
-            identityF.Texture.SaveAsPng(File.OpenWrite("lut-identity.png"), identityF.Texture.Width, identityF.Texture.Height);
-#endif
+            Squared.Render.STB.ImageWrite.WriteImage(
+                identity, File.OpenWrite("lut-identity.png"), Squared.Render.STB.ImageWriteFormat.PNG
+            );
             */
 
             var names = TextureLoader.GetNames("LUTs\\");
@@ -472,7 +472,10 @@ namespace TestGame {
             var texture = TextureLoader.Load(name, new TextureLoadOptions {
                 Premultiply = false,
                 GenerateMips = false,
-                FloatingPoint = true
+                FloatingPoint = false,
+                Enable16Bit = false,
+                sRGBFromLinear = name.Contains("-linear"),
+                sRGBToLinear = name.Contains("-srgb")
             });
             var lut = new ColorLUT(texture, true);
             LUTs.Add(key, lut);

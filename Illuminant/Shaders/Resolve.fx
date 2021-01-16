@@ -20,7 +20,7 @@ sampler PointSampler : register(s7) {
 };
 
 uniform float2 LightmapUVOffset;
-uniform float  ResolveToSRGB;
+uniform float  AlbedoIsSRGB, ResolveToSRGB;
 uniform float  InverseScaleFactor;
 
 float4 ResolveCommon (
@@ -49,7 +49,7 @@ float4 ResolveWithAlbedoCommon (
 
     float4 light = tex2Dlod(TextureSampler2, float4(texCoord2, 0, 0));
     float4 albedo = tex2Dlod(TextureSampler, float4(texCoord1, 0, 0));
-    if (ResolveToSRGB)
+    if (AlbedoIsSRGB)
         albedo = pSRGBToPLinear(albedo);
 
     light *= InverseScaleFactor * 2;
