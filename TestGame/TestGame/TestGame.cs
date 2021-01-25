@@ -30,6 +30,7 @@ using PRGUISlider = Squared.PRGUI.Controls.Slider;
 using PRGUIDropdown = Squared.PRGUI.Controls.Dropdown<object>;
 using Squared.PRGUI.Imperative;
 using Squared.PRGUI.Input;
+using System.Text.RegularExpressions;
 
 namespace TestGame {
     public class TestGame : MultithreadedGame {
@@ -464,6 +465,8 @@ namespace TestGame {
                 LoadLUT(name);
         }
 
+        Regex RowCountRE = new Regex(@"(\-x(?'count'[0-9]+))", RegexOptions.ExplicitCapture);
+
         private void LoadLUT (string name) {
             var key = Path.GetFileName(name);
             if (LUTs.ContainsKey(key))
@@ -477,7 +480,12 @@ namespace TestGame {
                 sRGBFromLinear = name.Contains("-linear"),
                 sRGBToLinear = name.Contains("-srgb")
             });
-            var lut = new ColorLUT(texture, true);
+            var rowCountM = RowCountRE.Match(name);
+            var rowCount = rowCountM.Success
+                ? int.Parse(rowCountM.Groups["count"]?.Value)
+                : 1;
+            
+            var lut = new ColorLUT(texture, true, rowCount);
             LUTs.Add(key, lut);
         }
 

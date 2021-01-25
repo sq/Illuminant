@@ -15,8 +15,9 @@ const float3 RgbToGray = float3(0.299, 0.587, 0.144);
 
 Texture2D DarkLUT : register(t4);
 Texture2D BrightLUT : register(t5);
-uniform const float2 LUTResolutions;
+uniform const float4 LUTResolutionsAndRowCounts;
 uniform const float3 LUTLevels;
+uniform const float4 LUTOffsets;
 uniform const float  PerChannelLUT, LUTOnly;
 
 sampler DarkLUTSampler : register(s4) {
@@ -83,8 +84,8 @@ float4 LUTBlendedResolveWithAlbedoCommon(
 
     albedo.rgb = saturate3(albedo.rgb);
 
-    float3 lutValue1 = ReadLUT(DarkLUTSampler, LUTResolutions.x, albedo.rgb);
-    float3 lutValue2 = ReadLUT(BrightLUTSampler, LUTResolutions.y, albedo.rgb);
+    float3 lutValue1 = ReadLUT(DarkLUTSampler, LUTResolutionsAndRowCounts.xz, albedo.rgb, LUTOffsets.xy);
+    float3 lutValue2 = ReadLUT(BrightLUTSampler, LUTResolutionsAndRowCounts.yw, albedo.rgb, LUTOffsets.zw);
 
     float3 blendedValue;
     if (hasNeutralBand) {
