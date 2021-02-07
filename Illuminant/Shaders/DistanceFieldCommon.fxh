@@ -270,7 +270,7 @@ float decodeDistance (float encodedDistance) {
 Texture2D DistanceFieldTexture : register(t7);
 sampler   DistanceFieldTextureSampler : register(s7){
     Texture = (DistanceFieldTexture);
-    AddressU  = CLAMP;
+    AddressU  = WRAP;
     AddressV  = CLAMP;
     MipFilter = POINT;
     MinFilter = LINEAR;
@@ -320,11 +320,11 @@ float getZToSliceIndex (in DistanceFieldConstants vars) {
 
 float2 computeDistanceFieldSliceUv (
     float virtualSliceIndex,
-    float invSliceCountXTimesOneThird
+    DistanceFieldConstants vars
 ) {
-    float rowIndexF   = virtualSliceIndex * invSliceCountXTimesOneThird;
+    float columnIndex = floor(virtualSliceIndex / 3);
+    float rowIndexF   = virtualSliceIndex * getInvSliceCountXTimesOneThird(vars);
     float rowIndex    = floor(rowIndexF);
-    float columnIndex = floor((rowIndexF - rowIndex) * DistanceField.TextureSliceCount.x);
     return float2(columnIndex, rowIndex) * getDistanceSliceSize();
 }
 
@@ -351,7 +351,7 @@ float sampleDistanceFieldEx (
         texelUv = clamp2(texelUv, vars.halfDistanceTexel, vars.distanceSliceSizeMinusHalfTexel);
     
     float4 uv = float4(
-        computeDistanceFieldSliceUv(virtualSliceIndex, getInvSliceCountXTimesOneThird(vars)) + texelUv,
+        computeDistanceFieldSliceUv(virtualSliceIndex, vars) + texelUv,
         0, 0
     );
 
