@@ -14,6 +14,7 @@ using Squared.Illuminant.Configuration;
 using Squared.Illuminant.Util;
 using Squared.Render;
 using Squared.Render.Evil;
+using Squared.Render.Resources;
 using Squared.Render.Tracing;
 using Squared.Util;
 using Chunk = Squared.Illuminant.Particles.ParticleSystem.Chunk;
@@ -58,7 +59,7 @@ namespace Squared.Illuminant.Particles {
         internal readonly HashSet<ParticleSystem> Systems = 
             new HashSet<ParticleSystem>(new ReferenceComparer<ParticleSystem>());
 
-        private readonly EmbeddedEffectProvider Effects;
+        private readonly EffectProvider Effects;
         private readonly Dictionary<Type, Delegate> GenericResolvers = 
             new Dictionary<Type, Delegate>(new ReferenceComparer<Type>());
         private readonly Dictionary<Type, Delegate> GenericBoxedResolvers = 
@@ -96,7 +97,7 @@ namespace Squared.Illuminant.Particles {
             Coordinator = coordinator;
             Materials = materials;
 
-            Effects = new EmbeddedEffectProvider(coordinator);
+            Effects = new EffectProvider(System.Reflection.Assembly.GetExecutingAssembly(), coordinator);
 
             OwnsMaterials = (particleMaterials == null);
             ParticleMaterials = particleMaterials ?? new ParticleMaterials(materials);

@@ -11,6 +11,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Squared.Render;
 using Squared.Render.Convenience;
 using Squared.Render.Evil;
+using Squared.Render.Resources;
 using Squared.Render.Tracing;
 
 namespace Squared.Illuminant {
@@ -23,7 +24,7 @@ namespace Squared.Illuminant {
         }
 
         private Material LoadOneMaterial (
-            EmbeddedEffectProvider effects, out Material result, string fileName, string techniqueName = null, 
+            EffectProvider effects, out Material result, string fileName, string techniqueName = null, 
             Action<DeviceManager>[] begin = null, Action<DeviceManager>[] end = null
         ) {
             try {
@@ -44,7 +45,7 @@ namespace Squared.Illuminant {
             }
         }
 
-        public void Load (RenderCoordinator coordinator, EmbeddedEffectProvider effects = null) {
+        public void Load (RenderCoordinator coordinator, EffectProvider effects = null) {
             lock (this) {
                 if (IsLoaded)
                     return;
@@ -52,7 +53,7 @@ namespace Squared.Illuminant {
                 IsLoaded = true;
                 // FIXME: This is a memory leak
                 if (effects == null)
-                    effects = new EmbeddedEffectProvider(coordinator);
+                    effects = new EffectProvider(System.Reflection.Assembly.GetExecutingAssembly(), coordinator);
                             
                 var neutralDepthStencilState = new DepthStencilState {
                     StencilEnable = false,
@@ -289,7 +290,7 @@ namespace Squared.Illuminant.Particles {
             }
         }
 
-        private void LoadMaterials (EmbeddedEffectProvider effects) {
+        private void LoadMaterials (EffectProvider effects) {
             lock (ParticleMaterials) {
                 if (ParticleMaterials.IsLoaded)
                     return;

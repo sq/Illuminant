@@ -42,8 +42,8 @@ namespace TestGame {
         public IlluminantMaterials IlluminantMaterials;
         public ParticleMaterials ParticleMaterials;
 
-        public EmbeddedTexture2DProvider TextureLoader { get; private set; }
-        public EmbeddedFreeTypeFontProvider FontLoader { get; private set; }
+        public Texture2DProvider TextureLoader { get; private set; }
+        public FreeTypeFontProvider FontLoader { get; private set; }
 
         public KeyboardInputSource Keyboard = new KeyboardInputSource();
         public MouseInputSource Mouse = new MouseInputSource();
@@ -302,13 +302,13 @@ namespace TestGame {
         protected override void OnLoadContent (bool isReloading) {
             RenderCoordinator.EnableThreading = false;
 
-            TextureLoader = new EmbeddedTexture2DProvider(RenderCoordinator) {
+            TextureLoader = new Texture2DProvider(Assembly.GetExecutingAssembly(), RenderCoordinator) {
                 DefaultOptions = new TextureLoadOptions {
                     Premultiply = true,
                     GenerateMips = true
                 }
             };
-            FontLoader = new EmbeddedFreeTypeFontProvider(RenderCoordinator);
+            FontLoader = new FreeTypeFontProvider(Assembly.GetExecutingAssembly(), RenderCoordinator);
 
             Font = FontLoader.Load("FiraSans-Medium");
             Font.MipMapping = true; // FIXME: We're really blurry without this and I'm too lazy to fix it right now
@@ -460,9 +460,11 @@ namespace TestGame {
             );
             */
 
-            var names = TextureLoader.GetNames("LUTs\\");
-            foreach (var name in names)
-                LoadLUT(name);
+            var names = TextureLoader.StreamSource.GetNames();
+            foreach (var name in names) {
+                if (name.StartsWith("LUTs\\"))
+                    LoadLUT(name);
+            }
         }
 
         Regex RowCountRE = new Regex(@"(\-x(?'count'[0-9]+))", RegexOptions.ExplicitCapture);

@@ -13,6 +13,7 @@ using Microsoft.Xna.Framework.Graphics.PackedVector;
 using Squared.Game;
 using Squared.Render;
 using Squared.Render.Convenience;
+using Squared.Render.Resources;
 using Squared.Render.Tracing;
 using Squared.Util;
 
@@ -403,7 +404,7 @@ namespace Squared.Illuminant {
 
         private Uniforms.Environment EnvironmentUniforms;
 
-        private readonly EmbeddedEffectProvider Effects;
+        private readonly EffectProvider Effects;
 
         private readonly TypedUniform<Uniforms.DistanceField> uDistanceField;
         private readonly TypedUniform<Render.DitheringSettings> uDithering;
@@ -422,7 +423,7 @@ namespace Squared.Illuminant {
             uDistanceField = materials.NewTypedUniform<Uniforms.DistanceField>("DistanceField");
             uDithering = materials.NewTypedUniform<Render.DitheringSettings>("Dithering");
 
-            Effects = new EmbeddedEffectProvider(coordinator);
+            Effects = new EffectProvider(System.Reflection.Assembly.GetExecutingAssembly(), coordinator);
 
             IlluminantMaterials = illuminantMaterials ?? new IlluminantMaterials(materials);
 

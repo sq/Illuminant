@@ -5,7 +5,7 @@
         "commandLine": "",
         "environment": [
         ],
-        "executable": "C:\\Users\\Katelyn\\Documents\\Projects\\Illuminant\\TestGame\\TestGame\\bin\\FNA-x64\\Release\\TestGame.exe",
+        "executable": "E:\\Documents\\Projects\\Illuminant\\TestGame\\TestGame\\bin\\FNA-x64\\Release\\TestGame.exe",
         "inject": false,
         "numQueuedFrames": 0,
         "options": {

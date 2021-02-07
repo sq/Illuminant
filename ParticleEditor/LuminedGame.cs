@@ -25,6 +25,7 @@ using Squared.Util;
 using Squared.Threading;
 using ThreefoldTrials.Framework;
 using Nuke = NuklearDotNet.Nuklear;
+using Squared.Render.Resources;
 
 namespace Lumined {
     public partial class EditorGame : MultithreadedGame, INuklearHost {
@@ -43,8 +44,8 @@ namespace Lumined {
         public LightingRenderer LightingRenderer;
         public PropertyEditor UI;
 
-        public EmbeddedTexture2DProvider TextureLoader { get; private set; }
-        public EmbeddedFreeTypeFontProvider FontLoader { get; private set; }
+        public Texture2DProvider TextureLoader { get; private set; }
+        public FreeTypeFontProvider FontLoader { get; private set; }
 
         public KeyboardState PreviousKeyboardState, KeyboardState;
         public MouseState PreviousMouseState, MouseState;
@@ -191,13 +192,13 @@ namespace Lumined {
         protected override void OnLoadContent (bool isReloading) {
             DidLoadContent = true;
 
-            TextureLoader = new EmbeddedTexture2DProvider(RenderCoordinator) {
+            TextureLoader = new Texture2DProvider(Assembly.GetExecutingAssembly(), RenderCoordinator) {
                 DefaultOptions = new TextureLoadOptions {
                     Premultiply = true,
                     GenerateMips = true
                 }
             };
-            FontLoader = new EmbeddedFreeTypeFontProvider(RenderCoordinator);
+            FontLoader = new FreeTypeFontProvider(Assembly.GetExecutingAssembly(), RenderCoordinator);
 
             Font = FontLoader.Load("Lato-Regular");
             Font.GlyphMargin = 2;
@@ -231,7 +232,7 @@ namespace Lumined {
             WorldSpaceTextMaterial.Parameters.ShadowOffset.SetValue(Vector2.One * 0.75f);
 
             // FIXME: Memory leak
-            var eep = new EmbeddedEffectProvider(typeof(Squared.Illuminant.Particles.ParticleSystem).Assembly, RenderCoordinator);
+            var eep = new EffectProvider(typeof(Squared.Illuminant.Particles.ParticleSystem).Assembly, RenderCoordinator);
             ScreenSpaceBezierVisualizer = new Material(eep.Load("VisualizeBezier"), "ScreenSpaceBezierVisualizer");
             Materials.Add(ScreenSpaceBezierVisualizer);
             ScreenSpaceBezierVisualizer = Materials.Get(ScreenSpaceBezierVisualizer, blendState: BlendState.AlphaBlend);

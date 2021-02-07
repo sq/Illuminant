@@ -96,7 +96,7 @@ namespace Squared.Illuminant.Modeling {
 
             if (File.Exists(path)) {
                 using (var img = new Squared.Render.STB.Image(path, premultiply: true, asFloatingPoint: floatingPoint))
-                    result = img.CreateTexture(Coordinator, !floatingPoint, powerOfTwo);
+                    result = img.CreateTexture(Coordinator, powerOfTwo);
             } else {
                 // HACK: Create placeholder texture
                 lock (Coordinator.CreateResourceLock) {
