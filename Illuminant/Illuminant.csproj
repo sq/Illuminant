@@ -103,7 +103,7 @@
     <DefineConstants>TRACE;DEBUG;FNA;SDL2;DF3D</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|FNA-x64'">
-    <DefineConstants>TRACE;FNA;SDL2;DF3D</DefineConstants>
+    <DefineConstants>TRACE;FNA;SDL2</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|FNA'">
     <DefineConstants>TRACE;FNA;SDL2;DF3D</DefineConstants>

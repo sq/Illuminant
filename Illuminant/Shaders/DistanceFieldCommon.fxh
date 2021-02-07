@@ -3,6 +3,8 @@
 #ifndef DISTANCE_FIELD_DEFINED
 #define DISTANCE_FIELD_DEFINED
 
+// #define DF3D
+
 // This is a distance of 0
 // Moving this value up/down allocates more precision to positive or negative distances
 #define DISTANCE_ZERO (192.0 / 255.0)
@@ -274,6 +276,16 @@ sampler   DistanceFieldTextureSampler : register(s7){
     MinFilter = LINEAR;
     MagFilter = LINEAR;
 };
+Texture3D DistanceFieldTexture3D : register(t6);
+sampler   DistanceFieldTextureSampler3D : register(s6){
+    Texture = (DistanceFieldTexture3D);
+    AddressU  = CLAMP;
+    AddressV  = CLAMP;
+    AddressW  = CLAMP;
+    MipFilter = POINT;
+    MinFilter = LINEAR;
+    MagFilter = LINEAR;
+};
 
 struct DistanceFieldConstants {
     float3 data;
@@ -329,6 +341,11 @@ float sampleDistanceFieldEx (
     float slicePosition = min(clampedPosition.z, getMaximumValidZ(vars)) * getZToSliceIndex(vars);
     float virtualSliceIndex = floor(slicePosition);
 
+#ifdef DF3D
+    float4 uvwl = float4(clampedPosition / extent, 0);
+    float4 packedSample = tex3Dlod(DistanceFieldTextureSampler3D, uvwl);
+    float blendedSample = packedSample.x;
+#else
     float2 texelUv = clampedPosition.xy * getDistanceTexelSize();
     if (0)
         texelUv = clamp2(texelUv, vars.halfDistanceTexel, vars.distanceSliceSizeMinusHalfTexel);
@@ -353,6 +370,7 @@ float sampleDistanceFieldEx (
     float blendedSample = lerp(
         samples.x, samples.y, subslice
     );
+#endif
 
     float decodedDistance = decodeDistance(blendedSample);
 

@@ -143,8 +143,14 @@ namespace Squared.Illuminant.Particles.Transforms {
                     }
 
                     var dft = p["DistanceFieldTexture"];
+#if DF3D
+                    var dft3d = p["DistanceFieldTexture3D"];
+#endif
                     if (dft != null) {
                         dft.SetValue(system.Configuration.Collision?.DistanceField?.Texture?.Get());
+#if DF3D
+                        dft3d.SetValue(system.Configuration.Collision?.DistanceField?.Texture3D);
+#endif
 
                         var dfu = new Uniforms.DistanceField(
                             system.Configuration.Collision.DistanceField, 

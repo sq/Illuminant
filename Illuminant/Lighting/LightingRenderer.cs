@@ -1756,6 +1756,9 @@ namespace Squared.Illuminant {
                 uDistanceField.TrySet(m, ref dfu);
                 p["DistanceFieldPacked1"]?.SetValue(Vector4.Zero);
                 p.ClearTexture("DistanceFieldTexture");
+#if DF3D
+                p.ClearTexture("DistanceFieldTexture3D");
+#endif
                 return;
             }
 
@@ -1773,8 +1776,12 @@ namespace Squared.Illuminant {
 
             uDistanceField.TrySet(m, ref dfu);
 
-            if (setDistanceTexture)
+            if (setDistanceTexture) {
                 p["DistanceFieldTexture"]?.SetValue(_DistanceField.Texture.Get());
+#if DF3D
+                p["DistanceFieldTexture3D"]?.SetValue(_DistanceField.Texture3D);
+#endif
+            }
 
             p["DistanceFieldPacked1"]?.SetValue(new Vector4(
                 // FIXME: Surprisingly, using double precision for 1/3 here breaks

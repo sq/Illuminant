@@ -131,8 +131,8 @@ namespace Squared.Illuminant {
                     coordinator.Device,
                     SliceWidth, 
                     SliceHeight,
-                    PhysicalSliceCount,
-                    false, Format
+                    SliceCount,
+                    false, SurfaceFormat.Rg32
                 );
 #endif
 
@@ -250,7 +250,8 @@ namespace Squared.Illuminant {
             // FIXME
             int numComponents;
             var sizeofPixel = Render.Evil.TextureUtils.GetBytesPerPixelAndComponents(Format, out numComponents);
-            var buffer = new byte[sizeofPixel * SliceWidth * SliceHeight];
+            byte[] srcBuffer = new byte[sizeofPixel * SliceWidth * SliceHeight],
+                destBuffer = new byte[sizeof(ushort) * 2 * SliceWidth * SliceHeight];
             var tex = Texture.Get();
             var lastUpdatedPhysicalSlice = -1;
             for (int i = 0; i < count; i++) {
@@ -268,14 +269,31 @@ namespace Squared.Illuminant {
 
                 lastUpdatedPhysicalSlice = Math.Max(lastUpdatedPhysicalSlice, physicalSliceIndex);
 
-                fixed (byte* pBuffer = buffer) {
-                    var ipBuffer = new IntPtr(pBuffer);
+                fixed (byte* pSrcBuffer = srcBuffer)
+                fixed (byte* pDestBuffer = destBuffer) {
+                    IntPtr iSrc = new IntPtr(pSrcBuffer),
+                        iDest = new IntPtr(pDestBuffer);
 
                     lock (UseLock)
-                        tex.GetDataPointerEXT(0, rect, ipBuffer, buffer.Length);
+                        tex.GetDataPointerEXT(0, rect, iSrc, srcBuffer.Length);
 
-                    lock (UseLock)
-                        Texture3D.SetDataPointerEXT(0, 0, 0, SliceWidth, SliceHeight, physicalSliceIndex, physicalSliceIndex + 1, ipBuffer, buffer.Length);
+                    // HACK: Unpack slices into individual fp32 levels
+                    for (int j = 0; j < 3; j++) {
+                        for (int y = 0; y < SliceHeight; y++) {
+                            var pPackedSrc = ((ushort*)pSrcBuffer) + (y * SliceWidth * 4);
+                            var pDest = ((ushort*)pDestBuffer) + (y * SliceWidth * 2);
+
+                            for (int x = 0; x < SliceWidth; x++) {
+                                int k = (x * 4) + j;
+                                float fSrc = pPackedSrc[k];// / (float)ushort.MaxValue;
+                                pDest[x] = fSrc;
+                            }
+                        }
+
+                        int top = (physicalSliceIndex * 3) + j;
+                        lock (UseLock)
+                            Texture3D.SetDataPointerEXT(0, 0, 0, SliceWidth, SliceHeight, top, top + 1, iDest, destBuffer.Length);
+                    }
                 }
             }
 #endif
