@@ -35,6 +35,9 @@ namespace Squared.Illuminant {
 
         public readonly RenderCoordinator Coordinator;
         public readonly AutoRenderTarget Texture;
+#if DF3D
+        public readonly Texture3D Texture3D;
+#endif
         public readonly int SliceWidth, SliceHeight, SliceCount;
         public readonly int PhysicalSliceCount;
         public readonly int ColumnCount, RowCount;
@@ -121,6 +124,17 @@ namespace Squared.Illuminant {
                     SliceHeight * RowCount,
                     false, Format
                 );
+
+#if DF3D
+            lock (coordinator.CreateResourceLock)
+                Texture3D = new Texture3D(
+                    coordinator.Device,
+                    SliceWidth, 
+                    SliceHeight,
+                    PhysicalSliceCount,
+                    false, Format
+                );
+#endif
 
             coordinator.DeviceReset += Coordinator_DeviceReset;
             NeedClear = true;
@@ -219,9 +233,52 @@ namespace Squared.Illuminant {
             lock (UseLock)
                 tex.SetData(data);
 
+            lock (UseLock)
+                Update3DTexture();
+
             SliceInfo.InvalidSlices.Clear();
             // FIXME: Is this right?
             SliceInfo.ValidSliceCount = ((SliceCount + 2) / 3) * 3;
+        }
+
+        public void Update3DTexture () {
+            Update3DTexture(0, SliceCount);
+        }
+
+        public unsafe void Update3DTexture (int firstSlice, int count) {
+#if DF3D
+            // FIXME
+            int numComponents;
+            var sizeofPixel = Render.Evil.TextureUtils.GetBytesPerPixelAndComponents(Format, out numComponents);
+            var buffer = new byte[sizeofPixel * SliceWidth * SliceHeight];
+            var tex = Texture.Get();
+            var lastUpdatedPhysicalSlice = -1;
+            for (int i = 0; i < count; i++) {
+                var sliceIndex = firstSlice + i;
+                var physicalSliceIndex = sliceIndex / 3;
+                if (physicalSliceIndex <= lastUpdatedPhysicalSlice)
+                    continue;
+                var columnIndex = physicalSliceIndex % ColumnCount;
+                var rowIndex = physicalSliceIndex / ColumnCount;
+                var x1 = columnIndex * SliceWidth;
+                var y1 = rowIndex * SliceHeight;
+                var rect = new Rectangle(
+                    x1, y1, SliceWidth, SliceHeight
+                );
+
+                lastUpdatedPhysicalSlice = Math.Max(lastUpdatedPhysicalSlice, physicalSliceIndex);
+
+                fixed (byte* pBuffer = buffer) {
+                    var ipBuffer = new IntPtr(pBuffer);
+
+                    lock (UseLock)
+                        tex.GetDataPointerEXT(0, rect, ipBuffer, buffer.Length);
+
+                    lock (UseLock)
+                        Texture3D.SetDataPointerEXT(0, 0, 0, SliceWidth, SliceHeight, physicalSliceIndex, physicalSliceIndex + 1, ipBuffer, buffer.Length);
+                }
+            }
+#endif
         }
 
         public virtual void Invalidate () {

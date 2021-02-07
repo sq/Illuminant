@@ -113,6 +113,11 @@ namespace Squared.Illuminant {
                 RenderDistanceFieldDistanceFunctions(firstVirtualSliceIndex, group, dynamicFlagFilter);
                 RenderDistanceFieldHeightVolumes(firstVirtualSliceIndex, group, dynamicFlagFilter);
 
+                // FIXME
+                Coordinator.BeforePresent(() => {
+                    (ddf ?? df).Update3DTexture(firstVirtualSliceIndex, lastVirtualSliceIndex - firstVirtualSliceIndex + 1);
+                });
+
                 // FIXME: Slow
                 for (var i = firstVirtualSliceIndex; i <= lastVirtualSliceIndex; i++) {
                     if (ddf != null)

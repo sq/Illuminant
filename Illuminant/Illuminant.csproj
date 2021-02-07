@@ -99,6 +99,18 @@
     <SquaredPath>..\..\Fracture</SquaredPath>
     <ShaderDirectory>shaders</ShaderDirectory>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|FNA-x64'">
+    <DefineConstants>TRACE;DEBUG;FNA;SDL2;DF3D</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|FNA-x64'">
+    <DefineConstants>TRACE;FNA;SDL2;DF3D</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|FNA'">
+    <DefineConstants>TRACE;FNA;SDL2;DF3D</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|FNA'">
+    <DefineConstants>TRACE;DEBUG;FNA;SDL2;DF3D</DefineConstants>
+  </PropertyGroup>
   <Import Project="$(SquaredPath)\Squared\SquaredGameLibraries.targets" />
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SquaredPath)\Squared\XNAFramework.targets" />
