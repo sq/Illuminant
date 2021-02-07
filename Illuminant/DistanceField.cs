@@ -277,7 +277,6 @@ namespace Squared.Illuminant {
                     lock (UseLock)
                         tex.GetDataPointerEXT(0, rect, iSrc, srcBuffer.Length);
 
-                    // HACK: Unpack slices into individual fp32 levels
                     for (int j = 0; j < 3; j++) {
                         for (int y = 0; y < SliceHeight; y++) {
                             var pPackedSrc = ((ushort*)pSrcBuffer) + (y * SliceWidth * 4);
@@ -285,8 +284,7 @@ namespace Squared.Illuminant {
 
                             for (int x = 0; x < SliceWidth; x++) {
                                 int k = (x * 4) + j;
-                                float fSrc = pPackedSrc[k];// / (float)ushort.MaxValue;
-                                pDest[x] = fSrc;
+                                pDest[(x * 2)] = pPackedSrc[k];
                             }
                         }
 
