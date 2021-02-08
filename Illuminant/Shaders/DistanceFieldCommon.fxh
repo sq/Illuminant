@@ -276,6 +276,8 @@ sampler   DistanceFieldTextureSampler : register(s7){
     MinFilter = LINEAR;
     MagFilter = LINEAR;
 };
+
+#ifdef DF3D
 Texture3D DistanceFieldTexture3D : register(t6);
 sampler   DistanceFieldTextureSampler3D : register(s6){
     Texture = (DistanceFieldTexture3D);
@@ -286,6 +288,7 @@ sampler   DistanceFieldTextureSampler3D : register(s6){
     MinFilter = LINEAR;
     MagFilter = LINEAR;
 };
+#endif
 
 struct DistanceFieldConstants {
     float3 data;
@@ -347,8 +350,6 @@ float sampleDistanceFieldEx (
     float blendedSample = packedSample.x;
 #else
     float2 texelUv = clampedPosition.xy * getDistanceTexelSize();
-    if (0)
-        texelUv = clamp2(texelUv, vars.halfDistanceTexel, vars.distanceSliceSizeMinusHalfTexel);
     
     float4 uv = float4(
         computeDistanceFieldSliceUv(virtualSliceIndex, vars) + texelUv,

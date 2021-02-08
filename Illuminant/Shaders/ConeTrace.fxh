@@ -161,15 +161,16 @@ float coneTrace (
 
     [loop]
     while (liveness > 0) {
+        // HACK: This strange loop arrangement is much faster than the obvious way of writing it, somehow
         stepsRemaining--;
-        if (stepsRemaining == 0)
-            traceA.data.x = traceA.data.y;
-
         stepLiveness = coneTraceAdvance(traceA, config, vars);
 
         liveness = stepsRemaining * 
             stepLiveness;
     }
+
+    if (stepsRemaining == 0)
+        traceA.data.x = traceA.data.y;
 
     // HACK: Force visibility down to 0 if we are going to terminate the trace because we took too many steps.
     float stepWindowVisibility = stepsRemaining / MAX_STEP_RAMP_WINDOW;
