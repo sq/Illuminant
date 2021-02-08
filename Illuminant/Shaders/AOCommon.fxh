@@ -7,7 +7,7 @@ float computeAO (
     in bool visible
 ) {
     float aoRadius = moreLightProperties.x, aoOpacity = moreLightProperties.w;
-    PREFER_BRANCH
+    REQUIRE_BRANCH
     if ((aoRadius >= 0.5) && (DistanceField.Extent.x > 0) && visible) {
         float distance = sampleDistanceFieldEx(shadedPixelPosition + float3(0, 0, shadedPixelNormal.z * moreLightProperties.x), vars);
         float clampedDistance = clamp(distance, 0, aoRadius);
