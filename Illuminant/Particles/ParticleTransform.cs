@@ -82,11 +82,13 @@ namespace Squared.Illuminant.Particles.Transforms {
             private void _BeforeDraw (DeviceManager dm, object _up) {
                 DidSetRenderTarget = false;
                 var up = (ParticleTransformUpdateParameters)_up;
+                if (up == null)
+                    return;
                 var system = up.System;
                 var engine = system.Engine;
                 var m = up.Material;
-                var e = m.Effect;
-                var p = e.Parameters;
+                var e = m?.Effect;
+                var p = e?.Parameters;
 
                 var curr = up.Curr;
                 if (!IsValidUpdateTarget(curr))
@@ -113,7 +115,7 @@ namespace Squared.Illuminant.Particles.Transforms {
                 }
                 DidSetRenderTarget = true;
 
-                if (e != null) {
+                if (m != null) {
                     system.SetSystemUniforms(m, up.DeltaTimeSeconds);
 
                     if (Transform != null)
