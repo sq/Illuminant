@@ -142,7 +142,7 @@ namespace TestGame {
                     AllowDrag = true,
                     AllowMaximize = false,
                     Appearance = { BackgroundColor = new Color(80, 80, 80) },
-                    ScreenAlignment = new Vector2(0.99f, 0.9f),
+                    Alignment = new Vector2(0.99f, 0.9f),
                     ContainerFlags = ControlFlags.Container_Wrap | ControlFlags.Container_Row | ControlFlags.Container_Align_Start,
                     Scrollable = true,
                     ShowHorizontalScrollbar = false,
@@ -439,7 +439,7 @@ namespace TestGame {
 
             var window = PRGUIContext.Controls.OfType<Window>().FirstOrDefault();
             if (window != null)
-                window.ScreenAlignment = window.ScreenAlignment;
+                window.Alignment = window.Alignment;
         }
 
         private void LoadLUTs () {

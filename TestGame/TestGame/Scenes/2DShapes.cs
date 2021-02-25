@@ -325,6 +325,13 @@ namespace TestGame.Scenes {
             ir.RasterizeEllipse(b, Vector2.One * 3, Color.Yellow, layer: 4);
             ir.RasterizeEllipse(c, Vector2.One * 3, Color.Yellow, layer: 4);
 
+            ir.RasterizeRectangle(new Vector2(Width - 256, 0), new Vector2(Width, 256), 0f, Color.Black, layer: 5);
+            ir.RasterizeEllipse(
+                new Vector2(Width - 128, 128), new Vector2(64f), Color.Orange * 1f, Color.Red * 0f, layer: 6,
+                blendInLinearSpace: BlendInLinearSpace,
+                blendState: RenderStates.RasterShapeMaxBlend
+            );
+
             var scratchGroup = BatchGroup.ForRenderTarget(
                 frame, -9999, Scratch, 
                 materialSet: Game.Materials, 
