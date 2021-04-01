@@ -23,7 +23,7 @@ namespace TestGame.Scenes {
     // These aren't illuminant specific but who cares
     public class Shapes : Scene {
         Toggle Animate, BlendInLinearSpace, WorldSpace;
-        Slider ArcLength, AnnularRadius;
+        Slider ArcStart, ArcLength, AnnularRadius;
 
         [Group("Outline")]
         Toggle HardOutlines;
@@ -38,13 +38,15 @@ namespace TestGame.Scenes {
         [Items("Radial")]
         [Items("RadialEnclosed")]
         [Items("RadialEnclosing")]
+        [Items("Along")]
         [Items("Horizontal")]
         [Items("Vertical")]
         [Items("Angular")]
+        [Items("Conical")]
         Dropdown<string> FillMode;
 
         [Group("Fill")]
-        Toggle RepeatFill, GradientAlongLine, UseRamp, Hollow;
+        Toggle RepeatFill, UseRamp, Hollow;
         [Group("Fill")]
         Slider FillOffset, FillSize, FillAngle;
 
@@ -74,6 +76,10 @@ namespace TestGame.Scenes {
             OutlineSize.Value = 1f;
             OutlineSize.Speed = 0.5f;
             OutlineSize.Exponent = 2;
+            ArcStart.Min = 0f;
+            ArcStart.Max = 360f;
+            ArcStart.Value = 0f;
+            ArcStart.Speed = 5f;
             ArcLength.Min = 5f;
             ArcLength.Max = 360f;
             ArcLength.Value = 45f;
@@ -203,7 +209,6 @@ namespace TestGame.Scenes {
                 fillSize: fillSize,
                 fillAngle: FillAngle,
                 annularRadius: AnnularRadius,
-                gradientAlongLine: GradientAlongLine, 
                 rampTexture: UseRamp ? RampTexture : null,
                 layer: 1
             );
@@ -278,7 +283,7 @@ namespace TestGame.Scenes {
 
             ir.RasterizeArc(
                 new Vector2(200, 860),
-                Animate ? (float)(Time.Seconds) * 60f : 0f, ArcLength,
+                Animate ? (float)(Time.Seconds) * 60f : ArcStart, ArcLength,
                 120, 8, OutlineSize,
                 innerColor: Color.White, 
                 outerColor: Color.Black, 

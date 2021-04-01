@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Squared.Illuminant</RootNamespace>
     <AssemblyName>Illuminant</AssemblyName>
-    <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
     <OutputPath>bin\$(Platform)\$(Configuration)</OutputPath>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>

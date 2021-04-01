@@ -20,7 +20,7 @@ using Squared.Util;
 
 namespace TestGame.Scenes {
     public class BitmapShaders : Scene {
-        Texture2D TestImage;
+        Texture2D TestImage, TestImage2;
 
         [Items("Normal")]
         [Items("Shadowed")]
@@ -29,16 +29,24 @@ namespace TestGame.Scenes {
         [Items("VerticalBlur")]
         [Items("RadialBlur")]
         [Items("HighlightColor")]
+        [Items("Crossfade")]
+        [Items("Over")]
+        [Items("Under")]
         Dropdown<string> Shader;
 
-        Slider Opacity, Brightness, ShadowOffset, DitherGamma, StippleRatio, BlurSigma, BlurSampleRadius, HighlightTolerance;
+        Slider Opacity, Brightness, ShadowOffset, DitherGamma, StippleRatio, 
+            BlurSigma, BlurSampleRadius, HighlightTolerance, Image2Weight;
+
+        Toggle PreserveAspectRatio;
 
         public BitmapShaders (TestGame game, int width, int height)
             : base(game, width, height) {
 
+            Opacity.Min = 0f;
             Opacity.Max = 1;
             Opacity.Speed = 0.01f;
             Opacity.Value = 1;
+            Brightness.Min = -1f;
             Brightness.Max = 1;
             Brightness.Speed = 0.01f;
             Brightness.Value = 1;
@@ -67,10 +75,16 @@ namespace TestGame.Scenes {
             HighlightTolerance.Min = 0;
             HighlightTolerance.Value = 0.1f;
             HighlightTolerance.Speed = 0.01f;
+            Image2Weight.Min = 0;
+            Image2Weight.Max = 1;
+            Image2Weight.Value = 0.5f;
+            Image2Weight.Speed = 0.05f;
+            PreserveAspectRatio.Value = true;
         }
 
         public override void LoadContent () {
             TestImage = Game.TextureLoader.Load("transparent_test");
+            TestImage2 = Game.TextureLoader.Load("precision-test");
         }
 
         public override void UnloadContent () {
@@ -105,6 +119,18 @@ namespace TestGame.Scenes {
                     userData = c.ToVector4();
                     userData.W = HighlightTolerance;
                     break;
+                case "Crossfade":
+                    material = Game.Materials.CrossfadeBitmap;
+                    userData = new Vector4(Image2Weight.Value);
+                    break;
+                case "Over":
+                    material = Game.Materials.OverBitmap;
+                    userData = new Vector4(Image2Weight.Value);
+                    break;
+                case "Under":
+                    material = Game.Materials.UnderBitmap;
+                    userData = new Vector4(Image2Weight.Value);
+                    break;
                 default:
                     material = Game.Materials.ScreenSpaceBitmap;
                     break;
@@ -122,7 +148,17 @@ namespace TestGame.Scenes {
                 white, white, white, 255
             ) * Opacity;
 
-            ir.Draw(TestImage, Vector2.Zero, layer: 1, scale: Vector2.One, multiplyColor: multiplyColor, userData: userData, material: material);
+            var dc = new BitmapDrawCall(TestImage, Vector2.Zero) {
+                Texture2 = TestImage2,
+                MultiplyColor = multiplyColor,
+                UserData = userData
+            };
+            dc.AlignTexture2(2.0f, preserveAspectRatio: PreserveAspectRatio.Value);
+
+            ir.Draw(
+                dc, layer: 1, material: material,
+                samplerState2: SamplerState.PointWrap
+            );
         }
 
         public override void Update (GameTime gameTime) {
