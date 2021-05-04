@@ -42,7 +42,8 @@ namespace TestGame.Scenes {
             GroundPlaneShadows,
             TopFaceShadows,
             EnableDirectionalLights,
-            EnablePointLight;
+            EnablePointLight,
+            InPlaceResolve;
         [Group("Lighting")]
         Slider MaximumLightStrength;
         [Group("Dithering")]
@@ -362,6 +363,15 @@ namespace TestGame.Scenes {
                 };
             }
 
+            IBatchContainer resolveTarget = null;
+            int resolveTargetLayer = 2;
+            var resolveBlendState = InPlaceResolve
+                ? RenderStates.MultiplyColor2x
+                : BlendState.Opaque;
+            var doResolveDither = dmode.Contains("Pre") || (dmode == "Merged");
+            var albedo = (dmode == "Merged") && !ShowLightmap ? Background : null;
+            LightingRenderer.RenderedLighting lighting;
+
             using (var bg = BatchGroup.ForRenderTarget(
                 frame, -1, Lightmap,
                 (dm, _) => {
@@ -373,28 +383,15 @@ namespace TestGame.Scenes {
                     Game.Materials.PopViewTransform();
                 }
             )) {
-                ClearBatch.AddNew(bg, 0, Game.Materials.Clear, clearColor: Color.Black);
+                ClearBatch.AddNew(bg, 1, Game.Materials.Clear, clearColor: Color.Black);
 
-                var lighting = Renderer.RenderLighting(bg, 1, 1.0f / LightScaleFactor);
-                var doResolveDither = dmode.Contains("Pre") || (dmode == "Merged");
-                lighting.Resolve(
-                    bg, 2, Width, Height,
-                    albedo: (dmode == "Merged") && !ShowLightmap ? Background : null,
-                    hdr: new HDRConfiguration {
-                        InverseScaleFactor = LightScaleFactor,
-                        Gamma = Gamma,
-                        AlbedoIsSRGB = sRGB,
-                        ResolveToSRGB = sRGB,
-                        Dithering = new DitheringSettings {
-                            Strength = doResolveDither ? DitherStrength : 0f,
-                            Power = (int)DitherPower,
-                            BandSize = DitherBandSize,
-                            RangeMin = DitherRangeMin,
-                            RangeMax = DitherRangeMax
-                        }
-                    },
-                    lutBlending: lutBlending
-                );
+                lighting = Renderer.RenderLighting(bg, 0, 1.0f / LightScaleFactor);
+                if (InPlaceResolve) {
+                    albedo = null;
+                } else {
+                    resolveTarget = bg;
+                    resolveTargetLayer = 3;
+                }
 
                 lighting.TryComputeHistogram(
                     Histogram, 
@@ -405,7 +402,12 @@ namespace TestGame.Scenes {
             using (var group = BatchGroup.New(frame, 0)) {
                 ClearBatch.AddNew(group, 0, Game.Materials.Clear, clearColor: Color.Blue);
 
-                if (ShowLightmap || (dmode == "Merged")) {
+                if (resolveTarget == null) {
+                    resolveTarget = group;
+                    resolveTargetLayer = 2;
+                }
+
+                if (ShowLightmap || ((dmode == "Merged") && !InPlaceResolve)) {
                     using (var bb = BitmapBatch.New(
                         group, 1,
                         Game.Materials.Get(Game.Materials.ScreenSpaceBitmap, blendState: BlendState.Opaque),
@@ -416,7 +418,7 @@ namespace TestGame.Scenes {
                     using (var bb = BitmapBatch.New(
                         group, 1,
                         Game.Materials.Get(
-                            ShowGBuffer
+                            ShowGBuffer || InPlaceResolve
                                 ? Game.Materials.ScreenSpaceBitmap
                                 : (sRGB 
                                     ? Game.Materials.ScreenSpaceLightmappedsRGBBitmap
@@ -428,7 +430,7 @@ namespace TestGame.Scenes {
                         var dc = new BitmapDrawCall(
                             Background, Vector2.Zero, Color.White * (ShowGBuffer ? 0.7f : 1.0f)
                         );
-                        dc.Textures = new TextureSet(dc.Textures.Texture1, Lightmap);
+                        dc.Textures = new TextureSet(dc.Textures.Texture1, InPlaceResolve ? null : Lightmap);
                         bb.Add(dc);
                     }
                 }
@@ -474,6 +476,26 @@ namespace TestGame.Scenes {
                     visualizer.Draw(group, 5, Histogram, new[] { 40.0f, 90.0f });
                 }
             }
+
+            lighting.Resolve(
+                resolveTarget, resolveTargetLayer, Width, Height,
+                albedo: albedo,
+                hdr: new HDRConfiguration {
+                    InverseScaleFactor = LightScaleFactor,
+                    Gamma = Gamma,
+                    AlbedoIsSRGB = sRGB,
+                    ResolveToSRGB = sRGB,
+                    Dithering = new DitheringSettings {
+                        Strength = doResolveDither ? DitherStrength : 0f,
+                        Power = (int)DitherPower,
+                        BandSize = DitherBandSize,
+                        RangeMin = DitherRangeMin,
+                        RangeMax = DitherRangeMax
+                    }
+                },
+                blendState: resolveBlendState,
+                lutBlending: lutBlending
+            );
         }
 
         public override void Update (GameTime gameTime) {

@@ -47,7 +47,8 @@ namespace Squared.Illuminant {
         internal readonly Effect[] EffectsToSetGammaCompressionParametersOn;
         internal readonly Effect[] EffectsToSetToneMappingParametersOn;
 
-        public IlluminantMaterials (DefaultMaterialSet materialSet) {
+        public IlluminantMaterials (DefaultMaterialSet materialSet) 
+            : base () {
             MaterialSet = materialSet;
 
             EffectsToSetGammaCompressionParametersOn = new Effect[6];
