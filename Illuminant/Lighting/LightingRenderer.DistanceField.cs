@@ -59,14 +59,15 @@ namespace Squared.Illuminant {
 
             var m = IlluminantMaterials.DistanceToPolygon;
 
-            Materials.ApplyViewTransformToMaterial(IlluminantMaterials.ClearDistanceFieldSlice, ref args.ViewTransform);
-            Materials.ApplyViewTransformToMaterial(m, ref args.ViewTransform);
+            Materials.PushViewTransform(ref args.ViewTransform);
             SetDistanceFieldParameters(m, false, Configuration.DefaultQuality);
 
-            foreach (var m2 in IlluminantMaterials.DistanceFunctionTypes) {
-                Materials.ApplyViewTransformToMaterial(m2, ref args.ViewTransform);
+            foreach (var m2 in IlluminantMaterials.DistanceFunctionTypes)
                 SetDistanceFieldParameters(m2, false, Configuration.DefaultQuality);
-            }
+        }
+
+        private void _EndSliceBatch (DeviceManager dm, object userData) {
+            Materials.PopViewTransform();
         }
 
         private void RenderDistanceFieldSliceTriplet (
@@ -101,7 +102,7 @@ namespace Squared.Illuminant {
 
             using (var group = BatchGroup.New(
                 rtGroup, layer++,
-                BeginSliceBatch, null, args
+                BeginSliceBatch, EndSliceBatch, args
             )) {
                 if (RenderTrace.EnableTracing)
                     RenderTrace.Marker(group, -2, "LightingRenderer {0} : Begin Distance Field Slices [{1}-{2}]", this.ToObjectID(), firstVirtualSliceIndex, lastVirtualSliceIndex);

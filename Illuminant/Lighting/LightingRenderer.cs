@@ -382,7 +382,7 @@ namespace Squared.Illuminant {
             ParticleLightBatchSetup, BeforeLuminanceBufferUpdate,
             BeforeRenderGBuffer, AfterRenderGBuffer,
             GBufferBillboardBatchSetup, AfterLuminanceBufferUpdate,
-            BeginSliceBatch, BeginClearSliceBatch;
+            BeginSliceBatch, BeginClearSliceBatch, EndSliceBatch;
 
         // FIXME: Thread sync issue?
         private Vector2? PendingDrawViewportPosition, PendingDrawViewportScale;
@@ -442,6 +442,7 @@ namespace Squared.Illuminant {
             GBufferBillboardBatchSetup    = _GBufferBillboardBatchSetup;
             BeginSliceBatch               = _BeginSliceBatch;
             BeginClearSliceBatch          = _BeginClearSliceBatch;
+            EndSliceBatch                 = _EndSliceBatch;
 
             InitBuffers(coordinator);
 
