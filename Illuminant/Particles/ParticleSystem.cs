@@ -858,7 +858,7 @@ namespace Squared.Illuminant.Particles {
             // HACK
             p["VelocityTexture"].SetValue(state.Chunk.RenderData);
             p["AttributeTexture"].SetValue(state.Chunk.RenderColor);
-            state.Material.Flush();
+            state.Material.Flush(dm);
             p["PositionTexture"].SetValue(state.Source.PositionAndLife);
             // HACK
             p["VelocityTexture"].SetValue(state.Chunk.RenderData);

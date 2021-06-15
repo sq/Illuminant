@@ -347,7 +347,7 @@ namespace Squared.Illuminant.Particles {
                     system.SetSystemUniforms(m, 0);
                     p["ChunkIndexAndMaxIndex"].SetValue(new Vector2(i, LivenessQueryRTs.Width));
                     p["PositionTexture"].SetValue(srcTexture);
-                    m.Flush();
+                    m.Flush(dm);
 
                     var call = new NativeDrawCall(
                         PrimitiveType.TriangleList,

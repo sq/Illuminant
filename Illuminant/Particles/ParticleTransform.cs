@@ -167,7 +167,7 @@ namespace Squared.Illuminant.Particles.Transforms {
                     ));
 
                     system.MaybeSetLifeRampParameters(p);
-                    m.Flush();
+                    m.Flush(dm);
                 }
 
                 if (up.ShouldClear && !(Transform?.IsAnalyzer ?? false))

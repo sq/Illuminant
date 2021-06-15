@@ -23,7 +23,7 @@ namespace TestGame.Scenes {
     // These aren't illuminant specific but who cares
     public class Shapes : Scene {
         Toggle Animate, BlendInLinearSpace, WorldSpace;
-        Slider ArcStart, ArcLength, AnnularRadius;
+        Slider ArcStart, ArcLength, ArcSharpness, AnnularRadius;
 
         [Group("Outline")]
         Toggle HardOutlines;
@@ -84,6 +84,8 @@ namespace TestGame.Scenes {
             ArcLength.Max = 360f;
             ArcLength.Value = 45f;
             ArcLength.Speed = 5f;
+            ArcSharpness.Min = 0f;
+            ArcSharpness.Max = 1.0f;
             HardOutlines.Value = true;
             FillMode.Value = "Natural";
             FillOffset.Min = -1f;
@@ -281,6 +283,26 @@ namespace TestGame.Scenes {
 
             ir.RasterizeEllipse(new Vector2(200, 860), Vector2.One * 3, Color.Yellow, layer: 4);
 
+            if (false)
+                ir.RasterizeArc(
+                    new Vector2(200, 860),
+                    Animate ? (float)(Time.Seconds) * 60f : ArcStart, ArcLength,
+                    120, 8, OutlineSize,
+                    innerColor: Color.White, 
+                    outerColor: Color.Black, 
+                    outlineColor: Color.Blue,
+                    fillMode: fillMode,
+                    fillOffset: FillOffset,
+                    fillSize: fillSize,
+                    fillAngle: FillAngle,
+                    annularRadius: AnnularRadius,
+                    layer: 2,
+                    texture: UseTexture ? Texture : null,
+                    textureSettings: textureSettings,
+                    rampTexture: UseRamp ? RampTexture : null,
+                    endRounding: 0f
+                );
+
             ir.RasterizeArc(
                 new Vector2(200, 860),
                 Animate ? (float)(Time.Seconds) * 60f : ArcStart, ArcLength,
@@ -296,7 +318,8 @@ namespace TestGame.Scenes {
                 layer: 2,
                 texture: UseTexture ? Texture : null,
                 textureSettings: textureSettings,
-                rampTexture: UseRamp ? RampTexture : null
+                rampTexture: UseRamp ? RampTexture : null,
+                endRounding: 1.0f - ArcSharpness
             );
 
             Vector2 a = new Vector2(1024, 64),

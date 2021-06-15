@@ -73,27 +73,31 @@ void VS_PosVelAttr(
     readStateUv(actualXy, position, renderData, color);
 
     float life = position.w;
+    /*
     if ((life <= 0) || StippleReject(offsetAndIndex.z, StippleFactor)) {
         result = float4(0, 0, 0, 0);
         return;
     }
+    */
 
     float angle = renderData.y;
     angle = fmod(angle, 2 * PI);
+    angle = 0;
 
     float2 size = renderData.x * System.TexelAndSize.zw * RasterizeSettings.SizeFactorAndPosition.xy;
+    size = float2(16, 16);
     float2 nonRotatedUnitCorner;
     float3 rotatedCorner = ComputeRotatedAndNonRotatedCorner(cornerWeights, angle, size, nonRotatedUnitCorner);
     float2 positionXy = nonRotatedUnitCorner;
 
     // HACK: Discard Z
-    float3 displayXyz = float3(position.x, position.y - (position.z * getZToY()), 0);
-    displayXyz.xy *= RasterizeSettings.Scale.xy;
-    displayXyz.xy += RasterizeSettings.SizeFactorAndPosition.zw;
+    float3 displayXyz = float3(position.x, position.y, 0);
+    // displayXyz.xy *= RasterizeSettings.Scale.xy;
+    // displayXyz.xy += RasterizeSettings.SizeFactorAndPosition.zw;
 
-    rotatedCorner.xy *= RasterizeSettings.Scale.xy;
+    // rotatedCorner.xy *= RasterizeSettings.Scale.xy;
 
-    float3 screenXyz = displayXyz - float3(GetViewportPosition(), 0) + rotatedCorner;
+    float3 screenXyz = displayXyz - float3(0, 0, 0) + float3(nonRotatedUnitCorner * 16, 0);
 
     // FIXME: What should W be?
     float4 screenZElements = RasterizeSettings.ZFormula * float4(position.xyz, 1);
@@ -102,8 +106,12 @@ void VS_PosVelAttr(
 
     // FIXME
     result = TransformPosition(
-        float4(screenXyz.xy * GetViewportScale(), screenZ, 1), 0
+        float4(screenXyz.xy, 0, 1), 0
     );
+    texCoord = 0;
+    renderData = 0;
+    positionXyAndRounding = 0;
+    return;
 
     float2 cornerCoord = (nonRotatedUnitCorner / 2) + 0.5;
     // FIXME: This is broken in release mode FNA

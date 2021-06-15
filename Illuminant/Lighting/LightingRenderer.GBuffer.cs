@@ -270,7 +270,7 @@ namespace Squared.Illuminant {
         private void _SetTextureForGBufferBillboard (DeviceManager dm, ref PrimitiveDrawCall<BillboardVertex> drawCall, int index) {
             var material = dm.CurrentMaterial;
             material.Effect.Parameters["Mask"].SetValue((Texture)drawCall.UserData);
-            material.Flush();
+            material.Flush(dm);
         }
 
         private struct GBufferBillboardSorter : IRefComparer<Billboard> {
