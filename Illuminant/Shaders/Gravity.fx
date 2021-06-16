@@ -7,6 +7,8 @@ uniform float3 AttractorPositions[MAX_ATTRACTORS];
 uniform float3 AttractorRadiusesAndStrengths[MAX_ATTRACTORS];
 uniform float  MaximumAcceleration;
 
+uniform float2 CategoryFilter;
+
 void PS_Gravity (
     ACCEPTS_VPOS,
     out float4 newPosition       : COLOR0,
@@ -18,6 +20,11 @@ void PS_Gravity (
     readStatePV(
         xy, newPosition, oldVelocity
     );
+
+    if (!checkCategoryFilter(oldVelocity.w, CategoryFilter)) {
+        newVelocity = oldVelocity;
+        return;
+    }
 
     float3 acceleration = 0;
 

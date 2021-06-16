@@ -9,6 +9,7 @@ using Squared.Illuminant.Configuration;
 using Squared.Illuminant.Util;
 using Squared.Render;
 using Squared.Render.Convenience;
+using Squared.Util;
 
 namespace Squared.Illuminant.Particles.Transforms {
     public enum AreaType : int {
@@ -304,6 +305,7 @@ namespace Squared.Illuminant.Particles.Transforms {
 
     public abstract class ParticleAreaTransform : ParticleTransform {
         public float Strength = 1;
+        public Vector2? CategoryFilter = null;
         public TransformArea Area = null;
 
         public static void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, TransformArea area) {
@@ -324,6 +326,7 @@ namespace Squared.Illuminant.Particles.Transforms {
         protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
             SetParameters(engine, parameters, now, Area);
             parameters["Strength"]?.SetValue(Strength);
+            parameters["CategoryFilter"]?.SetValue(CategoryFilter ?? new Vector2(-9999, 9999));
         }
 
         public override bool IsValid {

@@ -200,4 +200,8 @@ float4 mul3 (float4 oldValue, float4x4 mat, float w) {
     return float4(divided, oldValue.w);
 }
 
+bool checkCategoryFilter (float type, float2 typeMinMax) {
+    return (type >= typeMinMax.x) && (type <= typeMinMax.y);
+}
+
 #endif

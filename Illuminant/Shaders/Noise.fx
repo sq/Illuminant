@@ -16,6 +16,8 @@ uniform int    AreaType;
 uniform float3 AreaCenter, AreaSize;
 uniform float  AreaFalloff, AreaRotation;
 
+uniform float2 CategoryFilter;
+
 float computeWeight(float3 worldPosition) {
     float distance = evaluateByTypeId(
         AreaType, worldPosition, AreaCenter, AreaSize, AreaRotation
@@ -34,6 +36,12 @@ void PS_Noise(
     readStatePV(
         xy, oldPosition, oldVelocity
     );
+
+    if (!checkCategoryFilter(oldVelocity.w, CategoryFilter)) {
+        newPosition = oldPosition;
+        newVelocity = oldVelocity;
+        return;
+    }
 
     float weight = computeWeight(oldPosition);
     float t = weight * getDeltaTime() / TimeDivisor;
@@ -70,6 +78,12 @@ void PS_SpatialNoise(
     readStatePV(
         xy, oldPosition, oldVelocity
     );
+
+    if (!checkCategoryFilter(oldVelocity.w, CategoryFilter)) {
+        newPosition = oldPosition;
+        newVelocity = oldVelocity;
+        return;
+    }
 
     float weight = computeWeight(oldPosition);
     float t = weight * getDeltaTime() / TimeDivisor;
