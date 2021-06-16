@@ -141,7 +141,6 @@ namespace Squared.Illuminant.Compiled {{
         tw.WriteLine(
 @"
         public @{0} (ParticleEngine engine, ITimeProvider timeProvider = null) {{
-            ParticleSystem s;
             Engine = engine;", name
             );
         }
@@ -284,7 +283,7 @@ namespace Squared.Illuminant.Compiled {{
             TextWriter tw, object o, Type type,
             TryGetValue getValue = null
         ) {
-            foreach (var m in type.GetMembers(BindingFlags.Public | BindingFlags.Instance)) {
+            foreach (var m in type.GetMembers(BindingFlags.Public | BindingFlags.Instance).OrderBy(m => m.Name)) {
                 var f = m as FieldInfo;
                 var p = m as PropertyInfo;
 

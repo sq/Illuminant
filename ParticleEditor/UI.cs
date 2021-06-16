@@ -293,7 +293,7 @@ namespace Lumined {
 
             using (var group = Nuklear.CollapsingGroup("Transforms", "Transforms", true))
             if (group.Visible && (Controller.SelectedSystem != null)) {
-                Nuklear.NewRow(LineHeight, 3);
+                Nuklear.NewRow(LineHeight, 4);
                 if (Nuklear.Button("Add"))
                     Controller.AddTransform();
                 if (Nuklear.Button("Remove", Controller.SelectedSystem.Transforms.Count > 0)) {
@@ -303,6 +303,8 @@ namespace Lumined {
                 }
                 if (Nuklear.Button("Duplicate", Controller.SelectedSystem.Transforms.Count > 0))
                     Controller.DuplicateTransform(state.Transforms.SelectedIndex);
+                if (Nuklear.Button("To Bottom", Controller.SelectedSystem.Transforms.Count > 1))
+                    state.Transforms.SelectedIndex = Controller.MoveTransformToBack(state.Transforms.SelectedIndex);
 
                 var view = Controller.View.Systems[state.Systems.SelectedIndex];
                 var model = view.Model;

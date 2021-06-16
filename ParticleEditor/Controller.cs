@@ -344,6 +344,18 @@ namespace Lumined {
             view.AddNewViewForModel(xformModel);
         }
 
+        public int MoveTransformToBack (int index) {
+            var view = SelectedSystem;
+            var model = view.Model;
+            var xformView = view.Transforms[index];
+            var xform = model.Transforms[index];
+            view.Transforms.RemoveAt(index);
+            model.Transforms.RemoveAt(index);
+            view.Transforms.Add(xformView);
+            model.Transforms.Add(xform);
+            return model.Transforms.Count - 1;
+        }
+
         public void RemoveTransform (int index) {
             var view = SelectedSystem;
             var model = view.Model;

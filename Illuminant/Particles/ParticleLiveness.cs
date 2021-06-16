@@ -7,6 +7,8 @@ using Squared.Render;
 
 namespace Squared.Illuminant.Particles {
     public partial class ParticleSystem : IParticleSystems {
+        public bool IsActive { get; set; } = true;
+
         // HACK: Performing occlusion queries every frame seems to be super unreliable,
         //  so just perform them intermittently and accept that our data will be outdated
         public const int LivenessCheckInterval = 4;
