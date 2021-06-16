@@ -366,55 +366,91 @@ namespace Squared.Illuminant.Particles {
                     }, dEnd
                 );
 
+                var updateHint = new Material.PipelineHint {
+                    HasIndices = true,
+                    VertexFormats = new Type[] {
+                        typeof(ParticleSystemVertex),
+                    },
+                    VertexTextureFormats = new SurfaceFormat[] {
+                        SurfaceFormat.Vector4,
+                        SurfaceFormat.Vector4,
+                        SurfaceFormat.Vector4
+                    }
+                };
+
                 LoadOneMaterial(out ParticleMaterials.Erase,
                     "UpdateParticleSystem", "Erase", dBegin, dEnd
-                );
+                ).HintPipeline = updateHint;
 
                 LoadOneMaterial(out ParticleMaterials.UpdatePositions,
                     "UpdateParticleSystem", "UpdatePositions", dBegin, dEnd
-                );
+                ).HintPipeline = updateHint;
 
                 LoadOneMaterial(out ParticleMaterials.UpdateWithDistanceField,
                     "UpdateParticleSystemWithDistanceField", "UpdateWithDistanceField", dBegin, dEnd
-                );
+                ).HintPipeline = updateHint;
+
+                var transformHint = new Material.PipelineHint {
+                    HasIndices = true,
+                    VertexFormats = new Type[] {
+                        typeof(ParticleSystemVertex),
+                    },
+                    VertexTextureFormats = new SurfaceFormat[] {
+                        SurfaceFormat.Vector4,
+                        SurfaceFormat.Vector4,
+                        SurfaceFormat.Vector4
+                    }
+                };
 
                 LoadOneMaterial(out ParticleMaterials.FMA,
                     "FMA", null, dBegin, dEnd
-                );
+                ).HintPipeline = transformHint;
 
                 LoadOneMaterial(out ParticleMaterials.MatrixMultiply,
                     "MatrixMultiply", null, dBegin, dEnd
-                );
+                ).HintPipeline = transformHint;
 
                 LoadOneMaterial(out ParticleMaterials.Noise,
                     "Noise", null, dBegin, dEnd
-                );
+                ).HintPipeline = transformHint;
 
                 LoadOneMaterial(out ParticleMaterials.SpatialNoise,
                     "Noise", "SpatialNoise", dBegin, dEnd
-                );
+                ).HintPipeline = transformHint;
 
                 LoadOneMaterial(out ParticleMaterials.Gravity,
                     "Gravity", null, dBegin, dEnd
-                );
+                ).HintPipeline = transformHint;
+
+                var spawnHint = new Material.PipelineHint {
+                    HasIndices = true,
+                    VertexFormats = new Type[] {
+                        typeof(ParticleSystemVertex),
+                    },
+                    VertexTextureFormats = new SurfaceFormat[] {
+                        SurfaceFormat.Vector4,
+                        SurfaceFormat.Vector4,
+                        SurfaceFormat.Vector4
+                    }
+                };
 
                 LoadOneMaterial(out ParticleMaterials.Spawn,
                     "SpawnParticles", null, dBegin, dEnd
-                );
+                ).HintPipeline = spawnHint;
 
                 LoadOneMaterial(out ParticleMaterials.SpawnFromPositionTexture,
                     "SpawnParticles", "SpawnParticlesFromPositionTexture", dBegin, dEnd
-                );
+                ).HintPipeline = spawnHint;
 
                 LoadOneMaterial(out ParticleMaterials.SpawnFeedback,
                     "SpawnParticles", "SpawnFeedbackParticles", dBegin, dEnd
-                );
+                ).HintPipeline = spawnHint;
 
                 LoadOneMaterial(out ParticleMaterials.SpawnPattern,
                     "PatternSpawner", "SpawnPatternParticles", dBegin, dEnd
-                );
+                ).HintPipeline = spawnHint;
 
-                var hint = new Material.PipelineHint {
+                var rasterizeHint = new Material.PipelineHint {
                     HasIndices = true,
                     VertexFormats = new Type[] {
                         typeof(ParticleSystemVertex),
@@ -429,13 +465,13 @@ namespace Squared.Illuminant.Particles {
                 
                 LoadOneMaterial(out ParticleMaterials.TextureLinear,
                     "RasterizeParticleSystem", "RasterizeParticlesTextureLinear"
-                ).HintPipeline = hint;
+                ).HintPipeline = rasterizeHint;
                 LoadOneMaterial(out ParticleMaterials.TexturePoint,
                     "RasterizeParticleSystem", "RasterizeParticlesTexturePoint"
-                ).HintPipeline = hint;
+                ).HintPipeline = rasterizeHint;
                 LoadOneMaterial(out ParticleMaterials.NoTexture,
                     "RasterizeParticleSystem", "RasterizeParticlesNoTexture"
-                ).HintPipeline = hint;
+                ).HintPipeline = rasterizeHint;
 
                 ParticleMaterials.IsLoaded = true;
             }
