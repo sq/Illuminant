@@ -224,12 +224,12 @@ namespace Lumined {
                 UI = new PropertyEditor(this);
 
             TextMaterial = Materials.Get(Materials.ScreenSpaceShadowedBitmap, blendState: BlendState.AlphaBlend);
-            TextMaterial.Parameters.ShadowColor.SetValue(new Vector4(0, 0, 0, 0.6f));
-            TextMaterial.Parameters.ShadowOffset.SetValue(Vector2.One * 0.75f);
+            TextMaterial.DefaultParameters.Add("GlobalShadowColor", new Vector4(0, 0, 0, 0.6f));
+            TextMaterial.DefaultParameters.Add("ShadowOffset", Vector2.One * 0.75f);
 
             WorldSpaceTextMaterial = Materials.Get(Materials.WorldSpaceShadowedBitmap, blendState: BlendState.AlphaBlend);
-            WorldSpaceTextMaterial.Parameters.ShadowColor.SetValue(new Vector4(0, 0, 0, 0.9f));
-            WorldSpaceTextMaterial.Parameters.ShadowOffset.SetValue(Vector2.One * 0.75f);
+            WorldSpaceTextMaterial.DefaultParameters.Add("GlobalShadowColor", new Vector4(0, 0, 0, 0.9f));
+            WorldSpaceTextMaterial.DefaultParameters.Add("ShadowOffset", Vector2.One * 0.75f);
 
             // FIXME: Memory leak
             var eep = new EffectProvider(typeof(Squared.Illuminant.Particles.ParticleSystem).Assembly, RenderCoordinator);

@@ -136,11 +136,12 @@ namespace TestGame.Scenes {
                     break;
             }
 
+            var ir = new ImperativeRenderer(frame, Game.Materials);
+
             material = Game.Materials.Get(material, blendState: BlendState.AlphaBlend);
             Game.Materials.SetGaussianBlurParameters(material, BlurSigma, (int)(BlurSampleRadius) * 2 + 1);
-            material.Effect.Parameters["ShadowOffset"]?.SetValue(new Vector2(ShadowOffset * 0.66f, ShadowOffset));
+            ir.Parameters.Add("ShadowOffset", new Vector2(ShadowOffset * 0.66f, ShadowOffset));
 
-            var ir = new ImperativeRenderer(frame, Game.Materials);
             ir.Clear(layer: 0, color: Color.DeepSkyBlue * 0.33f);
 
             var white = (int)(255 * Brightness);

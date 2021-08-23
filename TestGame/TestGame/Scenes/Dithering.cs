@@ -163,12 +163,12 @@ namespace TestGame.Scenes {
                 ir.RasterizeRectangle(
                     new Vector2(4, 4), new Vector2(512, 24), radius: 2, outlineRadius: 2, 
                     outlineColor: Color.Black, innerColor: Color.Black, outerColor: Color.White, 
-                    fillMode: RasterFillMode.Horizontal
+                    fill: RasterFillMode.Horizontal
                 );
                 ir.RasterizeRectangle(
                     new Vector2(4, 28), new Vector2(512, 48), radius: 2, outlineRadius: 2, 
                     outlineColor: Color.Black, innerColor: Color.Red, outerColor: Color.Blue, 
-                    fillMode: RasterFillMode.Horizontal
+                    fill: RasterFillMode.Horizontal
                 );
             };
 

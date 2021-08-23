@@ -362,6 +362,8 @@ namespace Framework {
             TextAdvancePending = false;
         }
 
+        static int hack = 0;
+
         private void RenderCommand (nk_command_text* c) {
             var pTextUtf8 = &c->stringFirstByte;
             int charsDecoded;
@@ -497,6 +499,7 @@ namespace Framework {
             if (Scene == null)
                 return;
             // FIXME: Gross
+            hack = 0;
 
             using (var group = BatchGroup.New(container, layer, (dm, _) => {
                 dm.Device.RasterizerState = RenderStates.ScissorOnly;

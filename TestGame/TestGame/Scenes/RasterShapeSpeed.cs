@@ -78,15 +78,19 @@ namespace TestGame.Scenes {
                         ir.RasterizeRectangle(
                             center - radius, center + radius, 0f, 
                             c1, c2, 
-                            texture: (UseTexture && !Simple) ? Texture : null, 
-                            fillOffset: FillOffset.Value,
-                            fillGradientPower: new Vector2(FillPower1.Value, FillPower2.Value)
+                            texture: (UseTexture && !Simple) ? Texture : null,
+                            fill: new RasterFillSettings {
+                                Offset = FillOffset.Value,
+                                GradientPower = new Vector2(FillPower1.Value, FillPower2.Value)
+                            }
                         );
                     else
                         ir.RasterizeEllipse(
                             center, radius, c1, c2, texture: (UseTexture && !Simple) ? Texture : null, 
-                            fillOffset: FillOffset.Value,
-                            fillGradientPower: new Vector2(FillPower1.Value, FillPower2.Value)
+                            fill: new RasterFillSettings {
+                                Offset = FillOffset.Value,
+                                GradientPower = new Vector2(FillPower1.Value, FillPower2.Value)
+                            }
                         );
                 }
             }

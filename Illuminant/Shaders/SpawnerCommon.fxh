@@ -8,6 +8,7 @@ uniform float4 Configuration[9];
 uniform float4 FormulaTypes;
 uniform float4x4 PositionMatrix, VelocityMatrix;
 uniform float3 SourceChunkSizeAndTexel, AxisMask;
+uniform float2 SourceLifeRange;
 
 uniform float  PositionConstantCount;
 uniform float2 PositionConstantTexel;

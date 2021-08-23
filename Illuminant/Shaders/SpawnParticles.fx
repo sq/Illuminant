@@ -74,6 +74,10 @@ void PS_SpawnFeedback (
     float4 sourceUv = float4(sourceXy * SourceChunkSizeAndTexel.yz, 0, 0);
 
     readStateUv(sourceUv, sourcePosition, sourceVelocity, sourceAttributes);
+    if ((sourcePosition.w <= SourceLifeRange.x) || (sourcePosition.w >= SourceLifeRange.y)) {
+        discard;
+        return;
+    }
 
     float4 random1, random2, random3;
     evaluateRandomForIndex(index, random1, random2, random3);

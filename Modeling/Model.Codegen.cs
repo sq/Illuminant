@@ -33,14 +33,13 @@ namespace Squared.Illuminant.Modeling {
         };
 
         private string GetSystemName (SystemModel sm, int index) {
-            if (String.IsNullOrWhiteSpace(sm.Name))
-                return "System" + index;
-            else
-                return FormatName(sm.Name);
+            return FormatName(sm.Name) ?? "System" + index;
         }
 
         private string FormatName (string name) {
             name = (name ?? "").Replace(" ", "").Replace("-", "").Replace(".", "");
+            if (name.Length < 1)
+                return null;
             name = name.Substring(0, 1).ToUpper() + name.Substring(1);
             return name;
         }

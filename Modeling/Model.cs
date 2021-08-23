@@ -106,10 +106,15 @@ namespace Squared.Illuminant.Modeling {
             Filename = Path.GetFullPath(fileName);
 
             if (saveCode) {
-                using (var outStream = File.OpenWrite(fileName.Replace(Path.GetExtension(fileName), ".cs"))) {
-                    outStream.SetLength(0);
-                    using (var sw = new StreamWriter(outStream, Encoding.UTF8))
-                        SaveAsCode(sw);
+                try {
+                    using (var outStream = File.OpenWrite(fileName.Replace(Path.GetExtension(fileName), ".cs"))) {
+                        outStream.SetLength(0);
+                        using (var sw = new StreamWriter(outStream, Encoding.UTF8))
+                            SaveAsCode(sw);
+                    }
+                } catch (Exception exc) {
+                    Console.Error.WriteLine("Failed to generate code for particle system!");
+                    Console.Error.WriteLine(exc.ToString());
                 }
             }
         }

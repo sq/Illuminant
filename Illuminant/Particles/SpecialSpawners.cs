@@ -312,6 +312,11 @@ namespace Squared.Illuminant.Particles.Transforms {
         /// Multiplies the color Constant of new particles by the attribute of source particles
         /// </summary>
         public bool MultiplyColorConstant = false;
+
+        /// <summary>
+        /// The source particle's life must be above X and below Y to be considered
+        /// </summary>
+        public Vector2 SourceLifeRange = new Vector2(0, 9999);
         
         [NonSerialized]
         private ParticleSystem.Chunk CurrentFeedbackSource;
@@ -399,7 +404,9 @@ namespace Squared.Illuminant.Particles.Transforms {
             //  this is not completely random but for low spawn rates it's going to look somewhat close
             if (SpawnFromEntireWindow) {
                 var sourceCount = Math.Max(spawnCount / InstanceMultiplier, 1);
-                CurrentFeedbackSourceIndex += RNG.Next(0, availableLessMargin - sourceCount);
+                var maxOffset = availableLessMargin - sourceCount;
+                if (maxOffset > 1)
+                    CurrentFeedbackSourceIndex += RNG.Next(0, maxOffset);
             }
 
             // Console.WriteLine("requested {0} spawning {1}", requestedCount, spawnCount);
@@ -424,6 +431,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             parameters["SourceVelocityFactor"].SetValue(SourceVelocityFactor);
             parameters["InstanceMultiplier"].SetValue(InstanceMultiplier);
             parameters["SpawnFromEntireWindow"].SetValue(SpawnFromEntireWindow? 1f : 0f);
+            parameters["SourceLifeRange"].SetValue(SourceLifeRange);
         }
 
         public override bool IsValid {
