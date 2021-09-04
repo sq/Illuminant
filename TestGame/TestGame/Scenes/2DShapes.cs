@@ -22,7 +22,7 @@ using Squared.Util;
 namespace TestGame.Scenes {
     // These aren't illuminant specific but who cares
     public class Shapes : Scene {
-        Toggle Animate, BlendInLinearSpace, WorldSpace;
+        Toggle Animate, BlendInLinearSpace, WorldSpace, ClosedPolygon;
         Slider ArcStart, ArcLength, ArcSharpness, AnnularRadius;
 
         [Group("Outline")]
@@ -317,7 +317,7 @@ namespace TestGame.Scenes {
                 float r = 160;
                 b = new Vector2(1220 + (float)Math.Cos(t) * r, 180 + (float)Math.Sin(t) * r);
             } else
-                b = new Vector2(1200, 64);
+                b = new Vector2(Game.MouseState.X, Game.MouseState.Y);
 
             ir.RasterizeQuadraticBezier(
                 a, b, c, 8, OutlineSize,
@@ -332,11 +332,35 @@ namespace TestGame.Scenes {
                 rampTexture: UseRamp ? RampTexture : null
             );
 
+            var verts = new RasterPolygonVertex[] {
+                new Vector2(732, 732),
+                new Vector2(896, 764),
+                new Vector2(928, 896),
+                new Vector2(732, 880),
+                new Vector2(790, 680),
+                new RasterPolygonVertex(new Vector2(732, 600), new Vector2(600, 600))
+            };
+            ir.RasterizePolygon(
+                new ArraySegment<RasterPolygonVertex>(verts), 
+                ClosedPolygon, animatedRadius + (ClosedPolygon ? 2 : 6), OutlineSize, 
+                Color.Blue, 
+                Color.Green, 
+                Color.Red,
+                fill: fs,
+                annularRadius: AnnularRadius,
+                layer: 5
+            );
+
             ir.RasterShadow = default(RasterShadowSettings);
 
-            ir.RasterizeEllipse(a, Vector2.One * 3, Color.Yellow, layer: 4);
-            ir.RasterizeEllipse(b, Vector2.One * 3, Color.Yellow, layer: 4);
-            ir.RasterizeEllipse(c, Vector2.One * 3, Color.Yellow, layer: 4);
+            if (false)
+            foreach (var vert in verts) {
+                ir.RasterizeEllipse(vert.Position, Vector2.One * 3, Color.Yellow, layer: 6);
+            }
+
+            ir.RasterizeEllipse(a, Vector2.One * 3, Color.Yellow, layer: 6);
+            ir.RasterizeEllipse(b, Vector2.One * 3, Color.Yellow, layer: 6);
+            ir.RasterizeEllipse(c, Vector2.One * 3, Color.Yellow, layer: 6);
 
             ir.RasterizeRectangle(new Vector2(Width - 256, 0), new Vector2(Width, 256), 0f, Color.Black, layer: 5);
             ir.RasterizeEllipse(
@@ -368,7 +392,7 @@ namespace TestGame.Scenes {
                 }
             }
 
-            ir.Draw(Scratch, new Vector2(900, 700), scale: new Vector2(3), samplerState: SamplerState.PointClamp, layer: 5);
+            ir.Draw(Scratch, new Vector2(1200, 700), scale: new Vector2(3), samplerState: SamplerState.PointClamp, layer: 5);
 
             var fir = new ImperativeRenderer(frame, Game.Materials);
             fir.Draw(RenderTo, Vector2.Zero, layer: 0, blendState: BlendState.Opaque);

@@ -504,9 +504,7 @@ namespace Squared.Illuminant.Particles {
 
                 Parallel.For(
                     0, RandomnessTextureHeight,
-                    () => {
-                        return new MersenneTwister(Interlocked.Increment(ref o));
-                    },
+                    () => new CoreCLR.Xoshiro(null),
                     (y, pls, rng) => {
                         int j = y * RandomnessTextureWidth;
                         for (int x = 0; x < RandomnessTextureWidth; x++)

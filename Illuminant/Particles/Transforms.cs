@@ -175,15 +175,15 @@ namespace Squared.Illuminant.Particles.Transforms {
         [NonSerialized]
         private double NextU, NextV;
         [NonSerialized]
-        protected readonly MersenneTwister RNG;
+        protected readonly CoreCLR.Xoshiro RNG;
 
         public Noise ()
             : this (null) {
         }
 
-        public Noise (int? seed)
+        public Noise (CoreCLR.Xoshiro? rng)
             : base () {
-            RNG = new MersenneTwister(seed.GetValueOrDefault(NextSeed++));
+            RNG = rng ?? new CoreCLR.Xoshiro(null);
 
             Interval = IntervalUnit;
             Position = new NoiseParameters4 {
@@ -276,8 +276,8 @@ namespace Squared.Illuminant.Particles.Transforms {
             : this (null) {
         }
 
-        public SpatialNoise (int? seed)
-            : base (seed) {
+        public SpatialNoise (CoreCLR.Xoshiro? rng)
+            : base (rng) {
 
             SpaceScale = Vector2.One;
         }

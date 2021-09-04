@@ -85,7 +85,7 @@ namespace Squared.Illuminant.Particles.Transforms {
         protected Vector2 Indices      { get; private set; }
         public    int     TotalSpawned { get; private set; }
         [NonSerialized]
-        protected readonly MersenneTwister RNG;
+        protected readonly CoreCLR.Xoshiro RNG;
 
         [NonSerialized]
         protected Vector4[] Temp = new Vector4[9];
@@ -104,8 +104,8 @@ namespace Squared.Illuminant.Particles.Transforms {
             IsAnalyzer = false;
         }
 
-        protected SpawnerBase (int? seed) {
-            RNG = new MersenneTwister(seed.GetValueOrDefault(NextSeed++));
+        protected SpawnerBase (CoreCLR.Xoshiro? rng) {
+            RNG = rng ?? new CoreCLR.Xoshiro(null);
             ActiveStateChanged += Spawner_ActiveStateChanged;
             Handler2 = new UpdateHandler(this);
         }
