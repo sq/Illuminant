@@ -481,7 +481,7 @@ namespace Squared.Illuminant.Particles {
                 prev.LastTurnUsed = Engine.CurrentTurn;
             curr.LastTurnUsed = Engine.CurrentTurn;
 
-            if (e != null)
+            if ((e != null) && RenderTrace.EnableTracing)
                 RenderTrace.Marker(container, layer++, "System {0:X8} Transform {1} Chunk {2}", GetHashCode(), m.Name, chunk.ID);
 
             Transforms.ParticleTransformUpdateParameters up;
@@ -695,7 +695,9 @@ namespace Squared.Illuminant.Particles {
                 foreach (var t in Transforms)
                     t.BeforeFrame(Engine);
 
-                foreach (var s in Transforms.OfType<Transforms.SpawnerBase>()) {
+                foreach (var _s in Transforms) {
+                    if (!(_s is Transforms.SpawnerBase s))
+                        continue;
                     if (!s.IsActive || !s.IsActive2)
                         continue;
 
@@ -974,7 +976,8 @@ namespace Squared.Illuminant.Particles {
                     DefaultMaterialSet = Engine.Materials, LastResetCount = Engine.ResetCount
                 }
             )) {
-                RenderTrace.Marker(group, -9999, "Rasterize {0} particle chunks", Chunks.Count);
+                if (RenderTrace.EnableTracing)
+                    RenderTrace.Marker(group, -9999, "Rasterize {0} particle chunks", Chunks.Count);
 
                 int i = 1;
                 lock (Chunks)

@@ -153,7 +153,7 @@ namespace Squared.Illuminant {
                     // FIXME: Memory leak for the delegate and boxed value here
                     using (var userContentGroup = BatchGroup.New(group, 100, UpdateScaleFactorForGBufferBitmapMaterial, userData: Configuration.RenderScale)) {
                         if (RenderTrace.EnableTracing)
-                                RenderTrace.Marker(userContentGroup, -999, "LightingRenderer {0} : Begin User G-Buffer Content", this.ToObjectID());
+                            RenderTrace.Marker(userContentGroup, -999, "LightingRenderer {0} : Begin User G-Buffer Content", this.ToObjectID());
 
                         var ir = new ImperativeRenderer(
                             userContentGroup, Materials,
