@@ -345,6 +345,7 @@ namespace Squared.Illuminant.Particles {
 
         private readonly Action<DeviceManager, object> BeforeSystemUpdate, AfterSystemUpdate, RenderChunkSetup;
         private readonly Action UpdateAfterPresentHandler;
+        private readonly SendOrPostCallback AfterFrameHandler;
 
         private SynchronizationContext LastUpdateSyncContext;
 
@@ -367,6 +368,7 @@ namespace Squared.Illuminant.Particles {
 
             BeforeSystemUpdate = _BeforeSystemUpdate;
             AfterSystemUpdate = _AfterSystemUpdate;
+            AfterFrameHandler = _AfterFrameHandler;
             UpdateAfterPresentHandler = _UpdateAfterPresentHandler;
             RenderChunkSetup = _RenderChunkSetup;
 
@@ -748,7 +750,7 @@ namespace Squared.Illuminant.Particles {
             var sc = LastUpdateSyncContext;
 
             if (sc != null)
-                sc.Post(_AfterFrameHandler, null);
+                sc.Post(AfterFrameHandler, null);
             else
                 _AfterFrameHandler(null);
         }
