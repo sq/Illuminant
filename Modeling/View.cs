@@ -125,7 +125,7 @@ namespace Squared.Illuminant.Modeling {
                 int i = 0;
 
                 foreach (var s in Systems) {
-                    UpdateResults[i] = s.Instance.Update(g, (s.Model.UpdateOrder << 16) + i);
+                    UpdateResults[i] = s.Instance.Update(g, (s.Model.UpdateOrder << 16) + i, true);
                     i++;
                 }
             }

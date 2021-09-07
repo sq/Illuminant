@@ -58,7 +58,7 @@ namespace Squared.Illuminant.Particles {
         public class UpdateResult {
             public ParticleSystem System { get; private set; }
             public bool PerformedUpdate { get; private set; }
-            public float Timestamp { get; private set; }
+            public float Timestamp { get; internal set; }
 
             internal UpdateResult (ParticleSystem system, bool performedUpdate, float timestamp) {
                 System = system;
@@ -606,7 +606,11 @@ namespace Squared.Illuminant.Particles {
             MaybePerformReadback((float)now);
         }
 
-        public UpdateResult Update (IBatchContainer container, int layer) {
+        public void Update (IBatchContainer container, int layer) {
+            Update(container, layer, false);
+        }
+
+        public UpdateResult Update (IBatchContainer container, int layer, bool needResultObject) {
             var lastUpdateTimeSeconds = LastUpdateTimeSeconds;
             var updateError = UpdateErrorAccumulator;
             UpdateErrorAccumulator = 0;
@@ -633,7 +637,7 @@ namespace Squared.Illuminant.Particles {
                 UpdateErrorAccumulator = actualDeltaTimeSeconds - adjustedDeltaTime;
                 actualDeltaTimeSeconds = adjustedDeltaTime;
                 if ((actualDeltaTimeSeconds <= 0) && (CurrentFrameIndex > 1))
-                    return new UpdateResult(this, false, (float)now);
+                    return needResultObject ? new UpdateResult(this, false, (float)now) : null;
                 LastUpdateTimeSeconds = now = lastUpdateTimeSeconds.Value + adjustedDeltaTime;
             } else {
                 LastUpdateTimeSeconds = now;
@@ -731,7 +735,8 @@ namespace Squared.Illuminant.Particles {
             Engine.EndOfUpdate(container, layer, initialTurn, container.RenderManager.DeviceManager.FrameIndex);
 
             LastResetCount = Engine.ResetCount;
-            return new UpdateResult(this, true, (float)now);
+
+            return needResultObject ? new UpdateResult(this, true, (float)now) : null;
         }
 
         private void _AfterFrameHandler (object _) {
