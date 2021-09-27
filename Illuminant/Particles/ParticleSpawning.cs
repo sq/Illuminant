@@ -24,7 +24,7 @@ namespace Squared.Illuminant.Particles {
             var g = parallel ? Engine.Coordinator.ThreadGroup : null;
 
             for (int i = 0; i < numToSpawn; i++) {
-                var c = CreateChunk();
+                var c = CreateChunk(Engine.Coordinator?.Frame?.Index ?? -1);
                 if (c == null)
                     return 0;
 
@@ -132,9 +132,11 @@ namespace Squared.Illuminant.Particles {
             else
                 spawnCount = requestedSpawnCount;
 
+            int frameIndex = container.RenderManager.DeviceManager.FrameIndex;
+
             bool needClear;
             var fs = spawner as Transforms.FeedbackSpawner;
-            var chunk = PickTargetForSpawn(fs != null, spawnCount, out needClear, spawner.PartialSpawnAllowed);
+            var chunk = PickTargetForSpawn(fs != null, spawnCount, frameIndex, out needClear, spawner.PartialSpawnAllowed);
             if (chunk == null)
                 return false;
 
@@ -195,7 +197,7 @@ namespace Squared.Illuminant.Particles {
         }
 
         internal Chunk PickTargetForSpawn (
-            bool feedback, int count, 
+            bool feedback, int count, int frameIndex,
             ref int currentTarget, out bool needClear,
             bool partialSpawnAllowed
         ) {
@@ -210,7 +212,7 @@ namespace Squared.Illuminant.Particles {
             }
 
             if (chunk == null) {
-                chunk = CreateChunk();
+                chunk = CreateChunk(frameIndex);
                 if (chunk == null) {
                     needClear = false;
                     return null;
@@ -232,11 +234,11 @@ namespace Squared.Illuminant.Particles {
             return ChunkFromID(feedback ? CurrentFeedbackSpawnTarget : CurrentSpawnTarget);
         }
 
-        internal Chunk PickTargetForSpawn (bool feedback, int count, out bool needClear, bool partialSpawnAllowed) {
+        internal Chunk PickTargetForSpawn (bool feedback, int count, int frameIndex, out bool needClear, bool partialSpawnAllowed) {
             if (feedback)
-                return PickTargetForSpawn(true, count, ref CurrentFeedbackSpawnTarget, out needClear, partialSpawnAllowed);
+                return PickTargetForSpawn(true, count, frameIndex, ref CurrentFeedbackSpawnTarget, out needClear, partialSpawnAllowed);
             else
-                return PickTargetForSpawn(false, count, ref CurrentSpawnTarget, out needClear, partialSpawnAllowed);
+                return PickTargetForSpawn(false, count, frameIndex,ref CurrentSpawnTarget, out needClear, partialSpawnAllowed);
         }
 
         internal Chunk PickSourceForFeedback (int count) {

@@ -80,8 +80,15 @@ namespace Squared.Illuminant.Particles {
         internal class BufferSet : IDisposable {
             public readonly int Size, MaximumCount;
             public readonly int ID;
+            public int CurrentOwnerID;
 
+            // Once a given system uses a buffer, it owns it for the rest of the frame
+            // This prevents other systems from accidentally trampling over state
+            public ParticleSystem CurrentOwnerSystem;
+            public int CurrentOwnerSystemFrameIndex;
+            // This tracks whether a buffer is currently being read from (for readback/rendering)
             public int  LastFrameDependency = -1;
+            // This tracks the last turn a buffer was used (note that turns are NOT frames)
             public long LastTurnUsed;
 
             public RenderTargetBinding[] Bindings2, Bindings3, Bindings4;
@@ -120,6 +127,11 @@ namespace Squared.Illuminant.Particles {
             public void Dispose () {
                 if (IsDisposed)
                     return;
+
+#if DEBUG
+                if (CurrentOwnerID != 0)
+                    throw new InvalidOperationException("Disposing a buffer set that has an owner");
+#endif
 
                 IsDisposed = true;
                 PositionAndLife.Dispose();
@@ -412,14 +424,14 @@ namespace Squared.Illuminant.Particles {
             }
         }
         
-        private Chunk CreateChunk () {
+        private Chunk CreateChunk (int frameIndex) {
             lock (Chunks)
             if (Chunks.Count >= MaxChunkCount)
                 return null;
 
             lock (Engine.Coordinator.CreateResourceLock) {
                 var result = new Chunk(this);
-                result.Current = AcquireOrCreateBufferSet(out result.CurrentIsNew);
+                result.Current = AcquireOrCreateBufferSet(result.ID, frameIndex, out result.CurrentIsNew);
                 result.GlobalIndexOffset = TotalSpawnCount;
                 return result;
             }
@@ -490,7 +502,7 @@ namespace Squared.Illuminant.Particles {
                 var nameText = (label != null)
                     ? $"{label} {m.Name}"
                     : m.Name;
-                RenderTrace.Marker(container, layer++, "System {0:X8} Transform {1} Chunk {2}", GetHashCode(), nameText, chunk.ID);
+                RenderTrace.Marker(container, layer++, "System {0:X8} Transform {1} Chunk {2} Previous {3} Current {4}", GetHashCode(), nameText, chunk.ID, prev?.ID, curr?.ID);
             }
 
             Transforms.ParticleTransformUpdateParameters up;
@@ -588,14 +600,32 @@ namespace Squared.Illuminant.Particles {
             Engine.uSizeFromVelocity.TrySet(m, ref sizeFromVelocity);
         }
 
-        private BufferSet AcquireOrCreateBufferSet (out bool resultIsNew) {
-            BufferSet result;
-            if (!Engine.AvailableBuffers.TryPopFront(out result)) {
+        private BufferSet AcquireOrCreateBufferSet (int ownerId, int frameIndex, out bool resultIsNew) {
+            BufferSet result = null;
+            resultIsNew = true;
+
+            using (var e = Engine.AvailableBuffers.GetEnumerator()) {
+                while (e.GetNext(out BufferSet ab)) {
+                    if ((ab.CurrentOwnerSystem ?? this) != this)
+                        continue;
+
+                    result = ab;
+                    e.RemoveCurrent();
+                    resultIsNew = false;
+                }
+            }
+
+            if (result == null)
                 result = CreateBufferSet(Engine.Coordinator.Device);
-                resultIsNew = true;
-            } else
-                resultIsNew = false;
+
+            result.CurrentOwnerSystem = this;
+            result.CurrentOwnerSystemFrameIndex = frameIndex;
             result.LastTurnUsed = Engine.CurrentTurn;
+#if DEBUG
+            if (result.CurrentOwnerID != 0)
+                throw new InvalidOperationException("Chunk already has an owner");
+#endif
+            result.CurrentOwnerID = ownerId;
             return result;
         }
 
@@ -603,10 +633,17 @@ namespace Squared.Illuminant.Particles {
             Engine.NextTurn(frameIndex);
 
             var prev = chunk.Previous;
-            chunk.Previous = chunk.Current;
-            chunk.Current = AcquireOrCreateBufferSet(out resultIsNew);
-            if (prev != null)
+            if (prev != null) {
+#if DEBUG
+                if (prev.CurrentOwnerID != chunk.ID)
+                    throw new InvalidOperationException("Chunk owner was changed");
+#endif
+                prev.CurrentOwnerID = 0;
                 Engine.DiscardedBuffers.Add(prev);
+            }
+
+            chunk.Previous = chunk.Current;
+            chunk.Current = AcquireOrCreateBufferSet(chunk.ID, frameIndex, out resultIsNew);
         }
 
         private void _BeforeSystemUpdate (DeviceManager dm, object userData) {
@@ -904,12 +941,14 @@ namespace Squared.Illuminant.Particles {
                 Chunk = chunk
             };
 
-            // Console.WriteLine("Draw {0}", curr.ID);
+            if (RenderTrace.EnableTracing)
+                RenderTrace.Marker(group, layer++, "System {0:X8} {3} Render Chunk {1} Current {2}", GetHashCode(), chunk.ID, chunk.Current.ID, Label);
 
             using (var batch = NativeBatch.New(
                 group, layer, m, RenderChunkSetup, userData: state
             )) {
-                if (IsChunkValidSource(src, chunk))
+                if (IsChunkValidSource(src, chunk)) {
+                    chunk.Current.LastFrameDependency = group.RenderManager.DeviceManager.FrameIndex;
                     batch.Add(new NativeDrawCall(
                         PrimitiveType.TriangleList, 
                         Engine.RasterizeVertexBuffer, 0,
@@ -918,7 +957,11 @@ namespace Squared.Illuminant.Particles {
                         Engine.RasterizeIndexBuffer, 0, 0, 4, 0, 2,
                         quadCount
                     ));
+                }
             }
+
+            if (RenderTrace.EnableTracing)
+                layer++;
         }
 
         internal void MaybeSetLifeRampParameters (EffectParameterCollection p) {
@@ -999,9 +1042,6 @@ namespace Squared.Illuminant.Particles {
                     DefaultMaterialSet = Engine.Materials, LastResetCount = Engine.ResetCount
                 }
             )) {
-                if (RenderTrace.EnableTracing)
-                    RenderTrace.Marker(group, -9999, "Rasterize {0} particle chunks", Chunks.Count);
-
                 int i = 1;
                 lock (Chunks)
                 foreach (var chunk in Chunks)

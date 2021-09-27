@@ -104,22 +104,24 @@ namespace Squared.Illuminant.Particles {
             }
         }
 
-        private void Reap (BufferSet buffer) {
+        private void Reap (ref BufferSet buffer) {
             if (buffer == null)
                 return;
             bool forcedToReap = (buffer.Size != Engine.Configuration.ChunkSize);
+            buffer.CurrentOwnerID = 0;
 
             if (forcedToReap)
                 Engine.Coordinator.DisposeResource(buffer);
             else
                 Engine.DiscardedBuffers.Add(buffer);
+
+            buffer = null;
         }
 
         private void Reap (Chunk chunk) {
             // Console.WriteLine("Chunk reaped");
-            Reap(chunk.Previous);
-            Reap(chunk.Current);
-            chunk.Previous = chunk.Current = null;
+            Reap(ref chunk.Previous);
+            Reap(ref chunk.Current);
             lock (Chunks)
                 Chunks.Remove(chunk);
             chunk.Clear();

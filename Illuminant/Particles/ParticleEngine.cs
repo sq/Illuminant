@@ -143,6 +143,11 @@ namespace Squared.Illuminant.Particles {
             ParticleSystem.BufferSet b;
             using (var e = DiscardedBuffers.GetEnumerator())
             while (e.GetNext(out b)) {
+                if (b.CurrentOwnerSystemFrameIndex < frameIndex) {
+                    b.CurrentOwnerSystem = null;
+                    b.CurrentOwnerSystemFrameIndex = -1;
+                }
+
                 // We can't reuse any buffers that were recently used for painting or readback
                 // Liveness queries are computed with an additional one-frame delay, so that means sifting is delayed
                 //  by two frames
@@ -152,15 +157,8 @@ namespace Squared.Illuminant.Particles {
                 var age = CurrentTurn - b.LastTurnUsed;
                 if (age >= Configuration.RecycleInterval) {
                     e.RemoveCurrent();
-                    if (!b.IsDisposed) {
-                        // FIXME: HACK: Without doing this, there's a rare but consistently reproducible
-                        //  problem where a spawner in one system will somehow cause spawns to happen in other
-                        //  systems at the same time, as if buffer rotation is making state travel between them
-                        if (false)
-                            Coordinator.DisposeResource(b);
-                        else
-                            AvailableBuffers.Add(b);
-                    }
+                    if (!b.IsDisposed)
+                        AvailableBuffers.Add(b);
                 }
             }
         }
@@ -611,6 +609,7 @@ namespace Squared.Illuminant.Particles {
         /// <summary>
         /// How long a buffer must remain unused before getting used again.
         /// Lower values reduce memory usage but can cause performance or correctness issues.
+        /// Increasing the recycle interval allows the GPU more time to render to a buffer before we reuse it.
         /// </summary>
         public int RecycleInterval = 3;
 
