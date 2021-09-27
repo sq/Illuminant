@@ -152,8 +152,15 @@ namespace Squared.Illuminant.Particles {
                 var age = CurrentTurn - b.LastTurnUsed;
                 if (age >= Configuration.RecycleInterval) {
                     e.RemoveCurrent();
-                    if (!b.IsDisposed)
-                        AvailableBuffers.Add(b);
+                    if (!b.IsDisposed) {
+                        // FIXME: HACK: Without doing this, there's a rare but consistently reproducible
+                        //  problem where a spawner in one system will somehow cause spawns to happen in other
+                        //  systems at the same time, as if buffer rotation is making state travel between them
+                        if (false)
+                            Coordinator.DisposeResource(b);
+                        else
+                            AvailableBuffers.Add(b);
+                    }
                 }
             }
         }
@@ -605,7 +612,7 @@ namespace Squared.Illuminant.Particles {
         /// How long a buffer must remain unused before getting used again.
         /// Lower values reduce memory usage but can cause performance or correctness issues.
         /// </summary>
-        public int RecycleInterval = 4;
+        public int RecycleInterval = 3;
 
         /// <summary>
         /// The maximum number of spare buffers to keep around.

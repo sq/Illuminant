@@ -24,18 +24,20 @@ namespace TestGame.Scenes {
     public class RasterShapeSpeed : Scene {
         Toggle BlendInLinearSpace, UseTexture, UseGeometry, Simple, Rectangles;
 
-        Slider FillPower1, FillPower2, FillOffset;
+        Slider FillPower, FillOffset;
 
         Texture2D Texture;
 
         public RasterShapeSpeed (TestGame game, int width, int height)
             : base(game, width, height) {
 
-            FillOffset.Min = -1;
+            FillOffset.Min = -1f;
+            FillOffset.Max = 1f;
             FillOffset.Speed = 0.05f;
-            FillPower1.Value = FillPower2.Value = 1;
-            FillPower1.Max = FillPower2.Max = 5;
-            FillPower1.Speed = FillPower2.Speed = 0.05f;
+            FillPower.Value = 1;
+            FillPower.Min = 0.05f;
+            FillPower.Max = 10f;
+            FillPower.Speed = 0.05f;
         }
 
         public override void LoadContent () {
@@ -52,9 +54,9 @@ namespace TestGame.Scenes {
 
             var batch = BatchGroup.New(
                 frame, 0,
-                materialSet: Game.Materials,
-                viewTransform: vt
+                materialSet: Game.Materials
             );
+            batch.SetViewTransform(ref vt);
 
             var ir = new ImperativeRenderer(batch, Game.Materials, blendState: BlendState.AlphaBlend);
             ir.Clear(layer: 0, color: new Color(0, 32, 48));
@@ -81,7 +83,7 @@ namespace TestGame.Scenes {
                             texture: (UseTexture && !Simple) ? Texture : null,
                             fill: new RasterFillSettings {
                                 Offset = FillOffset.Value,
-                                GradientPower = new Vector2(FillPower1.Value, FillPower2.Value)
+                                GradientPower = FillPower.Value
                             }
                         );
                     else
@@ -89,7 +91,7 @@ namespace TestGame.Scenes {
                             center, radius, c1, c2, texture: (UseTexture && !Simple) ? Texture : null, 
                             fill: new RasterFillSettings {
                                 Offset = FillOffset.Value,
-                                GradientPower = new Vector2(FillPower1.Value, FillPower2.Value)
+                                GradientPower = FillPower.Value
                             }
                         );
                 }

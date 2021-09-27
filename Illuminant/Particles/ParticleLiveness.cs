@@ -107,7 +107,9 @@ namespace Squared.Illuminant.Particles {
         private void Reap (BufferSet buffer) {
             if (buffer == null)
                 return;
-            if (buffer.Size != Engine.Configuration.ChunkSize)
+            bool forcedToReap = (buffer.Size != Engine.Configuration.ChunkSize);
+
+            if (forcedToReap)
                 Engine.Coordinator.DisposeResource(buffer);
             else
                 Engine.DiscardedBuffers.Add(buffer);

@@ -135,6 +135,7 @@ namespace Squared.Illuminant.Particles {
             public int ID;
             public int RefCount;
 
+            internal bool CurrentIsNew;
             internal BufferSet Previous, Current;
 
             public RenderTarget2D Color;
@@ -311,6 +312,7 @@ namespace Squared.Illuminant.Particles {
 
         public bool IsDisposed { get; private set; }
         public int LiveCount { get; private set; }
+        public string Label;
 
         public readonly ParticleEngine                     Engine;
         public readonly ParticleSystemConfiguration        Configuration;
@@ -417,7 +419,7 @@ namespace Squared.Illuminant.Particles {
 
             lock (Engine.Coordinator.CreateResourceLock) {
                 var result = new Chunk(this);
-                result.Current = AcquireOrCreateBufferSet();
+                result.Current = AcquireOrCreateBufferSet(out result.CurrentIsNew);
                 result.GlobalIndexOffset = TotalSpawnCount;
                 return result;
             }
@@ -455,7 +457,7 @@ namespace Squared.Illuminant.Particles {
             Action<DeviceManager, object> beforeDraw,
             Action<DeviceManager, object> afterDraw,
             double deltaTimeSeconds, bool shouldClear,
-            double now, bool isUpdate, Chunk sourceChunk
+            double now, bool isUpdate, Chunk sourceChunk, string label
         ) {
             if (chunk == null)
                 throw new ArgumentNullException();
@@ -471,10 +473,11 @@ namespace Squared.Illuminant.Particles {
                 return;
 
             var chunkMaterial = m;
+            bool currentIsNew = false;
             if (isSpawning)
                 li.DeadFrameCount = 0;
             else if (!isAnalyzer)
-                RotateBuffers(chunk, container.RenderManager.DeviceManager.FrameIndex);
+                RotateBuffers(chunk, container.RenderManager.DeviceManager.FrameIndex, out currentIsNew);
 
             var prev = chunk.Previous;
             var curr = chunk.Current;
@@ -483,8 +486,12 @@ namespace Squared.Illuminant.Particles {
                 prev.LastTurnUsed = Engine.CurrentTurn;
             curr.LastTurnUsed = Engine.CurrentTurn;
 
-            if ((e != null) && RenderTrace.EnableTracing)
-                RenderTrace.Marker(container, layer++, "System {0:X8} Transform {1} Chunk {2}", GetHashCode(), m.Name, chunk.ID);
+            if ((e != null) && RenderTrace.EnableTracing) {
+                var nameText = (label != null)
+                    ? $"{label} {m.Name}"
+                    : m.Name;
+                RenderTrace.Marker(container, layer++, "System {0:X8} Transform {1} Chunk {2}", GetHashCode(), nameText, chunk.ID);
+            }
 
             Transforms.ParticleTransformUpdateParameters up;
             if (!_UpdateParameterPool.TryPopFront(out up))
@@ -504,6 +511,11 @@ namespace Squared.Illuminant.Particles {
             up.Now = (float)now;
             up.DeltaTimeSeconds = deltaTimeSeconds;
             up.CurrentFrameIndex = CurrentFrameIndex;
+
+            if (currentIsNew || chunk.CurrentIsNew) {
+                ClearBatch.AddNew(container, layer++, Engine.Materials.Clear, clearColor: Color.Transparent);
+                chunk.CurrentIsNew = false;
+            }
 
             using (var batch = NativeBatch.New(
                 container, layer++, m,
@@ -576,20 +588,23 @@ namespace Squared.Illuminant.Particles {
             Engine.uSizeFromVelocity.TrySet(m, ref sizeFromVelocity);
         }
 
-        private BufferSet AcquireOrCreateBufferSet () {
+        private BufferSet AcquireOrCreateBufferSet (out bool resultIsNew) {
             BufferSet result;
-            if (!Engine.AvailableBuffers.TryPopFront(out result))
+            if (!Engine.AvailableBuffers.TryPopFront(out result)) {
                 result = CreateBufferSet(Engine.Coordinator.Device);
+                resultIsNew = true;
+            } else
+                resultIsNew = false;
             result.LastTurnUsed = Engine.CurrentTurn;
             return result;
         }
 
-        private void RotateBuffers (Chunk chunk, int frameIndex) {
+        private void RotateBuffers (Chunk chunk, int frameIndex, out bool resultIsNew) {
             Engine.NextTurn(frameIndex);
 
             var prev = chunk.Previous;
             chunk.Previous = chunk.Current;
-            chunk.Current = AcquireOrCreateBufferSet();
+            chunk.Current = AcquireOrCreateBufferSet(out resultIsNew);
             if (prev != null)
                 Engine.DiscardedBuffers.Add(prev);
         }
@@ -787,7 +802,8 @@ namespace Squared.Illuminant.Particles {
                 RunTransform(
                     chunk, group, ref i, it.GetMaterial(Engine.ParticleMaterials),
                     startedWhen, false, it.IsAnalyzer, it.BeforeDraw, it.AfterDraw,
-                    actualDeltaTimeSeconds, isFirstXform && !it.IsAnalyzer, now, false, null
+                    actualDeltaTimeSeconds, isFirstXform && !it.IsAnalyzer, now, false, null,
+                    t.Label
                 );
 
                 if (!it.IsAnalyzer)
@@ -804,7 +820,7 @@ namespace Squared.Illuminant.Particles {
                         chunk, group, ref i, pm.Erase,
                         startedWhen, false, false,
                         null, null, actualDeltaTimeSeconds, 
-                        true, now, true, null
+                        true, now, true, null, Label
                     );
                 }
 
@@ -818,7 +834,7 @@ namespace Squared.Illuminant.Particles {
                     chunk, group, ref i, pm.UpdateWithDistanceField,
                     startedWhen, false, false,
                     Updater.BeforeDraw, Updater.AfterDraw, 
-                    actualDeltaTimeSeconds, true, now, true, null
+                    actualDeltaTimeSeconds, true, now, true, null, Label
                 );
                 chunk.ApproximateMaximumLife -= Configuration.LifeDecayPerSecond * actualDeltaTimeSeconds;
             } else {
@@ -827,7 +843,7 @@ namespace Squared.Illuminant.Particles {
                     chunk, group, ref i, pm.UpdatePositions,
                     startedWhen, false, false, 
                     Updater.BeforeDraw, Updater.AfterDraw,
-                    actualDeltaTimeSeconds, true, now, true, null
+                    actualDeltaTimeSeconds, true, now, true, null, Label
                 );
                 chunk.ApproximateMaximumLife -= Configuration.LifeDecayPerSecond * actualDeltaTimeSeconds;
             }

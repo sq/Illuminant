@@ -181,7 +181,7 @@ namespace Squared.Illuminant.Particles {
                     startedWhen, true, false,
                     h.BeforeDraw, h.AfterDraw, 
                     deltaTimeSeconds, needClear, now, false,
-                    sourceChunk
+                    sourceChunk, spawner.Label
                 );
             }
 

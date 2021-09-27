@@ -257,7 +257,7 @@ namespace Squared.Illuminant.Compiled {{
             tw.WriteLine(
 @"            }};
 
-            {0} = new ParticleSystem(engine, {0}Configuration);", name
+            {0} = new ParticleSystem(engine, {0}Configuration) {{ Label = ""{0}"" }};", name
             );
         }
 
@@ -340,6 +340,8 @@ namespace Squared.Illuminant.Compiled {{
 @"
             {0}.Transforms.Add({2}new {1} {{", systemName, GetTypeName(t.Type), string.IsNullOrWhiteSpace(t.Name) ? "" : FormatName(t.Name) + " = "
             );
+            tw.WriteLine(@"
+                Label = {0},", t.Name != null ? $"\"{t.Name}\"" : "null");
 
             WriteMembers(tw, t, t.Type, (string name, out object value) => {
                 if (!t.Properties.ContainsKey(name)) {

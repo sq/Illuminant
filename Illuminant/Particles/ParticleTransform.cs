@@ -22,6 +22,7 @@ namespace Squared.Illuminant.Particles.Transforms {
     }
 
     internal interface IParticleTransform {
+        string Label { get; }
         Material GetMaterial (ParticleMaterials materials);
         void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex);
         Action<DeviceManager, object> BeforeDraw { get; }
@@ -232,6 +233,7 @@ namespace Squared.Illuminant.Particles.Transforms {
         protected abstract Material GetMaterial (ParticleMaterials materials);
         protected abstract void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex);
 
+        public string Label { get; set; }
         public bool IsAnalyzer { get; protected set; }
 
         protected ParticleTransform () {

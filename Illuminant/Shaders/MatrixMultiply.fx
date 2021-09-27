@@ -30,7 +30,7 @@ void PS_MatrixMultiply (
         xy, oldPosition, oldVelocity
     );
 
-    if (!checkCategoryFilter(oldVelocity.w, CategoryFilter)) {
+    if ((oldPosition.w <= 0) || !checkCategoryFilter(oldVelocity.w, CategoryFilter)) {
         newPosition = oldPosition;
         newVelocity = oldVelocity;
         return;

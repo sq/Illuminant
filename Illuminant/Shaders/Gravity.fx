@@ -21,7 +21,7 @@ void PS_Gravity (
         xy, newPosition, oldVelocity
     );
 
-    if (!checkCategoryFilter(oldVelocity.w, CategoryFilter)) {
+    if ((newPosition.w <= 0) || !checkCategoryFilter(oldVelocity.w, CategoryFilter)) {
         newVelocity = oldVelocity;
         return;
     }

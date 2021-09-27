@@ -48,7 +48,7 @@ namespace TestGame.Scenes {
         [Group("Fill")]
         Toggle RepeatFill, UseRamp, Hollow;
         [Group("Fill")]
-        Slider FillOffset, FillSize, FillAngle;
+        Slider FillOffset, FillRangeStart, FillSize, FillAngle, FillPower;
 
         [Group("Shadow")]
         Toggle ShadowInside;
@@ -56,7 +56,7 @@ namespace TestGame.Scenes {
         Slider ShadowSoftness, ShadowOffset, ShadowOpacity, ShadowExpansion;
 
         [Group("Texture")]
-        Toggle UseTexture, CompositeTexture, PreserveAspectRatio;
+        Toggle UseTexture, CompositeTexture, PreserveAspectRatio, ScreenSpaceTexture;
         [Group("Texture")]
         Slider TextureSize, TextureOrigin, TexturePosition;
 
@@ -91,11 +91,19 @@ namespace TestGame.Scenes {
             FillOffset.Min = -1f;
             FillOffset.Max = 1f;
             FillOffset.Speed = 0.1f;
+            FillRangeStart.Value = 0f;
+            FillRangeStart.Min = 0f;
+            FillRangeStart.Max = 0.95f;
+            FillRangeStart.Speed = 0.05f;
             FillSize.Value = 1f;
             FillSize.Min = 0.05f;
             FillSize.Max = 4f;
             FillSize.Speed = 0.05f;
             FillSize.Exponent = 4;
+            FillPower.Value = 1f;
+            FillPower.Min = 0.05f;
+            FillPower.Max = 5f;
+            FillPower.Speed = 0.05f;
             AnnularRadius.Value = 0f;
             AnnularRadius.Min = 0f;
             AnnularRadius.Max = 32f;
@@ -159,7 +167,6 @@ namespace TestGame.Scenes {
                 viewTransform: vt
             );
 
-            var fillSize = FillSize * (RepeatFill ? -1 : 1);
             var fillMode = (RasterFillMode)Enum.Parse(typeof(RasterFillMode), FillMode.Value);
 
             var ir = new ImperativeRenderer(batch, Game.Materials, blendState: BlendState.NonPremultiplied);
@@ -176,7 +183,8 @@ namespace TestGame.Scenes {
             ir.RasterShadow.Expansion = ShadowExpansion;
 
             var textureSettings = new RasterTextureSettings {
-                Mode = CompositeTexture ? RasterTextureCompositeMode.Over : RasterTextureCompositeMode.Multiply,
+                Mode = (CompositeTexture ? RasterTextureCompositeMode.Over : RasterTextureCompositeMode.Multiply) |
+                    (ScreenSpaceTexture ? RasterTextureCompositeMode.ScreenSpace : default(RasterTextureCompositeMode)),
                 PreserveAspectRatio = PreserveAspectRatio,
                 Origin = new Vector2(TextureOrigin.Value),
                 Scale = new Vector2(TextureSize.Value),
@@ -187,8 +195,10 @@ namespace TestGame.Scenes {
             var fs = new RasterFillSettings {
                 Mode = fillMode,
                 Offset = FillOffset,
-                Size = fillSize,
-                Angle = FillAngle
+                FillRange = new Vector2(FillRangeStart.Value, FillRangeStart.Value + FillSize.Value),
+                Repeat = RepeatFill.Value,
+                Angle = FillAngle,
+                GradientPower = FillPower.Value
             };
 
             ir.RasterizeEllipse(
@@ -333,9 +343,9 @@ namespace TestGame.Scenes {
             );
 
             var verts = new RasterPolygonVertex[] {
-                new Vector2(732, 732),
+                new RasterPolygonVertex(new Vector2(732, 732), 4f),
                 new Vector2(896, 764),
-                new Vector2(928, 896),
+                new RasterPolygonVertex(new Vector2(928, 896), -4f),
                 new Vector2(732, 880),
                 new Vector2(790, 680),
                 new RasterPolygonVertex(new Vector2(732, 600), new Vector2(600, 600))
@@ -348,7 +358,10 @@ namespace TestGame.Scenes {
                 Color.Red,
                 fill: fs,
                 annularRadius: AnnularRadius,
-                layer: 5
+                layer: 5,
+                texture: UseTexture ? Texture : null,
+                textureSettings: textureSettings,
+                rampTexture: UseRamp ? RampTexture : null
             );
 
             ir.RasterShadow = default(RasterShadowSettings);
