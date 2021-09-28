@@ -128,11 +128,6 @@ namespace Squared.Illuminant.Particles {
                 if (IsDisposed)
                     return;
 
-#if DEBUG
-                if (CurrentOwnerID != 0)
-                    throw new InvalidOperationException("Disposing a buffer set that has an owner");
-#endif
-
                 IsDisposed = true;
                 PositionAndLife.Dispose();
                 Velocity.Dispose();
@@ -621,10 +616,6 @@ namespace Squared.Illuminant.Particles {
 
             result.CurrentOwnerFrameIndex = frameIndex;
             result.LastTurnUsed = Engine.CurrentTurn;
-#if DEBUG
-            if (result.CurrentOwnerID != 0)
-                throw new InvalidOperationException("Chunk already has an owner");
-#endif
             result.CurrentOwnerID = ownerId;
             return result;
         }
@@ -638,8 +629,6 @@ namespace Squared.Illuminant.Particles {
                 if (prev.CurrentOwnerID != chunk.ID)
                     throw new InvalidOperationException("Chunk owner was changed");
 #endif
-                prev.CurrentOwnerID = 0;
-                prev.CurrentOwnerFrameIndex = -1;
                 Engine.DiscardedBuffers.Add(prev);
             }
 

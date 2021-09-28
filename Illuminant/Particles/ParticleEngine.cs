@@ -152,7 +152,7 @@ namespace Squared.Illuminant.Particles {
                 }
 
                 // We can't reuse any buffers that were recently used for painting or readback
-                if (b.LastFrameDependency >= (frameIndex - 1))
+                if (b.LastFrameDependency >= (frameIndex - Configuration.FrameDependencyLength))
                     continue;
 
                 var age = CurrentTurn - b.LastTurnUsed;
@@ -614,7 +614,9 @@ namespace Squared.Illuminant.Particles {
         /// Lower values reduce memory usage but can cause performance or correctness issues.
         /// Increasing the recycle interval allows the GPU more time to render to a buffer before we reuse it.
         /// </summary>
-        public int RecycleTurnInterval = 2;
+        public int RecycleTurnInterval = 3;
+
+        public int FrameDependencyLength = 1;
 
         /// <summary>
         /// The maximum number of spare buffers to keep around.
