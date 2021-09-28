@@ -140,27 +140,30 @@ namespace Squared.Illuminant.Particles {
         public long CurrentTurn { get; private set; }
 
         private void SiftBuffers (int frameIndex) {
+            if (DiscardedBuffers.Count == 0)
+                return;
+
             ParticleSystem.BufferSet b;
             using (var e = DiscardedBuffers.GetEnumerator())
             while (e.GetNext(out b)) {
-                if (b.CurrentOwnerSystemFrameIndex < frameIndex) {
-                    b.CurrentOwnerSystem = null;
-                    b.CurrentOwnerSystemFrameIndex = -1;
+                if (b.CurrentOwnerFrameIndex < frameIndex) {
+                    b.CurrentOwnerID = 0;
+                    b.CurrentOwnerFrameIndex = -1;
                 }
 
                 // We can't reuse any buffers that were recently used for painting or readback
-                // Liveness queries are computed with an additional one-frame delay, so that means sifting is delayed
-                //  by two frames
-                if (b.LastFrameDependency >= (frameIndex - 2))
+                if (b.LastFrameDependency >= (frameIndex - 1))
                     continue;
 
                 var age = CurrentTurn - b.LastTurnUsed;
-                if (age >= Configuration.RecycleInterval) {
+                if (age >= Configuration.RecycleTurnInterval) {
                     e.RemoveCurrent();
                     if (!b.IsDisposed)
                         AvailableBuffers.Add(b);
                 }
             }
+
+            // Console.WriteLine($"{AvailableBuffers.Count} buffers available and {DiscardedBuffers.Count} unavailable after sift");
         }
 
         internal IParameter FindConstantBoxed (string name) {
@@ -611,7 +614,7 @@ namespace Squared.Illuminant.Particles {
         /// Lower values reduce memory usage but can cause performance or correctness issues.
         /// Increasing the recycle interval allows the GPU more time to render to a buffer before we reuse it.
         /// </summary>
-        public int RecycleInterval = 3;
+        public int RecycleTurnInterval = 2;
 
         /// <summary>
         /// The maximum number of spare buffers to keep around.

@@ -80,12 +80,12 @@ namespace Squared.Illuminant.Particles {
         internal class BufferSet : IDisposable {
             public readonly int Size, MaximumCount;
             public readonly int ID;
-            public int CurrentOwnerID;
 
-            // Once a given system uses a buffer, it owns it for the rest of the frame
-            // This prevents other systems from accidentally trampling over state
-            public ParticleSystem CurrentOwnerSystem;
-            public int CurrentOwnerSystemFrameIndex;
+            // The ID of the chunk that used the buffer this frame (if any)
+            public int CurrentOwnerID;
+            // Once a given chunk uses a buffer, it owns it for the rest of the frame
+            // This prevents other systems or chunks from accidentally trampling over state
+            public int CurrentOwnerFrameIndex;
             // This tracks whether a buffer is currently being read from (for readback/rendering)
             public int  LastFrameDependency = -1;
             // This tracks the last turn a buffer was used (note that turns are NOT frames)
@@ -606,20 +606,20 @@ namespace Squared.Illuminant.Particles {
 
             using (var e = Engine.AvailableBuffers.GetEnumerator()) {
                 while (e.GetNext(out BufferSet ab)) {
-                    if ((ab.CurrentOwnerSystem ?? this) != this)
+                    if ((ab.CurrentOwnerID != 0) && (ab.CurrentOwnerID != ownerId))
                         continue;
 
                     result = ab;
                     e.RemoveCurrent();
                     resultIsNew = false;
+                    break;
                 }
             }
 
             if (result == null)
                 result = CreateBufferSet(Engine.Coordinator.Device);
 
-            result.CurrentOwnerSystem = this;
-            result.CurrentOwnerSystemFrameIndex = frameIndex;
+            result.CurrentOwnerFrameIndex = frameIndex;
             result.LastTurnUsed = Engine.CurrentTurn;
 #if DEBUG
             if (result.CurrentOwnerID != 0)
@@ -639,6 +639,7 @@ namespace Squared.Illuminant.Particles {
                     throw new InvalidOperationException("Chunk owner was changed");
 #endif
                 prev.CurrentOwnerID = 0;
+                prev.CurrentOwnerFrameIndex = -1;
                 Engine.DiscardedBuffers.Add(prev);
             }
 
@@ -1052,10 +1053,16 @@ namespace Squared.Illuminant.Particles {
         internal void ResetInternalState () {
             // FIXME: Release buffers
             foreach (var chunk in Chunks) {
-                if (chunk.Previous != null)
+                if (chunk.Previous != null) {
+                    chunk.Previous.CurrentOwnerID = 0;
+                    chunk.Previous.CurrentOwnerFrameIndex = -1;
                     Engine.DiscardedBuffers.Add(chunk.Previous);
-                if (chunk.Current != null)
+                }
+                if (chunk.Current != null) {
+                    chunk.Current.CurrentOwnerID = 0;
+                    chunk.Current.CurrentOwnerFrameIndex = -1;
                     Engine.DiscardedBuffers.Add(chunk.Current);
+                }
                 Engine.Coordinator.DisposeResource(chunk);
             }
             LivenessInfos.Clear();
