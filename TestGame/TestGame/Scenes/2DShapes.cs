@@ -22,7 +22,7 @@ using Squared.Util;
 namespace TestGame.Scenes {
     // These aren't illuminant specific but who cares
     public class Shapes : Scene {
-        Toggle Animate, BlendInLinearSpace, WorldSpace, ClosedPolygon;
+        Toggle Animate, BlendInLinearSpace, WorldSpace, ClosedPolygon, PolygonGap;
         Slider ArcStart, ArcLength, ArcSharpness, AnnularRadius;
 
         [Group("Outline")]
@@ -342,14 +342,22 @@ namespace TestGame.Scenes {
                 rampTexture: UseRamp ? RampTexture : null
             );
 
-            var verts = new RasterPolygonVertex[] {
-                new RasterPolygonVertex(new Vector2(732, 732), 4f),
-                new Vector2(896, 764),
-                new RasterPolygonVertex(new Vector2(928, 896), -4f),
-                new Vector2(732, 880),
-                new Vector2(790, 680),
-                new RasterPolygonVertex(new Vector2(732, 600), new Vector2(600, 600))
-            };
+            RasterPolygonVertex v0 = new RasterPolygonVertex(new Vector2(732, 732), 4f),
+                v1 = new Vector2(896, 764),
+                v2 = new RasterPolygonVertex(new Vector2(928, 896), -4f),
+                v3 = new Vector2(732, 880),
+                v3_5 = new RasterPolygonVertex(new Vector2(760, 700)) { Type = RasterVertexType.Skip },
+                v4 = new RasterPolygonVertex(new Vector2(790, 680)),
+                v5 = new RasterPolygonVertex(new Vector2(732, 600), new Vector2(600, 600));
+
+            var verts = PolygonGap
+                ? new RasterPolygonVertex[] {
+                    v0, v1, v2, v3, v0, v3_5, v4, v5
+                }
+                : new RasterPolygonVertex[] {
+                    v0, v1, v2, v3, v4, v5
+                };
+
             ir.RasterizePolygon(
                 new ArraySegment<RasterPolygonVertex>(verts), 
                 ClosedPolygon, animatedRadius + (ClosedPolygon ? 2 : 6), OutlineSize, 
