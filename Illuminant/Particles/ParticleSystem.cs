@@ -721,9 +721,9 @@ namespace Squared.Illuminant.Particles {
                 }
 
                 if (IsClearPending) {
-                    List<Chunk> chunkList;
+                    var chunkList = default(DenseList<Chunk>);
                     lock (Chunks)
-                        chunkList = Chunks.ToList();
+                        chunkList.AddRange(Chunks);
                     foreach (var c in chunkList) {
                         if (c.Size == Engine.Configuration.ChunkSize)
                             c.Clear();
