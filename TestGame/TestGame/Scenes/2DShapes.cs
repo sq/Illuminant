@@ -48,7 +48,7 @@ namespace TestGame.Scenes {
         [Group("Fill")]
         Toggle RepeatFill, UseRamp, Hollow;
         [Group("Fill")]
-        Slider FillOffset, FillRangeStart, FillSize, FillAngle, FillPower;
+        Slider FillOffset, FillRangeStart, FillSize, FillAngle, FillPower, RampVOffset;
 
         [Group("Shadow")]
         Toggle ShadowInside;
@@ -138,6 +138,9 @@ namespace TestGame.Scenes {
             TexturePosition.Min = -4;
             TexturePosition.Max = 4;
             TexturePosition.Speed = 0.01f;
+            RampVOffset.Min = -1;
+            RampVOffset.Max = 2;
+            RampVOffset.Speed = 0.1f;
         }
 
         public override void LoadContent () {
@@ -211,7 +214,8 @@ namespace TestGame.Scenes {
                 annularRadius: AnnularRadius,
                 texture: UseTexture ? Texture : null,
                 textureSettings: textureSettings,
-                rampTexture: UseRamp ? RampTexture : null
+                rampTexture: UseRamp ? RampTexture : null,
+                rampUVOffset: new Vector2(0, RampVOffset)
             );
 
             ir.RasterizeLineSegment(
@@ -222,6 +226,7 @@ namespace TestGame.Scenes {
                 fill: fs,
                 annularRadius: AnnularRadius,
                 rampTexture: UseRamp ? RampTexture : null,
+                rampUVOffset: new Vector2(0, RampVOffset),
                 layer: 1
             );
 
@@ -243,7 +248,8 @@ namespace TestGame.Scenes {
                 layer: 1,
                 texture: UseTexture ? Texture : null,
                 textureSettings: textureSettings,
-                rampTexture: UseRamp ? RampTexture : null
+                rampTexture: UseRamp ? RampTexture : null,
+                rampUVOffset: new Vector2(0, RampVOffset)
             );
 
             ir.RasterizeRectangle(
@@ -282,7 +288,8 @@ namespace TestGame.Scenes {
                 layer: 2,
                 texture: UseTexture ? Texture : null,
                 textureSettings: textureSettings,
-                rampTexture: UseRamp ? RampTexture : null
+                rampTexture: UseRamp ? RampTexture : null,
+                rampUVOffset: new Vector2(0, RampVOffset)
             );
 
             ir.RasterizeEllipse(new Vector2(200, 860), Vector2.One * 3, Color.Yellow, layer: 4);
@@ -301,6 +308,7 @@ namespace TestGame.Scenes {
                     texture: UseTexture ? Texture : null,
                     textureSettings: textureSettings,
                     rampTexture: UseRamp ? RampTexture : null,
+                    rampUVOffset: new Vector2(0, RampVOffset),
                     endRounding: 0f
                 );
 
@@ -317,6 +325,7 @@ namespace TestGame.Scenes {
                 texture: UseTexture ? Texture : null,
                 textureSettings: textureSettings,
                 rampTexture: UseRamp ? RampTexture : null,
+                rampUVOffset: new Vector2(0, RampVOffset),
                 endRounding: 1.0f - ArcSharpness
             );
 
@@ -339,7 +348,8 @@ namespace TestGame.Scenes {
                 layer: 3,
                 texture: UseTexture ? Texture : null,
                 textureSettings: textureSettings,
-                rampTexture: UseRamp ? RampTexture : null
+                rampTexture: UseRamp ? RampTexture : null,
+                rampUVOffset: new Vector2(0, RampVOffset)
             );
 
             RasterPolygonVertex v0 = new RasterPolygonVertex(new Vector2(732, 732), 4f),
@@ -369,7 +379,8 @@ namespace TestGame.Scenes {
                 layer: 5,
                 texture: UseTexture ? Texture : null,
                 textureSettings: textureSettings,
-                rampTexture: UseRamp ? RampTexture : null
+                rampTexture: UseRamp ? RampTexture : null,
+                rampUVOffset: new Vector2(0, RampVOffset)
             );
 
             ir.RasterShadow = default(RasterShadowSettings);
