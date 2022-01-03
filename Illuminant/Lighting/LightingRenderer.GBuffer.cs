@@ -70,7 +70,7 @@ namespace Squared.Illuminant {
 
         private void _BeforeRenderGBuffer (DeviceManager dm, object userData) {
             dm.PushStates();
-            Materials.PushViewTransform(ref PendingGBufferArguments.Transform);
+            Materials.PushViewTransform(in PendingGBufferArguments.Transform);
             dm.AssertRenderTarget(_GBuffer.Texture.Get());
             dm.Device.ScissorRectangle = new Rectangle(0, 0, PendingGBufferArguments.RenderWidth, PendingGBufferArguments.RenderHeight);
         }

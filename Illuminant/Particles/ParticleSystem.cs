@@ -276,7 +276,7 @@ namespace Squared.Illuminant.Particles {
                 var scale = rp.UserParameters?.Scale ?? Vector2.One;
 
                 var u = new RasterizeParticleSystem(System.Engine.Configuration, System.Configuration, origin, scale);
-                System.Engine.uRasterize.TrySet(m, ref u);
+                System.Engine.uRasterize.TrySet(m, in u);
 
                 var renderingOptions = new Vector4(
                     (appearance?.Rounded ?? false) ? 1 : 0,
@@ -570,7 +570,7 @@ namespace Squared.Illuminant.Particles {
             ClampedBezier1 sizeFromLife, sizeFromVelocity, roundingFromLife;
 
             var psu = new Uniforms.ParticleSystem(Engine.Configuration, Configuration, deltaTimeSeconds);
-            Engine.uSystem.Set(m, ref psu);
+            Engine.uSystem.Set(m, in psu);
 
             var o = Configuration.Color._OpacityFromLife.GetValueOrDefault(0);
             if (o != 0) {
@@ -588,11 +588,11 @@ namespace Squared.Illuminant.Particles {
             sizeFromVelocity = new ClampedBezier1(Configuration.SizeFromVelocity);
             roundingFromLife = new ClampedBezier1(Configuration.Appearance.RoundingPowerFromLife);
 
-            Engine.uColorFromLife.TrySet(m, ref colorFromLife);
-            Engine.uSizeFromLife.TrySet(m, ref sizeFromLife);
-            Engine.uRoundingPowerFromLife.TrySet(m, ref roundingFromLife);
-            Engine.uColorFromVelocity.TrySet(m, ref colorFromVelocity);
-            Engine.uSizeFromVelocity.TrySet(m, ref sizeFromVelocity);
+            Engine.uColorFromLife.TrySet(m, in colorFromLife);
+            Engine.uSizeFromLife.TrySet(m, in sizeFromLife);
+            Engine.uRoundingPowerFromLife.TrySet(m, in roundingFromLife);
+            Engine.uColorFromVelocity.TrySet(m, in colorFromVelocity);
+            Engine.uSizeFromVelocity.TrySet(m, in sizeFromVelocity);
         }
 
         private BufferSet AcquireOrCreateBufferSet (int ownerId, int frameIndex, out bool resultIsNew) {

@@ -160,7 +160,7 @@ namespace Squared.Illuminant.Particles.Transforms {
                             system.Configuration.Collision.DistanceField, 
                             system.Configuration.Collision.DistanceFieldMaximumZ.Value
                         );
-                        engine.uDistanceField.Set(m, ref dfu);
+                        engine.uDistanceField.Set(m, in dfu);
                     }
 
                     m.Effect.Parameters["RotationFromLifeAndIndex"]?.SetValue(new Vector2(

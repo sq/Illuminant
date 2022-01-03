@@ -691,7 +691,7 @@ namespace Squared.Illuminant {
             if (Configuration.ScaleCompensation)
                 vt.Position += coordOffset;
 
-            Materials.PushViewTransform(ref vt);
+            Materials.PushViewTransform(in vt);
         }
 
         private void _BeginLightPass (DeviceManager device, object userData) {
@@ -1347,7 +1347,7 @@ namespace Squared.Illuminant {
                     };
                 ds.FrameIndex = dm.FrameIndex;
 
-                Renderer.uDithering.Set(m, ref ds);
+                Renderer.uDithering.Set(m, in ds);
                 Renderer.EnvironmentUniforms.SetIntoParameters(p);
 
                 if (hdr.HasValue) {
@@ -1490,7 +1490,7 @@ namespace Squared.Illuminant {
                         };
                     }
 
-                    bb.Add(ref dc);
+                    bb.Add(in dc);
                 }
             }
         }
@@ -1754,7 +1754,7 @@ namespace Squared.Illuminant {
                 dfu = new Uniforms.DistanceField();
                 dfu.InvScaleFactorX = dfu.InvScaleFactorY = 1;
                 dfu.Extent.Z = Environment.MaximumZ;
-                uDistanceField.TrySet(m, ref dfu);
+                uDistanceField.TrySet(m, in dfu);
                 p["DistanceFieldPacked1"]?.SetValue(Vector4.Zero);
                 p.ClearTexture("DistanceFieldTexture");
 #if DF3D
@@ -1775,7 +1775,7 @@ namespace Squared.Illuminant {
                 LongStepFactor = q.LongStepFactor
             };
 
-            uDistanceField.TrySet(m, ref dfu);
+            uDistanceField.TrySet(m, in dfu);
 
             if (setDistanceTexture) {
                 p["DistanceFieldTexture"]?.SetValue(_DistanceField.Texture.Get());

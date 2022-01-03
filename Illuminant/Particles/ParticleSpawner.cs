@@ -336,7 +336,7 @@ namespace Squared.Illuminant.Particles.Transforms {
                 for (var i = 0; i < AdditionalPositions.Count; i++) {
                     var ap = AdditionalPositions[i];
                     v = new Vector4(ap, life);
-                    if (Temp4[i + 1].FastEquals(ref v))
+                    if (Temp4[i + 1].FastEquals(in v))
                         continue;
 
                     Temp4[i + 1] = v;
