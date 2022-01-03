@@ -15,7 +15,7 @@ using Squared.Util;
 
 namespace Squared.Illuminant {
     public unsafe class Histogram : IDisposable {
-        private struct FloatComparer : IComparer<float> {
+        private sealed class FloatComparer : IComparer<float> {
             public static readonly FloatComparer Instance = new FloatComparer();
 
             public int Compare (float lhs, float rhs) {

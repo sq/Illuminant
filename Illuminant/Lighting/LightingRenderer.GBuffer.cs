@@ -273,7 +273,9 @@ namespace Squared.Illuminant {
             material.Flush(dm);
         }
 
-        private struct GBufferBillboardSorter : IRefComparer<Billboard> {
+        private sealed class GBufferBillboardSorter : IRefComparer<Billboard> {
+            public static readonly GBufferBillboardSorter Instance = new GBufferBillboardSorter();
+
             public int Compare (ref Billboard lhs, ref Billboard rhs) {
                 int result = lhs.SortKey.CompareTo(rhs.SortKey);
                 if (result == 0)
@@ -304,7 +306,7 @@ namespace Squared.Illuminant {
             // FIXME: This suuuuuuuuuuucks
             BillboardScratch.Clear();
             BillboardScratch.AddRange(Environment.Billboards);
-            BillboardScratch.FastCLRSortRef(new GBufferBillboardSorter());
+            BillboardScratch.FastCLRSortRef(GBufferBillboardSorter.Instance);
 
             if (BillboardScratch.Count <= 0)
                 return;

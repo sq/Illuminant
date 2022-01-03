@@ -274,7 +274,7 @@ namespace Squared.Illuminant {
             }
         }
 
-        private class LightObstructionTypeComparer : IRefComparer<LightObstruction> {
+        private sealed class LightObstructionTypeComparer : IRefComparer<LightObstruction> {
             public static readonly LightObstructionTypeComparer Instance = 
                 new LightObstructionTypeComparer();
 
@@ -1161,7 +1161,7 @@ namespace Squared.Illuminant {
             vertex.MoreLightProperties.Z = lightSource.FalloffYFactor;
             vertex.MoreLightProperties.W = lightSource.AmbientOcclusionOpacity;
             vertex.EvenMoreLightProperties = Vector4.Zero;
-            ltrs.LightVertices.Add(ref vertex);
+            ltrs.LightVertices.Add(in vertex);
 
             ltrs.LightCount++;
         }
@@ -1208,7 +1208,7 @@ namespace Squared.Illuminant {
                 )
             );
 
-            ltrs.LightVertices.Add(ref vertex);
+            ltrs.LightVertices.Add(in vertex);
             ltrs.LightCount++;
         }
 
@@ -1231,7 +1231,7 @@ namespace Squared.Illuminant {
             vertex.MoreLightProperties.Z = lightSource.FalloffYFactor;
             vertex.MoreLightProperties.W = lightSource.AmbientOcclusionOpacity;
             vertex.EvenMoreLightProperties = Vector4.Zero;
-            ltrs.LightVertices.Add(ref vertex);
+            ltrs.LightVertices.Add(in vertex);
 
             ltrs.LightCount++;
         }
@@ -1293,7 +1293,7 @@ namespace Squared.Illuminant {
                 lightSource.TextureRegion.BottomRight.X,
                 lightSource.TextureRegion.BottomRight.Y
             );
-            ltrs.LightVertices.Add(ref vertex);
+            ltrs.LightVertices.Add(in vertex);
 
             ltrs.LightCount++;
         }
@@ -1920,7 +1920,7 @@ namespace Squared.Illuminant {
         public Vector3 Up, Right;
     }
 
-    public class LightSorter : IRefComparer<LightSource> {
+    public sealed class LightSorter : IRefComparer<LightSource> {
         public static readonly LightSorter Instance = new LightSorter();
 
         public int Compare (ref LightSource x, ref LightSource y) {

@@ -110,6 +110,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|FNA-x64'">
     <DefineConstants>TRACE;FNA;SDL2</DefineConstants>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|FNA'">
     <DefineConstants>TRACE;FNA;SDL2</DefineConstants>
