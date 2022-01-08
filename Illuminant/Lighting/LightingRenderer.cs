@@ -67,13 +67,13 @@ namespace Squared.Illuminant {
             }
 
             public override bool Equals (object obj) {
-                if (obj is LightTypeRenderStateKey)
-                    return Equals((LightTypeRenderStateKey)obj);
+                if (obj is LightTypeRenderStateKey ltrsk)
+                    return Equals(ltrsk);
 
                 return false;
             }
 
-            public bool Equals (LightTypeRenderStateKey ltrsk) {
+            public bool Equals (in LightTypeRenderStateKey ltrsk) {
                 return (ParticleLightSource == ltrsk.ParticleLightSource) &&
                     (Type == ltrsk.Type) &&
                     (RampTexture == ltrsk.RampTexture) &&
@@ -871,7 +871,8 @@ namespace Squared.Illuminant {
         }
 
         // FIXME: This is awful
-        private readonly HashSet<LightTypeRenderStateKey> DeadRenderStates = new HashSet<LightTypeRenderStateKey>();
+        private readonly HashSet<LightTypeRenderStateKey> DeadRenderStates = 
+            new HashSet<LightTypeRenderStateKey>(LightTypeRenderStateKeyComparer.Instance);
 
         private readonly DirectionalLightSource DummyDirectionalLightForFullbrightMode = new DirectionalLightSource {
             Color = new Vector4(0, 0, 0, 1),
@@ -886,7 +887,6 @@ namespace Squared.Illuminant {
         /// <param name="layer">The layer to render lighting into.</param>
         /// <param name="intensityScale">A factor to scale the intensity of all light sources. You can use this to rescale the intensity of light values for HDR.</param>
         /// <param name="paintDirectIllumination">If false, direct illumination will not be rendered (only light probes will be updated).</param>
-        /// <param name="indirectIlluminationSettings">If specified, indirect illumination is rendered based on the provided settings.</param>
         public RenderedLighting RenderLighting (
             IBatchContainer container, int layer, 
             float intensityScale = 1.0f, 

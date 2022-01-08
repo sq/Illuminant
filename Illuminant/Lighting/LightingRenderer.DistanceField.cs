@@ -384,6 +384,19 @@ namespace Squared.Illuminant {
             }
         }
 
+        private Action<DeviceManager, object> SetupDistanceFieldPartition, TeardownDistanceFieldPartition;
+
+        // FIXME: Can we use a view transform modifier instead of these callbacks?
+        private void _SetupDistanceFieldPartition (DeviceManager dm, object userData) {
+            var vt = Materials.ViewTransform;
+            vt.ResetZRanges();
+            Materials.PushViewTransform(in vt);
+        }
+
+        private void _TeardownDistanceFieldPartition (DeviceManager dm, object userData) {
+            Materials.PopViewTransform();
+        }
+
         private void RenderDistanceFieldPartition (ref int layerIndex, IBatchContainer resultGroup, bool? dynamicFlagFilter) {
             var ddf = _DistanceField as DynamicDistanceField;
             if (ddf == null)
@@ -403,17 +416,16 @@ namespace Squared.Illuminant {
             if (slicesToUpdate <= 0)
                 return;
 
+            if (SetupDistanceFieldPartition == null)
+                SetupDistanceFieldPartition = _SetupDistanceFieldPartition;
+            if (TeardownDistanceFieldPartition == null)
+                TeardownDistanceFieldPartition = _TeardownDistanceFieldPartition;
+
             using (var rtGroup = BatchGroup.ForRenderTarget(
                 resultGroup, layerIndex++, renderTarget,
                 // HACK: Since we're mucking with view transforms, do a save and restore
-                (dm, _) => {
-                    var vt = Materials.ViewTransform;
-                    vt.ResetZRanges();
-                    Materials.PushViewTransform(in vt);
-                },
-                (dm, _) => {
-                    Materials.PopViewTransform();
-                },
+                SetupDistanceFieldPartition,
+                TeardownDistanceFieldPartition,
                 name: "Render Distance Field Partition"
             )) {
                 // We incrementally do a partial update of the distance field.

@@ -86,6 +86,32 @@ namespace Squared.Illuminant {
             dm.PopStates();
         }
 
+        private Action<DeviceManager, object> SetupGBufferGroundPlane;
+
+        private void _SetupGBufferGroundPlane (DeviceManager dm, object userData) {
+            var sohack = ComputeSelfOcclusionHack();
+            var zsohack = ComputeZSelfOcclusionHack();
+            var p = IlluminantMaterials.HeightVolumeFace.Effect.Parameters;
+            p["DistanceFieldExtent"].SetValue(Extent3);
+            p["SelfOcclusionHack"].SetValue(sohack);
+            p["ZSelfOcclusionHack"].SetValue(zsohack);
+            EnvironmentUniforms.SetIntoParameters(p);
+
+            p = IlluminantMaterials.GroundPlane.Effect.Parameters;
+            p["DistanceFieldExtent"].SetValue(Extent3);
+            p["SelfOcclusionHack"].SetValue(sohack);
+            p["ZSelfOcclusionHack"].SetValue(zsohack);
+            EnvironmentUniforms.SetIntoParameters(p);
+
+            p = IlluminantMaterials.HeightVolume.Effect.Parameters;
+            p["DistanceFieldExtent"].SetValue(Extent3);
+            p["SelfOcclusionHack"].SetValue(sohack);
+            p["ZSelfOcclusionHack"].SetValue(zsohack);
+            EnvironmentUniforms.SetIntoParameters(p);
+
+            dm.Device.RasterizerState = RenderStates.ScissorOnly;
+        }
+
         private void RenderGBuffer (
             ref int layerIndex, IBatchContainer resultGroup,
             int renderWidth, int renderHeight,
@@ -113,29 +139,12 @@ namespace Squared.Illuminant {
                     Color.Transparent, clearZ: 0
                 );
 
+                if (SetupGBufferGroundPlane == null)
+                    SetupGBufferGroundPlane = _SetupGBufferGroundPlane;
+
                 using (var batch = PrimitiveBatch<HeightVolumeVertex>.New(
                     group, 1, IlluminantMaterials.GroundPlane,
-                    (dm, _) => {
-                        var p = IlluminantMaterials.HeightVolumeFace.Effect.Parameters;
-                        p["DistanceFieldExtent"].SetValue(Extent3);
-                        p["SelfOcclusionHack"].SetValue(ComputeSelfOcclusionHack());
-                        p["ZSelfOcclusionHack"].SetValue(ComputeZSelfOcclusionHack());
-                        EnvironmentUniforms.SetIntoParameters(p);
-
-                        p = IlluminantMaterials.GroundPlane.Effect.Parameters;
-                        p["DistanceFieldExtent"].SetValue(Extent3);
-                        p["SelfOcclusionHack"].SetValue(ComputeSelfOcclusionHack());
-                        p["ZSelfOcclusionHack"].SetValue(ComputeZSelfOcclusionHack());
-                        EnvironmentUniforms.SetIntoParameters(p);
-
-                        p = IlluminantMaterials.HeightVolume.Effect.Parameters;
-                        p["DistanceFieldExtent"].SetValue(Extent3);
-                        p["SelfOcclusionHack"].SetValue(ComputeSelfOcclusionHack());
-                        p["ZSelfOcclusionHack"].SetValue(ComputeZSelfOcclusionHack());
-                        EnvironmentUniforms.SetIntoParameters(p);
-
-                        dm.Device.RasterizerState = Render.Convenience.RenderStates.ScissorOnly;
-                    }
+                    SetupGBufferGroundPlane
                 )) {
                     RenderGroundPlane(batch);
 
