@@ -1707,6 +1707,7 @@ namespace Squared.Illuminant {
                 blendState: blendState ?? BlendState.AlphaBlend
             );
             using (var batch = PrimitiveBatch<VisualizeDistanceFieldVertex>.New(
+                // FIXME: Create reusable delegate instance + use userData
                 container, layerIndex++, material, (dm, _) => {
                     var p = material.Effect.Parameters;
 

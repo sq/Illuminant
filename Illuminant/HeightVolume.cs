@@ -110,13 +110,7 @@ namespace Squared.Illuminant {
                 var range = new Vector2(h1, h2);
 
                 if (_Mesh3D == null) {
-                    _Mesh3D = (
-                        from p in Geometry.Triangulate(Polygon) 
-                        from v in p
-                        select new HeightVolumeVertex(
-                            new Vector3(v, h2), Vector3.UnitZ, range, TopFaceEnableShadows
-                        )
-                    ).ToArray();
+                    BuildMesh3D(range);
                 } else {
                     for (var i = 0; i < _Mesh3D.Length; i++) {
                         _Mesh3D[i].Position.Z = h2;
@@ -127,6 +121,16 @@ namespace Squared.Illuminant {
 
                 return _Mesh3D;
             }
+        }
+
+        private void BuildMesh3D (Vector2 range) {
+            _Mesh3D = (
+                from p in Geometry.Triangulate(Polygon) 
+                from v in p
+                select new HeightVolumeVertex(
+                    new Vector3(v, range.Y), Vector3.UnitZ, range, TopFaceEnableShadows
+                )
+            ).ToArray();
         }
 
         public override ArraySegment<HeightVolumeVertex> GetFrontFaceMesh3D () {
