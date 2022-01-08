@@ -20,7 +20,7 @@ using Squared.Util;
 
 namespace TestGame.Scenes {
     public class BitmapShaders : Scene {
-        Texture2D TestImage, TestImage2;
+        Texture2D TestImage, TestImage2, TransitionTestImage, TransitionMask;
 
         [Items("Normal")]
         [Items("Shadowed")]
@@ -32,6 +32,7 @@ namespace TestGame.Scenes {
         [Items("Crossfade")]
         [Items("Over")]
         [Items("Under")]
+        [Items("GradientMasked")]
         Dropdown<string> Shader;
 
         Slider Opacity, Brightness, ShadowOffset, DitherGamma, StippleRatio, 
@@ -77,14 +78,17 @@ namespace TestGame.Scenes {
             HighlightTolerance.Speed = 0.01f;
             Image2Weight.Min = 0;
             Image2Weight.Max = 1;
-            Image2Weight.Value = 0.5f;
-            Image2Weight.Speed = 0.05f;
+            Image2Weight.Value = 0f;
+            Image2Weight.Speed = 0.015f;
             PreserveAspectRatio.Value = true;
+            Shader.Value = "GradientMasked";
         }
 
         public override void LoadContent () {
             TestImage = Game.TextureLoader.Load("transparent_test");
             TestImage2 = Game.TextureLoader.Load("precision-test");
+            TransitionMask = Game.TextureLoader.Load("transition-mask", new TextureLoadOptions { FloatingPoint = true, EnableGrayscale = true });
+            TransitionTestImage = Game.TextureLoader.Load("vector-field-background");
         }
 
         public override void UnloadContent () {
@@ -131,6 +135,11 @@ namespace TestGame.Scenes {
                     material = Game.Materials.UnderBitmap;
                     userData = new Vector4(Image2Weight.Value);
                     break;
+                case "GradientMasked":
+                    material = Game.Materials.GradientMaskedBitmap;
+                    // Progress, min, max, window size
+                    userData = new Vector4(Image2Weight.Value, 0, 1, 0.2f);
+                    break;
                 default:
                     material = Game.Materials.ScreenSpaceBitmap;
                     break;
@@ -149,12 +158,13 @@ namespace TestGame.Scenes {
                 white, white, white, 255
             ) * Opacity;
 
-            var dc = new BitmapDrawCall(TestImage, Vector2.Zero) {
-                Texture2 = TestImage2,
+            var dc = new BitmapDrawCall((Shader.Value == "GradientMasked" ? TransitionTestImage : TestImage), Vector2.Zero) {
+                Texture2 = (Shader.Value == "GradientMasked" ? TransitionMask : TestImage2),
                 MultiplyColor = multiplyColor,
                 UserData = userData
             };
-            dc.AlignTexture2(2.0f, preserveAspectRatio: PreserveAspectRatio.Value);
+            if (Shader.Value != "GradientMasked")
+                dc.AlignTexture2(2.0f, preserveAspectRatio: PreserveAspectRatio.Value);
 
             ir.Draw(
                 dc, layer: 1, material: material,

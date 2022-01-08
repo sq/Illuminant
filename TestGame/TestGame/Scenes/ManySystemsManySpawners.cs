@@ -72,10 +72,7 @@ namespace TestGame.Scenes {
             ClearBatch.AddNew(frame, 0, Game.Materials.Clear, clearColor: Color.DarkTurquoise * 0.3f);
 
             using (var group = BatchGroup.New(
-                frame, 2, (dm, _) => {
-                    var vt = Game.Materials.ViewTransform;
-                    Game.Materials.ViewTransform = vt;
-                }
+                frame, 2
             )) {
                 int i = -1, j = 1;
                 foreach (var s in Systems) {

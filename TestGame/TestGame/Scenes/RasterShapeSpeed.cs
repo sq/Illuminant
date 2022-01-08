@@ -56,7 +56,7 @@ namespace TestGame.Scenes {
                 frame, 0,
                 materialSet: Game.Materials
             );
-            batch.SetViewTransform(ref vt);
+            batch.SetViewTransform(in vt);
 
             var ir = new ImperativeRenderer(batch, Game.Materials, blendState: BlendState.AlphaBlend);
             ir.Clear(layer: 0, color: new Color(0, 32, 48));

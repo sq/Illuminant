@@ -1,3 +1,5 @@
+#pragma warning ( disable: X3571 )
+
 #define ENABLE_DITHERING
 
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\CompilerWorkarounds.fxh"

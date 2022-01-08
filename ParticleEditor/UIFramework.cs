@@ -1478,7 +1478,7 @@ namespace Lumined {
                                         }
                                     } else
                                         cb = new Squared.Illuminant.Uniforms.ClampedBezier4(b);
-                                    Game.uBezier.Set(m, ref cb);
+                                    Game.uBezier.Set(m, in cb);
                                     m.Effect.Parameters["CurrentT"].SetValue(currentT.GetValueOrDefault(-99999));
                                     m.Effect.Parameters["ElementCount"].SetValue(elementCount);
                                 }
@@ -1491,7 +1491,7 @@ namespace Lumined {
                                 var pdc = new PrimitiveDrawCall<VertexPositionColorTexture>(
                                     PrimitiveType.TriangleList, verts, 0, 2
                                 );
-                                pb.Add(ref pdc);
+                                pb.Add(pdc);
                             }
                         }
                     }
