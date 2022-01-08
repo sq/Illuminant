@@ -379,7 +379,6 @@ namespace Squared.Illuminant.Particles {
             AfterSystemUpdate = _AfterSystemUpdate;
             AfterFrameHandler = _AfterFrameHandler;
             UpdateAfterPresentHandler = _UpdateAfterPresentHandler;
-            RenderChunkSetup = _RenderChunkSetup;
 
             engine.Systems.Add(this);
         }
@@ -894,29 +893,6 @@ namespace Squared.Illuminant.Particles {
             return isValid;
         }
 
-        private class RenderChunkHandlerState {
-            public Material Material;
-            public BufferSet Source;
-            public Chunk Chunk;
-        }
-
-        private void _RenderChunkSetup (DeviceManager dm, object userData) {
-            var state = (RenderChunkHandlerState)userData;
-
-            if (!IsChunkValidSource(state.Source, state.Chunk))
-                return;
-            var p = state.Material.Effect.Parameters;
-            p["PositionTexture"].SetValue(state.Source.PositionAndLife);
-            // HACK
-            p["VelocityTexture"].SetValue(state.Chunk.RenderData);
-            p["AttributeTexture"].SetValue(state.Chunk.RenderColor);
-            state.Material.Flush(dm);
-            p["PositionTexture"].SetValue(state.Source.PositionAndLife);
-            // HACK
-            p["VelocityTexture"].SetValue(state.Chunk.RenderData);
-            p["AttributeTexture"].SetValue(state.Chunk.RenderColor);
-        }
-
         private void RenderChunk (
             BatchGroup group, Chunk chunk, Material m, int layer, bool usePreviousData
         ) {
@@ -925,18 +901,16 @@ namespace Squared.Illuminant.Particles {
 
             var src = usePreviousData ? chunk.Previous : chunk.Current;
 
-            var state = new RenderChunkHandlerState {
-                Material = m,
-                Source = src,
-                Chunk = chunk
-            };
-
             if (RenderTrace.EnableTracing)
                 RenderTrace.Marker(group, layer++, "System {0:X8} {3} Render Chunk {1} Current {2}", GetHashCode(), chunk.ID, chunk.Current.ID, Label);
 
             using (var batch = NativeBatch.New(
-                group, layer, m, RenderChunkSetup, userData: state
+                group, layer, m
             )) {
+                batch.MaterialParameters.Add("PositionTexture", src.PositionAndLife);
+                batch.MaterialParameters.Add("VelocityTexture", chunk.RenderData);
+                batch.MaterialParameters.Add("AttributeTexture", chunk.RenderColor);
+
                 if (IsChunkValidSource(src, chunk)) {
                     chunk.Current.LastFrameDependency = group.RenderManager.DeviceManager.FrameIndex;
                     batch.Add(new NativeDrawCall(
