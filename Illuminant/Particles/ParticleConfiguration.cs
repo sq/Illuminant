@@ -1,6 +1,7 @@
 ﻿using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Squared.Render;
 using Squared.Util;
 
 namespace Squared.Illuminant.Particles {
@@ -300,5 +301,6 @@ namespace Squared.Illuminant.Particles {
         public Vector2 Origin = Vector2.Zero;
         public Vector2 Scale = Vector2.One;
         public float? StippleFactor = null;
+        internal Material Material;
     }
 }

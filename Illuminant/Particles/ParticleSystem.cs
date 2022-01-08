@@ -48,13 +48,6 @@ namespace Squared.Illuminant.Particles {
     public partial class ParticleSystem : IParticleSystems {
         public const int MaxChunkCount = 64;
 
-        internal class InternalRenderParameters {
-            public DefaultMaterialSet DefaultMaterialSet;
-            public Material Material;
-            public ParticleRenderParameters UserParameters;
-            public int LastResetCount;
-        }
-
         public class UpdateResult {
             public ParticleSystem System { get; private set; }
             public bool PerformedUpdate { get; private set; }
@@ -237,73 +230,32 @@ namespace Squared.Illuminant.Particles {
             }
 
             private void _BeforeDraw (DeviceManager dm, object _rp) {
-                var rp = (InternalRenderParameters)_rp;
-                var m = rp.Material;
-                var e = m.Effect;
-                var p = e.Parameters;
-                if (rp.LastResetCount != System.Engine.ResetCount)
+                var rp = _rp as ParticleRenderParameters;
+                var m = rp?.Material ?? (_rp as Material);
+                if (m == null)
                     return;
+                var e = m?.Effect;
+                var p = e?.Parameters;
 
                 // FIXME: deltaTime
                 System.SetSystemUniforms(m, 0);
-                var appearance = System.Configuration.Appearance;
 
-                var tex = appearance?.Texture?.Instance;
-                if ((tex != null) && tex.IsDisposed)
-                    tex = null;
-                var texSize = (tex != null)
-                    ? new Vector2(tex.Width, tex.Height)
-                    : Vector2.One;
-
-                // TODO: transform arg
-                var bt = p["BitmapTexture"];
-                if (bt != null) {
-                    bt.SetValue(tex);
-                    if (tex != null) {
-                        // var offset = new Vector2(-0.5f) / texSize;
-                        var offset = appearance.OffsetPx / texSize;
-                        var size = appearance.SizePx.GetValueOrDefault(texSize) / texSize;
-                        p["BitmapTextureRegion"]?.SetValue(new Vector4(
-                            offset.X, offset.Y, 
-                            offset.X + size.X, offset.Y + size.Y
-                        ));
-                    }
-                }
-                
-                p["StippleFactor"]?.SetValue(rp.UserParameters?.StippleFactor ?? System.Configuration.StippleFactor);
-
-                var origin = rp.UserParameters?.Origin ?? Vector2.Zero;
-                var scale = rp.UserParameters?.Scale ?? Vector2.One;
+                var origin = rp?.Origin ?? Vector2.Zero;
+                var scale = rp?.Scale ?? Vector2.One;
 
                 var u = new RasterizeParticleSystem(System.Engine.Configuration, System.Configuration, origin, scale);
                 System.Engine.uRasterize.TrySet(m, in u);
 
-                var renderingOptions = new Vector4(
-                    (appearance?.Rounded ?? false) ? 1 : 0,
-                    (appearance?.DitheredOpacity ?? false) ? 1 : 0,
-                    (appearance?.ColumnFromVelocity ?? false) ? 1 : 0,
-                    (appearance?.RowFromVelocity ?? false) ? 1 : 0
-                );
-
-                p["RenderingOptions"]?.SetValue(renderingOptions);
-
-                System.MaybeSetLifeRampParameters(p);
+                if (p != null)
+                    System.MaybeSetLifeRampParameters(p);
             }
 
             private void _AfterDraw (DeviceManager dm, object _rp) {
-                var rp = (InternalRenderParameters)_rp;
-                var m = rp.Material;
-                var e = m.Effect;
-                var p = e.Parameters;
-
-                p.ClearTextures(ClearTextureList);
-                // ughhhhhhhhhh
-#if !FNA
-                for (var i = 0; i < 4; i++)
-                    dm.Device.VertexTextures[i] = null;
-                for (var i = 0; i < 16; i++)
-                    dm.Device.Textures[i] = null;
-#endif
+                var rp = _rp as ParticleRenderParameters;
+                var m = rp?.Material ?? (_rp as Material);
+                if (m == null)
+                    return;
+                m.Effect?.Parameters.ClearTextures(ClearTextureList);
             }
         }
 
@@ -997,15 +949,53 @@ namespace Squared.Illuminant.Particles {
                     material, blendState: blendState, depthStencilState: Configuration.DepthStencilState
                 );
             var e = material.Effect;
-            var p = e.Parameters;
+            // HACK
+            if (renderParams != null)
+                renderParams.Material = material;
             using (var group = BatchGroup.New(
                 container, layer,
                 Renderer.BeforeDraw, Renderer.AfterDraw, 
-                userData: new InternalRenderParameters {
-                    Material = material, UserParameters = renderParams,
-                    DefaultMaterialSet = Engine.Materials, LastResetCount = Engine.ResetCount
-                }
+                userData: (object)renderParams ?? (object)material
             )) {
+                // HACK: This ensures our parameters get applied to the material, since groups normally don't
+                //  have a material associated with them.
+                group.Material = material;
+                var m = material;
+
+                // FIXME: We previously did a LastResetCount check in the setup handler. We might need to bring it back?
+
+                // FIXME: deltaTime
+                // SetSystemUniforms(m, 0);
+                var tex = appearance?.Texture?.Instance;
+                if ((tex != null) && tex.IsDisposed)
+                    tex = null;
+                var texSize = (tex != null)
+                    ? new Vector2(tex.Width, tex.Height)
+                    : Vector2.One;
+
+                // TODO: transform arg
+                group.MaterialParameters.Add("BitmapTexture", tex);
+                if (tex != null) {
+                    // var offset = new Vector2(-0.5f) / texSize;
+                    var offset = appearance.OffsetPx / texSize;
+                    var size = appearance.SizePx.GetValueOrDefault(texSize) / texSize;
+                    group.MaterialParameters.Add("BitmapTextureRegion", new Vector4(
+                        offset.X, offset.Y, 
+                        offset.X + size.X, offset.Y + size.Y
+                    ));
+                }
+                
+                group.MaterialParameters.Add("StippleFactor", renderParams?.StippleFactor ?? Configuration.StippleFactor);
+
+                var renderingOptions = new Vector4(
+                    (appearance?.Rounded ?? false) ? 1 : 0,
+                    (appearance?.DitheredOpacity ?? false) ? 1 : 0,
+                    (appearance?.ColumnFromVelocity ?? false) ? 1 : 0,
+                    (appearance?.RowFromVelocity ?? false) ? 1 : 0
+                );
+
+                group.MaterialParameters.Add("RenderingOptions", renderingOptions);
+
                 int i = 1;
                 lock (Chunks)
                 foreach (var chunk in Chunks)
