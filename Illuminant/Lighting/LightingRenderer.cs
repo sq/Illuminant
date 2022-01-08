@@ -20,8 +20,13 @@ using Squared.Util;
 namespace Squared.Illuminant {
     public sealed partial class LightingRenderer : IDisposable, INameableGraphicsObject {
         private class HeightVolumeCacheData : IDisposable {
+            public HeightVolumeBase Volume;
             public Texture2D VertexDataTexture;
             public readonly HeightVolumeVertex[] BoundingBoxVertices = new HeightVolumeVertex[4];
+
+            public HeightVolumeCacheData (HeightVolumeBase volume) {
+                Volume = volume;
+            }
 
             public void Dispose () {
                 VertexDataTexture.Dispose();

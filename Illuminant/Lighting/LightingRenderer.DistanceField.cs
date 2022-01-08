@@ -137,6 +137,37 @@ namespace Squared.Illuminant {
             }
         }
 
+        Action<DeviceManager, object> SetupDistanceFieldHeightVolume,
+            SetupDistanceFieldHeightVolumeDraw,
+            SetupDistanceFieldDistanceFunction;
+
+        private void _SetupDistanceFieldDistanceFunction (DeviceManager dm, object userData) {
+            var buffer = (DistanceFunctionBuffer)userData;
+            dm.Device.RasterizerState = RenderStates.ScissorOnly;
+            dm.Device.DepthStencilState = DepthStencilState.None;
+
+            lock (buffer)
+                buffer.Flush();
+        }
+
+        private void _SetupDistanceFieldHeightVolume (DeviceManager dm, object userData) {
+            dm.Device.RasterizerState = RenderStates.ScissorOnly;
+            dm.Device.DepthStencilState = DepthStencilState.None;
+            SetDistanceFieldParameters(IlluminantMaterials.DistanceToPolygon, false, Configuration.DefaultQuality);
+        }
+
+        private void _SetupDistanceFieldHeightVolumeDraw (DeviceManager dm, object userData) {
+            var cacheData = (HeightVolumeCacheData)userData;
+            var hv = cacheData.Volume;
+            var ep = IlluminantMaterials.DistanceToPolygon.Effect.Parameters;
+            var pb = hv.Bounds;
+            var tl = pb.TopLeft;
+            var br = pb.BottomRight;
+            ep["Bounds"].SetValue(new Vector4(tl.X, tl.Y, br.X, br.Y));
+            ep["Uv"].SetValue(new Vector4(0, 0, 1.0f / hv.Polygon.Count, 0));
+            ep["VertexDataTexture"].SetValue(cacheData.VertexDataTexture);
+        }
+
         private void RenderDistanceFieldHeightVolumes (
             int firstVirtualIndex, BatchGroup group, bool? dynamicFlagFilter
         ) {
@@ -153,20 +184,21 @@ namespace Squared.Illuminant {
                 SliceIndexToZ(firstVirtualIndex + 3)
             );
 
+            if (SetupDistanceFieldHeightVolume == null)
+                SetupDistanceFieldHeightVolume = _SetupDistanceFieldHeightVolume;
+            if (SetupDistanceFieldHeightVolumeDraw == null)
+                SetupDistanceFieldHeightVolumeDraw = _SetupDistanceFieldHeightVolumeDraw;
+
             // Rasterize the height volumes in sequential order.
             // FIXME: Depth buffer/stencil buffer tricks should work for generating this SDF, but don't?
-            using (var innerGroup = BatchGroup.New(group, 2, (dm, _) => {
-                dm.Device.RasterizerState = RenderStates.ScissorOnly;
-                dm.Device.DepthStencilState = DepthStencilState.None;
-                SetDistanceFieldParameters(mat, false, Configuration.DefaultQuality);
-            }))
+
+            using (var innerGroup = BatchGroup.New(group, 2, SetupDistanceFieldHeightVolume))
             foreach (var hv in Environment.HeightVolumes) {
                 if ((dynamicFlagFilter != null) && (hv.IsDynamic != dynamicFlagFilter.Value))
                     continue;
 
                 var p = hv.Polygon;
                 var m = hv.Mesh3D;
-                var pb = p.Bounds;
                 var b = hv.Bounds.Expand(DistanceLimit, DistanceLimit);
                 var zRange = new Vector2(hv.ZBase, hv.ZBase + hv.Height);
 
@@ -177,7 +209,7 @@ namespace Squared.Illuminant {
                     HeightVolumeCache.TryGetValue(p, out cacheData);
 
                 if (cacheData == null) {
-                    cacheData = new HeightVolumeCacheData();
+                    cacheData = new HeightVolumeCacheData(hv);
                     
                     lock (Coordinator.CreateResourceLock)
                         cacheData.VertexDataTexture = new Texture2D(Coordinator.Device, p.Count, 1, false, SurfaceFormat.Vector4);
@@ -206,20 +238,14 @@ namespace Squared.Illuminant {
 
                 using (var batch = PrimitiveBatch<HeightVolumeVertex>.New(
                     innerGroup, i, mat,
-                    (dm, _) => {
-                        var ep = mat.Effect.Parameters;
-                        var tl = pb.TopLeft;
-                        var br = pb.BottomRight;
-                        ep["Bounds"].SetValue(new Vector4(tl.X, tl.Y, br.X, br.Y));
-                        ep["Uv"].SetValue(new Vector4(0, 0, 1.0f / p.Count, 0));
-                        ep["VertexDataTexture"].SetValue(cacheData.VertexDataTexture);
-                        ep["SliceZ"].SetValue(sliceZ);
-                    }
-                ))
+                    SetupDistanceFieldHeightVolumeDraw, cacheData
+                )) {
+                    batch.MaterialParameters.Add("SliceZ", sliceZ);
                     batch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
                         PrimitiveType.TriangleList,
                         cacheData.BoundingBoxVertices, 0, cacheData.BoundingBoxVertices.Length, QuadIndices, 0, 2
                     ));
+                }
 
                 i++;
             }
@@ -322,7 +348,8 @@ namespace Squared.Illuminant {
             var numTypes = (int)LightObstruction.MAX_Type + 1;
             var batches  = new NativeBatch[numTypes];
 
-            Action<DeviceManager, object> setup = null;
+            if (SetupDistanceFieldDistanceFunction == null)
+                SetupDistanceFieldDistanceFunction = _SetupDistanceFieldDistanceFunction;
 
             for (int k = 0; k < 2; k++) {
                 var dynamicFlag = (k != 0);
@@ -339,18 +366,10 @@ namespace Squared.Illuminant {
                     if (RenderTrace.EnableTracing)
                         RenderTrace.Marker(group, (i * 2) + 3, "LightingRenderer {0} : Render {1}(s) to {2} buffer", this.ToObjectID(), (LightObstructionType)i, (buffer == DynamicDistanceFunctions) ? "dynamic" : "static");
 
-                    setup = (dm, _) => {
-                        dm.Device.RasterizerState = RenderStates.ScissorOnly;
-                        dm.Device.DepthStencilState = DepthStencilState.None;
-                        m.Effect.Parameters["SliceZ"].SetValue(sliceZ);
-
-                        lock (buffer)
-                            buffer.Flush();
-                    };
-
                     using (var batch = NativeBatch.New(
-                        group, (i * 2) + 4, m, setup
+                        group, (i * 2) + 4, m, SetupDistanceFieldDistanceFunction, userData: buffer
                     )) {
+                        batch.MaterialParameters.Add("SliceZ", sliceZ);
                         batch.Add(new NativeDrawCall(
                             PrimitiveType.TriangleList,
                             CornerBuffer, 0, 

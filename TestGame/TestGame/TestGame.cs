@@ -133,7 +133,7 @@ namespace TestGame {
         private void UpdatePRGUI () {
             // TODO: Immediate mode
             PRGUIContext.CanvasSize = new Vector2(UIRenderTarget.Width, UIRenderTarget.Height);
-            var window = PRGUIContext.Controls.Cast<Window>().FirstOrDefault();
+            var window = PRGUIContext.Controls.OfType<Window>().FirstOrDefault();
             if (window == null) {
                 window = new Window {
                     Title = "Settings",
