@@ -33,12 +33,13 @@ namespace TestGame.Scenes {
         [Items("Over")]
         [Items("Under")]
         [Items("GradientMasked")]
+        [Items("Outlined")]
         Dropdown<string> Shader;
 
         Slider Opacity, Brightness, ShadowOffset, DitherGamma, StippleRatio, 
             BlurSigma, BlurSampleRadius, HighlightTolerance, Image2Weight;
 
-        Toggle PreserveAspectRatio;
+        Toggle PreserveAspectRatio, ReverseDirection;
 
         public BitmapShaders (TestGame game, int width, int height)
             : base(game, width, height) {
@@ -81,13 +82,13 @@ namespace TestGame.Scenes {
             Image2Weight.Value = 0f;
             Image2Weight.Speed = 0.015f;
             PreserveAspectRatio.Value = true;
-            Shader.Value = "GradientMasked";
+            Shader.Value = "Outlined";
         }
 
         public override void LoadContent () {
             TestImage = Game.TextureLoader.Load("transparent_test");
             TestImage2 = Game.TextureLoader.Load("precision-test");
-            TransitionMask = Game.TextureLoader.Load("transition-mask", new TextureLoadOptions { FloatingPoint = true, EnableGrayscale = true });
+            TransitionMask = Game.TextureLoader.Load("errai-cutin", new TextureLoadOptions { FloatingPoint = true, EnableGrayscale = true });
             TransitionTestImage = Game.TextureLoader.Load("vector-field-background");
         }
 
@@ -137,8 +138,12 @@ namespace TestGame.Scenes {
                     break;
                 case "GradientMasked":
                     material = Game.Materials.GradientMaskedBitmap;
-                    // Progress, min, max, window size
-                    userData = new Vector4(Image2Weight.Value, 0, 1, 0.2f);
+                    // Progress, direction, unused, window size
+                    userData = new Vector4(Image2Weight.Value, ReverseDirection ? -1f : 1f, 0f, 0.05f);
+                    break;
+                case "Outlined":
+                    material = Game.Materials.GaussianOutlined;
+                    userData = new Vector4(220 / 255f, 32 / 255f, 96 / 255f, 4);
                     break;
                 default:
                     material = Game.Materials.ScreenSpaceBitmap;

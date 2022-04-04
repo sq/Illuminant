@@ -1,6 +1,7 @@
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\CompilerWorkarounds.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\FormatCommon.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\BitmapCommon.fxh"
 
 sampler FieldSampler : register(s6) {
@@ -36,6 +37,7 @@ void VectorWarpPixelShader (
     float2 warpedTexCoord = baseTexCoord + (fieldValue.xy * HalfTexel2);
     float2 finalTexCoord = clamp2(warpedTexCoord, texRgn2.xy, texRgn2.zw);
     float4 background = tex2D(TextureSampler2, finalTexCoord);
+    background = ExtractRgba(background, BitmapTraits2);
 
     result = background;
     result *= multiplyColor;

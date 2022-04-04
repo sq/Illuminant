@@ -238,10 +238,10 @@ namespace TestGame.Scenes {
             Environment.Lights.Add(new ParticleLightSource {
                 System = System,
                 Template = new SphereLightSource {
-                    Radius = 3,
-                    RampLength = 40,
+                    Radius = 4,
+                    RampLength = 128,
                     RampMode = LightSourceRampMode.Linear,
-                    Color = Vector4.One * 0.4f
+                    Color = Vector4.One * 0.25f
                 }
             });
 
