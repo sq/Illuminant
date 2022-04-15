@@ -495,16 +495,27 @@ namespace Squared.Illuminant.Particles {
             }
         }
 
+        /// <summary>
+        /// Resets internal state and clears resources
+        /// </summary>
         public void Reset () {
+            ReleaseResources();
             Engine.ResetCount++;
-            LastClearTimestamp = Time.Ticks;
-            IsClearPending = true;
             TotalSpawnCount = 0;
             UpdateErrorAccumulator = 0;
             CurrentFrameIndex = 0;
             LastUpdateTimeSeconds = null;
             foreach (var xform in Transforms)
                 xform.Reset();
+        }
+
+        /// <summary>
+        /// Clears resources like textures, but does not reset internal state
+        /// This will also clear any active particles
+        /// </summary>
+        public void ReleaseResources () {
+            LastClearTimestamp = Time.Ticks;
+            IsClearPending = true;
             lock (ChunksToReap) {
                 foreach (var chunk in Chunks) {
                     var li = GetLivenessInfo(chunk);
@@ -756,8 +767,7 @@ namespace Squared.Illuminant.Particles {
         internal void NotifyDeviceReset () {
             if (OnDeviceReset != null)
                 OnDeviceReset(this);
-            LastResetCount = Engine.ResetCount;
-            Reset();
+            ReleaseResources();
         }
 
         private void UpdateChunk (
@@ -949,6 +959,14 @@ namespace Squared.Illuminant.Particles {
                     material, blendState: blendState, depthStencilState: Configuration.DepthStencilState
                 );
             var e = material.Effect;
+
+            // HACK: Fix an obscure crash where the last texture we used was disposed, since we won't update it
+            //  until later in the draw process but FNA checks it when the material is applied instead of at draw
+            foreach (var p in e.Parameters) {
+                if (p.ParameterType == EffectParameterType.Texture2D)
+                    p.SetValue((Texture2D)null);
+            }
+            
             // HACK
             if (renderParams != null)
                 renderParams.Material = material;

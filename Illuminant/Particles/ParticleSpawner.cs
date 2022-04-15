@@ -183,6 +183,9 @@ namespace Squared.Illuminant.Particles.Transforms {
                     RateError = 0;
                 }
             }
+
+            if (spawnCount > 0)
+                ;
         }
 
         public virtual void EndTick (int requestedSpawnCount, int actualSpawnCount) {
