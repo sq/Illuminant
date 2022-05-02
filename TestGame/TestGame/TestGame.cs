@@ -143,7 +143,7 @@ namespace TestGame {
                     AllowMaximize = false,
                     Appearance = { BackgroundColor = new Color(80, 80, 80) },
                     Alignment = new Vector2(0.99f, 0.9f),
-                    ContainerFlags = ControlFlags.Container_Wrap | ControlFlags.Container_Row | ControlFlags.Container_Align_Start,
+                    ContainerFlags = ControlFlags.Container_Break_Auto | ControlFlags.Container_Row | ControlFlags.Container_Align_Start,
                     Scrollable = true,
                     ShowHorizontalScrollbar = false,
                     ClipChildren = true,
@@ -209,6 +209,7 @@ namespace TestGame {
             var container = builder.Data<TitledContainer, string>(kvp.Key)
                 .SetTitle(kvp.Key)
                 .SetCollapsible(true)
+                .AddContainerFlags(ControlFlags.Container_Break_Auto)
                 .Children();
 
             bool smartBreakAllowed = false;
@@ -511,8 +512,9 @@ namespace TestGame {
                 else if (ks.IsKeyDown(Keys.OemTilde) && !pks.IsKeyDown(Keys.OemTilde)) {
                     Graphics.SynchronizeWithVerticalRetrace = !Graphics.SynchronizeWithVerticalRetrace;
                     Graphics.ApplyChangesAfterPresent(RenderCoordinator);
-                }
-                else if (
+                } else if (ks.IsKeyDown(Keys.F10) && !pks.IsKeyDown(Keys.F10)) {
+                    PRGUIContext.Engine?.SaveRecords(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "prgui.xml"));
+                } else if (
                     (ks.IsKeyDown(Keys.Enter) && alt) &&
                     (!pks.IsKeyDown(Keys.Enter) || !wasAlt)
                 ) {
