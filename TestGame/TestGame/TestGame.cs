@@ -31,6 +31,7 @@ using PRGUIDropdown = Squared.PRGUI.Controls.Dropdown<object>;
 using Squared.PRGUI.Imperative;
 using Squared.PRGUI.Input;
 using System.Text.RegularExpressions;
+using Squared.Render.Resources;
 
 namespace TestGame {
     public class TestGame : MultithreadedGame {
@@ -44,6 +45,7 @@ namespace TestGame {
 
         public Texture2DProvider TextureLoader { get; private set; }
         public FreeTypeFontProvider FontLoader { get; private set; }
+        public EffectProvider EffectLoader { get; private set; }
 
         public KeyboardInputSource Keyboard = new KeyboardInputSource();
         public MouseInputSource Mouse = new MouseInputSource();
@@ -91,12 +93,13 @@ namespace TestGame {
             typeof(LoadCompiledModel),
 #endif
             typeof(Shapes),
+            typeof(Strokes),
+            typeof(BitmapShaders),
             typeof(RasterShapeSpeed),
             typeof(SystemStress),
             typeof(HueTest),
-            typeof(BitmapShaders),
             typeof(BitmapBillboards),
-            typeof(ProjectorLight)
+            typeof(ProjectorLight),
         };
 
         public TestGame () {
@@ -310,6 +313,7 @@ namespace TestGame {
                 }
             };
             FontLoader = new FreeTypeFontProvider(Assembly.GetExecutingAssembly(), RenderCoordinator);
+            EffectLoader = new EffectProvider(typeof(TestGame).Assembly, RenderCoordinator);
 
             Font = FontLoader.Load("FiraSans-Medium");
             Font.DefaultAlignment = new GlyphPixelAlignment(

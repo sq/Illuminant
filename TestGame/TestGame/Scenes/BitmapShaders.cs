@@ -34,9 +34,12 @@ namespace TestGame.Scenes {
         [Items("Under")]
         [Items("GradientMasked")]
         [Items("Outlined")]
+        [Items("Shatter")]
         Dropdown<string> Shader;
 
-        Slider Opacity, Brightness, ShadowOffset, DitherGamma, StippleRatio, 
+        Material ShatterMaterial;
+
+        Slider Opacity, Brightness, Offset, DitherGamma, Ratio, 
             BlurSigma, BlurSampleRadius, HighlightTolerance, Image2Weight;
 
         Toggle PreserveAspectRatio, ReverseDirection;
@@ -52,18 +55,18 @@ namespace TestGame.Scenes {
             Brightness.Max = 1;
             Brightness.Speed = 0.01f;
             Brightness.Value = 1;
-            ShadowOffset.Max = 16;
-            ShadowOffset.Speed = 0.5f;
-            ShadowOffset.Value = 4;
-            ShadowOffset.Min = -2;
+            Offset.Max = 16;
+            Offset.Speed = 0.5f;
+            Offset.Value = 4;
+            Offset.Min = -2;
             DitherGamma.Min = 0.1f;
             DitherGamma.Max = 3f;
             DitherGamma.Value = 1f;
             DitherGamma.Speed = 0.01f;
-            StippleRatio.Min = 1f;
-            StippleRatio.Max = 10f;
-            StippleRatio.Speed = 0.5f;
-            StippleRatio.Value = 1f;
+            Ratio.Min = 1f;
+            Ratio.Max = 10f;
+            Ratio.Speed = 0.5f;
+            Ratio.Value = 1f;
             BlurSigma.Min = 0.1f;
             BlurSigma.Max = 7.0f;
             BlurSigma.Value = 2f;
@@ -82,7 +85,7 @@ namespace TestGame.Scenes {
             Image2Weight.Value = 0f;
             Image2Weight.Speed = 0.015f;
             PreserveAspectRatio.Value = true;
-            Shader.Value = "Outlined";
+            Shader.Value = "Shatter";
         }
 
         public override void LoadContent () {
@@ -90,12 +93,16 @@ namespace TestGame.Scenes {
             TestImage2 = Game.TextureLoader.Load("precision-test");
             TransitionMask = Game.TextureLoader.Load("errai-cutin", new TextureLoadOptions { FloatingPoint = true, EnableGrayscale = true });
             TransitionTestImage = Game.TextureLoader.Load("vector-field-background");
+            ShatterMaterial = new Material(Game.EffectLoader.Load("Shatter"), "ShatterTechnique");
+            Game.Materials.Add(ShatterMaterial);
         }
 
         public override void UnloadContent () {
         }
 
         public override void Draw (Squared.Render.Frame frame) {
+            var ir = new ImperativeRenderer(frame, Game.Materials);
+
             Vector4 userData = default(Vector4);
             Material material;
             switch (Shader.Value) {
@@ -107,7 +114,7 @@ namespace TestGame.Scenes {
                     break;
                 case "Stippled":
                     material = Game.Materials.ScreenSpaceStippledBitmap;
-                    userData = new Vector4(0, DitherGamma, StippleRatio - 1, 0);
+                    userData = new Vector4(0, DitherGamma, Ratio - 1, 0);
                     break;
                 case "HorizontalBlur":
                     material = Game.Materials.ScreenSpaceHorizontalGaussianBlur;
@@ -141,6 +148,15 @@ namespace TestGame.Scenes {
                     // Progress, direction, unused, window size
                     userData = new Vector4(Image2Weight.Value, ReverseDirection ? -1f : 1f, 0f, 0.05f);
                     break;
+                case "Shatter":
+                    material = ShatterMaterial;
+                    // Progress, direction * scale, angle, offset
+                    float t = (float)(Time.Seconds * 0.66), 
+                        x = (float)Math.Sin(t),
+                        y = (float)Math.Cos(t);
+                    userData = new Vector4(Image2Weight.Value, (ReverseDirection ? -1f : 1f) * Ratio.Value, t, Offset.Value);
+                    ir.RasterizeEllipse(new Vector2((x + 1) / 2f * Width, (y + 1) / 2f * Height), new Vector2(4f), Color.Red, layer: 999);
+                    break;
                 case "Outlined":
                     material = Game.Materials.GaussianOutlined;
                     userData = new Vector4(220 / 255f, 32 / 255f, 96 / 255f, 4);
@@ -150,11 +166,9 @@ namespace TestGame.Scenes {
                     break;
             }
 
-            var ir = new ImperativeRenderer(frame, Game.Materials);
-
             material = Game.Materials.Get(material, blendState: BlendState.AlphaBlend);
             Game.Materials.SetGaussianBlurParameters(material, BlurSigma, (int)(BlurSampleRadius) * 2 + 1);
-            ir.Parameters.Add("ShadowOffset", new Vector2(ShadowOffset * 0.66f, ShadowOffset));
+            ir.Parameters.Add("ShadowOffset", new Vector2(Offset * 0.66f, Offset));
 
             ir.Clear(layer: 0, color: Color.DeepSkyBlue * 0.33f);
 
