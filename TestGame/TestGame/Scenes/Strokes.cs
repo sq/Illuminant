@@ -59,7 +59,7 @@ namespace TestGame.Scenes {
         public override void LoadContent () {
             NozzleAtlas = Game.TextureLoader.Load(
                 "acrylic-nozzles", 
-                new TextureLoadOptions { Premultiply = false, GenerateMips = true }, 
+                new TextureLoadOptions { Premultiply = true, GenerateMips = true }, 
                 cached: true
             );
             /*
