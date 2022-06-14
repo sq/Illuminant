@@ -187,7 +187,7 @@ namespace TestGame.Scenes {
 
             var textureSettings = new RasterTextureSettings {
                 Mode = (CompositeTexture ? RasterTextureCompositeMode.Over : RasterTextureCompositeMode.Multiply) |
-                    (ScreenSpaceTexture ? RasterTextureCompositeMode.ScreenSpace : default(RasterTextureCompositeMode)),
+                    (ScreenSpaceTexture ? RasterTextureCompositeMode.ScreenSpaceLocal : default(RasterTextureCompositeMode)),
                 PreserveAspectRatio = PreserveAspectRatio,
                 Origin = new Vector2(TextureOrigin.Value),
                 Scale = new Vector2(TextureSize.Value),

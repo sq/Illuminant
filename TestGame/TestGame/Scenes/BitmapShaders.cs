@@ -90,7 +90,7 @@ namespace TestGame.Scenes {
 
         public override void LoadContent () {
             TestImage = Game.TextureLoader.Load("transparent_test");
-            TestImage2 = Game.TextureLoader.Load("precision-test");
+            TestImage2 = Game.TextureLoader.Load("precision-test-rectangular");
             TransitionMask = Game.TextureLoader.Load("errai-cutin", new TextureLoadOptions { FloatingPoint = true, EnableGrayscale = true });
             TransitionTestImage = Game.TextureLoader.Load("vector-field-background");
             ShatterMaterial = new Material(Game.EffectLoader.Load("Shatter"), "ShatterTechnique");

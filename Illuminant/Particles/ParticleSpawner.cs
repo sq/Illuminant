@@ -85,7 +85,7 @@ namespace Squared.Illuminant.Particles.Transforms {
         protected Vector2 Indices      { get; private set; }
         public    int     TotalSpawned { get; private set; }
         [NonSerialized]
-        protected readonly CoreCLR.Xoshiro RNG;
+        protected CoreCLR.Xoshiro RNG;
 
         [NonSerialized]
         protected Vector4[] Temp = new Vector4[9];

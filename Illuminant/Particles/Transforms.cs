@@ -175,7 +175,7 @@ namespace Squared.Illuminant.Particles.Transforms {
         [NonSerialized]
         private double NextU, NextV;
         [NonSerialized]
-        protected readonly CoreCLR.Xoshiro RNG;
+        protected CoreCLR.Xoshiro RNG;
 
         public Noise ()
             : this (null) {
