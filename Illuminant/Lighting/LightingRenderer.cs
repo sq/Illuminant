@@ -1166,7 +1166,7 @@ namespace Squared.Illuminant {
             vertex.MoreLightProperties.Z = lightSource.FalloffYFactor;
             vertex.MoreLightProperties.W = lightSource.AmbientOcclusionOpacity;
             vertex.EvenMoreLightProperties = Vector4.Zero;
-            ltrs.LightVertices.Add(in vertex);
+            ltrs.LightVertices.Add(ref vertex);
 
             ltrs.LightCount++;
         }
@@ -1213,7 +1213,7 @@ namespace Squared.Illuminant {
                 )
             );
 
-            ltrs.LightVertices.Add(in vertex);
+            ltrs.LightVertices.Add(ref vertex);
             ltrs.LightCount++;
         }
 
@@ -1236,7 +1236,7 @@ namespace Squared.Illuminant {
             vertex.MoreLightProperties.Z = lightSource.FalloffYFactor;
             vertex.MoreLightProperties.W = lightSource.AmbientOcclusionOpacity;
             vertex.EvenMoreLightProperties = Vector4.Zero;
-            ltrs.LightVertices.Add(in vertex);
+            ltrs.LightVertices.Add(ref vertex);
 
             ltrs.LightCount++;
         }
@@ -1298,7 +1298,7 @@ namespace Squared.Illuminant {
                 lightSource.TextureRegion.BottomRight.X,
                 lightSource.TextureRegion.BottomRight.Y
             );
-            ltrs.LightVertices.Add(in vertex);
+            ltrs.LightVertices.Add(ref vertex);
 
             ltrs.LightCount++;
         }
@@ -1352,7 +1352,7 @@ namespace Squared.Illuminant {
                     };
                 ds.FrameIndex = dm.FrameIndex;
 
-                Renderer.uDithering.Set(m, in ds);
+                Renderer.uDithering.Set(m, ref ds);
                 Renderer.EnvironmentUniforms.SetIntoParameters(p);
 
                 if (hdr.HasValue) {
@@ -1495,7 +1495,7 @@ namespace Squared.Illuminant {
                         };
                     }
 
-                    bb.Add(in dc);
+                    bb.Add(ref dc);
                 }
             }
         }
@@ -1760,7 +1760,7 @@ namespace Squared.Illuminant {
                 dfu = new Uniforms.DistanceField();
                 dfu.InvScaleFactorX = dfu.InvScaleFactorY = 1;
                 dfu.Extent.Z = Environment.MaximumZ;
-                uDistanceField.TrySet(m, in dfu);
+                uDistanceField.TrySet(m, ref dfu);
                 p["DistanceFieldPacked1"]?.SetValue(Vector4.Zero);
                 p.ClearTexture("DistanceFieldTexture");
 #if DF3D
@@ -1781,7 +1781,7 @@ namespace Squared.Illuminant {
                 LongStepFactor = q.LongStepFactor
             };
 
-            uDistanceField.TrySet(m, in dfu);
+            uDistanceField.TrySet(m, ref dfu);
 
             if (setDistanceTexture) {
                 p["DistanceFieldTexture"]?.SetValue(_DistanceField.Texture.Get());

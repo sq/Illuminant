@@ -1478,7 +1478,7 @@ namespace Lumined {
                                         }
                                     } else
                                         cb = new Squared.Illuminant.Uniforms.ClampedBezier4(b);
-                                    Game.uBezier.Set(m, in cb);
+                                    Game.uBezier.Set(m, ref cb);
                                     m.Effect.Parameters["CurrentT"].SetValue(currentT.GetValueOrDefault(-99999));
                                     m.Effect.Parameters["ElementCount"].SetValue(elementCount);
                                 }

@@ -160,7 +160,7 @@ namespace Squared.Illuminant.Particles.Transforms {
                             system.Configuration.Collision.DistanceField, 
                             system.Configuration.Collision.DistanceFieldMaximumZ.Value
                         );
-                        engine.uDistanceField.Set(m, in dfu);
+                        engine.uDistanceField.Set(m, ref dfu);
                     }
 
                     m.Effect.Parameters["RotationFromLifeAndIndex"]?.SetValue(new Vector2(
@@ -184,12 +184,10 @@ namespace Squared.Illuminant.Particles.Transforms {
                 var engine = system.Engine;
                 var m = up.Material;
                 var e = m.Effect;
-                var p = e.Parameters;
 
                 // XNA effectparameter gets confused about whether a value is set or not, so we do this
                 //  to ensure it always re-sets the texture parameter
-                if (e != null)
-                    p.ClearTextures(ParticleSystem.ClearTextureList);
+                e?.Parameters?.ClearTextures(ParticleSystem.ClearTextureList);
 
                 Transform?.AfterUpdateChunk(engine);
 

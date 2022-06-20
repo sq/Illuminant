@@ -32,6 +32,9 @@ namespace TestGame.Scenes {
 
         [Group("Basic Settings")]
         Slider Size, Spacing, Seed;
+        [Items("LineSegment")]
+        [Items("Rectangle")]
+        Dropdown<string> Type;
         [Group("Tapering")]
         Slider TaperIn, TaperOut,
             StartOffset, EndOffset;
@@ -70,6 +73,7 @@ namespace TestGame.Scenes {
             Seed.Speed = 1;
             Seed.Integral = true;
             BlendInLinearSpace.Value = true;
+            Type.Value = "LineSegment";
         }
 
         public override void LoadContent () {
@@ -115,12 +119,21 @@ namespace TestGame.Scenes {
 
                 var tl = new Vector2(80, 112);
                 var br = new Vector2(1024, 800);
+                var taper = new Vector4(TaperIn.Value, TaperOut.Value, StartOffset.Value, EndOffset.Value);
 
-                ir.StrokeLineSegment(
-                    tl, br, Color.White, Color.Black, Brush,
-                    seed: Seed.Value,
-                    taper: new Vector4(TaperIn.Value, TaperOut.Value, StartOffset.Value, EndOffset.Value)
-                );
+                switch (Type.Value) {
+                    case "LineSegment":
+                    case "Rectangle":
+                        ir.RasterizeStroke(
+                            (Type.Value == "LineSegment")
+                                ? RasterStrokeType.LineSegment
+                                : RasterStrokeType.Rectangle, 
+                            tl, br, Color.White, Color.Black, Brush,
+                            seed: Seed.Value,
+                            taper: taper
+                        );
+                        break;
+                } 
             }
         }
 
@@ -130,8 +143,7 @@ namespace TestGame.Scenes {
             Brush.Flow = DynamicsEditor(ref builder, Brush.Flow, "Flow", 1f);
             Brush.BrushIndex = DynamicsEditor(ref builder, Brush.BrushIndex, "Brush Index", 4f);
             Brush.Hardness = DynamicsEditor(ref builder, Brush.Hardness, "Hardness", 1f);
-            // FIXME
-            // Brush.WidthFactor = DynamicsEditor(ref builder, Brush.WidthFactor, "Width", 1f);
+            Brush.Color = DynamicsEditor(ref builder, Brush.Color, "Color", 1f);
         }
 
         private void DynamicsValue (
@@ -143,7 +155,7 @@ namespace TestGame.Scenes {
                 : ControlFlags.Layout_Fill_Row;
             var ctl = builder.New<ParameterEditor<float>>(cflags)
                 .SetMinimumSize(0f, null)
-                .SetRange<float>(0f, maxValue)
+                .SetRange<float>(minValue, maxValue)
                 .SetTooltip(tooltip);
             ctl.Value(ref value);
             ctl.Control.Increment = (maxValue > 1) ? 1 : 0.05f;

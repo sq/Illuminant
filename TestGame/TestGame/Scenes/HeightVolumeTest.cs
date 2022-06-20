@@ -264,7 +264,7 @@ namespace TestGame.Scenes {
                     Color.White
                 );
 
-                bb.Add(in dc);
+                bb.Add(ref dc);
             }
 
             if (ShowDistanceField)
@@ -281,7 +281,7 @@ namespace TestGame.Scenes {
                     ScaleF = Width / (float)DistanceField.Texture.Width
                 };
 
-                bb.Add(in dc);
+                bb.Add(ref dc);
             }
         }
 
