@@ -758,7 +758,7 @@ namespace Squared.Illuminant {
                 lightSource.AmbientOcclusionOpacity > 0.001 ? lightSource.AmbientOcclusionRadius : 0,
                 lightSource.ShadowDistanceFalloff.GetValueOrDefault(-99999),
                 lightSource.FalloffYFactor,
-                Arithmetic.Clamp(lightSource.AmbientOcclusionOpacity, 0f, 1f)
+                Arithmetic.Saturate(lightSource.AmbientOcclusionOpacity)
             ));
             p["LightColor"].SetValue(lightSource.Color);
         }

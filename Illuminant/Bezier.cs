@@ -783,9 +783,9 @@ namespace Squared.Illuminant.Uniforms {
                     t = Arithmetic.WrapExclusive(t, 0, 1);
             } else {
                 if (invDivisor < 0)
-                    t = 1 - Arithmetic.Clamp(t, 0, 1);
+                    t = 1 - Arithmetic.Saturate(t);
                 else
-                    t = Arithmetic.Clamp(t, 0, 1);
+                    t = Arithmetic.Saturate(t);
             }
 
             switch (mode % 256) {

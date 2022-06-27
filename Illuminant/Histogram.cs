@@ -307,7 +307,7 @@ namespace Squared.Illuminant {
                     if (!h.GetPercentile(percentile, out bucketIndex, out value))
                         continue;
 
-                    var x = Arithmetic.Lerp(Bounds.TopLeft.X, Bounds.BottomRight.X, Arithmetic.Clamp(value / h.MaxInputValue, 0, 1));
+                    var x = Arithmetic.Lerp(Bounds.TopLeft.X, Bounds.BottomRight.X, Arithmetic.Saturate(value / h.MaxInputValue));
                     var halfWidth = PercentileWidth / 2f;
 
                     ir.FillRectangle(
@@ -318,7 +318,7 @@ namespace Squared.Illuminant {
 
                 {
                     var median = h.Median;
-                    var x = Arithmetic.Lerp(Bounds.TopLeft.X, Bounds.BottomRight.X, Arithmetic.Clamp(median / h.MaxInputValue, 0, 1));
+                    var x = Arithmetic.Lerp(Bounds.TopLeft.X, Bounds.BottomRight.X, Arithmetic.Saturate(median / h.MaxInputValue));
                     var halfWidth = PercentileWidth / 2f;
 
                     ir.FillRectangle(
@@ -330,8 +330,8 @@ namespace Squared.Illuminant {
                 if (rangeMin.HasValue || rangeMax.HasValue) {
                     float min = rangeMin.GetValueOrDefault(0);
                     float max = rangeMax.GetValueOrDefault(h.MaxInputValue);
-                    x1 = Arithmetic.Lerp(Bounds.TopLeft.X, Bounds.BottomRight.X, Arithmetic.Clamp(min / h.MaxInputValue, 0, 1));
-                    x2 = Arithmetic.Lerp(Bounds.TopLeft.X, Bounds.BottomRight.X, Arithmetic.Clamp(max / h.MaxInputValue, 0, 1));
+                    x1 = Arithmetic.Lerp(Bounds.TopLeft.X, Bounds.BottomRight.X, Arithmetic.Saturate(min / h.MaxInputValue));
+                    x2 = Arithmetic.Lerp(Bounds.TopLeft.X, Bounds.BottomRight.X, Arithmetic.Saturate(max / h.MaxInputValue));
 
                     ir.FillRectangle(
                         new Bounds(new Vector2(x1, Bounds.TopLeft.Y), new Vector2(x2, Bounds.BottomRight.Y)),

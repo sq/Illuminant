@@ -39,8 +39,9 @@ namespace TestGame.Scenes {
 
         Material ShatterMaterial;
 
-        Slider Opacity, Brightness, Offset, DitherGamma, Ratio, 
-            BlurSigma, BlurSampleRadius, HighlightTolerance, Image2Weight;
+        Slider Opacity, Brightness, Offset, DitherGamma, Ratio,
+            BlurSigma, BlurSampleRadius, HighlightTolerance, Image2Weight,
+            Scale;
 
         Toggle PreserveAspectRatio, ReverseDirection;
 
@@ -85,6 +86,10 @@ namespace TestGame.Scenes {
             Image2Weight.Value = 0f;
             Image2Weight.Speed = 0.015f;
             PreserveAspectRatio.Value = true;
+            Scale.Min = 0.1f;
+            Scale.Max = 2.0f;
+            Scale.Value = 1.0f;
+            Scale.Speed = 0.1f;
             Shader.Value = "Shatter";
         }
 
@@ -159,7 +164,7 @@ namespace TestGame.Scenes {
                     break;
                 case "Outlined":
                     material = Game.Materials.GaussianOutlined;
-                    userData = new Vector4(220 / 255f, 32 / 255f, 96 / 255f, 4);
+                    userData = new Vector4(220 / 255f, 32 / 255f, 96 / 255f, 2);
                     break;
                 default:
                     material = Game.Materials.ScreenSpaceBitmap;
@@ -180,7 +185,8 @@ namespace TestGame.Scenes {
             var dc = new BitmapDrawCall((Shader.Value == "GradientMasked" ? TransitionTestImage : TestImage), Vector2.Zero) {
                 Texture2 = (Shader.Value == "GradientMasked" ? TransitionMask : TestImage2),
                 MultiplyColor = multiplyColor,
-                UserData = userData
+                UserData = userData,
+                ScaleF = Scale
             };
             if (Shader.Value != "GradientMasked")
                 dc.AlignTexture2(2.0f, preserveAspectRatio: PreserveAspectRatio.Value);
