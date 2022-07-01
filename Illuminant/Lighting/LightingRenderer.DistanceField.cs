@@ -59,7 +59,7 @@ namespace Squared.Illuminant {
 
             var m = IlluminantMaterials.DistanceToPolygon;
 
-            Materials.PushViewTransform(in args.ViewTransform);
+            Materials.PushViewTransform(ref args.ViewTransform);
             SetDistanceFieldParameters(m, false, Configuration.DefaultQuality);
 
             foreach (var m2 in IlluminantMaterials.DistanceFunctionTypes)
@@ -390,7 +390,7 @@ namespace Squared.Illuminant {
         private void _SetupDistanceFieldPartition (DeviceManager dm, object userData) {
             var vt = Materials.ViewTransform;
             vt.ResetZRanges();
-            Materials.PushViewTransform(in vt);
+            Materials.PushViewTransform(ref vt);
         }
 
         private void _TeardownDistanceFieldPartition (DeviceManager dm, object userData) {

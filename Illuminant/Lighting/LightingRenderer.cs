@@ -696,7 +696,7 @@ namespace Squared.Illuminant {
             if (Configuration.ScaleCompensation)
                 vt.Position += coordOffset;
 
-            Materials.PushViewTransform(in vt);
+            Materials.PushViewTransform(ref vt);
         }
 
         private void _BeginLightPass (DeviceManager device, object userData) {

@@ -70,7 +70,7 @@ namespace Squared.Illuminant {
 
         private void _BeforeRenderGBuffer (DeviceManager dm, object userData) {
             dm.PushStates();
-            Materials.PushViewTransform(in PendingGBufferArguments.Transform);
+            Materials.PushViewTransform(ref PendingGBufferArguments.Transform);
             dm.AssertRenderTarget(_GBuffer.Texture.Get());
             dm.Device.ScissorRectangle = new Rectangle(0, 0, PendingGBufferArguments.RenderWidth, PendingGBufferArguments.RenderHeight);
         }
@@ -169,9 +169,8 @@ namespace Squared.Illuminant {
                             layer: 0,
                             depthStencilState: FrontFaceDepthStencilState,
                             blendState: BlendState.Opaque,
-                            useZBuffer: true
+                            flags: ImperativeRendererFlags.UseZBuffer | ImperativeRendererFlags.UseDiscard
                         ) {
-                            UseDiscard = true,
                             DefaultBitmapMaterial = IlluminantMaterials.AutoGBufferBitmap
                         };
 

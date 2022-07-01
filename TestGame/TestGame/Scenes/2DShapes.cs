@@ -179,11 +179,13 @@ namespace TestGame.Scenes {
             ir.RasterSoftOutlines = !HardOutlines.Value;
             ir.WorldSpace = WorldSpace;
 
-            ir.RasterShadow.Color = new pSRGBColor(0.4f, 0.02f, 0.22f, 1f) * ShadowOpacity;
-            ir.RasterShadow.Softness = ShadowSoftness;
-            ir.RasterShadow.Offset = new Vector2(ShadowOffset);
-            ir.RasterShadow.Inside = ShadowInside;
-            ir.RasterShadow.Expansion = ShadowExpansion;
+            var shadow = new RasterShadowSettings {
+                Color = new pSRGBColor(0.4f, 0.02f, 0.22f, 1f) * ShadowOpacity,
+                Softness = ShadowSoftness,
+                Offset = new Vector2(ShadowOffset),
+                Inside = ShadowInside,
+                Expansion = ShadowExpansion,
+            };
 
             var textureSettings = new RasterTextureSettings {
                 Mode = (CompositeTexture ? RasterTextureCompositeMode.Over : RasterTextureCompositeMode.Multiply) |
@@ -214,6 +216,7 @@ namespace TestGame.Scenes {
                 annularRadius: AnnularRadius,
                 texture: UseTexture ? Texture : null,
                 textureSettings: textureSettings,
+                shadow: shadow,
                 rampTexture: UseRamp ? RampTexture : null,
                 rampUVOffset: new Vector2(0, RampVOffset)
             );
@@ -227,6 +230,7 @@ namespace TestGame.Scenes {
                 annularRadius: AnnularRadius,
                 rampTexture: UseRamp ? RampTexture : null,
                 rampUVOffset: new Vector2(0, RampVOffset),
+                shadow: shadow,
                 layer: 1
             );
 
@@ -246,6 +250,7 @@ namespace TestGame.Scenes {
                 fill: fs,
                 annularRadius: AnnularRadius,
                 layer: 1,
+                shadow: shadow,
                 texture: UseTexture ? Texture : null,
                 textureSettings: textureSettings,
                 rampTexture: UseRamp ? RampTexture : null,
@@ -286,6 +291,7 @@ namespace TestGame.Scenes {
                 fill: fs,
                 annularRadius: AnnularRadius,
                 layer: 2,
+                shadow: shadow,
                 texture: UseTexture ? Texture : null,
                 textureSettings: textureSettings,
                 rampTexture: UseRamp ? RampTexture : null,
@@ -322,6 +328,7 @@ namespace TestGame.Scenes {
                 fill: fs,
                 annularRadius: AnnularRadius,
                 layer: 2,
+                shadow: shadow,
                 texture: UseTexture ? Texture : null,
                 textureSettings: textureSettings,
                 rampTexture: UseRamp ? RampTexture : null,
@@ -346,6 +353,7 @@ namespace TestGame.Scenes {
                 fill: fs,
                 annularRadius: AnnularRadius,
                 layer: 3,
+                shadow: shadow,
                 texture: UseTexture ? Texture : null,
                 textureSettings: textureSettings,
                 rampTexture: UseRamp ? RampTexture : null,
@@ -377,13 +385,12 @@ namespace TestGame.Scenes {
                 fill: fs,
                 annularRadius: AnnularRadius,
                 layer: 5,
+                shadow: shadow,
                 texture: UseTexture ? Texture : null,
                 textureSettings: textureSettings,
                 rampTexture: UseRamp ? RampTexture : null,
                 rampUVOffset: new Vector2(0, RampVOffset)
             );
-
-            ir.RasterShadow = default(RasterShadowSettings);
 
             if (false)
             foreach (var vert in verts) {
@@ -397,6 +404,7 @@ namespace TestGame.Scenes {
             ir.RasterizeRectangle(new Vector2(Width - 256, 0), new Vector2(Width, 256), 0f, Color.Black, layer: 5);
             ir.RasterizeEllipse(
                 new Vector2(Width - 128, 128), new Vector2(64f), Color.Orange * 1f, Color.Red * 0f, layer: 6,
+                shadow: shadow,
                 blendInLinearSpace: BlendInLinearSpace,
                 blendState: RenderStates.RasterShapeMaxBlend
             );
