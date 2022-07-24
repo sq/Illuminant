@@ -291,92 +291,94 @@ namespace Squared.Illuminant.Particles {
                 throw new Exception("Too many liveness queries");
             }
 
-            var wt = LivenessQueryRTs.AcquireWriteTarget();
-            var nextBuffer = wt.Target;
-            var previousBuffer = wt.Previous;
+            lock (Coordinator.UseResourceLock) {
+                var wt = LivenessQueryRTs.AcquireWriteTarget();
+                var nextBuffer = wt.Target;
+                var previousBuffer = wt.Previous;
 
-            var dm = Coordinator.Manager.DeviceManager;
+                var dm = Coordinator.Manager.DeviceManager;
 
-            RenderTrace.ImmediateMarker(dm.Device, "Compute liveness for {0} system(s)", LivenessQueryRequests.Count);
-            var m = Configuration.AccurateLivenessCounts
-                ? ParticleMaterials.CountLiveParticles
-                : ParticleMaterials.CountLiveParticlesFast;
+                RenderTrace.ImmediateMarker(dm.Device, "Compute liveness for {0} system(s)", LivenessQueryRequests.Count);
+                var m = Configuration.AccurateLivenessCounts
+                    ? ParticleMaterials.CountLiveParticles
+                    : ParticleMaterials.CountLiveParticlesFast;
 
-            if (!AutoRenderTarget.IsRenderTargetValid(nextBuffer)) {
+                if (!AutoRenderTarget.IsRenderTargetValid(nextBuffer)) {
+                    Monitor.Exit(LivenessQueryRequests);
+                    return;
+                }
+
+                var p = m.Effect.Parameters;
+                p["PositionTexture"].SetValue((Texture2D)null);
+
+                dm.PushRenderTarget(nextBuffer);
+                dm.Device.Clear(
+                    ClearOptions.Target | ClearOptions.DepthBuffer, 
+                    Color.Transparent, 0, 0
+                );
+                dm.ApplyMaterial(m);
+                dm.Device.BlendState = BlendState.Additive;
+                dm.Device.RasterizerState = RasterizerState.CullNone;
+                dm.Device.DepthStencilState = (Configuration.AccurateLivenessCounts)
+                    ? DepthStencilState.None
+                    : ParticleMaterials.CountDepthStencilState;
+
+                int i = 0;
+                foreach (var system in LivenessQueryRequests) {
+                    var chunkList = BufferPool<Chunk>.Allocate(system.Chunks.Count);
+                    lock (system.Chunks) {
+                        system.Chunks.CopyTo(chunkList.Data, 0);
+                        var wi = new LivenessDataReadbackWorkItem {
+                            RenderTarget = previousBuffer,
+                            NeedResourceLock = true,
+                            Engine = this,
+                            Chunks = chunkList,
+                            ResetCount = ResetCount
+                        };
+                        // HACK: Perform right before present to reduce the odds that this makes us miss a frame, 
+                        //  since present blocks on vsync and so does a gpu readback in debug contexts
+                        Coordinator.BeforePresent(wi.Execute);
+                    }
+
+                    RenderTrace.ImmediateMarker(dm.Device, "Compute liveness for {0} chunk(s)", chunkList.Data.Length);
+                    foreach (var chunk in chunkList.Data) {
+                        if (chunk.TotalSpawned == 0) {
+                            i++;
+                            continue;
+                        }
+
+                        var srcTexture = chunk.Current.PositionAndLife;
+                        if (!AutoRenderTarget.IsRenderTargetValid(srcTexture)) {
+                            i++;
+                            continue;
+                        }
+
+                        system.SetSystemUniforms(m, 0);
+                        p["ChunkIndexAndMaxIndex"].SetValue(new Vector2(i, LivenessQueryRTs.Width));
+                        p["PositionTexture"].SetValue(srcTexture);
+                        m.Flush(dm);
+
+                        var call = new NativeDrawCall(
+                            PrimitiveType.TriangleList,
+                            RasterizeVertexBuffer, 0,
+                            RasterizeOffsetBuffer, 0,
+                            null, 0,
+                            RasterizeIndexBuffer, 0, 0, 4, 0, 2,
+                            chunk.TotalSpawned
+                        );
+                        NativeBatch.IssueDrawCall(
+                            dm.Device, ref call,
+                            TwoBindings, ThreeBindings
+                        );
+                        i++;
+                    }
+                }
+
+                dm.PopRenderTarget();
+                LivenessQueryRequests.Clear();
+
                 Monitor.Exit(LivenessQueryRequests);
-                return;
             }
-
-            var p = m.Effect.Parameters;
-            p["PositionTexture"].SetValue((Texture2D)null);
-
-            dm.PushRenderTarget(nextBuffer);
-            dm.Device.Clear(
-                ClearOptions.Target | ClearOptions.DepthBuffer, 
-                Color.Transparent, 0, 0
-            );
-            dm.ApplyMaterial(m);
-            dm.Device.BlendState = BlendState.Additive;
-            dm.Device.RasterizerState = RasterizerState.CullNone;
-            dm.Device.DepthStencilState = (Configuration.AccurateLivenessCounts)
-                ? DepthStencilState.None
-                : ParticleMaterials.CountDepthStencilState;
-
-            int i = 0;
-            foreach (var system in LivenessQueryRequests) {
-                var chunkList = BufferPool<Chunk>.Allocate(system.Chunks.Count);
-                lock (system.Chunks) {
-                    system.Chunks.CopyTo(chunkList.Data, 0);
-                    var wi = new LivenessDataReadbackWorkItem {
-                        RenderTarget = previousBuffer,
-                        NeedResourceLock = true,
-                        Engine = this,
-                        Chunks = chunkList,
-                        ResetCount = ResetCount
-                    };
-                    // HACK: Perform right before present to reduce the odds that this makes us miss a frame, 
-                    //  since present blocks on vsync and so does a gpu readback in debug contexts
-                    Coordinator.BeforePresent(wi.Execute);
-                }
-
-                RenderTrace.ImmediateMarker(dm.Device, "Compute liveness for {0} chunk(s)", chunkList.Data.Length);
-                foreach (var chunk in chunkList.Data) {
-                    if (chunk.TotalSpawned == 0) {
-                        i++;
-                        continue;
-                    }
-
-                    var srcTexture = chunk.Current.PositionAndLife;
-                    if (!AutoRenderTarget.IsRenderTargetValid(srcTexture)) {
-                        i++;
-                        continue;
-                    }
-
-                    system.SetSystemUniforms(m, 0);
-                    p["ChunkIndexAndMaxIndex"].SetValue(new Vector2(i, LivenessQueryRTs.Width));
-                    p["PositionTexture"].SetValue(srcTexture);
-                    m.Flush(dm);
-
-                    var call = new NativeDrawCall(
-                        PrimitiveType.TriangleList,
-                        RasterizeVertexBuffer, 0,
-                        RasterizeOffsetBuffer, 0,
-                        null, 0,
-                        RasterizeIndexBuffer, 0, 0, 4, 0, 2,
-                        chunk.TotalSpawned
-                    );
-                    NativeBatch.IssueDrawCall(
-                        dm.Device, ref call,
-                        TwoBindings, ThreeBindings
-                    );
-                    i++;
-                }
-            }
-
-            dm.PopRenderTarget();
-            LivenessQueryRequests.Clear();
-
-            Monitor.Exit(LivenessQueryRequests);
         }
 
         private void AutoIssueLivenessQueries () {

@@ -56,9 +56,9 @@ namespace TestGame.Scenes {
         Slider ShadowSoftness, ShadowOffset, ShadowOpacity, ShadowExpansion;
 
         [Group("Texture")]
-        Toggle UseTexture, CompositeTexture, PreserveAspectRatio, ScreenSpaceTexture;
+        Toggle UseTexture, CompositeTexture, PreserveAspectRatio, ScreenSpaceTexture, FinalTexture;
         [Group("Texture")]
-        Slider TextureSize, TextureOrigin, TexturePosition;
+        Slider TextureSize, TextureOrigin, TexturePosition, TextureSaturation, TextureBrightness;
 
         Texture2D Texture, RampTexture;
 
@@ -141,6 +141,14 @@ namespace TestGame.Scenes {
             RampVOffset.Min = -1;
             RampVOffset.Max = 2;
             RampVOffset.Speed = 0.1f;
+            TextureSaturation.Value = 1f;
+            TextureSaturation.Min = 0f;
+            TextureSaturation.Max = 2f;
+            TextureSaturation.Speed = 0.05f;
+            TextureBrightness.Value = 1f;
+            TextureBrightness.Min = 0f;
+            TextureBrightness.Max = 2f;
+            TextureBrightness.Speed = 0.05f;
         }
 
         public override void LoadContent () {
@@ -189,11 +197,14 @@ namespace TestGame.Scenes {
 
             var textureSettings = new RasterTextureSettings {
                 Mode = (CompositeTexture ? RasterTextureCompositeMode.Over : RasterTextureCompositeMode.Multiply) |
-                    (ScreenSpaceTexture ? RasterTextureCompositeMode.ScreenSpaceLocal : default(RasterTextureCompositeMode)),
+                    (ScreenSpaceTexture ? RasterTextureCompositeMode.ScreenSpaceLocal : default(RasterTextureCompositeMode)) |
+                    (FinalTexture ? RasterTextureCompositeMode.AfterOutline : default(RasterTextureCompositeMode)),
                 PreserveAspectRatio = PreserveAspectRatio,
                 Origin = new Vector2(TextureOrigin.Value),
                 Scale = new Vector2(TextureSize.Value),
-                Position = new Vector2(TexturePosition.Value)
+                Position = new Vector2(TexturePosition.Value),
+                Brightness = TextureBrightness.Value,
+                Saturation = TextureSaturation.Value
             };
 
             var now = (float)Time.Seconds;
@@ -382,6 +393,7 @@ namespace TestGame.Scenes {
                 Color.Blue, 
                 Color.Green, 
                 Color.Red,
+                offset: Animate ? new Vector2(Arithmetic.PulseSine(now / 2f, 0f, 128f)) : Vector2.Zero,
                 fill: fs,
                 annularRadius: AnnularRadius,
                 layer: 5,
