@@ -218,6 +218,8 @@ namespace TestGame {
             bool smartBreakAllowed = false;
             foreach (var s in kvp.Value)
                 RenderSetting(s, ref container, ref smartBreakAllowed);
+
+            container.Finish();
         }
 
         protected void RenderSetting (ISetting s, ref ContainerBuilder builder, ref bool smartBreakAllowed) {

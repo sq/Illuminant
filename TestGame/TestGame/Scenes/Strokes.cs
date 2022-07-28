@@ -169,6 +169,7 @@ namespace TestGame.Scenes {
             DynamicsValue(ref container, "Taper", ref result.TaperFactor, -1f, 1f, true);
             DynamicsValue(ref container, "Noise", ref result.NoiseFactor, 0f, 1f, false);
             DynamicsValue(ref container, "Angle", ref result.AngleFactor, -1f, 1f, false);
+            container.Finish();
             return result;
         }
 

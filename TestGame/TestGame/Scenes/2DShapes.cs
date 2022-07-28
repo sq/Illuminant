@@ -22,8 +22,13 @@ using Squared.Util;
 namespace TestGame.Scenes {
     // These aren't illuminant specific but who cares
     public class Shapes : Scene {
-        Toggle Animate, BlendInLinearSpace, WorldSpace, ClosedPolygon, PolygonGap;
+        Toggle Animate, WorldSpace, ClosedPolygon, PolygonGap;
         Slider ArcStart, ArcLength, ArcSharpness, AnnularRadius;
+
+        [Items("Linear")]
+        [Items("sRGB")]
+        [Items("OkLab")]
+        Dropdown<string> ColorSpace;
 
         [Group("Outline")]
         Toggle HardOutlines;
@@ -70,7 +75,7 @@ namespace TestGame.Scenes {
             Gamma.Max = 3.0f;
             Gamma.Value = 1.0f;
             Gamma.Speed = 0.1f;
-            BlendInLinearSpace.Value = true;
+            ColorSpace.Value = "Linear";
             OutlineSize.Min = 0f;
             OutlineSize.Max = 16f;
             OutlineSize.Value = 1f;
@@ -183,7 +188,18 @@ namespace TestGame.Scenes {
             var ir = new ImperativeRenderer(batch, Game.Materials, blendState: BlendState.NonPremultiplied);
             ir.Clear(layer: 0, color: new Color(0, 96, 128));
             ir.RasterOutlineGamma = Gamma.Value;
-            ir.RasterBlendInLinearSpace = BlendInLinearSpace.Value;
+            switch (ColorSpace.Value) {
+                default:
+                    ir.RasterBlendInLinearSpace = true;
+                    break;
+                case "OkLab":
+                    ir.RasterBlendInOkLabSpace = true;
+                    break;
+                case "sRGB":
+                    ir.RasterBlendInOkLabSpace = false;
+                    ir.RasterBlendInLinearSpace = false;
+                    break;
+            }
             ir.RasterSoftOutlines = !HardOutlines.Value;
             ir.WorldSpace = WorldSpace;
 
@@ -255,8 +271,8 @@ namespace TestGame.Scenes {
                 tl, br, 
                 radiusCW: new Vector4(animatedRadius + 4, animatedRadius, animatedRadius * 2, 0), 
                 outlineRadius: OutlineSize, 
-                innerColor: Hollow ? Color.Transparent : Color.White, 
-                outerColor: Hollow ? Color.Transparent : Color.Black, 
+                innerColor: Hollow ? Color.Transparent : Color.Red, 
+                outerColor: Hollow ? Color.Transparent : new Color(0, 255, 0), 
                 outlineColor: Color.Blue,
                 fill: fs,
                 annularRadius: AnnularRadius,
@@ -417,7 +433,6 @@ namespace TestGame.Scenes {
             ir.RasterizeEllipse(
                 new Vector2(Width - 128, 128), new Vector2(64f), Color.Orange * 1f, Color.Red * 0f, layer: 6,
                 shadow: shadow,
-                blendInLinearSpace: BlendInLinearSpace,
                 blendState: RenderStates.RasterShapeMaxBlend
             );
 
