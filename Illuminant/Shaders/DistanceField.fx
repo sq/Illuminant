@@ -101,10 +101,7 @@ float4 computeSliceDistances (float2 xy, float2 zRange, float4 SliceZ) {
         intersectionCountRight = 0;
 
     if (
-        (xy.x < Bounds.x) ||
-        (xy.y < Bounds.y) ||
-        (xy.x > Bounds.z) ||
-        (xy.y > Bounds.w)
+        any(xy < Bounds.xy) || any(xy > Bounds.zw)
     )
         intersectionCountDown = intersectionCountRight = 0;
 

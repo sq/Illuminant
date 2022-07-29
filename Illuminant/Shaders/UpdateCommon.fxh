@@ -85,7 +85,7 @@ float getRotationForVelocity (float velocityLength, float3 velocity) {
     float2 absvel = abs(velocity.xy);
 
     float angle;
-    if ((absvel.x < 0.01) && (absvel.y < 0.01))
+    if (all(absvel < 0.01))
         return 0;
     
     float result = atan2(velocity.y, velocity.x);

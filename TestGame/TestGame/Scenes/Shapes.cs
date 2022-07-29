@@ -387,24 +387,10 @@ namespace TestGame.Scenes {
                 rampUVOffset: new Vector2(0, RampVOffset)
             );
 
-            RasterPolygonVertex v0 = new RasterPolygonVertex(new Vector2(732, 732), 4f),
-                v1 = new Vector2(896, 764),
-                v2 = new RasterPolygonVertex(new Vector2(928, 896), -4f),
-                v3 = new Vector2(732, 880),
-                v3_5 = new RasterPolygonVertex(new Vector2(760, 700)) { Type = RasterVertexType.Skip },
-                v4 = new RasterPolygonVertex(new Vector2(790, 680)),
-                v5 = new RasterPolygonVertex(new Vector2(732, 600), new Vector2(600, 600));
-
-            var verts = PolygonGap
-                ? new RasterPolygonVertex[] {
-                    v0, v1, v2, v3, v0, v3_5, v4, v5
-                }
-                : new RasterPolygonVertex[] {
-                    v0, v1, v2, v3, v4, v5
-                };
+            var verts = GetPolygon(new Vector2(700, 700), 1f, PolygonGap, 4f);
 
             ir.RasterizePolygon(
-                new ArraySegment<RasterPolygonVertex>(verts), 
+                verts, 
                 ClosedPolygon, animatedRadius + (ClosedPolygon ? 2 : 6), OutlineSize, 
                 Color.Blue, 
                 Color.Green, 
@@ -463,6 +449,31 @@ namespace TestGame.Scenes {
 
             var fir = new ImperativeRenderer(frame, Game.Materials);
             fir.Draw(RenderTo, Vector2.Zero, layer: 0, blendState: BlendState.Opaque);
+        }
+
+        public static ArraySegment<RasterPolygonVertex> GetPolygon (Vector2 position, float scale, bool polygonGap, float sizeBias) {
+            RasterPolygonVertex v0 = new RasterPolygonVertex(new Vector2(32, 32), sizeBias),
+                v1 = new Vector2(196, 64),
+                v2 = new RasterPolygonVertex(new Vector2(228, 196), -sizeBias),
+                v3 = new Vector2(32, 180),
+                v3_5 = new RasterPolygonVertex(new Vector2(60, 0)) { Type = RasterVertexType.Skip },
+                v4 = new RasterPolygonVertex(new Vector2(90, -20)),
+                v5 = new RasterPolygonVertex(new Vector2(32, -100), new Vector2(-100f));
+
+            var verts = polygonGap
+                ? new RasterPolygonVertex[] {
+                    v0, v1, v2, v3, v0, v3_5, v4, v5
+                }
+                : new RasterPolygonVertex[] {
+                    v0, v1, v2, v3, v4, v5
+                };
+
+            for (int i = 0; i < verts.Length; i++) {
+                verts[i].Position = position + (verts[i].Position * scale);
+                verts[i].ControlPoint = position + (verts[i].ControlPoint * scale);
+            }
+
+            return new ArraySegment<RasterPolygonVertex>(verts);
         }
 
         public override void Update (GameTime gameTime) {

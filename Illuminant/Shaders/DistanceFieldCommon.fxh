@@ -62,11 +62,11 @@ bool doesRightRayIntersectLine (float2 rayOrigin, float2 a1, float2 a2) {
 //  data for that pixel.
 
 bool isCloseX (float2 p, float2 a1, float2 a2) {
-    return (abs(a1.x - p.x) < intersectEpsilon) || (abs(a2.x - p.x) < intersectEpsilon);
+    return abs(min(a1.x, a2.x) - p.x) < intersectEpsilon;
 }
 
 bool isCloseY (float2 p, float2 a1, float2 a2) {
-    return (abs(a1.y - p.y) < intersectEpsilon) || (abs(a2.y - p.y) < intersectEpsilon);
+    return abs(min(a1.y, a2.y) - p.y) < intersectEpsilon;
 }
 
 #define QUANTIZE_PRECISION 100

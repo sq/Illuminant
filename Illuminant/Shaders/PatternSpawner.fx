@@ -50,7 +50,7 @@ void PS_SpawnPattern (
     //  spawn rectangle. The centering offset and other stuff is still right.
     // So for now, just reject the garbage particles.
     // Incidentally this seems to also work around the bug in mojoshader's impl of tex2dlod. Yay!
-    if ((texCoordXy.x > 1) || (texCoordXy.y > 1)) {
+    if (any(texCoordXy > 1)) {
         discard;
         return;
     }

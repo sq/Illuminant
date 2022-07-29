@@ -68,7 +68,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Scenes\Strokes.cs" />
-    <Compile Include="Scenes\2DShapes.cs" />
+    <Compile Include="Scenes\Shapes.cs" />
     <Compile Include="Scenes\BitmapBillboards.cs" />
     <Compile Include="Scenes\BitmapShaders.cs" />
     <Compile Include="Scenes\DistanceFieldEditor.cs" />

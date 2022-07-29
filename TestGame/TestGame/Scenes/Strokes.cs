@@ -26,7 +26,7 @@ using Squared.Util;
 namespace TestGame.Scenes {
     // These aren't illuminant specific but who cares
     public class Strokes : Scene {
-        Toggle BlendInLinearSpace, WorldSpace, Textured;
+        Toggle BlendInLinearSpace, WorldSpace, Textured, PolygonGap;
 
         RasterBrush Brush;
 
@@ -34,6 +34,7 @@ namespace TestGame.Scenes {
         Slider Size, Spacing, Seed;
         [Items("LineSegment")]
         [Items("Rectangle")]
+        [Items("Polygon")]
         Dropdown<string> Type;
         [Group("Tapering")]
         Slider TaperIn, TaperOut,
@@ -41,9 +42,15 @@ namespace TestGame.Scenes {
 
         Texture2D NozzleAtlas;
 
+        private List<RasterPolygonVertex> Polygon = new List<RasterPolygonVertex>();
+        private RasterPolygonVertex[] PolygonArray;
+        private Vector2 LastPathPoint;
+        private double LastPathPointTime;
+        private bool CreatingPath;
+        private const float PathPointDistance = 24f, PathPointIntervalSeconds = 0.33f;
+
         public Strokes (TestGame game, int width, int height)
             : base(game, width, height) {
-            Textured.Value = true;
             Size.Min = 0.5f;
             Size.Max = 400f;
             Size.Speed = 5f;
@@ -53,11 +60,11 @@ namespace TestGame.Scenes {
             Spacing.Value = 0.2f;
             Spacing.Speed = 0.025f;
             TaperIn.Min = 0f;
-            TaperIn.Max = 250f;
+            TaperIn.Max = 600f;
             TaperIn.Value = 100f;
             TaperIn.Speed = 5f;
             TaperOut.Min = 0f;
-            TaperOut.Max = 250f;
+            TaperOut.Max = 600f;
             TaperOut.Value = 50f;
             TaperOut.Speed = 5f;
             StartOffset.Min = 0f;
@@ -73,7 +80,8 @@ namespace TestGame.Scenes {
             Seed.Speed = 1;
             Seed.Integral = true;
             BlendInLinearSpace.Value = true;
-            Type.Value = "LineSegment";
+            Textured.Value = false;
+            Type.Value = "Polygon";
         }
 
         public override void LoadContent () {
@@ -133,6 +141,20 @@ namespace TestGame.Scenes {
                             taper: taper
                         );
                         break;
+                    case "Polygon":
+                        var verts = Polygon.Count > 0
+                            ? new ArraySegment<RasterPolygonVertex>(PolygonArray)
+                            : Shapes.GetPolygon(new Vector2(275, 325), 2.5f, PolygonGap, 0.25f);
+                        ir.RasterizeStroke(
+                            verts,
+                            Color.White, Color.Black, Brush,
+                            seed: Seed.Value, taper: taper
+                        );
+                        ir.Layer += 1;
+
+                        foreach (var vert in verts)
+                            ir.RasterizeEllipse(vert.Position, new Vector2(vert.LocalRadius + 1.0f), Color.Yellow);
+                        break;
                 } 
             }
         }
@@ -176,6 +198,31 @@ namespace TestGame.Scenes {
         public override void Update (GameTime gameTime) {
             if (Game.IsActive) {
                 var time = (float)Time.Seconds;
+
+                var ms = Game.MouseState;
+                if ((Type.Value == "Polygon") && !Game.IsMouseOverUI) {
+                    var pos = new Vector2(ms.X, ms.Y);
+                    var shouldBeCreatingPath = ms.LeftButton == ButtonState.Pressed;
+                    var distance = (pos - LastPathPoint).Length();
+
+                    if (
+                        (shouldBeCreatingPath != CreatingPath) || 
+                        (CreatingPath && (distance > PathPointDistance)) ||
+                        (CreatingPath && ((Time.Seconds - LastPathPointTime) > PathPointIntervalSeconds) && (distance > 6))
+                    ) {
+                        if (CreatingPath == false)
+                            Polygon.Clear();
+
+                        Polygon.Add(pos);
+                        // HACK
+                        while (Polygon.Count >= 256)
+                            Polygon.RemoveAt(0);
+                        PolygonArray = Polygon.ToArray();
+                        CreatingPath = shouldBeCreatingPath;
+                        LastPathPoint = pos;
+                        LastPathPointTime = Time.Seconds;
+                    }
+                }
 
                 Game.IsMouseVisible = true;
             }
