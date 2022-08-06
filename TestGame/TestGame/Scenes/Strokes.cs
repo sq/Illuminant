@@ -39,6 +39,8 @@ namespace TestGame.Scenes {
         [Group("Tapering")]
         Slider TaperIn, TaperOut,
             StartOffset, EndOffset;
+        [Group("Shadow")]
+        Slider ShadowOpacity, ShadowOffset, ShadowExpansion, ShadowHardness;
 
         Texture2D NozzleAtlas;
 
@@ -82,6 +84,21 @@ namespace TestGame.Scenes {
             BlendInLinearSpace.Value = true;
             Textured.Value = false;
             Type.Value = "Polygon";
+            ShadowOpacity.Min = 0;
+            ShadowOpacity.Max = 1;
+            ShadowOpacity.Speed = 0.05f;
+            ShadowOpacity.Value = 0.5f;
+            ShadowHardness.Min = 0;
+            ShadowHardness.Max = 1;
+            ShadowHardness.Speed = 0.05f;
+            ShadowHardness.Value = 0.75f;
+            ShadowExpansion.Min = -64f;
+            ShadowExpansion.Max = 64f;
+            ShadowExpansion.Speed = 0.25f;
+            ShadowOffset.Min = -32f;
+            ShadowOffset.Max = 32f;
+            ShadowOffset.Value = 4f;
+            ShadowOffset.Speed = 0.25f;
         }
 
         public override void LoadContent () {
@@ -117,6 +134,10 @@ namespace TestGame.Scenes {
             Brush.NozzleAtlas = Textured ? NozzleAtlas : null;
             Brush.Spacing = Spacing.Value;
             Brush.SizePx = Size.Value;
+            Brush.ShadowColor = new Color(96, 0, 24) * ShadowOpacity;
+            Brush.ShadowOffset = new Vector2(ShadowOffset.Value * 0.1f, ShadowOffset.Value);
+            Brush.ShadowExpansion = ShadowExpansion.Value;
+            Brush.ShadowHardness = ShadowHardness.Value;
 
             using (var bg = BatchGroup.New(frame, 1, materialSet: Game.Materials)) {
                 bg.ViewTransform = vt;
@@ -142,18 +163,20 @@ namespace TestGame.Scenes {
                         );
                         break;
                     case "Polygon":
-                        var verts = Polygon.Count > 0
+                        var verts = Polygon.Count > 1
                             ? new ArraySegment<RasterPolygonVertex>(PolygonArray)
                             : Shapes.GetPolygon(new Vector2(275, 325), 2.5f, PolygonGap, 0.25f);
-                        ir.RasterizeStroke(
-                            verts,
-                            Color.White, Color.Black, Brush,
-                            seed: Seed.Value, taper: taper
-                        );
+
+                        if (verts.Count >= 2)
+                            ir.RasterizeStroke(
+                                verts,
+                                Color.White, Color.Black, Brush,
+                                seed: Seed.Value, taper: taper
+                            );
                         ir.Layer += 1;
 
                         foreach (var vert in verts)
-                            ir.RasterizeEllipse(vert.Position, new Vector2(vert.LocalRadius + 1.0f), Color.Yellow);
+                            ir.RasterizeEllipse(vert.Position, new Vector2(1.5f), Color.Yellow);
                         break;
                 } 
             }
@@ -213,14 +236,16 @@ namespace TestGame.Scenes {
                         if (CreatingPath == false)
                             Polygon.Clear();
 
-                        Polygon.Add(pos);
-                        // HACK
-                        while (Polygon.Count >= 256)
-                            Polygon.RemoveAt(0);
-                        PolygonArray = Polygon.ToArray();
-                        CreatingPath = shouldBeCreatingPath;
-                        LastPathPoint = pos;
-                        LastPathPointTime = Time.Seconds;
+                        if ((Polygon.LastOrDefault().Position - pos).Length() > 1) {
+                            Polygon.Add(pos);
+                            // HACK
+                            while (Polygon.Count > 1024)
+                                Polygon.RemoveAt(0);
+                            PolygonArray = Polygon.ToArray();
+                            CreatingPath = shouldBeCreatingPath;
+                            LastPathPoint = pos;
+                            LastPathPointTime = Time.Seconds;
+                        }
                     }
                 }
 

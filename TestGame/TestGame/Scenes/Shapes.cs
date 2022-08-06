@@ -456,7 +456,7 @@ namespace TestGame.Scenes {
                 v1 = new Vector2(196, 64),
                 v2 = new RasterPolygonVertex(new Vector2(228, 196), -sizeBias),
                 v3 = new Vector2(32, 180),
-                v3_5 = new RasterPolygonVertex(new Vector2(60, 0)) { Type = RasterVertexType.Skip },
+                v3_5 = new RasterPolygonVertex(new Vector2(60, 0)) { Type = RasterVertexType.StartNew },
                 v4 = new RasterPolygonVertex(new Vector2(90, -20)),
                 v5 = new RasterPolygonVertex(new Vector2(32, -100), new Vector2(-100f));
 

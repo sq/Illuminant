@@ -139,6 +139,10 @@ namespace Squared.Illuminant.Particles.Transforms {
             /// </summary>
             public Parameter<T> Offset;
             /// <summary>
+            /// The noise value before scaling will never be below this amount.
+            /// </summary>
+            public Parameter<T> Minimum;
+            /// <summary>
             /// The noise value is scaled by this amount.
             /// </summary>
             public Parameter<T> Scale;
@@ -244,8 +248,10 @@ namespace Squared.Illuminant.Particles.Transforms {
 
             parameters["TimeDivisor"].SetValue(CyclesPerSecond.HasValue ? Uniforms.ParticleSystem.VelocityConstantScale / CyclesPerSecond.Value : -1);
             parameters["PositionOffset"].SetValue(Position.Offset.Evaluate(now, engine.ResolveVector4));
+            parameters["PositionMinimum"].SetValue(Position.Minimum.Evaluate(now, engine.ResolveVector4));
             parameters["PositionScale"].SetValue (Position.Scale.Evaluate(now, engine.ResolveVector4));
             parameters["VelocityOffset"].SetValue(new Vector4(Velocity.Offset.Evaluate(now, engine.ResolveVector3), Speed.Offset.Evaluate(now, engine.ResolveSingle)));
+            parameters["VelocityMinimum"].SetValue(new Vector4(Velocity.Minimum.Evaluate(now, engine.ResolveVector3), Speed.Minimum.Evaluate(now, engine.ResolveSingle)));
             parameters["VelocityScale"].SetValue (new Vector4(Velocity.Scale.Evaluate(now, engine.ResolveVector3), Speed.Scale.Evaluate(now, engine.ResolveSingle)));
 
             double intervalSecs = Interval.Evaluate(now, engine.ResolveSingle) / (double)IntervalUnit;

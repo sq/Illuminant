@@ -5,8 +5,8 @@
 uniform float  FrequencyLerp;
 uniform float2 NextRandomnessOffset;
 uniform float  TimeDivisor;
-uniform float4 PositionOffset, PositionScale;
-uniform float4 VelocityOffset, VelocityScale;
+uniform float4 PositionOffset, PositionMinimum, PositionScale;
+uniform float4 VelocityOffset, VelocityMinimum, VelocityScale;
 uniform float  ReplaceOldVelocity;
 
 uniform float2 SpaceScale;
@@ -54,8 +54,12 @@ void PS_Noise(
     float4 randomP = lerp(randomP1, randomP2, FrequencyLerp);
     float4 randomV = lerp(randomV1, randomV2, FrequencyLerp);
 
-    float4 positionDelta = (randomP + PositionOffset) * PositionScale;
-    float4 velocityDelta = (randomV + VelocityOffset) * VelocityScale;
+    float4 positionDelta = (randomP + PositionOffset);
+    positionDelta = sign(positionDelta) * max(abs(positionDelta), PositionMinimum);
+    positionDelta *= PositionScale;
+    float4 velocityDelta = (randomV + VelocityOffset);
+    velocityDelta = sign(velocityDelta) * max(abs(velocityDelta), VelocityMinimum);
+    velocityDelta *= VelocityScale;
 
     newPosition = lerp(oldPosition, oldPosition + positionDelta, t);
     if (ReplaceOldVelocity) {
