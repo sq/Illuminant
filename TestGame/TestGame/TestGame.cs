@@ -100,6 +100,7 @@ namespace TestGame {
             typeof(HueTest),
             typeof(BitmapBillboards),
             typeof(ProjectorLight),
+            typeof(GenerateMaps),
         };
 
         public TestGame () {
@@ -327,8 +328,7 @@ namespace TestGame {
             Font.GlyphMargin = 2;
 
             Materials = new DefaultMaterialSet(RenderCoordinator);
-            IlluminantMaterials = new IlluminantMaterials(Materials);
-            IlluminantMaterials.Load(RenderCoordinator);
+            IlluminantMaterials = new IlluminantMaterials(RenderCoordinator, Materials);
             ParticleMaterials = new ParticleMaterials(Materials);
             RampTexture = TextureLoader.Load("light_ramp");
 

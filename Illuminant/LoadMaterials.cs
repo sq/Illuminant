@@ -45,7 +45,7 @@ namespace Squared.Illuminant {
             }
         }
 
-        public void Load (RenderCoordinator coordinator, EffectProvider effects = null) {
+        internal void Load (RenderCoordinator coordinator, EffectProvider effects = null) {
             lock (this) {
                 if (IsLoaded)
                     return;
@@ -257,6 +257,14 @@ namespace Squared.Illuminant {
                 LoadOneMaterial(effects, out ScreenSpaceVectorWarp,
                     "VectorWarp", "ScreenSpaceVectorWarp", 
                     new [] { MaterialUtil.MakeDelegate(blendState: BlendState.AlphaBlend) }
+                );
+
+                LoadOneMaterial(effects, out HeightmapToNormals,
+                    "ProcessHeightmap", "HeightmapToNormals"
+                );
+
+                LoadOneMaterial(effects, out HeightmapToDisplacement,
+                    "ProcessHeightmap", "HeightmapToDisplacement"
                 );
             }
         }

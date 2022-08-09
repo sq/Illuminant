@@ -8,6 +8,7 @@ _ReSharper.*
 Illuminant/obj
 Illuminant/bin
 Illuminant/Shaders/bin
+TestGame/TestGame/Shaders/bin
 TestGame/TestGame/obj
 TestGame/TestGame/bin
 TestGame/TestGameContent/obj

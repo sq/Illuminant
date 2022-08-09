@@ -205,7 +205,7 @@ namespace Lumined {
             Font.Gamma = 0.8f;
 
             Materials = new DefaultMaterialSet(RenderCoordinator);
-            IlluminantMaterials = new IlluminantMaterials(Materials);
+            IlluminantMaterials = new IlluminantMaterials(RenderCoordinator, Materials);
             ParticleMaterials = new ParticleMaterials(Materials);
             LightingRenderer = new LightingRenderer(
                 Content, RenderCoordinator, Materials, 

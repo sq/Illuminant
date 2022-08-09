@@ -2,9 +2,10 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Squared.Render;
+using Squared.Render.Resources;
 
 namespace Squared.Illuminant {
-    public partial class IlluminantMaterials {
+    public partial class IlluminantMaterials : IDisposable {
         public readonly DefaultMaterialSet MaterialSet;
 
         public Material SphereLight, DirectionalLight, ParticleSystemSphereLight, LineLight, ProjectorLight;
@@ -41,18 +42,31 @@ namespace Squared.Illuminant {
         public Material FunctionSurface, FunctionOutline;
         public Material CalculateLuminance;
         public Material ScreenSpaceVectorWarp;
+        public Material HeightmapToNormals, HeightmapToDisplacement;
+        private EffectProvider OwnedEffects;
 
         public bool IsLoaded { get; internal set; }
 
         internal readonly Effect[] EffectsToSetGammaCompressionParametersOn;
         internal readonly Effect[] EffectsToSetToneMappingParametersOn;
 
-        public IlluminantMaterials (DefaultMaterialSet materialSet) 
+        internal IlluminantMaterials (DefaultMaterialSet materialSet) 
             : base () {
             MaterialSet = materialSet;
 
             EffectsToSetGammaCompressionParametersOn = new Effect[6];
             EffectsToSetToneMappingParametersOn = new Effect[10];
+        }
+
+        public IlluminantMaterials (RenderCoordinator coordinator, DefaultMaterialSet materialSet) 
+            : this (materialSet) 
+        {
+            OwnedEffects = new EffectProvider(System.Reflection.Assembly.GetExecutingAssembly(), coordinator);
+            Load(coordinator, OwnedEffects);
+        }
+
+        public void Dispose () {
+            OwnedEffects?.Dispose();
         }
 
         /// <summary>
