@@ -156,7 +156,7 @@ namespace TestGame.Scenes {
                         Origin = Vector2.One * 0.5f,
                         MultiplyColor = Color.White * Opacity
                     };
-                    dc.Textures = new TextureSet(FieldTexture, Background);
+                    dc.Textures = new TextureSet(Background, FieldTexture);
                     using (var bb = BitmapBatch.New(frame, 2, material, SamplerState.LinearClamp, SamplerState.LinearClamp))
                         bb.Add(dc);
                     break;

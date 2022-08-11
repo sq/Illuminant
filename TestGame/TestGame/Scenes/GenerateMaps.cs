@@ -31,12 +31,13 @@ namespace TestGame.Scenes {
         [Items("Displacement")]
         [Items("Normals")]
         [Items("Displaced")]
+        [Items("Refracted")]
         [Items("Lit")]
         Dropdown<string> Type;
         [Group("Brush Settings")]
         Slider Size, Spacing, Height1, Height2;
         [Group("Generator Settings")]
-        Slider TapSpacing, MipBias, DisplacementScale;
+        Slider TapSpacing, MipBias, DisplacementScale, RefractionIndex;
 
         private List<RasterPolygonVertex> Polygon = new List<RasterPolygonVertex>();
         private RasterPolygonVertex[] PolygonArray;
@@ -79,6 +80,10 @@ namespace TestGame.Scenes {
             DisplacementScale.Max = 64f;
             DisplacementScale.Speed = 1f;
             DisplacementScale.Value = 4f;
+            RefractionIndex.Min = -1f;
+            RefractionIndex.Max = 2f;
+            RefractionIndex.Value = 0.5f;
+            RefractionIndex.Speed = 0.05f;
         }
 
         public override void LoadContent () {
@@ -136,6 +141,7 @@ namespace TestGame.Scenes {
                 switch (Type.Value) {
                     case "Normals":
                     case "Lit":
+                    case "Refracted":
                         tex1 = HeightMap;
                         m = IlluminantMaterials.HeightmapToNormals;
                         break;
@@ -154,6 +160,7 @@ namespace TestGame.Scenes {
                 var ir = new ImperativeRenderer(fg, Game.Materials, blendState: BlendState.NonPremultiplied);
                 ir.Clear(layer: 0, color: new Color(0, 63, 127));
                 ir.Parameters.Add("FieldIntensity", new Vector3(DisplacementScale.Value, DisplacementScale.Value, DisplacementScale.Value));
+                ir.Parameters.Add("RefractionIndex", RefractionIndex.Value);
 
                 Material m = null;
                 AbstractTextureReference tex1 = default,
@@ -168,12 +175,14 @@ namespace TestGame.Scenes {
                         break;
                     case "Lit":
                     case "Displaced":
+                    case "Refracted":
                     default:
-                        tex2 = new AbstractTextureReference(Background);
-                        tex1 = new AbstractTextureReference(GeneratedMap);
-                        m = (Type.Value == "Displaced")
-                            ? IlluminantMaterials.ScreenSpaceVectorWarp
-                            : null;
+                        tex1 = new AbstractTextureReference(Background);
+                        tex2 = new AbstractTextureReference(GeneratedMap);
+                        if (Type.Value == "Refracted")
+                            m = IlluminantMaterials.ScreenSpaceNormalRefraction;
+                        else if (Type.Value == "Displaced")
+                            m = IlluminantMaterials.ScreenSpaceVectorWarp;
                         break;
                 }
 

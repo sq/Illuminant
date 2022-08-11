@@ -23,7 +23,8 @@ namespace TestGame.Scenes {
     // These aren't illuminant specific but who cares
     public class Shapes : Scene {
         Toggle Animate, WorldSpace, ClosedPolygon, PolygonGap;
-        Slider ArcStart, ArcLength, ArcSharpness, AnnularRadius;
+        Slider ArcStart, ArcLength, ArcSharpness, AnnularRadius,
+            StarPoints;
 
         [Items("Linear")]
         [Items("sRGB")]
@@ -154,6 +155,10 @@ namespace TestGame.Scenes {
             TextureBrightness.Min = 0f;
             TextureBrightness.Max = 2f;
             TextureBrightness.Speed = 0.05f;
+            StarPoints.Min = 3;
+            StarPoints.Max = 32;
+            StarPoints.Integral = true;
+            StarPoints.Value = 5;
         }
 
         public override void LoadContent () {
@@ -327,23 +332,24 @@ namespace TestGame.Scenes {
 
             ir.RasterizeEllipse(new Vector2(200, 860), Vector2.One * 3, Color.Yellow, layer: 4);
 
-            if (false)
-                ir.RasterizeArc(
-                    new Vector2(200, 860),
-                    Animate ? (float)(Time.Seconds) * 60f : ArcStart, ArcLength,
-                    120, 8, OutlineSize,
-                    innerColor: Color.White, 
-                    outerColor: Color.Black, 
-                    outlineColor: Color.Blue,
-                    fill: fs,
-                    annularRadius: AnnularRadius,
-                    layer: 2,
-                    texture: UseTexture ? Texture : null,
-                    textureSettings: textureSettings,
-                    rampTexture: UseRamp ? RampTexture : null,
-                    rampUVOffset: new Vector2(0, RampVOffset),
-                    endRounding: 0f
-                );
+            ir.RasterizeStar(
+                new Vector2(200, 600),
+                80f, (int)StarPoints.Value, 
+                (float)Arithmetic.Lerp(2, StarPoints.Value, Animate ? (Time.Seconds % 4) / 4f : ArcLength / 360f),
+                OutlineSize,
+                rotationDegrees: ArcStart,
+                innerColor: Color.White, 
+                outerColor: Color.Black, 
+                outlineColor: Color.Blue,
+                fill: fs,
+                annularRadius: AnnularRadius,
+                layer: 2,
+                shadow: shadow,
+                texture: UseTexture ? Texture : null,
+                textureSettings: textureSettings,
+                rampTexture: UseRamp ? RampTexture : null,
+                rampUVOffset: new Vector2(0, RampVOffset)
+            );
 
             ir.RasterizeArc(
                 new Vector2(200, 860),

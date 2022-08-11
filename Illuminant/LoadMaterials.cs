@@ -259,6 +259,11 @@ namespace Squared.Illuminant {
                     new [] { MaterialUtil.MakeDelegate(blendState: BlendState.AlphaBlend) }
                 );
 
+                LoadOneMaterial(effects, out ScreenSpaceNormalRefraction,
+                    "VectorWarp", "ScreenSpaceNormalRefraction", 
+                    new [] { MaterialUtil.MakeDelegate(blendState: BlendState.AlphaBlend) }
+                );
+
                 LoadOneMaterial(effects, out HeightmapToNormals,
                     "ProcessHeightmap", "HeightmapToNormals"
                 );
