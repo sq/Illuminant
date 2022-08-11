@@ -25,13 +25,27 @@ float tap(
 }
 
 float3 calculateNormal(
-    float2 texCoord, float4 texRgn
+    float2 texCoord, float4 texRgn, out float alpha
 ) {
     float3 spacing = float3(TapSpacingAndBias.xy, 0);
+    float a = tap(texCoord - spacing.xz, texRgn), b = tap(texCoord + spacing.xz, texRgn),
+        c = tap(texCoord - spacing.zy, texRgn), d = tap(texCoord + spacing.zy, texRgn),
+        center = tap(texCoord, texRgn),
+        epsilon = 0.001;
+
+    if (
+        (abs(center) < epsilon) && (abs(a) < epsilon) &&
+        (abs(b) < epsilon) && (abs(c) < epsilon) &&
+        (abs(d) < epsilon)
+    )
+        alpha = 0;
+    else
+        alpha = 1;
+
     return normalize(float3(
-        tap(texCoord - spacing.xz, texRgn) - tap(texCoord + spacing.xz, texRgn),
-        tap(texCoord - spacing.zy, texRgn) - tap(texCoord + spacing.zy, texRgn),
-        tap(texCoord, texRgn)
+        a - b,
+        c - d,
+        center
     ));
 }
 
@@ -40,8 +54,9 @@ void HeightmapToNormalsPixelShader (
     in float4 texRgn       : TEXCOORD1,
     out float4 result       : COLOR0
 ) {
-    float3 normal = calculateNormal(texCoord, texRgn);
-    result = float4(normal + 0.5, 1);
+    float alpha;
+    float3 normal = calculateNormal(texCoord, texRgn, alpha);
+    result = float4(normal + 0.5, alpha);
 }
 
 void HeightmapToDisplacementPixelShader(
@@ -49,7 +64,8 @@ void HeightmapToDisplacementPixelShader(
     in float4 texRgn : TEXCOORD1,
     out float4 result : COLOR0
 ) {
-    float3 normal = calculateNormal(texCoord, texRgn);
+    float alpha;
+    float3 normal = calculateNormal(texCoord, texRgn, alpha);
     float3 displacement = normal.xyz * float3(DisplacementScale, 1);
     result = float4(displacement.xy + 0.5, 0.5, 1);
 }
