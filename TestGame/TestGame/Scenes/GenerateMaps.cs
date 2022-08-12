@@ -35,9 +35,12 @@ namespace TestGame.Scenes {
         [Items("Lit")]
         Dropdown<string> Type;
         [Group("Brush Settings")]
-        Slider Size, Spacing, Height1, Height2;
+        Slider Size, Spacing, Height1, Height2, DitherPower, DitherStrength;
         [Group("Generator Settings")]
-        Slider TapSpacing, MipBias, DisplacementScale, RefractionIndex;
+        Slider TapSpacing, MipBias;
+        Toggle HighPrecisionNormals;
+        [Group("Warp Settings")]
+        Slider DisplacementScale, RefractionIndex, RefractionMipBias;
 
         private List<RasterPolygonVertex> Polygon = new List<RasterPolygonVertex>();
         private RasterPolygonVertex[] PolygonArray;
@@ -67,6 +70,15 @@ namespace TestGame.Scenes {
             Height2.Max = 2f;
             Height2.Value = 1f;
             Height2.Speed = 0.1f;
+            DitherPower.Min = 0f;
+            DitherPower.Max = 16f;
+            DitherPower.Speed = 1f;
+            DitherPower.Value = 0f;
+            DitherPower.Integral = true;
+            DitherStrength.Min = 0f;
+            DitherStrength.Max = 1f;
+            DitherStrength.Speed = 0.05f;
+            DitherStrength.Value = 1f;
             Type.Value = "Height";
             TapSpacing.Min = 0.5f;
             TapSpacing.Max = 16f;
@@ -82,8 +94,13 @@ namespace TestGame.Scenes {
             DisplacementScale.Value = 4f;
             RefractionIndex.Min = -1f;
             RefractionIndex.Max = 2f;
-            RefractionIndex.Value = 0.5f;
+            RefractionIndex.Value = 0.9f;
             RefractionIndex.Speed = 0.05f;
+            RefractionMipBias.Min = -1f;
+            RefractionMipBias.Max = 8f;
+            RefractionMipBias.Speed = 0.5f;
+            RefractionMipBias.Value = 0f;
+            HighPrecisionNormals.Value = true;
         }
 
         public override void LoadContent () {
@@ -93,8 +110,14 @@ namespace TestGame.Scenes {
                 TaperFactor = 0.8f,
             };
             HeightMap = new AutoRenderTarget(Game.RenderCoordinator, Width, Height, true, SurfaceFormat.Single);
-            GeneratedMap = new AutoRenderTarget(Game.RenderCoordinator, Width, Height, true, SurfaceFormat.Color);
             IlluminantMaterials = new IlluminantMaterials(Game.RenderCoordinator, Game.Materials);
+            MakeGeneratedMap();
+        }
+
+        private void MakeGeneratedMap () {
+            if (GeneratedMap != null)
+                Game.RenderCoordinator.DisposeResource(GeneratedMap);
+            GeneratedMap = new AutoRenderTarget(Game.RenderCoordinator, Width, Height, true, HighPrecisionNormals ? SurfaceFormat.Vector4 : SurfaceFormat.Color);
         }
 
         public override void UnloadContent () {
@@ -112,13 +135,18 @@ namespace TestGame.Scenes {
 
             using (var bg = BatchGroup.ForRenderTarget(frame, -3, HeightMap)) {
                 var ir = new ImperativeRenderer(bg, Game.Materials, blendState: BlendState.NonPremultiplied);
-                ir.Clear(layer: 0, color: new Color(127, 127, 127));
+                ir.Clear(layer: 0, value: Vector4.Zero);
                 // We are feeding in linear values as-is and want it to blend them and then write them back out
                 ir.RasterBlendInLinearSpace = false;
-                ir.DisableDithering = true;
+                ir.DisableDithering = DitherPower.Value <= 0;
+                if (DitherPower.Value > 0)
+                    Game.Materials.DefaultDitheringSettings.Power = (int)DitherPower.Value;
+                else
+                    Game.Materials.DefaultDitheringSettings.Power = 8;
+                Game.Materials.DefaultDitheringSettings.Strength = DitherStrength.Value;
 
                 var taper = new Vector4(64, 64, 0, 0);
-                float h1 = (Height1.Value / 2f) + 0.5f, h2 = (Height2.Value / 2f) + 0.5f;
+                float h1 = Height1.Value, h2 = Height2.Value;
                 pSRGBColor c1 = new pSRGBColor(new Vector4(h1, h1, h1, 1), true),
                     c2 = new pSRGBColor(new Vector4(h2, h2, h2, 1), true);
 
@@ -128,13 +156,19 @@ namespace TestGame.Scenes {
                         c1, c2, Brush,
                         seed: 0f, taper: taper                  
                     );
+
+                ir.RasterizeStar(
+                    new Vector2(Width - 512, 256),
+                    170f, 7, 4f, 0f, c2, c1, pSRGBColor.Transparent
+                );
             }
 
             using (var gm = BatchGroup.ForRenderTarget(frame, -2, GeneratedMap)) {
                 var ir = new ImperativeRenderer(gm, Game.Materials, blendState: BlendState.NonPremultiplied);
-                ir.Clear(layer: 0, color: new Color(127, 127, 127));
+                ir.Clear(layer: 0, value: HighPrecisionNormals ? Vector4.Zero : new Vector4(0.5f, 0.5f, 0.5f, 0f));
                 ir.Parameters.Add("TapSpacingAndBias", new Vector3(1.0f / HeightMap.Width * TapSpacing.Value, 1.0f / HeightMap.Height * TapSpacing.Value, MipBias));
                 ir.Parameters.Add("DisplacementScale", Vector2.One);
+                ir.Parameters.Add("NormalsAreSigned", HighPrecisionNormals);
 
                 IDynamicTexture tex1 = null;
                 Material m = null;
@@ -160,7 +194,8 @@ namespace TestGame.Scenes {
                 var ir = new ImperativeRenderer(fg, Game.Materials, blendState: BlendState.NonPremultiplied);
                 ir.Clear(layer: 0, color: new Color(0, 63, 127));
                 ir.Parameters.Add("FieldIntensity", new Vector3(DisplacementScale.Value, DisplacementScale.Value, DisplacementScale.Value));
-                ir.Parameters.Add("RefractionIndex", RefractionIndex.Value);
+                ir.Parameters.Add("RefractionIndexAndMipBias", new Vector2(RefractionIndex.Value, RefractionMipBias.Value));
+                ir.Parameters.Add("NormalsAreSigned", HighPrecisionNormals);
 
                 Material m = null;
                 AbstractTextureReference tex1 = default,
@@ -188,7 +223,7 @@ namespace TestGame.Scenes {
 
                 var ts = new TextureSet(tex1, tex2);
                 var dc = new BitmapDrawCall(ts, Vector2.Zero, Bounds.Unit, Color.White, Vector2.One, Vector2.Zero, 0f);
-                ir.Draw(dc, material: m);
+                ir.Draw(dc, material: m, blendState: BlendState.Opaque);
 
                 ir.Layer += 1;
 
@@ -262,6 +297,8 @@ namespace TestGame.Scenes {
                 }
 
                 Game.IsMouseVisible = true;
+            } else {
+                CreatingPath = false;
             }
         }
     }
