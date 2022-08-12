@@ -38,7 +38,7 @@ namespace TestGame.Scenes {
         Slider Size, Spacing, Height1, Height2, DitherPower, DitherStrength;
         [Group("Generator Settings")]
         Slider TapSpacing, MipBias;
-        Toggle HighPrecisionNormals;
+        Toggle HighPrecisionNormals, HighResolutionNormals;
         [Group("Warp Settings")]
         Slider DisplacementScale, RefractionIndex, RefractionMipBias;
 
@@ -109,15 +109,25 @@ namespace TestGame.Scenes {
                 Constant = 1,
                 TaperFactor = 0.8f,
             };
-            HeightMap = new AutoRenderTarget(Game.RenderCoordinator, Width, Height, true, SurfaceFormat.Single);
             IlluminantMaterials = new IlluminantMaterials(Game.RenderCoordinator, Game.Materials);
-            MakeGeneratedMap();
+            MakeSurfaces();
         }
 
-        private void MakeGeneratedMap () {
-            if (GeneratedMap != null)
+        private void MakeSurfaces () {
+            int w = Width, h = Height;
+            if (HighResolutionNormals) {
+                w *= 2;
+                h *= 2;
+            }
+            var format = HighPrecisionNormals ? SurfaceFormat.Vector4 : SurfaceFormat.Color;
+            if ((HeightMap == null) || (HeightMap.Width != w) || (HeightMap.Height != h)) {
+                Game.RenderCoordinator.DisposeResource(HeightMap);
+                HeightMap = new AutoRenderTarget(Game.RenderCoordinator, w, h, true, SurfaceFormat.Single);
+            }
+            if ((GeneratedMap == null) || (GeneratedMap.Width != w) || (GeneratedMap.Height != h)) {
                 Game.RenderCoordinator.DisposeResource(GeneratedMap);
-            GeneratedMap = new AutoRenderTarget(Game.RenderCoordinator, Width, Height, true, HighPrecisionNormals ? SurfaceFormat.Vector4 : SurfaceFormat.Color);
+                GeneratedMap = new AutoRenderTarget(Game.RenderCoordinator, w, h, false, format);
+            }
         }
 
         public override void UnloadContent () {
@@ -129,12 +139,16 @@ namespace TestGame.Scenes {
             Brush.Spacing = Spacing.Value;
             Brush.SizePx = Size.Value;
 
+            MakeSurfaces();
+
             var verts = Polygon.Count > 1
                 ? new ArraySegment<RasterPolygonVertex>(PolygonArray)
                 : Shapes.GetPolygon(new Vector2(275, 325), 2.5f, false, 0.25f);
 
             using (var bg = BatchGroup.ForRenderTarget(frame, -3, HeightMap)) {
                 var ir = new ImperativeRenderer(bg, Game.Materials, blendState: BlendState.NonPremultiplied);
+                if (HighResolutionNormals)
+                    ir = ir.MakeSubgroup(viewTransformModifier: ScaleViewTransform);
                 ir.Clear(layer: 0, value: Vector4.Zero);
                 // We are feeding in linear values as-is and want it to blend them and then write them back out
                 ir.RasterBlendInLinearSpace = false;
@@ -230,6 +244,10 @@ namespace TestGame.Scenes {
                 foreach (var vert in verts)
                     ir.RasterizeEllipse(vert.Position, new Vector2(1.5f), Color.Yellow);
             }
+        }
+
+        private void ScaleViewTransform (ref ViewTransform vt, object userData) {
+            vt.Scale *= 0.5f;
         }
 
         public override void UIScene (ref ContainerBuilder builder) {

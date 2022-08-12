@@ -36,6 +36,8 @@ float3 calculateNormal (
     float2 texCoord, float4 texRgn, out float alpha
 ) {
     float3 spacing = float3(TapSpacingAndBias.xy, 0);
+    if (spacing.x <= 0)
+        spacing = float3(HalfTexel, 0);
     float epsilon = 0.001, temp;
 
     float a = tap(texCoord - spacing.xz, texRgn, temp), b = tap(texCoord + spacing.xz, texRgn, temp),
