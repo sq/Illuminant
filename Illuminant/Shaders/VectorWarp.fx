@@ -11,9 +11,19 @@ sampler FieldSampler : register(s6) {
     MagFilter = LINEAR;
 };
 
+sampler HeightmapSampler {
+    Texture = (SecondTexture);
+    MipFilter = LINEAR;
+    MinFilter = LINEAR;
+    MagFilter = LINEAR;
+    AddressU = CLAMP;
+    AddressV = CLAMP;
+};
+
 uniform float3 FieldIntensity;
 uniform float2 RefractionIndexAndMipBias;
-uniform bool NormalsAreSigned;
+
+#include "ProcessHeightmap.fxh"
 
 void VectorWarpPixelShader (
     in float4 multiplyColor : COLOR0,
@@ -60,11 +70,11 @@ void NormalRefractionPixelShader(
     float2 normalTexCoord = clamp2(texCoord2, texRgn2.xy, texRgn2.zw);
     float4 rawNormals = tex2D(TextureSampler2, normalTexCoord);
     float3 surfaceNormal = NormalsAreSigned 
-        ? rawNormals.xyz 
+        ? rawNormals.xyz * DenormalCompensation.y
         : (rawNormals.xyz - 0.5) * 2;
 
     float3 ray = float3(0, 0, -1);
-    float3 refracted = refract(ray, surfaceNormal, RefractionIndexAndMipBias.x);
+    float3 refracted = refract(ray, normalize(surfaceNormal), RefractionIndexAndMipBias.x);
     float3 bias = refracted * FieldIntensity;
     // FIXME: z would be nice to produce a lensing effect (via some sort of ray-plane intersection)
     //  but I wasn't able to get it to work when I tried
@@ -72,6 +82,44 @@ void NormalRefractionPixelShader(
     // The generated normal map has alpha values of 0 in areas where the heightmap was 0 or we otherwise don't
     //  want to apply refraction mip bias
     float effectiveMipBias = RefractionIndexAndMipBias.y * rawNormals.a;
+    float4 warped = tex2Dbias(TextureSampler, float4(clamp2(intersectionPoint.xy, texRgn1.xy, texRgn1.zw), 0, effectiveMipBias)),
+        unwarped = tex2D(TextureSampler, clamp2(texCoord1, texRgn1.xy, texRgn1.zw));
+    warped = ExtractRgba(warped, BitmapTraits);
+    unwarped = ExtractRgba(unwarped, BitmapTraits);
+
+    // We want to smoothly interpolate between unwarped and warped in boundary regions where the height just changed,
+    //  because in those regions the refracted vector is likely to be almost perfectly horizontal so the resulting pixel
+    //  values will look completely wrong and cause an ugly hard edge.
+    // We negate and multiply the refracted z value to do this simply, our warping magnitude will increase as the z length does
+    //  and if the z value is negative we won't warp at all (since it's pointing away from the bitmap)
+    result = lerp(unwarped, warped, saturate(refracted.z * -33));
+    result.a = 1.0;
+    result *= multiplyColor;
+
+    const float discardThreshold = (0.5 / 255.0);
+    clip(result.a - discardThreshold);
+}
+
+void HeightmapRefractionPixelShader(
+    in float4 multiplyColor : COLOR0,
+    in float2 texCoord1 : TEXCOORD0,
+    in float4 texRgn1 : TEXCOORD1,
+    in float2 texCoord2 : TEXCOORD2,
+    in float4 texRgn2 : TEXCOORD3,
+    out float4 result : COLOR0
+) {
+    float alpha;
+    float3 surfaceNormal = calculateNormal(texCoord2, texRgn2, HalfTexel2, BitmapTraits2, alpha);
+
+    float3 ray = float3(0, 0, -1);
+    float3 refracted = refract(ray, normalize(surfaceNormal), RefractionIndexAndMipBias.x);
+    float3 bias = refracted * FieldIntensity;
+    // FIXME: z would be nice to produce a lensing effect (via some sort of ray-plane intersection)
+    //  but I wasn't able to get it to work when I tried
+    float3 intersectionPoint = float3(texCoord1.xy + bias.xy, 0);
+    // The generated normal map has alpha values of 0 in areas where the heightmap was 0 or we otherwise don't
+    //  want to apply refraction mip bias
+    float effectiveMipBias = RefractionIndexAndMipBias.y * alpha;
     float4 warped = tex2Dbias(TextureSampler, float4(clamp2(intersectionPoint.xy, texRgn1.xy, texRgn1.zw), 0, effectiveMipBias)),
         unwarped = tex2D(TextureSampler, clamp2(texCoord1, texRgn1.xy, texRgn1.zw));
     warped = ExtractRgba(warped, BitmapTraits);
@@ -105,5 +153,14 @@ technique ScreenSpaceNormalRefraction
     {
         vertexShader = compile vs_3_0 ScreenSpaceVertexShader();
         pixelShader = compile ps_3_0 NormalRefractionPixelShader();
+    }
+}
+
+technique ScreenSpaceHeightmapRefraction
+{
+    pass P0
+    {
+        vertexShader = compile vs_3_0 ScreenSpaceVertexShader();
+        pixelShader = compile ps_3_0 HeightmapRefractionPixelShader();
     }
 }

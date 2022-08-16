@@ -54,7 +54,7 @@ namespace TestGame.Scenes {
         [Group("Fill")]
         Toggle RepeatFill, UseRamp, Hollow;
         [Group("Fill")]
-        Slider FillOffset, FillRangeStart, FillSize, FillAngle, FillPower, RampVOffset;
+        Slider FillOffset, FillRangeStart, FillSize, FillAngle, FillPower, RampVOffset, FillOpacity;
 
         [Group("Shadow")]
         Toggle ShadowInside;
@@ -118,6 +118,10 @@ namespace TestGame.Scenes {
             FillAngle.Min = 0f;
             FillAngle.Max = 360f;
             FillAngle.Speed = 2f;
+            FillOpacity.Min = 0f;
+            FillOpacity.Max = 1f;
+            FillOpacity.Speed = 0.05f;
+            FillOpacity.Value = 1.0f;
             ShadowOffset.Min = -16f;
             ShadowOffset.Max = 16f;
             ShadowOffset.Value = 2f;
@@ -240,8 +244,8 @@ namespace TestGame.Scenes {
 
             ir.RasterizeEllipse(
                 Vector2.One * 600, new Vector2(420, 360), OutlineSize,
-                innerColor: Hollow ? Color.Transparent : Color.White,
-                outerColor: Hollow ? Color.Transparent : Color.Black,
+                innerColor: Hollow ? Color.Transparent : Color.White * FillOpacity,
+                outerColor: Hollow ? Color.Transparent : Color.Black * FillOpacity,
                 outlineColor: Color.White,
                 layer: 1,
                 fill: fs,
@@ -255,8 +259,8 @@ namespace TestGame.Scenes {
 
             ir.RasterizeLineSegment(
                 new Vector2(32, 32), new Vector2(1024, 64), 1, 8, OutlineSize, 
-                innerColor: Color.White, 
-                outerColor: Color.Black, 
+                innerColor: Color.White * FillOpacity, 
+                outerColor: Color.Black * FillOpacity, 
                 outlineColor: Color.Red,
                 fill: fs,
                 annularRadius: AnnularRadius,
@@ -276,8 +280,8 @@ namespace TestGame.Scenes {
                 tl, br, 
                 radiusCW: new Vector4(animatedRadius + 4, animatedRadius, animatedRadius * 2, 0), 
                 outlineRadius: OutlineSize, 
-                innerColor: Hollow ? Color.Transparent : Color.Red, 
-                outerColor: Hollow ? Color.Transparent : new Color(0, 255, 0), 
+                innerColor: Hollow ? Color.Transparent : Color.Red * FillOpacity, 
+                outerColor: Hollow ? Color.Transparent : new Color(0, 255, 0) * FillOpacity, 
                 outlineColor: Color.Blue,
                 fill: fs,
                 annularRadius: AnnularRadius,
@@ -317,8 +321,8 @@ namespace TestGame.Scenes {
             ir.RasterizeTriangle(
                 new Vector2(640, 96), new Vector2(1200, 256), new Vector2(800, 512), 
                 animatedRadius, OutlineSize,
-                innerColor: Hollow ? Color.Transparent : Color.White, 
-                outerColor: Hollow ? Color.Transparent : Color.Black, 
+                innerColor: Hollow ? Color.Transparent : Color.White * FillOpacity, 
+                outerColor: Hollow ? Color.Transparent : Color.Black * FillOpacity, 
                 outlineColor: Color.Blue,
                 fill: fs,
                 annularRadius: AnnularRadius,
@@ -338,8 +342,8 @@ namespace TestGame.Scenes {
                 (float)Arithmetic.Lerp(2, StarPoints.Value, Animate ? (Time.Seconds % 4) / 4f : ArcLength / 360f),
                 OutlineSize,
                 rotationDegrees: ArcStart,
-                innerColor: Color.White, 
-                outerColor: Color.Black, 
+                innerColor: Color.White * FillOpacity, 
+                outerColor: Color.Black * FillOpacity, 
                 outlineColor: Color.Blue,
                 fill: fs,
                 annularRadius: AnnularRadius,
@@ -355,8 +359,8 @@ namespace TestGame.Scenes {
                 new Vector2(200, 860),
                 Animate ? (float)(Time.Seconds) * 60f : ArcStart, ArcLength,
                 120, 8, OutlineSize,
-                innerColor: Color.White, 
-                outerColor: Color.Black, 
+                innerColor: Color.White * FillOpacity, 
+                outerColor: Color.Black * FillOpacity, 
                 outlineColor: Color.Blue,
                 fill: fs,
                 annularRadius: AnnularRadius,
@@ -380,8 +384,8 @@ namespace TestGame.Scenes {
 
             ir.RasterizeQuadraticBezier(
                 a, b, c, 8, OutlineSize,
-                innerColor: Color.White, 
-                outerColor: Color.Black, 
+                innerColor: Color.White * FillOpacity, 
+                outerColor: Color.Black * FillOpacity, 
                 outlineColor: Color.Red,
                 fill: fs,
                 annularRadius: AnnularRadius,
@@ -398,8 +402,8 @@ namespace TestGame.Scenes {
             ir.RasterizePolygon(
                 verts, 
                 ClosedPolygon, animatedRadius + (ClosedPolygon ? 2 : 6), OutlineSize, 
-                Color.Blue, 
-                Color.Green, 
+                Color.Blue * FillOpacity, 
+                Color.Green * FillOpacity, 
                 Color.Red,
                 offset: Animate ? new Vector2(Arithmetic.PulseSine(now / 2f, 0f, 128f)) : Vector2.Zero,
                 fill: fs,

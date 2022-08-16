@@ -32,7 +32,8 @@ namespace TestGame.Scenes {
         [Items("Normals")]
         [Items("Displaced")]
         [Items("Refracted")]
-        [Items("Lit")]
+        [Items("RefractedDirect")]
+        // [Items("Lit")]
         Dropdown<string> Type;
         [Group("Brush Settings")]
         Slider Size, Spacing, Height1, Height2, DitherPower, DitherStrength;
@@ -207,6 +208,8 @@ namespace TestGame.Scenes {
             using (var fg = BatchGroup.New(frame, 1)) {
                 var ir = new ImperativeRenderer(fg, Game.Materials, blendState: BlendState.NonPremultiplied);
                 ir.Clear(layer: 0, color: new Color(0, 63, 127));
+                ir.Parameters.Add("TapSpacingAndBias", new Vector3(1.0f / HeightMap.Width * TapSpacing.Value, 1.0f / HeightMap.Height * TapSpacing.Value, MipBias));
+                ir.Parameters.Add("DisplacementScale", Vector2.One);
                 ir.Parameters.Add("FieldIntensity", new Vector3(DisplacementScale.Value, DisplacementScale.Value, DisplacementScale.Value));
                 ir.Parameters.Add("RefractionIndexAndMipBias", new Vector2(RefractionIndex.Value, RefractionMipBias.Value));
                 ir.Parameters.Add("NormalsAreSigned", HighPrecisionNormals);
@@ -221,6 +224,11 @@ namespace TestGame.Scenes {
                     case "Normals":
                     case "Displacement":
                         tex1 = new AbstractTextureReference(GeneratedMap);
+                        break;
+                    case "RefractedDirect":
+                        tex1 = new AbstractTextureReference(Background);
+                        tex2 = new AbstractTextureReference(HeightMap);
+                        m = IlluminantMaterials.ScreenSpaceHeightmapRefraction;
                         break;
                     case "Lit":
                     case "Displaced":
