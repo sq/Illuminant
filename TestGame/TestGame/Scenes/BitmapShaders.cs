@@ -35,6 +35,7 @@ namespace TestGame.Scenes {
         [Items("GradientMasked")]
         [Items("Outlined")]
         [Items("Shatter")]
+        [Items("RadialMaskSoftening")]
         Dropdown<string> Shader;
 
         Material ShatterMaterial;
@@ -53,7 +54,7 @@ namespace TestGame.Scenes {
             Opacity.Speed = 0.01f;
             Opacity.Value = 1;
             Brightness.Min = -1f;
-            Brightness.Max = 1;
+            Brightness.Max = 2f;
             Brightness.Speed = 0.01f;
             Brightness.Value = 1;
             Offset.Max = 16;
@@ -110,6 +111,7 @@ namespace TestGame.Scenes {
 
             Vector4 userData = default(Vector4);
             Material material;
+            var blendState = BlendState.AlphaBlend;
             switch (Shader.Value) {
                 case "Shadowed":
                     // HACK: Ensure we don't trample the default global shadow settings (-:
@@ -166,12 +168,17 @@ namespace TestGame.Scenes {
                     material = Game.Materials.GaussianOutlined;
                     userData = new Vector4(220 / 255f, 32 / 255f, 96 / 255f, 2);
                     break;
+                case "RadialMaskSoftening":
+                    material = Game.Materials.RadialMaskSoftening;
+                    userData = new Vector4(Brightness.Value, 0, 0, 0);
+                    blendState = BlendState.Opaque;
+                    break;
                 default:
                     material = Game.Materials.ScreenSpaceBitmap;
                     break;
             }
 
-            material = Game.Materials.Get(material, blendState: BlendState.AlphaBlend);
+            material = Game.Materials.Get(material, blendState: blendState);
             Game.Materials.SetGaussianBlurParameters(material, BlurSigma, (int)(BlurSampleRadius) * 2 + 1);
             ir.Parameters.Add("ShadowOffset", new Vector2(Offset * 0.66f, Offset));
 

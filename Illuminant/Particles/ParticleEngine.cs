@@ -83,6 +83,7 @@ namespace Squared.Illuminant.Particles {
 
         internal readonly HashSet<ParticleSystem> LivenessQueryRequests = new HashSet<ParticleSystem>();
 
+        private Action IssueLivenessQueries;
         private VertexBufferBinding[] TwoBindings = new VertexBufferBinding[2],
             ThreeBindings = new VertexBufferBinding[3];
 
@@ -96,6 +97,7 @@ namespace Squared.Illuminant.Particles {
         ) {
             Coordinator = coordinator;
             Materials = materials;
+            IssueLivenessQueries = _IssueLivenessQueries;
 
             Effects = new EffectProvider(System.Reflection.Assembly.GetExecutingAssembly(), coordinator);
 
@@ -276,7 +278,7 @@ namespace Squared.Illuminant.Particles {
             }
         }
 
-        private void IssueLivenessQueries () {
+        private void _IssueLivenessQueries () {
             if (Configuration.ApproximateLivenessCounts) {
                 PerformApproximateLivenessQueries();
                 return;

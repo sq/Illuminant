@@ -39,16 +39,18 @@ namespace TestGame.Scenes {
         Slider Size, Spacing, Height1, Height2, DitherPower, DitherStrength;
         [Group("Generator Settings")]
         Slider TapSpacing, MipBias;
-        Toggle HighPrecisionNormals, HighResolutionNormals;
+        Toggle HighPrecisionNormals;
         [Group("Warp Settings")]
         Slider DisplacementScale, RefractionIndex, RefractionMipBias;
+        [Group("Sprite Settings")]
+        Slider HeightScale, BlurSigma, BlurSampleRadius, SpriteSize;
 
         private List<RasterPolygonVertex> Polygon = new List<RasterPolygonVertex>();
         private RasterPolygonVertex[] PolygonArray;
         private Vector2 LastPathPoint;
         private double LastPathPointTime;
         private bool CreatingPath;
-        private Texture2D Background;
+        private Texture2D Background, Sprite;
         private AutoRenderTarget HeightMap, GeneratedMap;
         private IlluminantMaterials IlluminantMaterials;
         private const float PathPointDistance = 32f, PathPointIntervalSeconds = 0.33f;
@@ -102,10 +104,28 @@ namespace TestGame.Scenes {
             RefractionMipBias.Speed = 0.5f;
             RefractionMipBias.Value = 0f;
             HighPrecisionNormals.Value = true;
+            HeightScale.Min = 0.1f;
+            HeightScale.Max = 2.0f;
+            HeightScale.Value = 1.0f;
+            HeightScale.Speed = 0.05f;
+            BlurSigma.Min = 0.1f;
+            BlurSigma.Max = 7.0f;
+            BlurSigma.Value = 2f;
+            BlurSigma.Speed = 0.05f;
+            BlurSampleRadius.Integral = true;
+            BlurSampleRadius.Min = 1;
+            BlurSampleRadius.Max = 9;
+            BlurSampleRadius.Value = 3;
+            BlurSampleRadius.Speed = 1;
+            SpriteSize.Min = 0.05f;
+            SpriteSize.Max = 1.0f;
+            SpriteSize.Value = 0.25f;
+            SpriteSize.Speed = 0.01f;
         }
 
         public override void LoadContent () {
             Background = Game.TextureLoader.Load("vector-field-background");
+            Sprite = Game.TextureLoader.Load("test-sprite");
             Brush.Scale = new BrushDynamics {
                 Constant = 1,
                 TaperFactor = 0.8f,
@@ -116,10 +136,6 @@ namespace TestGame.Scenes {
 
         private void MakeSurfaces () {
             int w = Width, h = Height;
-            if (HighResolutionNormals) {
-                w *= 2;
-                h *= 2;
-            }
             var format = HighPrecisionNormals ? SurfaceFormat.Vector4 : SurfaceFormat.Color;
             if ((HeightMap == null) || (HeightMap.Width != w) || (HeightMap.Height != h)) {
                 Game.RenderCoordinator.DisposeResource(HeightMap);
@@ -146,10 +162,11 @@ namespace TestGame.Scenes {
                 ? new ArraySegment<RasterPolygonVertex>(PolygonArray)
                 : Shapes.GetPolygon(new Vector2(275, 325), 2.5f, false, 0.25f);
 
+            var spriteMaterial = Game.Materials.RadialMaskSoftening;
+            Game.Materials.SetGaussianBlurParameters(spriteMaterial, BlurSigma, (int)(BlurSampleRadius) * 2 + 1);
+
             using (var bg = BatchGroup.ForRenderTarget(frame, -3, HeightMap)) {
                 var ir = new ImperativeRenderer(bg, Game.Materials, blendState: BlendState.NonPremultiplied);
-                if (HighResolutionNormals)
-                    ir = ir.MakeSubgroup(viewTransformModifier: ScaleViewTransform);
                 ir.Clear(layer: 0, value: Vector4.Zero);
                 // We are feeding in linear values as-is and want it to blend them and then write them back out
                 ir.RasterBlendInLinearSpace = false;
@@ -164,6 +181,14 @@ namespace TestGame.Scenes {
                 float h1 = Height1.Value, h2 = Height2.Value;
                 pSRGBColor c1 = new pSRGBColor(new Vector4(h1, h1, h1, 1), true),
                     c2 = new pSRGBColor(new Vector4(h2, h2, h2, 1), true);
+
+                ir.Draw(
+                    Sprite, new Vector2(64, 64),
+                    userData: new Vector4(HeightScale, 0, 0, 0),
+                    material: spriteMaterial,
+                    scale: new Vector2(SpriteSize.Value),
+                    blendState: BlendState.Additive
+                );
 
                 if (verts.Count >= 2)
                     ir.RasterizeStroke(
