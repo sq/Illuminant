@@ -20,8 +20,6 @@ sampler HeightmapSampler {
     AddressV = CLAMP;
 };
 
-// For VectorWarp: scale factor for the field's offsets
-// For Refraction: distance in pixels for a bias of 1.0
 uniform float3 FieldIntensity;
 uniform float2 RefractionIndexAndMipBias;
 
@@ -80,7 +78,7 @@ void NormalRefractionPixelShader(
     float3 bias = refracted * FieldIntensity;
     // FIXME: z would be nice to produce a lensing effect (via some sort of ray-plane intersection)
     //  but I wasn't able to get it to work when I tried
-    float3 intersectionPoint = float3(texCoord1.xy + (bias.xy * HalfTexel * 2), 0);
+    float3 intersectionPoint = float3(texCoord1.xy + bias.xy, 0);
     // The generated normal map has alpha values of 0 in areas where the heightmap was 0 or we otherwise don't
     //  want to apply refraction mip bias
     float effectiveMipBias = RefractionIndexAndMipBias.y * rawNormals.a;
@@ -118,7 +116,7 @@ void HeightmapRefractionPixelShader(
     float3 bias = refracted * FieldIntensity;
     // FIXME: z would be nice to produce a lensing effect (via some sort of ray-plane intersection)
     //  but I wasn't able to get it to work when I tried
-    float3 intersectionPoint = float3(texCoord1.xy + (bias.xy * HalfTexel * 2), 0);
+    float3 intersectionPoint = float3(texCoord1.xy + bias.xy, 0);
     // The generated normal map has alpha values of 0 in areas where the heightmap was 0 or we otherwise don't
     //  want to apply refraction mip bias
     float effectiveMipBias = RefractionIndexAndMipBias.y * alpha;

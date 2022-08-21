@@ -94,7 +94,7 @@ namespace TestGame.Scenes {
             DisplacementScale.Min = -16f;
             DisplacementScale.Max = 64f;
             DisplacementScale.Speed = 1f;
-            DisplacementScale.Value = 4f;
+            DisplacementScale.Value = 32f;
             RefractionIndex.Min = -1f;
             RefractionIndex.Max = 2f;
             RefractionIndex.Value = 0.9f;
@@ -162,9 +162,6 @@ namespace TestGame.Scenes {
                 ? new ArraySegment<RasterPolygonVertex>(PolygonArray)
                 : Shapes.GetPolygon(new Vector2(275, 325), 2.5f, false, 0.25f);
 
-            var spriteMaterial = Game.Materials.RadialMaskSoftening;
-            Game.Materials.SetGaussianBlurParameters(spriteMaterial, BlurSigma, (int)(BlurSampleRadius) * 2 + 1);
-
             using (var bg = BatchGroup.ForRenderTarget(frame, -3, HeightMap)) {
                 var ir = new ImperativeRenderer(bg, Game.Materials, blendState: BlendState.NonPremultiplied);
                 ir.Clear(layer: 0, value: Vector4.Zero);
@@ -182,6 +179,8 @@ namespace TestGame.Scenes {
                 pSRGBColor c1 = new pSRGBColor(new Vector4(h1, h1, h1, 1), true),
                     c2 = new pSRGBColor(new Vector4(h2, h2, h2, 1), true);
 
+                var spriteMaterial = Game.Materials.RadialMaskSoftening;
+                Game.Materials.SetGaussianBlurParameters(spriteMaterial, BlurSigma, (int)(BlurSampleRadius) * 2 + 1);
                 ir.Draw(
                     Sprite, new Vector2(64, 64),
                     userData: new Vector4(HeightScale, 0, 0, 0),
