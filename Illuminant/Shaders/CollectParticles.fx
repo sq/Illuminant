@@ -1,11 +1,11 @@
 #include "DistanceFunctionCommon.fxh"
 #include "ParticleCommon.fxh"
 
-uniform int    AreaType;
-uniform float3 AreaCenter, AreaSize;
-uniform float  AreaFalloff, AreaRotation;
+uniform const int    AreaType;
+uniform const float3 AreaCenter, AreaSize;
+uniform const float  AreaFalloff, AreaRotation;
 
-uniform float2 CategoryFilter;
+uniform const float2 CategoryFilter;
 
 void PS_CollectParticles (
     ACCEPTS_VPOS,

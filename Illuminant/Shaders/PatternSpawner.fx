@@ -3,10 +3,10 @@
 #include "RandomCommon.fxh"
 #include "SpawnerCommon.fxh"
 
-uniform float4 StepWidthAndSizeScale;
-uniform float4 YOffsetsAndCoordScale;
-uniform float4 TexelOffsetAndMipBias;
-uniform float2 CenteringOffset;
+uniform const float4 StepWidthAndSizeScale;
+uniform const float4 YOffsetsAndCoordScale;
+uniform const float4 TexelOffsetAndMipBias;
+uniform const float2 CenteringOffset;
 
 Texture2D PatternTexture;
 sampler PatternSampler {

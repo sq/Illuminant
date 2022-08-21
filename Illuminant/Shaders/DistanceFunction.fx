@@ -9,8 +9,8 @@
 // HACK: For some reason we need to expand the function boxes for things to work right?
 #define FUNCTION_SIZE_HACK 1
 
-uniform float2 PixelSize;
-uniform float4 SliceZ;
+uniform const float2 PixelSize;
+uniform const float4 SliceZ;
 
 void DistanceFunctionVertexShader(
     in    float3 cornerWeights       : NORMAL2,

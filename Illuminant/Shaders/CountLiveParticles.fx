@@ -1,6 +1,6 @@
 #include "ParticleCommon.fxh"
 
-uniform float2 ChunkIndexAndMaxIndex;
+uniform const float2 ChunkIndexAndMaxIndex;
 
 void VS_CountLiveParticles (
     in  float2 xy             : POSITION0,

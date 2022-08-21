@@ -205,7 +205,7 @@ uniform DistanceFieldSettings DistanceField;
     DistanceFieldPacked1.z * (1.0 / max(0.001, dfu.TextureSliceCount.W)),
     DistanceField.TextureSliceCount.z, dfu.MinimumLength
 */
-uniform float4 DistanceFieldPacked1;
+uniform const float4 DistanceFieldPacked1;
 
 float getMaximumEncodedDistance () {
     return DistanceField.Extent.w;

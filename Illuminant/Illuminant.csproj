@@ -57,10 +57,10 @@
   <ItemGroup>
     <Compile Include="Bezier.cs" />
     <Compile Include="Billboard.cs" />
-    <Compile Include="DistanceField.cs" />
+    <Compile Include="SDF\DistanceField.cs" />
     <Compile Include="Formula.cs" />
     <Compile Include="GBuffer.cs" />
-    <Compile Include="HeightVolume.cs" />
+    <Compile Include="SDF\HeightVolume.cs" />
     <Compile Include="Histogram.cs" />
     <Compile Include="Lighting\IlluminantMaterials.cs" />
     <Compile Include="LazyResource.cs" />

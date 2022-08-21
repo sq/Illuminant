@@ -22,7 +22,7 @@ struct RasterizeParticleSystemSettings {
 uniform RasterizeParticleSystemSettings RasterizeSettings;
 uniform ClampedBezier1 RoundingPowerFromLife;
 // Rounded, dithered opacity, column from velocity, row from velocity
-uniform float4 RenderingOptions;
+uniform const float4 RenderingOptions;
 
 Texture2D BitmapTexture;
 sampler BitmapSampler {

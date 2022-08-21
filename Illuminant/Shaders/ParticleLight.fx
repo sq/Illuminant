@@ -9,9 +9,9 @@
 #include "Bezier.fxh"
 #include "ParticleCommon.fxh"
 
-uniform float4 LightProperties;
-uniform float4 MoreLightProperties;
-uniform float4 LightColor;
+uniform const float4 LightProperties;
+uniform const float4 MoreLightProperties;
+uniform const float4 LightColor;
 
 void ParticleLightVertexShader(
     in float3 cornerWeights          : NORMAL2,

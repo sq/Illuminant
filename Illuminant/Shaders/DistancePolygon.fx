@@ -9,12 +9,12 @@
 
 #define MAX_VERTICES 32
 
-uniform int    VertexCount;
-uniform float4 Vertices[MAX_VERTICES];
-uniform float2 MinAndMaxZ;
+uniform const int    VertexCount;
+uniform const float4 Vertices[MAX_VERTICES];
+uniform const float2 MinAndMaxZ;
 
-uniform float2 PixelSize;
-uniform float4 SliceZ;
+uniform const float2 PixelSize;
+uniform const float4 SliceZ;
 
 void DistancePolygonVertexShader(
     in    float3 cornerWeights : NORMAL2,

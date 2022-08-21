@@ -43,7 +43,7 @@ namespace TestGame.Scenes {
         [Group("Warp Settings")]
         Slider DisplacementScale, RefractionIndex, RefractionMipBias;
         [Group("Sprite Settings")]
-        Slider HeightScale, BlurSigma, BlurSampleRadius, SpriteSize;
+        Slider HeightScale, BlurSigma, BlurSampleRadius, BlurMeanFactor, SpriteSize, SpriteBias, SpriteMasking;
 
         private List<RasterPolygonVertex> Polygon = new List<RasterPolygonVertex>();
         private RasterPolygonVertex[] PolygonArray;
@@ -109,7 +109,7 @@ namespace TestGame.Scenes {
             HeightScale.Value = 1.0f;
             HeightScale.Speed = 0.05f;
             BlurSigma.Min = 0.1f;
-            BlurSigma.Max = 7.0f;
+            BlurSigma.Max = 10.0f;
             BlurSigma.Value = 2f;
             BlurSigma.Speed = 0.05f;
             BlurSampleRadius.Integral = true;
@@ -117,10 +117,22 @@ namespace TestGame.Scenes {
             BlurSampleRadius.Max = 9;
             BlurSampleRadius.Value = 3;
             BlurSampleRadius.Speed = 1;
+            BlurMeanFactor.Min = 0f;
+            BlurMeanFactor.Max = 1f;
+            BlurMeanFactor.Value = 0f;
+            BlurMeanFactor.Speed = 0.05f;
             SpriteSize.Min = 0.05f;
             SpriteSize.Max = 1.0f;
             SpriteSize.Value = 0.25f;
             SpriteSize.Speed = 0.01f;
+            SpriteBias.Min = -1f;
+            SpriteBias.Max = 9f;
+            SpriteBias.Value = 0f;
+            SpriteBias.Speed = 0.25f;
+            SpriteMasking.Min = 0f;
+            SpriteMasking.Max = 1f;
+            SpriteMasking.Value = 0.5f;
+            SpriteMasking.Speed = 0.05f;
         }
 
         public override void LoadContent () {
@@ -180,10 +192,10 @@ namespace TestGame.Scenes {
                     c2 = new pSRGBColor(new Vector4(h2, h2, h2, 1), true);
 
                 var spriteMaterial = Game.Materials.RadialMaskSoftening;
-                Game.Materials.SetGaussianBlurParameters(spriteMaterial, BlurSigma, (int)(BlurSampleRadius) * 2 + 1);
+                Game.Materials.SetGaussianBlurParameters(spriteMaterial, BlurSigma, (int)(BlurSampleRadius) * 2 + 1, BlurMeanFactor);
                 ir.Draw(
                     Sprite, new Vector2(64, 64),
-                    userData: new Vector4(HeightScale, 0, 0, 0),
+                    userData: new Vector4(HeightScale, SpriteBias, SpriteMasking, 0),
                     material: spriteMaterial,
                     scale: new Vector2(SpriteSize.Value),
                     blendState: BlendState.Additive

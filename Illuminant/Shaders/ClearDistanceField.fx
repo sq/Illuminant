@@ -13,8 +13,8 @@ sampler   ClearSampler : register(s0) {
     AddressV = CLAMP;
 };
 
-uniform float2 ClearInverseScale;
-uniform float4 ClearMultiplier;
+uniform const float2 ClearInverseScale;
+uniform const float4 ClearMultiplier;
 
 void DistanceVertexShader (
     in    float3 position : POSITION0, // x, y, z

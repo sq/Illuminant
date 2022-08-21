@@ -11,11 +11,11 @@
 #define OUTLINE_SIZE OutlineSize
 #define FILL_INTERIOR FilledInterior
 
-uniform float  FilledInterior;
-uniform float  OutlineSize;
-uniform float3 AmbientColor;
-uniform float3 LightDirection;
-uniform float3 LightColor;
+uniform const float  FilledInterior;
+uniform const float  OutlineSize;
+uniform const float3 AmbientColor;
+uniform const float3 LightDirection;
+uniform const float3 LightColor;
 
 #include "VisualizeCommon.fxh"
 

@@ -21,9 +21,9 @@ sampler PointSampler : register(s7) {
     MagFilter = POINT;
 };
 
-uniform float2 LightmapUVOffset;
-uniform float  AlbedoIsSRGB, ResolveToSRGB;
-uniform float  InverseScaleFactor;
+uniform const float2 LightmapUVOffset;
+uniform const float  AlbedoIsSRGB, ResolveToSRGB;
+uniform const float  InverseScaleFactor;
 
 float4 ResolveCommon (
     in float2 texCoord,

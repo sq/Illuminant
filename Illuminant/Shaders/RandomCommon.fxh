@@ -1,8 +1,8 @@
 #ifndef RANDOM_DEFINED
 #define RANDOM_DEFINED
 
-uniform float2 RandomnessTexel;
-uniform float2 RandomnessOffset;
+uniform const float2 RandomnessTexel;
+uniform const float2 RandomnessOffset;
 
 Texture2D LowPrecisionRandomnessTexture;
 sampler LowPrecisionRandomnessSampler {

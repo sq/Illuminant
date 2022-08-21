@@ -41,8 +41,8 @@ namespace TestGame.Scenes {
         Material ShatterMaterial;
 
         Slider Opacity, Brightness, Offset, DitherGamma, Ratio,
-            BlurSigma, BlurSampleRadius, HighlightTolerance, Image2Weight,
-            Scale;
+            BlurSigma, BlurSampleRadius, BlurMeanFactor,
+            HighlightTolerance, Image2Weight, Scale;
 
         Toggle PreserveAspectRatio, ReverseDirection;
 
@@ -70,7 +70,7 @@ namespace TestGame.Scenes {
             Ratio.Speed = 0.5f;
             Ratio.Value = 1f;
             BlurSigma.Min = 0.1f;
-            BlurSigma.Max = 7.0f;
+            BlurSigma.Max = 10.0f;
             BlurSigma.Value = 2f;
             BlurSigma.Speed = 0.05f;
             BlurSampleRadius.Integral = true;
@@ -78,6 +78,10 @@ namespace TestGame.Scenes {
             BlurSampleRadius.Max = 9;
             BlurSampleRadius.Value = 3;
             BlurSampleRadius.Speed = 1;
+            BlurMeanFactor.Min = 0f;
+            BlurMeanFactor.Max = 1f;
+            BlurMeanFactor.Value = 0f;
+            BlurMeanFactor.Speed = 0.05f;
             HighlightTolerance.Max = 2;
             HighlightTolerance.Min = 0;
             HighlightTolerance.Value = 0.1f;
@@ -179,7 +183,7 @@ namespace TestGame.Scenes {
             }
 
             material = Game.Materials.Get(material, blendState: blendState);
-            Game.Materials.SetGaussianBlurParameters(material, BlurSigma, (int)(BlurSampleRadius) * 2 + 1);
+            Game.Materials.SetGaussianBlurParameters(material, BlurSigma, (int)(BlurSampleRadius) * 2 + 1, BlurMeanFactor);
             ir.Parameters.Add("ShadowOffset", new Vector2(Offset * 0.66f, Offset));
 
             ir.Clear(layer: 0, color: Color.DeepSkyBlue * 0.33f);

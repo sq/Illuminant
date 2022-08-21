@@ -1,16 +1,16 @@
 #include "DistanceFunctionCommon.fxh"
 #include "ParticleCommon.fxh"
 
-uniform float TimeDivisor;
-uniform float4 PositionAdd, PositionMultiply;
-uniform float4 VelocityAdd, VelocityMultiply;
+uniform const float TimeDivisor;
+uniform const float4 PositionAdd, PositionMultiply;
+uniform const float4 VelocityAdd, VelocityMultiply;
 
-uniform float  Strength;
-uniform int    AreaType;
-uniform float3 AreaCenter, AreaSize;
-uniform float  AreaFalloff, AreaRotation;
+uniform const float  Strength;
+uniform const int    AreaType;
+uniform const float3 AreaCenter, AreaSize;
+uniform const float  AreaFalloff, AreaRotation;
 
-uniform float2 CategoryFilter;
+uniform const float2 CategoryFilter;
 
 float computeWeight (float3 worldPosition) {
     float distance = evaluateByTypeId(

@@ -3,7 +3,7 @@
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\BitmapCommon.fxh"
 #include "GBufferShaderCommon.fxh"
 
-uniform float2 ViewCoordinateScaleFactor;
+uniform const float2 ViewCoordinateScaleFactor;
 
 void AutoGBufferBitmapPixelShader (
     in float4 color : COLOR0,

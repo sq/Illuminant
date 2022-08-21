@@ -18,17 +18,17 @@ float evaluateFunctions (float3 worldPosition, float vars);
 #define FILL_INTERIOR FilledInterior
 #define VISUALIZE_TEXEL float4(0.75, 0.75, 0.75, 0)
 
-uniform float  FilledInterior;
-uniform float  OutlineSize;
+uniform const float  FilledInterior;
+uniform const float  OutlineSize;
 
-uniform float3 AmbientColor;
-uniform float3 LightDirection;
-uniform float3 LightColor;
+uniform const float3 AmbientColor;
+uniform const float3 LightDirection;
+uniform const float3 LightColor;
 
-uniform int    FunctionType;
-uniform float3 FunctionCenter;
-uniform float3 FunctionSize;
-uniform float  FunctionRotation;
+uniform const int    FunctionType;
+uniform const float3 FunctionCenter;
+uniform const float3 FunctionSize;
+uniform const float  FunctionRotation;
 
 #include "VisualizeCommon.fxh"
 

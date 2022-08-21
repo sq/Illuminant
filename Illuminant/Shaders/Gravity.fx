@@ -2,12 +2,12 @@
 
 #define MAX_ATTRACTORS 16
 
-uniform int    AttractorCount;
-uniform float3 AttractorPositions[MAX_ATTRACTORS];
-uniform float3 AttractorRadiusesAndStrengths[MAX_ATTRACTORS];
-uniform float  MaximumAcceleration;
+uniform const int    AttractorCount;
+uniform const float3 AttractorPositions[MAX_ATTRACTORS];
+uniform const float3 AttractorRadiusesAndStrengths[MAX_ATTRACTORS];
+uniform const float  MaximumAcceleration;
 
-uniform float2 CategoryFilter;
+uniform const float2 CategoryFilter;
 
 void PS_Gravity (
     ACCEPTS_VPOS,

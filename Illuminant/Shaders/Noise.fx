@@ -2,21 +2,21 @@
 #include "ParticleCommon.fxh"
 #include "RandomCommon.fxh"
 
-uniform float  FrequencyLerp;
-uniform float2 NextRandomnessOffset;
-uniform float  TimeDivisor;
-uniform float4 PositionOffset, PositionMinimum, PositionScale;
-uniform float4 VelocityOffset, VelocityMinimum, VelocityScale;
-uniform float  ReplaceOldVelocity;
+uniform const float  FrequencyLerp;
+uniform const float2 NextRandomnessOffset;
+uniform const float  TimeDivisor;
+uniform const float4 PositionOffset, PositionMinimum, PositionScale;
+uniform const float4 VelocityOffset, VelocityMinimum, VelocityScale;
+uniform const float  ReplaceOldVelocity;
 
-uniform float2 SpaceScale;
+uniform const float2 SpaceScale;
 
-uniform float  Strength;
-uniform int    AreaType;
-uniform float3 AreaCenter, AreaSize;
-uniform float  AreaFalloff, AreaRotation;
+uniform const float  Strength;
+uniform const int    AreaType;
+uniform const float3 AreaCenter, AreaSize;
+uniform const float  AreaFalloff, AreaRotation;
 
-uniform float2 CategoryFilter;
+uniform const float2 CategoryFilter;
 
 float computeWeight(float3 worldPosition) {
     float distance = evaluateByTypeId(

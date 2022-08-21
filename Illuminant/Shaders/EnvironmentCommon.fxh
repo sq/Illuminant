@@ -1,8 +1,8 @@
 #ifndef ENVIRONMENT_DEFINED
 #define ENVIRONMENT_DEFINED
 
-uniform float4 EnvironmentZAndScale;
-uniform float4 EnvironmentZToY;
+uniform const float4 EnvironmentZAndScale;
+uniform const float4 EnvironmentZToY;
 
 float getGroundZ () {
     return EnvironmentZAndScale.x;

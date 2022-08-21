@@ -20,8 +20,8 @@ sampler HeightmapSampler {
     AddressV = CLAMP;
 };
 
-uniform float3 FieldIntensity;
-uniform float2 RefractionIndexAndMipBias;
+uniform const float3 FieldIntensity;
+uniform const float2 RefractionIndexAndMipBias;
 
 #include "ProcessHeightmap.fxh"
 

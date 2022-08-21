@@ -13,9 +13,9 @@ sampler LifeRampSampler {
 };
 
 // ramp_strength, ramp_min, ramp_divisor, index_divisor
-uniform float4 LifeRampSettings;
+uniform const float4 LifeRampSettings;
 
-uniform float2 RotationFromLifeAndIndex;
+uniform const float2 RotationFromLifeAndIndex;
 
 float3 applyFrictionAndMaximum (float3 velocity) {
     float l = length(velocity);

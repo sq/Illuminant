@@ -18,9 +18,9 @@
 
 #include "EnvironmentCommon.fxh"
 
-uniform float  GBufferViewportRelative;
-uniform float  GBufferInvScaleFactor;
-uniform float4 GBufferTexelSizeAndMisc;
+uniform const float  GBufferViewportRelative;
+uniform const float  GBufferInvScaleFactor;
+uniform const float4 GBufferTexelSizeAndMisc;
 
 #define GetViewportScale GetViewportScalePacked
 

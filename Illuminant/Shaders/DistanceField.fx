@@ -5,11 +5,11 @@
 #include "LightCommon.fxh"
 #include "DistanceFieldCommon.fxh"
 
-uniform float2 PixelSize;
-uniform float4 SliceZ;
-uniform float4 Bounds;
+uniform const float2 PixelSize;
+uniform const float4 SliceZ;
+uniform const float4 Bounds;
 // Start, Step
-uniform float4 Uv;
+uniform const float4 Uv;
 
 Texture2D VertexDataTexture : register(t0);
 sampler   VertexDataSampler : register(s0) {

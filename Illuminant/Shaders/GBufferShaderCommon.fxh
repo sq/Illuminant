@@ -3,8 +3,8 @@
 #define RELATIVEY_SCALE 128
 
 // FIXME: Use the shared header?
-uniform float  SelfOcclusionHack;
-uniform float3 DistanceFieldExtent;
+uniform const float  SelfOcclusionHack;
+uniform const float3 DistanceFieldExtent;
 
 float4 encodeGBufferSample (
     float3 normal, float relativeY, float z, bool dead, bool enableShadows, bool fullbright

@@ -101,6 +101,7 @@ namespace TestGame {
             typeof(BitmapBillboards),
             typeof(ProjectorLight),
             typeof(GenerateMaps),
+            typeof(JumpFlooding)
         };
 
         public TestGame () {

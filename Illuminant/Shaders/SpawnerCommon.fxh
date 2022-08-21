@@ -1,18 +1,18 @@
 #define MAX_INLINE_POSITION_CONSTANTS 4
 
-uniform float  AlignVelocityAndPosition, MultiplyLife, SpawnFromEntireWindow;
-uniform float  AlignPositionConstant, MultiplyAttributeConstant, PolygonLoop;
-uniform float  PolygonRate, SourceVelocityFactor, FeedbackSourceIndex, AttributeDiscardThreshold, InstanceMultiplier;
-uniform float4 ChunkSizeAndIndices;
-uniform float4 Configuration[9];
-uniform float4 FormulaTypes;
-uniform float4x4 PositionMatrix, VelocityMatrix;
-uniform float3 SourceChunkSizeAndTexel, AxisMask;
-uniform float2 SourceLifeRange;
+uniform const float  AlignVelocityAndPosition, MultiplyLife, SpawnFromEntireWindow;
+uniform const float  AlignPositionConstant, MultiplyAttributeConstant, PolygonLoop;
+uniform const float  PolygonRate, SourceVelocityFactor, FeedbackSourceIndex, AttributeDiscardThreshold, InstanceMultiplier;
+uniform const float4 ChunkSizeAndIndices;
+uniform const float4 Configuration[9];
+uniform const float4 FormulaTypes;
+uniform const float4x4 PositionMatrix, VelocityMatrix;
+uniform const float3 SourceChunkSizeAndTexel, AxisMask;
+uniform const float2 SourceLifeRange;
 
-uniform float  PositionConstantCount;
-uniform float2 PositionConstantTexel;
-uniform float4 InlinePositionConstants[MAX_INLINE_POSITION_CONSTANTS];
+uniform const float  PositionConstantCount;
+uniform const float2 PositionConstantTexel;
+uniform const float4 InlinePositionConstants[MAX_INLINE_POSITION_CONSTANTS];
 
 Texture2D PositionConstantTexture;
 sampler PositionConstantSampler {

@@ -5,8 +5,8 @@
 #include "Bezier.fxh"
 
 uniform ClampedBezier4 Bezier;
-uniform int   ElementCount;
-uniform float CurrentT;
+uniform const int   ElementCount;
+uniform const float CurrentT;
 
 void ScreenSpaceBezierVisualizerVertexShader (
     in float2 position : POSITION0, // x, y
