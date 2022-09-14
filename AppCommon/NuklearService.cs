@@ -217,8 +217,8 @@ namespace Framework {
 
             glyph->uv0 = new nk_vec2(texBounds.TopLeft.X, texBounds.TopLeft.Y);
             glyph->uv1 = new nk_vec2(texBounds.BottomRight.X, texBounds.BottomRight.Y);
-            glyph->width = result.RectInTexture.Width * FontScale;
-            glyph->height = (result.RectInTexture.Height * FontScale) + VerticalPadding;
+            glyph->width = result.BoundsInTexture.Size.X * result.Texture.Instance.Width * FontScale;
+            glyph->height = (result.BoundsInTexture.Size.Y * result.Texture.Instance.Height * FontScale) + VerticalPadding;
             glyph->xadvance = result.Width * FontScale;
         }
 
@@ -291,7 +291,7 @@ namespace Framework {
             for (int i = 0; i < 255; i++) {
                 Glyph glyph;
                 if (newFont.GetGlyph((char)i, out glyph))
-                    estimatedHeight = Math.Max(estimatedHeight, glyph.RectInTexture.Height / newFont.DPIScaleFactor);
+                    estimatedHeight = Math.Max(estimatedHeight, glyph.BoundsInTexture.Size.Y * glyph.Texture.Instance.Height / newFont.DPIScaleFactor);
             }
             // LineSpacing includes whitespace :(
             userFont->height = (estimatedHeight + VerticalPadding) * FontScale;

@@ -337,7 +337,8 @@ float sampleDistanceFieldEx (
 ) {
     float3 extent = DistanceField.Extent.xyz;
     float3 clampedPosition = clamp3(position, 0, extent);
-    float distanceToVolume = length(clampedPosition - position);
+    float3 distanceToVolume3 = -min(position, 0) + (max(position, extent) - extent);
+    float distanceToVolume = length(distanceToVolume3);
 
     // Interpolate between two Z samples. The xy interpolation is done by the GPU for us.
     // linear [0-1] -> [0-NumZSlices)

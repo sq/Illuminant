@@ -310,7 +310,7 @@ namespace TestGame.Scenes {
                     delta.X *= (Renderer.Configuration.MaximumRenderSize.First / viewport.Rectangle.Size.X);
                     delta.Y *= (Renderer.Configuration.MaximumRenderSize.Second / viewport.Rectangle.Size.Y);
 
-                    var posChange = (viewport.Right * delta.X) + (viewport.Up * -delta.Y);
+                    var posChange = (viewport.Right * delta.X) + (viewport.Up * delta.Y);
 
                     if (posChange.LengthSquared() > 0) {
                         var obs = Environment.Obstructions[(int)SelectedObject.Value];

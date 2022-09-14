@@ -30,8 +30,9 @@ namespace TestGame.Scenes {
         [Items("Outline")]
         Dropdown<string> Mode;
 
-        Slider OutlineThickness, OutlineSoftness, OutlinePower, OutlineOffset;
+        Slider OutlineThickness, OutlineSoftness, OutlinePower, OutlineOffset, Scale;
         Toggle UseGPUField;
+        JumpFlood.GPUScratchSurfaces JumpScratchSurfaces;
 
         public JumpFlooding (TestGame game, int width, int height)
             : base(game, width, height) {
@@ -45,7 +46,7 @@ namespace TestGame.Scenes {
             OutlineThickness.Value = 8f;
             OutlineThickness.Speed = 0.5f;
             OutlineSoftness.Min = 0.1f;
-            OutlineSoftness.Max = 32f;
+            OutlineSoftness.Max = 128f;
             OutlineSoftness.Value = 4f;
             OutlineSoftness.Speed = 0.05f;
             OutlinePower.Min = 0.05f;
@@ -56,6 +57,10 @@ namespace TestGame.Scenes {
             OutlineOffset.Max = 32f;
             OutlineOffset.Value = 0f;
             OutlineOffset.Speed = 0.5f;
+            Scale.Min = 0.1f;
+            Scale.Max = 2f;
+            Scale.Value = 1.0f;
+            Scale.Speed = 0.05f;
         }
 
         public override void LoadContent () {
@@ -64,7 +69,7 @@ namespace TestGame.Scenes {
                 Premultiply = true
             }, true, false);
             CPUDistanceField = Game.TextureLoader.GetDistanceField(Sprite);
-            GPUDistanceField = new RenderTarget2D(Game.GraphicsDevice, Sprite.Width, Sprite.Height, true, SurfaceFormat.Single, DepthFormat.None);
+            GPUDistanceField = new RenderTarget2D(Game.GraphicsDevice, Sprite.Width, Sprite.Height, true, SurfaceFormat.HalfSingle, DepthFormat.None);
         }
 
         public override void UnloadContent () {
@@ -74,7 +79,7 @@ namespace TestGame.Scenes {
             var ir = new ImperativeRenderer(frame, Game.Materials);
 
             if (NeedGenerateGPUField) {
-                JumpFlood.GenerateDistanceField(ref ir, Sprite, GPUDistanceField, layer: -1);
+                JumpFlood.GenerateDistanceField(ref ir, Sprite, GPUDistanceField, ref JumpScratchSurfaces, layer: -1);
                 NeedGenerateGPUField = false;
             }
 
@@ -89,7 +94,10 @@ namespace TestGame.Scenes {
                 distanceField
             );
             var dc = new BitmapDrawCall(textures, Vector2.Zero) {
-                UserData = new Vector4(1, 0, 0, 1)
+                UserData = new Vector4(1, 0, 0, 1),
+                TextureRegion = Bounds.Unit.Expand(0.1f, 0.1f),
+                TextureRegion2 = Bounds.Unit.Expand(0.1f, 0.1f),
+                ScaleF = Scale.Value
             };
             ir.Parameters.Add("ShadowOffset", new Vector2(OutlineOffset.Value, OutlineOffset.Value));
             ir.Parameters.Add("OutlineRadiusSoftnessAndPower", new Vector3(OutlineThickness.Value, OutlineSoftness.Value, OutlinePower.Value));

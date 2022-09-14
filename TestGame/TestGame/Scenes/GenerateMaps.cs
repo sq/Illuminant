@@ -35,22 +35,31 @@ namespace TestGame.Scenes {
         [Items("RefractedDirect")]
         // [Items("Lit")]
         Dropdown<string> Type;
+
         [Group("Brush Settings")]
         Slider Size, Spacing, Height1, Height2, DitherPower, DitherStrength;
+
         [Group("Generator Settings")]
         Slider TapSpacing, MipBias;
+        [Group("Generator Settings")]
         Toggle HighPrecisionNormals;
+
         [Group("Warp Settings")]
         Slider DisplacementScale, RefractionIndex, RefractionMipBias;
+
         [Group("Sprite Settings")]
-        Slider HeightScale, BlurSigma, BlurSampleRadius, BlurMeanFactor, SpriteSize, SpriteBias, SpriteMasking;
+        Slider HeightScale, BlurSigma, BlurSampleRadius, BlurMeanFactor, SpriteSize, SpriteBias, SpriteMasking,
+            DistancePower1, DistancePower2;
+        [Group("Sprite Settings")]
+        Toggle UseDistanceField, UseMips;
 
         private List<RasterPolygonVertex> Polygon = new List<RasterPolygonVertex>();
         private RasterPolygonVertex[] PolygonArray;
         private Vector2 LastPathPoint;
         private double LastPathPointTime;
-        private bool CreatingPath;
+        private bool CreatingPath, NeedToGenerateSDF = true;
         private Texture2D Background, Sprite;
+        private RenderTarget2D SpriteDistanceField;
         private AutoRenderTarget HeightMap, GeneratedMap;
         private IlluminantMaterials IlluminantMaterials;
         private const float PathPointDistance = 32f, PathPointIntervalSeconds = 0.33f;
@@ -126,18 +135,32 @@ namespace TestGame.Scenes {
             SpriteSize.Value = 0.25f;
             SpriteSize.Speed = 0.01f;
             SpriteBias.Min = -1f;
-            SpriteBias.Max = 9f;
+            SpriteBias.Max = 7f;
             SpriteBias.Value = 0f;
             SpriteBias.Speed = 0.25f;
             SpriteMasking.Min = 0f;
             SpriteMasking.Max = 1f;
             SpriteMasking.Value = 0.5f;
             SpriteMasking.Speed = 0.05f;
+            UseDistanceField.Key = Keys.D;
+            DistancePower1.Min = 0.1f;
+            DistancePower1.Max = 4.0f;
+            DistancePower1.Value = 1.0f;
+            DistancePower1.Speed = 0.1f;
+            DistancePower2.Min = 0.1f;
+            DistancePower2.Max = 4.0f;
+            DistancePower2.Value = 1.0f;
+            DistancePower2.Speed = 0.1f;
+            UseDistanceField.Value = true;
+            UseMips.Value = true;
         }
 
         public override void LoadContent () {
             Background = Game.TextureLoader.Load("vector-field-background");
-            Sprite = Game.TextureLoader.Load("test-sprite");
+            Sprite = Game.TextureLoader.LoadSync("test-sprite", new TextureLoadOptions {
+                GenerateDistanceField = true
+            }, true, false);
+            SpriteDistanceField = new RenderTarget2D(Game.GraphicsDevice, Sprite.Width, Sprite.Height, true, SurfaceFormat.Single, DepthFormat.None);
             Brush.Scale = new BrushDynamics {
                 Constant = 1,
                 TaperFactor = 0.8f,
@@ -174,6 +197,12 @@ namespace TestGame.Scenes {
                 ? new ArraySegment<RasterPolygonVertex>(PolygonArray)
                 : Shapes.GetPolygon(new Vector2(275, 325), 2.5f, false, 0.25f);
 
+            if (NeedToGenerateSDF) {
+                var ir = new ImperativeRenderer(frame, Game.Materials);
+                Squared.Render.DistanceField.JumpFlood.GenerateDistanceField(ref ir, Sprite, SpriteDistanceField, layer: -4);
+                NeedToGenerateSDF = false;
+            }
+
             using (var bg = BatchGroup.ForRenderTarget(frame, -3, HeightMap)) {
                 var ir = new ImperativeRenderer(bg, Game.Materials, blendState: BlendState.NonPremultiplied);
                 ir.Clear(layer: 0, value: Vector4.Zero);
@@ -191,15 +220,28 @@ namespace TestGame.Scenes {
                 pSRGBColor c1 = new pSRGBColor(new Vector4(h1, h1, h1, 1), true),
                     c2 = new pSRGBColor(new Vector4(h2, h2, h2, 1), true);
 
-                var spriteMaterial = Game.Materials.RadialMaskSoftening;
-                Game.Materials.SetGaussianBlurParameters(spriteMaterial, BlurSigma, (int)(BlurSampleRadius) * 2 + 1, BlurMeanFactor);
-                ir.Draw(
-                    Sprite, new Vector2(64, 64),
-                    userData: new Vector4(HeightScale, SpriteBias, SpriteMasking, 0),
-                    material: spriteMaterial,
-                    scale: new Vector2(SpriteSize.Value),
-                    blendState: BlendState.Additive
-                );
+                if (UseDistanceField) {
+                    ir.Parameters.Add("DistancePowersAndMipBias", new Vector3(DistancePower1, DistancePower2, SpriteBias));
+                    ir.Draw(
+                        SpriteDistanceField, new Vector2(64, 64),
+                        // min distance (0 for no interior), max distance (0 for no exterior), min height, max height
+                        userData: new Vector4(-32 * HeightScale.Value, SpriteMasking * 32f, h1, h2),
+                        material: IlluminantMaterials.HeightFromDistance,
+                        scale: new Vector2(SpriteSize.Value),
+                        blendState: BlendState.Additive,
+                        samplerState: UseMips ? SamplerState.LinearClamp : SamplerState.PointClamp
+                    );
+                } else {
+                    var spriteMaterial = Game.Materials.RadialMaskSoftening;
+                    Game.Materials.SetGaussianBlurParameters(spriteMaterial, BlurSigma, (int)(BlurSampleRadius) * 2 + 1, BlurMeanFactor);
+                    ir.Draw(
+                        Sprite, new Vector2(64, 64),
+                        userData: new Vector4(HeightScale, SpriteBias, SpriteMasking, 0),
+                        material: spriteMaterial,
+                        scale: new Vector2(SpriteSize.Value),
+                        blendState: BlendState.Additive
+                    );
+                }
 
                 if (verts.Count >= 2)
                     ir.RasterizeStroke(

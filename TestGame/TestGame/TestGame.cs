@@ -52,6 +52,7 @@ namespace TestGame {
         public GamepadVirtualKeyboardAndCursor GamePad = new GamepadVirtualKeyboardAndCursor();
 
         public Material TextMaterial { get; private set; }
+        public Material UnshadowedTextMaterial { get; private set; }
 
         public FreeTypeFont Font;
         public Texture2D RampTexture;
@@ -101,7 +102,9 @@ namespace TestGame {
             typeof(BitmapBillboards),
             typeof(ProjectorLight),
             typeof(GenerateMaps),
-            typeof(JumpFlooding)
+            typeof(JumpFlooding),
+            typeof(SDFText),
+            typeof(Emoji)
         };
 
         public TestGame () {
@@ -333,10 +336,14 @@ namespace TestGame {
             ParticleMaterials = new ParticleMaterials(Materials);
             RampTexture = TextureLoader.Load("light_ramp");
 
-            TextMaterial = Materials.Get(Materials.ScreenSpaceShadowedBitmap, blendState: BlendState.AlphaBlend);
+            TextMaterial = Materials.Get(Font.SDF ? Materials.DistanceFieldText : Materials.ScreenSpaceShadowedBitmap, blendState: RenderStates.PorterDuffOver);
             TextMaterial.Parameters.ShadowColor.SetValue(new Vector4(0, 0, 0, 0.5f));
             TextMaterial.Parameters.ShadowOffset.SetValue(Vector2.One * 0.66f);
-            TextMaterial.Parameters.ShadowMipBias.SetValue(1.5f);
+            if (!Font.SDF)
+                TextMaterial.Parameters.ShadowMipBias.SetValue(1.5f);
+
+            UnshadowedTextMaterial = TextMaterial.Clone();
+            UnshadowedTextMaterial.Parameters.ShadowColor.SetValue(new Vector4(0, 0, 0, 0));
 
             UIRenderTarget = new AutoRenderTarget(
                 RenderCoordinator,
@@ -345,7 +352,10 @@ namespace TestGame {
             );
 
             var decorations = new DefaultDecorations(Materials, 3, 1) {
-                DefaultFont = Font                
+                DefaultFont = Font,
+                TextMaterial = TextMaterial,
+                ShadedTextMaterial = TextMaterial,
+                SelectedTextMaterial = TextMaterial
             };
             PRGUIContext = new UIContext(Materials, decorations) {
                 InputSources = { Keyboard, Mouse, GamePad },
@@ -596,7 +606,7 @@ namespace TestGame {
                     Color.Black
                 );
                 ir.Layer += 1;
-                ir.DrawMultiple(dc, position, material: Materials.ScreenSpaceBitmap, blendState: BlendState.AlphaBlend);
+                ir.DrawMultiple(dc, position, material: TextMaterial);
             }
         }
     }

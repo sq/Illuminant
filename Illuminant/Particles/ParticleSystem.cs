@@ -456,7 +456,7 @@ namespace Squared.Illuminant.Particles {
             }
 
             Transforms.ParticleTransformUpdateParameters up;
-            if (!_UpdateParameterPool.TryPopFront(out up))
+            if (!_UpdateParameterPool.TryPopBack(out up))
                 up = new Particles.Transforms.ParticleTransformUpdateParameters();
             _UpdateParametersInUse.Add(up);
 
