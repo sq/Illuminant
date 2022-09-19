@@ -355,7 +355,7 @@ namespace TestGame {
                 DefaultFont = Font,
                 TextMaterial = TextMaterial,
                 ShadedTextMaterial = TextMaterial,
-                SelectedTextMaterial = TextMaterial
+                // SelectedTextMaterial = TextMaterial
             };
             PRGUIContext = new UIContext(Materials, decorations) {
                 InputSources = { Keyboard, Mouse, GamePad },

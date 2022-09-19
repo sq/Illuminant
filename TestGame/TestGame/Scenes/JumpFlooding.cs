@@ -30,7 +30,7 @@ namespace TestGame.Scenes {
         [Items("Outline")]
         Dropdown<string> Mode;
 
-        Slider OutlineThickness, OutlineSoftness, OutlinePower, OutlineOffset, Scale;
+        Slider OutlineThickness, OutlineSoftness, OutlinePower, OutlineOffset, Scale, SmoothingLevel;
         Toggle UseGPUField;
         JumpFlood.GPUScratchSurfaces JumpScratchSurfaces;
 
@@ -57,6 +57,11 @@ namespace TestGame.Scenes {
             OutlineOffset.Max = 32f;
             OutlineOffset.Value = 0f;
             OutlineOffset.Speed = 0.5f;
+            SmoothingLevel.Min = 0f;
+            SmoothingLevel.Max = 1f;
+            SmoothingLevel.Value = 1.0f;
+            SmoothingLevel.Speed = 0.05f;
+            SmoothingLevel.Changed += (s, e) => NeedGenerateGPUField = true;
             Scale.Min = 0.1f;
             Scale.Max = 2f;
             Scale.Value = 1.0f;
@@ -79,7 +84,10 @@ namespace TestGame.Scenes {
             var ir = new ImperativeRenderer(frame, Game.Materials);
 
             if (NeedGenerateGPUField) {
-                JumpFlood.GenerateDistanceField(ref ir, Sprite, GPUDistanceField, ref JumpScratchSurfaces, layer: -1);
+                JumpFlood.GenerateDistanceField(
+                    ref ir, Sprite, GPUDistanceField, ref JumpScratchSurfaces, 
+                    layer: -1, smoothingLevel: SmoothingLevel
+                );
                 NeedGenerateGPUField = false;
             }
 

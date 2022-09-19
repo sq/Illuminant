@@ -88,7 +88,7 @@ namespace TestGame.Scenes {
             FontSize = new FreeTypeFont.FontSize(Game.Font, BaseSize.Value) {
                 SDF = true
             };
-            TextMaterial = Game.Materials.DistanceFieldText.Clone();
+            TextMaterial = Game.Materials.Get(Game.Materials.DistanceFieldText, depthStencilState: RenderStates.OutlinedTextDepthStencil, clone: true);
         }
 
         public override void UnloadContent () {
@@ -111,7 +111,7 @@ namespace TestGame.Scenes {
             ir.Parameters.Add("ShadowOffset", new Vector2(OutlineOffset.Value, OutlineOffset.Value));
             ir.Parameters.Add("TextDistanceScaleOffsetAndPower", new Vector3(Scale.Value, Offset.Value, Power.Value));
             ir.Parameters.Add("OutlineRadiusSoftnessAndPower", new Vector3(OutlineThickness.Value, OutlineSoftness.Value, OutlinePower.Value));
-            ir.Clear(color: Color.CornflowerBlue);
+            ir.Clear(color: Color.CornflowerBlue, z: 0f);
             ir.DrawString(
                 FontSize, TestText, Vector2.One, scale: TextSize.Value / BaseSize.Value, material: TextMaterial,
                 alignToPixels: false, blendState: BlendState.AlphaBlend
