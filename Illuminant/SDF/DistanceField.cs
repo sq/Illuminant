@@ -344,7 +344,8 @@ namespace Squared.Illuminant {
                     coordinator,
                     SliceWidth * ColumnCount, 
                     SliceHeight * RowCount,
-                    false, SurfaceFormat.Rgba64
+                    false, SurfaceFormat.Rgba64,
+                    name: "DynamicDistanceField"
                 );
         }
 

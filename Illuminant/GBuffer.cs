@@ -34,7 +34,8 @@ namespace Squared.Illuminant {
                     highQuality
                         ? SurfaceFormat.Vector4
                         : SurfaceFormat.HalfVector4,
-                    DepthFormat.Depth24, 0
+                    DepthFormat.Depth24, 0,
+                    name: "GBuffer"
                 );
         }
 
