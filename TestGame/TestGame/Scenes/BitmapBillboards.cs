@@ -331,9 +331,6 @@ namespace TestGame.Scenes {
                 
                 var time = (float)Time.Seconds;
 
-                var dl = (DirectionalLightSource)
-                    Environment.Lights[1];
-
                 var ms = Game.MouseState;
                 Game.IsMouseVisible = true;
 

@@ -1,6 +1,6 @@
 uniform const float3 TapSpacingAndBias;
 uniform const float2 DisplacementScale;
-uniform const bool NormalsAreSigned;
+uniform const bool NormalsAreSigned, NormalElevationClamping;
 // HACK: The surface normals can be very small (effectively denormal) in some cases,
 //  this tries to compensate by scaling them up before storing them to a floating-point
 //  texture so they don't round down to zero.
@@ -54,6 +54,18 @@ float3 calculateNormal (
             )
         )
     );
+
+    // HACK: When generating normals from a heightmap, it may be desirable to not
+    //  have 'higher elevation' pixels influence the normals of pixels at lower
+    //  elevation. This set of mins provides an approximation of that, and prevents
+    //  false shadows from appearing on surfaces when using these generated normals
+    //  for lighting.
+    if (NormalElevationClamping) {
+        a = min(a, center);
+        b = min(b, center);
+        c = min(c, center);
+        d = min(d, center);
+    }
 
     if (
         (abs(center) < epsilon) && (abs(a) < epsilon) &&

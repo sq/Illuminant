@@ -250,6 +250,9 @@ namespace Squared.Illuminant {
                     "AutoGBufferBitmap", "AutoGBufferBitmap"
                 );
 
+                LoadOneMaterial(effects, out NormalBillboard,
+                    "AutoGBufferBitmap", "NormalBillboard");
+
                 LoadOneMaterial(effects, out GBufferMask,
                     "GBufferMask", "GBufferMask"
                 );

@@ -104,7 +104,8 @@ namespace TestGame {
             typeof(GenerateMaps),
             typeof(JumpFlooding),
             typeof(SDFText),
-            typeof(Emoji)
+            typeof(Emoji),
+            typeof(HLSprites),
         };
 
         public TestGame () {
