@@ -127,8 +127,9 @@ namespace TestGame.Scenes {
             Environment.Ambient = new Color(63, 63, 63, 0);
             Environment.Lights.Add(new SphereLightSource {
                 CastsShadows = false, Color = new Vector4(0.5f, 0.1f, 0.2f, 1f),
-                Radius = 16f,
-                RampLength = 512f
+                Radius = 64f,
+                RampLength = 800f,
+                RampMode = LightSourceRampMode.Exponential
             });
 
             Renderer = new LightingRenderer(
@@ -262,7 +263,7 @@ namespace TestGame.Scenes {
                         break;
                     case "Composited":
                     default:
-                        ir.Draw(Background, Vector2.Zero);
+                        // ir.Draw(Background, Vector2.Zero);
                         ir.Layer += 1;
                         tex1 = new AbstractTextureReference(SpriteAlbedo);
                         tex2 = new AbstractTextureReference(Lightmap);

@@ -51,6 +51,7 @@ void MaskBillboardPixelShader(
 
     // HACK: We drop the world x axis and the normal y axis,
     //  and reconstruct those two values when sampling the g-buffer
+    // FIXME: This is the old encoding!
     result = float4(
         (normal.x / 2) + 0.5,
         (normal.z / 2) + 0.5,
@@ -79,6 +80,7 @@ void GDataBillboardPixelShader(
 
     // HACK: We drop the world x axis and the normal y axis,
     //  and reconstruct those two values when sampling the g-buffer
+    // FIXME: This is the old encoding!
     result = float4(
         data.r,
         data.g,

@@ -19,8 +19,7 @@ float4 encodeGBufferSample (
         // HACK: We drop the world x axis and the normal y axis,
         //  and reconstruct those two values when sampling the g-buffer
         return float4(
-            (normal.x / 2) + 0.5,
-            (normal.z / 2) + 0.5,
+            encodeNormalSpherical(normal),
             (relativeY / RELATIVEY_SCALE),
             fullbright
                 // for a fullbright pixel we just make the w value total garbage
