@@ -752,9 +752,10 @@ namespace Squared.Illuminant.Particles {
                 t.AfterFrame(Engine);
 
             lock (_UpdateParameterPool) {
-                _UpdateParameterPool.Clear();
-                foreach (var up in _UpdateParametersInUse)
-                    _UpdateParameterPool.Add(up);
+                foreach (var up in _UpdateParametersInUse) {
+                    if (_UpdateParameterPool.Count < 16)
+                        _UpdateParameterPool.Add(up);
+                }
                 _UpdateParametersInUse.Clear();
             }
         }
