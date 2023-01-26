@@ -5,7 +5,9 @@ uniform const bool NormalsAreSigned, NormalElevationClamping;
 //  this tries to compensate by scaling them up before storing them to a floating-point
 //  texture so they don't round down to zero.
 // FIXME: This still isn't enough to prevent artifacts at edges for some reason :(
-uniform const float2 DenormalCompensation = float2(50, 1.0 / 50);
+// uniform const float2 DenormalCompensation = float2(50, 1.0 / 50);
+// HACK: Disabled because it makes HLSprites awkward to deal with
+uniform const float2 DenormalCompensation = float2(1.0, 1.0);
 
 float tap (
     float2 uv,
