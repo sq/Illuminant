@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,6 +26,7 @@ using Squared.Util;
 
 namespace TestGame.Scenes {
     public class HLSpritesSolve : Scene {
+        [Items("Albedo")]
         [Items("Left")]
         [Items("Right")]
         [Items("Up")]
@@ -32,18 +34,21 @@ namespace TestGame.Scenes {
         [Items("Normals")]
         [Items("Lightmap")]
         [Items("GBuffer")]
+        [Items("Composited")]
         Dropdown<string> ViewMode;
 
         [Group("Generator Settings")]
         // Toggle HighPrecisionNormals;
         bool HighPrecisionNormals = false;
         [Group("Generator Settings")]
-        Slider NumberOfInputs, ZBasis;
+        Slider NumberOfInputs, ZBasis, MinInput, MaxInput;
 
         [Group("Light Settings")]
         Slider LightPosX, LightPosY, LightPosZ;
 
-        private Texture2D InputLeft, InputRight, InputAbove, InputBelow;
+        Slider SpriteSize;
+
+        private Texture2D Albedo, InputLeft, InputRight, InputAbove, InputBelow;
         private Texture2D[] Inputs;
         private float[][] InputBuffers;
         private Vector4[] OutputBuffer;
@@ -58,6 +63,7 @@ namespace TestGame.Scenes {
 
         public SphereLightSource MovableLight;
         float LightZ;
+        public bool NeedGenerate = true;
 
         public HLSpritesSolve (TestGame game, int width, int height)
             : base(game, width, height) {
@@ -65,7 +71,13 @@ namespace TestGame.Scenes {
             NumberOfInputs.Min = 1;
             NumberOfInputs.Max = 4;
             NumberOfInputs.Integral = true;
-            NumberOfInputs.Value = 4;
+            NumberOfInputs.Value = 3;
+            MinInput.Min = 0f;
+            MinInput.Max = 254f;
+            MinInput.Value = 139f;
+            MaxInput.Min = 1f;
+            MaxInput.Max = 255f;
+            MaxInput.Value = 204f;
             ZBasis.Min = 0.1f;
             ZBasis.Max = 2f;
             ZBasis.Value = 0.5f;
@@ -74,9 +86,14 @@ namespace TestGame.Scenes {
             LightPosY.Max = Height;
             LightPosZ.Max = 512f;
             LightPosX.Speed = LightPosY.Speed = LightPosZ.Speed = 16f;
+            SpriteSize.Min = 0.1f;
+            SpriteSize.Max = 3.0f;
+            SpriteSize.Value = 0.5f;
         }
 
         public override void LoadContent () {
+            Albedo = Game.TextureLoader.LoadSync("normalgen-albedo", new TextureLoadOptions {
+            }, true, false);
             InputBelow = Game.TextureLoader.LoadSync("normalgen-below", new TextureLoadOptions {
             }, true, false);
             InputAbove = Game.TextureLoader.LoadSync("normalgen-above", new TextureLoadOptions {
@@ -98,8 +115,8 @@ namespace TestGame.Scenes {
             Environment.Ambient = new Color(63, 63, 63, 0);
             Environment.Lights.Add(new SphereLightSource {
                 CastsShadows = false, Color = new Vector4(0.5f, 0.1f, 0.2f, 1f),
-                Radius = 64f,
-                RampLength = 800f,
+                Radius = 1f,
+                RampLength = 1024f,
                 RampMode = LightSourceRampMode.Exponential
             });
 
@@ -122,10 +139,18 @@ namespace TestGame.Scenes {
 
             Renderer.OnRenderGBuffer += (LightingRenderer lr, ref ImperativeRenderer ir) => {
                 ir.Parameters.Add("NormalsAreSigned", HighPrecisionNormals);
-                ir.Draw(GeneratedMap, Vector2.Zero, material: IlluminantMaterials.NormalBillboard);
+                ir.Draw(GeneratedMap, Vector2.Zero, material: IlluminantMaterials.NormalBillboard, scale: SpriteSize.Value * Vector2.One);
             };
 
             MakeSurfaces();
+            NeedGenerate = true;
+            EventHandler<float> eh = (s, e) => {
+                NeedGenerate = true;
+            };
+            NumberOfInputs.Changed += eh;
+            MinInput.Changed += eh;
+            MaxInput.Changed += eh;
+            ZBasis.Changed += eh;
         }
 
         private void MakeSurfaces () {
@@ -138,7 +163,7 @@ namespace TestGame.Scenes {
                 GeneratedMap = new Texture2D(Game.GraphicsDevice, w, h, false, SurfaceFormat.Vector4);
             }
             Lightmap = new RenderTarget2D(
-                Game.GraphicsDevice, w, h, false,
+                Game.GraphicsDevice, Width, Height, false,
                 SurfaceFormat.Color, DepthFormat.None, 0, 
                 RenderTargetUsage.PlatformContents
             );
@@ -149,40 +174,50 @@ namespace TestGame.Scenes {
             source.GetData(readbackBuf);
             var resultBuf = new float[source.Width * source.Height];
             for (int i = 0; i < readbackBuf.Length; i++) {
-                var value = readbackBuf[i].R;
-                resultBuf[i] = (value / 255.0f);
+                if (readbackBuf[i].A < 16)
+                    resultBuf[i] = float.NaN;
+                else
+                    resultBuf[i] = readbackBuf[i].R / 255.0f;
             }
             return resultBuf;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private float CleanInput (float value, float min, float range) {
+            return Arithmetic.Saturate((value - min) / range);
+        }
+
         private void GenerateNormalsOnCPU (float[][] inputs, int inputCount) {
-            float z = ZBasis;
+            NeedGenerate = false;
+
+            float z = ZBasis, min = MinInput.Value / 255f, range = (MaxInput.Value - MinInput.Value) / 255f;
 
             for (int y = 0; y < GeneratedMap.Height; y++) {
                 int rowIndex = (y * GeneratedMap.Width);
                 for (int x = 0; x < GeneratedMap.Width; x++) {
                     int index = rowIndex + x;
-                    float left = inputs[0][index],
-                        right = inputCount > 1 ? inputs[1][index] : 1f - left,
-                        above = inputCount > 2 ? inputs[2][index] : 0.5f,
-                        below = inputCount > 3 ? inputs[3][index] : 1f- above;
+                    float left = CleanInput(inputs[0][index], min, range),
+                        right = inputCount > 1 ? CleanInput(inputs[1][index], min, range) : 1f - left,
+                        above = inputCount > 2 ? CleanInput(inputs[2][index], min, range) : 0.5f,
+                        below = inputCount > 3 ? CleanInput(inputs[3][index], min, range) : 1f - above;
 
-                    Vector4 a = new Vector4((1f - left) * 0.5f, (1f - above) * 0.5f, 0.5f, 1f),
-                        b = new Vector4(right * 0.5f + 0.5f, below * 0.5f + 0.5f, 0f, 1f),
-                        n = new Vector4(
-                            a.X <= 0.5f ? b.X * a.X * 2f : 1f - 2f * (1f - a.X) * (1f - b.X),
-                            a.Y <= 0.5f ? b.Y * a.Y * 2f : 1f - 2f * (1f - a.Y) * (1f - b.Y),
-                            0, 0f
-                        );
-                    n -= new Vector4(0.5f);
-                    n *= 2.0f;
+                    if (float.IsNaN(left) || float.IsNaN(right) || float.IsNaN(above) || float.IsNaN(below)) {
+                        OutputBuffer[index] = default;
+                        continue;
+                    }
+
+                    Vector4 n = new Vector4(-left, 0, 0, 0) +
+                        new Vector4(right, 0, 0, 0) +
+                        new Vector4(0, -above, 0, 0) +
+                        new Vector4(0, below, 0, 0);
+                    n *= 1f / 4f;
                     n.Z = z;
                     n.Normalize();
 
                     n *= 0.5f;
                     n += new Vector4(0.5f);
-
                     n.W = 1f;
+
                     OutputBuffer[index] = n;
                 }
             }
@@ -196,9 +231,8 @@ namespace TestGame.Scenes {
         public override void Draw (Frame frame) {
             var now = (float)Time.Seconds;
 
-            MakeSurfaces();
-
-            GenerateNormalsOnCPU(InputBuffers, (int)NumberOfInputs.Value);
+            if (NeedGenerate)
+                GenerateNormalsOnCPU(InputBuffers, (int)NumberOfInputs.Value);
 
             /*
 
@@ -220,7 +254,7 @@ namespace TestGame.Scenes {
                 frame, -1, Lightmap,
                 (dm, _) => {
                     Game.Materials.PushViewTransform(ViewTransform.CreateOrthographic(
-                        Lightmap.Width, Lightmap.Height
+                        Width, Height
                     ));
                 },
                 (dm, _) => {
@@ -231,7 +265,7 @@ namespace TestGame.Scenes {
 
                 var lighting = Renderer.RenderLighting(lm, 1, 1.0f);
                 lighting.Resolve(
-                    lm, 2, Lightmap.Width, Lightmap.Height,
+                    lm, 2, Width, Height,
                     hdr: new HDRConfiguration {
                         InverseScaleFactor = 1.0f,
                         Gamma = 1.0f,
@@ -252,7 +286,11 @@ namespace TestGame.Scenes {
                 AbstractTextureReference tex1 = default,
                     tex2 = default;
                 var bs = BlendState.Opaque;
+                float scale = SpriteSize.Value;
                 switch (ViewMode.Value) {
+                    case "Albedo":
+                        tex1 = Albedo;
+                        break;
                     case "Left":
                         tex1 = InputLeft;
                         break;
@@ -267,23 +305,38 @@ namespace TestGame.Scenes {
                         break;
                     case "Normals":
                         tex1 = new AbstractTextureReference(GeneratedMap);
+                        bs = BlendState.NonPremultiplied;
                         break;
                     case "Lightmap":
                         tex1 = new AbstractTextureReference(Lightmap);
+                        scale = 1;
                         break;
                     case "GBuffer":
                         tex1 = new AbstractTextureReference(Renderer.GBuffer.Texture);
+                        scale = 1;
+                        break;
+                    case "Composited":
+                        tex1 = new AbstractTextureReference(Albedo);
+                        tex2 = new AbstractTextureReference(Lightmap);
+                        m = Game.Materials.ScreenSpaceLightmappedBitmap;
                         break;
                 }
 
                 var ts = new TextureSet(tex1, tex2);
                 var dc = new BitmapDrawCall(
-                    ts, Vector2.Zero, Bounds.Unit, Color.White, Vector2.One * 3f, Vector2.Zero, 0f
+                    ts, Vector2.Zero, Bounds.Unit, Color.White, Vector2.One * scale, Vector2.Zero, 0f
                 ) {
                     UserData = Vector4.One
                 };
-                // dc.AlignTexture2(1.0f / SpriteSize.Value, true);
+                dc.AlignTexture2(1.0f / SpriteSize.Value, true);
                 ir.Draw(dc, material: m, blendState: bs);
+
+                ir.Layer += 1;
+
+                var p = Environment.Lights.OfType<SphereLightSource>().First();
+                ir.RasterizeEllipse(
+                    new Vector2(p.Position.X, p.Position.Y), new Vector2(Arithmetic.Saturate(p.Position.Z / 32f) + 2f), Color.Yellow
+                );
 
                 ir.Layer += 1;
             }

@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework.Input;
@@ -45,6 +46,7 @@ namespace TestGame {
         protected T _Value;
 
         public virtual T Value { 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return _Value; }
             set {
                 var eqc = EqualityComparer<T>.Default;
@@ -65,6 +67,7 @@ namespace TestGame {
 
         public abstract void Update (Scene s);
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator T (Setting<T> setting) {
             return setting.Value;
         }
