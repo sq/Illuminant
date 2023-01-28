@@ -23,6 +23,7 @@ using Squared.Render.Convenience;
 using Squared.Render.RasterShape;
 using Squared.Render.RasterStroke;
 using Squared.Util;
+using Squared.Util.Containers;
 
 namespace TestGame.Scenes {
     public class HLSpritesSolve : Scene {
@@ -36,17 +37,19 @@ namespace TestGame.Scenes {
         [Items("GBuffer")]
         [Items("Composited")]
         Dropdown<string> ViewMode;
+        Slider SpriteSize;
 
         [Group("Generator Settings")]
-        // Toggle HighPrecisionNormals;
-        bool HighPrecisionNormals = false;
+        Toggle ShadowsOnly;
         [Group("Generator Settings")]
-        Slider NumberOfInputs, ZBasis, MinInput, MaxInput;
+        Slider NumberOfInputs, ZBasis, MinInput, MaxInput, Inclination;
 
         [Group("Light Settings")]
-        Slider LightPosX, LightPosY, LightPosZ;
+        Slider LightPosX, LightPosY, LightPosZ, LightSize;
+        [Group("Light Settings")]
+        Toggle Auto;
 
-        Slider SpriteSize;
+        bool HighPrecisionNormals = false;
 
         private Texture2D Albedo, InputLeft, InputRight, InputAbove, InputBelow;
         private Texture2D[] Inputs;
@@ -71,24 +74,33 @@ namespace TestGame.Scenes {
             NumberOfInputs.Min = 1;
             NumberOfInputs.Max = 4;
             NumberOfInputs.Integral = true;
-            NumberOfInputs.Value = 3;
+            NumberOfInputs.Value = 2;
             MinInput.Min = 0f;
             MinInput.Max = 254f;
-            MinInput.Value = 139f;
+            MinInput.Value = 141f;
             MaxInput.Min = 1f;
             MaxInput.Max = 255f;
-            MaxInput.Value = 204f;
+            MaxInput.Value = 200f;
             ZBasis.Min = 0.1f;
             ZBasis.Max = 2f;
             ZBasis.Value = 0.5f;
+            Inclination.Min = 0f;
+            Inclination.Max = 1.0f;
+            Inclination.Value = 0f;
             LightPosX.Min = LightPosY.Min = LightPosZ.Min = -512f;
             LightPosX.Max = Width;
             LightPosY.Max = Height;
             LightPosZ.Max = 512f;
             LightPosX.Speed = LightPosY.Speed = LightPosZ.Speed = 16f;
+            LightSize.Min = 32;
+            LightSize.Max = 2048;
+            LightSize.Value = 1024;
+            LightSize.Speed = 64;
             SpriteSize.Min = 0.1f;
             SpriteSize.Max = 3.0f;
             SpriteSize.Value = 0.5f;
+            ShadowsOnly.Value = true;
+            Auto.Value = true;
         }
 
         public override void LoadContent () {
@@ -116,7 +128,6 @@ namespace TestGame.Scenes {
             Environment.Lights.Add(new SphereLightSource {
                 CastsShadows = false, Color = new Vector4(0.5f, 0.1f, 0.2f, 1f),
                 Radius = 1f,
-                RampLength = 1024f,
                 RampMode = LightSourceRampMode.Exponential
             });
 
@@ -132,6 +143,7 @@ namespace TestGame.Scenes {
                         OcclusionToOpacityPower = 0.7f,
                         MaxConeRadius = 24,
                     },
+                    RenderGroundPlane = false,
                     EnableGBuffer = true,
                 }, Game.IlluminantMaterials
             );
@@ -144,13 +156,13 @@ namespace TestGame.Scenes {
 
             MakeSurfaces();
             NeedGenerate = true;
-            EventHandler<float> eh = (s, e) => {
-                NeedGenerate = true;
-            };
+            EventHandler<float> eh = (s, e) => NeedGenerate = true;
             NumberOfInputs.Changed += eh;
             MinInput.Changed += eh;
             MaxInput.Changed += eh;
             ZBasis.Changed += eh;
+            Inclination.Changed += eh;
+            ShadowsOnly.Changed += (s, e) => NeedGenerate = true;
         }
 
         private void MakeSurfaces () {
@@ -183,46 +195,121 @@ namespace TestGame.Scenes {
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private float CleanInput (float value, float min, float range) {
-            return Arithmetic.Saturate((value - min) / range);
+        private float CleanInput (float value, float min, float range, bool shadowsOnly) {
+            var scaled = Arithmetic.Saturate((value - min) / range);
+            if (shadowsOnly)
+                return scaled - 1;
+            else
+                return (scaled - 0.5f) * 2f;
         }
+
+        delegate float Evaluator (ref Vector3 candidate);
 
         private void GenerateNormalsOnCPU (float[][] inputs, int inputCount) {
             NeedGenerate = false;
+            var so = ShadowsOnly.Value;
+            float z = ZBasis, min = MinInput.Value / 255f, 
+                range = (MaxInput.Value - MinInput.Value) / 255f, 
+                iz = 1.0f, magnitudeLimit = 1f, minStep = 0.1f,
+                left = 0,
+                right = 0,
+                above = 0,
+                below = 0;
 
-            float z = ZBasis, min = MinInput.Value / 255f, range = (MaxInput.Value - MinInput.Value) / 255f;
+            // light vectors that will be dotted against the normal
+            Vector3 current, 
+                lLeft = new Vector3(1, 0, Inclination),
+                lRight = new Vector3(-1, 0, Inclination),
+                lAbove = new Vector3(0, 1, Inclination),
+                lBelow = new Vector3(0, -1, Inclination),
+                half = new Vector3(0.5f);
 
             for (int y = 0; y < GeneratedMap.Height; y++) {
                 int rowIndex = (y * GeneratedMap.Width);
                 for (int x = 0; x < GeneratedMap.Width; x++) {
                     int index = rowIndex + x;
-                    float left = CleanInput(inputs[0][index], min, range),
-                        right = inputCount > 1 ? CleanInput(inputs[1][index], min, range) : 1f - left,
-                        above = inputCount > 2 ? CleanInput(inputs[2][index], min, range) : 0.5f,
-                        below = inputCount > 3 ? CleanInput(inputs[3][index], min, range) : 1f - above;
+
+                    // target dot products
+                    left = CleanInput(inputs[0][index], min, range, so);
+                    right = inputCount > 1 ? CleanInput(inputs[1][index], min, range, so) : -left;
+                    above = inputCount > 2 ? CleanInput(inputs[2][index], min, range, so) : 0;
+                    below = inputCount > 3 ? CleanInput(inputs[3][index], min, range, so) : -above;
 
                     if (float.IsNaN(left) || float.IsNaN(right) || float.IsNaN(above) || float.IsNaN(below)) {
                         OutputBuffer[index] = default;
                         continue;
                     }
 
-                    Vector4 n = new Vector4(-left, 0, 0, 0) +
-                        new Vector4(right, 0, 0, 0) +
-                        new Vector4(0, -above, 0, 0) +
-                        new Vector4(0, below, 0, 0);
-                    n *= 1f / 4f;
-                    n.Z = z;
-                    n.Normalize();
+                    /*
+                    if ((left <= -0.01) && (right <= -0.01) && (above <= -0.01)) {
+                        // For pixels that are always dark, generate no normals
+                        OutputBuffer[index] = default;
+                        // OutputBuffer[index] = new Vector4(0.5f, 0.5f, 0f, 1f);
+                        continue;
+                    }
+                    */
 
-                    n *= 0.5f;
-                    n += new Vector4(0.5f);
-                    n.W = 1f;
+                    left = -left;
+                    right = -right;
+                    above = -above;
+                    below = -below;
 
-                    OutputBuffer[index] = n;
+                    // First search on the x axis for the normal that produces the closest set of dot products
+                    current = new Vector3(0, 0, iz);
+                    refine(ref current, ref current.X);
+                    refine(ref current, ref current.Y);
+                    current.Normalize();
+                    current *= half;
+                    current += half;
+
+                    OutputBuffer[index] = new Vector4(current, 1);
                 }
             }
 
             GeneratedMap.SetData(OutputBuffer);
+
+            float evaluate (Vector3 candidate) {
+                candidate.Normalize();
+
+                Vector3.Dot(ref lLeft, ref candidate, out float result);
+                result = Math.Abs(result - left);
+
+                if (inputCount > 1) {
+                    Vector3.Dot(ref lRight, ref candidate, out float b);
+                    result = Math.Max(result, Math.Abs(b - right));
+                }
+
+                if (inputCount > 2) {
+                    Vector3.Dot(ref lAbove, ref candidate, out float c);
+                    result = Math.Max(result, Math.Abs(c - above));
+                }
+
+                if (inputCount > 3) {
+                    Vector3.Dot(ref lBelow, ref candidate, out float d);
+                    result = Math.Max(result, Math.Abs(d - below));
+                }
+
+                return result;
+            }
+
+            void refine (ref Vector3 value, ref float element) {
+                // FIXME: Replace with binary search
+                var currentElement = element;
+                var currentScore = evaluate(value);
+
+                for (float test = -magnitudeLimit, step = 0.01f; test <= magnitudeLimit; test += step) {
+                    currentElement = element;
+                    element = test;
+                    var testScore = evaluate(value);
+                    if (testScore > currentScore) {
+                        element = currentElement;
+                    } else {
+                        currentScore = testScore;
+                    }
+                }
+
+                ;
+            }
         }
 
         public override void UnloadContent () {
@@ -287,6 +374,7 @@ namespace TestGame.Scenes {
                     tex2 = default;
                 var bs = BlendState.Opaque;
                 float scale = SpriteSize.Value;
+                var pos = Vector2.Zero;
                 switch (ViewMode.Value) {
                     case "Albedo":
                         tex1 = Albedo;
@@ -319,26 +407,26 @@ namespace TestGame.Scenes {
                         tex1 = new AbstractTextureReference(Albedo);
                         tex2 = new AbstractTextureReference(Lightmap);
                         m = Game.Materials.ScreenSpaceLightmappedBitmap;
+                        pos = new Vector2(16, 16);
                         break;
                 }
 
                 var ts = new TextureSet(tex1, tex2);
                 var dc = new BitmapDrawCall(
-                    ts, Vector2.Zero, Bounds.Unit, Color.White, Vector2.One * scale, Vector2.Zero, 0f
+                    ts, pos, Bounds.Unit, Color.White, Vector2.One * scale, Vector2.Zero, 0f
                 ) {
                     UserData = Vector4.One
                 };
                 dc.AlignTexture2(1.0f / SpriteSize.Value, true);
-                ir.Draw(dc, material: m, blendState: bs);
-
-                ir.Layer += 1;
+                ir.Draw(dc, material: m, blendState: bs, layer: 16);
 
                 var p = Environment.Lights.OfType<SphereLightSource>().First();
                 ir.RasterizeEllipse(
-                    new Vector2(p.Position.X, p.Position.Y), new Vector2(Arithmetic.Saturate(p.Position.Z / 32f) + 2f), Color.Yellow
+                    new Vector2(p.Position.X, p.Position.Y), new Vector2(Arithmetic.Saturate(p.Position.Z / 16f) + 1.5f), Color.Yellow,
+                    layer: p.Position.Z < 0 ? 15 : 17
                 );
 
-                ir.Layer += 1;
+                ir.Layer = 18;
             }
         }
 
@@ -357,9 +445,19 @@ namespace TestGame.Scenes {
                 if (!Game.IsMouseOverUI) {
                 }
 
+                if (Auto) {
+                    var spriteSize = new Vector2(InputLeft.Width, InputLeft.Height) * SpriteSize;
+                    var spriteCenter = new Vector2(16, 16) + (spriteSize * 0.5f);
+                    double a1 = Time.Seconds / 1,
+                        a2 = Time.Seconds / 10;
+                    LightPosX.Value = (float)(Math.Cos(a1) * spriteSize.X * 0.5) + spriteCenter.X;
+                    LightPosY.Value = (float)(Math.Sin(a2) * spriteSize.Y * 0.5) + spriteCenter.Y;
+                    LightPosZ.Value = (float)(Math.Sin(a1) * 24);
+                }
                 var pos = new Vector3(LightPosX.Value, LightPosY.Value, LightPosZ.Value);
-                Environment.Lights.OfType<SphereLightSource>().First()
-                    .Position = pos;
+                var l = Environment.Lights.OfType<SphereLightSource>().First();
+                l.RampLength = LightSize.Value;
+                l.Position = pos;
 
                 Game.IsMouseVisible = true;
             }
