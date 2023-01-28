@@ -27,6 +27,7 @@ using Squared.Util;
 namespace TestGame.Scenes {
     public class HLSpritesSolve : Scene {
         [Items("Albedo")]
+        [Items("Distance")]
         [Items("Left")]
         [Items("Right")]
         [Items("Up")]
@@ -42,6 +43,9 @@ namespace TestGame.Scenes {
         Toggle ShadowsOnly;
         [Group("Generator Settings")]
         Slider NumberOfInputs, ZBasis, MinInput, MaxInput, Inclination;
+
+        [Group("GBuffer Settings")]
+        Slider DistanceZMax, DistanceZScale;
 
         [Group("Light Settings")]
         Slider LightPosX, LightPosY, LightPosZ, LightSize;
@@ -98,12 +102,19 @@ namespace TestGame.Scenes {
             SpriteSize.Min = 0.1f;
             SpriteSize.Max = 3.0f;
             SpriteSize.Value = 0.5f;
+            DistanceZMax.Min = 1;
+            DistanceZMax.Max = 128;
+            DistanceZMax.Value = 16;
+            DistanceZScale.Min = -4f;
+            DistanceZScale.Max = 4f;
+            DistanceZScale.Value = -1f;
             ShadowsOnly.Value = true;
             Auto.Value = true;
         }
 
         public override void LoadContent () {
             Albedo = Game.TextureLoader.LoadSync("normalgen-albedo", new TextureLoadOptions {
+                GenerateDistanceField = true
             }, true, false);
             InputBelow = Game.TextureLoader.LoadSync("normalgen-below", new TextureLoadOptions {
             }, true, false);
@@ -149,8 +160,12 @@ namespace TestGame.Scenes {
             IlluminantMaterials = Renderer.IlluminantMaterials;
 
             Renderer.OnRenderGBuffer += (LightingRenderer lr, ref ImperativeRenderer ir) => {
+                var texSet = new TextureSet(
+                    GeneratedMap, Game.TextureLoader.GetDistanceField(Albedo)
+                );
                 ir.Parameters.Add("NormalsAreSigned", HighPrecisionNormals);
-                ir.Draw(GeneratedMap, Vector2.Zero, material: IlluminantMaterials.NormalBillboard, scale: SpriteSize.Value * Vector2.One);
+                ir.Parameters.Add("ZFromDistance", new Vector4(0, DistanceZMax, DistanceZScale, 0));
+                ir.Draw(texSet, Vector2.Zero, material: IlluminantMaterials.NormalBillboard, scale: SpriteSize.Value * Vector2.One);
             };
 
             MakeSurfaces();
@@ -320,6 +335,9 @@ namespace TestGame.Scenes {
                 switch (ViewMode.Value) {
                     case "Albedo":
                         tex1 = Albedo;
+                        break;
+                    case "Distance":
+                        tex1 = Game.TextureLoader.GetDistanceField(Albedo);
                         break;
                     case "Left":
                         tex1 = InputLeft;

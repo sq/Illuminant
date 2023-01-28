@@ -5,6 +5,8 @@
 
 uniform const bool NormalsAreSigned;
 uniform const float2 ViewCoordinateScaleFactor;
+// min z offset, max z offset, distance scale
+uniform const float4 ZFromDistance;
 
 void AutoGBufferBitmapPixelShader (
     in float4 color : COLOR0,
@@ -51,6 +53,8 @@ void NormalBillboardPixelShader(
     in float4 userData : COLOR2,
     in float2 texCoord : TEXCOORD0,
     in float4 texRgn : TEXCOORD1,
+    in float2 texCoord2 : TEXCOORD2,
+    in float4 texRgn2 : TEXCOORD3,
     out float4 result : COLOR0
 ) {
     // FIXME: Without this we get weird acne at the top/left edges of billboards.
@@ -65,6 +69,12 @@ void NormalBillboardPixelShader(
 
     float relativeY = (originalPositionData.y - originalPositionData.w) * ViewCoordinateScaleFactor.y;
     float z = userData.z + (userData.y * relativeY);
+
+    if (abs(ZFromDistance.z) > 0.001) {
+        float distance = tex2D(TextureSampler2, clamp2(texCoord2, texRgn2.xy, texRgn2.zw)).r;
+        z += clamp(ZFromDistance.z * distance, ZFromDistance.x, ZFromDistance.y);
+    }
+
     result = encodeGBufferSample(
         normal, relativeY, z, isDead,
         // enable shadows
