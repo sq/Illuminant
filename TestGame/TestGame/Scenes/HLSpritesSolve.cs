@@ -218,12 +218,12 @@ namespace TestGame.Scenes {
                         above = inputCount > 2 ? CleanInput(inputs[2][index], min, range, so) : 0,
                         below = inputCount > 3 ? CleanInput(inputs[3][index], min, range, so) : -above;
 
-                    /*
                     if (float.IsNaN(left) || float.IsNaN(right) || float.IsNaN(above) || float.IsNaN(below)) {
                         OutputBuffer[index] = default;
                         continue;
                     }
 
+                    /*
                     if ((left <= -0.01) && (right <= -0.01) && (above <= -0.01)) {
                         // For pixels that are always dark, generate no normals
                         OutputBuffer[index] = default;
@@ -232,11 +232,14 @@ namespace TestGame.Scenes {
                     }
                     */
 
-                    n = new Vector4(-left, 0, iz, 0) +
-                        new Vector4(right, 0, iz, 0) +
-                        new Vector4(0, -above, iz, 0) +
-                        new Vector4(0, below, iz, 0);
-                    n *= 1f / 4f;
+                    n = new Vector4(-left, 0, iz, 0);
+                    if (inputCount > 1)
+                        n += new Vector4(right, 0, iz, 0);
+                    if (inputCount > 2)
+                        n += new Vector4(0, -above, iz, 0);
+                    if (inputCount > 3)
+                        n += new Vector4(0, below, iz, 0);
+                    n *= 1f / inputCount;
                     n.Z = z;
                     n.Normalize();
 
