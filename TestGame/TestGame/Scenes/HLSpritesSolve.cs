@@ -86,7 +86,7 @@ namespace TestGame.Scenes {
             MaxInput.Value = 200f;
             ZMagnitude.Min = 0.1f;
             ZMagnitude.Max = 2f;
-            ZMagnitude.Value = 0.5f;
+            ZMagnitude.Value = 0.8f;
             Inclination.Min = -1.0f;
             Inclination.Max = 1.0f;
             Inclination.Value = 0f;
@@ -101,7 +101,7 @@ namespace TestGame.Scenes {
             LightSize.Speed = 64;
             SpriteSize.Min = 0.1f;
             SpriteSize.Max = 3.0f;
-            SpriteSize.Value = 0.5f;
+            SpriteSize.Value = 0.9f;
             DistanceZMax.Min = 1;
             DistanceZMax.Max = 128;
             DistanceZMax.Value = 16;
@@ -113,7 +113,7 @@ namespace TestGame.Scenes {
         }
 
         public override void LoadContent () {
-            Albedo = Game.TextureLoader.LoadSync("normalgen-albedo", new TextureLoadOptions {
+            Albedo = Game.TextureLoader.LoadSync("red-albedo", new TextureLoadOptions {
                 GenerateDistanceField = true
             }, true, false);
             InputBelow = Game.TextureLoader.LoadSync("normalgen-below", new TextureLoadOptions {
@@ -399,8 +399,8 @@ namespace TestGame.Scenes {
                 if (Auto) {
                     var spriteSize = new Vector2(InputLeft.Width, InputLeft.Height) * SpriteSize;
                     var spriteCenter = new Vector2(16, 16) + (spriteSize * 0.5f);
-                    double a1 = Time.Seconds / 1,
-                        a2 = Time.Seconds / 10;
+                    double a1 = Time.Seconds / 0.9,
+                        a2 = Time.Seconds / 8.33;
                     LightPosX.Value = (float)(Math.Cos(a1) * spriteSize.X * 0.5) + spriteCenter.X;
                     LightPosY.Value = (float)(Math.Sin(a2) * spriteSize.Y * 0.5) + spriteCenter.Y;
                     LightPosZ.Value = (float)(Math.Sin(a1) * 24);
