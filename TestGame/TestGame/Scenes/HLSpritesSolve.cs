@@ -42,7 +42,7 @@ namespace TestGame.Scenes {
         [Group("Generator Settings")]
         Toggle ShadowsOnly;
         [Group("Generator Settings")]
-        Slider NumberOfInputs, ZBasis, MinInput, MaxInput, Inclination;
+        Slider NumberOfInputs, ZMagnitude, MinInput, MaxInput, Inclination;
 
         [Group("GBuffer Settings")]
         Slider DistanceZMax, DistanceZScale;
@@ -84,9 +84,9 @@ namespace TestGame.Scenes {
             MaxInput.Min = 1f;
             MaxInput.Max = 255f;
             MaxInput.Value = 200f;
-            ZBasis.Min = 0.1f;
-            ZBasis.Max = 2f;
-            ZBasis.Value = 0.5f;
+            ZMagnitude.Min = 0.1f;
+            ZMagnitude.Max = 2f;
+            ZMagnitude.Value = 0.5f;
             Inclination.Min = -1.0f;
             Inclination.Max = 1.0f;
             Inclination.Value = 0f;
@@ -174,7 +174,7 @@ namespace TestGame.Scenes {
             NumberOfInputs.Changed += eh;
             MinInput.Changed += eh;
             MaxInput.Changed += eh;
-            ZBasis.Changed += eh;
+            ZMagnitude.Changed += eh;
             Inclination.Changed += eh;
             ShadowsOnly.Changed += (s, e) => NeedGenerate = true;
         }
@@ -210,54 +210,45 @@ namespace TestGame.Scenes {
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private float CleanInput (float value, float min, float range, bool shadowsOnly) {
-            var scaled = Arithmetic.Saturate((value - min) / range);
+            var result = (value - min) / range;
             if (shadowsOnly)
-                return scaled - 1;
-            else
-                return (scaled - 0.5f) * 2f;
+                result -= 0.5f;
+            return Arithmetic.Saturate(result);
         }
 
         private void GenerateNormalsOnCPU (float[][] inputs, int inputCount) {
             NeedGenerate = false;
             var so = ShadowsOnly.Value;
-            float z = ZBasis, min = MinInput.Value / 255f, 
-                range = (MaxInput.Value - MinInput.Value) / 255f, iz = Inclination;
-            Vector4 n;
+            float zMagnitude = ZMagnitude, min = MinInput.Value / 255f, 
+                range = (MaxInput.Value - MinInput.Value) / 255f;
 
             for (int y = 0; y < GeneratedMap.Height; y++) {
                 int rowIndex = (y * GeneratedMap.Width);
                 for (int x = 0; x < GeneratedMap.Width; x++) {
                     int index = rowIndex + x;
                     float left = CleanInput(inputs[0][index], min, range, so),
-                        right = inputCount > 1 ? CleanInput(inputs[1][index], min, range, so) : -left,
+                        right = inputCount > 1 ? CleanInput(inputs[1][index], min, range, so) : 1 - left,
                         above = inputCount > 2 ? CleanInput(inputs[2][index], min, range, so) : 0,
-                        below = inputCount > 3 ? CleanInput(inputs[3][index], min, range, so) : -above;
+                        below = inputCount > 3 ? CleanInput(inputs[3][index], min, range, so) : 1 - above;
 
                     if (float.IsNaN(left) || float.IsNaN(right) || float.IsNaN(above) || float.IsNaN(below)) {
                         OutputBuffer[index] = default;
                         continue;
                     }
 
-                    /*
-                    if ((left <= -0.01) && (right <= -0.01) && (above <= -0.01)) {
-                        // For pixels that are always dark, generate no normals
-                        OutputBuffer[index] = default;
-                        // OutputBuffer[index] = new Vector4(0.5f, 0.5f, 0f, 1f);
-                        continue;
-                    }
-                    */
+                    float xDelta = right - left,
+                        yDelta = below - above;
+                    var xy = new Vector2(xDelta, yDelta);
+                    float xyLength = xy.Length(),
+                        forward = xyLength <= 0.01f
+                            ? 1f
+                            : (xyLength >= 0.98f
+                                ? 0f
+                                : (float)Math.Sqrt(1.0 - xyLength)
+                            ) * zMagnitude;
 
-                    n = new Vector4(-left, 0, iz, 0);
-                    if (inputCount > 1)
-                        n += new Vector4(right, 0, iz, 0);
-                    if (inputCount > 2)
-                        n += new Vector4(0, -above, iz, 0);
-                    if (inputCount > 3)
-                        n += new Vector4(0, below, iz, 0);
-                    n *= 1f / inputCount;
-                    n.Z = z;
+                    var n = new Vector4(xDelta, yDelta, forward, 0f);
                     n.Normalize();
-
                     n *= 0.5f;
                     n += new Vector4(0.5f);
                     n.W = 1f;
