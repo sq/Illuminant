@@ -23,7 +23,6 @@ using Squared.Render.Convenience;
 using Squared.Render.RasterShape;
 using Squared.Render.RasterStroke;
 using Squared.Util;
-using Squared.Util.Containers;
 
 namespace TestGame.Scenes {
     public class HLSpritesSolve : Scene {
@@ -74,7 +73,7 @@ namespace TestGame.Scenes {
             NumberOfInputs.Min = 1;
             NumberOfInputs.Max = 4;
             NumberOfInputs.Integral = true;
-            NumberOfInputs.Value = 2;
+            NumberOfInputs.Value = 3;
             MinInput.Min = 0f;
             MinInput.Max = 254f;
             MinInput.Value = 141f;
@@ -84,7 +83,7 @@ namespace TestGame.Scenes {
             ZBasis.Min = 0.1f;
             ZBasis.Max = 2f;
             ZBasis.Value = 0.5f;
-            Inclination.Min = 0f;
+            Inclination.Min = -1.0f;
             Inclination.Max = 1.0f;
             Inclination.Value = 0f;
             LightPosX.Min = LightPosY.Min = LightPosZ.Min = -512f;
@@ -203,44 +202,28 @@ namespace TestGame.Scenes {
                 return (scaled - 0.5f) * 2f;
         }
 
-        delegate float Evaluator (ref Vector3 candidate);
-
         private void GenerateNormalsOnCPU (float[][] inputs, int inputCount) {
             NeedGenerate = false;
             var so = ShadowsOnly.Value;
             float z = ZBasis, min = MinInput.Value / 255f, 
-                range = (MaxInput.Value - MinInput.Value) / 255f, 
-                iz = 1.0f, magnitudeLimit = 1f, minStep = 0.1f,
-                left = 0,
-                right = 0,
-                above = 0,
-                below = 0;
-
-            // light vectors that will be dotted against the normal
-            Vector3 current, 
-                lLeft = new Vector3(1, 0, Inclination),
-                lRight = new Vector3(-1, 0, Inclination),
-                lAbove = new Vector3(0, 1, Inclination),
-                lBelow = new Vector3(0, -1, Inclination),
-                half = new Vector3(0.5f);
+                range = (MaxInput.Value - MinInput.Value) / 255f, iz = Inclination;
+            Vector4 n;
 
             for (int y = 0; y < GeneratedMap.Height; y++) {
                 int rowIndex = (y * GeneratedMap.Width);
                 for (int x = 0; x < GeneratedMap.Width; x++) {
                     int index = rowIndex + x;
+                    float left = CleanInput(inputs[0][index], min, range, so),
+                        right = inputCount > 1 ? CleanInput(inputs[1][index], min, range, so) : -left,
+                        above = inputCount > 2 ? CleanInput(inputs[2][index], min, range, so) : 0,
+                        below = inputCount > 3 ? CleanInput(inputs[3][index], min, range, so) : -above;
 
-                    // target dot products
-                    left = CleanInput(inputs[0][index], min, range, so);
-                    right = inputCount > 1 ? CleanInput(inputs[1][index], min, range, so) : -left;
-                    above = inputCount > 2 ? CleanInput(inputs[2][index], min, range, so) : 0;
-                    below = inputCount > 3 ? CleanInput(inputs[3][index], min, range, so) : -above;
-
+                    /*
                     if (float.IsNaN(left) || float.IsNaN(right) || float.IsNaN(above) || float.IsNaN(below)) {
                         OutputBuffer[index] = default;
                         continue;
                     }
 
-                    /*
                     if ((left <= -0.01) && (right <= -0.01) && (above <= -0.01)) {
                         // For pixels that are always dark, generate no normals
                         OutputBuffer[index] = default;
@@ -249,67 +232,23 @@ namespace TestGame.Scenes {
                     }
                     */
 
-                    left = -left;
-                    right = -right;
-                    above = -above;
-                    below = -below;
+                    n = new Vector4(-left, 0, iz, 0) +
+                        new Vector4(right, 0, iz, 0) +
+                        new Vector4(0, -above, iz, 0) +
+                        new Vector4(0, below, iz, 0);
+                    n *= 1f / 4f;
+                    n.Z = z;
+                    n.Normalize();
 
-                    // First search on the x axis for the normal that produces the closest set of dot products
-                    current = new Vector3(0, 0, iz);
-                    refine(ref current, ref current.X);
-                    refine(ref current, ref current.Y);
-                    current.Normalize();
-                    current *= half;
-                    current += half;
+                    n *= 0.5f;
+                    n += new Vector4(0.5f);
+                    n.W = 1f;
 
-                    OutputBuffer[index] = new Vector4(current, 1);
+                    OutputBuffer[index] = n;
                 }
             }
 
             GeneratedMap.SetData(OutputBuffer);
-
-            float evaluate (Vector3 candidate) {
-                candidate.Normalize();
-
-                Vector3.Dot(ref lLeft, ref candidate, out float result);
-                result = Math.Abs(result - left);
-
-                if (inputCount > 1) {
-                    Vector3.Dot(ref lRight, ref candidate, out float b);
-                    result = Math.Max(result, Math.Abs(b - right));
-                }
-
-                if (inputCount > 2) {
-                    Vector3.Dot(ref lAbove, ref candidate, out float c);
-                    result = Math.Max(result, Math.Abs(c - above));
-                }
-
-                if (inputCount > 3) {
-                    Vector3.Dot(ref lBelow, ref candidate, out float d);
-                    result = Math.Max(result, Math.Abs(d - below));
-                }
-
-                return result;
-            }
-
-            void refine (ref Vector3 value, ref float element) {
-                // FIXME: Replace with binary search
-                var currentElement = element;
-                var currentScore = evaluate(value);
-
-                for (float test = -magnitudeLimit, step = 0.01f; test <= magnitudeLimit; test += step) {
-                    currentElement = element;
-                    element = test;
-                    var testScore = evaluate(value);
-                    if (testScore > currentScore) {
-                        element = currentElement;
-                    } else {
-                        currentScore = testScore;
-                    }
-                }
-
-                ;
-            }
         }
 
         public override void UnloadContent () {
