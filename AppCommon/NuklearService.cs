@@ -217,8 +217,8 @@ namespace Framework {
 
             glyph->uv0 = new nk_vec2(texBounds.TopLeft.X, texBounds.TopLeft.Y);
             glyph->uv1 = new nk_vec2(texBounds.BottomRight.X, texBounds.BottomRight.Y);
-            glyph->width = result.BoundsInTexture.Size.X * result.Texture.Instance.Width * FontScale;
-            glyph->height = (result.BoundsInTexture.Size.Y * result.Texture.Instance.Height * FontScale) + VerticalPadding;
+            glyph->width = texBounds.Size.X * result.Texture.Instance.Width * FontScale;
+            glyph->height = (texBounds.Size.Y * result.Texture.Instance.Height * FontScale) + VerticalPadding;
             glyph->xadvance = result.Width * FontScale;
         }
 

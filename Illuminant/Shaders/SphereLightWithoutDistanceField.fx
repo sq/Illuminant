@@ -13,7 +13,7 @@ void SphereLightWithoutDistanceFieldPixelShader (
 ) {
     float3 shadedPixelPosition, shadedPixelNormal;
     bool enableShadows, fullbright;
-    sampleGBuffer(
+    float3 cameraPosition = sampleGBuffer(
         GET_VPOS,
         shadedPixelPosition, shadedPixelNormal, enableShadows, fullbright
     );
@@ -28,7 +28,7 @@ void SphereLightWithoutDistanceFieldPixelShader (
         shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties
     );
     float specularity = CalcSphereLightSpecularity(
-        shadedPixelPosition, shadedPixelNormal, lightCenter,
+        cameraPosition, shadedPixelPosition, shadedPixelNormal, lightCenter,
         specular.a
     );
 

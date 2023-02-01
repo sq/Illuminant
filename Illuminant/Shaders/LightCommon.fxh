@@ -48,8 +48,9 @@ sampler LightProbeNormalSampler : register(s4) {
     MagFilter = POINT;
 };
 
-// returns world position data from the gbuffer at the specified screen position
-void sampleGBuffer (
+// returns approximate camera position
+// calculates world position data from the gbuffer at the specified screen position
+float3 sampleGBuffer (
     float2 screenPositionPx,
     out float3 worldPosition,
     out float3 normal,
@@ -58,6 +59,7 @@ void sampleGBuffer (
 ) {
     enableShadows = true;
     fullbright = false;
+    float3 cameraPosition;
 
     PREFER_BRANCH
     if (any(GBufferTexelSizeAndMisc.xy)) {
@@ -88,6 +90,7 @@ void sampleGBuffer (
         worldZ *= 512;
 
         screenPositionPx /= getEnvironmentRenderScale();
+        cameraPosition = float3(screenPositionPx.xy, getMaximumZ() + 0.01);
 
         worldPosition = float3(
             (screenPositionPx.xy + float2(0, relativeY)) / GetViewportScale() + GetViewportPosition(),
@@ -103,6 +106,7 @@ void sampleGBuffer (
         }
     } else {
         screenPositionPx /= getEnvironmentRenderScale();
+        cameraPosition = float3(screenPositionPx.xy, getMaximumZ() + 0.01);
 
         worldPosition = float3(
             screenPositionPx.xy / GetViewportScale() + GetViewportPosition(),
@@ -110,6 +114,8 @@ void sampleGBuffer (
         );
         normal = float3(0, 0, 1);
     }
+
+    return cameraPosition;
 }
 
 float computeNormalFactor (
@@ -165,14 +171,12 @@ float computeSphereLightOpacity (
 }
 
 float CalcSphereLightSpecularity (
+    in float3 cameraPosition,
     in float3 shadedPixelPosition,
     in float3 shadedPixelNormal,
     in float3 lightCenter,
     in float power
 ) {
-    // FIXME: We want to get the actual screen position from the g buffer sampling stage,
-    //  since in 2.5D the pixel can have a Y offset which we would want to take into account
-    float3 cameraPosition = shadedPixelPosition - float3(0, 0, 1);
     float3 lightDirection = shadedPixelPosition - lightCenter;
     float3 h = normalize(normalize(cameraPosition - shadedPixelPosition) - lightDirection);
     return pow(saturate(dot(h, shadedPixelNormal)), power);
