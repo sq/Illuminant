@@ -2,8 +2,8 @@
 // These values produce a very rapid climb up to 1.0 (we don't really want
 //  smooth dot attenuation, we're just using it to mask light from behind
 //  surfaces)
-#define DOT_OFFSET     0.01
-#define DOT_RAMP_RANGE 0.33
+#define DOT_OFFSET     0.1
+#define DOT_RAMP_RANGE 0.1
 // The final output from the dot computation is raised to this power so
 #define DOT_EXPONENT   0.85
 
