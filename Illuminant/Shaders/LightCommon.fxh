@@ -3,7 +3,7 @@
 //  smooth dot attenuation, we're just using it to mask light from behind
 //  surfaces)
 #define DOT_OFFSET     0.01
-#define DOT_RAMP_RANGE 0.2
+#define DOT_RAMP_RANGE 0.33
 // The final output from the dot computation is raised to this power so
 #define DOT_EXPONENT   0.85
 
@@ -139,6 +139,13 @@ float computeSphereLightOpacity (
     float  distance       = length(distance3);
     float  distanceFactor = 1 - saturate((distance - lightRadius) / lightRampLength);
 
+    if (getLightOcclusion() > 0) {
+        // If the light is too far behind the pixel being shaded, fully occlude it
+        // This ensures that we don't get false lighting from behind surfaces when the angle
+        //  between the light and the surface becomes too shallow
+        distanceFactor *= 1 - saturate(distance3.z / getLightOcclusion());
+    }
+
     float3 lightNormal = distance3 / distance;
     float normalFactor = computeNormalFactor(lightNormal, shadedPixelNormal);
 
@@ -155,6 +162,20 @@ float computeSphereLightOpacity (
     else
         // HACK: If the point is inside the light's radius we ensure it is always fully lit
         return saturate((normalFactor * distanceFactor) + saturate(lightRadius - distance));
+}
+
+float CalcSphereLightSpecularity (
+    in float3 shadedPixelPosition,
+    in float3 shadedPixelNormal,
+    in float3 lightCenter,
+    in float power
+) {
+    // FIXME: We want to get the actual screen position from the g buffer sampling stage,
+    //  since in 2.5D the pixel can have a Y offset which we would want to take into account
+    float3 cameraPosition = shadedPixelPosition - float3(0, 0, 1);
+    float3 lightDirection = shadedPixelPosition - lightCenter;
+    float3 h = normalize(normalize(cameraPosition - shadedPixelPosition) - lightDirection);
+    return pow(saturate(dot(h, shadedPixelNormal)), power);
 }
 
 float computeDirectionalLightOpacity (

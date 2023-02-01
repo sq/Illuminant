@@ -45,7 +45,9 @@ namespace TestGame.Scenes {
             EnablePointLight,
             InPlaceResolve;
         [Group("Lighting")]
-        Slider MaximumLightStrength;
+        Slider MaximumLightStrength,
+            SpecularBrightness,
+            SpecularPower;
         [Group("Dithering")]
         [Items("None")]
         [Items("Pre")]
@@ -137,6 +139,14 @@ namespace TestGame.Scenes {
             MaximumEncodedDistance.Speed = 16;
             MaximumEncodedDistance.Integral = true;
             MaximumEncodedDistance.Changed += (s, e) => CreateDistanceField();
+
+            SpecularBrightness.Min = 0f;
+            SpecularBrightness.Max = 2f;
+            SpecularBrightness.Value = 0f;
+
+            SpecularPower.Min = 0.05f;
+            SpecularPower.Max = 64f;
+            SpecularPower.Value = 16f;
 
             InitUnitSlider(DitherStrength, DitherBandSize, DitherRangeMax, DitherRangeMin);
 
@@ -544,6 +554,8 @@ namespace TestGame.Scenes {
 
                 var mousePos = new Vector3(ms.X, ms.Y, LightZ);
 
+                MovableLight.SpecularColor = new Vector3(SpecularBrightness);
+                MovableLight.SpecularPower = SpecularPower;
                 MovableLight.RampTexture.Set(UseRampTexture ? Game.RampTexture : null);
 
                 if (Deterministic) {

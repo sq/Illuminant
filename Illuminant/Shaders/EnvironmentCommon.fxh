@@ -22,6 +22,10 @@ float getInvZToYMultiplier () {
     return EnvironmentZToY.y;
 }
 
+float getLightOcclusion () {
+    return EnvironmentZToY.z;
+}
+
 float2 getEnvironmentRenderScale () {
     return EnvironmentZAndScale.zw;
 }

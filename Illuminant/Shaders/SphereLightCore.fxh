@@ -18,6 +18,7 @@ void SphereLightVertexShader(
     // ao radius, distance falloff, y falloff factor, ao opacity
     inout float4 moreLightProperties : TEXCOORD3,
     inout float4 color               : TEXCOORD4,
+    inout float4 specular            : TEXCOORD5,
     out float3 worldPosition         : POSITION1,
     out float4 result                : POSITION0
 ) {

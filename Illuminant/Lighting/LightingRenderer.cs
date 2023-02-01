@@ -678,6 +678,7 @@ namespace Squared.Illuminant {
                 ZToYMultiplier = Configuration.TwoPointFiveD
                     ? Environment.ZToYMultiplier
                     : 0.0f,
+                LightOcclusion = Configuration.LightOcclusion,
                 RenderScale = Configuration.RenderScale
             };
         }
@@ -1156,7 +1157,8 @@ namespace Squared.Illuminant {
             vertex.LightPosition3 = vertex.LightPosition2 = vertex.LightPosition1 = new Vector4(lightSource.Position, 0);
             var color = lightSource.Color;
             color.W *= (lightSource.Opacity * intensityScale);
-            vertex.Color2 = vertex.Color1 = color;
+            vertex.Color1 = color;
+            vertex.Color2 = new Vector4(lightSource.SpecularColor, lightSource.SpecularPower);
             vertex.LightProperties.X = lightSource.Radius;
             vertex.LightProperties.Y = lightSource.RampLength;
             vertex.LightProperties.Z = (int)lightSource.RampMode;

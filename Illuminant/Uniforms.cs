@@ -14,6 +14,7 @@ namespace Squared.Illuminant.Uniforms {
     public struct Environment {
         // GroundZ, MaximumZ, ZToYMultiplier, InvZToYMultiplier
         internal Vector4 _ZAndScale;
+        // ZToYMultiplier, InvZToYMultiplier, LightOcclusion, unused
         internal Vector4 _ZToY;
 
         internal void SetIntoParameters (EffectParameterCollection parameters) {
@@ -54,6 +55,11 @@ namespace Squared.Illuminant.Uniforms {
                 else
                     _ZToY.Y = 1.0f / value;
             }
+        }
+
+        public float LightOcclusion {
+            get => _ZToY.Z;
+            set => _ZToY.Z = value;
         }
 
         public Vector2 RenderScale {

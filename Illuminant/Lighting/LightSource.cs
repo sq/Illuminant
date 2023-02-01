@@ -204,7 +204,9 @@ namespace Squared.Illuminant {
         /// Note that this color is a Vector4 so that you can use HDR (greater than one) lighting values.
         /// Alpha is *not* premultiplied (maybe it should be?)
         /// </summary>
-        public Vector4   Color = Vector4.One;
+        public Vector4 Color = Vector4.One;
+        public Vector3 SpecularColor = Vector3.Zero;
+        public float SpecularPower = 2.0f;
         /// <summary>
         /// Uniformly obscures light if it is within N pixels of any obstacle. This produces
         ///  a 'blob shadow' around volumes within the distance field.

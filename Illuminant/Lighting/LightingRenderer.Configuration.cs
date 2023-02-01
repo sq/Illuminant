@@ -147,6 +147,13 @@ namespace Squared.Illuminant {
         /// </summary>
         public float ProjectorMipBias = -0.33f;
 
+        /// <summary>
+        /// Block lights this far behind the shaded pixel even if the vector between the light
+        ///  and the pixel would normally cause light to be received. Helps suppress incorrect
+        ///  light at shallow angles, but may look wrong in 2.5D.
+        /// </summary>
+        public float LightOcclusion = 0f;
+
         public RendererConfiguration (
             int maxWidth, int maxHeight, bool highQuality,
             bool enableBrightnessEstimation = false,

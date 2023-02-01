@@ -145,6 +145,7 @@ namespace TestGame.Scenes {
                         MaxConeRadius = 24,
                     },
                     EnableGBuffer = true,
+                    LightOcclusion = 32f,
                 }, Game.IlluminantMaterials
             );
             IlluminantMaterials = Renderer.IlluminantMaterials;

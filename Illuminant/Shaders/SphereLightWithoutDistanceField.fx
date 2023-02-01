@@ -7,6 +7,7 @@ void SphereLightWithoutDistanceFieldPixelShader (
     in  float4 lightProperties     : TEXCOORD2,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : TEXCOORD4,
+    in  float4 specular            : TEXCOORD5,
     ACCEPTS_VPOS,
     out float4 result              : COLOR0
 ) {
@@ -26,8 +27,15 @@ void SphereLightWithoutDistanceFieldPixelShader (
     float opacity = SphereLightPixelCoreNoDF(
         shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties
     );
+    float specularity = CalcSphereLightSpecularity(
+        shadedPixelPosition, shadedPixelNormal, lightCenter,
+        specular.a
+    );
 
-    result = float4(color.rgb * color.a * opacity, 1);
+    result = float4(
+        (color.rgb * color.a * opacity) +
+        (specular.rgb * specularity * opacity), 1
+    );
 }
 
 technique SphereLightWithoutDistanceField {

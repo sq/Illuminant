@@ -48,7 +48,9 @@ namespace TestGame.Scenes {
         Slider DistanceZMax, DistanceZScale;
 
         [Group("Light Settings")]
-        Slider LightPosX, LightPosY, LightPosZ, LightSize;
+        Slider LightPosX, LightPosY, LightPosZ, LightSize, LightOcclusion,
+            SpecularBrightness,
+            SpecularPower;
         [Group("Light Settings")]
         Toggle Auto;
 
@@ -99,6 +101,9 @@ namespace TestGame.Scenes {
             LightSize.Max = 2048;
             LightSize.Value = 1024;
             LightSize.Speed = 64;
+            LightOcclusion.Min = 0f;
+            LightOcclusion.Max = 128f;
+            LightOcclusion.Value = 24f;
             SpriteSize.Min = 0.1f;
             SpriteSize.Max = 3.0f;
             SpriteSize.Value = 0.9f;
@@ -110,6 +115,12 @@ namespace TestGame.Scenes {
             DistanceZScale.Value = -1f;
             ShadowsOnly.Value = true;
             Auto.Value = true;
+            SpecularBrightness.Min = 0f;
+            SpecularBrightness.Max = 2f;
+            SpecularBrightness.Value = 0f;
+            SpecularPower.Min = 0.05f;
+            SpecularPower.Max = 64f;
+            SpecularPower.Value = 16f;
         }
 
         public override void LoadContent () {
@@ -155,6 +166,7 @@ namespace TestGame.Scenes {
                     },
                     RenderGroundPlane = false,
                     EnableGBuffer = true,
+                    LightOcclusion = 32f,
                 }, Game.IlluminantMaterials
             );
             IlluminantMaterials = Renderer.IlluminantMaterials;
@@ -283,6 +295,7 @@ namespace TestGame.Scenes {
             }
             */
 
+            Renderer.Configuration.LightOcclusion = LightOcclusion;
             Renderer.UpdateFields(frame, -2);
 
             using (var lm = BatchGroup.ForRenderTarget(
@@ -400,7 +413,7 @@ namespace TestGame.Scenes {
                     var spriteSize = new Vector2(InputLeft.Width, InputLeft.Height) * SpriteSize;
                     var spriteCenter = new Vector2(16, 16) + (spriteSize * 0.5f);
                     double a1 = Time.Seconds / 0.9,
-                        a2 = Time.Seconds / 8.33;
+                        a2 = Time.Seconds / 6.33;
                     LightPosX.Value = (float)(Math.Cos(a1) * spriteSize.X * 0.5) + spriteCenter.X;
                     LightPosY.Value = (float)(Math.Sin(a2) * spriteSize.Y * 0.5) + spriteCenter.Y;
                     LightPosZ.Value = (float)(Math.Sin(a1) * 24);
@@ -409,6 +422,8 @@ namespace TestGame.Scenes {
                 var l = Environment.Lights.OfType<SphereLightSource>().First();
                 l.RampLength = LightSize.Value;
                 l.Position = pos;
+                l.SpecularColor = new Vector3(SpecularBrightness);
+                l.SpecularPower = SpecularPower;
 
                 Game.IsMouseVisible = true;
             }

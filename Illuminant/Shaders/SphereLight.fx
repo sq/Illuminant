@@ -10,6 +10,7 @@ void SphereLightPixelShader (
     in  float4 lightProperties     : TEXCOORD2,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : TEXCOORD4,
+    in  float4 specular            : TEXCOORD5,
     ACCEPTS_VPOS,
     out float4 result              : COLOR0
 ) {
@@ -29,10 +30,18 @@ void SphereLightPixelShader (
     lightProperties.w *= enableShadows;
 
     float opacity = SphereLightPixelCore(
-        shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties
+        shadedPixelPosition, shadedPixelNormal, lightCenter, 
+        lightProperties, moreLightProperties
+    );
+    float specularity = CalcSphereLightSpecularity(
+        shadedPixelPosition, shadedPixelNormal, lightCenter,
+        specular.a
     );
 
-    result = float4(color.rgb * color.a * opacity, 1);
+    result = float4(
+        (color.rgb * color.a * opacity) +
+        (specular.rgb * specularity * opacity), 1
+    );
 }
 
 void SphereLightWithDistanceRampPixelShader(
@@ -41,6 +50,7 @@ void SphereLightWithDistanceRampPixelShader(
     in  float4 lightProperties     : TEXCOORD2,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : TEXCOORD4,
+    in  float4 specular            : TEXCOORD5,
     ACCEPTS_VPOS,
     out float4 result              : COLOR0
 ) {
@@ -62,8 +72,15 @@ void SphereLightWithDistanceRampPixelShader(
     float opacity = SphereLightPixelCoreWithRamp(
         shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties
     );
+    float specularity = CalcSphereLightSpecularity(
+        shadedPixelPosition, shadedPixelNormal, lightCenter,
+        specular.a
+    );
 
-    result = float4(color.rgb * color.a * opacity, 1);
+    result = float4(
+        (color.rgb * color.a * opacity) +
+        (specular.rgb * specularity * opacity), 1
+    );
 }
 
 technique SphereLight {
