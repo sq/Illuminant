@@ -153,7 +153,7 @@ namespace TestGame.Scenes {
                     var obs = new LightObstruction(
                         LightObstructionType.Box,
                         new Vector3(x * tileSize, y * tileSize, 0),
-                        new Vector3(20f, 20f, rng.Next(32, 200))
+                        new Vector3(20f, 20f, rng.Next(32, 160))
                     );
                     Environment.Obstructions.Add(obs);
                     var hvBounds = obs.Bounds3;

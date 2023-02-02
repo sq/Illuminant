@@ -281,6 +281,10 @@ namespace Squared.Illuminant {
                 LoadOneMaterial(effects, out HeightFromDistance,
                     "ProcessHeightmap", "HeightFromDistance"
                 );
+
+                LoadOneMaterial(effects, out NormalsFromLightmaps,
+                    "ProcessNormals", "NormalsFromLightmaps"
+                );
             }
         }
     }

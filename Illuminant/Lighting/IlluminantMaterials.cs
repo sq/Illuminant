@@ -43,6 +43,7 @@ namespace Squared.Illuminant {
         public Material CalculateLuminance;
         public Material ScreenSpaceVectorWarp, ScreenSpaceNormalRefraction, ScreenSpaceHeightmapRefraction;
         public Material HeightmapToNormals, HeightmapToDisplacement, HeightFromDistance;
+        public Material NormalsFromLightmaps;
         private EffectProvider OwnedEffects;
 
         public bool IsLoaded { get; internal set; }

@@ -60,8 +60,8 @@ namespace TestGame.Scenes {
         private Texture2D[] Inputs;
         private float[][] InputBuffers;
         private Vector4[] OutputBuffer;
-        // private AutoRenderTarget GeneratedMap;
-        private Texture2D GeneratedMap;
+        private AutoRenderTarget GeneratedMap;
+        // private Texture2D GeneratedMap;
         private IlluminantMaterials IlluminantMaterials;
 
         LightingEnvironment Environment;
@@ -173,7 +173,7 @@ namespace TestGame.Scenes {
 
             Renderer.OnRenderGBuffer += (LightingRenderer lr, ref ImperativeRenderer ir) => {
                 var texSet = new TextureSet(
-                    GeneratedMap, Game.TextureLoader.GetDistanceField(Albedo)
+                    GeneratedMap.Get(), Game.TextureLoader.GetDistanceField(Albedo)
                 );
                 ir.Parameters.Add("NormalsAreSigned", HighPrecisionNormals);
                 ir.Parameters.Add("ZFromDistance", new Vector4(0, DistanceZMax, DistanceZScale, 0));
@@ -197,8 +197,8 @@ namespace TestGame.Scenes {
             var format = HighPrecisionNormals ? SurfaceFormat.Vector4 : SurfaceFormat.Color;
             if ((GeneratedMap == null) || (GeneratedMap.Width != w) || (GeneratedMap.Height != h)) {
                 Game.RenderCoordinator.DisposeResource(GeneratedMap);
-                // GeneratedMap = new AutoRenderTarget(Game.RenderCoordinator, w, h, false, format);
-                GeneratedMap = new Texture2D(Game.GraphicsDevice, w, h, false, SurfaceFormat.Vector4);
+                GeneratedMap = new AutoRenderTarget(Game.RenderCoordinator, w, h, false, format);
+                // GeneratedMap = new Texture2D(Game.GraphicsDevice, w, h, false, SurfaceFormat.Vector4);
             }
             Lightmap = new RenderTarget2D(
                 Game.GraphicsDevice, Width, Height, false,
@@ -228,11 +228,13 @@ namespace TestGame.Scenes {
             return Arithmetic.Saturate(result);
         }
 
+        /*
         private void GenerateNormalsOnCPU (float[][] inputs, int inputCount) {
             NeedGenerate = false;
             var so = ShadowsOnly.Value;
-            float zMagnitude = ZMagnitude, min = MinInput.Value / 255f, 
-                range = (MaxInput.Value - MinInput.Value) / 255f;
+            float zMagnitude = ZMagnitude, min = MinInput.Value / 255f,
+                range = (MaxInput.Value - MinInput.Value) / 255f,
+                inclination = Inclination.Value;
 
             for (int y = 0; y < GeneratedMap.Height; y++) {
                 int rowIndex = (y * GeneratedMap.Width);
@@ -242,11 +244,6 @@ namespace TestGame.Scenes {
                         right = inputCount > 1 ? CleanInput(inputs[1][index], min, range, so) : 1 - left,
                         above = inputCount > 2 ? CleanInput(inputs[2][index], min, range, so) : 0,
                         below = inputCount > 3 ? CleanInput(inputs[3][index], min, range, so) : 1 - above;
-
-                    if (float.IsNaN(left) || float.IsNaN(right) || float.IsNaN(above) || float.IsNaN(below)) {
-                        OutputBuffer[index] = default;
-                        continue;
-                    }
 
                     float xDelta = right - left,
                         yDelta = below - above;
@@ -259,7 +256,7 @@ namespace TestGame.Scenes {
                                 : (float)Math.Sqrt(1.0 - xyLength)
                             ) * zMagnitude;
 
-                    var n = new Vector4(xDelta, yDelta, forward, 0f);
+                    var n = new Vector4(xDelta, yDelta, forward + inclination, 0f);
                     n.Normalize();
                     n *= 0.5f;
                     n += new Vector4(0.5f);
@@ -271,6 +268,7 @@ namespace TestGame.Scenes {
 
             GeneratedMap.SetData(OutputBuffer);
         }
+        */
 
         public override void UnloadContent () {
         }
@@ -278,36 +276,41 @@ namespace TestGame.Scenes {
         public override void Draw (Frame frame) {
             var now = (float)Time.Seconds;
 
+            /*
             if (NeedGenerate)
                 GenerateNormalsOnCPU(InputBuffers, (int)NumberOfInputs.Value);
+            */
 
-            /*
-
-            using (var gm = BatchGroup.ForRenderTarget(frame, -3, GeneratedMap)) {
-                var ir = new ImperativeRenderer(gm, Game.Materials, blendState: BlendState.NonPremultiplied);
+            using (var gm = BatchGroup.ForRenderTarget(
+                frame, -3, GeneratedMap,
+                viewTransform: ViewTransform.CreateOrthographic(
+                    GeneratedMap.Width, GeneratedMap.Height
+                ), materialSet: Game.Materials
+            )) {
+                var ir = new ImperativeRenderer(gm, Game.Materials, blendState: BlendState.Opaque);
                 ir.Clear(layer: 0, value: HighPrecisionNormals ? Vector4.Zero : new Vector4(0.5f, 0.5f, 0.5f, 0f));
 
-                var tex1 = SpriteHeight;
-                Material m = IlluminantMaterials.HeightmapToNormals;
+                var textures = new TextureSet(InputLeft, InputRight);
+                Material m = IlluminantMaterials.NormalsFromLightmaps;
+                ir.Parameters.Add("AboveTexture", InputAbove);
+                ir.Parameters.Add("BelowTexture", InputBelow);
+                ir.Parameters.Add("ShadowsOnly", ShadowsOnly.Value);
+                ir.Parameters.Add("InputCount", (int)NumberOfInputs.Value);
+                ir.Parameters.Add("Configuration1", new Vector4(MinInput / 255.0f, MaxInput / 255.0f, ZMagnitude, Inclination));
 
-                if (tex1 != null)
-                    ir.Draw(tex1, Vector2.Zero, scale: SpriteSize.Value * Vector2.One, material: m);
+                var dc = new BitmapDrawCall(textures, Vector2.Zero);
+
+                ir.Draw(ref dc, material: m);
             }
-            */
 
             Renderer.Configuration.LightOcclusion = LightOcclusion;
             Renderer.UpdateFields(frame, -2);
 
             using (var lm = BatchGroup.ForRenderTarget(
                 frame, -1, Lightmap,
-                (dm, _) => {
-                    Game.Materials.PushViewTransform(ViewTransform.CreateOrthographic(
-                        Width, Height
-                    ));
-                },
-                (dm, _) => {
-                    Game.Materials.PopViewTransform();
-                }
+                viewTransform: ViewTransform.CreateOrthographic(
+                    Width, Height
+                ), materialSet: Game.Materials
             )) {
                 ClearBatch.AddNew(lm, 0, Game.Materials.Clear, clearColor: Color.Black);
 
@@ -357,7 +360,7 @@ namespace TestGame.Scenes {
                         break;
                     case "Normals":
                         tex1 = new AbstractTextureReference(GeneratedMap);
-                        bs = BlendState.NonPremultiplied;
+                        bs = BlendState.Opaque;
                         break;
                     case "Lightmap":
                         tex1 = new AbstractTextureReference(Lightmap);
