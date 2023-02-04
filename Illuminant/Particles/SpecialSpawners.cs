@@ -195,7 +195,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             }
         }
 
-        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
+        protected override void SetParameters (ParticleEngine engine, MaterialEffectParameters parameters, float now, int frameIndex) {
             base.SetParameters(engine, parameters, now, frameIndex);
 
             var tex = Texture.Instance;
@@ -416,7 +416,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             return materials.SpawnFeedback;
         }
 
-        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
+        protected override void SetParameters (ParticleEngine engine, MaterialEffectParameters parameters, float now, int frameIndex) {
             base.SetParameters(engine, parameters, now, frameIndex);
 
             var life = Life.Constant.Evaluate(now, engine.ResolveSingle);

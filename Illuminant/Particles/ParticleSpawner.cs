@@ -197,7 +197,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             RateError += numUnspawned;
         }
 
-        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
+        protected override void SetParameters (ParticleEngine engine, MaterialEffectParameters parameters, float now, int frameIndex) {
             var ro = parameters["RandomnessOffset"];
             if (ro == null)
                 return;
@@ -372,7 +372,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             return result;
         }
 
-        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
+        protected override void SetParameters (ParticleEngine engine, MaterialEffectParameters parameters, float now, int frameIndex) {
             base.SetParameters(engine, parameters, now, frameIndex);
 
             var count = 1 + AdditionalPositions.Count;

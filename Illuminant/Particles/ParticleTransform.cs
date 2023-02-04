@@ -24,13 +24,13 @@ namespace Squared.Illuminant.Particles.Transforms {
     internal interface IParticleTransform {
         string Label { get; }
         Material GetMaterial (ParticleMaterials materials);
-        void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex);
+        void SetParameters (ParticleEngine engine, MaterialEffectParameters parameters, float now, int frameIndex);
         Action<DeviceManager, object> BeforeDraw { get; }
         Action<DeviceManager, object> AfterDraw { get; }
         bool IsAnalyzer { get; }
     }
 
-    public delegate void ParameterSetter (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex);
+    public delegate void ParameterSetter (ParticleEngine engine, MaterialEffectParameters parameters, float now, int frameIndex);
 
     public class TransformArea {
         public AreaType Type = AreaType.None;
@@ -89,8 +89,7 @@ namespace Squared.Illuminant.Particles.Transforms {
                 var system = up.System;
                 var engine = system.Engine;
                 var m = up.Material;
-                var e = m?.Effect;
-                var p = e?.Parameters;
+                var p = m?.Parameters;
 
                 var curr = up.Curr;
                 if (!IsValidUpdateTarget(curr))
@@ -229,7 +228,7 @@ namespace Squared.Illuminant.Particles.Transforms {
         internal readonly UpdateHandler Handler;
 
         protected abstract Material GetMaterial (ParticleMaterials materials);
-        protected abstract void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex);
+        protected abstract void SetParameters (ParticleEngine engine, MaterialEffectParameters parameters, float now, int frameIndex);
 
         public string Label { get; set; }
         public bool IsAnalyzer { get; protected set; }
@@ -243,11 +242,11 @@ namespace Squared.Illuminant.Particles.Transforms {
             return GetMaterial(materials);
         }
 
-        void IParticleTransform.SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
+        void IParticleTransform.SetParameters (ParticleEngine engine, MaterialEffectParameters parameters, float now, int frameIndex) {
             SetParameters(engine, parameters, now, frameIndex);
         }
 
-        protected bool BindRandomnessTexture (ParticleEngine e, EffectParameterCollection p, bool highPrecision) {
+        protected bool BindRandomnessTexture (ParticleEngine e, MaterialEffectParameters p, bool highPrecision) {
             var result = false;
 
             var rt = p["RandomnessTexture"];
@@ -308,7 +307,7 @@ namespace Squared.Illuminant.Particles.Transforms {
         public Vector2? CategoryFilter = null;
         public TransformArea Area = null;
 
-        public static void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, TransformArea area) {
+        public static void SetParameters (ParticleEngine engine, MaterialEffectParameters parameters, float now, TransformArea area) {
             if (area != null) {
                 parameters["AreaType"].SetValue((int)area.Type);
                 parameters["AreaCenter"].SetValue(area.Center.Evaluate(now, engine.ResolveVector3));
@@ -323,7 +322,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             }
         }
 
-        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
+        protected override void SetParameters (ParticleEngine engine, MaterialEffectParameters parameters, float now, int frameIndex) {
             SetParameters(engine, parameters, now, Area);
             parameters["Strength"]?.SetValue(Strength);
             parameters["CategoryFilter"]?.SetValue(CategoryFilter ?? new Vector2(-9999, 9999));

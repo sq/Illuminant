@@ -35,7 +35,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             };
         }
 
-        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
+        protected override void SetParameters (ParticleEngine engine, MaterialEffectParameters parameters, float now, int frameIndex) {
             base.SetParameters(engine, parameters, now, frameIndex);
             parameters["TimeDivisor"].SetValue(CyclesPerSecond.HasValue ? Uniforms.ParticleSystem.VelocityConstantScale / CyclesPerSecond.Value : -1);
             parameters["PositionAdd"].SetValue(new Vector4(Position.Add.Evaluate(now, engine.ResolveVector3), 0));
@@ -58,7 +58,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             Position = Velocity = Matrix.Identity;
         }
 
-        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
+        protected override void SetParameters (ParticleEngine engine, MaterialEffectParameters parameters, float now, int frameIndex) {
             base.SetParameters(engine, parameters, now, frameIndex);
             parameters["TimeDivisor"].SetValue(CyclesPerSecond.HasValue ? Uniforms.ParticleSystem.VelocityConstantScale / CyclesPerSecond.Value : -1);
             parameters["PositionMatrix"].SetValue(Position);
@@ -116,7 +116,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             Velocity = new GTParameters();
         }
 
-        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
+        protected override void SetParameters (ParticleEngine engine, MaterialEffectParameters parameters, float now, int frameIndex) {
             base.SetParameters(engine, parameters, now, frameIndex);
             parameters["TimeDivisor"].SetValue(CyclesPerSecond.HasValue ? Uniforms.ParticleSystem.VelocityConstantScale / CyclesPerSecond.Value : -1);
             var position = Position.GetMatrix(engine, now);
@@ -240,7 +240,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             t = (float)((now - LastUChangeWhen) / intervalSecs);
         }
 
-        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
+        protected override void SetParameters (ParticleEngine engine, MaterialEffectParameters parameters, float now, int frameIndex) {
             base.SetParameters(engine, parameters, now, frameIndex);
 
             if (!BindRandomnessTexture(engine, parameters, true))
@@ -288,7 +288,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             SpaceScale = Vector2.One;
         }
 
-        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
+        protected override void SetParameters (ParticleEngine engine, MaterialEffectParameters parameters, float now, int frameIndex) {
             base.SetParameters(engine, parameters, now, frameIndex);
 
             var scale = SpaceScale.Evaluate(now, engine.ResolveVector2);
@@ -344,7 +344,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             return materials.Gravity;
         }
 
-        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
+        protected override void SetParameters (ParticleEngine engine, MaterialEffectParameters parameters, float now, int frameIndex) {
             if (Attractors.Count > MaxAttractors)
                 throw new Exception("Maximum number of attractors per instance is " + MaxAttractors);
 
@@ -419,10 +419,6 @@ namespace Squared.Illuminant.Particles.Transforms {
 
         protected override Material GetMaterial (ParticleMaterials materials) {
             return materials.CollectParticles;
-        }
-
-        protected override void SetParameters (ParticleEngine engine, EffectParameterCollection parameters, float now, int frameIndex) {
-            base.SetParameters(engine, parameters, now, frameIndex);
         }
 
         public override void AfterFrame (ParticleEngine engine) {

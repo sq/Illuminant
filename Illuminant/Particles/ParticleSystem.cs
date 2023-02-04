@@ -234,8 +234,7 @@ namespace Squared.Illuminant.Particles {
                 var m = rp?.Material ?? (_rp as Material);
                 if (m == null)
                     return;
-                var e = m?.Effect;
-                var p = e?.Parameters;
+                var p = m.Parameters;
 
                 // FIXME: deltaTime
                 System.SetSystemUniforms(m, 0);
@@ -427,7 +426,6 @@ namespace Squared.Illuminant.Particles {
             var device = container.RenderManager.DeviceManager.Device;
 
             var e = m.Effect;
-            var p = (e != null) ? e.Parameters : null;
 
             var li = GetLivenessInfo(chunk);
             // FIXME
@@ -895,7 +893,7 @@ namespace Squared.Illuminant.Particles {
                 layer++;
         }
 
-        internal void MaybeSetLifeRampParameters (EffectParameterCollection p) {
+        internal void MaybeSetLifeRampParameters (MaterialEffectParameters p) {
             var rt = p["LifeRampTexture"];
             if (rt == null)
                 return;
