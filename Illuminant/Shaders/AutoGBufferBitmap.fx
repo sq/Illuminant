@@ -65,7 +65,7 @@ void NormalBillboardPixelShader(
     texColor.a *= color.a;
 
     float3 normal = NormalsAreSigned ? texColor.rgb : (texColor.rgb - 0.5) * 2.0;
-    bool isDead = texColor.a < 0.5;
+    bool isDead = (texColor.a < 0.5) || (length(texColor.rgb) < 0.01);
 
     float relativeY = (originalPositionData.y - originalPositionData.w) * ViewCoordinateScaleFactor.y;
     float z = userData.z + (userData.y * relativeY);
@@ -83,7 +83,7 @@ void NormalBillboardPixelShader(
         (userData.w < -0.5)
     );
 
-    if (isDead)
+    if (texColor.a < 0.5)
         discard;
 }
 

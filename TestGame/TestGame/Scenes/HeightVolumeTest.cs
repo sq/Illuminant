@@ -328,10 +328,14 @@ namespace TestGame.Scenes {
                     MovableLight.Position = new Vector3(350, 900, 170);
                 else
                     MovableLight.Position = new Vector3(mousePos, LightZ);
+
                 MovableLight.CastsShadows = Shadows;
-                // Lights[0].RampEnd = 250f * (((1 - LightZ) * 0.25f) + 0.75f);
+                MovableLight.SpecularColor = SpecularBrightness * Vector3.One;
+                MovableLight.SpecularPower = SpecularPower;
 
                 LightReplicator.Template.CastsShadows = Shadows;
+                LightReplicator.Template.SpecularColor = SpecularBrightness * Vector3.One;
+                LightReplicator.Template.SpecularPower = SpecularPower;
 
                 int count = LightReplicator.Lights.Count;
 
