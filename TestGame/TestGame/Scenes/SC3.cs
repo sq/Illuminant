@@ -454,12 +454,12 @@ namespace TestGame.Scenes {
             SetAO(ForegroundEnvironment.Lights, radius: AmbientOcclusion.Value ? 8f : 0f);
 
             foreach (var l in Environment.Lights)
-                l.CastsShadows = CastShadows.Value;
+                ((LightSource)l).CastsShadows = CastShadows.Value;
 
             Environment.ZToYMultiplier = ForegroundEnvironment.ZToYMultiplier = ZToYMultiplier.Value;
 
-            Environment.Lights[0].FalloffYFactor = LightFalloffYFactor.Value;
-            ForegroundEnvironment.Lights[0].FalloffYFactor = LightFalloffYFactor.Value;
+            ((LightSource)Environment.Lights[0]).FalloffYFactor = LightFalloffYFactor.Value;
+            ((LightSource)ForegroundEnvironment.Lights[0]).FalloffYFactor = LightFalloffYFactor.Value;
 
             var bbill = BackgroundBillboards[0];
             if (bbill.DataScale != GDataScale.Value) {

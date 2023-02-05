@@ -194,8 +194,8 @@ namespace TestGame.Scenes {
 
             SetAO(Environment.Lights, AmbientOcclusion.Value, 4);
 
-            Environment.Lights[1].Opacity = DirectionalLight1.Value ? 1 : 0;
-            Environment.Lights[2].Opacity = DirectionalLight2.Value ? 1 : 0;
+            ((LightSource)Environment.Lights[1]).Opacity = DirectionalLight1.Value ? 1 : 0;
+            ((LightSource)Environment.Lights[2]).Opacity = DirectionalLight2.Value ? 1 : 0;
 
             // Renderer.InvalidateFields();
 

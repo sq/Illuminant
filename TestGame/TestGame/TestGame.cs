@@ -640,7 +640,7 @@ namespace TestGame {
             HasLoadedContent = false;
         }
 
-        protected void SetAO (List<LightSource> lights, float opacity = 1, float radius = 0) {
+        protected void SetAO (List<LightSourceBase> lights, float opacity = 1, float radius = 0) {
             foreach (var light in lights) {
                 var dl = light as DirectionalLightSource;
                 var sl = light as SphereLightSource;

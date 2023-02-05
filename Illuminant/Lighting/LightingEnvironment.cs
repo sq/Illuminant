@@ -11,7 +11,7 @@ using Squared.Util;
 
 namespace Squared.Illuminant {
     public class LightingEnvironment {
-        public readonly List<LightSource> Lights = new List<LightSource>();
+        public readonly List<LightSourceBase> Lights = new List<LightSourceBase>();
         // SDF objects that define obstructions to be rendered into the distance field
         public readonly LightObstructionCollection Obstructions = new LightObstructionCollection();
         // Polygonal meshes that define 3D volumes that are rendered into the distance field

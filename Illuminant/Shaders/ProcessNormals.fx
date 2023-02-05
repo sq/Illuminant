@@ -61,7 +61,11 @@ float cleanInput (float value) {
 
 float3 tap (in float2 texCoord, in float4 texRgn) {
     float4 uv = float4(clamp2(texCoord, texRgn.xy, texRgn.zw), 0, 0);
-    float left = cleanInput(tex2Dlod(LeftSampler, uv)),
+    float4 leftSample = tex2Dlod(LeftSampler, uv);
+    if (leftSample.a <= 0.01)
+        return -999;
+
+    float left = cleanInput(leftSample),
         right = InputCount > 1 ? cleanInput(tex2Dlod(RightSampler, uv)) : 1.0 - left,
         above = InputCount > 2 ? cleanInput(tex2Dlod(AboveSampler, uv)) : 0.0,
         below = InputCount > 3 ? cleanInput(tex2Dlod(BelowSampler, uv)) : 1.0 - above,
@@ -76,6 +80,14 @@ float3 tap (in float2 texCoord, in float4 texRgn) {
                 ) * Configuration1.z;
     float3 n = float3(xDelta, yDelta, forward + Configuration1.w);
     return normalize(n);
+}
+
+void conditionalTap (inout float3 accum, inout float count, in float2 texCoord, in float4 texRgn) {
+    float3 result = tap(texCoord, texRgn);
+    if (result.x <= -99)
+        return;
+    accum += result;
+    count += 1;
 }
 
 void NormalsFromLightmapsPixelShader(
@@ -104,7 +116,18 @@ void NormalsFromLightmapsPixelShader(
     // Negative distance is higher so we want to go from max height to min height as distance increases
     distance = lerp(params.w, params.z, distance);
     */
-    float3 normal = tap(texCoord, texRgn);
+    float3 texel = float3(HalfTexel, 0);
+    float tapCount = 1;
+    float3 accum = tap(texCoord, texRgn);
+    conditionalTap(accum, tapCount, texCoord - texel.xy, texRgn);
+    conditionalTap(accum, tapCount, texCoord - texel.zy, texRgn);
+    conditionalTap(accum, tapCount, texCoord + float2(texel.x, -texel.y), texRgn);
+    conditionalTap(accum, tapCount, texCoord - texel.xz, texRgn);
+    conditionalTap(accum, tapCount, texCoord + texel.xz, texRgn);
+    conditionalTap(accum, tapCount, texCoord + float2(-texel.x, texel.y), texRgn);
+    conditionalTap(accum, tapCount, texCoord + texel.zy, texRgn);
+    conditionalTap(accum, tapCount, texCoord + texel.xy, texRgn);
+    float3 normal = accum / tapCount;
     result = float4((normal * 0.5) + 0.5, 1);
 }
 

@@ -14,10 +14,11 @@ namespace Squared.Illuminant {
         Directional = 2,
         Particle = 3,
         Line = 4,
-        Projector = 5
+        Projector = 5,
+        // Replicators are Sphere type
     }
 
-    public abstract class LightSource {
+    public abstract class LightSourceBase {
         [NonSerialized]
         public readonly LightSourceTypeID TypeID;
 
@@ -33,6 +34,12 @@ namespace Squared.Illuminant {
         /// </summary>
         public int        SortKey;
 
+        protected LightSourceBase (LightSourceTypeID typeID) {
+            TypeID = typeID;
+        }
+    }
+
+    public abstract class LightSource : LightSourceBase {
         /// <summary>
         /// Overrides how light is blended into the lightmap.
         /// The default is an additive blend, use null for that.
@@ -70,8 +77,8 @@ namespace Squared.Illuminant {
         /// </summary>
         public RendererQualitySettings Quality = null;
 
-        protected LightSource (LightSourceTypeID typeID) {
-            TypeID = typeID;
+        protected LightSource (LightSourceTypeID typeID)
+            : base (typeID) {
         }
     }
 
@@ -325,7 +332,7 @@ namespace Squared.Illuminant {
         }
     }
 
-    public class ParticleLightSource : LightSource {
+    public class ParticleLightSource : LightSourceBase {
         public SphereLightSource Template = new SphereLightSource ();
 
         public Particles.ParticleSystem System;
@@ -447,7 +454,23 @@ namespace Squared.Illuminant {
                 TextureRef = value;
             }
         }
+    }
 
+    public class LightSourceReplicator : LightSourceBase {
+        public SphereLightSource Template = new SphereLightSource ();
+
+        public UnorderedList<ReplicatedLight> Lights = new UnorderedList<ReplicatedLight>();
+
+        public LightSourceReplicator ()
+            : base(LightSourceTypeID.Sphere) {
+        }
+    }
+
+    public struct ReplicatedLight {
+        public Vector3 Position;
+        public float? Radius, RampLength, SpecularPower, Opacity;
+        public Vector4? Color;
+        public Vector3? SpecularColor;
     }
 
     public enum LightSourceRampMode {

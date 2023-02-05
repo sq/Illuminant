@@ -20,10 +20,13 @@ namespace TestGame.Scenes {
 
         RenderTarget2D Lightmap;
 
-        public readonly List<SphereLightSource> Lights = new List<SphereLightSource>();
+        public SphereLightSource MovableLight;
+        public LightSourceReplicator LightReplicator;
 
         Toggle ShowGBuffer, ShowDistanceField, GroundIsOpaque, TwoPointFiveD, Deterministic, Shadows, GroundShadows;
-        Slider LightmapScaleRatio, MaxStepCount, MinStepSize, DistanceFieldResolution, DistanceSliceCount, MaximumEncodedDistance;
+        Slider LightmapScaleRatio, MaxStepCount, MinStepSize, DistanceFieldResolution, DistanceSliceCount, MaximumEncodedDistance, 
+            SpecularBrightness,
+            SpecularPower;
 
         public const int RotatingLightCount = 1024;
 
@@ -83,6 +86,12 @@ namespace TestGame.Scenes {
             MinStepSize.Min = 0.5f;
             MinStepSize.Max = 5f;
             MinStepSize.Speed = 0.1f;
+
+            SpecularBrightness.Min = 0f;
+            SpecularBrightness.Max = 1f;
+            SpecularPower.Min = 0.1f;
+            SpecularPower.Max = 64f;
+            SpecularPower.Value = 16f;
         }
 
         private void CreateRenderTargets () {
@@ -116,7 +125,6 @@ namespace TestGame.Scenes {
 
         public override void LoadContent () {
             Environment = new LightingEnvironment();
-            Lights.Clear();
 
             Environment.GroundZ = 0;
             Environment.MaximumZ = 128;
@@ -138,7 +146,7 @@ namespace TestGame.Scenes {
                 DistanceField = DistanceField
             };
 
-            var light = new SphereLightSource {
+            MovableLight = new SphereLightSource {
                 Position = new Vector3(64, 64, 0),
                 Color = new Vector4(1f, 1f, 1f, 1f),
                 Opacity = 0.5f,
@@ -147,25 +155,28 @@ namespace TestGame.Scenes {
                 RampMode = LightSourceRampMode.Exponential
             };
 
-            Lights.Add(light);
-            Environment.Lights.Add(light);
-
             float opacityScale = Math.Min((float)Math.Pow(32.0 / RotatingLightCount, 1.1), 2);
             float radiusScale  = Arithmetic.Clamp(32.0f / RotatingLightCount, 0.75f, 1.5f);
 
+            LightReplicator = new LightSourceReplicator {
+                Template = new SphereLightSource {
+                    Opacity = opacityScale,
+                    RampMode = LightSourceRampMode.Exponential
+                },
+            };
+
+            Environment.Lights.Add(MovableLight);
+            Environment.Lights.Add(LightReplicator);
+
             var rng = new Random(1234);
+
             for (var i = 0; i < RotatingLightCount; i++) {
-                light = new SphereLightSource {
+                LightReplicator.Lights.Add(new ReplicatedLight {
                     Position = new Vector3(64, 64, rng.NextFloat(0.1f, 2.0f)),
                     Color = new Vector4((float)rng.NextDouble(0.1f, 0.7f), (float)rng.NextDouble(0.1f, 0.7f), (float)rng.NextDouble(0.1f, 0.7f), 1f),
-                    Opacity = opacityScale,
                     Radius = rng.NextFloat(36, 68) * radiusScale,
                     RampLength = rng.NextFloat(180, 300) * radiusScale,
-                    RampMode = LightSourceRampMode.Exponential
-                };
-
-                Lights.Add(light);
-                Environment.Lights.Add(light);
+                });
             }
 
             const float angleStep = (float)(Math.PI / 128);
@@ -314,20 +325,20 @@ namespace TestGame.Scenes {
                 var lightCenter = new Vector3(Width / 2, Height / 2, 0);
 
                 if (Deterministic)
-                    Lights[0].Position = new Vector3(350, 900, 170);
+                    MovableLight.Position = new Vector3(350, 900, 170);
                 else
-                    Lights[0].Position = new Vector3(mousePos, LightZ);
-                Lights[0].CastsShadows = Shadows;
+                    MovableLight.Position = new Vector3(mousePos, LightZ);
+                MovableLight.CastsShadows = Shadows;
                 // Lights[0].RampEnd = 250f * (((1 - LightZ) * 0.25f) + 0.75f);
 
-                int count = Environment.Lights.Count - 1;
+                LightReplicator.Template.CastsShadows = Shadows;
+
+                int count = LightReplicator.Lights.Count;
 
                 float stepOffset = (float)((Math.PI * 2) / count);
                 float timeValue = (float)(time / 14 % 4);
                 float offset = timeValue;
-                for (int i = 1; i < Environment.Lights.Count; i++, offset += stepOffset) {
-                    Lights[i].CastsShadows = Shadows;
-
+                for (int i = 0; i < count; i++, offset += stepOffset) {
                     float radiusFactor = (float)Math.Abs(Math.Sin(
                         (i / (float)count * 8.7f) + timeValue
                     ));
@@ -335,7 +346,8 @@ namespace TestGame.Scenes {
                     float localZ = Arithmetic.Lerp(centerMinZ, outsideMinZ, radiusFactor) +
                         Arithmetic.Pulse(timeValue, 0, 40);
 
-                    Lights[i].Position = lightCenter + new Vector3(
+                    ref var light = ref LightReplicator.Lights.DangerousItem(i);
+                    light.Position = lightCenter + new Vector3(
                         (float)Math.Cos(angle + offset) * localRadius, 
                         (float)Math.Sin(angle + offset) * localRadius,
                         localZ

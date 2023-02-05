@@ -775,19 +775,22 @@ namespace Squared.Illuminant {
             SetDistanceFieldParameters(material, true, q);
         }
 
-        private LightTypeRenderState GetLightRenderState (LightSource ls) {
+        private LightTypeRenderState GetLightRenderState (LightSourceBase lsb) {
+            var ls = (lsb as LightSource) ?? (lsb as LightSourceReplicator)?.Template ?? (lsb as ParticleLightSource)?.Template;
+
             var ltk =
                 new LightTypeRenderStateKey {
-                    Type = ls.TypeID,
-                    BlendState = ls.BlendMode,
-                    RampTexture = ls.TextureRef ?? Configuration.DefaultRampTexture,
-                    Quality = ls.Quality ?? Configuration.DefaultQuality,
-                    ParticleLightSource = ls as ParticleLightSource,
+                    Type = lsb.TypeID,
+                    BlendState = ls?.BlendMode ?? default,
+                    RampTexture = ls?.TextureRef ?? Configuration.DefaultRampTexture,
+                    Quality = ls?.Quality ?? Configuration.DefaultQuality,
+                    ParticleLightSource = lsb as ParticleLightSource,
                     CastsShadows = (DistanceField != null) && 
-                    (
-                        ls.CastsShadows || 
-                        ((ls.AmbientOcclusionOpacity > 0) && (ls.AmbientOcclusionRadius > 0))
-                    )
+                        (ls != null) &&
+                        (
+                            ls.CastsShadows || 
+                            ((ls.AmbientOcclusionOpacity > 0) && (ls.AmbientOcclusionRadius > 0))
+                        )
                 };
 
             // A 1x1 ramp is treated as no ramp at all.
@@ -799,8 +802,6 @@ namespace Squared.Illuminant {
                 (ltk.RampTexture.Width == 1)
             )
                 ltk.RampTexture = null;
-
-            var sls = ls as SphereLightSource;
 
             LightTypeRenderState result;
             if (!LightRenderStates.TryGetValue(ltk, out result)) {
@@ -946,8 +947,10 @@ namespace Squared.Illuminant {
             PendingDrawViewportPosition = viewportPosition;
             PendingDrawViewportScale = viewportScale;
 
-            foreach (var ls in Environment.Lights)
-                ls.TextureRef?.EnsureInitialized(Configuration.RampTextureLoader);
+            foreach (var lsb in Environment.Lights) {
+                if (lsb is LightSource ls)
+                    ls.TextureRef?.EnsureInitialized(Configuration.RampTextureLoader);
+            }
 
             BatchGroup resultGroup;
 
@@ -1017,11 +1020,11 @@ namespace Squared.Illuminant {
                             DeadRenderStates.Add(kvp.Key);
                         }
 
-                        using (var buffer = BufferPool<LightSource>.Allocate(Environment.Lights.Count)) {
+                        using (var buffer = BufferPool<LightSourceBase>.Allocate(Environment.Lights.Count)) {
                             Array.Clear(buffer.Data, 0, buffer.Data.Length);
                             Environment.Lights.CopyTo(buffer.Data);
                             Sort.FastCLRSortRef(
-                                new ArraySegment<LightSource>(buffer.Data), LightSorter.Instance, 0, Environment.Lights.Count
+                                new ArraySegment<LightSourceBase>(buffer.Data), LightSorter.Instance, 0, Environment.Lights.Count
                             );
 
                             // var renderedLights = new HashSet<LightSource>(new ReferenceComparer<LightSource>());
@@ -1036,6 +1039,7 @@ namespace Squared.Illuminant {
                                 var particleLightSource = lightSource as ParticleLightSource;
                                 var lineLightSource = lightSource as LineLightSource;
                                 var projectorLightSource = lightSource as ProjectorLightSource;
+                                var replicator = lightSource as LightSourceReplicator;
 
                                 /*
                                 if (renderedLights.Contains(lightSource))
@@ -1057,6 +1061,8 @@ namespace Squared.Illuminant {
                                     RenderLineLightSource(lineLightSource, intensityScale, ltrs);
                                 else if (projectorLightSource != null)
                                     RenderProjectorLightSource(projectorLightSource, intensityScale, ltrs);
+                                else if (replicator != null)
+                                    RenderReplicatorLightSource(replicator, intensityScale, ltrs);
                                 else
                                     throw new NotSupportedException(lightSource.GetType().Name);
                             };
@@ -1171,6 +1177,33 @@ namespace Squared.Illuminant {
             ltrs.LightVertices.Add(ref vertex);
 
             ltrs.LightCount++;
+        }
+
+        private void RenderReplicatorLightSource (LightSourceReplicator lightSource, float intensityScale, LightTypeRenderState ltrs) {
+            LightVertex vertex;
+            var lights = lightSource.Lights;
+            var template = lightSource.Template;
+            for (int i = 0, c = lights.Count; i < c; i++) {
+                ref var light = ref lights.DangerousItem(i);
+
+                vertex.LightPosition3 = vertex.LightPosition2 = vertex.LightPosition1 = new Vector4(light.Position, 0);
+                var color = light.Color ?? template.Color;
+                color.W *= (light.Opacity ?? template.Opacity) * intensityScale;
+                vertex.Color1 = color;
+                vertex.Color2 = new Vector4(light.SpecularColor ?? template.SpecularColor, light.SpecularPower ?? template.SpecularPower);
+                vertex.LightProperties.X = light.Radius ?? template.Radius;
+                vertex.LightProperties.Y = light.RampLength ?? template.RampLength;
+                vertex.LightProperties.Z = (int)template.RampMode;
+                vertex.LightProperties.W = (template.CastsShadows && (DistanceField != null)) ? 1f : 0f;
+                vertex.MoreLightProperties.X = template.AmbientOcclusionRadius;
+                vertex.MoreLightProperties.Y = template.ShadowDistanceFalloff.GetValueOrDefault(-99999);
+                vertex.MoreLightProperties.Z = template.FalloffYFactor;
+                vertex.MoreLightProperties.W = template.AmbientOcclusionOpacity;
+                vertex.EvenMoreLightProperties = Vector4.Zero;
+                ltrs.LightVertices.Add(ref vertex);
+
+                ltrs.LightCount++;
+            }
         }
 
         private void RenderDirectionalLightSource (DirectionalLightSource lightSource, float intensityScale, LightTypeRenderState ltrs) {
@@ -1928,25 +1961,28 @@ namespace Squared.Illuminant {
         public Vector3 Up, Right;
     }
 
-    public sealed class LightSorter : IRefComparer<LightSource> {
+    public sealed class LightSorter : IRefComparer<LightSourceBase> {
         public static readonly LightSorter Instance = new LightSorter();
 
-        public int Compare (ref LightSource x, ref LightSource y) {
+        public int Compare (ref LightSourceBase x, ref LightSourceBase y) {
             int result = x.SortKey - y.SortKey;
             if (result != 0)
                 return result;
 
+            var lx = (x as LightSource) ?? (x as LightSourceReplicator)?.Template ?? (x as ParticleLightSource)?.Template;
+            var ly = (y as LightSource) ?? (y as LightSourceReplicator)?.Template ?? (y as ParticleLightSource)?.Template;
+
             int xBlendID = 0, yBlendID = 0;
-            if (x.BlendMode != null)
-                xBlendID = x.BlendMode.GetHashCode();
-            if (y.BlendMode != null)
-                yBlendID = y.BlendMode.GetHashCode();
+            if (lx?.BlendMode != null)
+                xBlendID = lx.BlendMode.GetHashCode();
+            if (ly?.BlendMode != null)
+                yBlendID = ly.BlendMode.GetHashCode();
 
             int xTexID = 0, yTexID = 0;
-            if (x.TextureRef != null)
-                xTexID = x.TextureRef.GetHashCode();
-            if (y.TextureRef != null)
-                yTexID = y.TextureRef.GetHashCode();
+            if (lx?.TextureRef != null)
+                xTexID = lx.TextureRef.GetHashCode();
+            if (ly?.TextureRef != null)
+                yTexID = ly.TextureRef.GetHashCode();
 
             result = xBlendID - yBlendID;
             if (result == 0)
