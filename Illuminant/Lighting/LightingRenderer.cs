@@ -456,7 +456,7 @@ namespace Squared.Illuminant {
 
             _Lightmaps = new BufferRing(
                 coordinator,
-                Configuration.MaximumRenderSize.First, 
+                Configuration.MaximumRenderSize.First,
                 Configuration.MaximumRenderSize.Second,
                 false,
                 Configuration.HighQuality
@@ -465,7 +465,8 @@ namespace Squared.Illuminant {
                 Configuration.StencilCulling
                     ? DepthFormat.Depth24Stencil8
                     : DepthFormat.None,
-                Configuration.RingBufferSize
+                Configuration.RingBufferSize,
+                name: "Lightmaps"
             );
 
             lock (Coordinator.CreateResourceLock) {
@@ -483,24 +484,28 @@ namespace Squared.Illuminant {
                 _DummyDistanceFieldTexture = new Texture2D(coordinator.Device, 1, 1, false, DistanceField.Format);
             }
 
-            _LightProbeValueBuffers = new BufferRing(
-                coordinator,
-                Configuration.MaximumLightProbeCount, 
-                1,
-                false,
-                SurfaceFormat.HalfVector4,
-                DepthFormat.None,
-                Configuration.RingBufferSize
-            );
+            if (Configuration.MaximumLightProbeCount > 0) {
+                _LightProbeValueBuffers = new BufferRing(
+                    coordinator,
+                    Configuration.MaximumLightProbeCount,
+                    1,
+                    false,
+                    SurfaceFormat.HalfVector4,
+                    DepthFormat.None,
+                    Configuration.RingBufferSize,
+                    name: "Light probes"
+                );
+            }
 
             if (Configuration.EnableBrightnessEstimation) {
                 var width = Configuration.MaximumRenderSize.First / 2;
                 var height = Configuration.MaximumRenderSize.Second / 2;
 
                 _LuminanceBuffers = new BufferRing(
-                    coordinator, width, height, true, 
-                    SurfaceFormat.Single, DepthFormat.None, 
-                    Configuration.RingBufferSize
+                    coordinator, width, height, true,
+                    SurfaceFormat.Single, DepthFormat.None,
+                    Configuration.RingBufferSize,
+                    name: "Luminance readback"
                 );
             }
 
@@ -683,7 +688,7 @@ namespace Squared.Illuminant {
             };
         }
 
-        private void PushLightingViewTransform (RenderTarget2D renderTarget) {
+        private void PushLightingViewTransform (RenderTarget2D renderTarget, bool defer) {
             var vt = ViewTransform.CreateOrthographic(
                 renderTarget.Width, renderTarget.Height
             );
@@ -697,7 +702,8 @@ namespace Squared.Illuminant {
             if (Configuration.ScaleCompensation)
                 vt.Position += coordOffset;
 
-            Materials.PushViewTransform(ref vt);
+            // Defer is safe because the first thing we do is Clear
+            Materials.PushViewTransform(ref vt, defer: defer);
         }
 
         private void _BeginLightPass (DeviceManager device, object userData) {
@@ -707,7 +713,7 @@ namespace Squared.Illuminant {
             var renderHeight = (int)(Configuration.MaximumRenderSize.Second * Configuration.RenderScale.Y);
 
             device.PushStates();
-            PushLightingViewTransform(buffer);
+            PushLightingViewTransform(buffer, true);
 
             device.Device.ScissorRectangle = new Rectangle(0, 0, Math.Min(renderWidth + 2, buffer.Width), Math.Min(renderHeight + 2, buffer.Height));
 
@@ -718,7 +724,7 @@ namespace Squared.Illuminant {
             var buffer = (RenderTarget2D)userData;
 
             device.PushStates();
-            PushLightingViewTransform(buffer);
+            PushLightingViewTransform(buffer, false);
         }
 
         private void _EndLightPass (DeviceManager device, object userData) {
@@ -987,11 +993,11 @@ namespace Squared.Illuminant {
                     var ambient = Environment.Ambient * intensityScale;
                     // Zero out the alpha value because we use it to indicate whether a pixel is fullbright
                     if (Configuration.AllowFullbright && Configuration.EnableGBuffer)
-                        ambient.A = 0;
+                        ambient.W = 0;
 
                     ClearBatch.AddNew(
                         resultGroup, -2, Materials.Clear, 
-                        clearColor: ambient,
+                        clearValue: ambient,
                         // If the g-buffer is disabled, initialize the whole lightmap so that it is already stencil selected
                         // When the g-buffer is enabled we will do a prepass to mark every pixel we want to light
                         clearStencil: Configuration.EnableGBuffer ? 0 : 1
@@ -1015,13 +1021,14 @@ namespace Squared.Illuminant {
 
                         foreach (var kvp in LightRenderStates) {
                             if (kvp.Value.LightVertices != null)
-                                kvp.Value.LightVertices.Clear();
+                                kvp.Value.LightVertices.UnsafeFastClear();
                             kvp.Value.LightCount = 0;
                             DeadRenderStates.Add(kvp.Key);
                         }
 
                         using (var buffer = BufferPool<LightSourceBase>.Allocate(Environment.Lights.Count)) {
-                            Array.Clear(buffer.Data, 0, buffer.Data.Length);
+                            // Shouldn't be necessary and is very expensive
+                            // Array.Clear(buffer.Data, 0, buffer.Data.Length);
                             Environment.Lights.CopyTo(buffer.Data);
                             Sort.FastCLRSortRef(
                                 new ArraySegment<LightSourceBase>(buffer.Data), LightSorter.Instance, 0, Environment.Lights.Count

@@ -19,13 +19,13 @@ namespace Squared.Illuminant {
     }
 
     public partial class IlluminantMaterials {
-        private void DefineMaterial (Material m) {
-            MaterialSet.Add(m);
+        private void DefineMaterial (Material m, bool addToList) {
+            MaterialSet.Add(m, addToList);
         }
 
         private Material LoadOneMaterial (
             EffectProvider effects, out Material result, string fileName, string techniqueName = null, 
-            Action<DeviceManager>[] begin = null, Action<DeviceManager>[] end = null
+            Action<DeviceManager>[] begin = null, Action<DeviceManager>[] end = null, bool addToList = false
         ) {
             try {
                 if (techniqueName == null)
@@ -36,7 +36,7 @@ namespace Squared.Illuminant {
                     begin, end
                 );
                 result = m;
-                DefineMaterial(m);
+                DefineMaterial(m, addToList);
                 return m;
             } catch (Exception exc) {
                 result = null;
@@ -145,7 +145,7 @@ namespace Squared.Illuminant {
                     new[] { MaterialUtil.MakeDelegate(blendState: BlendState.Opaque) }
                 );
 
-                DistanceFunctionTypes = new Render.Material[(int)LightObstruction.MAX_Type + 1];
+                DistanceFunctionTypes = new Material[(int)LightObstruction.MAX_Type + 1];
 
                 foreach (var i in Enum.GetValues(typeof(LightObstructionType))) {
                     var name = Enum.GetName(typeof(LightObstructionType), i);
@@ -154,7 +154,8 @@ namespace Squared.Illuminant {
 
                     LoadOneMaterial(effects, out DistanceFunctionTypes[(short)i],
                         "DistanceFunction", name,
-                            new[] { MaterialUtil.MakeDelegate(blendState: RenderStates.MaxBlendValue) }
+                            new[] { MaterialUtil.MakeDelegate(blendState: RenderStates.MaxBlendValue) },
+                        addToList: true
                     );
                 }
 
@@ -292,11 +293,11 @@ namespace Squared.Illuminant {
 
 namespace Squared.Illuminant.Particles {
     public sealed partial class ParticleEngine : IDisposable {
-        private void DefineMaterial (Material m) {
-            Materials.Add(m);
+        private void DefineMaterial (Material m, bool addToList) {
+            Materials.Add(m, addToList);
         }
 
-        private Material LoadOneMaterial (out Material result, string fileName, string techniqueName, Action<DeviceManager>[] begin = null, Action<DeviceManager>[] end = null) {
+        private Material LoadOneMaterial (out Material result, string fileName, string techniqueName, Action<DeviceManager>[] begin = null, Action<DeviceManager>[] end = null, bool addToList = false) {
             var effect = Effects.Load(fileName);
             if (effect == null)
                 throw new Exception("Failed to load shader " + fileName);
@@ -306,7 +307,7 @@ namespace Squared.Illuminant.Particles {
                     begin, end
                 );
                 result = m;
-                DefineMaterial(m);
+                DefineMaterial(m, addToList);
                 if (result == null)
                     Console.WriteLine("Failed to load shader {0} technique {1}", fileName, techniqueName);
                 return m;

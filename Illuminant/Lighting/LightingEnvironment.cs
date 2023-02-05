@@ -32,7 +32,11 @@ namespace Squared.Illuminant {
         public float ZToYMultiplier = 0f;
 
         // Ambient light color
-        public Color Ambient = Color.Black;
+        public Vector4 Ambient = Vector4.Zero;
+
+        public Color AmbientColor {
+            set => Ambient = value.ToVector4();
+        }
 
         public bool EnableGroundShadows = true;
 

@@ -464,6 +464,10 @@ namespace Squared.Illuminant {
         public LightSourceReplicator ()
             : base(LightSourceTypeID.Sphere) {
         }
+
+        public void Clear () => Lights.UnsafeFastClear();
+
+        public void Add (ReplicatedLight light) => Lights.Add(ref light);
     }
 
     public struct ReplicatedLight {

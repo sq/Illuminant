@@ -312,7 +312,7 @@ namespace Squared.Illuminant {
                 return;
 
             // FIXME: This suuuuuuuuuuucks
-            BillboardScratch.Clear();
+            BillboardScratch.UnsafeFastClear();
             BillboardScratch.AddRange(Environment.Billboards);
             BillboardScratch.FastCLRSortRef(GBufferBillboardSorter.Instance);
 
@@ -320,7 +320,7 @@ namespace Squared.Illuminant {
                 return;
 
             BillboardVertexScratch.EnsureCapacity(BillboardScratch.Count * 4);
-            BillboardVertexScratch.Clear();
+            BillboardVertexScratch.UnsafeFastClear();
 
             var verts = BillboardVertexScratch.GetBufferArray();
 

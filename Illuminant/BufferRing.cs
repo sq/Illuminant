@@ -53,9 +53,12 @@ namespace Squared.Illuminant {
         public SurfaceFormat Format { get; private set; }
         public DepthFormat DepthFormat { get; private set; }
 
+        public readonly string Name;
+
         public BufferRing (
             RenderCoordinator coordinator, int width, int height, 
-            bool mipMap, SurfaceFormat format, DepthFormat depthFormat = DepthFormat.None, int ringSize = 2
+            bool mipMap, SurfaceFormat format, DepthFormat depthFormat = DepthFormat.None, int ringSize = 2,
+            string name = null
         ) {
             Coordinator = coordinator;
 
@@ -63,6 +66,7 @@ namespace Squared.Illuminant {
             MipMap = mipMap;
             Format = format;
             DepthFormat = depthFormat;
+            Name = name;
 
             CreateBuffers(width, height);
         }
@@ -73,12 +77,17 @@ namespace Squared.Illuminant {
 
             for (int i = 0; i < RingSize; i++) {
                 RenderTarget2D buffer;
-                lock (Coordinator.CreateResourceLock)
+                lock (Coordinator.CreateResourceLock) {
                     buffer = new RenderTarget2D(
-                        Coordinator.Device, width, height, 
+                        Coordinator.Device, width, height,
                         MipMap, Format, DepthFormat,
                         0, RenderTargetUsage.PreserveContents
-                    );
+                    ) {
+                        Name = $"{Name ?? "BufferRing"} buffer #{i}"
+                    };
+
+                    Coordinator.AutoAllocatedTextureResources.Add(buffer);
+                }
 
                 lock (Buffers) {
                     if (Buffers.Count > i) {
