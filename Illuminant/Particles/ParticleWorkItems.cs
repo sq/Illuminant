@@ -32,10 +32,10 @@ namespace Squared.Illuminant.Particles {
                     if (Color.Initializer != null)
                         q.Enqueue(ref Color);
                 } else {
-                    Position.Execute();
-                    Velocity.Execute();
+                    Position.Execute(g);
+                    Velocity.Execute(g);
                     if (Color.Initializer != null)
-                        Color.Execute();
+                        Color.Execute(g);
                 }
             }
 
@@ -67,7 +67,7 @@ namespace Squared.Illuminant.Particles {
             public RenderTarget2D Buffer, Buffer2;
             public ChunkInitializer<TElement> Parent;
 
-            public void Execute () {
+            public void Execute (ThreadGroup group) {
                 var scratch = Scratch.Value;
                 if (scratch == null)
                     Scratch.Value = scratch = new TElement[Parent.System.ChunkMaximumCount];
@@ -112,7 +112,7 @@ namespace Squared.Illuminant.Particles {
             public bool NeedResourceLock;
             public int ResetCount;
 
-            public void Execute () {
+            public void Execute (ThreadGroup group) {
                 if (ResetCount != Engine.ResetCount) {
                     Chunks.Dispose();
                     Console.WriteLine("A reset invalidated this query");

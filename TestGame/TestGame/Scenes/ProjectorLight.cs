@@ -203,7 +203,7 @@ namespace TestGame.Scenes {
                     Color = new Vector4(0.5f, 0.3f, 0.15f, 0.3f),
                 });
 
-                Environment.Ambient = new Color(8, 8, 8, 255);
+                Environment.AmbientColor = new Color(8, 8, 8, 255);
             }
 
             Rect(new Vector2(330, 347), new Vector2(Width, 388), 0f, 55f);

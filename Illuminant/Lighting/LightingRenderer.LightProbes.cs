@@ -120,7 +120,7 @@ namespace Squared.Illuminant {
             public long Timestamp;
             public float ScaleFactor;
 
-            public void Execute () {
+            public void Execute (ThreadGroup group) {
                 var count = Renderer.Probes.Count;
                 var now = Time.Ticks;
 

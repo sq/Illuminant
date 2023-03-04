@@ -339,7 +339,8 @@ namespace Squared.Illuminant.Particles {
                         };
                         // HACK: Perform right before present to reduce the odds that this makes us miss a frame, 
                         //  since present blocks on vsync and so does a gpu readback in debug contexts
-                        Coordinator.BeforePresent(wi.Execute);
+                        // FIXME: Remove this allocation
+                        Coordinator.BeforePresent(() => wi.Execute(null));
                     }
 
                     RenderTrace.ImmediateMarker(dm.Device, "Compute liveness for {0} chunk(s)", chunkList.Data.Length);

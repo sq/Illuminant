@@ -31,7 +31,7 @@ namespace Squared.Illuminant {
             public int Width, Height;
             public Action<Histogram> OnComplete;
 
-            public void Execute () {
+            public void Execute (ThreadGroup group) {
                 var count = Width * Height;
 
                 lock (Renderer._LuminanceReadbackArrayLock) {

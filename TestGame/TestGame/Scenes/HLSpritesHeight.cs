@@ -124,7 +124,7 @@ namespace TestGame.Scenes {
             Environment.GroundZ = 0;
             Environment.MaximumZ = 512;
             Environment.ZToYMultiplier = 0f;
-            Environment.Ambient = new Color(63, 63, 63, 0);
+            Environment.AmbientColor = new Color(63, 63, 63, 0);
             Environment.Lights.Add(new SphereLightSource {
                 CastsShadows = false, Color = new Vector4(0.5f, 0.1f, 0.2f, 1f),
                 Radius = 64f,
