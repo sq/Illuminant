@@ -103,7 +103,7 @@ namespace TestGame.Scenes {
 
         public override void LoadContent () {
             NozzleAtlas = Game.TextureLoader.Load(
-                "acrylic-nozzles", 
+                "isse-chain-link", 
                 new TextureLoadOptions { Premultiply = true, GenerateMips = true }, 
                 cached: true
             );

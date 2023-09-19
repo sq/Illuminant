@@ -32,7 +32,7 @@ namespace TestGame.Scenes {
         Dropdown<string> ColorSpace;
 
         [Group("Outline")]
-        Toggle HardOutlines;
+        Toggle HardOutlines, InteriorGamma;
         [Group("Outline")]
         Slider Gamma, OutlineSize;
 
@@ -54,7 +54,8 @@ namespace TestGame.Scenes {
         [Group("Fill")]
         Toggle RepeatFill, UseRamp, Hollow;
         [Group("Fill")]
-        Slider FillOffset, FillRangeStart, FillSize, FillAngle, FillPower, RampVOffset, FillOpacity;
+        Slider FillOffset, FillRangeStart, FillSize, FillAngle, FillPower, RampVOffset, FillOpacity,
+            GradientCenterX, GradientCenterY;
 
         [Group("Shadow")]
         Toggle ShadowInside;
@@ -163,6 +164,9 @@ namespace TestGame.Scenes {
             StarPoints.Max = 32;
             StarPoints.Integral = true;
             StarPoints.Value = 5;
+            GradientCenterX.Min = GradientCenterY.Min = 0f;
+            GradientCenterX.Max = GradientCenterY.Max = 1f;
+            GradientCenterX.Value = GradientCenterY.Value = 0.5f;
         }
 
         public override void LoadContent () {
@@ -192,11 +196,16 @@ namespace TestGame.Scenes {
                 viewTransform: vt
             );
 
+            var ellipseGradientCenter = new Vector2(GradientCenterX, GradientCenterY);
             var fillMode = (RasterFillMode)Enum.Parse(typeof(RasterFillMode), FillMode.Value);
 
             var ir = new ImperativeRenderer(batch, Game.Materials, blendState: BlendState.NonPremultiplied);
             ir.Clear(layer: 0, color: new Color(0, 96, 128));
-            ir.RasterOutlineGamma = Gamma.Value;
+            if (InteriorGamma)
+                ir.RasterGamma = Gamma.Value;
+            else
+                ir.RasterOutlineGamma = Gamma.Value;
+
             switch (ColorSpace.Value) {
                 default:
                     ir.RasterBlendInLinearSpace = true;
@@ -254,7 +263,8 @@ namespace TestGame.Scenes {
                 textureSettings: textureSettings,
                 shadow: shadow,
                 rampTexture: UseRamp ? RampTexture : null,
-                rampUVOffset: new Vector2(0, RampVOffset)
+                rampUVOffset: new Vector2(0, RampVOffset),
+                gradientCenter: ellipseGradientCenter
             );
 
             ir.RasterizeLineSegment(
@@ -334,7 +344,7 @@ namespace TestGame.Scenes {
                 rampUVOffset: new Vector2(0, RampVOffset)
             );
 
-            ir.RasterizeEllipse(new Vector2(200, 860), Vector2.One * 3, Color.Yellow, layer: 4);
+            ir.RasterizeEllipse(new Vector2(200, 860), Vector2.One * 3, Color.Yellow, layer: 4, gradientCenter: ellipseGradientCenter);
 
             ir.RasterizeStar(
                 new Vector2(200, 600),
@@ -429,7 +439,8 @@ namespace TestGame.Scenes {
             ir.RasterizeEllipse(
                 new Vector2(Width - 128, 128), new Vector2(64f), Color.Orange * 1f, Color.Red * 0f, layer: 6,
                 shadow: shadow,
-                blendState: RenderStates.RasterShapeMaxBlend
+                blendState: RenderStates.RasterShapeMaxBlend,
+                gradientCenter: ellipseGradientCenter
             );
 
             var scratchGroup = BatchGroup.ForRenderTarget(

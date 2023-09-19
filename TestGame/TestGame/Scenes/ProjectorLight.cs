@@ -70,8 +70,8 @@ namespace TestGame.Scenes {
 
             Rotation.MinusKey = Keys.T;
             Rotation.PlusKey = Keys.Y;
-            Rotation.Min = -3600;
-            Rotation.Max = 3600;
+            Rotation.Min = -360;
+            Rotation.Max = 360;
             Rotation.Speed = 5;
             Rotation.Integral = false;
 

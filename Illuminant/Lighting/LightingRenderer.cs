@@ -111,7 +111,7 @@ namespace Squared.Illuminant {
                 Key    = key;
 
                 if (key.Type != LightSourceTypeID.Particle)
-                    LightVertices = new UnorderedList<LightVertex>(512);
+                    LightVertices = new UnorderedList<LightVertex>(64);
 
                 SelectMaterial();
             }
@@ -850,14 +850,16 @@ namespace Squared.Illuminant {
             h /= 2;
 
             var name = "Generate HDR Buffer";
-            using (var copyGroup = BatchGroup.ForRenderTarget(
+            var copyGroup = BatchGroup.ForRenderTarget(
                 container, layer, newLuminanceBuffer.Buffer,
-                before: BeforeLuminanceBufferUpdate, 
+                before: BeforeLuminanceBufferUpdate,
                 after: AfterLuminanceBufferUpdate,
                 userData: newLuminanceBuffer,
                 name: name,
                 ignoreInvalidTargets: true
-            )) {
+            );
+
+            {
                 if (RenderTrace.EnableTracing)
                     RenderTrace.Marker(copyGroup, -1, "LightingRenderer {0} : {1}", this.ToObjectID(), name);
 
@@ -960,7 +962,8 @@ namespace Squared.Illuminant {
 
             BatchGroup resultGroup;
 
-            using (var outerGroup = BatchGroup.New(container, layer)) {
+            var outerGroup = BatchGroup.New(container, layer);
+            {
                 if (RenderTrace.EnableTracing)
                     RenderTrace.Marker(outerGroup, -9999, "LightingRenderer {0} : Begin", this.ToObjectID());
 
@@ -1106,9 +1109,10 @@ namespace Squared.Illuminant {
                                 if (!pls.IsActive)
                                     continue;
 
-                                using (var bg = BatchGroup.New(
+                                var bg = BatchGroup.New(
                                     resultGroup, layerIndex++, ParticleLightBatchSetup, null, ltrs
-                                )) {
+                                );
+                                {
                                     // FIXME: Single-frame delay between particle state and particle light source positions,
                                     //  due to some sort of race condition I can't figure out.
                                     pls.System.Render(
@@ -1122,9 +1126,10 @@ namespace Squared.Illuminant {
                                 if (count <= 0)
                                     continue;
 
-                                using (var nb = NativeBatch.New(
+                                var nb = NativeBatch.New(
                                     resultGroup, layerIndex++, ltrs.Material, IlluminationBatchSetup, userData: ltrs
-                                )) {
+                                );
+                                {
                                     var cornerBuffer = ltrs.GetCornerBuffer(false);
                                     // HACK: Split large numbers of lights into smaller draw operations
                                     const int step = 128;
@@ -1512,14 +1517,16 @@ namespace Squared.Illuminant {
             resolveHandler.uvOffset = uvOffset;
 
             // HACK: This is a little gross
-            using (var group = BatchGroup.New(
+            var group = BatchGroup.New(
                 container, layer, before: resolveHandler.Before, after: resolveHandler.After
-            )) {
-                using (var bb = BitmapBatch.New(
-                    group, 0, m, 
+            );
+            {
+                var bb = BitmapBatch.New(
+                    group, 0, m,
                     samplerState: albedoSamplerState ?? SamplerState.LinearClamp,
                     samplerState2: lightmapSamplerState ?? SamplerState.LinearClamp
-                )) {
+                );
+                {
                     BitmapDrawCall dc;
                     if (albedo != null) {
                         dc = new BitmapDrawCall(

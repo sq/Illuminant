@@ -45,9 +45,6 @@
     <Reference Include="mscorlib">
       <Private>False</Private>
     </Reference>
-    <Reference Include="SharpFont, Version=4.0.1.200, Culture=neutral, PublicKeyToken=48add4c483071cdf, processorArchitecture=MSIL">
-      <Private>True</Private>
-    </Reference>
     <Reference Include="System">
       <Private>False</Private>
     </Reference>

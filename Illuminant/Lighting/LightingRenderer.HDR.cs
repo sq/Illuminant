@@ -70,7 +70,7 @@ namespace Squared.Illuminant {
             return buffer[lastZero + index];
         }
 
-        public class RenderedLighting : IDisposable {
+        public struct RenderedLighting : IDisposable {
             public   readonly LightingRenderer Renderer;
             public   readonly float            InverseScaleFactor;
             private  readonly RenderTarget2D   Lightmap;
@@ -79,7 +79,7 @@ namespace Squared.Illuminant {
             private  readonly int              Width, Height;
             internal          BatchGroup       BatchGroup;
 
-            private bool IsBatchGroupDisposed = false;
+            private bool IsBatchGroupDisposed;
 
             internal RenderedLighting (
                 LightingRenderer renderer, RenderTarget2D lightmap, float inverseScaleFactor,
@@ -91,6 +91,8 @@ namespace Squared.Illuminant {
                 LuminanceBuffer = null;
                 InverseScaleFactor = inverseScaleFactor;
                 renderer.Configuration.GetRenderSize(out Width, out Height);
+                BatchGroup = null;
+                IsBatchGroupDisposed = false;
             }
 
             public bool IsValid {
