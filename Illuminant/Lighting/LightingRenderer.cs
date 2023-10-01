@@ -474,12 +474,16 @@ namespace Squared.Illuminant {
                     coordinator.Device,
                     Configuration.MaximumLightProbeCount,
                     1, false, SurfaceFormat.Vector4
-                );
+                ) {
+                    Name = "LightingRenderer.LightProbePositions",
+                };
                 _LightProbeNormals = new Texture2D(
                     coordinator.Device,
                     Configuration.MaximumLightProbeCount,
                     1, false, SurfaceFormat.Vector4
-                );
+                ) {
+                    Name = "LightingRenderer.LightProbeNormals",
+                };
                 _DummyGBufferTexture = new Texture2D(coordinator.Device, 1, 1, false, SurfaceFormat.HalfVector4);
                 _DummyDistanceFieldTexture = new Texture2D(coordinator.Device, 1, 1, false, DistanceField.Format);
             }

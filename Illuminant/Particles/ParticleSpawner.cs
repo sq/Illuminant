@@ -314,7 +314,9 @@ namespace Squared.Illuminant.Particles.Transforms {
                 var bufSize = (count + 127) / 128 * 128;
                 Temp4 = new Vector4[bufSize];
                 lock (engine.Coordinator.CreateResourceLock)
-                    PositionBuffer = new Texture2D(engine.Coordinator.Device, bufSize, 1, false, SurfaceFormat.Vector4);
+                    PositionBuffer = new Texture2D(engine.Coordinator.Device, bufSize, 1, false, SurfaceFormat.Vector4) {
+                        Name = "Transforms.Spawner.PositionBuffer",
+                    };
             }
         }
 
@@ -363,12 +365,13 @@ namespace Squared.Illuminant.Particles.Transforms {
             var result = base.GetChunkSizeAndIndices(engine);
             var polygonRate = PolygonRate.GetValueOrDefault(0);
             if (polygonRate >= 1) {
-                if (!PolygonLoop)
+                if (!PolygonLoop && (count > 1))
                     count -= 1;
                 result.W = (TotalSpawned / polygonRate) % (float)count;
             } else {
                 result.W = TotalSpawned % count;
             }
+            result.AssertFinite();
             return result;
         }
 

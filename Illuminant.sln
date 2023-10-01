@@ -36,7 +36,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Modeling", "Modeling\Modeli
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FNA", "..\FNA\FNA.csproj", "{35253CE1-C864-4CD3-8249-4D1319748E8F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpFont", "..\Fracture\Ext\SharpFont\Source\SharpFont\SharpFont.csproj", "{ECD55E3B-1139-4F0D-AF63-3F471AAF6E91}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpFont", "..\Fracture\Ext\SharpFontFork\Source\SharpFont\SharpFont.csproj", "{ECD55E3B-1139-4F0D-AF63-3F471AAF6E91}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PRGUI", "..\Fracture\Squared\PRGUI\PRGUI.csproj", "{36463AEE-E309-43A6-BCFA-A69944390AA7}"
 EndProject

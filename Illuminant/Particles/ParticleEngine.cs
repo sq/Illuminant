@@ -501,13 +501,17 @@ namespace Squared.Illuminant.Particles {
                     Coordinator.Device,
                     RandomnessTextureWidth, RandomnessTextureHeight, false,
                     SurfaceFormat.Vector4
-                );
+                ) {
+                    Name = "ParticleEngine.RandomnessTexture",
+                };
                 // TODO: Mip chain?
                 LowPrecisionRandomnessTexture = new Texture2D(
                     Coordinator.Device,
                     RandomnessTextureWidth, RandomnessTextureHeight, false,
                     SurfaceFormat.Rgba64
-                );
+                ) {
+                    Name = "ParticleEngine.LowPrecisionRandomnessTexture",
+                };
 
                 var buffer = new Vector4[RandomnessTextureWidth * RandomnessTextureHeight];
                 int o;
@@ -595,6 +599,7 @@ namespace Squared.Illuminant.Particles {
             Coordinator.DisposeResource(RasterizeVertexBuffer);
             Coordinator.DisposeResource(RasterizeOffsetBuffer);
             Coordinator.DisposeResource(RandomnessTexture);
+            Coordinator.DisposeResource(LowPrecisionRandomnessTexture);
             Coordinator.DisposeResource(LivenessQueryRTs);
         }
 

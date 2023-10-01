@@ -120,9 +120,9 @@ namespace Squared.Illuminant {
             lock (coordinator.CreateResourceLock)
                 Texture = new AutoRenderTarget(
                     coordinator,
-                    SliceWidth * ColumnCount, 
+                    SliceWidth * ColumnCount,
                     SliceHeight * RowCount,
-                    false, Format
+                    false, Format, name: "DistanceField.Texture"
                 );
 
 #if DF3D

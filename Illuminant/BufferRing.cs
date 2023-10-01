@@ -86,7 +86,7 @@ namespace Squared.Illuminant {
                         Name = $"{Name ?? "BufferRing"} buffer #{i}"
                     };
 
-                    Coordinator.AutoAllocatedTextureResources.Add(buffer);
+                    Coordinator.RegisterAutoAllocatedTextureResource(buffer);
                 }
 
                 lock (Buffers) {
