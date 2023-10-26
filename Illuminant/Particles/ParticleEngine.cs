@@ -569,9 +569,11 @@ namespace Squared.Illuminant.Particles {
                 });
 
                 ScratchTexture = new RenderTarget2D(
-                    coordinator.Device, Configuration.ChunkSize, Configuration.ChunkSize, 
+                    coordinator.Device, Configuration.ChunkSize, Configuration.ChunkSize,
                     false, SurfaceFormat.Alpha8, DepthFormat.None, 0, RenderTargetUsage.PreserveContents
-                );
+                ) {
+                    Name = "ParticleEngine.ScratchTexture"
+                };
 
                 DummyRampTexture = new Texture2D(coordinator.Device, 1, 1, false, SurfaceFormat.Color);
             }

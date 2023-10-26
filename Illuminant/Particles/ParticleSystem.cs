@@ -110,11 +110,13 @@ namespace Squared.Illuminant.Particles {
 
             internal RenderTarget2D CreateRenderTarget (ParticleEngineConfiguration configuration, GraphicsDevice device) {
                 return new RenderTarget2D(
-                    device, 
-                    Size, Size, false, 
-                    SurfaceFormat.Vector4, DepthFormat.None, 
+                    device,
+                    Size, Size, false,
+                    SurfaceFormat.Vector4, DepthFormat.None,
                     0, RenderTargetUsage.PreserveContents
-                );
+                ) {
+                    Name = "ParticleSystem.BufferSet",
+                };
             }
 
             public void Dispose () {
@@ -190,7 +192,9 @@ namespace Squared.Illuminant.Particles {
                 return new RenderTarget2D(
                     device, Size, Size, false, SurfaceFormat.Vector4,
                     DepthFormat.None, 0, RenderTargetUsage.PreserveContents
-                );
+                ) {
+                    Name = "ParticleSystem.Chunk",
+                };
             }
 
             public void Dispose () {

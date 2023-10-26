@@ -200,6 +200,7 @@ namespace TestGame.Scenes {
                 GeneratedMap = new AutoRenderTarget(Game.RenderCoordinator, w, h, false, format);
                 // GeneratedMap = new Texture2D(Game.GraphicsDevice, w, h, false, SurfaceFormat.Vector4);
             }
+            Game.RenderCoordinator.DisposeResource(Lightmap);
             Lightmap = new RenderTarget2D(
                 Game.GraphicsDevice, Width, Height, false,
                 SurfaceFormat.Color, DepthFormat.None, 0, 

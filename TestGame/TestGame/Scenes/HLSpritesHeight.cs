@@ -39,6 +39,11 @@ namespace TestGame.Scenes {
         [Group("Generator Settings")]
         Toggle HighPrecisionNormals, ElevationClamping;
 
+        [Group("GBuffer Settings")]
+        Slider DistanceZMax, DistanceZScale, RimLightRadius;
+        [Group("GBuffer Settings")]
+        Toggle DistanceOnly;
+
         [Group("Sprite Settings")]
         Slider HeightScale, BlurSigma, BlurSampleRadius, BlurMeanFactor, SpriteSize, SpriteBias, SpriteMasking;
         [Group("Sprite Settings")]
@@ -106,13 +111,24 @@ namespace TestGame.Scenes {
             LightPosY.Max = Height;
             LightPosZ.Max = 512f;
             LightPosX.Speed = LightPosY.Speed = LightPosZ.Speed = 16f;
+            DistanceZMax.Min = 1;
+            DistanceZMax.Max = 128;
+            DistanceZMax.Value = 16;
+            DistanceZScale.Min = -4f;
+            DistanceZScale.Max = 4f;
+            DistanceZScale.Value = -1f;
+            RimLightRadius.Min = 0f;
+            RimLightRadius.Max = 64f;
+            RimLightRadius.Value = 8f;
+            RimLightRadius.Speed = 0.5f;
             UseMips.Value = true;
+            DistanceOnly.Value = false;
         }
 
         public override void LoadContent () {
             Background = Game.TextureLoader.Load("vector-field-background");
             SpriteAlbedo = Game.TextureLoader.LoadSync("red-albedo", new TextureLoadOptions {
-                // GenerateDistanceField = true,
+                GenerateDistanceField = true,
                 GenerateMips = true,
             }, true, false);
             SpriteHeight = Game.TextureLoader.LoadSync("red-heightmap", new TextureLoadOptions {
@@ -127,7 +143,7 @@ namespace TestGame.Scenes {
             Environment.AmbientColor = new Color(63, 63, 63, 0);
             Environment.Lights.Add(new SphereLightSource {
                 CastsShadows = false, Color = new Vector4(0.5f, 0.1f, 0.2f, 1f),
-                Radius = 64f,
+                Radius = 1f,
                 RampLength = 800f,
                 RampMode = LightSourceRampMode.Exponential
             });
@@ -151,8 +167,20 @@ namespace TestGame.Scenes {
             IlluminantMaterials = Renderer.IlluminantMaterials;
 
             Renderer.OnRenderGBuffer += (LightingRenderer lr, ref ImperativeRenderer ir) => {
+                var df = Game.TextureLoader.GetDistanceField(SpriteAlbedo);
+                var texSet = new TextureSet(
+                    DistanceOnly ? df : GeneratedMap.Get(), 
+                    df
+                );
+                ir.Parameters.Add("TapSpacingAndBias", new Vector3(1.0f / df.Width * TapSpacing.Value, 1.0f / df.Height * TapSpacing.Value, MipBias));
                 ir.Parameters.Add("NormalsAreSigned", HighPrecisionNormals);
-                ir.Draw(GeneratedMap, Vector2.Zero, material: IlluminantMaterials.NormalBillboard);
+                ir.Parameters.Add("ZFromDistance", new Vector4(0, DistanceZMax, DistanceZScale, RimLightRadius));
+                var dc = new BitmapDrawCall(texSet, Vector2.Zero);
+                dc.AlignTexture2(1f, true);
+                ir.Draw(ref dc, material: DistanceOnly 
+                    ? IlluminantMaterials.DistanceBillboard 
+                    : IlluminantMaterials.NormalBillboard
+                );
             };
 
             MakeSurfaces();
@@ -165,6 +193,7 @@ namespace TestGame.Scenes {
                 Game.RenderCoordinator.DisposeResource(GeneratedMap);
                 GeneratedMap = new AutoRenderTarget(Game.RenderCoordinator, w, h, false, format);
             }
+            Game.RenderCoordinator.DisposeResource(Lightmap);
             Lightmap = new RenderTarget2D(
                 Game.GraphicsDevice, w, h, false,
                 SurfaceFormat.Color, DepthFormat.None, 0, 
