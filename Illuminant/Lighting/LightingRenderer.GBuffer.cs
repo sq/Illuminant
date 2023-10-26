@@ -31,13 +31,16 @@ namespace Squared.Illuminant {
             }
         }
 
-        private void EnsureGBuffer () {
+        private void EnsureGBuffer (int width, int height) {
             if (Configuration.EnableGBuffer) {
+                if ((_GBuffer != null) && ((_GBuffer.Width != width) || (_GBuffer.Height != height))) {
+                    Coordinator.DisposeResource(_GBuffer);
+                    _GBuffer = null;
+                }
+
                 if (_GBuffer == null) {
                     _GBuffer = new GBuffer(
-                        Coordinator, 
-                        Configuration.MaximumRenderSize.First, 
-                        Configuration.MaximumRenderSize.Second,
+                        Coordinator, width, height,
                         Configuration.HighQuality
                     );
                     _GBuffer.Texture.SetName(_Name);

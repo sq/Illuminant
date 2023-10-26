@@ -352,6 +352,18 @@ namespace Squared.Illuminant {
         /// </summary>
         public float   Volumetricity = 1;
         /// <summary>
+        /// Controls the distance at which a shaded pixel will receive
+        ///  full diffuse light from the cone light source, separate
+        ///  from the volumetric light. 1.0 is gradual falloff that
+        ///  ends exactly at EndPosition.
+        /// </summary>
+        public float   RampLength = 1.0f;
+        /// <summary>
+        /// Amplifies diffuse highlights and shadows for pixels within 
+        ///  the light volume to increase contrast/visibility.
+        /// </summary>
+        public float   BlowoutFactor = 0.0f;
+        /// <summary>
         /// Controls the nature of the light's distance falloff.
         /// Exponential produces falloff that is more realistic (square of distance or whatever) but not necessarily as expected. 
         /// </summary>
