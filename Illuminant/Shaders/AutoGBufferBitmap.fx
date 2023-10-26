@@ -97,7 +97,6 @@ void NormalBillboardPixelShader(
         discard;
 }
 
-
 float tap(
     float2 uv,
     float4 texRgn

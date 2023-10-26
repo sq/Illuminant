@@ -17,6 +17,14 @@ namespace Squared.Illuminant {
     public sealed partial class LightingRenderer : IDisposable, INameableGraphicsObject {
         public event UserGBufferRenderer OnRenderGBuffer;
 
+        private GBufferTransformArguments PendingGBufferArguments = new GBufferTransformArguments();
+        private Action<DeviceManager, object> SetupGBufferGroundPlane;
+        private object BoxedRenderScale = default(Vector2);
+        private short[] BillboardQuadIndices;
+        private MaterialParameterValues.Storage GBufferParameterStorage;
+        private Action<DeviceManager, object> UpdateScaleFactorForGBufferBitmapMaterial;
+        private HeightVolumeVertex[] GroundPlaneVerts = new HeightVolumeVertex[4];
+
         public GBuffer GBuffer {
             get {
                 return _GBuffer;
@@ -66,7 +74,6 @@ namespace Squared.Illuminant {
             public int RenderWidth, RenderHeight;
             public ViewTransform Transform;
         }
-        private GBufferTransformArguments PendingGBufferArguments = new GBufferTransformArguments();
 
         private void _BeforeRenderGBuffer (DeviceManager dm, object userData) {
             dm.PushStates();
@@ -75,7 +82,7 @@ namespace Squared.Illuminant {
             dm.Device.ScissorRectangle = new Rectangle(0, 0, PendingGBufferArguments.RenderWidth, PendingGBufferArguments.RenderHeight);
         }
 
-        private void UpdateScaleFactorForGBufferBitmapMaterial (DeviceManager dm, object userData) {
+        private void _UpdateScaleFactorForGBufferBitmapMaterial (DeviceManager dm, object userData) {
             var scaleFactor = (Vector2)userData;
             var invScaleFactor = new Vector2(1.0f / scaleFactor.X, 1.0f / scaleFactor.Y);
             IlluminantMaterials.AutoGBufferBitmap.Effect.Parameters["ViewCoordinateScaleFactor"].SetValue(invScaleFactor);
@@ -85,8 +92,6 @@ namespace Squared.Illuminant {
             Materials.PopViewTransform();
             dm.PopStates();
         }
-
-        private Action<DeviceManager, object> SetupGBufferGroundPlane;
 
         private void _SetupGBufferGroundPlane (DeviceManager dm, object userData) {
             var sohack = ComputeSelfOcclusionHack();
@@ -159,8 +164,13 @@ namespace Squared.Illuminant {
                 // TODO: Update the heightmap using any SDF light obstructions (maybe only if they're flagged?)
 
                 if (OnRenderGBuffer != null) {
-                    // FIXME: Memory leak for the delegate and boxed value here
-                    using (var userContentGroup = BatchGroup.New(group, 100, UpdateScaleFactorForGBufferBitmapMaterial, userData: Configuration.RenderScale)) {
+
+                    if (UpdateScaleFactorForGBufferBitmapMaterial == null)
+                        UpdateScaleFactorForGBufferBitmapMaterial = _UpdateScaleFactorForGBufferBitmapMaterial;
+                    if ((Vector2)BoxedRenderScale != Configuration.RenderScale) 
+                        BoxedRenderScale = Configuration.RenderScale;
+
+                    using (var userContentGroup = BatchGroup.New(group, 100, UpdateScaleFactorForGBufferBitmapMaterial, userData: BoxedRenderScale)) {
                         if (RenderTrace.EnableTracing)
                             RenderTrace.Marker(userContentGroup, -999, "LightingRenderer {0} : Begin User G-Buffer Content", this.ToObjectID());
 
@@ -173,6 +183,8 @@ namespace Squared.Illuminant {
                         ) {
                             DefaultBitmapMaterial = IlluminantMaterials.AutoGBufferBitmap
                         };
+                        GBufferParameterStorage = GBufferParameterStorage.EnsureUniqueStorage(ref ir.Parameters);
+                        ir.Parameters.UseExistingListStorage(GBufferParameterStorage);
 
                         OnRenderGBuffer(this, ref ir);
                     }
@@ -184,6 +196,9 @@ namespace Squared.Illuminant {
         }
 
         private void RenderGBufferVolumes (PrimitiveBatch<HeightVolumeVertex> batch) {
+            if (Environment.HeightVolumes.Count == 0)
+                return;
+
             // Rasterize the height volumes in order from lowest to highest.
             foreach (var hv in Environment.HeightVolumes.OrderBy(hv => hv.ZBase + hv.Height)) {
                 var b = hv.Bounds;
@@ -263,15 +278,14 @@ namespace Squared.Illuminant {
                 bl += huge;
             }
 
-            var verts = new HeightVolumeVertex[] {
-                new HeightVolumeVertex(tl, Vector3.UnitZ, zRange, Environment.EnableGroundShadows),
-                new HeightVolumeVertex(tr, Vector3.UnitZ, zRange, Environment.EnableGroundShadows),
-                new HeightVolumeVertex(br, Vector3.UnitZ, zRange, Environment.EnableGroundShadows),
-                new HeightVolumeVertex(bl, Vector3.UnitZ, zRange, Environment.EnableGroundShadows)
-            };
+            // FIXME: Potential race condition
+            GroundPlaneVerts[0] = new HeightVolumeVertex(tl, Vector3.UnitZ, zRange, Environment.EnableGroundShadows);
+            GroundPlaneVerts[1] = new HeightVolumeVertex(tr, Vector3.UnitZ, zRange, Environment.EnableGroundShadows);
+            GroundPlaneVerts[2] = new HeightVolumeVertex(br, Vector3.UnitZ, zRange, Environment.EnableGroundShadows);
+            GroundPlaneVerts[3] = new HeightVolumeVertex(bl, Vector3.UnitZ, zRange, Environment.EnableGroundShadows);
 
             batch.Add(new PrimitiveDrawCall<HeightVolumeVertex>(
-                PrimitiveType.TriangleList, verts, 0, 4, QuadIndices, 0, 2
+                PrimitiveType.TriangleList, GroundPlaneVerts, 0, 4, QuadIndices, 0, 2
             ));
         }
 
@@ -296,8 +310,6 @@ namespace Squared.Illuminant {
                 return result;
             }
         }
-
-        private short[] BillboardQuadIndices;
 
         private void _GBufferBillboardBatchSetup (DeviceManager dm, object userData) {
             var m = (Material)userData;
