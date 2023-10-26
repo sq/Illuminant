@@ -182,6 +182,10 @@ namespace Squared.Illuminant {
                         _Material = parent.IlluminantMaterials.LineLight;
                         _ProbeMaterial = parent.IlluminantMaterials.LineLightProbe;
                         break;
+                    case LightSourceTypeID.Volumetric:
+                        _Material = parent.IlluminantMaterials.VolumetricLight;
+                        _ProbeMaterial = parent.IlluminantMaterials.VolumetricLightProbe;
+                        break;
                     case LightSourceTypeID.Projector:
                         _Material = castsShadows
                             ? parent.IlluminantMaterials.ProjectorLight
@@ -1053,6 +1057,7 @@ namespace Squared.Illuminant {
                                 var particleLightSource = lightSource as ParticleLightSource;
                                 var lineLightSource = lightSource as LineLightSource;
                                 var projectorLightSource = lightSource as ProjectorLightSource;
+                                var volumetricLightSource = lightSource as VolumetricLightSource;
                                 var replicator = lightSource as LightSourceReplicator;
 
                                 /*
@@ -1077,6 +1082,8 @@ namespace Squared.Illuminant {
                                     RenderProjectorLightSource(projectorLightSource, intensityScale, ltrs);
                                 else if (replicator != null)
                                     RenderReplicatorLightSource(replicator, intensityScale, ltrs);
+                                else if (volumetricLightSource != null)
+                                    RenderVolumetricLightSource(volumetricLightSource, intensityScale, ltrs);
                                 else
                                     throw new NotSupportedException(lightSource.GetType().Name);
                             };
@@ -1279,6 +1286,29 @@ namespace Squared.Illuminant {
             vertex.Color1 = color1;
             vertex.Color2 = color2;
             vertex.LightProperties.X = lightSource.Radius;
+            vertex.LightProperties.Y = 0;
+            vertex.LightProperties.Z = (int)lightSource.RampMode;
+            vertex.LightProperties.W = (lightSource.CastsShadows && (DistanceField != null)) ? 1f : 0f;
+            vertex.MoreLightProperties.X = lightSource.AmbientOcclusionRadius;
+            vertex.MoreLightProperties.Y = lightSource.ShadowDistanceFalloff.GetValueOrDefault(-99999);
+            vertex.MoreLightProperties.Z = lightSource.FalloffYFactor;
+            vertex.MoreLightProperties.W = lightSource.AmbientOcclusionOpacity;
+            vertex.EvenMoreLightProperties = Vector4.Zero;
+            ltrs.LightVertices.Add(ref vertex);
+
+            ltrs.LightCount++;
+        }
+
+        private void RenderVolumetricLightSource (VolumetricLightSource lightSource, float intensityScale, LightTypeRenderState ltrs) {
+            LightVertex vertex;
+            vertex.LightPosition1 = new Vector4(lightSource.StartPosition, lightSource.StartRadius);
+            vertex.LightPosition2 = new Vector4(lightSource.EndPosition, lightSource.EndRadius);
+            vertex.LightPosition3 = Vector4.Zero;
+            Vector4 color1 = lightSource.Color;
+            color1.W *= (lightSource.Opacity * intensityScale);
+            vertex.Color1 = vertex.Color2 = color1;
+            // FIXME
+            vertex.LightProperties.X = lightSource.Volumetricity;
             vertex.LightProperties.Y = 0;
             vertex.LightProperties.Z = (int)lightSource.RampMode;
             vertex.LightProperties.W = (lightSource.CastsShadows && (DistanceField != null)) ? 1f : 0f;

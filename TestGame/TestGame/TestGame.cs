@@ -107,6 +107,7 @@ namespace TestGame {
             typeof(Emoji),
             typeof(HLSpritesHeight),
             typeof(HLSpritesSolve),
+            typeof(VolumetricLight)
         };
 
         public TestGame () {

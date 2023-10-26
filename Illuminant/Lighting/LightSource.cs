@@ -15,6 +15,7 @@ namespace Squared.Illuminant {
         Particle = 3,
         Line = 4,
         Projector = 5,
+        Volumetric = 6,
         // Replicators are Sphere type
     }
 
@@ -318,6 +319,63 @@ namespace Squared.Illuminant {
                 Radius = Radius,
                 StartColor = StartColor,
                 EndColor = EndColor,
+                Opacity = Opacity,
+                CastsShadows = CastsShadows,
+                AmbientOcclusionRadius = AmbientOcclusionRadius,
+                RampMode = RampMode,
+                FalloffYFactor = FalloffYFactor,
+                ShadowDistanceFalloff = ShadowDistanceFalloff,
+                AmbientOcclusionOpacity = AmbientOcclusionOpacity,
+                Quality = Quality,
+                TextureRef = TextureRef,
+            };
+            return result;
+        }
+    }
+
+    public class VolumetricLightSource : LightSource {
+        /// <summary>
+        /// The position of the beginning of the cone.
+        /// </summary>
+        public Vector3 StartPosition;
+        /// <summary>
+        /// The position of the end of the cone.
+        /// </summary>
+        public Vector3 EndPosition;
+        /// <summary>
+        /// The sizes of the start and end of the cone.
+        /// </summary>
+        public float   StartRadius, EndRadius = 0;
+        /// <summary>
+        /// Controls the brightness of the cone light volume.
+        /// Lower values make the cone brighter.
+        /// </summary>
+        public float   Volumetricity = 1;
+        /// <summary>
+        /// Controls the nature of the light's distance falloff.
+        /// Exponential produces falloff that is more realistic (square of distance or whatever) but not necessarily as expected. 
+        /// </summary>
+        public LightSourceRampMode RampMode = LightSourceRampMode.Linear;
+        /// <summary>
+        /// The color of the light's illumination.
+        /// Note that this color is a Vector4 so that you can use HDR (greater than one) lighting values.
+        /// Alpha is *not* premultiplied (maybe it should be?)
+        /// </summary>
+        public Vector4   Color = Vector4.One;
+
+        public VolumetricLightSource ()
+            : base (LightSourceTypeID.Volumetric) {
+        }
+
+        public VolumetricLightSource Clone () {
+            var result = new VolumetricLightSource {
+                BlendMode = BlendMode,
+                UserData = UserData,
+                StartPosition = StartPosition,
+                EndPosition = EndPosition,
+                StartRadius = StartRadius,
+                EndRadius = EndRadius,
+                Color = Color,
                 Opacity = Opacity,
                 CastsShadows = CastsShadows,
                 AmbientOcclusionRadius = AmbientOcclusionRadius,

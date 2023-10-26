@@ -95,6 +95,10 @@ namespace Squared.Illuminant {
                     "LineLight", null, dBegin, dEnd
                 );
 
+                LoadOneMaterial(effects, out VolumetricLight,
+                    "VolumetricLight", null, dBegin, dEnd
+                );
+
                 LoadOneMaterial(effects, out ProjectorLight,
                     "ProjectorLight", null, dBegin, dEnd
                 );
@@ -130,6 +134,13 @@ namespace Squared.Illuminant {
                 LoadOneMaterial(effects, out LineLightProbe,
                     "LineLightProbe", null, dBegin, dEnd
                 );
+
+                // FIXME
+                /*
+                LoadOneMaterial(effects, out VolumetricLightProbe,
+                    "VolumetricLightProbe", null, dBegin, dEnd
+                );
+                */
 
                 LoadOneMaterial(effects, out ProjectorLightProbe,
                     "ProjectorLightProbe", null, dBegin, dEnd
