@@ -1126,10 +1126,8 @@ namespace Squared.Illuminant {
                                     // FIXME: Single-frame delay between particle state and particle light source positions,
                                     //  due to some sort of race condition I can't figure out.
                                     pls.System.Render(
-                                        bg, 0, ltrs.Material, null, null, 
-                                        new Particles.ParticleRenderParameters {
-                                            StippleFactor = pls.StippleFactor
-                                        }, usePreviousData: true
+                                        bg, 0, ltrs.Material, null, null,
+                                        pls.RenderParameters, usePreviousData: true
                                     );
                                 }
                             } else {

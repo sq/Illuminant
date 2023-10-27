@@ -5,6 +5,7 @@ using System.Text;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Squared.Game;
+using Squared.Illuminant.Particles;
 using Squared.Util;
 
 namespace Squared.Illuminant {
@@ -413,6 +414,16 @@ namespace Squared.Illuminant {
 
         public ParticleLightSource ()
             : base (LightSourceTypeID.Particle) {
+        }
+
+        private ParticleRenderParameters _RenderParameters;
+
+        internal ParticleRenderParameters RenderParameters {
+            get {
+                if (_RenderParameters?.StippleFactor != StippleFactor)
+                    _RenderParameters = new ParticleRenderParameters { StippleFactor = StippleFactor };
+                return _RenderParameters;
+            }
         }
 
         public ParticleLightSource Clone (bool deep) {
