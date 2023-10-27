@@ -32,6 +32,59 @@ float sdCappedCone(float3 p, float3 a, float3 b, float ra, float rb) {
                        cbx * cbx + cby * cby * baba));
 }
 
+float dot2(float3 v) {
+    return dot(v, v);
+}
+
+bool coneIntersect(
+    in float3 ro, in float3 rd, in float3 pa, in float3 pb, in float ra, in float rb,
+    out float4 result
+) {
+    result = 0;
+    float3 ba = pb - pa;
+    float3 oa = ro - pa;
+    float3 ob = ro - pb;
+    float m0 = dot(ba, ba);
+    float m1 = dot(oa, ba);
+    float m2 = dot(rd, ba);
+    float m3 = dot(rd, oa);
+    float m5 = dot(oa, oa);
+    float m9 = dot(ob, ba);
+    
+    // caps
+    if (m1 < 0.0)
+    {
+        if (dot2(oa * m2 - rd * m1) < (ra * ra * m2 * m2)) { // delayed division
+            result = float4(-m1 / m2, -ba * rsqrt(m0));
+            return true;
+        }
+    }
+    else if (m9 > 0.0)
+    {
+        float t = -m9 / m2; // NOT delayed division
+        if (dot2(ob + rd * t) < (rb * rb)) {
+            result = float4(t, ba * rsqrt(m0));
+            return true;
+        }
+    }
+    
+    // body
+    float rr = ra - rb;
+    float hy = m0 + rr * rr;
+    float k2 = m0 * m0 - m2 * m2 * hy;
+    float k1 = m0 * m0 * m3 - m1 * m2 * hy + m0 * ra * (rr * m2 * 1.0);
+    float k0 = m0 * m0 * m5 - m1 * m1 * hy + m0 * ra * (rr * m1 * 2.0 - m0 * ra);
+    float h = k1 * k1 - k2 * k0;
+    if (h < 0.0)
+        return false; //no intersection
+    float t = (-k1 - sqrt(h)) / k2;
+    float y = m1 + t * m2;
+    if (y < 0.0 || y > m0)
+        return false; //no intersection
+    result = float4(t, normalize(m0 * (m0 * (oa + t * rd) + rr * ba * ra) - ba * hy * y));
+    return true;
+}
+
 float volumetricTrace (
     in float4 startPosition,
     in float4 endPosition,
@@ -41,6 +94,18 @@ float volumetricTrace (
     in DistanceFieldConstants vars,
     in bool   enableDistance
 ) {
+    float4 temp;
+    
+    // HACK: Early-out if we know the trace will not ever intersect the cone.
+    // We fudge the radiuses slightly to give ourselves breathing room.
+    [branch]
+    if (!coneIntersect(
+        float3(shadedPixelPosition.xy, getMaximumZ()), float3(0, 0, -1),
+        startPosition.xyz, endPosition.xyz,
+        startPosition.w + 1, endPosition.w + 1, temp
+    ))
+        return 0;
+    
     float steps = getStepLimit(),
         occlusion = 1.0,
         hits = 0,

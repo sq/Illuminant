@@ -33,13 +33,17 @@ void VolumetricLightPixelShader(
 
     lightProperties.w *= enableShadows;
 
-    float u;
     float opacity = VolumetricLightPixelCore(
         shadedPixelPosition, shadedPixelNormal,
         startPosition, endPosition,
         lightProperties, moreLightProperties,
         evenMoreLightProperties
     );
+    if (opacity <= 0)
+    {
+        result = 0;
+        discard;
+    }
 
     result = float4(color.rgb * color.a * opacity, 1);
 }
