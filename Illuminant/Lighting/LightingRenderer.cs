@@ -774,6 +774,7 @@ namespace Squared.Illuminant {
                 Arithmetic.Saturate(lightSource.AmbientOcclusionOpacity)
             ));
             p["LightColor"].SetValue(lightSource.Color);
+            p["LightSpecularColor"].SetValue(new Vector4(lightSource.SpecularColor, lightSource.SpecularPower));
         }
 
         private void SetLightShaderParameters (Material material, RendererQualitySettings q) {

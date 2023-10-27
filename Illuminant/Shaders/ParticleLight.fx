@@ -11,7 +11,7 @@
 
 uniform const float4 LightProperties;
 uniform const float4 MoreLightProperties;
-uniform const float4 LightColor;
+uniform const float4 LightColor, LightSpecularColor;
 
 void ParticleLightVertexShader(
     in float3 cornerWeights          : NORMAL2,
@@ -90,7 +90,7 @@ void ParticleLightPixelShader(
 ) {
     float3 shadedPixelPosition, shadedPixelNormal;
     bool enableShadows, fullbright;
-    sampleGBuffer(
+    float3 cameraPosition = sampleGBuffer(
         GET_VPOS,
         shadedPixelPosition, shadedPixelNormal, enableShadows, fullbright
     );
@@ -106,8 +106,15 @@ void ParticleLightPixelShader(
     float opacity = SphereLightPixelCore(
         shadedPixelPosition, shadedPixelNormal, lightCenter.xyz, lightProperties, moreLightProperties
     );
+    float specularity = CalcSphereLightSpecularity(
+        cameraPosition, shadedPixelPosition, shadedPixelNormal, lightCenter.xyz,
+        LightSpecularColor.a
+    );
 
-    result = float4(lightColor.rgb * lightColor.a * opacity, 1);
+    result = float4(
+        (lightColor.rgb * lightColor.a * opacity) +
+        (LightSpecularColor.rgb * specularity * opacity), 1
+    );
 }
 
 void ParticleLightWithoutDistanceFieldPixelShader(
@@ -121,7 +128,7 @@ void ParticleLightWithoutDistanceFieldPixelShader(
 ) {
     float3 shadedPixelPosition, shadedPixelNormal;
     bool enableShadows, fullbright;
-    sampleGBuffer(
+    float3 cameraPosition = sampleGBuffer(
         GET_VPOS,
         shadedPixelPosition, shadedPixelNormal, enableShadows, fullbright
     );
@@ -137,8 +144,15 @@ void ParticleLightWithoutDistanceFieldPixelShader(
     float opacity = SphereLightPixelCoreNoDF(
         shadedPixelPosition, shadedPixelNormal, lightCenter.xyz, lightProperties, moreLightProperties
     );
+    float specularity = CalcSphereLightSpecularity(
+        cameraPosition, shadedPixelPosition, shadedPixelNormal, lightCenter.xyz,
+        LightSpecularColor.a
+    );
 
-    result = float4(lightColor.rgb * lightColor.a * opacity, 1);
+    result = float4(
+        (lightColor.rgb * lightColor.a * opacity) +
+        (LightSpecularColor.rgb * specularity * opacity), 1
+    );
 }
 
 technique ParticleLight {

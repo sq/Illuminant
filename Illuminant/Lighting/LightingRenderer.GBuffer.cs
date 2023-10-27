@@ -32,7 +32,7 @@ namespace Squared.Illuminant {
         }
 
         private void EnsureGBuffer (int width, int height) {
-            if (Configuration.EnableGBuffer) {
+            if (Configuration.EnableGBuffer && (width > 0) && (height > 0)) {
                 if ((_GBuffer != null) && ((_GBuffer.Width != width) || (_GBuffer.Height != height))) {
                     Coordinator.DisposeResource(_GBuffer);
                     _GBuffer = null;
