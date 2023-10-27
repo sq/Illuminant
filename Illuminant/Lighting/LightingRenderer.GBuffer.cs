@@ -74,7 +74,6 @@ namespace Squared.Illuminant {
         }
 
         private class GBufferTransformArguments {
-            public int RenderWidth, RenderHeight;
             public ViewTransform Transform;
         }
 
@@ -82,7 +81,6 @@ namespace Squared.Illuminant {
             dm.PushStates();
             Materials.PushViewTransform(ref PendingGBufferArguments.Transform);
             dm.AssertRenderTarget(_GBuffer.Texture.Get());
-            dm.Device.ScissorRectangle = new Rectangle(0, 0, PendingGBufferArguments.RenderWidth, PendingGBufferArguments.RenderHeight);
         }
 
         private void _UpdateScaleFactorForGBufferBitmapMaterial (DeviceManager dm, object userData) {
@@ -121,16 +119,14 @@ namespace Squared.Illuminant {
         }
 
         private void RenderGBuffer (
-            ref int layerIndex, IBatchContainer resultGroup,
-            int renderWidth, int renderHeight,
+            ref int layerIndex, IBatchContainer resultGroup, Vector2? viewportScale,
             bool enableHeightVolumes = true, bool enableBillboards = true
         ) {
-            var actualScaleFactor = PendingFieldViewportScale.GetValueOrDefault(Vector2.One) * Configuration.RenderScale;
-            PendingGBufferArguments.Transform = ViewTransform.CreateOrthographic(_GBuffer.Width, _GBuffer.Height);
-            PendingGBufferArguments.Transform.Position = PendingFieldViewportPosition.GetValueOrDefault(Vector2.Zero);
-            PendingGBufferArguments.Transform.Scale = actualScaleFactor;
-            PendingGBufferArguments.RenderWidth = renderWidth;
-            PendingGBufferArguments.RenderHeight = renderHeight;
+            var actualScaleFactor = viewportScale.GetValueOrDefault(Vector2.One) * Configuration.RenderScale;
+            var vt = ViewTransform.CreateOrthographic(_GBuffer.Width, _GBuffer.Height);
+            vt.Position = PendingFieldViewportPosition.GetValueOrDefault(Vector2.Zero);
+            vt.Scale = actualScaleFactor;
+            PendingGBufferArguments.Transform = vt;
 
             // FIXME: Is this right?
             using (var group = BatchGroup.ForRenderTarget(

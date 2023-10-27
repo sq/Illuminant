@@ -117,8 +117,8 @@ namespace Squared.Illuminant {
                     BatchGroup.Dispose();
                 }
 
-                var rw = (albedo != null) ? albedo.Width : width;
-                var rh = (albedo != null) ? albedo.Height : height;
+                var rw = (albedo != null) ? albedo.Width : Lightmap.Width;
+                var rh = (albedo != null) ? albedo.Height : Lightmap.Height;
                 var scale = new Vector2(width / rw, height / rh);
 
                 Renderer.ResolveLighting(

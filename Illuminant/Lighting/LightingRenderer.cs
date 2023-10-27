@@ -1909,12 +1909,12 @@ namespace Squared.Illuminant {
             PendingFieldViewportScale = viewportScale;
             PreviousZToYMultiplier = Environment.ZToYMultiplier;
 
-            var renderWidth = (int)(Configuration.MaximumRenderSize.First * Configuration.RenderScale.X);
-            var renderHeight = (int)(Configuration.MaximumRenderSize.Second * Configuration.RenderScale.Y);
+            var renderWidth = (int)Configuration.MaximumRenderSize.First;
+            var renderHeight = (int)Configuration.MaximumRenderSize.Second;
             EnsureGBuffer(renderWidth, renderHeight);
 
             if (_GBuffer != null)
-                RenderGBuffer(ref layer, container, renderWidth, renderHeight);
+                RenderGBuffer(ref layer, container, viewportScale);
 
             if (_DistanceField != null) {
                 AutoInvalidateDistanceField();
