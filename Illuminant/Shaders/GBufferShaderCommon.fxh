@@ -1,5 +1,8 @@
 #include "EnvironmentCommon.fxh"
 
+#define GBUFFER_Z_SCALE 1024
+#define GBUFFER_Z_OFFSET 1024
+
 // FIXME: Use the shared header?
 uniform const float  SelfOcclusionHack;
 uniform const float3 DistanceFieldExtent;
@@ -24,7 +27,7 @@ float4 encodeGBufferSample (
                 ? 99999
                 // If shadows are disabled we negate the Z value, and bias it by -1
                 // This ensures that shadows can be disabled for a Z of 0
-                : ((z / 512) * (enableShadows ? 1 : -1)) + (enableShadows ? 0 : -1)
+                : (((z + GBUFFER_Z_OFFSET) / GBUFFER_Z_SCALE) * (enableShadows ? 1 : -1)) + (enableShadows ? 0 : -1)
         );
     }
 }

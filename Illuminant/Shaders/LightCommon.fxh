@@ -20,6 +20,9 @@ uniform const float  GBufferViewportRelative;
 uniform const float  GBufferInvScaleFactor;
 uniform const float4 GBufferTexelSizeAndMisc;
 
+#define GBUFFER_Z_SCALE 1024
+#define GBUFFER_Z_OFFSET 1024
+
 #define GetViewportScale GetViewportScalePacked
 
 float2 GetViewportScalePacked () {
@@ -74,7 +77,7 @@ float3 sampleGBuffer (
         float relativeY = sample.z;
         float worldZ    = sample.w;
         if (worldZ < 0) {
-            // To ensure shadows can be disabled for the ground plane, unshadowed pixels have their Z biased by -1
+            // To ensure shadows can be disabled for the ground plane, unshadowed pixels have their Z biased by -1024
             worldZ += 1;
             // Unshadowed pixels have their Z negated
             worldZ = -worldZ;
@@ -85,7 +88,8 @@ float3 sampleGBuffer (
             enableShadows = false;
             fullbright = true;
         }
-        worldZ *= 512;
+        worldZ *= GBUFFER_Z_SCALE;
+        worldZ -= GBUFFER_Z_OFFSET;
 
         screenPositionPx /= getEnvironmentRenderScale();
         cameraPosition = float3(screenPositionPx.xy, getMaximumZ() + 0.01);
@@ -117,11 +121,12 @@ float3 sampleGBuffer (
     return cameraPosition;
 }
 
-bool checkShadowFilter(float filter, bool enableShadows) {
+bool checkShadowFilter(float4 evenMoreLightProperties, bool enableShadows) {
+    float filter = evenMoreLightProperties.x;
     if (filter < 0)
         return true;
     else 
-        return (filter > 0.5) == enableShadows;
+        return (filter > 0.5) != enableShadows;
 }
 
 float computeNormalFactor (

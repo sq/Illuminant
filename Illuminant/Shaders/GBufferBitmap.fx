@@ -56,7 +56,7 @@ void MaskBillboardPixelShader(
         (normal.x / 2) + 0.5,
         (normal.z / 2) + 0.5,
         relativeY,
-        (worldPosition.z / 512) * dataScaleAndDynamicFlag.y
+        ((worldPosition.z + GBUFFER_Z_OFFSET) / GBUFFER_Z_SCALE) * dataScaleAndDynamicFlag.y
     );
 }
 
@@ -85,7 +85,7 @@ void GDataBillboardPixelShader(
         data.r,
         data.g,
         yOffset,
-        (effectiveZ / 512) * dataScaleAndDynamicFlag.y
+        ((effectiveZ + GBUFFER_Z_OFFSET) / GBUFFER_Z_SCALE) * dataScaleAndDynamicFlag.y
     );
 }
 
