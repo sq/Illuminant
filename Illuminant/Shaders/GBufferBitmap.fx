@@ -74,18 +74,17 @@ void GDataBillboardPixelShader(
     const float discardThreshold = (127.0 / 255.0);
     clip(alpha - discardThreshold);
 
+    // FIXME: We can't represent vertical normals this way just horizontal
+    normal = normalize(float3((data.r - 0.5) * 2, 0, 0.0001));
     float dataScale = dataScaleAndDynamicFlag.x;
-    float yOffset = data.b * dataScale;
-    float effectiveZ = worldPosition.z + (yOffset * getInvZToYMultiplier());
+    float yOffset = data.g * dataScale;
+    float effectiveZ = worldPosition.z + (yOffset * getInvZToYMultiplier()) + (data.b * dataScale);
 
-    // HACK: We drop the world x axis and the normal y axis,
-    //  and reconstruct those two values when sampling the g-buffer
-    // FIXME: This is the old encoding!
-    result = float4(
-        data.r,
-        data.g,
+    result = encodeGBufferSample(
+        normal,
         yOffset,
-        ((effectiveZ + GBUFFER_Z_OFFSET) / GBUFFER_Z_SCALE) * dataScaleAndDynamicFlag.y
+        effectiveZ,
+        false, true, false
     );
 }
 

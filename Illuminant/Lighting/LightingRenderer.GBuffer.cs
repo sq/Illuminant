@@ -157,7 +157,9 @@ namespace Squared.Illuminant {
                     } else if (enableHeightVolumes) {
                         // fixme: needs self occlusion hack
                         RenderGBufferVolumes(batch);
-                    }
+                        RenderGBufferBillboards(group, 10);
+                    } else
+                        RenderGBufferBillboards(group, 10);
                 }
 
                 // TODO: Update the heightmap using any SDF light obstructions (maybe only if they're flagged?)

@@ -124,7 +124,7 @@ float3 sampleGBuffer (
 bool checkShadowFilter(float4 evenMoreLightProperties, bool enableShadows) {
     float filter = evenMoreLightProperties.x;
     if (filter < 0)
-        return true;
+        return false;
     else 
         return (filter > 0.5) != enableShadows;
 }

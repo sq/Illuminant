@@ -1222,7 +1222,10 @@ namespace Squared.Illuminant {
                 vertex.MoreLightProperties.Y = template.ShadowDistanceFalloff.GetValueOrDefault(-99999);
                 vertex.MoreLightProperties.Z = template.FalloffYFactor;
                 vertex.MoreLightProperties.W = template.AmbientOcclusionOpacity;
-                vertex.EvenMoreLightProperties = Vector4.Zero;
+                vertex.EvenMoreLightProperties = new Vector4(
+                    -1,
+                    0, 0, 0
+                );
                 ltrs.LightVertices.Add(ref vertex);
 
                 ltrs.LightCount++;
