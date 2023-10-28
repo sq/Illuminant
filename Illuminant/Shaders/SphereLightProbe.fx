@@ -9,6 +9,7 @@ void SphereLightProbeVertexShader(
     // ao radius, distance falloff, y falloff factor, ao opacity
     inout float4 moreLightProperties : TEXCOORD3,
     inout float4 color               : TEXCOORD4,
+    inout float4 evenMoreLightProperties : TEXCOORD7,
     out float4 result                : POSITION0
 ) {
     float2 clipPosition = (cornerWeights.xy * 99999) - 1;

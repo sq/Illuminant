@@ -7,8 +7,6 @@
 // The final output from the dot computation is raised to this power so
 #define DOT_EXPONENT   0.85
 
-#define RELATIVEY_SCALE 128
-
 #define DEFINE_LightCorners const float3 LightCorners[] = { \
     { 0, 0, 0 }, \
     { 1, 0, 0 }, \
@@ -73,7 +71,7 @@ float3 sampleGBuffer (
         float2 uv     = (sourceXy + 0.5) * GBufferTexelSizeAndMisc.xy;
         float4 sample = tex2Dlod(GBufferSampler, float4(uv, 0, 0));
 
-        float relativeY = sample.z * RELATIVEY_SCALE;
+        float relativeY = sample.z;
         float worldZ    = sample.w;
         if (worldZ < 0) {
             // To ensure shadows can be disabled for the ground plane, unshadowed pixels have their Z biased by -1
@@ -99,7 +97,8 @@ float3 sampleGBuffer (
 
         // HACK: Reconstruct the y normal from the z normal
         if (any(sample.xy)) {
-            normal = decodeNormalSpherical(sample.xy);
+            float2 filteredSample = sample.xy;
+            normal = decodeNormalSpherical(filteredSample);
         } else {
             // HACK: If the x and y normals are both 0, the normal is intended to be 0 (to disable directional occlusion)
             normal = float3(0, 0, 0);
@@ -116,6 +115,13 @@ float3 sampleGBuffer (
     }
 
     return cameraPosition;
+}
+
+bool checkShadowFilter(float filter, bool enableShadows) {
+    if (filter < 0)
+        return true;
+    else 
+        return (filter > 0.5) == enableShadows;
 }
 
 float computeNormalFactor (

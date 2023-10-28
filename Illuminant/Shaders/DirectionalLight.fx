@@ -24,6 +24,7 @@ void DirectionalLightVertexShader(
     inout float4 moreLightProperties : TEXCOORD3,
     inout float4 color               : TEXCOORD4,
     inout float4 lightDirection      : TEXCOORD5,
+    inout float4 evenMoreLightProperties : TEXCOORD7,
     out float3   worldPosition       : POSITION1,
     out float4   result              : POSITION0
 ) {
@@ -40,6 +41,7 @@ void DirectionalLightProbeVertexShader(
     inout float4 lightDirection      : TEXCOORD5,
     inout float4 lightProperties     : TEXCOORD2,
     inout float4 moreLightProperties : TEXCOORD3,
+    inout float4 evenMoreLightProperties : TEXCOORD7,
     inout float4 color               : TEXCOORD4,
     out float4   result              : POSITION0
 ) {
@@ -96,6 +98,7 @@ void DirectionalLightPixelShader(
     in  float4 lightProperties     : TEXCOORD2,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : TEXCOORD4,
+    in  float4 evenMoreLightProperties : TEXCOORD7,
     ACCEPTS_VPOS,
     out float4 result              : COLOR0
 ) {
@@ -107,7 +110,7 @@ void DirectionalLightPixelShader(
         shadedPixelPosition, shadedPixelNormal, enableShadows, fullbright
     );
 
-    if (fullbright) {
+    if (fullbright || checkShadowFilter(evenMoreLightProperties, enableShadows)) {
         result = 0;
         discard;
         return;
@@ -129,6 +132,7 @@ void DirectionalLightWithRampPixelShader(
     in  float4 lightProperties     : TEXCOORD2,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : TEXCOORD4,
+    in  float4 evenMoreLightProperties : TEXCOORD7,
     ACCEPTS_VPOS,
     out float4 result              : COLOR0
 ) {
@@ -140,7 +144,7 @@ void DirectionalLightWithRampPixelShader(
         shadedPixelPosition, shadedPixelNormal, enableShadows, fullbright
     );
 
-    if (fullbright) {
+    if (fullbright || checkShadowFilter(evenMoreLightProperties, enableShadows)) {
         result = 0;
         discard;
         return;

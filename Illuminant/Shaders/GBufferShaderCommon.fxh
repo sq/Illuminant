@@ -1,7 +1,5 @@
 #include "EnvironmentCommon.fxh"
 
-#define RELATIVEY_SCALE 128
-
 // FIXME: Use the shared header?
 uniform const float  SelfOcclusionHack;
 uniform const float3 DistanceFieldExtent;
@@ -20,7 +18,7 @@ float4 encodeGBufferSample (
         //  and reconstruct those two values when sampling the g-buffer
         return float4(
             encodeNormalSpherical(normal),
-            (relativeY / RELATIVEY_SCALE),
+            relativeY,
             fullbright
                 // for a fullbright pixel we just make the w value total garbage
                 ? 99999

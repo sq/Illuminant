@@ -20,6 +20,12 @@ namespace Squared.Illuminant {
         // Replicators are Sphere type
     }
 
+    public enum ShadowFilter : int {
+        None = -1,
+        Unshadowed = 0,
+        Shadowed = 1,
+    }
+
     public abstract class LightSourceBase {
         [NonSerialized]
         public readonly LightSourceTypeID TypeID;
@@ -155,6 +161,8 @@ namespace Squared.Illuminant {
             }
         }
 
+        public ShadowFilter ShadowFilter = ShadowFilter.None;
+
         public DirectionalLightSource ()
             : base (LightSourceTypeID.Directional) {
         }
@@ -240,6 +248,8 @@ namespace Squared.Illuminant {
                 base.AmbientOcclusionOpacity = value;
             }
         }
+
+        public ShadowFilter ShadowFilter = ShadowFilter.None;
 
         public SphereLightSource ()
             : base (LightSourceTypeID.Sphere) {

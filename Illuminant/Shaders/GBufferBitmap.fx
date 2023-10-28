@@ -55,7 +55,7 @@ void MaskBillboardPixelShader(
     result = float4(
         (normal.x / 2) + 0.5,
         (normal.z / 2) + 0.5,
-        (relativeY / RELATIVEY_SCALE),
+        relativeY,
         (worldPosition.z / 512) * dataScaleAndDynamicFlag.y
     );
 }
@@ -84,7 +84,7 @@ void GDataBillboardPixelShader(
     result = float4(
         data.r,
         data.g,
-        yOffset / RELATIVEY_SCALE,
+        yOffset,
         (effectiveZ / 512) * dataScaleAndDynamicFlag.y
     );
 }

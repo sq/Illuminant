@@ -8,6 +8,7 @@ void SphereLightWithoutDistanceFieldPixelShader (
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : TEXCOORD4,
     in  float4 specular            : TEXCOORD5,
+    in  float4 evenMoreLightProperties : TEXCOORD7,
     ACCEPTS_VPOS,
     out float4 result              : COLOR0
 ) {
@@ -18,7 +19,7 @@ void SphereLightWithoutDistanceFieldPixelShader (
         shadedPixelPosition, shadedPixelNormal, enableShadows, fullbright
     );
 
-    if (fullbright) {
+    if (fullbright || checkShadowFilter(evenMoreLightProperties, enableShadows)) {
         result = 0;
         discard;
         return;

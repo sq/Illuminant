@@ -20,6 +20,7 @@ void DirectionalLightVertexShader(
     inout float4 moreLightProperties : TEXCOORD3,
     inout float4 color               : TEXCOORD4,
     inout float4 lightDirection      : TEXCOORD5,
+    inout float4 evenMoreLightProperties : TEXCOORD7,
     out float3   worldPosition       : POSITION1,
     out float4   result              : POSITION0
 ) {
@@ -58,6 +59,7 @@ void DirectionalLightPixelShaderNoDF(
     in  float4 lightProperties     : TEXCOORD2,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : TEXCOORD4,
+    in  float4 evenMoreLightProperties : TEXCOORD7,
     ACCEPTS_VPOS,
     out float4 result              : COLOR0
 ) {
@@ -69,7 +71,7 @@ void DirectionalLightPixelShaderNoDF(
         shadedPixelPosition, shadedPixelNormal, enableShadows, fullbright
     );
 
-    if (fullbright) {
+    if (fullbright || checkShadowFilter(evenMoreLightProperties, enableShadows)) {
         result = 0;
         discard;
         return;
