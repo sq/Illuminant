@@ -91,6 +91,7 @@ float volumetricTrace (
     in float3 shadedPixelPosition,
     in float4 lightProperties,
     in float4 moreLightProperties,
+    in float4 evenMoreLightProperties,
     in DistanceFieldConstants vars,
     in bool   enableDistance
 ) {
@@ -115,6 +116,8 @@ float volumetricTrace (
     for (float z = getMaximumZ(), z2 = max(shadedPixelPosition.z, getGroundZ()); z >= z2; z -= step) {
         float3 pos = float3(shadedPixelPosition.xy, z);
         float sd = sdCappedCone(pos, startPosition.xyz, endPosition.xyz, startPosition.w, endPosition.w);
+        if (sd >= 0)
+            continue;
         
         if (enableDistance) {
             // If the path between the camera and the shaded pixel is fully
@@ -125,8 +128,9 @@ float volumetricTrace (
             if (occlusion <= 0)
                 break;
         }
-        
-        hits += (1 - smoothstep(-1, 1, sd)) * occlusion;
+
+        float ramp = pow(saturate(-sd / lightProperties.y), evenMoreLightProperties.y);
+        hits += ramp * occlusion;
     }
 
     return saturate(hits / steps / lightProperties.x);
@@ -141,7 +145,7 @@ float VolumetricLightPixelCore(
     in float4 lightProperties,
     // ao radius, distance falloff, y falloff factor, ao opacity
     in float4 moreLightProperties,
-    // blowout
+    // blowout, interior ramping power
     in float4 evenMoreLightProperties
 ) {
     float4 coneLightProperties = lightProperties;
@@ -165,7 +169,7 @@ float VolumetricLightPixelCore(
     float distanceFromStartOfCone = length(shadedPixelPosition.xy - startPosition.xy),
         volumetricOpacity = volumetricTrace(
             startPosition, endPosition, shadedPixelPosition,
-            lightProperties, moreLightProperties,
+            lightProperties, moreLightProperties, evenMoreLightProperties,
             vars, traceShadows
         );
     
@@ -191,11 +195,12 @@ float VolumetricLightPixelCore(
     float fullLength = length(trajectory);
     float normalOpacity = computeNormalFactor(trajectory / fullLength, shadedPixelNormal);
     normalOpacity = lerp(normalOpacity, normalOpacity * 2 - 1, evenMoreLightProperties.x);
-    float shapeOpacity = 1 - smoothstep(
-        -1, 1, sdCappedCone(shadedPixelPosition, startPosition.xyz, endPosition.xyz, startPosition.w, endPosition.w)
-    );
+    float contactDistance = sdCappedCone(shadedPixelPosition, startPosition.xyz, endPosition.xyz, startPosition.w, endPosition.w);
+    float shapeOpacity = contactDistance < 0 
+        ? pow(saturate(-contactDistance / lightProperties.y), evenMoreLightProperties.y)
+        : 0;
     float distanceOpacity = 1 - saturate(
-        length(shadedPixelPosition - startPosition.xyz) / (fullLength * lightProperties.y)
+        length(shadedPixelPosition - startPosition.xyz) / (fullLength * evenMoreLightProperties.z)
     );
     float diffuse = normalOpacity * shapeOpacity * distanceOpacity;
     PREFER_FLATTEN

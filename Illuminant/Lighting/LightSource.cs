@@ -368,7 +368,16 @@ namespace Squared.Illuminant {
         ///  from the volumetric light. 1.0 is gradual falloff that
         ///  ends exactly at EndPosition.
         /// </summary>
-        public float   RampLength = 1.0f;
+        public float   DistanceAttenuation = 1.0f;
+        /// <summary>
+        /// Controls how far inside the volume you must be for full
+        ///  illumination.
+        /// </summary>
+        public float   RampLength = 1f;
+        /// <summary>
+        /// pow(distance / RampLength, RampPower)
+        /// </summary>
+        public float   RampPower = 1.0f;
         /// <summary>
         /// Amplifies diffuse highlights and shadows for pixels within 
         ///  the light volume to increase contrast/visibility.

@@ -1330,7 +1330,7 @@ namespace Squared.Illuminant {
             vertex.MoreLightProperties.Y = lightSource.ShadowDistanceFalloff.GetValueOrDefault(-99999);
             vertex.MoreLightProperties.Z = lightSource.FalloffYFactor;
             vertex.MoreLightProperties.W = lightSource.AmbientOcclusionOpacity;
-            vertex.EvenMoreLightProperties = new Vector4(lightSource.BlowoutFactor, 0f, 0f, 0f);
+            vertex.EvenMoreLightProperties = new Vector4(lightSource.BlowoutFactor, lightSource.RampPower, lightSource.DistanceAttenuation, 0f);
             ltrs.LightVertices.Add(ref vertex);
 
             ltrs.LightCount++;

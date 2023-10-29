@@ -34,7 +34,8 @@ namespace TestGame.Scenes {
         Slider DistanceFieldResolution,
             Elevation1, Elevation2,
             Radius1, Radius2,
-            Volumetricity, RampLength;
+            Volumetricity, RampLength,
+            RampPower, DistanceAttenuation;
 
         public VolumetricLight (TestGame game, int width, int height)
             : base(game, 1024, 1024) {
@@ -69,9 +70,15 @@ namespace TestGame.Scenes {
             Volumetricity.Min = 0.05f;
             Volumetricity.Max = 8f;
             Volumetricity.Value = 1f;
-            RampLength.Max = 4.0f;
-            RampLength.Min = 0.01f;
+            RampLength.Min = 1f;
+            RampLength.Max = 512f;
             RampLength.Value = 1.0f;
+            RampPower.Min = 0.25f;
+            RampPower.Max = 8f;
+            RampPower.Value = 1f;
+            DistanceAttenuation.Min = 0f;
+            DistanceAttenuation.Max = 2f;
+            DistanceAttenuation.Value = 1f;
 
             DistanceFieldResolution.Changed += (s, e) => CreateDistanceField();
         }
@@ -283,7 +290,9 @@ namespace TestGame.Scenes {
                 MovableLight.EndPosition.Z = Elevation2;
                 MovableLight.EndRadius = Radius2;
                 MovableLight.Volumetricity = Volumetricity;
+                MovableLight.DistanceAttenuation = DistanceAttenuation;
                 MovableLight.RampLength = RampLength;
+                MovableLight.RampPower = RampPower;
 
                 if (Deterministic) {
                 } else {
