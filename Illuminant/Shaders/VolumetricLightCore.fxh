@@ -111,7 +111,7 @@ float volumetricTrace (
         occlusion = 1.0,
         hits = 0,
         step = (getMaximumZ() - getGroundZ()) / steps;
-
+    
     [loop]
     for (float z = getMaximumZ(), z2 = max(shadedPixelPosition.z, getGroundZ()); z >= z2; z -= step) {
         float3 pos = float3(shadedPixelPosition.xy, z);
@@ -145,7 +145,7 @@ float VolumetricLightPixelCore(
     in float4 lightProperties,
     // ao radius, distance falloff, y falloff factor, ao opacity
     in float4 moreLightProperties,
-    // blowout, interior ramping power
+    // blowout, interior ramping power, distance attenuation, unused
     in float4 evenMoreLightProperties
 ) {
     float4 coneLightProperties = lightProperties;
@@ -165,13 +165,21 @@ float VolumetricLightPixelCore(
     float aoOpacity = computeAO(shadedPixelPosition, shadedPixelNormal, moreLightProperties, vars, visible);
     bool traceShadows = visible && lightProperties.w && (aoOpacity >= SHADOW_OPACITY_THRESHOLD) &&
         (DistanceField.Extent.z > 0);
+    
+    // Interpolate our ramp length for the current pixel based on distance from
+    //  the start of the cone
+    if (false) {
+        float t;
+        closestPointOnLine3(startPosition.xyz, endPosition.xyz, shadedPixelPosition, t);
+        float localRadius = lerp(startPosition.w, endPosition.w, t);
+        lightProperties.y = min(localRadius, lightProperties.y);
+    }
 
-    float distanceFromStartOfCone = length(shadedPixelPosition.xy - startPosition.xy),
-        volumetricOpacity = volumetricTrace(
-            startPosition, endPosition, shadedPixelPosition,
-            lightProperties, moreLightProperties, evenMoreLightProperties,
-            vars, traceShadows
-        );
+    float volumetricOpacity = volumetricTrace(
+        startPosition, endPosition, shadedPixelPosition,
+        lightProperties, moreLightProperties, evenMoreLightProperties,
+        vars, traceShadows
+    );
     
     float preTraceOpacity = aoOpacity * volumetricOpacity;
     
