@@ -26,6 +26,14 @@ namespace Squared.Illuminant {
         Shadowed = 1,
     }
 
+    public enum VolumetricLightShape : int {
+        Ellipsoid = 0,
+        Cone = 1,
+        // Capsules are just a less flexible version of the round cone shape we use... use a cone
+        // Capsule = 2,
+        Box = 2,
+    }
+
     public abstract class LightSourceBase {
         [NonSerialized]
         public readonly LightSourceTypeID TypeID;
@@ -345,33 +353,35 @@ namespace Squared.Illuminant {
     }
 
     public class VolumetricLightSource : LightSource {
+        public VolumetricLightShape Shape = VolumetricLightShape.Cone;
         /// <summary>
-        /// The position of the beginning of the cone.
+        /// The origin position of the volumetric light.
         /// </summary>
         public Vector3 StartPosition;
         /// <summary>
-        /// The position of the end of the cone.
+        /// The secondary position of the volumetric light.
+        /// For cones, this is the endpoint of the cone.
+        /// For ellipsoids and boxes, this is the light's radius.
         /// </summary>
         public Vector3 EndPosition;
         /// <summary>
-        /// The sizes of the start and end of the cone.
+        /// The start and end radiuses of the light, if applicable.
         /// </summary>
         public float   StartRadius, EndRadius = 0;
         /// <summary>
-        /// Controls the brightness of the cone light volume.
-        /// Lower values make the cone brighter.
+        /// Controls the brightness of each sampled point in the light volume.
+        /// Lower values make the light brighter by requiring fewer samples.
         /// </summary>
         public float   Volumetricity = 1;
         /// <summary>
         /// Controls the distance at which a shaded pixel will receive
-        ///  full diffuse light from the cone light source on contact,
-        ///  separate from the volumetric light. 1.0 is gradual falloff 
-        ///  that ends exactly at EndPosition.
+        ///  full diffuse light on contact, separate from the volume. 
+        ///  1.0 is gradual falloff that ends exactly at the boundary.
         /// </summary>
         public float   DistanceAttenuation = 1.0f;
         /// <summary>
-        /// Controls how far inside the volume you must be for full
-        ///  illumination.
+        /// Controls how far inside the volume a sample must be for
+        ///  it to be fully illuminated, which creates a soft-edged volume.
         /// </summary>
         public float   RampLength = 1f;
         /// <summary>
@@ -379,7 +389,7 @@ namespace Squared.Illuminant {
         /// </summary>
         public float   RampPower = 1.0f;
         /// <summary>
-        /// Amplifies diffuse highlights and shadows for pixels within 
+        /// Amplifies diffuse directional highlights/shadows for pixels within 
         ///  the light volume to increase contrast/visibility.
         /// </summary>
         public float   BlowoutFactor = 0.0f;
@@ -403,10 +413,16 @@ namespace Squared.Illuminant {
             var result = new VolumetricLightSource {
                 BlendMode = BlendMode,
                 UserData = UserData,
+                Shape = Shape,
                 StartPosition = StartPosition,
                 EndPosition = EndPosition,
                 StartRadius = StartRadius,
                 EndRadius = EndRadius,
+                Volumetricity = Volumetricity,
+                DistanceAttenuation = DistanceAttenuation,
+                RampLength = RampLength,
+                RampPower = RampPower,
+                BlowoutFactor = BlowoutFactor,
                 Color = Color,
                 Opacity = Opacity,
                 CastsShadows = CastsShadows,

@@ -75,16 +75,29 @@ namespace Squared.Illuminant {
             }
         }
 
-        public float Rotation {
+        public Quaternion Orientation {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get {
-                return Vertex.Rotation;
+                return Vertex.Orientation;
             }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set {
-                if (Vertex.Rotation != value)
+                if (Vertex.Orientation != value)
                     Invalidate();
-                Vertex.Rotation = value;
+                Vertex.Orientation = value;
+            }
+        }
+
+        private float? _ShadowRotation;
+
+        public float? Rotation {
+            get => _ShadowRotation;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            set {
+                if (!value.HasValue)
+                    throw new ArgumentNullException("value");
+                _ShadowRotation = value;
+                Orientation = Quaternion.CreateFromAxisAngle(Vector3.UnitZ, value.Value);
             }
         }
 

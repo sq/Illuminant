@@ -29,14 +29,18 @@ namespace TestGame.Scenes {
         Toggle ShowGBuffer,
             ShowDistanceField,
             Deterministic,
-            Shadows,
-            Ellipsoid;
+            Shadows;
 
         Slider DistanceFieldResolution,
             Elevation1, Elevation2,
             Radius1, Radius2,
             Volumetricity, RampLength,
             RampPower, DistanceAttenuation;
+
+        [Items("Cone")]
+        [Items("Ellipsoid")]
+        [Items("Box")]
+        Dropdown<string> Type;
 
         Vector3 P1, P2;
 
@@ -164,7 +168,7 @@ namespace TestGame.Scenes {
                 new RendererConfiguration(
                     1024, 1024, true
                 ) {
-                    MaximumFieldUpdatesPerFrame = 9,
+                    MaximumFieldUpdatesPerFrame = 18,
                     DefaultQuality = {
                         MinStepSize = 1f,
                         LongStepFactor = 0.5f,
@@ -192,6 +196,13 @@ namespace TestGame.Scenes {
 
             for (int x = -1024; x < (Width + 1024); x += 37)
                 Pillar(new Vector2(x, 540 + (x / 24.0f)));
+
+            Environment.Obstructions.Add(new LightObstruction(
+                LightObstructionType.Box, 
+                new Vector3(150, 150, 0), new Vector3(50, 100, 33)
+            ) {
+                IsDynamic = true,
+            });
         }
 
         public override void UnloadContent () {
@@ -300,6 +311,22 @@ namespace TestGame.Scenes {
                 MovableLight.DistanceAttenuation = DistanceAttenuation;
                 MovableLight.RampLength = RampLength;
                 MovableLight.RampPower = RampPower;
+                switch (Type.Value) {
+                    case "Ellipsoid":
+                        MovableLight.Shape = VolumetricLightShape.Ellipsoid;
+                        break;
+                    case "Cone":
+                        MovableLight.Shape = VolumetricLightShape.Cone;
+                        break;
+                    case "Box":
+                        MovableLight.Shape = VolumetricLightShape.Box;
+                        break;
+                }
+
+                var obs = Environment.Obstructions[Environment.Obstructions.Count - 1];
+                obs.Orientation = Quaternion.CreateFromYawPitchRoll(
+                    time * 0.05f, time * 0.66f, 0f
+                );
 
                 if (Deterministic) {
                 } else {

@@ -12,8 +12,9 @@
 #define SELF_OCCLUSION_HACK 1.5
 #define SHADOW_OPACITY_THRESHOLD (0.75 / 255.0)
 
-#define TYPE_ELLIPSOID 0
-#define TYPE_CONE 1
+#define SHAPE_ELLIPSOID 0
+#define SHAPE_CONE 1
+#define SHAPE_BOX 2
 
 uniform const float FrameIndex;
 
@@ -73,6 +74,17 @@ float sdCappedCone(float3 p, float3 a, float3 b, float ra, float rb) {
     
     return s * sqrt(min(cax * cax + cay * cay * baba,
                        cbx * cbx + cby * cby * baba));
+}
+
+float sdCapsule(float3 p, float3 a, float3 b, float r) {
+    float3 pa = p - a, ba = b - a;
+    float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+    return length(pa - ba * h) - r;
+}
+
+float sdBox(in float3 p, in float3 b) {
+    float3 d = abs(p) - b;
+    return length(max(d, 0.0001)) + min(max(max(d.x, d.y), d.z), 0.0001);
 }
 
 bool coneIntersect(
@@ -183,6 +195,89 @@ bool roundConeIntersect(float3 ro, float3 rd, float3 pa, float3 pb, in float ra,
     return true;
 }
 
+bool ellipsoidIntersect(in float3 ro, in float3 rd, in float3 ra, out float4 result) {
+    float3 ocn = ro / ra;
+    float3 rdn = rd / ra;
+    float a = dot(rdn, rdn);
+    float b = dot(ocn, rdn);
+    float c = dot(ocn, ocn);
+    float h = b * b - a * (c - 1.0);
+    if (h < 0.0) {
+        result = -1;
+        return false;
+    }
+    h = sqrt(h);
+    result = float4(float2(-b - h, -b + h) / a, 0, 0);
+    return true;
+}
+
+// capsule defined by extremes pa and pb, and radious ra
+// Note that only ONE of the two spherical caps is checked for intersections,
+// which is a nice optimization
+bool capsuleIntersect(in float3 ro, in float3 rd, in float3 pa, in float3 pb, in float ra, out float4 result) {
+    float3 ba = pb - pa;
+    float3 oa = ro - pa;
+    float baba = dot(ba, ba);
+    float bard = dot(ba, rd);
+    float baoa = dot(ba, oa);
+    float rdoa = dot(rd, oa);
+    float oaoa = dot(oa, oa);
+    float a = baba - bard * bard;
+    float b = baba * rdoa - baoa * bard;
+    float c = baba * oaoa - baoa * baoa - ra * ra * baba;
+    float h = b * b - a * c;
+    if (h >= 0.0)
+    {
+        float t = (-b - sqrt(h)) / a;
+        float y = baoa + t * bard;
+        // body
+        if (y > 0.0 && y < baba)
+        {
+            result = t;
+            return true;
+        }
+        // caps
+        float3 oc = (y <= 0.0) ? oa : ro - pb;
+        b = dot(rd, oc);
+        c = dot(oc, oc) - ra * ra;
+        h = b * b - c;
+        if (h > 0.0)
+        {
+            result = -b - sqrt(h);
+            return true;
+        }            
+    }
+    
+    result = -1;
+    return false;
+}
+
+// axis aligned box centered at the origin, with size boxSize
+bool boxIntersect(in float3 ro, in float3 rd, float3 boxSize, out float3 outNormal, out float4 result) {
+    float3 m = float3(
+        rd.x != 0 ? rcp(rd.x) : 0,
+        rd.y != 0 ? rcp(rd.y) : 0,
+        rd.z != 0 ? rcp(rd.z) : 0
+    ); // can precompute if traversing a set of aligned boxes
+    float3 n = m * ro; // can precompute if traversing a set of aligned boxes
+    float3 k = abs(m) * boxSize;
+    float3 t1 = -n - k;
+    float3 t2 = -n + k;
+    float tN = max(max(t1.x, t1.y), t1.z);
+    float tF = min(min(t2.x, t2.y), t2.z);
+    if (tN > tF || tF < 0.0)
+    {
+        outNormal = 0;
+        result = -1;
+        return false; // no intersection
+    }
+    outNormal = (tN > 0.0) ? step(tN, t1) : // ro ouside the box
+                           step(t2, tF); // ro inside the box
+    outNormal *= -sign(rd);
+    result = float4(tN, tF, 0, 0);
+    return true;
+}
+
 float eval (
     in float3 position,
     in float4 startPosition,
@@ -191,7 +286,30 @@ float eval (
     in float4 moreLightProperties,
     in float4 evenMoreLightProperties
 ) {
-    return sdRoundCone(position, startPosition.xyz, endPosition.xyz, startPosition.w, endPosition.w);
+    [branch]
+    if (evenMoreLightProperties.w <= SHAPE_ELLIPSOID)
+        return sdEllipsoid(position - startPosition.xyz, endPosition.xyz);    
+    
+    [branch]
+    if (evenMoreLightProperties.w <= SHAPE_CONE)
+        return sdRoundCone(position, startPosition.xyz, endPosition.xyz, startPosition.w, endPosition.w);
+    
+    return sdBox(position - startPosition.xyz, endPosition.xyz);
+}
+
+bool intersect(float3 ro, float3 rd, float3 pa, float3 pb, in float ra, in float rb, in float4 evenMoreLightProperties, out float4 result) {
+    result = 0;
+    return true;
+    float3 temp3;
+    
+    if (evenMoreLightProperties.w <= SHAPE_ELLIPSOID)
+        return ellipsoidIntersect(ro - pa, rd, pb, result);
+    
+    [branch]
+    if (evenMoreLightProperties.w <= SHAPE_CONE)
+        return roundConeIntersect(ro, rd, pa, pb, ra, rb, result);
+    
+    return boxIntersect(ro, rd, pb, temp3, result);
 }
 
 float volumetricTrace (
@@ -260,10 +378,11 @@ float VolumetricLightPixelCore(
     // HACK: Early-out if we know the trace will not ever intersect the cone.
     // We fudge the radiuses slightly to give ourselves breathing room.
     float radiusBias = 1.0;
-    if (!roundConeIntersect(
+    if (!intersect(
         float3(shadedPixelPosition.xy, getMaximumZ()), float3(0, 0, -1),
         startPosition.xyz, endPosition.xyz,
-        startPosition.w + radiusBias, endPosition.w + radiusBias, temp
+        startPosition.w + radiusBias, endPosition.w + radiusBias, 
+        evenMoreLightProperties, temp
     ))
         visible = false;
 
@@ -305,7 +424,9 @@ float VolumetricLightPixelCore(
     // FIXME: Do specular for the shaded surface?
 
     float3 trajectory = endPosition.xyz - startPosition.xyz;
-    float fullLength = length(trajectory);
+    float fullLength = evenMoreLightProperties.w == SHAPE_CONE
+        ? length(trajectory)
+        : length(endPosition.xyz);
     float normalOpacity = computeNormalFactor(normalize(shadedPixelPosition - startPosition.xyz), shadedPixelNormal);
     normalOpacity = lerp(normalOpacity, normalOpacity * 2 - 1, evenMoreLightProperties.x);
     float contactDistance = eval(shadedPixelPosition, startPosition, endPosition, lightProperties, moreLightProperties, evenMoreLightProperties);    

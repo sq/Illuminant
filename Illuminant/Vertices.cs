@@ -105,7 +105,7 @@ namespace Squared.Illuminant {
     public struct DistanceFunctionVertex : IVertexType {
         public Vector3 Center;
         public Vector3 Size;
-        public float Rotation;
+        public Quaternion Orientation;
 
         public static VertexDeclaration _VertexDeclaration;
 
@@ -115,14 +115,21 @@ namespace Squared.Illuminant {
             _VertexDeclaration = new VertexDeclaration(
                 new VertexElement(Marshal.OffsetOf(tThis, "Center").ToInt32(),   VertexElementFormat.Vector3, VertexElementUsage.TextureCoordinate, 0),
                 new VertexElement(Marshal.OffsetOf(tThis, "Size").ToInt32(),     VertexElementFormat.Vector3, VertexElementUsage.TextureCoordinate, 1),
-                new VertexElement(Marshal.OffsetOf(tThis, "Rotation").ToInt32(), VertexElementFormat.Single,  VertexElementUsage.TextureCoordinate, 2)
+                new VertexElement(Marshal.OffsetOf(tThis, "Orientation").ToInt32(), VertexElementFormat.Vector4,  VertexElementUsage.TextureCoordinate, 2)
             );
         }
 
         public DistanceFunctionVertex (Vector3 center, Vector3 size, float rotation, LightObstructionType type) {
             Center = center;
             Size = size;
-            Rotation = rotation;
+            Orientation = Quaternion.CreateFromAxisAngle(Vector3.UnitZ, rotation);
+            // Unused = Type = (short)(((short)type) + 1);
+        }
+
+        public DistanceFunctionVertex (Vector3 center, Vector3 size, Quaternion orientation, LightObstructionType type) {
+            Center = center;
+            Size = size;
+            Orientation = orientation;
             // Unused = Type = (short)(((short)type) + 1);
         }
 

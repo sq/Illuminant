@@ -1315,8 +1315,24 @@ namespace Squared.Illuminant {
                 return;
 
             LightVertex vertex;
-            vertex.LightPosition1 = new Vector4(lightSource.StartPosition, lightSource.StartRadius);
-            vertex.LightPosition2 = new Vector4(lightSource.EndPosition, lightSource.EndRadius);
+            var startPosition = lightSource.StartPosition;
+            var endPosition = lightSource.EndPosition;
+            switch (lightSource.Shape) {
+                // These two are in the form [origin, radius],
+                //  so we want to convert a bounds i.e. [tl, br] into that form
+                case VolumetricLightShape.Ellipsoid:
+                case VolumetricLightShape.Box:
+                    // FIXME: Abs?
+                    endPosition = (endPosition - startPosition).Abs() * 0.5f;
+                    startPosition = (lightSource.StartPosition + lightSource.EndPosition) * 0.5f;
+                    break;
+                // This one takes the form [start, end]
+                case VolumetricLightShape.Cone:
+                    break;
+            }
+
+            vertex.LightPosition1 = new Vector4(startPosition, lightSource.StartRadius);
+            vertex.LightPosition2 = new Vector4(endPosition, lightSource.EndRadius);
             vertex.LightPosition3 = Vector4.Zero;
             Vector4 color1 = lightSource.Color;
             color1.W *= (lightSource.Opacity * intensityScale);
@@ -1330,7 +1346,7 @@ namespace Squared.Illuminant {
             vertex.MoreLightProperties.Y = lightSource.ShadowDistanceFalloff.GetValueOrDefault(-99999);
             vertex.MoreLightProperties.Z = lightSource.FalloffYFactor;
             vertex.MoreLightProperties.W = lightSource.AmbientOcclusionOpacity;
-            vertex.EvenMoreLightProperties = new Vector4(lightSource.BlowoutFactor, lightSource.RampPower, lightSource.DistanceAttenuation, 0f);
+            vertex.EvenMoreLightProperties = new Vector4(lightSource.BlowoutFactor, lightSource.RampPower, lightSource.DistanceAttenuation, (int)lightSource.Shape);
             ltrs.LightVertices.Add(ref vertex);
 
             ltrs.LightCount++;
@@ -1824,7 +1840,7 @@ namespace Squared.Illuminant {
                         p["FunctionType"].SetValue((int)singleObject.Type + 1);
                         p["FunctionCenter"].SetValue(singleObject.Center);
                         p["FunctionSize"].SetValue(singleObject.Size);
-                        p["FunctionRotation"].SetValue(singleObject.Rotation);
+                        p["FunctionRotation"].SetValue(singleObject.Rotation ?? 0);
                     }
 
                     p["OutlineSize"]?.SetValue(Math.Max(outlineSize, 1f));

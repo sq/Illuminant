@@ -16,7 +16,7 @@ void DistanceFunctionVertexShader(
     in    float3 cornerWeights       : NORMAL2,
     inout float3 center              : TEXCOORD0,
     inout float3 size                : TEXCOORD1,
-    inout float  rotation            : TEXCOORD2,
+    inout float4 rotation            : TEXCOORD2,
     out   float4 result              : POSITION0
 ) {
     float msize = max(max(abs(size.x), abs(size.y)), abs(size.z)) + getMaximumEncodedDistance() + 4;
@@ -36,7 +36,7 @@ void BoxPixelShader (
     ACCEPTS_VPOS,
     in  float3 center   : TEXCOORD0,
     in  float3 size     : TEXCOORD1,
-    in  float  rotation : TEXCOORD2
+    in  float4 rotation : TEXCOORD2
 ) {
     float2 vpos = GET_VPOS;
     color = float4(
@@ -52,7 +52,7 @@ void EllipsoidPixelShader(
     ACCEPTS_VPOS,
     in  float3 center   : TEXCOORD0,
     in  float3 size     : TEXCOORD1,
-    in  float  rotation : TEXCOORD2
+    in  float4 rotation : TEXCOORD2
 ) {
     float2 vpos = GET_VPOS;
     color = float4(
@@ -68,7 +68,7 @@ void CylinderPixelShader(
     ACCEPTS_VPOS,
     in  float3 center   : TEXCOORD0,
     in  float3 size     : TEXCOORD1,
-    in  float  rotation : TEXCOORD2
+    in  float4 rotation : TEXCOORD2
 ) {
     float2 vpos = GET_VPOS;
     color = float4(
@@ -84,7 +84,7 @@ void SpheroidPixelShader(
     ACCEPTS_VPOS,
     in  float3 center   : TEXCOORD0,
     in  float3 size     : TEXCOORD1,
-    in  float  rotation : TEXCOORD2
+    in  float4 rotation : TEXCOORD2
 ) {
     float2 vpos = GET_VPOS;
     color = float4(
@@ -100,7 +100,7 @@ void OctagonPixelShader(
     ACCEPTS_VPOS,
     in  float3 center   : TEXCOORD0,
     in  float3 size     : TEXCOORD1,
-    in  float  rotation : TEXCOORD2
+    in  float4 rotation : TEXCOORD2
 ) {
     float2 vpos = GET_VPOS;
     color = float4(

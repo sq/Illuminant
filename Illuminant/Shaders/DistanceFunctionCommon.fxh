@@ -5,19 +5,24 @@
 #define DISTANCE_FUNCTION_DEFINED
 
 float evaluateNone (
-    float3 worldPosition, float3 center, float3 size, float rotation
+    float3 worldPosition, float3 center, float3 size, float4 rotation
 ) {
     return 0;
 }
 
-float3 rotateLocalPosition (float3 localPosition, float rotation) {
-    float _sin, _cos;
-    sincos(-rotation, _sin, _cos);
-    return float3(
-        (_cos * localPosition.x) - (_sin * localPosition.y),
-        (_sin * localPosition.x) + (_cos * localPosition.y),
-        localPosition.z
+// Quaternion multiplication
+// http://mathworld.wolfram.com/Quaternion.html
+float4 qmul(float4 q1, float4 q2) {
+    return float4(
+        q2.xyz * q1.w + q1.xyz * q2.w + cross(q1.xyz, q2.xyz),
+        q1.w * q2.w - dot(q1.xyz, q2.xyz)
     );
+}
+
+// http://mathworld.wolfram.com/Quaternion.html
+float3 rotateLocalPosition (float3 localPosition, float4 rotation) {
+    float4 r_c = rotation * float4(-1, -1, -1, 1);
+    return qmul(rotation, qmul(float4(localPosition, 0), r_c)).xyz;
 }
 
 // To use these you'll want the 2D distance field functions from SDF2D.fxh in Squared.Render
@@ -41,7 +46,7 @@ float4 opElongate (float3 p, float3 h) {
 }
 
 float evaluateBox (
-    float3 worldPosition, float3 center, float3 size, float rotation
+    float3 worldPosition, float3 center, float3 size, float4 rotation
 ) {
     float3 position = worldPosition - center;
     position = rotateLocalPosition(position, rotation);
@@ -58,7 +63,7 @@ float evaluateBox (
 }
 
 float evaluateSpheroid (
-    float3 worldPosition, float3 center, float3 size, float rotation
+    float3 worldPosition, float3 center, float3 size, float4 rotation
 ) {
     float3 position = worldPosition - center;
     position = rotateLocalPosition(position, rotation);
@@ -94,7 +99,7 @@ float sdEllipsoid_improvedV2( in float3 p, in float3 r )
 }
 
 float evaluateEllipsoid (
-    float3 worldPosition, float3 center, float3 size, float rotation
+    float3 worldPosition, float3 center, float3 size, float4 rotation
 ) {
     float3 position = worldPosition - center;
     position = rotateLocalPosition(position, rotation);
@@ -108,7 +113,7 @@ float sdCappedCylinder (float3 p, float h, float r) {
 }
 
 float evaluateCylinder (
-    float3 worldPosition, float3 center, float3 size, float rotation
+    float3 worldPosition, float3 center, float3 size, float4 rotation
 ) {
     float3 position = worldPosition - center;
     position = rotateLocalPosition(position, rotation);
@@ -147,7 +152,7 @@ float sdOctogonPrism( float3 p, float r, float h )
 }
 
 float evaluateOctagon (
-    float3 worldPosition, float3 center, float3 size, float rotation
+    float3 worldPosition, float3 center, float3 size, float4 rotation
 ) {
     float3 position = worldPosition - center;
     position = rotateLocalPosition(position, rotation);
@@ -160,7 +165,7 @@ float evaluateOctagon (
 }
 
 float evaluateByTypeId (
-    int typeId, float3 worldPosition, float3 center, float3 size, float rotation
+    int typeId, float3 worldPosition, float3 center, float3 size, float4 rotation
 ) {
     // HACK: The compiler insists that typeId must be known-positive, so we force it
     switch (abs(typeId)) {
