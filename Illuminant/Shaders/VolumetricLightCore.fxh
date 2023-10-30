@@ -9,6 +9,44 @@
 #define SELF_OCCLUSION_HACK 1.5
 #define SHADOW_OPACITY_THRESHOLD (0.75 / 255.0)
 
+#define TYPE_ELLIPSOID 0
+#define TYPE_CONE 1
+
+float dot2(float3 v) {
+    return dot(v, v);
+}
+
+float sdEllipsoid(float3 p, float3 r) {
+    float k0 = length(p / r);
+    float k1 = length(p / (r * r));
+    return k0 * (k0 - 1.0) / k1;
+}
+
+float sdRoundCone(float3 p, float3 a, float3 b, float r1, float r2) {
+  // sampling independent computations (only depend on shape)
+    float3 ba = b - a;
+    float l2 = dot(ba, ba);
+    float rr = r1 - r2;
+    float a2 = l2 - rr * rr;
+    float il2 = 1.0 / l2;
+    
+  // sampling dependant computations
+    float3 pa = p - a;
+    float y = dot(pa, ba);
+    float z = y - l2;
+    float x2 = dot2(pa * l2 - ba * y);
+    float y2 = y * y * l2;
+    float z2 = z * z * l2;
+
+  // single square root!
+    float k = sign(rr) * rr * rr * x2;
+    if (sign(z) * a2 * z2 > k)
+        return sqrt(x2 + z2) * il2 - r2;
+    if (sign(y) * a2 * y2 < k)
+        return sqrt(x2 + y2) * il2 - r1;
+    return (sqrt(x2 * a2 * il2) + y * rr) * il2 - r1;
+}
+
 float sdCappedCone(float3 p, float3 a, float3 b, float ra, float rb) {
     float rba = rb - ra;
     float baba = dot(b - a, b - a);
@@ -30,10 +68,6 @@ float sdCappedCone(float3 p, float3 a, float3 b, float ra, float rb) {
     
     return s * sqrt(min(cax * cax + cay * cay * baba,
                        cbx * cbx + cby * cby * baba));
-}
-
-float dot2(float3 v) {
-    return dot(v, v);
 }
 
 bool coneIntersect(
@@ -85,6 +119,77 @@ bool coneIntersect(
     return true;
 }
 
+// cone defined by extremes pa and pb, and radious ra and rb.
+bool roundConeIntersect(float3 ro, float3 rd, float3 pa, float3 pb, in float ra, in float rb, out float4 result) {
+    float3 ba = pb - pa;
+    float3 oa = ro - pa;
+    float3 ob = ro - pb;
+    float rr = ra - rb;
+    float m0 = dot(ba, ba);
+    float m1 = dot(ba, oa);
+    float m2 = dot(ba, rd);
+    float m3 = dot(rd, oa);
+    float m5 = dot(oa, oa);
+    float m6 = dot(ob, rd);
+    float m7 = dot(ob, ob);
+    
+    // body
+    float d2 = m0 - rr * rr;
+    float k2 = d2 - m2 * m2;
+    float k1 = d2 * m3 - m1 * m2 + m2 * rr * ra;
+    float k0 = d2 * m5 - m1 * m1 + m1 * rr * ra * 2.0 - m0 * ra * ra;
+    float h = k1 * k1 - k0 * k2;
+    if (h < 0.0) {
+        result = -1.0;
+        return false;
+    }
+    float t = (-sqrt(h) - k1) / k2;
+  //if( t<0.0 ) return vec4(-1.0);
+    float y = m1 - ra * rr + t * m2;
+    if (y > 0.0 && y < d2) {
+        result = float4(t, normalize(d2 * (oa + t * rd) - ba * y));
+        return true;
+    }
+
+    // caps
+    float h1 = m3 * m3 - m5 + ra * ra;
+    float h2 = m6 * m6 - m7 + rb * rb;
+    if (max(h1, h2) < 0.0) {
+        result = -1.0;
+        return false;
+        
+    }
+    
+    result = 1e20;
+    if (h1 > 0.0)
+    {
+        t = -m3 - sqrt(h1);
+        result = float4(t, (oa + t * rd) / ra);
+        return true;
+    }
+    if (h2 > 0.0)
+    {
+        t = -m6 - sqrt(h2);
+        if (t < result.x) {
+            result = float4(t, (ob + t * rd) / rb);
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+float eval (
+    in float3 position,
+    in float4 startPosition,
+    in float4 endPosition,
+    in float4 lightProperties,
+    in float4 moreLightProperties,
+    in float4 evenMoreLightProperties
+) {
+    return sdRoundCone(position, startPosition.xyz, endPosition.xyz, startPosition.w, endPosition.w);
+}
+
 float volumetricTrace (
     in float4 startPosition,
     in float4 endPosition,
@@ -99,11 +204,12 @@ float volumetricTrace (
     
     // HACK: Early-out if we know the trace will not ever intersect the cone.
     // We fudge the radiuses slightly to give ourselves breathing room.
+    float radiusBias = 1.0;
     [branch]
-    if (!coneIntersect(
+    if (!roundConeIntersect(
         float3(shadedPixelPosition.xy, getMaximumZ()), float3(0, 0, -1),
         startPosition.xyz, endPosition.xyz,
-        startPosition.w + 1, endPosition.w + 1, temp
+        startPosition.w + radiusBias, endPosition.w + radiusBias, temp
     ))
         return 0;
     
@@ -115,7 +221,7 @@ float volumetricTrace (
     [loop]
     for (float z = getMaximumZ(), z2 = max(shadedPixelPosition.z, getGroundZ()); z >= z2; z -= step) {
         float3 pos = float3(shadedPixelPosition.xy, z);
-        float sd = sdCappedCone(pos, startPosition.xyz, endPosition.xyz, startPosition.w, endPosition.w);
+        float sd = eval(pos, startPosition, endPosition, lightProperties, moreLightProperties, evenMoreLightProperties);
         if (sd >= 0)
             continue;
         
@@ -165,15 +271,6 @@ float VolumetricLightPixelCore(
     float aoOpacity = computeAO(shadedPixelPosition, shadedPixelNormal, moreLightProperties, vars, visible);
     bool traceShadows = visible && lightProperties.w && (aoOpacity >= SHADOW_OPACITY_THRESHOLD) &&
         (DistanceField.Extent.z > 0);
-    
-    // Interpolate our ramp length for the current pixel based on distance from
-    //  the start of the cone
-    if (false) {
-        float t;
-        closestPointOnLine3(startPosition.xyz, endPosition.xyz, shadedPixelPosition, t);
-        float localRadius = lerp(startPosition.w, endPosition.w, t);
-        lightProperties.y = min(localRadius, lightProperties.y);
-    }
 
     float volumetricOpacity = volumetricTrace(
         startPosition, endPosition, shadedPixelPosition,
@@ -201,9 +298,9 @@ float VolumetricLightPixelCore(
 
     float3 trajectory = endPosition.xyz - startPosition.xyz;
     float fullLength = length(trajectory);
-    float normalOpacity = computeNormalFactor(trajectory / fullLength, shadedPixelNormal);
+    float normalOpacity = computeNormalFactor(normalize(shadedPixelPosition - startPosition.xyz), shadedPixelNormal);
     normalOpacity = lerp(normalOpacity, normalOpacity * 2 - 1, evenMoreLightProperties.x);
-    float contactDistance = sdCappedCone(shadedPixelPosition, startPosition.xyz, endPosition.xyz, startPosition.w, endPosition.w);
+    float contactDistance = eval(shadedPixelPosition, startPosition, endPosition, lightProperties, moreLightProperties, evenMoreLightProperties);    
     float shapeOpacity = contactDistance < 0 
         ? pow(saturate(-contactDistance / lightProperties.y), evenMoreLightProperties.y)
         : 0;

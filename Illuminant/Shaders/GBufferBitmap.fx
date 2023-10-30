@@ -75,7 +75,8 @@ void GDataBillboardPixelShader(
     clip(alpha - discardThreshold);
 
     // FIXME: We can't represent vertical normals this way just horizontal
-    normal = normalize(float3((data.r - 0.5) * 2, 0, 0.0001));
+    normal = float3((data.r - 0.5) * 2, 0, 0);
+    normal.z = sqrt(1 - dot(normal.xy, normal.xy));
     float dataScale = dataScaleAndDynamicFlag.x;
     float yOffset = data.g * dataScale;
     float effectiveZ = worldPosition.z + (yOffset * getInvZToYMultiplier()) + (data.b * dataScale);

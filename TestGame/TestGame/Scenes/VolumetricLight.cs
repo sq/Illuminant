@@ -29,13 +29,16 @@ namespace TestGame.Scenes {
         Toggle ShowGBuffer,
             ShowDistanceField,
             Deterministic,
-            Shadows;
+            Shadows,
+            Ellipsoid;
 
         Slider DistanceFieldResolution,
             Elevation1, Elevation2,
             Radius1, Radius2,
             Volumetricity, RampLength,
             RampPower, DistanceAttenuation;
+
+        Vector3 P1, P2;
 
         public VolumetricLight (TestGame game, int width, int height)
             : base(game, 1024, 1024) {
@@ -64,9 +67,9 @@ namespace TestGame.Scenes {
             Elevation2.Min = 0;
             Elevation2.Max = 132;
             Radius1.Min = 1f;
-            Radius1.Max = 64f;
+            Radius1.Max = 128f;
             Radius2.Min = 1f;
-            Radius2.Max = 64f;
+            Radius2.Max = 128f;
             Volumetricity.Min = 0.05f;
             Volumetricity.Max = 8f;
             Volumetricity.Value = 1f;
@@ -77,7 +80,7 @@ namespace TestGame.Scenes {
             RampPower.Max = 8f;
             RampPower.Value = 1f;
             DistanceAttenuation.Min = 0f;
-            DistanceAttenuation.Max = 2f;
+            DistanceAttenuation.Max = 10f;
             DistanceAttenuation.Value = 1f;
 
             DistanceFieldResolution.Changed += (s, e) => CreateDistanceField();
@@ -180,8 +183,8 @@ namespace TestGame.Scenes {
                 Color = new Vector4(1f, 1f, 0.22f, 0.9f),
                 RampMode = LightSourceRampMode.Exponential
             };
-            MovableLight.StartPosition = new Vector3(0, 0, Elevation1);
-            MovableLight.EndPosition = new Vector3(900, 720, Elevation2);
+            MovableLight.StartPosition = P1 = new Vector3(0, 0, Elevation1);
+            MovableLight.EndPosition = P2 = new Vector3(900, 720, Elevation2);
 
             Environment.Lights.Add(MovableLight);
 
@@ -284,10 +287,14 @@ namespace TestGame.Scenes {
                 var ms = Game.MouseState;
                 Game.IsMouseVisible = true;
 
+                P1.Z = Elevation1;
+                P2.Z = Elevation2;
+
+                MovableLight.StartPosition = P1;
+                MovableLight.EndPosition = P2;
+
                 MovableLight.CastsShadows = Shadows;
-                MovableLight.StartPosition.Z = Elevation1;
                 MovableLight.StartRadius = Radius1;
-                MovableLight.EndPosition.Z = Elevation2;
                 MovableLight.EndRadius = Radius2;
                 MovableLight.Volumetricity = Volumetricity;
                 MovableLight.DistanceAttenuation = DistanceAttenuation;
@@ -297,11 +304,11 @@ namespace TestGame.Scenes {
                 if (Deterministic) {
                 } else {
                     if (ms.LeftButton == ButtonState.Pressed) {
-                        MovableLight.EndPosition.X = ms.X;
-                        MovableLight.EndPosition.Y = ms.Y;
+                        P2.X = ms.X;
+                        P2.Y = ms.Y;
                     } else {
-                        MovableLight.StartPosition.X = ms.X;
-                        MovableLight.StartPosition.Y = ms.Y;
+                        P1.X = ms.X;
+                        P1.Y = ms.Y;
                     }
                 }
             }

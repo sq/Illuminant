@@ -364,9 +364,9 @@ namespace Squared.Illuminant {
         public float   Volumetricity = 1;
         /// <summary>
         /// Controls the distance at which a shaded pixel will receive
-        ///  full diffuse light from the cone light source, separate
-        ///  from the volumetric light. 1.0 is gradual falloff that
-        ///  ends exactly at EndPosition.
+        ///  full diffuse light from the cone light source on contact,
+        ///  separate from the volumetric light. 1.0 is gradual falloff 
+        ///  that ends exactly at EndPosition.
         /// </summary>
         public float   DistanceAttenuation = 1.0f;
         /// <summary>
