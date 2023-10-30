@@ -1,5 +1,8 @@
+#define ENABLE_DITHERING 1
+
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\CompilerWorkarounds.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"
+#include "..\..\..\Fracture\Squared\RenderLib\Shaders\DitherCommon.fxh"
 #include "LightCommon.fxh"
 #include "DistanceFieldCommon.fxh"
 #include "ConeTrace.fxh"
@@ -11,6 +14,8 @@
 
 #define TYPE_ELLIPSOID 0
 #define TYPE_CONE 1
+
+uniform const float FrameIndex;
 
 float dot2(float3 v) {
     return dot(v, v);
@@ -156,8 +161,7 @@ bool roundConeIntersect(float3 ro, float3 rd, float3 pa, float3 pb, in float ra,
     float h2 = m6 * m6 - m7 + rb * rb;
     if (max(h1, h2) < 0.0) {
         result = -1.0;
-        return false;
-        
+        return false;        
     }
     
     result = 1e20;
@@ -176,7 +180,7 @@ bool roundConeIntersect(float3 ro, float3 rd, float3 pa, float3 pb, in float ra,
         }
     }
     
-    return false;
+    return true;
 }
 
 float eval (
@@ -198,34 +202,28 @@ float volumetricTrace (
     in float4 moreLightProperties,
     in float4 evenMoreLightProperties,
     in DistanceFieldConstants vars,
+    in float2 vpos,
     in bool   enableDistance
-) {
-    float4 temp;
-    
-    // HACK: Early-out if we know the trace will not ever intersect the cone.
-    // We fudge the radiuses slightly to give ourselves breathing room.
-    float radiusBias = 1.0;
-    [branch]
-    if (!roundConeIntersect(
-        float3(shadedPixelPosition.xy, getMaximumZ()), float3(0, 0, -1),
-        startPosition.xyz, endPosition.xyz,
-        startPosition.w + radiusBias, endPosition.w + radiusBias, temp
-    ))
-        return 0;
-    
+) { 
     float steps = getStepLimit(),
         occlusion = 1.0,
         hits = 0,
-        step = (getMaximumZ() - getGroundZ()) / steps;
+        z2 = max(shadedPixelPosition.z, getGroundZ()),
+        z1 = max(getMaximumZ(), z2),
+        step = max(abs(z2 - z1), 1) / steps,
+    // HACK: Apply dithering to the initial Z coordinate.
+    // This significantly reduces visible banding caused by low resolution
+        dither = (Dither17(vpos, (FrameIndex % 4) + 0.5) * 3) - 1.5;
     
     [loop]
-    for (float z = getMaximumZ(), z2 = max(shadedPixelPosition.z, getGroundZ()); z >= z2; z -= step) {
+    for (float z = z1 + dither; z >= z2; z -= step) {
         float3 pos = float3(shadedPixelPosition.xy, z);
         float sd = eval(pos, startPosition, endPosition, lightProperties, moreLightProperties, evenMoreLightProperties);
         if (sd >= 0)
             continue;
         
-        if (enableDistance) {
+        if (enableDistance)
+        {
             // If the path between the camera and the shaded pixel is fully
             //  occluded, we should stop tracing
             float sample = sampleDistanceFieldEx(pos, vars);
@@ -252,16 +250,26 @@ float VolumetricLightPixelCore(
     // ao radius, distance falloff, y falloff factor, ao opacity
     in float4 moreLightProperties,
     // blowout, interior ramping power, distance attenuation, unused
-    in float4 evenMoreLightProperties
+    in float4 evenMoreLightProperties,
+    in float2 vpos
 ) {
-    float4 coneLightProperties = lightProperties;
-    float lengthOfCone = length(endPosition.xyz - startPosition.xyz);
-
     float3 lightCenter;
-    // FIXME: Early-cull with a ray-cone intersection
     bool visible = (shadedPixelPosition.x > -9999);
+    float4 temp;
+    
+    // HACK: Early-out if we know the trace will not ever intersect the cone.
+    // We fudge the radiuses slightly to give ourselves breathing room.
+    float radiusBias = 1.0;
+    if (!roundConeIntersect(
+        float3(shadedPixelPosition.xy, getMaximumZ()), float3(0, 0, -1),
+        startPosition.xyz, endPosition.xyz,
+        startPosition.w + radiusBias, endPosition.w + radiusBias, temp
+    ))
+        visible = false;
 
-    clip(visible ? 1 : -1);
+    [branch]    
+    if (!visible)
+        return 0;
 
     DistanceFieldConstants vars = makeDistanceFieldConstants();
 
@@ -275,7 +283,7 @@ float VolumetricLightPixelCore(
     float volumetricOpacity = volumetricTrace(
         startPosition, endPosition, shadedPixelPosition,
         lightProperties, moreLightProperties, evenMoreLightProperties,
-        vars, traceShadows
+        vars, vpos, traceShadows
     );
     
     float preTraceOpacity = aoOpacity * volumetricOpacity;

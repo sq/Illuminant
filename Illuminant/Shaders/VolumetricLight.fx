@@ -37,7 +37,7 @@ void VolumetricLightPixelShader(
         shadedPixelPosition, shadedPixelNormal,
         startPosition, endPosition,
         lightProperties, moreLightProperties,
-        evenMoreLightProperties
+        evenMoreLightProperties, GET_VPOS
     );
     if (opacity <= 0)
     {
