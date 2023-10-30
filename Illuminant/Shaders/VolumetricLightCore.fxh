@@ -332,27 +332,28 @@ float volumetricTrace (
     // HACK: Apply dithering to the initial Z coordinate.
     // This significantly reduces visible banding caused by low resolution
         dither = (Dither17(vpos, (FrameIndex % 4) + 0.5) * 3) - 1.5;
-    
+
+    float z = z1 + dither;
+    bool alive = true;
     [loop]
-    for (float z = z1 + dither; z >= z2; z -= step) {
+    while (alive) {
         float3 pos = float3(shadedPixelPosition.xy, z);
         float sd = eval(pos, startPosition, endPosition, lightProperties, moreLightProperties, evenMoreLightProperties);
-        if (sd >= 0)
-            continue;
         
+        [branch]
         if (enableDistance)
         {
             // If the path between the camera and the shaded pixel is fully
             //  occluded, we should stop tracing
             float sample = sampleDistanceFieldEx(pos, vars);
             occlusion = min(occlusion, smoothstep(-1, 1, sample));
-            // FIXME: smoothstep
-            if (occlusion <= 0)
-                break;
         }
 
         float ramp = pow(saturate(-sd / lightProperties.y), evenMoreLightProperties.y);
         hits += ramp * occlusion;
+        
+        z -= step;
+        alive = (occlusion > 0) && (z >= z2);
     }
 
     return saturate(hits / steps / lightProperties.x);
@@ -484,37 +485,24 @@ void VolumetricLightVertexShader(
     out float4 result                : POSITION0
 ) {
     float3 vertex = cornerWeights;
-
-    float  radius = lightProperties.x + lightProperties.y + 1;
-    float  deltaY = (radius) - (radius / moreLightProperties.z);
-    float3 radius3;
-
-    if (1)
-        // HACK: How the hell do we compute bounds for this in the first place?
-        radius3 = float3(9999, 9999, 0);
-    else if (0)
-        // HACK: Scale the y axis some to clip off dead pixels caused by the y falloff factor
-        radius3 = float3(radius, radius - (deltaY / 2.0), 0);
+    float3 p1, p2;
+    
+    if ((int) evenMoreLightProperties.w == SHAPE_CONE)
+    {
+        p1 = min(startPosition.xyz, endPosition.xyz) - max(startPosition.w, endPosition.w);
+        p2 = max(startPosition.xyz, endPosition.xyz) + max(startPosition.w, endPosition.w);
+    }
     else
-        radius3 = float3(radius, radius, 0);
-
-    float3 p1 = min(startPosition, endPosition).xyz, p2 = max(startPosition, endPosition).xyz;
-    float3 tl = p1 - radius3, br = p2 + radius3;
-
-    // Unfortunately we need to adjust both by the light's radius (to account for pixels above/below the center point
-    //  being lit in 2.5d projection), along with adjusting by the z of the light's centerpoint (to deal with pixels
-    //  at high elevation)
-    float radiusOffset = radius * getInvZToYMultiplier();
-    // FIXME
-    float effectiveZ = startPosition.z;
-    float zOffset = effectiveZ * getZToYMultiplier();
+    {
+        p1 = startPosition.xyz - endPosition.xyz;
+        p2 = startPosition.xyz + endPosition.xyz;
+    }
+    
+    float3 tl = min(p1, p2), br = max(p1, p2);
 
     worldPosition = lerp(tl, br, vertex);
-
-    if (vertex.y < 0.5) {
-        worldPosition.y -= radiusOffset;
-        worldPosition.y -= zOffset;
-    }
+    
+    // FIXME: zToY
 
     float3 screenPosition = (worldPosition - float3(GetViewportPosition(), 0));
     screenPosition.xy *= GetViewportScale() * getEnvironmentRenderScale();
