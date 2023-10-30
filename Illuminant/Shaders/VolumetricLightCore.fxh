@@ -427,7 +427,22 @@ float VolumetricLightPixelCore(
     float fullLength = evenMoreLightProperties.w == SHAPE_CONE
         ? length(trajectory)
         : length(endPosition.xyz);
-    float normalOpacity = computeNormalFactor(normalize(shadedPixelPosition - startPosition.xyz), shadedPixelNormal);
+    float dotRange = lerp(
+        DOT_RAMP_RANGE, 0.33,
+        // HACK: Make normal falloff less sharp for cones
+        // TODO: Figure out a better mathematical formula for this
+        evenMoreLightProperties.w == SHAPE_CONE
+            ? max(startPosition.w, endPosition.w) / 64
+            : 0
+    ), dotOffset = lerp(
+        DOT_OFFSET, 0.33,
+        // HACK: Make normal falloff less sharp for cones
+        // TODO: Figure out a better mathematical formula for this
+        evenMoreLightProperties.w == SHAPE_CONE
+            ? max(startPosition.w, endPosition.w) / 64
+            : 0
+    );
+    float normalOpacity = computeNormalFactorEx(normalize(shadedPixelPosition - startPosition.xyz), shadedPixelNormal, dotOffset, dotRange);
     normalOpacity = lerp(normalOpacity, normalOpacity * 2 - 1, evenMoreLightProperties.x);
     float contactDistance = eval(shadedPixelPosition, startPosition, endPosition, lightProperties, moreLightProperties, evenMoreLightProperties);    
     float shapeOpacity = contactDistance < 0 

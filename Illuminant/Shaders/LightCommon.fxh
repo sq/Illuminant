@@ -129,8 +129,8 @@ bool checkShadowFilter(float4 evenMoreLightProperties, bool enableShadows) {
         return (filter > 0.5) != enableShadows;
 }
 
-float computeNormalFactor (
-    float3 lightNormal, float3 shadedPixelNormal
+float computeNormalFactorEx (
+    float3 lightNormal, float3 shadedPixelNormal, float offset, float range
 ) {
     if (!any(shadedPixelNormal))
         return 1;
@@ -139,7 +139,13 @@ float computeNormalFactor (
 
     // HACK: We allow the light to be somewhat behind the surface without occluding it,
     //  and we want a smooth ramp between occluded and not-occluded
-    return pow(saturate((d + DOT_OFFSET) / DOT_RAMP_RANGE), DOT_EXPONENT);
+    return pow(saturate((d + offset) / range), DOT_EXPONENT);
+}
+
+float computeNormalFactor(
+    float3 lightNormal, float3 shadedPixelNormal
+) {
+    return computeNormalFactorEx(lightNormal, shadedPixelNormal, DOT_OFFSET, DOT_RAMP_RANGE);
 }
 
 float computeSphereLightOpacity (
