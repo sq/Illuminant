@@ -29,13 +29,14 @@ namespace TestGame.Scenes {
         Toggle ShowGBuffer,
             ShowDistanceField,
             Deterministic,
-            Shadows;
+            Shadows, OverrideAngle;
 
         Slider DistanceFieldResolution,
             Elevation1, Elevation2,
             Radius1, Radius2,
             Volumetricity, RampLength,
-            RampPower, DistanceAttenuation;
+            RampPower, DistanceAttenuation,
+            Angle;
 
         [Items("Cone")]
         [Items("Ellipsoid")]
@@ -51,8 +52,8 @@ namespace TestGame.Scenes {
             DistanceFieldResolution.Value = 0.5f;
             Elevation1.Value = 48;
             Elevation2.Value = 12;
-            Radius1.Value = 1f;
-            Radius2.Value = 16f;
+            Radius1.Value = 8f;
+            Radius2.Value = 128f;
             Shadows.Value = true;
 
             ShowGBuffer.Key = Keys.G;
@@ -71,9 +72,9 @@ namespace TestGame.Scenes {
             Elevation2.Min = 0;
             Elevation2.Max = 132;
             Radius1.Min = 1f;
-            Radius1.Max = 128f;
+            Radius1.Max = 512f;
             Radius2.Min = 1f;
-            Radius2.Max = 128f;
+            Radius2.Max = 512f;
             Volumetricity.Min = 0.05f;
             Volumetricity.Max = 8f;
             Volumetricity.Value = 1f;
@@ -86,6 +87,9 @@ namespace TestGame.Scenes {
             DistanceAttenuation.Min = 0f;
             DistanceAttenuation.Max = 10f;
             DistanceAttenuation.Value = 1f;
+            Angle.Min = 0f;
+            Angle.Max = 360f;
+            Angle.Value = 0f;
 
             DistanceFieldResolution.Changed += (s, e) => CreateDistanceField();
         }
@@ -177,7 +181,7 @@ namespace TestGame.Scenes {
                     },
                     EnableGBuffer = true,
                     // FIXME: I don't know how to make volumetric work in 2.5D
-                    TwoPointFiveD = false
+                    TwoPointFiveD = false,
                 }, Game.IlluminantMaterials
             );
 
@@ -199,7 +203,7 @@ namespace TestGame.Scenes {
 
             Environment.Obstructions.Add(new LightObstruction(
                 LightObstructionType.Box, 
-                new Vector3(150, 150, 0), new Vector3(50, 100, 33)
+                new Vector3(150, 150, 56), new Vector3(50, 100, 25)
             ) {
                 IsDynamic = true,
             });
@@ -311,6 +315,14 @@ namespace TestGame.Scenes {
                 MovableLight.DistanceAttenuation = DistanceAttenuation;
                 MovableLight.RampLength = RampLength;
                 MovableLight.RampPower = RampPower;
+                if (!OverrideAngle.Value)
+                    MovableLight.LightDirection = null;
+                else
+                    MovableLight.LightDirection = Vector3.Transform(
+                        new Vector3(0, 0, -1),
+                        Quaternion.CreateFromAxisAngle(new Vector3(0, -1, 0), MathHelper.ToRadians(Angle))
+                    );
+
                 switch (Type.Value) {
                     case "Ellipsoid":
                         MovableLight.Shape = VolumetricLightShape.Ellipsoid;

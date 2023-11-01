@@ -315,6 +315,7 @@ bool intersect(float3 ro, float3 rd, float3 pa, float3 pb, in float ra, in float
 float volumetricTrace (
     in float4 startPosition,
     in float4 endPosition,
+    in float3 rayNormal,
     in float3 shadedPixelPosition,
     in float4 lightProperties,
     in float4 moreLightProperties,
@@ -323,16 +324,17 @@ float volumetricTrace (
     in float2 vpos,
     in bool   enableDistance
 ) { 
+    bool projectFromOrigin = length(rayNormal) < 0.01;
     float steps = getStepLimit(),
-        occlusion = 1.0,
         hits = 0,
         z2 = max(shadedPixelPosition.z, getGroundZ()),
         z1 = max(getMaximumZ(), z2),
         step = max(abs(z2 - z1), 1) / steps,
     // HACK: Apply dithering to the initial Z coordinate.
     // This significantly reduces visible banding caused by low resolution
-        dither = (Dither17(vpos, (FrameIndex % 4) + 0.5) * 3) - 1.5;
-
+        dither = (Dither17(vpos, (FrameIndex % 4) + 0.5) * 3) - 1.5,
+        defaultTraceDistance = max(startPosition.z, endPosition.z) - min(startPosition.z, endPosition.z);
+    
     float z = z1 + dither;
     bool alive = true;
     [loop]
@@ -340,20 +342,37 @@ float volumetricTrace (
         float3 pos = float3(shadedPixelPosition.xy, z);
         float sd = eval(pos, startPosition, endPosition, lightProperties, moreLightProperties, evenMoreLightProperties);
         
-        [branch]
-        if (enableDistance)
-        {
-            // If the path between the camera and the shaded pixel is fully
-            //  occluded, we should stop tracing
-            float sample = sampleDistanceFieldEx(pos, vars);
-            occlusion = min(occlusion, smoothstep(-1, 1, sample));
+        float t = 0, occlusion = 1.0, distanceScale;
+        bool traceAlive = enableDistance;
+        float3 traceStartPos, traceAlong;
+        if (projectFromOrigin) {
+            traceAlong = pos - startPosition.xyz;
+            traceStartPos = startPosition.xyz;
+            distanceScale = rcp(length(traceAlong)) * 0.9;
+        } else {
+            traceAlong = (rayNormal * defaultTraceDistance);
+            traceStartPos = pos - traceAlong;
+            distanceScale = rcp(defaultTraceDistance) * 0.9;
+        }
+        [loop]
+        while (traceAlive) {
+            // If the path between the theoretical light origin and the
+            //  sample position is probably occluded, 
+            float3 samplePos = traceStartPos + (traceAlong * t);
+            float sample = sampleDistanceFieldEx(samplePos, vars);
+            if (sample <= 0.1) {
+                occlusion = 0;
+                break;
+            }
+            t += max(sample, 1) * distanceScale;
+            traceAlive = t < 1;
         }
 
         float ramp = pow(saturate(-sd / lightProperties.y), evenMoreLightProperties.y);
         hits += ramp * occlusion;
         
         z -= step;
-        alive = (occlusion > 0) && (z >= z2);
+        alive = (z >= z2);
     }
 
     return saturate(hits / steps / lightProperties.x);
@@ -364,6 +383,7 @@ float VolumetricLightPixelCore(
     in float3 shadedPixelNormal,
     in float4 startPosition,
     in float4 endPosition,
+    in float3 rayNormal,
     // radius, ramp length, ramp mode, enable shadows
     in float4 lightProperties,
     // ao radius, distance falloff, y falloff factor, ao opacity
@@ -397,11 +417,10 @@ float VolumetricLightPixelCore(
     moreLightProperties.x *= max(0, shadedPixelNormal.z);
 
     float aoOpacity = computeAO(shadedPixelPosition, shadedPixelNormal, moreLightProperties, vars, visible);
-    bool traceShadows = visible && lightProperties.w && (aoOpacity >= SHADOW_OPACITY_THRESHOLD) &&
-        (DistanceField.Extent.z > 0);
+    bool traceShadows = visible && lightProperties.w && (DistanceField.Extent.z > 0);
 
     float volumetricOpacity = volumetricTrace(
-        startPosition, endPosition, shadedPixelPosition,
+        startPosition, endPosition, rayNormal, shadedPixelPosition,
         lightProperties, moreLightProperties, evenMoreLightProperties,
         vars, vpos, traceShadows
     );
@@ -480,6 +499,7 @@ void VolumetricLightVertexShader(
     inout float4 moreLightProperties : TEXCOORD3,
     inout float4 startColor          : TEXCOORD4,
     inout float4 endColor            : TEXCOORD5,
+    inout float4 rayNormal           : TEXCOORD6,
     inout float4 evenMoreLightProperties : TEXCOORD7,
     out float3 worldPosition         : POSITION1,
     out float4 result                : POSITION0

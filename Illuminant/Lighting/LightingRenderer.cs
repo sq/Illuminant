@@ -1326,14 +1326,18 @@ namespace Squared.Illuminant {
                     endPosition = (endPosition - startPosition).Abs() * 0.5f;
                     startPosition = (lightSource.StartPosition + lightSource.EndPosition) * 0.5f;
                     break;
+
                 // This one takes the form [start, end]
                 case VolumetricLightShape.Cone:
                     break;
+
+                default:
+                    return;
             }
 
             vertex.LightPosition1 = new Vector4(startPosition, lightSource.StartRadius);
             vertex.LightPosition2 = new Vector4(endPosition, lightSource.EndRadius);
-            vertex.LightPosition3 = Vector4.Zero;
+            vertex.LightPosition3 = new Vector4(lightSource.LightDirection ?? Vector3.Zero, 0);
             Vector4 color1 = lightSource.Color;
             color1.W *= (lightSource.Opacity * intensityScale);
             vertex.Color1 = vertex.Color2 = color1;

@@ -365,6 +365,13 @@ namespace Squared.Illuminant {
         /// </summary>
         public Vector3 EndPosition;
         /// <summary>
+        /// The direction the light is traveling for the purpose
+        ///  of distance field shadow casting. If unset, the light
+        ///  will automatically travel from the origin/center of the
+        ///  light towards the point being lit.
+        /// </summary>
+        public Vector3? LightDirection;
+        /// <summary>
         /// The start and end radiuses of the light, if applicable.
         /// </summary>
         public float   StartRadius, EndRadius = 0;
