@@ -99,6 +99,10 @@ namespace Squared.Illuminant {
                     "VolumetricLight", null, dBegin, dEnd
                 );
 
+                LoadOneMaterial(effects, out ShadowedVolumetricLight,
+                    "ShadowedVolumetricLight", null, dBegin, dEnd
+                );
+
                 LoadOneMaterial(effects, out ProjectorLight,
                     "ProjectorLight", null, dBegin, dEnd
                 );

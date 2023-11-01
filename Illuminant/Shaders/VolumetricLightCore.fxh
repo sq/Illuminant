@@ -353,37 +353,49 @@ float volumetricTrace (
     [loop]
     while (alive) {
         float3 pos = float3(shadedPixelPosition.xy, z);
-        float sd = eval(pos, startPosition, endPosition, lightProperties, moreLightProperties, evenMoreLightProperties);
+        float sd = eval(pos, startPosition, endPosition, lightProperties, moreLightProperties, evenMoreLightProperties),
+            occlusion = 1.0;
         
-        float d = dither, occlusion = 1.0, md;
-        int traceSteps = enableDistance ? getStepLimit() : 0;
-        float3 traceStartPos, traceAlong;
-        if (projectFromOrigin) {
-            traceAlong = pos - startPosition.xyz;
-            traceStartPos = startPosition.xyz;
-            md = length(traceAlong);
-        } else {
-            traceAlong = (rayNormal * defaultTraceDistance);
-            traceStartPos = pos - traceAlong;
-            md = defaultTraceDistance;
-        }
-        traceAlong /= md;
-        
-        [loop]
-        while (traceSteps > 0) {
-            // If the path between the theoretical light origin and the
-            //  sample position is probably occluded, 
-            float3 samplePos = traceStartPos + (traceAlong * d);
-            float sample = sampleDistanceFieldEx(samplePos, vars);
-            if (sample <= 0.1) {
-                occlusion = 0;
-                break;
+        if (enableDistance)
+        {        
+            float d = dither, md;
+            int traceSteps = getStepLimit();
+            float3 traceStartPos, traceAlong;
+            if (projectFromOrigin)
+            {
+                traceAlong = pos - startPosition.xyz;
+                traceStartPos = startPosition.xyz;
+                md = length(traceAlong);
             }
-            d += max(abs(sample), getMinStepSize());
-            if (d >= md)
-                traceSteps = 0;
             else
-                traceSteps--;
+            {
+                traceAlong = (rayNormal * defaultTraceDistance);
+                traceStartPos = pos - traceAlong;
+                md = defaultTraceDistance;
+            }
+            traceAlong /= md;
+            
+            [loop]
+            while (traceSteps > 0)
+            {
+                // If the path between the theoretical light origin and the
+                //  sample position is probably occluded, 
+                float3 samplePos = traceStartPos + (traceAlong * d);
+                float sample = sampleDistanceFieldEx(samplePos, vars);
+                // HACK: Smoother shadow edges
+                occlusion = saturate(sample);
+                // HACK: This needs to be larger than 0 to account for error
+                if (sample <= 0.1)
+                {
+                    traceSteps = 0;
+                    occlusion = 0;
+                }
+                d += max(abs(sample) * 0.99, getMinStepSize());
+                if (d >= md)
+                    traceSteps = 0;
+                else
+                    traceSteps--;
+            }
         }
 
         float ramp = pow(saturate(-sd / lightProperties.y), evenMoreLightProperties.y);
@@ -408,7 +420,8 @@ float VolumetricLightPixelCore(
     in float4 moreLightProperties,
     // blowout, interior ramping power, distance attenuation, unused
     in float4 evenMoreLightProperties,
-    in float2 vpos
+    in float2 vpos,
+    in bool shadowingEnabled
 ) {
     float3 lightCenter;
     bool visible = (shadedPixelPosition.x > -9999);
@@ -435,7 +448,7 @@ float VolumetricLightPixelCore(
     moreLightProperties.x *= max(0, shadedPixelNormal.z);
 
     float aoOpacity = computeAO(shadedPixelPosition, shadedPixelNormal, moreLightProperties, vars, visible);
-    bool traceShadows = visible && lightProperties.w && (DistanceField.Extent.z > 0);
+    bool traceShadows = shadowingEnabled && visible && lightProperties.w && (DistanceField.Extent.z > 0);
 
     float volumetricOpacity = volumetricTrace(
         startPosition, endPosition, rayNormal, shadedPixelPosition,
@@ -444,19 +457,6 @@ float VolumetricLightPixelCore(
     );
     
     float preTraceOpacity = aoOpacity * volumetricOpacity;
-    
-    // FIXME: This isn't quite right
-    // Attempt to figure out whether light can reach this column of space
-    //  by traveling from the start of the cone
-    /*
-    float coneOpacity = coneTrace(
-        startPosition.xyz, lightProperties.xy,
-        float2(getConeGrowthFactor(), moreLightProperties.y),
-        // FIXME: We want to trace along an approximate trajectory towards the end of the cone
-        shadedPixelPosition + (SELF_OCCLUSION_HACK * shadedPixelNormal),
-        vars, true
-    );
-    */
 
     // FIXME: Do diffuse lighting for the shaded surface.
     // FIXME: Do specular for the shaded surface?

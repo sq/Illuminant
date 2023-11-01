@@ -183,7 +183,9 @@ namespace Squared.Illuminant {
                         _ProbeMaterial = parent.IlluminantMaterials.LineLightProbe;
                         break;
                     case LightSourceTypeID.Volumetric:
-                        _Material = parent.IlluminantMaterials.VolumetricLight;
+                        _Material = castsShadows
+                            ? parent.IlluminantMaterials.ShadowedVolumetricLight
+                            : parent.IlluminantMaterials.VolumetricLight;
                         _ProbeMaterial = parent.IlluminantMaterials.VolumetricLightProbe;
                         break;
                     case LightSourceTypeID.Projector:

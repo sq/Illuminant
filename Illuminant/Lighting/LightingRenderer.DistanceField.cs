@@ -114,6 +114,18 @@ namespace Squared.Illuminant {
                 RenderDistanceFieldDistanceFunctions(firstVirtualSliceIndex, group, dynamicFlagFilter);
                 RenderDistanceFieldHeightVolumes(firstVirtualSliceIndex, group, dynamicFlagFilter);
 
+                if (OnRenderDistanceFieldSlice != null)
+                    OnRenderDistanceFieldSlice(
+                        this, firstVirtualSliceIndex, group, dynamicFlagFilter,
+                        new Rectangle(sliceX, sliceY, df.SliceWidth, df.SliceHeight),
+                        new Vector4(
+                            SliceIndexToZ(firstVirtualSliceIndex),
+                            SliceIndexToZ(firstVirtualSliceIndex + 1),
+                            SliceIndexToZ(firstVirtualSliceIndex + 2),
+                            SliceIndexToZ(firstVirtualSliceIndex + 3)
+                        )
+                    );
+
                 // FIXME: Slow
                 for (var i = firstVirtualSliceIndex; i <= lastVirtualSliceIndex; i++) {
                     if (ddf != null)

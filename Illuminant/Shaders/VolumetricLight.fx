@@ -32,13 +32,14 @@ void VolumetricLightPixelShader(
         return;
     }
 
-    lightProperties.w *= enableShadows;
+    lightProperties.w = 0;
 
     float opacity = VolumetricLightPixelCore(
         shadedPixelPosition, shadedPixelNormal,
-        startPosition, endPosition, rayNormal,
+        startPosition, endPosition, rayNormal.xyz,
         lightProperties, moreLightProperties,
-        evenMoreLightProperties, GET_VPOS
+        evenMoreLightProperties, GET_VPOS,
+        false
     );
     if (opacity <= 0)
     {
@@ -50,9 +51,8 @@ void VolumetricLightPixelShader(
 }
 
 technique VolumetricLight {
-    pass P0
-    {
+    pass P0 {
         vertexShader = compile vs_3_0 VolumetricLightVertexShader();
-        pixelShader  = compile ps_3_0 VolumetricLightPixelShader();
+        pixelShader = compile ps_3_0 VolumetricLightPixelShader();
     }
 }

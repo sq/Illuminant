@@ -13,9 +13,14 @@ using Squared.Util;
 
 namespace Squared.Illuminant {
     public delegate void UserGBufferRenderer (LightingRenderer lightingRenderer, ref ImperativeRenderer billboardRenderer);
+    public delegate void UserDistanceFieldRenderer (
+        LightingRenderer lightingRenderer, int firstVirtualSliceIndex, BatchGroup group, bool? dynamicFlagFilter, 
+        Rectangle sliceRect, Vector4 sliceZValues
+    );
 
     public sealed partial class LightingRenderer : IDisposable, INameableGraphicsObject {
         public event UserGBufferRenderer OnRenderGBuffer;
+        public event UserDistanceFieldRenderer OnRenderDistanceFieldSlice;
 
         private GBufferTransformArguments PendingGBufferArguments = new GBufferTransformArguments();
         private Action<DeviceManager, object> SetupGBufferGroundPlane;

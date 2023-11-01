@@ -157,7 +157,7 @@ namespace TestGame.Scenes {
 
             DistanceField = new DynamicDistanceField(
                 Game.RenderCoordinator, 1024, 1024, Environment.MaximumZ,
-                24, DistanceFieldResolution.Value
+                32, DistanceFieldResolution.Value
             );
             if (Renderer != null) {
                 Renderer.DistanceField = DistanceField;
@@ -301,8 +301,6 @@ namespace TestGame.Scenes {
 
         public override void Update (GameTime gameTime) {
             if (Game.IsActive) {
-                const float step = 0.1f;
-                
                 var time = (float)Time.Seconds;
 
                 var ms = Game.MouseState;
@@ -343,13 +341,13 @@ namespace TestGame.Scenes {
                         break;
                 }
 
-                var obs = Environment.Obstructions[Environment.Obstructions.Count - 1];
-                obs.Orientation = Quaternion.CreateFromYawPitchRoll(
-                    time * 0.05f, time * 0.66f, 0f
-                );
-
                 if (Deterministic) {
                 } else {
+                    var obs = Environment.Obstructions[Environment.Obstructions.Count - 1];
+                    obs.Orientation = Quaternion.CreateFromYawPitchRoll(
+                        time * 0.05f, time * 0.66f, 0f
+                    );
+
                     if (ms.LeftButton == ButtonState.Pressed) {
                         P2.X = ms.X;
                         P2.Y = ms.Y;

@@ -33,7 +33,7 @@ void AutoGBufferBitmapPixelShader (
     float3 normal = (userData.x < -900)
         // Use massively negative Z normal to represent 'I don't want directional light occlusion at all, thanks'
         ? float3(0, 0, 0)
-        : float3(0, 1 - abs(userData.x), userData.x);
+        : normalize(float3(0, 1 - abs(userData.x), userData.x));
     float relativeY = (originalPositionData.y - originalPositionData.w) * ViewCoordinateScaleFactor.y;
     float z = userData.z + (userData.y * relativeY);
 
@@ -44,7 +44,7 @@ void AutoGBufferBitmapPixelShader (
     }
 
     result = encodeGBufferSample(
-        (normal.xyz - 0.5) * 2, relativeY, z, isDead, 
+        normal, relativeY, z, isDead, 
         // enable shadows
         userData.w > 0.5,
         // fullbright
@@ -126,6 +126,23 @@ float3 calculateNormal(
     ));
 }
 
+// https://blog.demofox.org/2016/02/19/normalized-vector-interpolation-tldr/
+float3 slerp(float3 start, float3 end, float percent) {
+     // Dot product - the cosine of the angle between 2 vectors.
+    float slerpDot = dot(start, end);
+     // Clamp it to be in the range of Acos()
+     // This may be unnecessary, but floating point
+     // precision can be a fickle mistress.
+    slerpDot = clamp(slerpDot, -1.0, 1.0);
+     // Acos(dot) returns the angle between start and end,
+     // And multiplying that by percent returns the angle between
+     // start and the final result.
+    float theta = acos(slerpDot) * percent;
+    float3 RelativeVec = normalize(end - start * slerpDot); // Orthonormal basis
+     // The final result.
+    return ((start * cos(theta)) + (RelativeVec * sin(theta)));
+}
+
 void DistanceBillboardPixelShader(
     in float4 color : COLOR0,
     // originX, originY, vertexX, vertexY
@@ -159,7 +176,7 @@ void DistanceBillboardPixelShader(
         isDead = true;
     
     normal = normalize(normal);
-    normal = lerp(normal, float3(0, 0, 1), 1 - smoothstep(-ZFromDistance.w, 0, distance));
+    normal = slerp(normal, float3(0, 0, 1), 1 - smoothstep(-ZFromDistance.w, 0, distance));
 
     result = encodeGBufferSample(
         normal, relativeY, z, isDead,
