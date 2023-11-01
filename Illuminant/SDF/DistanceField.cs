@@ -35,9 +35,6 @@ namespace Squared.Illuminant {
 
         public readonly RenderCoordinator Coordinator;
         public readonly AutoRenderTarget Texture;
-#if DF3D
-        public readonly Texture3D Texture3D;
-#endif
         public readonly int SliceWidth, SliceHeight, SliceCount;
         public readonly int PhysicalSliceCount;
         public readonly int ColumnCount, RowCount;
@@ -124,17 +121,6 @@ namespace Squared.Illuminant {
                     SliceHeight * RowCount,
                     false, Format, name: "DistanceField.Texture"
                 );
-
-#if DF3D
-            lock (coordinator.CreateResourceLock)
-                Texture3D = new Texture3D(
-                    coordinator.Device,
-                    SliceWidth, 
-                    SliceHeight,
-                    SliceCount,
-                    false, SurfaceFormat.Rg32
-                );
-#endif
 
             coordinator.DeviceReset += Coordinator_DeviceReset;
             NeedClear = true;
@@ -233,68 +219,9 @@ namespace Squared.Illuminant {
             lock (UseLock)
                 tex.SetData(data);
 
-            lock (UseLock)
-                Update3DTexture();
-
             SliceInfo.InvalidSlices.Clear();
             // FIXME: Is this right?
             SliceInfo.ValidSliceCount = ((SliceCount + 2) / 3) * 3;
-        }
-
-        public void Update3DTexture () {
-            Update3DTexture(0, SliceCount);
-        }
-
-        public unsafe void Update3DTexture (int firstSlice, int count) {
-#if DF3D
-            // FIXME
-            int numComponents;
-            var sizeofPixel = Render.Evil.TextureUtils.GetBytesPerPixelAndComponents(Format, out numComponents);
-            byte[] srcBuffer = new byte[sizeofPixel * SliceWidth * SliceHeight],
-                destBuffer = new byte[sizeof(ushort) * 2 * SliceWidth * SliceHeight];
-            var tex = Texture.Get();
-            var lastUpdatedPhysicalSlice = -1;
-            for (int i = 0; i < count; i++) {
-                var sliceIndex = firstSlice + i;
-                var physicalSliceIndex = sliceIndex / 3;
-                if (physicalSliceIndex <= lastUpdatedPhysicalSlice)
-                    continue;
-                var columnIndex = physicalSliceIndex % ColumnCount;
-                var rowIndex = physicalSliceIndex / ColumnCount;
-                var x1 = columnIndex * SliceWidth;
-                var y1 = rowIndex * SliceHeight;
-                var rect = new Rectangle(
-                    x1, y1, SliceWidth, SliceHeight
-                );
-
-                lastUpdatedPhysicalSlice = Math.Max(lastUpdatedPhysicalSlice, physicalSliceIndex);
-
-                fixed (byte* pSrcBuffer = srcBuffer)
-                fixed (byte* pDestBuffer = destBuffer) {
-                    IntPtr iSrc = new IntPtr(pSrcBuffer),
-                        iDest = new IntPtr(pDestBuffer);
-
-                    lock (UseLock)
-                        tex.GetDataPointerEXT(0, rect, iSrc, srcBuffer.Length);
-
-                    for (int j = 0; j < 3; j++) {
-                        for (int y = 0; y < SliceHeight; y++) {
-                            var pPackedSrc = ((ushort*)pSrcBuffer) + (y * SliceWidth * 4);
-                            var pDest = ((ushort*)pDestBuffer) + (y * SliceWidth * 2);
-
-                            for (int x = 0; x < SliceWidth; x++) {
-                                int k = (x * 4) + j;
-                                pDest[(x * 2)] = pPackedSrc[k];
-                            }
-                        }
-
-                        int top = (physicalSliceIndex * 3) + j;
-                        lock (UseLock)
-                            Texture3D.SetDataPointerEXT(0, 0, 0, SliceWidth, SliceHeight, top, top + 1, iDest, destBuffer.Length);
-                    }
-                }
-            }
-#endif
         }
 
         public virtual void Invalidate () {
@@ -363,9 +290,10 @@ namespace Squared.Illuminant {
         }
 
         public void ValidateSlice (int index, bool dynamic) {
-            if (dynamic && !StaticSliceInfo.InvalidSlices.Contains(index))
-                SliceInfo.InvalidSlices.Remove(index);
-            else
+            if (dynamic) {
+                if (!StaticSliceInfo.InvalidSlices.Contains(index))
+                    SliceInfo.InvalidSlices.Remove(index);
+            } else
                 StaticSliceInfo.InvalidSlices.Remove(index);
         }
 

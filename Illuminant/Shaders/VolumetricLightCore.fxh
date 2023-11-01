@@ -329,43 +329,61 @@ float volumetricTrace (
         hits = 0,
         z2 = max(shadedPixelPosition.z, getGroundZ()),
         z1 = max(getMaximumZ(), z2),
-        step = max(abs(z2 - z1), 1) / steps,
+        defaultTraceDistance;
+    
+    // Constrain the search space to areas that are within the bounding box of the shape
+    if ((float) evenMoreLightProperties.w == SHAPE_CONE) {
+        float r = max(startPosition.w, endPosition.w);
+        z1 = min(z1, max(startPosition.z, endPosition.z) + r);
+        z2 = max(z2, min(startPosition.z, endPosition.z) - r);
+        defaultTraceDistance = length(endPosition.xyz - startPosition.xyz);
+    } else {
+        z1 = min(z1, startPosition.z + endPosition.z);
+        z2 = max(z2, startPosition.z - endPosition.z);
+        defaultTraceDistance = length(endPosition.xyz);
+    }
+    
+    float step = max(abs(z2 - z1), 1) / steps,
     // HACK: Apply dithering to the initial Z coordinate.
     // This significantly reduces visible banding caused by low resolution
-        dither = (Dither17(vpos, (FrameIndex % 4) + 0.5) * 3) - 1.5,
-        defaultTraceDistance = max(startPosition.z, endPosition.z) - min(startPosition.z, endPosition.z);
+        dither = Dither17(vpos, (FrameIndex % 4) + 0.5);
     
-    float z = z1 + dither;
+    float z = z1 + (dither * step);
     bool alive = true;
     [loop]
     while (alive) {
         float3 pos = float3(shadedPixelPosition.xy, z);
         float sd = eval(pos, startPosition, endPosition, lightProperties, moreLightProperties, evenMoreLightProperties);
         
-        float t = 0, occlusion = 1.0, distanceScale;
-        bool traceAlive = enableDistance;
+        float d = dither, occlusion = 1.0, md;
+        int traceSteps = enableDistance ? getStepLimit() : 0;
         float3 traceStartPos, traceAlong;
         if (projectFromOrigin) {
             traceAlong = pos - startPosition.xyz;
             traceStartPos = startPosition.xyz;
-            distanceScale = rcp(length(traceAlong)) * 0.9;
+            md = length(traceAlong);
         } else {
             traceAlong = (rayNormal * defaultTraceDistance);
             traceStartPos = pos - traceAlong;
-            distanceScale = rcp(defaultTraceDistance) * 0.9;
+            md = defaultTraceDistance;
         }
+        traceAlong /= md;
+        
         [loop]
-        while (traceAlive) {
+        while (traceSteps > 0) {
             // If the path between the theoretical light origin and the
             //  sample position is probably occluded, 
-            float3 samplePos = traceStartPos + (traceAlong * t);
+            float3 samplePos = traceStartPos + (traceAlong * d);
             float sample = sampleDistanceFieldEx(samplePos, vars);
             if (sample <= 0.1) {
                 occlusion = 0;
                 break;
             }
-            t += max(sample, 1) * distanceScale;
-            traceAlive = t < 1;
+            d += max(abs(sample), getMinStepSize());
+            if (d >= md)
+                traceSteps = 0;
+            else
+                traceSteps--;
         }
 
         float ramp = pow(saturate(-sd / lightProperties.y), evenMoreLightProperties.y);

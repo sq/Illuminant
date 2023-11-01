@@ -271,9 +271,6 @@ namespace Squared.Illuminant.Particles {
             "LifeRampTexture", "BitmapTexture", "RampTexture",
             "RandomnessTexture", "LowPrecisionRandomnessTexture",
             "PatternTexture", "DistanceFieldTexture"
-#if DF3D
-            , "DistanceFieldTexture3D"
-#endif
         };
 
         public bool IsDisposed { get; private set; }

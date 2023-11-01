@@ -36,7 +36,7 @@ namespace TestGame.Scenes {
             Radius1, Radius2,
             Volumetricity, RampLength,
             RampPower, DistanceAttenuation,
-            Angle;
+            Angle, MaxStepCount;
 
         [Items("Cone")]
         [Items("Ellipsoid")]
@@ -90,6 +90,11 @@ namespace TestGame.Scenes {
             Angle.Min = 0f;
             Angle.Max = 360f;
             Angle.Value = 0f;
+
+            MaxStepCount.Min = 1;
+            MaxStepCount.Max = 64;
+            MaxStepCount.Value = 24;
+            MaxStepCount.Integral = true;
 
             DistanceFieldResolution.Changed += (s, e) => CreateDistanceField();
         }
@@ -152,7 +157,7 @@ namespace TestGame.Scenes {
 
             DistanceField = new DynamicDistanceField(
                 Game.RenderCoordinator, 1024, 1024, Environment.MaximumZ,
-                64, DistanceFieldResolution.Value
+                24, DistanceFieldResolution.Value
             );
             if (Renderer != null) {
                 Renderer.DistanceField = DistanceField;
@@ -172,7 +177,7 @@ namespace TestGame.Scenes {
                 new RendererConfiguration(
                     1024, 1024, true
                 ) {
-                    MaximumFieldUpdatesPerFrame = 18,
+                    MaximumFieldUpdatesPerFrame = 9,
                     DefaultQuality = {
                         MinStepSize = 1f,
                         LongStepFactor = 0.5f,
@@ -191,8 +196,8 @@ namespace TestGame.Scenes {
                 Color = new Vector4(1f, 1f, 0.22f, 0.9f),
                 RampMode = LightSourceRampMode.Exponential
             };
-            MovableLight.StartPosition = P1 = new Vector3(0, 0, Elevation1);
-            MovableLight.EndPosition = P2 = new Vector3(900, 720, Elevation2);
+            MovableLight.StartPosition = P1 = new Vector3(32, 100, Elevation1);
+            MovableLight.EndPosition = P2 = new Vector3(850, 800, Elevation2);
 
             Environment.Lights.Add(MovableLight);
 
@@ -221,6 +226,7 @@ namespace TestGame.Scenes {
 
             Renderer.Configuration.SetScale(scaleRatio);
 
+            Renderer.InvalidateFields(true);
             Renderer.UpdateFields(frame, -2);
 
             using (var bg = BatchGroup.ForRenderTarget(
@@ -304,6 +310,8 @@ namespace TestGame.Scenes {
 
                 P1.Z = Elevation1;
                 P2.Z = Elevation2;
+
+                Renderer.Configuration.DefaultQuality.MaxStepCount = (int)MaxStepCount.Value;
 
                 MovableLight.StartPosition = P1;
                 MovableLight.EndPosition = P2;
