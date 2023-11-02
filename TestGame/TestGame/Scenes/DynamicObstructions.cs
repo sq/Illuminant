@@ -31,7 +31,8 @@ namespace TestGame.Scenes {
         Toggle ShowGBuffer,
             ShowDistanceField,
             Deterministic,
-            EfficientUpdates;
+            EfficientUpdates,
+            Orthographic;
 
         Slider DistanceFieldResolution;
 
@@ -49,6 +50,9 @@ namespace TestGame.Scenes {
             ShowDistanceField.Key = Keys.D;
             Deterministic.Key = Keys.R;
             EfficientUpdates.Key = Keys.E;
+
+            Orthographic.Key = Keys.O;
+            Orthographic.Value = true;
 
             DistanceFieldResolution.MinusKey = Keys.D5;
             DistanceFieldResolution.PlusKey = Keys.D6;
@@ -206,6 +210,8 @@ namespace TestGame.Scenes {
 
             var scaleRatio = 1.0f;
 
+            Renderer.Configuration.TwoPointFiveD = Orthographic;
+            Renderer.Configuration.PerspectiveProjection = !Orthographic;
             Renderer.Configuration.SetScale(scaleRatio);
 
             Renderer.UpdateFields(frame, -2);

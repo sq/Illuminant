@@ -696,16 +696,21 @@ namespace Squared.Illuminant {
             };
         }
 
+        private void CreateViewTransform (int width, int height, out ViewTransform vt) {
+            float tiny = 0.0001f;
+            vt = Configuration.PerspectiveProjection
+                ? ViewTransform.CreatePerspective(0, 0, width, height, tiny, 1)
+                : ViewTransform.CreateOrthographic(width, height);
+            vt.ZRange = new Vector2(Environment.GroundZ, Environment.MaximumZ);
+        }
+
         private void PushLightingViewTransform (RenderTarget2D renderTarget, bool defer) {
-            var vt = ViewTransform.CreateOrthographic(
-                renderTarget.Width, renderTarget.Height
-            );
+            CreateViewTransform(renderTarget.Width, renderTarget.Height, out var vt);
 
             var coordOffset = new Vector2(1.0f / Configuration.RenderScale.X, 1.0f / Configuration.RenderScale.Y) * 0.5f;
 
             vt.Position = PendingDrawViewportPosition.GetValueOrDefault(Materials.ViewportPosition);
             vt.Scale = PendingDrawViewportScale.GetValueOrDefault(Materials.ViewportScale);
-            vt.ResetZRanges();
 
             if (Configuration.ScaleCompensation)
                 vt.Position += coordOffset;

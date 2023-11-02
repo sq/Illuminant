@@ -119,6 +119,12 @@ namespace Squared.Illuminant {
         /// This also enables painting the front of height volumes.
         /// </summary>
         public bool TwoPointFiveD     = false;
+        
+        /// <summary>
+        /// Enables perspective projection (Z range configured by environment).
+        /// This is completely broken
+        /// </summary>
+        public bool PerspectiveProjection = false;
 
         /// <summary>
         /// Paints the ground plane into the g-buffer automatically.

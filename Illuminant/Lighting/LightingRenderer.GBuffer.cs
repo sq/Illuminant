@@ -128,7 +128,7 @@ namespace Squared.Illuminant {
             bool enableHeightVolumes = true, bool enableBillboards = true
         ) {
             var actualScaleFactor = viewportScale.GetValueOrDefault(Vector2.One) * Configuration.RenderScale;
-            var vt = ViewTransform.CreateOrthographic(_GBuffer.Width, _GBuffer.Height);
+            CreateViewTransform(_GBuffer.Width, _GBuffer.Height, out var vt);
             vt.Position = PendingFieldViewportPosition.GetValueOrDefault(Vector2.Zero);
             vt.Scale = actualScaleFactor;
             PendingGBufferArguments.Transform = vt;
