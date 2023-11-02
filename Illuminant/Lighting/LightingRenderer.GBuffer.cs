@@ -381,7 +381,15 @@ namespace Squared.Illuminant {
                 batchSetup: GBufferBillboardBatchSetup,
                 userData: IlluminantMaterials.GDataBillboard
             )) {
-                Action flushBatch = () => {
+                void flushBatch (
+                    int i, int runStartedAt,
+                    BillboardType previousType, 
+                    PrimitiveBatch<BillboardVertex> gDataBatch, 
+                    PrimitiveBatch<BillboardVertex> maskBatch,
+                    BillboardVertex[] verts,
+                    int runStartedAtVertex,
+                    Texture2D previousTexture
+                ) {
                     var runLength = i - runStartedAt;
                     if (runLength <= 0)
                         return;
@@ -396,11 +404,11 @@ namespace Squared.Illuminant {
                         sortKey: new DrawCallSortKey(order: i),
                         beforeDraw: SetTextureForGBufferBillboard, userData: previousTexture
                     ));
-                };
+                }
 
                 foreach (var billboard in BillboardScratch) {
                     if ((previousTexture != billboard.Texture) || (previousType != billboard.Type)) {
-                        flushBatch();
+                        flushBatch(i, runStartedAt, previousType, gDataBatch, maskBatch, verts, runStartedAtVertex, previousTexture);
                         runStartedAt = i;
                         runStartedAtVertex = j;
                         previousTexture = billboard.Texture;
@@ -490,7 +498,7 @@ namespace Squared.Illuminant {
                     i++;
                 }
 
-                flushBatch();
+                flushBatch(i, runStartedAt, previousType, gDataBatch, maskBatch, verts, runStartedAtVertex, previousTexture);
             }
         }
 

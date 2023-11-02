@@ -11,6 +11,7 @@ using Squared.Game;
 using Squared.Render;
 using Squared.Render.Convenience;
 using Squared.Render.Tracing;
+using Squared.Threading.CoreCLR;
 using Squared.Util;
 
 namespace Squared.Illuminant {
@@ -37,6 +38,9 @@ namespace Squared.Illuminant {
             public AutoRenderTarget RenderTarget;
             public int SliceX, SliceY;
             public ViewTransform ViewTransform;
+
+            internal static readonly LowAllocConcurrentQueue<BeginSliceBatchArgs> Pool =
+                new LowAllocConcurrentQueue<BeginSliceBatchArgs>();
         }
 
         private void _BeginSliceBatch (DeviceManager dm, object userData) {
@@ -68,6 +72,9 @@ namespace Squared.Illuminant {
 
         private void _EndSliceBatch (DeviceManager dm, object userData) {
             Materials.PopViewTransform();
+
+            if (userData is BeginSliceBatchArgs args)
+                BeginSliceBatchArgs.Pool.Enqueue(args);
         }
 
         private void RenderDistanceFieldSliceTriplet (
@@ -93,12 +100,12 @@ namespace Squared.Illuminant {
             viewTransform.Position = new Vector2(-sliceXVirtual, -sliceYVirtual);
 
             var lastVirtualSliceIndex = firstVirtualSliceIndex + 2;
-            var args = new BeginSliceBatchArgs {
-                RenderTarget = renderTarget,
-                ViewTransform = viewTransform,
-                SliceX = sliceX,
-                SliceY = sliceY
-            };
+            if (!BeginSliceBatchArgs.Pool.TryDequeue(out var args))
+                args = new BeginSliceBatchArgs();
+            args.RenderTarget = renderTarget;
+            args.ViewTransform = viewTransform;
+            args.SliceX = sliceX;
+            args.SliceY = sliceY;
 
             using (var group = BatchGroup.New(
                 rtGroup, layer++,
@@ -271,25 +278,26 @@ namespace Squared.Illuminant {
             ));
         }
 
+        private VertexPositionColor[] ClearDistanceFieldSliceVertices = new VertexPositionColor[4];
+
         private void ClearDistanceFieldSlice (
             short[] indices, IBatchContainer container, int layer, int firstSliceIndex, Texture2D clearTexture
         ) {
             // var color = new Color((firstSliceIndex * 16) % 255, 0, 0, 0);
             var color = Color.Transparent;
 
-            var verts = new VertexPositionColor[] {
-                new VertexPositionColor(new Vector3(0, 0, 0), color),
-                new VertexPositionColor(new Vector3(_DistanceField.VirtualWidth, 0, 0), color),
-                new VertexPositionColor(new Vector3(_DistanceField.VirtualWidth, _DistanceField.VirtualHeight, 0), color),
-                new VertexPositionColor(new Vector3(0, _DistanceField.VirtualHeight, 0), color)
-            };
+            // FIXME: Minor race condition if the distance field's size changes while this buffer is in use
+            ClearDistanceFieldSliceVertices[0] = new VertexPositionColor(new Vector3(0, 0, 0), color);
+            ClearDistanceFieldSliceVertices[1] = new VertexPositionColor(new Vector3(_DistanceField.VirtualWidth, 0, 0), color);
+            ClearDistanceFieldSliceVertices[2] = new VertexPositionColor(new Vector3(_DistanceField.VirtualWidth, _DistanceField.VirtualHeight, 0), color);
+            ClearDistanceFieldSliceVertices[3] = new VertexPositionColor(new Vector3(0, _DistanceField.VirtualHeight, 0), color);
 
             using (var batch = PrimitiveBatch<VertexPositionColor>.New(
                 container, layer, IlluminantMaterials.ClearDistanceFieldSlice, BeginClearSliceBatch, clearTexture
             ))
                 batch.Add(new PrimitiveDrawCall<VertexPositionColor>(
                     PrimitiveType.TriangleList,
-                    verts, 0, 4, indices, 0, 2
+                    ClearDistanceFieldSliceVertices, 0, 4, indices, 0, 2
                 ));
         }
 
