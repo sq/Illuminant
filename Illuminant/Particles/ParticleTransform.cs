@@ -150,8 +150,7 @@ namespace Squared.Illuminant.Particles.Transforms {
                         dft.SetValue(system.Configuration.Collision?.DistanceField?.Texture?.Get());
 
                         var dfu = new Uniforms.DistanceField(
-                            system.Configuration.Collision.DistanceField, 
-                            system.Configuration.Collision.DistanceFieldMaximumZ.Value
+                            system.Configuration.Collision.DistanceField
                         );
                         engine.uDistanceField.Set(m, ref dfu);
                     }

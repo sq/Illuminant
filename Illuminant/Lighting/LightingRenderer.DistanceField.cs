@@ -30,7 +30,7 @@ namespace Squared.Illuminant {
 
         private float SliceIndexToZ (int slice) {
             float sliceZ = (slice / Math.Max(1, (float)(_DistanceField.SliceCount)));
-            return sliceZ * Environment.MaximumZ;
+            return (sliceZ * _DistanceField.VirtualDepth) + _DistanceField.ZOffset;
         }
 
         private class BeginSliceBatchArgs {

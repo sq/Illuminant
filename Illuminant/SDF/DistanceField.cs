@@ -39,8 +39,9 @@ namespace Squared.Illuminant {
         public readonly int PhysicalSliceCount;
         public readonly int ColumnCount, RowCount;
 
-        internal bool NeedClear;
+        public float ZOffset;
 
+        internal bool NeedClear;
         private readonly object UseLock;
 
         internal readonly SliceInfo SliceInfo = new SliceInfo();
@@ -141,19 +142,19 @@ namespace Squared.Illuminant {
             }
         }
 
-        internal Vector3 GetExtent3 (float maximumZ) {
+        internal Vector3 GetExtent3 () {
             return new Vector3(
                 VirtualWidth,
                 VirtualHeight,
-                maximumZ
+                VirtualDepth
             );
         }
 
-        internal Vector4 GetExtent4 (float maximumZ) {
+        internal Vector4 GetExtent4 () {
             return new Vector4(
                 VirtualWidth,
                 VirtualHeight,
-                maximumZ,
+                VirtualDepth,
                 MaximumEncodedDistance
             );
         }

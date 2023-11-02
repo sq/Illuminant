@@ -73,7 +73,7 @@ namespace Squared.Illuminant {
             if (_DistanceField == null) {
                 return 0;
             } else {
-                float sliceSize = Environment.MaximumZ / _DistanceField.SliceCount;
+                float sliceSize = _DistanceField.VirtualDepth / _DistanceField.SliceCount;
                 return Math.Max(sliceSize * 0.525f, 1f);
             }
         }

@@ -87,10 +87,10 @@ namespace Squared.Illuminant.Uniforms {
         public Vector4 Extent;
 
         // This does not initialize every member.
-        public DistanceField (Squared.Illuminant.DistanceField df, float maximumZ) {
-            Extent = df.GetExtent4(maximumZ);
+        public DistanceField (Squared.Illuminant.DistanceField df) {
+            Extent = df.GetExtent4();
             // FIXME
-            float sliceZSize = maximumZ / df.SliceCount;
+            float sliceZSize = df.VirtualDepth / df.SliceCount;
             TextureSliceCount = new Vector4(
                 df.ColumnCount, df.RowCount, 
                 Math.Min(df.SliceInfo.ValidSliceCount, df.SliceCount) * sliceZSize,
@@ -148,7 +148,7 @@ namespace Squared.Illuminant.Uniforms {
             }
         }
 
-        public float ConeGrowthFactor {
+        public float DistanceFieldZOffset {
             get {
                 return _ConeAndMisc.Y;
             }

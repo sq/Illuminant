@@ -1181,6 +1181,10 @@ namespace Squared.Illuminant {
         }
 
         private void RenderSphereLightSource (SphereLightSource lightSource, float intensityScale, LightTypeRenderState ltrs) {
+            // HACK
+            if (lightSource.Opacity <= 0f)
+                return;
+
             LightVertex vertex;
             vertex.LightPosition3 = vertex.LightPosition2 = vertex.LightPosition1 = new Vector4(lightSource.Position, 0);
             var color = lightSource.Color;
@@ -1214,6 +1218,9 @@ namespace Squared.Illuminant {
                 vertex.LightPosition3 = vertex.LightPosition2 = vertex.LightPosition1 = new Vector4(light.Position, 0);
                 var color = light.Color ?? template.Color;
                 color.W *= (light.Opacity ?? template.Opacity) * intensityScale;
+                if (color.W <= 0)
+                    continue;
+
                 vertex.Color1 = color;
                 vertex.Color2 = new Vector4(light.SpecularColor ?? template.SpecularColor, light.SpecularPower ?? template.SpecularPower);
                 vertex.LightProperties.X = light.Radius ?? template.Radius;
@@ -1235,6 +1242,10 @@ namespace Squared.Illuminant {
         }
 
         private void RenderDirectionalLightSource (DirectionalLightSource lightSource, float intensityScale, LightTypeRenderState ltrs) {
+            // HACK
+            if (lightSource.Opacity <= 0f)
+                return;
+
             LightVertex vertex;
             if (lightSource.Bounds.HasValue) {
                 // FIXME: 3D bounds?
@@ -1707,7 +1718,7 @@ namespace Squared.Illuminant {
                     worldMax = new Vector3(
                         _DistanceField.VirtualWidth,
                         _DistanceField.VirtualHeight,
-                        Environment.MaximumZ
+                        _DistanceField.VirtualDepth
                     );
                 } else {
                     var sz = singleObject.Bounds3;
@@ -1890,9 +1901,9 @@ namespace Squared.Illuminant {
                 return;
             }
 
-            dfu = new Uniforms.DistanceField(_DistanceField, Environment.MaximumZ) {
+            dfu = new Uniforms.DistanceField(_DistanceField) {
                 MaxConeRadius = q.MaxConeRadius,
-                ConeGrowthFactor = q.ConeGrowthFactor,
+                DistanceFieldZOffset = _DistanceField.ZOffset,
                 OcclusionToOpacityPower = q.OcclusionToOpacityPower,
                 StepLimit = q.MaxStepCount,
                 MinimumLength = q.MinStepSize,
@@ -1992,7 +2003,7 @@ namespace Squared.Illuminant {
         private Vector3 Extent3 {
             get {
                 if (_DistanceField != null)
-                    return _DistanceField.GetExtent3(Environment.MaximumZ);
+                    return _DistanceField.GetExtent3();
                 else
                     return new Vector3(0, 0, Environment.MaximumZ);
             }

@@ -187,10 +187,10 @@ float distanceSquaredToEdge (
 
 
 struct DistanceFieldSettings {
-    // MaxConeRadius, ConeGrowthFactor, OcclusionToOpacityPower, InvScaleFactor
+    // MaxConeRadius, DistanceFieldZOffset, OcclusionToOpacityPower, InvScaleFactor
     float4 _ConeAndMisc;
     float4 _TextureSliceAndTexelSize;
-    // StepLimit, MinimumLength, LongStepFactor
+    // StepLimit, MinimumLength, LongStepFactor, InvScaleFactorY
     float4 _StepAndMisc2;
     float4 TextureSliceCount;
     float4 Extent;
@@ -204,6 +204,10 @@ uniform DistanceFieldSettings DistanceField;
     DistanceField.TextureSliceCount.z, dfu.MinimumLength
 */
 uniform const float4 DistanceFieldPacked1;
+
+float getDistanceFieldZOffset () {
+    return DistanceField._ConeAndMisc.y;
+}
 
 float getMaximumEncodedDistance () {
     return DistanceField.Extent.w;
@@ -228,7 +232,8 @@ float getMaxConeRadius () {
 }
 
 float getConeGrowthFactor () {
-    return DistanceField._ConeAndMisc.y;
+    return 1.0;
+    // return DistanceField._ConeAndMisc.y;
 }
 
 float getOcclusionToOpacityPower () {
@@ -320,6 +325,7 @@ float sampleDistanceFieldEx (
     float3 position, 
     DistanceFieldConstants vars
 ) {
+    position.z -= getDistanceFieldZOffset();
     float3 extent = DistanceField.Extent.xyz;
     float3 clampedPosition = clamp3(position, 0, extent);
     float3 distanceToVolume3 = -min(position, 0) + (max(position, extent) - extent);
