@@ -22,8 +22,8 @@ void AutoGBufferBitmapPixelShader (
     out float4 result : COLOR0
 ) {
     // FIXME: Without this we get weird acne at the top/left edges of billboards.
-    texRgn.xy += HalfTexel;
-    texRgn.zw += HalfTexel;
+    texRgn.xy += BitmapTexelSize * 0.5;
+    texRgn.zw += BitmapTexelSize * 0.5;
 
     float4 texColor = tex2D(TextureSampler, clamp2(texCoord, texRgn.xy, texRgn.zw));
     texColor.a *= color.a;
@@ -68,8 +68,8 @@ void NormalBillboardPixelShader(
     out float4 result : COLOR0
 ) {
     // FIXME: Without this we get weird acne at the top/left edges of billboards.
-    texRgn.xy += HalfTexel;
-    texRgn.zw += HalfTexel;
+    texRgn.xy += BitmapTexelSize * 0.5;
+    texRgn.zw += BitmapTexelSize * 0.5;
 
     float4 texColor = tex2D(TextureSampler, clamp2(texCoord, texRgn.xy, texRgn.zw));
     texColor.a *= color.a;
@@ -105,10 +105,10 @@ float tap(
 }
 
 float3 calculateNormal(
-    float2 texCoord, float4 texRgn, float2 halfTexel, float4 traits, float z,
+    float2 texCoord, float4 texRgn, float2 texelSize, float4 traits, float z,
     out float center
 ) {
-    float3 spacing = float3(halfTexel * 2, 0);
+    float3 spacing = float3(texelSize, 0);
     float epsilon = 0.001, temp;
 
     float a = tap(texCoord - spacing.xz, texRgn), b = tap(texCoord + spacing.xz, texRgn),
@@ -156,8 +156,8 @@ void DistanceBillboardPixelShader(
     out float4 result : COLOR0
 ) {
     // FIXME: Without this we get weird acne at the top/left edges of billboards.
-    texRgn.xy += HalfTexel;
-    texRgn.zw += HalfTexel;
+    texRgn.xy += BitmapTexelSize * 0.5;
+    texRgn.zw += BitmapTexelSize * 0.5;
 
     float relativeY = (originalPositionData.y - originalPositionData.w) * ViewCoordinateScaleFactor.y;
     float z = userData.z + (userData.y * relativeY), distance;
@@ -165,7 +165,7 @@ void DistanceBillboardPixelShader(
     // HACK: We negate the result normal since we're sampling a distance field (and a distance field
     //  is negative as you go in, which is "opposite" of how a heightmap works)
     // FIXME: Is 0.5 the right z value?
-    float3 normal = calculateNormal(texCoord, texRgn, HalfTexel, BitmapTraits, 0.5, distance) * -1;
+    float3 normal = calculateNormal(texCoord, texRgn, BitmapTexelSize, BitmapTraits, 0.5, distance) * -1;
     bool isDead = false;
 
     if (abs(ZFromDistance.z) > 0.001) {

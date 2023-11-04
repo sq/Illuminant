@@ -47,7 +47,7 @@ void HeightmapToNormalsPixelShader (
     out float4 result      : COLOR0
 ) {
     float alpha;
-    float3 normal = calculateNormal(texCoord, texRgn, HalfTexel, BitmapTraits, alpha);
+    float3 normal = calculateNormal(texCoord, texRgn, BitmapTexelSize, BitmapTraits, alpha);
     result = float4(NormalsAreSigned ? normal * DenormalCompensation.x : (normal * 0.5) + 0.5, alpha);
 }
 
@@ -57,7 +57,7 @@ void HeightmapToDisplacementPixelShader (
     out float4 result      : COLOR0 
 ) {
     float alpha;
-    float3 normal = calculateNormal(texCoord, texRgn, HalfTexel, BitmapTraits, alpha);
+    float3 normal = calculateNormal(texCoord, texRgn, BitmapTexelSize, BitmapTraits, alpha);
     float3 displacement = normal.xyz * float3(DisplacementScale, 1);
     result = float4(displacement.xy + 0.5, 0.5, 1);
 }

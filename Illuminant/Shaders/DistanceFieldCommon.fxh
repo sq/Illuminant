@@ -281,34 +281,23 @@ sampler   DistanceFieldTextureSampler : register(s7){
 };
 
 struct DistanceFieldConstants {
-    float3 data;
-    float2 halfDistanceTexel, distanceSliceSizeMinusHalfTexel;
 };
 
 DistanceFieldConstants makeDistanceFieldConstants() {
-    float2 halfTexel = getDistanceTexelSize() * 0.5;
-    DistanceFieldConstants result = {
-        float3(
-            DistanceFieldPacked1.z, 
-            DistanceFieldPacked1.x, 
-            DistanceFieldPacked1.y
-        ),
-        halfTexel, getDistanceSliceSize() - halfTexel
-    };
-
+    DistanceFieldConstants result;
     return result;
 }
 
 float getMaximumValidZ (in DistanceFieldConstants vars) {
-    return vars.data.x;
+    return DistanceFieldPacked1.z;
 }
 
 float getInvSliceCountXTimesOneThird (in DistanceFieldConstants vars) {
-    return vars.data.y;
+    return DistanceFieldPacked1.x;
 }
 
 float getZToSliceIndex (in DistanceFieldConstants vars) {
-    return vars.data.z;
+    return DistanceFieldPacked1.y;
 }
 
 float2 computeDistanceFieldSliceUv (

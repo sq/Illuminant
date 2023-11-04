@@ -135,7 +135,7 @@ void NormalsFromLightmapsPixelShader(
     // Negative distance is higher so we want to go from max height to min height as distance increases
     distance = lerp(params.w, params.z, distance);
     */
-    float3 texel = float3(HalfTexel, 0);
+    float3 texel = float3(BitmapTexelSize, 0);
     float tapCount = 1;
     float3 accum = tap(texCoord, texRgn), normal;
     if (BLUR) {

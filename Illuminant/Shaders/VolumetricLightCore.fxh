@@ -358,7 +358,7 @@ float volumetricTrace (
         
         if (enableDistance)
         {        
-            float d = dither, md;
+            float d = dither * 0.66, md;
             int traceSteps = getStepLimit();
             float3 traceStartPos, traceAlong;
             if (projectFromOrigin)

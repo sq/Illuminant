@@ -45,8 +45,8 @@ void VectorWarpPixelShader (
     else
         fieldValue = 0;
 
-    float2 baseTexCoord = (GET_VPOS * HalfTexel);
-    float2 warpedTexCoord = baseTexCoord + (fieldValue.xy * HalfTexel);
+    float2 baseTexCoord = (GET_VPOS * BitmapTexelSize);
+    float2 warpedTexCoord = baseTexCoord + (fieldValue.xy * BitmapTexelSize);
     float2 finalTexCoord = clamp2(warpedTexCoord, texRgn1.xy, texRgn1.zw);
     float4 background = tex2D(TextureSampler, finalTexCoord);
     background = ExtractRgba(background, BitmapTraits);
@@ -109,7 +109,7 @@ void HeightmapRefractionPixelShader(
     out float4 result : COLOR0
 ) {
     float alpha;
-    float3 surfaceNormal = calculateNormal(texCoord2, texRgn2, HalfTexel2, BitmapTraits2, alpha);
+    float3 surfaceNormal = calculateNormal(texCoord2, texRgn2, BitmapTexelSize2, BitmapTraits2, alpha);
 
     float3 ray = float3(0, 0, -1);
     float3 refracted = refract(ray, normalize(surfaceNormal), RefractionIndexAndMipBias.x);
