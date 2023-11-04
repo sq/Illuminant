@@ -2,8 +2,10 @@
 // These values produce a very rapid climb up to 1.0 (we don't really want
 //  smooth dot attenuation, we're just using it to mask light from behind
 //  surfaces)
-#define DOT_OFFSET     0.1
-#define DOT_RAMP_RANGE 0.1
+#define DOT_OFFSET     0.15
+#define DOT_RAMP_RANGE 0.15
+#define DIRECTIONAL_DOT_OFFSET     0.30
+#define DIRECTIONAL_DOT_RAMP_RANGE 0.30
 // The final output from the dot computation is raised to this power so
 #define DOT_EXPONENT   0.85
 
@@ -225,7 +227,7 @@ float computeDirectionalLightOpacity (
     if (lightDirection.w < 0.1)
         return 1;
     else
-        return computeNormalFactor(lightDirection.xyz, shadedPixelNormal);
+        return computeNormalFactorEx(lightDirection.xyz, shadedPixelNormal, DIRECTIONAL_DOT_OFFSET, DIRECTIONAL_DOT_RAMP_RANGE);
 }
 
 void sampleLightProbeBuffer (

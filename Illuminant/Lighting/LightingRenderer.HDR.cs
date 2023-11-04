@@ -73,7 +73,7 @@ namespace Squared.Illuminant {
         public struct RenderedLighting : IDisposable {
             public   readonly LightingRenderer Renderer;
             public   readonly float            InverseScaleFactor;
-            private  readonly RenderTarget2D   Lightmap;
+            public   readonly RenderTarget2D   Lightmap;
             private  readonly RenderTarget2D   LightProbeValues;
             internal          RenderTarget2D   LuminanceBuffer;
             private  readonly int              Width, Height;

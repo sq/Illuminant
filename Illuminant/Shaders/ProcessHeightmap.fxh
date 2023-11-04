@@ -28,11 +28,11 @@ float synthesizeAlpha (float value) {
 }
 
 float3 calculateNormal (
-    float2 texCoord, float4 texRgn, float2 halfTexel, float4 traits, out float alpha
+    float2 texCoord, float4 texRgn, float2 texelSize, float4 traits, out float alpha
 ) {
     float3 spacing = float3(TapSpacingAndBias.xy, 0);
     if (spacing.x <= 0)
-        spacing = float3(halfTexel, 0);
+        spacing = float3(texelSize, 0);
     float epsilon = 0.001, temp;
 
     float a = tap(texCoord - spacing.xz, texRgn, traits, temp), b = tap(texCoord + spacing.xz, texRgn, traits, temp),
