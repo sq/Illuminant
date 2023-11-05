@@ -36,7 +36,7 @@ namespace TestGame.Scenes {
             Radius1, Radius2,
             Volumetricity, RampLength,
             RampPower, DistanceAttenuation,
-            Angle, MaxStepCount;
+            Angle, MaxStepCount, MinStepSize;
 
         [Items("Cone")]
         [Items("Ellipsoid")]
@@ -95,6 +95,10 @@ namespace TestGame.Scenes {
             MaxStepCount.Max = 64;
             MaxStepCount.Value = 24;
             MaxStepCount.Integral = true;
+
+            MinStepSize.Min = 0.5f;
+            MinStepSize.Max = 8f;
+            MinStepSize.Value = 1f;
 
             DistanceFieldResolution.Changed += (s, e) => CreateDistanceField();
         }
@@ -310,6 +314,7 @@ namespace TestGame.Scenes {
                 P2.Z = Elevation2;
 
                 Renderer.Configuration.DefaultQuality.MaxStepCount = (int)MaxStepCount.Value;
+                Renderer.Configuration.DefaultQuality.MinStepSize = MinStepSize.Value;
 
                 MovableLight.StartPosition = P1;
                 MovableLight.EndPosition = P2;

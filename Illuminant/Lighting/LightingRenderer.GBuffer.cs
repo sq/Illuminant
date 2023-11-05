@@ -299,6 +299,8 @@ namespace Squared.Illuminant {
             var material = dm.CurrentMaterial;
             material.Effect.Parameters["Mask"].SetValue((Texture)drawCall.UserData);
             material.Flush(dm);
+            // HACK: Filtering causes artifacts so we're disabling it for now
+            dm.Device.SamplerStates[0] = SamplerState.PointClamp;
         }
 
         private sealed class GBufferBillboardSorter : IRefComparer<Billboard> {

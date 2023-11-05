@@ -7,9 +7,6 @@ sampler MaskSampler : register(s0) {
     Texture = (Mask);
     AddressU = CLAMP;
     AddressV = CLAMP;
-    MipFilter = POINT;
-    MinFilter = LINEAR;
-    MagFilter = LINEAR;
 };
 
 void BillboardVertexShader(
@@ -60,6 +57,38 @@ void MaskBillboardPixelShader(
     );
 }
 
+float4 yawPitchRoll(float yaw, float pitch, float roll) {
+    float halfRoll = roll * 0.5;
+    float sinRoll = sin(halfRoll);
+    float cosRoll = cos(halfRoll);
+    float halfPitch = pitch * 0.5;
+    float sinPitch = sin(halfPitch);
+    float cosPitch = cos(halfPitch);
+    float halfYaw = yaw * 0.5;
+    float sinYaw = sin(halfYaw);
+    float cosYaw = cos(halfYaw);
+    return float4(
+        ((cosYaw * sinPitch) * cosRoll) + ((sinYaw * cosPitch) * sinRoll),
+        ((sinYaw * cosPitch) * cosRoll) - ((cosYaw * sinPitch) * sinRoll),
+        ((cosYaw * cosPitch) * sinRoll) - ((sinYaw * sinPitch) * cosRoll),
+        ((cosYaw * cosPitch) * cosRoll) + ((sinYaw * sinPitch) * sinRoll)
+    );
+}
+
+// Quaternion multiplication
+// http://mathworld.wolfram.com/Quaternion.html
+float4 qmul(float4 q1, float4 q2) {
+    return float4(
+        q2.xyz * q1.w + q1.xyz * q2.w + cross(q1.xyz, q2.xyz),
+        q1.w * q2.w - dot(q1.xyz, q2.xyz)
+    );
+}
+
+float3 rotateLocalPosition(float3 localPosition, float4 rotation) {
+    float4 r_c = rotation * float4(-1, -1, -1, 1);
+    return qmul(rotation, qmul(float4(localPosition, 0), r_c)).xyz;
+}
+
 void GDataBillboardPixelShader(
     in float2 texCoord       : TEXCOORD0,
     in float3 worldPosition  : TEXCOORD1,
@@ -72,17 +101,38 @@ void GDataBillboardPixelShader(
     float alpha = data.a;
 
     const float discardThreshold = (127.0 / 255.0);
-    clip(alpha - discardThreshold);
+    if (alpha < discardThreshold) {
+        result = 0;
+        discard;
+        return;
+    }
 
-    // FIXME: We can't represent vertical normals this way just horizontal
-    normal = float3((data.r - 0.5) * 2, 0, 0);
-    normal.z = sqrt(1 - dot(normal.xy, normal.xy));
+    // x|pitch y|yaw z|roll
     float dataScale = dataScaleAndDynamicFlag.x;
-    float yOffset = data.g * dataScale;
+    float2 rotationIn = data.gr;
+    float yOffset = 0;
+    if (abs(getInvZToYMultiplier()) >= 0.001) {
+        rotationIn.y = 0;
+        yOffset = data.g * dataScale;
+    }
+    float3 rotation = float3((rotationIn - 0.5) * 2, 0) * PI,
+        resultNormal;
+    
+    if (length(rotation) > 0.01) {
+        float4 quat = yawPitchRoll(rotation.y, rotation.x, rotation.z);
+        resultNormal = normalize(rotateLocalPosition(normal, quat));
+    } else
+        resultNormal = normal;
+
+    /*    
+    result = float4((resultNormal * 0.5) + 0.5, 1);
+    return;
+    */
+    
     float effectiveZ = worldPosition.z + (yOffset * getInvZToYMultiplier()) + (data.b * dataScale);
 
     result = encodeGBufferSample(
-        normal,
+        resultNormal,
         yOffset,
         effectiveZ,
         false, true, false

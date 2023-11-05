@@ -358,7 +358,7 @@ float volumetricTrace (
         
         if (enableDistance)
         {        
-            float d = dither * 0.66, md;
+            float d = dither * 0.66, md, stepScale = 0.99;
             int traceSteps = getStepLimit();
             float3 traceStartPos, traceAlong;
             if (projectFromOrigin)
@@ -383,14 +383,14 @@ float volumetricTrace (
                 float3 samplePos = traceStartPos + (traceAlong * d);
                 float sample = sampleDistanceFieldEx(samplePos, vars);
                 // HACK: Smoother shadow edges
-                occlusion = saturate(sample);
+                occlusion = saturate(sample * 0.5);
                 // HACK: This needs to be larger than 0 to account for error
-                if (sample <= 0.1)
+                if (sample <= -0.1)
                 {
                     traceSteps = 0;
                     occlusion = 0;
                 }
-                d += max(abs(sample) * 0.99, getMinStepSize());
+                d += max(abs(sample) * stepScale, getMinStepSize());
                 if (d >= md)
                     traceSteps = 0;
                 else
