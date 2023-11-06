@@ -57,46 +57,15 @@ void MaskBillboardPixelShader(
     );
 }
 
-float4 yawPitchRoll(float yaw, float pitch, float roll) {
-    float halfRoll = roll * 0.5;
-    float sinRoll = sin(halfRoll);
-    float cosRoll = cos(halfRoll);
-    float halfPitch = pitch * 0.5;
-    float sinPitch = sin(halfPitch);
-    float cosPitch = cos(halfPitch);
-    float halfYaw = yaw * 0.5;
-    float sinYaw = sin(halfYaw);
-    float cosYaw = cos(halfYaw);
-    return float4(
-        ((cosYaw * sinPitch) * cosRoll) + ((sinYaw * cosPitch) * sinRoll),
-        ((sinYaw * cosPitch) * cosRoll) - ((cosYaw * sinPitch) * sinRoll),
-        ((cosYaw * cosPitch) * sinRoll) - ((sinYaw * sinPitch) * cosRoll),
-        ((cosYaw * cosPitch) * cosRoll) + ((sinYaw * sinPitch) * sinRoll)
-    );
-}
-
-// Quaternion multiplication
-// http://mathworld.wolfram.com/Quaternion.html
-float4 qmul(float4 q1, float4 q2) {
-    return float4(
-        q2.xyz * q1.w + q1.xyz * q2.w + cross(q1.xyz, q2.xyz),
-        q1.w * q2.w - dot(q1.xyz, q2.xyz)
-    );
-}
-
-float3 rotateLocalPosition(float3 localPosition, float4 rotation) {
-    float4 r_c = rotation * float4(-1, -1, -1, 1);
-    return qmul(rotation, qmul(float4(localPosition, 0), r_c)).xyz;
-}
-
 void GDataBillboardPixelShader(
     in float2 texCoord       : TEXCOORD0,
     in float3 worldPosition  : TEXCOORD1,
     in float3 screenPosition : TEXCOORD2,
-    in float3 normal         : NORMAL0,
+    in float3 normalIn       : NORMAL0,
     in float2 dataScaleAndDynamicFlag : NORMAL1,
     out float4 result        : COLOR0
 ) {
+    // x normal, y normal, z offset, mask
     float4 data = tex2D(MaskSampler, texCoord);
     float alpha = data.a;
 
@@ -107,29 +76,30 @@ void GDataBillboardPixelShader(
         return;
     }
 
-    // x|pitch y|yaw z|roll
     float dataScale = dataScaleAndDynamicFlag.x;
-    float2 rotationIn = data.gr;
-    float yOffset = 0;
-    if (abs(getInvZToYMultiplier()) >= 0.001) {
-        rotationIn.y = 0;
-        yOffset = data.g * dataScale;
-    }
-    float3 rotation = float3((rotationIn - 0.5) * 2, 0) * PI,
-        resultNormal;
+    float2 tangentSpaceNormalIn = float3(data.rg, 0);
+    float3 tangentSpaceNormal = float3((tangentSpaceNormalIn - 0.5) * 2, 0);
+    tangentSpaceNormal.z = sqrt(1 - dot(tangentSpaceNormal.xy, tangentSpaceNormal.xy));
     
-    if (length(rotation) > 0.01) {
-        float4 quat = yawPitchRoll(rotation.y, rotation.x, rotation.z);
-        resultNormal = normalize(rotateLocalPosition(normal, quat));
-    } else
-        resultNormal = normal;
+    // HACK: Use a fixed space where +x is right, -y is up, and +z is forward. Then
+    //  convert the billboard's "normals" from this "tangent space" to world space
+    // The billboard's normals have Z reconstructed from x/y so if x/y are both 0
+    //  they will point 'forward' and produce +z as one would typically want
+    float3 tangent = float3(1, 0, 0),
+        bitangent = float3(0, -1, 0),
+        normal = float3(0, 0, 1),
+        worldSpaceNormal = tangent * tangentSpaceNormal.x + 
+            bitangent * tangentSpaceNormal.y + 
+            normal * tangentSpaceNormal.z;
+        
+    float3 resultNormal = normalize(worldSpaceNormal);
 
-    /*    
+#if 0
     result = float4((resultNormal * 0.5) + 0.5, 1);
     return;
-    */
-    
-    float effectiveZ = worldPosition.z + (yOffset * getInvZToYMultiplier()) + (data.b * dataScale);
+#else    
+    float effectiveZ = worldPosition.z + (data.b * dataScale);
+    float yOffset = effectiveZ * getZToYMultiplier();
 
     result = encodeGBufferSample(
         resultNormal,
@@ -137,6 +107,7 @@ void GDataBillboardPixelShader(
         effectiveZ,
         false, true, false
     );
+#endif
 }
 
 technique MaskBillboard
