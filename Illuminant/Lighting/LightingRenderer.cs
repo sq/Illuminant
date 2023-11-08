@@ -491,7 +491,15 @@ namespace Squared.Illuminant {
                     Name = "LightingRenderer.LightProbeNormals",
                 };
                 _DummyGBufferTexture = new Texture2D(coordinator.Device, 1, 1, false, SurfaceFormat.HalfVector4);
+                _DummyGBufferTexture.SetData(new HalfVector4[1]);
                 _DummyDistanceFieldTexture = new Texture2D(coordinator.Device, 1, 1, false, DistanceField.Format);
+                switch (DistanceField.Format) {
+                    case SurfaceFormat.Rgba64:
+                        _DummyDistanceFieldTexture.SetData(new Rgba64[1]);
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException("DistanceField.Format");
+                }
             }
 
             if (Configuration.MaximumLightProbeCount > 0) {

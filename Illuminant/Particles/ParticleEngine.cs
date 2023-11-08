@@ -576,6 +576,7 @@ namespace Squared.Illuminant.Particles {
                 };
 
                 DummyRampTexture = new Texture2D(coordinator.Device, 1, 1, false, SurfaceFormat.Color);
+                DummyRampTexture.SetData(new Color[1]);
             }
 
             FillIndexBuffer();
