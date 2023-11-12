@@ -190,7 +190,7 @@ namespace Squared.Illuminant {
                             DefaultBitmapMaterial = IlluminantMaterials.AutoGBufferBitmap
                         };
                         GBufferParameterStorage = GBufferParameterStorage.EnsureUniqueStorage(ref ir.Parameters);
-                        ir.Parameters.UseExistingListStorage(GBufferParameterStorage);
+                        ir.Parameters.UseExistingListStorage(GBufferParameterStorage, false);
 
                         OnRenderGBuffer(this, ref ir);
                     }

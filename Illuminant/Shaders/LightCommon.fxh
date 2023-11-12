@@ -4,8 +4,8 @@
 //  surfaces)
 #define DOT_OFFSET     0.15
 #define DOT_RAMP_RANGE 0.15
-#define DIRECTIONAL_DOT_OFFSET     0.30
-#define DIRECTIONAL_DOT_RAMP_RANGE 0.30
+#define DIRECTIONAL_DOT_OFFSET     0.35
+#define DIRECTIONAL_DOT_RAMP_RANGE 0.35
 // The final output from the dot computation is raised to this power so
 #define DOT_EXPONENT   0.85
 

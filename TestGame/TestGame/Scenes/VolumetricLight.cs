@@ -316,7 +316,7 @@ namespace TestGame.Scenes {
                 Renderer.Configuration.DefaultQuality.MaxStepCount = (int)MaxStepCount.Value;
                 Renderer.Configuration.DefaultQuality.MinStepSize = MinStepSize.Value;
 
-                MovableLight.StartPosition = P1;
+                MovableLight.StartPosition = P1; 
                 MovableLight.EndPosition = P2;
 
                 MovableLight.CastsShadows = Shadows;

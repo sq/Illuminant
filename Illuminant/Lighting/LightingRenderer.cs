@@ -233,10 +233,10 @@ namespace Squared.Illuminant {
                 }
             }
 
-            public void UpdateVertexBuffer () {
+            public int EnsureVertexBufferAllocated () {
                 lock (Lock) {
                     if (LightVertices == null)
-                        return;
+                        return 0;
 
                     var vertexCapacity = Capacity;
 
@@ -246,15 +246,21 @@ namespace Squared.Illuminant {
                     }
 
                     if (LightVertexBuffer == null) {
-                        LightVertexBuffer = new DynamicVertexBuffer(
-                            Parent.Coordinator.Device, typeof(LightVertex),
-                            vertexCapacity, BufferUsage.WriteOnly
-                        );
+                        lock (Parent.Coordinator.CreateResourceLock)
+                            LightVertexBuffer = new DynamicVertexBuffer(
+                                Parent.Coordinator.Device, typeof(LightVertex),
+                                vertexCapacity, BufferUsage.WriteOnly
+                            );
                     }
 
-                    if (vertexCapacity > 0)
-                        LightVertexBuffer.SetData(LightVertices.GetBufferArray(), 0, vertexCapacity, SetDataOptions.Discard);
+                    return vertexCapacity;
                 }
+            }
+
+            public void UpdateVertexBuffer () {
+                int capacity = EnsureVertexBufferAllocated();
+                if (capacity > 0)
+                    LightVertexBuffer.SetData(LightVertices.GetBufferArray(), 0, capacity, SetDataOptions.Discard);
             }
 
             public VertexBuffer GetCornerBuffer (bool forProbes) {
@@ -1113,7 +1119,7 @@ namespace Squared.Illuminant {
                         }
 
                         foreach (var kvp in LightRenderStates)
-                            kvp.Value.UpdateVertexBuffer();
+                            kvp.Value.EnsureVertexBufferAllocated();
 
                         if (paintDirectIllumination)
                         foreach (var kvp in LightRenderStates) {
