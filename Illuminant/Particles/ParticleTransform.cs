@@ -105,14 +105,11 @@ namespace Squared.Illuminant.Particles.Transforms {
                 if (Transform?.IsAnalyzer ?? false) {
                     dm.PushRenderTarget(engine.ScratchTexture);
                 } else if (up.IsUpdate) {
-                    curr.Bindings4[2] = new RenderTargetBinding(up.Chunk.RenderColor);
-                    curr.Bindings4[3] = new RenderTargetBinding(up.Chunk.RenderData);
-                    dm.PushRenderTargets(curr.Bindings4);
+                    curr.PushRenderTargets(ref dm, up.Chunk.RenderColor, up.Chunk.RenderData);
                 } else if (up.IsSpawning) {
-                    curr.Bindings3[2] = up.Chunk.Color;
-                    dm.PushRenderTargets(curr.Bindings3);
+                    curr.PushRenderTargets(ref dm, up.Chunk.Color);
                 } else {
-                    dm.PushRenderTargets(curr.Bindings2);
+                    curr.PushRenderTargets(ref dm);
                 }
                 DidSetRenderTarget = true;
 

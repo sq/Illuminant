@@ -83,8 +83,6 @@ namespace Squared.Illuminant.Particles {
             public int  LastFrameDependency = -1;
             // This tracks the last turn a buffer was used (note that turns are NOT frames)
             public long LastTurnUsed;
-
-            public RenderTargetBinding[] Bindings2, Bindings3, Bindings4;
             public RenderTarget2D PositionAndLife;
             public RenderTarget2D Velocity;
 
@@ -92,20 +90,17 @@ namespace Squared.Illuminant.Particles {
 
             private static volatile int NextID;
 
+            private static readonly RenderTargetBinding[] Bindings2 = new RenderTargetBinding[2], 
+                Bindings3 = new RenderTargetBinding[3], 
+                Bindings4 = new RenderTargetBinding[4];
+
             public BufferSet (ParticleEngineConfiguration configuration, GraphicsDevice device) {
                 ID = Interlocked.Increment(ref NextID);
                 Size = configuration.ChunkSize;
                 MaximumCount = Size * Size;
 
-                Bindings2 = new RenderTargetBinding[2];
-                Bindings3 = new RenderTargetBinding[3];
-                Bindings4 = new RenderTargetBinding[4];
-
                 PositionAndLife = CreateRenderTarget(configuration, device);
                 Velocity = CreateRenderTarget(configuration, device);
-
-                Bindings4[0] = Bindings3[0] = Bindings2[0] = new RenderTargetBinding(PositionAndLife);
-                Bindings4[1] = Bindings3[1] = Bindings2[1] = new RenderTargetBinding(Velocity);
             }
 
             internal RenderTarget2D CreateRenderTarget (ParticleEngineConfiguration configuration, GraphicsDevice device) {
@@ -126,6 +121,27 @@ namespace Squared.Illuminant.Particles {
                 IsDisposed = true;
                 PositionAndLife.Dispose();
                 Velocity.Dispose();
+            }
+
+            internal void PushRenderTargets (ref DeviceManager dm) {
+                Bindings2[0] = new RenderTargetBinding(PositionAndLife);
+                Bindings2[1] = new RenderTargetBinding(Velocity);
+                dm.PushRenderTargets(Bindings2);
+            }
+
+            internal void PushRenderTargets (ref DeviceManager dm, RenderTarget2D binding3) {
+                Bindings3[0] = new RenderTargetBinding(PositionAndLife);
+                Bindings3[1] = new RenderTargetBinding(Velocity);
+                Bindings3[2] = new RenderTargetBinding(binding3);
+                dm.PushRenderTargets(Bindings3);
+            }
+
+            internal void PushRenderTargets (ref DeviceManager dm, RenderTarget2D binding3, RenderTarget2D binding4) {
+                Bindings4[0] = new RenderTargetBinding(PositionAndLife);
+                Bindings4[1] = new RenderTargetBinding(Velocity);
+                Bindings4[2] = new RenderTargetBinding(binding3);
+                Bindings4[3] = new RenderTargetBinding(binding4);
+                dm.PushRenderTargets(Bindings4);
             }
         }
 

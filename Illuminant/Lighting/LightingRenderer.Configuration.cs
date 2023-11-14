@@ -142,6 +142,14 @@ namespace Squared.Illuminant {
         public bool AllowFullbright = false;
 
         /// <summary>
+        /// If AllowFullbright is set, pixels never touched by any light sources will also have
+        ///  an alpha of 0 and be fullbright. This option compensates for that by using a dummy
+        ///  directional fill light to touch all pixels at least once.
+        /// If you are using a global directional light already, you can turn this off.
+        /// </summary>
+        public bool EnableDummyDirectionalLight = true;
+
+        /// <summary>
         /// Used to load lazy texture resources.
         /// </summary>
         public Func<string, Texture2D> RampTextureLoader = null;

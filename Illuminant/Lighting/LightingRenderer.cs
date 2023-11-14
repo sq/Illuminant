@@ -1112,7 +1112,7 @@ namespace Squared.Illuminant {
                         // HACK: In fullbright mode, the lightmap will have an alpha value of 0 for any pixels
                         //  that have not been touched by a light source. Compensate by using a dummy directional light
                         //  to set the alpha value of any pixels that are not marked as fullbright by the g-buffer.
-                        if (Configuration.AllowFullbright && Configuration.EnableGBuffer) {
+                        if (Configuration.AllowFullbright && Configuration.EnableGBuffer && Configuration.EnableDummyDirectionalLight) {
                             var ltrs = GetLightRenderState(DummyDirectionalLightForFullbrightMode);
                             DeadRenderStates.Remove(ltrs.Key);
                             RenderDirectionalLightSource(DummyDirectionalLightForFullbrightMode, 1, ltrs);
