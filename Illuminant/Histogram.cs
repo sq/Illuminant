@@ -263,7 +263,7 @@ namespace Squared.Illuminant {
             IBatchContainer group, int layer, Histogram h,
             float[] percentiles = null, float? rangeMin = null, float? rangeMax = null
         ) {
-            var ir = new ImperativeRenderer(group, Materials, layer, blendState: BlendState.AlphaBlend).MakeSubgroup();
+            var ir = new ImperativeRenderer(group, Materials, layer: layer, blendState: BlendState.AlphaBlend).MakeSubgroup();
             ir.AutoIncrementLayer = false;
 
             ir.FillRectangle(Bounds, BackgroundColor, layer: 0);

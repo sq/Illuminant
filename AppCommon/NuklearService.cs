@@ -290,7 +290,7 @@ namespace Framework {
             float estimatedHeight = 0;
             for (int i = 0; i < 255; i++) {
                 Glyph glyph;
-                if (newFont.GetGlyph((char)i, out glyph))
+                if (newFont.GetGlyph((char)i, out glyph) && !glyph.Texture.IsDisposedOrNull)
                     estimatedHeight = Math.Max(estimatedHeight, glyph.BoundsInTexture.Size.Y * glyph.Texture.Instance.Height / newFont.DPIScaleFactor);
             }
             // LineSpacing includes whitespace :(

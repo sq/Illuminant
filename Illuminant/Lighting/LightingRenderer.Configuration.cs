@@ -7,6 +7,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Squared.Render.Convenience;
 using Squared.Util;
+using Squared.Util.Text;
 
 namespace Squared.Illuminant {
     public class RendererConfiguration {
@@ -152,7 +153,7 @@ namespace Squared.Illuminant {
         /// <summary>
         /// Used to load lazy texture resources.
         /// </summary>
-        public Func<string, Texture2D> RampTextureLoader = null;
+        public Func<AbstractString, Texture2D> RampTextureLoader = null;
 
         /// <summary>
         /// Biases the mip level used by projector light sources.

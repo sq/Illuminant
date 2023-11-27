@@ -17,6 +17,7 @@ using Squared.Render.Evil;
 using Squared.Render.Resources;
 using Squared.Render.Tracing;
 using Squared.Util;
+using Squared.Util.Text;
 using Chunk = Squared.Illuminant.Particles.ParticleSystem.Chunk;
 
 namespace Squared.Illuminant.Particles {
@@ -656,12 +657,12 @@ namespace Squared.Illuminant.Particles {
         /// <summary>
         /// Used to load lazy texture resources.
         /// </summary>
-        public Func<string, Texture2D> TextureLoader = null;
+        public Func<AbstractString, Texture2D> TextureLoader = null;
 
         /// <summary>
         /// Used to load lazy texture resources in floating-point format.
         /// </summary>
-        public Func<string, Texture2D> FPTextureLoader = null;
+        public Func<AbstractString, Texture2D> FPTextureLoader = null;
 
         /// <summary>
         /// Used to resolve ParticleSystemReferences for feedback.

@@ -5,6 +5,7 @@ using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework.Graphics;
+using Squared.Util.Text;
 
 namespace Squared.Illuminant {
     public interface ILazyResource {
@@ -37,7 +38,7 @@ namespace Squared.Illuminant {
             Instance = existingInstance;
         }
 
-        public void EnsureInitialized (Func<string, T> resourceLoader) {
+        public void EnsureInitialized (Func<AbstractString, T> resourceLoader) {
             if ((Instance != null) && Instance.IsDisposed)
                 Instance = null;
 

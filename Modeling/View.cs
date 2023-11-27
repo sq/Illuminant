@@ -58,8 +58,8 @@ namespace Squared.Illuminant.Modeling {
 
         protected virtual ParticleEngineConfiguration MakeConfiguration () {
             return new ParticleEngineConfiguration {
-                TextureLoader = (fn) => LoadTexture(fn, false),
-                FPTextureLoader = (fn) => LoadTexture(fn, true),
+                TextureLoader = (fn) => LoadTexture(fn.ToString(), false),
+                FPTextureLoader = (fn) => LoadTexture(fn.ToString(), true),
                 SystemResolver = ResolveReference,
                 NamedVariableResolver = (k) => {
                     Configuration.IParameter result;
