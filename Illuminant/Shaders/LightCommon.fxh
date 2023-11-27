@@ -22,7 +22,7 @@ uniform const float  GBufferViewportRelative;
 uniform const float  GBufferInvScaleFactor;
 uniform const float4 GBufferTexelSizeAndMisc;
 
-uniform const float4x4 InverseProjection;
+// uniform const float4x4 InverseProjection;
 
 #define GBUFFER_Z_SCALE 1024
 #define GBUFFER_Z_OFFSET 1024
@@ -98,7 +98,7 @@ float3 sampleGBuffer (
         screenPositionPx /= getEnvironmentRenderScale();
         cameraPosition = float3(screenPositionPx.xy, getMaximumZ() + 0.01);
 
-        if (false) {
+#if 0
             // Reconstruct x/y from inverse projection matrix + z from gbuffer
             float4 reconstructedViewSpacePosition = float4(
                 uv.x * 2 - 1,
@@ -114,12 +114,12 @@ float3 sampleGBuffer (
             worldPosition.xy /= GetViewportScale();
             worldPosition.xy += GetViewportPosition();
             worldPosition.z = worldZ;
-        } else {
+#else
             worldPosition = float3(
                 (screenPositionPx.xy + float2(0, relativeY)) / GetViewportScale() + GetViewportPosition(),
                 worldZ
             );
-        }
+#endif
 
         // HACK: Reconstruct the y normal from the z normal
         if (any(sample.xy)) {

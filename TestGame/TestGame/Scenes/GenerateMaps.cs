@@ -158,9 +158,14 @@ namespace TestGame.Scenes {
         public override void LoadContent () {
             Background = Game.TextureLoader.Load("vector-field-background");
             Sprite = Game.TextureLoader.LoadSync("test-sprite", new TextureLoadOptions {
-                GenerateDistanceField = true
+                GenerateDistanceField = true,
+                Premultiply = true,
             }, true, false);
-            SpriteDistanceField = new RenderTarget2D(Game.GraphicsDevice, Sprite.Width, Sprite.Height, true, SurfaceFormat.Single, DepthFormat.None);
+            NeedToGenerateSDF = true;
+            SpriteDistanceField = new RenderTarget2D(
+                Game.GraphicsDevice, Sprite.Width, Sprite.Height, true, SurfaceFormat.Single, DepthFormat.None,
+                0, RenderTargetUsage.DiscardContents
+            );
             Brush.Scale = new BrushDynamics {
                 Constant = 1,
                 TaperFactor = 0.8f,

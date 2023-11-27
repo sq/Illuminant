@@ -74,7 +74,11 @@ namespace TestGame.Scenes {
                 Premultiply = true
             }, true, false);
             CPUDistanceField = Game.TextureLoader.GetDistanceField(Sprite);
-            GPUDistanceField = new RenderTarget2D(Game.GraphicsDevice, Sprite.Width, Sprite.Height, true, SurfaceFormat.HalfSingle, DepthFormat.None);
+            NeedGenerateGPUField = true;
+            GPUDistanceField = new RenderTarget2D(
+                Game.GraphicsDevice, Sprite.Width, Sprite.Height, true, SurfaceFormat.HalfSingle, DepthFormat.None,
+                0, RenderTargetUsage.DiscardContents
+            );
         }
 
         public override void UnloadContent () {
