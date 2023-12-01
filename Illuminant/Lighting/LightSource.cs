@@ -87,6 +87,7 @@ namespace Squared.Illuminant {
         /// Allows you to optionally set a ramp texture to control the appearance of light falloff.
         /// </summary>
         internal NullableLazyResource<Texture2D> TextureRef = new NullableLazyResource<Texture2D>();
+        internal Vector2 RampOffsetAndRate = new Vector2(0, 1);
         /// <summary>
         /// Allows you to optionally override quality settings for this light.
         /// It is *much* faster to share a single settings instance for many lights!
@@ -200,7 +201,8 @@ namespace Squared.Illuminant {
                 Quality = Quality,
                 FalloffYFactor = FalloffYFactor,
                 TextureRef = TextureRef,
-                ShadowDistanceFalloff = ShadowDistanceFalloff
+                ShadowDistanceFalloff = ShadowDistanceFalloff,
+                RampOffsetAndRate = RampOffsetAndRate,
             };
             return result;
         }
@@ -272,6 +274,16 @@ namespace Squared.Illuminant {
             }
         }
 
+        public float RampOffset {
+            get { return RampOffsetAndRate.X; }
+            set { RampOffsetAndRate.X = value; }
+        }
+
+        public float RampRate {
+            get { return RampOffsetAndRate.Y; }
+            set { RampOffsetAndRate.Y = value; }
+        }
+
         public SphereLightSource Clone () {
             var result = new SphereLightSource {
                 BlendMode = BlendMode,
@@ -289,6 +301,7 @@ namespace Squared.Illuminant {
                 AmbientOcclusionOpacity = AmbientOcclusionOpacity,
                 Quality = Quality,
                 TextureRef = TextureRef,
+                RampOffsetAndRate = RampOffsetAndRate,
             };
             return result;
         }
@@ -347,6 +360,7 @@ namespace Squared.Illuminant {
                 AmbientOcclusionOpacity = AmbientOcclusionOpacity,
                 Quality = Quality,
                 TextureRef = TextureRef,
+                RampOffsetAndRate = RampOffsetAndRate,
             };
             return result;
         }
@@ -440,6 +454,7 @@ namespace Squared.Illuminant {
                 AmbientOcclusionOpacity = AmbientOcclusionOpacity,
                 Quality = Quality,
                 TextureRef = TextureRef,
+                RampOffsetAndRate = RampOffsetAndRate,
             };
             return result;
         }
@@ -565,7 +580,8 @@ namespace Squared.Illuminant {
                 ShadowDistanceFalloff = ShadowDistanceFalloff,
                 Quality = Quality,
                 TextureRef = TextureRef,
-                TextureRegion = TextureRegion
+                TextureRegion = TextureRegion,
+                RampOffsetAndRate = RampOffsetAndRate,
             };
         }
 

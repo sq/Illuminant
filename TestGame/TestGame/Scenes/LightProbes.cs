@@ -30,7 +30,9 @@ namespace TestGame.Scenes {
             ExponentialRamp,
             EnableProbeShadows;
 
-        Slider DistanceFieldResolution,
+        Slider RampOffset,
+            RampRate,
+            DistanceFieldResolution,
             LightmapScaleRatio;
 
         public LightProbeTest (TestGame game, int width, int height)
@@ -57,6 +59,12 @@ namespace TestGame.Scenes {
             LightmapScaleRatio.Min = 0.05f;
             LightmapScaleRatio.Max = 1.0f;
             LightmapScaleRatio.Speed = 0.1f;
+
+            RampOffset.Min = (float)-Math.PI;
+            RampOffset.Max = (float)Math.PI;
+            RampRate.Min = 0.1f;
+            RampRate.Max = 10f;
+            RampRate.Value = 1f;
 
             DistanceFieldResolution.Changed += (s, e) => CreateDistanceField();
         }
@@ -122,7 +130,7 @@ namespace TestGame.Scenes {
 
             Environment.Lights.Add(new SphereLightSource {
                 Position = new Vector3(500, 350, 1),
-                Color = new Vector4(1f, 0.7f, 0.15f, 1f),
+                Color = new Vector4(1f, 0.85f, 0.7f, 1f),
                 Radius = 128,
                 RampLength = 360
             });
@@ -274,9 +282,11 @@ namespace TestGame.Scenes {
                     Renderer.Probes.Last().Position = mousePos;
                 }
 
-                var l = Environment.Lights.Last();
-                ((SphereLightSource)l).RampTexture.Set(UseRampTexture ? Game.RampTexture : null);
-                ((SphereLightSource)l).RampMode = ExponentialRamp ? LightSourceRampMode.Exponential : LightSourceRampMode.Linear;
+                var l = (SphereLightSource)Environment.Lights.Last();
+                l.RampTexture.Set(UseRampTexture ? Game.RampTexture : null);
+                l.RampMode = ExponentialRamp ? LightSourceRampMode.Exponential : LightSourceRampMode.Linear;
+                l.RampOffset = RampOffset;
+                l.RampRate = RampRate;
 
                 foreach (var p in Renderer.Probes)
                     p.EnableShadows = EnableProbeShadows;

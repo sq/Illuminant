@@ -63,11 +63,11 @@ void SphereLightProbeWithDistanceRampPixelShader(
     lightProperties.w *= enableShadows;
     moreLightProperties.x = moreLightProperties.w = 0;
 
-    opacity *= SphereLightPixelCoreWithRamp(
+    float3 rgb = opacity * SphereLightPixelCoreWithRamp(
         shadedPixelPosition, shadedPixelNormal.xyz, lightCenter, lightProperties, moreLightProperties
     );
 
-    result = float4(color.rgb * color.a * opacity, 1);
+    result = float4(color.rgb * color.a * rgb, 1);
 }
 
 technique SphereLightProbe {

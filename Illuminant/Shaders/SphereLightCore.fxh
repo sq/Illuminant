@@ -10,6 +10,8 @@
 #define SELF_OCCLUSION_HACK 1.6
 #define SHADOW_OPACITY_THRESHOLD (0.75 / 255.0)
 
+uniform const float2 RampOffsetAndRate;
+
 void SphereLightVertexShader(
     in float3 cornerWeights          : NORMAL2,
     inout float3 lightCenter         : TEXCOORD0,
@@ -96,12 +98,16 @@ float SphereLightPixelEpilogue (
     return lightOpacity;
 }
 
-float SphereLightPixelEpilogueWithRamp (
-    in float preTraceOpacity, 
-    in float coneOpacity,
-    in bool  visible
+float3 SphereLightPixelEpilogueWithRamp (
+    in float  preTraceOpacity, 
+    in float  coneOpacity,
+    in bool   visible,
+    in float3 distanceToCenter
 ) {
-    float lightOpacity = SampleFromRamp(preTraceOpacity) * coneOpacity;
+    float angle = atan2(distanceToCenter.y, distanceToCenter.x);
+    float3 lightRgb = SampleFromRamp2(float2(
+        preTraceOpacity, (angle + RampOffsetAndRate.x) * RampOffsetAndRate.y
+    )).rgb * coneOpacity;
 
     // HACK: Don't cull pixels unless they were killed by distance falloff.
     // This ensures that billboards are always lit.
@@ -110,7 +116,7 @@ float SphereLightPixelEpilogueWithRamp (
         return 0;
     }
 
-    return lightOpacity;
+    return lightRgb;
 }
 
 float SphereLightPixelCore (
@@ -152,7 +158,7 @@ float SphereLightPixelCore (
     );
 }
 
-float SphereLightPixelCoreWithRamp (
+float3 SphereLightPixelCoreWithRamp (
     in float3 shadedPixelPosition,
     in float3 shadedPixelNormal,
     in float3 lightCenter,
@@ -187,7 +193,8 @@ float SphereLightPixelCoreWithRamp (
     );
 
     return SphereLightPixelEpilogueWithRamp(
-        preTraceOpacity, coneOpacity, visible
+        preTraceOpacity, coneOpacity, visible,
+        shadedPixelPosition - lightCenter
     );
 }
 
@@ -212,7 +219,7 @@ float SphereLightPixelCoreNoDF (
     );
 }
 
-float SphereLightPixelCoreNoDFWithRamp (
+float3 SphereLightPixelCoreNoDFWithRamp (
     in float3 shadedPixelPosition,
     in float3 shadedPixelNormal,
     in float3 lightCenter,
@@ -229,6 +236,7 @@ float SphereLightPixelCoreNoDFWithRamp (
     );
 
     return SphereLightPixelEpilogueWithRamp(
-        distanceOpacity, 1, visible
+        distanceOpacity, 1, visible,
+        shadedPixelPosition - lightCenter
     );
 }

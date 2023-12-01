@@ -16,8 +16,8 @@ float SampleFromRamp (float x) {
     return tex2Dlod(RampTextureSampler, float4(x, 0, 0, 0)).r;
 }
 
-float SampleFromRamp2 (float2 xy) {
-    return tex2Dlod(RampTextureSampler, float4(xy, 0, 0)).r;
+float4 SampleFromRamp2 (float2 xy) {
+    return tex2Dlod(RampTextureSampler, float4(xy, 0, 0));
 }
 
 #endif

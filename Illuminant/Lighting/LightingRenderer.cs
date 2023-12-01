@@ -46,12 +46,21 @@ namespace Squared.Illuminant {
         }
 
         private struct LightTypeRenderStateKey {
-            public LightSourceTypeID       Type;
-            public Texture2D               RampTexture;
-            public BlendState              BlendState;
-            public RendererQualitySettings Quality;
-            public ParticleLightSource     ParticleLightSource;
-            public bool                    CastsShadows;
+            public readonly LightSourceTypeID Type;
+            public Texture2D                  RampTexture;
+            public Vector2                    RampOffsetAndRate;
+            public BlendState                 BlendState;
+            public RendererQualitySettings    Quality;
+            public ParticleLightSource        ParticleLightSource;
+            public bool                       CastsShadows;
+
+            public LightTypeRenderStateKey (LightSourceTypeID type, Vector2 relativeRampOffsetAndRate) : this () {
+                Type = type;
+                RampOffsetAndRate = new Vector2(
+                    (float)-Math.PI + relativeRampOffsetAndRate.X, 
+                    (float)(1.0 / (Math.PI * 2) * relativeRampOffsetAndRate.Y)
+                );
+            }
 
             public override int GetHashCode () {
                 var result = (int)Type;
@@ -79,7 +88,8 @@ namespace Squared.Illuminant {
                     (RampTexture == ltrsk.RampTexture) &&
                     (BlendState == ltrsk.BlendState) &&
                     (Quality == ltrsk.Quality) &&
-                    (CastsShadows == ltrsk.CastsShadows);
+                    (CastsShadows == ltrsk.CastsShadows) &&
+                    (RampOffsetAndRate == ltrsk.RampOffsetAndRate);
             }
         }
 
@@ -774,6 +784,7 @@ namespace Squared.Illuminant {
             var rampTexture = p["RampTexture"];
             if (rampTexture != null)
                 rampTexture.SetValue(ltrs.Key.RampTexture);
+            p["RampOffsetAndRate"]?.SetValue(ltrs.Key.RampOffsetAndRate);
         }
 
         private void _ParticleLightBatchSetup (DeviceManager device, object userData) {
@@ -813,8 +824,7 @@ namespace Squared.Illuminant {
             var ls = (lsb as LightSource) ?? (lsb as LightSourceReplicator)?.Template ?? (lsb as ParticleLightSource)?.Template;
 
             var ltk =
-                new LightTypeRenderStateKey {
-                    Type = lsb.TypeID,
+                new LightTypeRenderStateKey(lsb.TypeID, ls?.RampOffsetAndRate ?? new Vector2(0, 1)) {
                     BlendState = ls?.BlendMode ?? default,
                     RampTexture = ls?.TextureRef ?? Configuration.DefaultRampTexture,
                     Quality = ls?.Quality ?? Configuration.DefaultQuality,

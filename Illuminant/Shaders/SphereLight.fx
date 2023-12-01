@@ -71,7 +71,7 @@ void SphereLightWithDistanceRampPixelShader(
 
     lightProperties.w *= enableShadows;
 
-    float opacity = SphereLightPixelCoreWithRamp(
+    float3 opacity = SphereLightPixelCoreWithRamp(
         shadedPixelPosition, shadedPixelNormal, lightCenter, lightProperties, moreLightProperties
     );
     float specularity = CalcSphereLightSpecularity(

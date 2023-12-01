@@ -26,15 +26,17 @@ namespace Squared.Illuminant {
             device.SetViewport(new Viewport(0, 0, Probes.Count, 1));
             device.Device.BlendState = RenderStates.AdditiveBlend;
 
+            var p = ltrs.ProbeMaterial.Effect.Parameters;
             SetLightShaderParameters(ltrs.ProbeMaterial, ltrs.Key.Quality);
 
-            ltrs.ProbeMaterial.Effect.Parameters["GBuffer"].SetValue(_LightProbePositions);
-            ltrs.ProbeMaterial.Effect.Parameters["GBufferTexelSizeAndMisc"].SetValue(new Vector4(
+            p["GBuffer"].SetValue(_LightProbePositions);
+            p["GBufferTexelSizeAndMisc"].SetValue(new Vector4(
                 1.0f / Configuration.MaximumLightProbeCount, 1.0f,
                 1, 1
             ));
-            ltrs.ProbeMaterial.Effect.Parameters["ProbeNormals"].SetValue(_LightProbeNormals);
-            ltrs.ProbeMaterial.Effect.Parameters["RampTexture"].SetValue(ltrs.Key.RampTexture);
+            p["ProbeNormals"].SetValue(_LightProbeNormals);
+            p["RampTexture"].SetValue(ltrs.Key.RampTexture);
+            p["RampOffsetAndRate"]?.SetValue(ltrs.Key.RampOffsetAndRate);
         }
 
         private void _EndLightProbePass (DeviceManager device, object userData) {
