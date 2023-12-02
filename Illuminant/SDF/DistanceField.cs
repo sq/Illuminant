@@ -30,7 +30,7 @@ namespace Squared.Illuminant {
 
         public readonly int VirtualWidth, VirtualHeight;
         public readonly float VirtualDepth;
-        public readonly double Resolution;
+        public readonly double Resolution, RequestedResolution;
         public readonly int MaximumEncodedDistance;
 
         public readonly RenderCoordinator Coordinator;
@@ -57,6 +57,7 @@ namespace Squared.Illuminant {
             VirtualHeight = virtualHeight;
             VirtualDepth = virtualDepth;
             MaximumEncodedDistance = maximumEncodedDistance;
+            RequestedResolution = requestedResolution;
 
             if (requestedResolution < 0.05)
                 requestedResolution = 0.05;

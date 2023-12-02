@@ -175,7 +175,8 @@ namespace TestGame.Scenes {
                 new TextureLoadOptions { Premultiply = true, GenerateMips = true }, 
                 cached: true
             );
-            RampTexture = Game.TextureLoader.Load("custom-gradient");
+            // RampTexture = Game.TextureLoader.Load("custom-gradient");
+            RampTexture = Game.RampTexture;
             if (Scratch == null)
                 Scratch = new AutoRenderTarget(Game.RenderCoordinator, 110, 110);
             if (RenderTo == null)

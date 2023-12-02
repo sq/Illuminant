@@ -99,7 +99,7 @@ namespace TestGame.Scenes {
             OpacityFromLife.MinusKey = Keys.OemSemicolon;
             OpacityFromLife.PlusKey = Keys.OemQuotes;
             OpacityFromLife.Min = 50;
-            OpacityFromLife.Max = MaxLife;
+            OpacityFromLife.Max = MaxLife * 2;
             OpacityFromLife.Speed = 10f;
             OpacityFromLife.Value = MaxLife / 2f;
 
@@ -235,7 +235,7 @@ namespace TestGame.Scenes {
                 Quality = DirectionalQuality,
             });
 
-            Environment.Lights.Add(new ParticleLightSource {
+            var pls = new ParticleLightSource {
                 System = System,
                 Template = new SphereLightSource {
                     Radius = 4,
@@ -243,7 +243,11 @@ namespace TestGame.Scenes {
                     RampMode = LightSourceRampMode.Linear,
                     Color = Vector4.One * 0.25f
                 }
-            });
+            };
+            // FIXME: Not implemented
+            // pls.Template.RampTexture.Set(Game.RampTexture);
+            Environment.Lights.Add(pls);
+
 
             var floor = -5f;
 
