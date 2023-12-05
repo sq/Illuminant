@@ -48,6 +48,7 @@ void SphereLightProbeWithDistanceRampPixelShader(
     in  float4 lightProperties     : TEXCOORD2,
     in  float4 moreLightProperties : TEXCOORD3,
     in  float4 color               : TEXCOORD4,
+    in  float4 evenMoreLightProperties : TEXCOORD7,
     ACCEPTS_VPOS,
     out float4 result              : COLOR0
 ) {
@@ -64,7 +65,7 @@ void SphereLightProbeWithDistanceRampPixelShader(
     moreLightProperties.x = moreLightProperties.w = 0;
 
     float3 rgb = opacity * SphereLightPixelCoreWithRamp(
-        shadedPixelPosition, shadedPixelNormal.xyz, lightCenter, lightProperties, moreLightProperties
+        shadedPixelPosition, shadedPixelNormal.xyz, lightCenter, lightProperties, moreLightProperties, evenMoreLightProperties
     );
 
     result = float4(color.rgb * color.a * rgb, 1);

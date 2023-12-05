@@ -48,18 +48,13 @@ namespace Squared.Illuminant {
         private struct LightTypeRenderStateKey {
             public readonly LightSourceTypeID Type;
             public Texture2D                  RampTexture;
-            public Vector2                    RampOffsetAndRate;
             public BlendState                 BlendState;
             public RendererQualitySettings    Quality;
             public ParticleLightSource        ParticleLightSource;
             public bool                       CastsShadows;
 
-            public LightTypeRenderStateKey (LightSourceTypeID type, Vector2 relativeRampOffsetAndRate) : this () {
+            public LightTypeRenderStateKey (LightSourceTypeID type) : this () {
                 Type = type;
-                RampOffsetAndRate = new Vector2(
-                    (float)-Math.PI + relativeRampOffsetAndRate.X, 
-                    (float)(1.0 / (Math.PI * 2) * relativeRampOffsetAndRate.Y)
-                );
             }
 
             public override int GetHashCode () {
@@ -87,9 +82,8 @@ namespace Squared.Illuminant {
                     (Type == ltrsk.Type) &&
                     (RampTexture == ltrsk.RampTexture) &&
                     (BlendState == ltrsk.BlendState) &&
-                    (Quality == ltrsk.Quality) &&
-                    (CastsShadows == ltrsk.CastsShadows) &&
-                    (RampOffsetAndRate == ltrsk.RampOffsetAndRate);
+                    Quality.Equals(ltrsk.Quality) &&
+                    (CastsShadows == ltrsk.CastsShadows);
             }
         }
 
@@ -125,6 +119,7 @@ namespace Squared.Illuminant {
 
                 SelectMaterial();
             }
+
 
             public Material Material {
                 get {
@@ -784,7 +779,6 @@ namespace Squared.Illuminant {
             var rampTexture = p["RampTexture"];
             if (rampTexture != null)
                 rampTexture.SetValue(ltrs.Key.RampTexture);
-            p["RampOffsetAndRate"]?.SetValue(ltrs.Key.RampOffsetAndRate);
         }
 
         private void _ParticleLightBatchSetup (DeviceManager device, object userData) {
@@ -824,7 +818,7 @@ namespace Squared.Illuminant {
             var ls = (lsb as LightSource) ?? (lsb as LightSourceReplicator)?.Template ?? (lsb as ParticleLightSource)?.Template;
 
             var ltk =
-                new LightTypeRenderStateKey(lsb.TypeID, ls?.RampOffsetAndRate ?? new Vector2(0, 1)) {
+                new LightTypeRenderStateKey(lsb.TypeID) {
                     BlendState = ls?.BlendMode ?? default,
                     RampTexture = ls?.TextureRef ?? Configuration.DefaultRampTexture,
                     Quality = ls?.Quality ?? Configuration.DefaultQuality,
@@ -843,7 +837,8 @@ namespace Squared.Illuminant {
             //  image file with a 1x1 bitmap
             if (
                 (ltk.RampTexture != null) &&
-                (ltk.RampTexture.Width == 1)
+                (ltk.RampTexture.Width == 1) &&
+                (ltk.RampTexture.Height == 1)
             )
                 ltk.RampTexture = null;
 
@@ -1049,6 +1044,7 @@ namespace Squared.Illuminant {
 
                     // TODO: Use threads?
                     lock (_LightStateLock) {
+                        if (Configuration.GarbageCollectRenderStates)
                         foreach (var drs in DeadRenderStates) {
                             LightTypeRenderState ltrs;
                             if (!LightRenderStates.TryGetValue(drs, out ltrs))
@@ -1097,7 +1093,8 @@ namespace Squared.Illuminant {
                                 */
 
                                 var ltrs = GetLightRenderState(lightSource);
-                                DeadRenderStates.Remove(ltrs.Key);
+                                if (!DeadRenderStates.Remove(ltrs.Key))
+                                    ;
 
                                 if (particleLightSource != null)
                                     continue;
@@ -1230,7 +1227,7 @@ namespace Squared.Illuminant {
             vertex.MoreLightProperties.W = lightSource.AmbientOcclusionOpacity;
             vertex.EvenMoreLightProperties = new Vector4(
                 (int)lightSource.ShadowFilter,
-                0, 0, 0
+                0, lightSource.RampOffsetForGPU, lightSource.RampRateForGPU
             );
             ltrs.LightVertices.Add(ref vertex);
 
@@ -1241,6 +1238,18 @@ namespace Squared.Illuminant {
             LightVertex vertex;
             var lights = lightSource.Lights;
             var template = lightSource.Template;
+
+            vertex.LightProperties.Z = (int)template.RampMode;
+            vertex.LightProperties.W = (template.CastsShadows && (DistanceField != null)) ? 1f : 0f;
+            vertex.MoreLightProperties.X = template.AmbientOcclusionRadius;
+            vertex.MoreLightProperties.Y = template.ShadowDistanceFalloff.GetValueOrDefault(-99999);
+            vertex.MoreLightProperties.Z = template.FalloffYFactor;
+            vertex.MoreLightProperties.W = template.AmbientOcclusionOpacity;
+            vertex.EvenMoreLightProperties = new Vector4(
+                (int)template.ShadowFilter,
+                0, template.RampOffsetForGPU, template.RampRateForGPU
+            );
+
             for (int i = 0, c = lights.Count; i < c; i++) {
                 ref var light = ref lights.DangerousItem(i);
 
@@ -1254,16 +1263,6 @@ namespace Squared.Illuminant {
                 vertex.Color2 = new Vector4(light.SpecularColor ?? template.SpecularColor, light.SpecularPower ?? template.SpecularPower);
                 vertex.LightProperties.X = light.Radius ?? template.Radius;
                 vertex.LightProperties.Y = light.RampLength ?? template.RampLength;
-                vertex.LightProperties.Z = (int)template.RampMode;
-                vertex.LightProperties.W = (template.CastsShadows && (DistanceField != null)) ? 1f : 0f;
-                vertex.MoreLightProperties.X = template.AmbientOcclusionRadius;
-                vertex.MoreLightProperties.Y = template.ShadowDistanceFalloff.GetValueOrDefault(-99999);
-                vertex.MoreLightProperties.Z = template.FalloffYFactor;
-                vertex.MoreLightProperties.W = template.AmbientOcclusionOpacity;
-                vertex.EvenMoreLightProperties = new Vector4(
-                    -1,
-                    0, 0, 0
-                );
                 ltrs.LightVertices.Add(ref vertex);
 
                 ltrs.LightCount++;
@@ -1306,7 +1305,7 @@ namespace Squared.Illuminant {
             );
             vertex.EvenMoreLightProperties = new Vector4(
                 (int)lightSource.ShadowFilter,
-                0, 0, 0
+                0, lightSource.RampOffsetForGPU, lightSource.RampRateForGPU
             );
 
             var lightBounds = new Bounds(
@@ -1345,7 +1344,9 @@ namespace Squared.Illuminant {
             vertex.MoreLightProperties.Y = lightSource.ShadowDistanceFalloff.GetValueOrDefault(-99999);
             vertex.MoreLightProperties.Z = lightSource.FalloffYFactor;
             vertex.MoreLightProperties.W = lightSource.AmbientOcclusionOpacity;
-            vertex.EvenMoreLightProperties = Vector4.Zero;
+            vertex.EvenMoreLightProperties = new Vector4(
+                0, 0, lightSource.RampOffsetForGPU, lightSource.RampRateForGPU
+            );
             ltrs.LightVertices.Add(ref vertex);
 
             ltrs.LightCount++;

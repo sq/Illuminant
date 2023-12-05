@@ -94,6 +94,9 @@ namespace Squared.Illuminant {
         /// </summary>
         public RendererQualitySettings Quality = null;
 
+        internal float RampOffsetForGPU => (float)-Math.PI + RampOffsetAndRate.X;
+        internal float RampRateForGPU => (float)(1.0 / (Math.PI * 2) * RampOffsetAndRate.Y);
+
         protected LightSource (LightSourceTypeID typeID)
             : base (typeID) {
         }

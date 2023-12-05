@@ -10,8 +10,6 @@
 #define SELF_OCCLUSION_HACK 1.6
 #define SHADOW_OPACITY_THRESHOLD (0.75 / 255.0)
 
-uniform const float2 RampOffsetAndRate;
-
 void SphereLightVertexShader(
     in float3 cornerWeights          : NORMAL2,
     inout float3 lightCenter         : TEXCOORD0,
@@ -102,11 +100,12 @@ float3 SphereLightPixelEpilogueWithRamp (
     in float  preTraceOpacity, 
     in float  coneOpacity,
     in bool   visible,
-    in float3 distanceToCenter
+    in float3 distanceToCenter,
+    in float4 evenMoreLightProperties
 ) {
     float angle = atan2(distanceToCenter.y, distanceToCenter.x);
     float3 lightRgb = SampleFromRamp2(float2(
-        preTraceOpacity, (angle + RampOffsetAndRate.x) * RampOffsetAndRate.y
+        preTraceOpacity, (angle + evenMoreLightProperties.z) * evenMoreLightProperties.w
     )).rgb * coneOpacity;
 
     // HACK: Don't cull pixels unless they were killed by distance falloff.
@@ -165,7 +164,8 @@ float3 SphereLightPixelCoreWithRamp (
     // radius, ramp length, ramp mode, enable shadows
     in float4 lightProperties,
     // ao radius, distance falloff, y falloff factor, ao opacity
-    in float4 moreLightProperties
+    in float4 moreLightProperties,
+    in float4 evenMoreLightProperties
 ) {
     bool visible;
     float distanceOpacity = SphereLightPixelPrologue(
@@ -194,7 +194,7 @@ float3 SphereLightPixelCoreWithRamp (
 
     return SphereLightPixelEpilogueWithRamp(
         preTraceOpacity, coneOpacity, visible,
-        shadedPixelPosition - lightCenter
+        shadedPixelPosition - lightCenter, evenMoreLightProperties
     );
 }
 
@@ -226,7 +226,8 @@ float3 SphereLightPixelCoreNoDFWithRamp (
     // radius, ramp length, ramp mode, enable shadows
     in float4 lightProperties,
     // ao radius, distance falloff, y falloff factor, ao opacity
-    in float4 moreLightProperties
+    in float4 moreLightProperties,
+    in float4 evenMoreLightProperties
 ) {
     bool visible;
     float distanceOpacity = SphereLightPixelPrologue(
@@ -237,6 +238,6 @@ float3 SphereLightPixelCoreNoDFWithRamp (
 
     return SphereLightPixelEpilogueWithRamp(
         distanceOpacity, 1, visible,
-        shadedPixelPosition - lightCenter
+        shadedPixelPosition - lightCenter, evenMoreLightProperties
     );
 }

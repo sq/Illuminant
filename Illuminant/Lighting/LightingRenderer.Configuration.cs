@@ -169,6 +169,12 @@ namespace Squared.Illuminant {
         /// </summary>
         public float LightOcclusion = 0f;
 
+        /// <summary>
+        /// If you frequently create many unique lights with different ramp textures, blend states,
+        ///  or quality settings, turn this on to eliminate a small but meaningful memory leak
+        /// </summary>
+        public bool GarbageCollectRenderStates;
+
         public RendererConfiguration (
             int maxWidth, int maxHeight, bool highQuality,
             bool enableBrightnessEstimation = false,
@@ -280,5 +286,26 @@ namespace Squared.Illuminant {
         /// An exponent that adjusts how sharp the transition between light and shadow is.
         /// </summary>
         public float OcclusionToOpacityPower = 1;
+
+        public bool Equals (RendererQualitySettings rhs) {
+            return (MinStepSize == rhs.MinStepSize) &&
+                (LongStepFactor == rhs.LongStepFactor) &&
+                (MaxStepCount == rhs.MaxStepCount) &&
+                (MaxConeRadius == rhs.MaxConeRadius) &&
+                (ConeGrowthFactor == rhs.ConeGrowthFactor) &&
+                (OcclusionToOpacityPower == rhs.OcclusionToOpacityPower);
+        }
+
+        public override bool Equals (object obj) {
+            if (obj is RendererQualitySettings rqs)
+                return Equals(rqs);
+            else
+                return false;
+        }
+
+        public override int GetHashCode () {
+            // FIXME
+            return 0;
+        }
     }
 }

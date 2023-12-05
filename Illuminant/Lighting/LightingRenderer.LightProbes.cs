@@ -36,7 +36,6 @@ namespace Squared.Illuminant {
             ));
             p["ProbeNormals"].SetValue(_LightProbeNormals);
             p["RampTexture"].SetValue(ltrs.Key.RampTexture);
-            p["RampOffsetAndRate"]?.SetValue(ltrs.Key.RampOffsetAndRate);
         }
 
         private void _EndLightProbePass (DeviceManager device, object userData) {

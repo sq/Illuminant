@@ -129,6 +129,7 @@ void LineLightVertexShader(
     inout float4 moreLightProperties : TEXCOORD3,
     inout float4 startColor          : TEXCOORD4,
     inout float4 endColor            : TEXCOORD5,
+    inout float4 evenMoreLightProperties : TEXCOORD7,
     out float3 worldPosition         : POSITION1,
     out float4 result                : POSITION0
 ) {
