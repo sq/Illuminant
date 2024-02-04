@@ -119,22 +119,22 @@ namespace TestGame.Scenes {
             switch (Shader.Value) {
                 case "Shadowed":
                     // HACK: Ensure we don't trample the default global shadow settings (-:
-                    material = Game.Materials.WorldSpaceShadowedBitmap;
+                    material = Game.Materials.ShadowedBitmap;
                     // FIXME: why is this broken?
                     userData = new Vector4(32 / 255f * 0.8f, 0, 0, 0.8f);
                     break;
                 case "Stippled":
-                    material = Game.Materials.ScreenSpaceStippledBitmap;
+                    material = Game.Materials.StippledBitmap;
                     userData = new Vector4(0, DitherGamma, Ratio - 1, 0);
                     break;
                 case "HorizontalBlur":
-                    material = Game.Materials.ScreenSpaceHorizontalGaussianBlur;
+                    material = Game.Materials.HorizontalGaussianBlur;
                     break;
                 case "VerticalBlur":
-                    material = Game.Materials.ScreenSpaceVerticalGaussianBlur;
+                    material = Game.Materials.VerticalGaussianBlur;
                     break;
                 case "RadialBlur":
-                    material = Game.Materials.ScreenSpaceRadialGaussianBlur;
+                    material = Game.Materials.RadialGaussianBlur;
                     break;
                 case "HighlightColor":
                     material = Game.Materials.HighlightColorBitmap;

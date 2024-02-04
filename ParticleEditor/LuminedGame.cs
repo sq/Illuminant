@@ -223,11 +223,11 @@ namespace Lumined {
             if (UI == null)
                 UI = new PropertyEditor(this);
 
-            TextMaterial = Materials.Get(Materials.ScreenSpaceShadowedBitmap, blendState: BlendState.AlphaBlend);
+            TextMaterial = Materials.Get(Materials.ShadowedBitmap, blendState: BlendState.AlphaBlend);
             TextMaterial.DefaultParameters.Add("GlobalShadowColor", new Vector4(0, 0, 0, 0.6f));
             TextMaterial.DefaultParameters.Add("ShadowOffset", Vector2.One * 0.75f);
 
-            WorldSpaceTextMaterial = Materials.Get(Materials.WorldSpaceShadowedBitmap, blendState: BlendState.AlphaBlend);
+            WorldSpaceTextMaterial = Materials.Get(Materials.ShadowedBitmap, blendState: BlendState.AlphaBlend);
             WorldSpaceTextMaterial.DefaultParameters.Add("GlobalShadowColor", new Vector4(0, 0, 0, 0.9f));
             WorldSpaceTextMaterial.DefaultParameters.Add("ShadowOffset", Vector2.One * 0.75f);
 

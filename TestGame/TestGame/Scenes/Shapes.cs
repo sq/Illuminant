@@ -23,8 +23,12 @@ namespace TestGame.Scenes {
     // These aren't illuminant specific but who cares
     public class Shapes : Scene {
         Toggle Animate, WorldSpace, ClosedPolygon, PolygonGap;
-        Slider ArcStart, ArcLength, ArcSharpness, AnnularRadius,
-            StarPoints;
+        Slider AnnularRadius, StarPoints;
+
+        [Group("Arc")]
+        Slider ArcStart, ArcLength, ArcSharpness;
+        [Group("Orientation")]
+        Slider Pitch, Yaw, Roll;
 
         [Items("Linear")]
         [Items("sRGB")]
@@ -87,6 +91,18 @@ namespace TestGame.Scenes {
             ArcStart.Max = 360f;
             ArcStart.Value = 0f;
             ArcStart.Speed = 5f;
+            Pitch.Min = -360f;
+            Pitch.Max = 360f;
+            Pitch.Value = 0f;
+            Pitch.Speed = 5f;
+            Yaw.Min = -360f;
+            Yaw.Max = 360f;
+            Yaw.Value = 0f;
+            Yaw.Speed = 5f;
+            Roll.Min = -360f;
+            Roll.Max = 360f;
+            Roll.Value = 0f;
+            Roll.Speed = 5f;
             ArcLength.Min = 5f;
             ArcLength.Max = 360f;
             ArcLength.Value = 45f;
@@ -200,6 +216,12 @@ namespace TestGame.Scenes {
             var ellipseGradientCenter = new Vector2(GradientCenterX, GradientCenterY);
             var fillMode = (RasterFillMode)Enum.Parse(typeof(RasterFillMode), FillMode.Value);
 
+            Quaternion? orientation = Quaternion.CreateFromYawPitchRoll(
+                MathHelper.ToRadians(Yaw), MathHelper.ToRadians(Pitch), MathHelper.ToRadians(Roll)
+            );
+            if (orientation.Value == Quaternion.Identity)
+                orientation = null;
+
             var ir = new ImperativeRenderer(batch, Game.Materials, blendState: BlendState.NonPremultiplied);
             ir.Clear(layer: 0, color: new Color(0, 96, 128));
             if (InteriorGamma)
@@ -265,7 +287,8 @@ namespace TestGame.Scenes {
                 shadow: shadow,
                 rampTexture: UseRamp ? RampTexture : null,
                 rampUVOffset: new Vector2(0, RampVOffset),
-                gradientCenter: ellipseGradientCenter
+                gradientCenter: ellipseGradientCenter,
+                orientation: orientation
             );
 
             ir.RasterizeLineSegment(
@@ -301,32 +324,33 @@ namespace TestGame.Scenes {
                 texture: UseTexture ? Texture : null,
                 textureSettings: textureSettings,
                 rampTexture: UseRamp ? RampTexture : null,
-                rampUVOffset: new Vector2(0, RampVOffset)
+                rampUVOffset: new Vector2(0, RampVOffset),
+                orientation: orientation
             );
 
             ir.RasterizeRectangle(
                 new Vector2(32, 256), new Vector2(32 + 6, 512), 4.5f, new Color(1f, 0, 0, 1), new Color(0.5f, 0, 0, 1),
-                layer: 2
+                layer: 2, orientation: orientation
             );
 
             ir.RasterizeRectangle(
                 new Vector2(48, 256), new Vector2(48 + 6, 512), 4.5f, new Color(1f, 1f, 0, 1), new Color(0.5f, 0.5f, 0, 1),
-                layer: 2
+                layer: 2, orientation: orientation
             );
 
             ir.RasterizeRectangle(
                 new Vector2(64, 256), new Vector2(64 + 6, 512), 4.5f, new Color(0f, 1f, 0, 1), new Color(0f, 0.5f, 0, 1),
-                layer: 2
+                layer: 2, orientation: orientation
             );
 
             ir.RasterizeRectangle(
                 new Vector2(80, 256), new Vector2(80 + 6, 512), 4.5f, new Color(0f, 1f, 1f, 1), new Color(0f, 0.5f, 0.5f, 1),
-                layer: 2
+                layer: 2, orientation: orientation
             );
 
             ir.RasterizeRectangle(
                 new Vector2(96, 256), new Vector2(96 + 6, 512), 4.5f, new Color(0f, 0f, 1f, 1), new Color(0f, 0f, 0.5f, 1),
-                layer: 2
+                layer: 2, orientation: orientation
             );
 
             ir.RasterizeTriangle(
@@ -342,7 +366,8 @@ namespace TestGame.Scenes {
                 texture: UseTexture ? Texture : null,
                 textureSettings: textureSettings,
                 rampTexture: UseRamp ? RampTexture : null,
-                rampUVOffset: new Vector2(0, RampVOffset)
+                rampUVOffset: new Vector2(0, RampVOffset),
+                orientation: orientation
             );
 
             ir.RasterizeEllipse(new Vector2(200, 860), Vector2.One * 3, Color.Yellow, layer: 4, gradientCenter: ellipseGradientCenter);
@@ -352,7 +377,6 @@ namespace TestGame.Scenes {
                 80f, (int)StarPoints.Value, 
                 (float)Arithmetic.Lerp(2, StarPoints.Value, Animate ? (Time.Seconds % 4) / 4f : ArcLength / 360f),
                 OutlineSize,
-                rotationDegrees: ArcStart,
                 innerColor: Color.White * FillOpacity, 
                 outerColor: Color.Black * FillOpacity, 
                 outlineColor: Color.Blue,
@@ -363,7 +387,8 @@ namespace TestGame.Scenes {
                 texture: UseTexture ? Texture : null,
                 textureSettings: textureSettings,
                 rampTexture: UseRamp ? RampTexture : null,
-                rampUVOffset: new Vector2(0, RampVOffset)
+                rampUVOffset: new Vector2(0, RampVOffset),
+                orientation: orientation
             );
 
             ir.RasterizeArc(
@@ -424,7 +449,8 @@ namespace TestGame.Scenes {
                 texture: UseTexture ? Texture : null,
                 textureSettings: textureSettings,
                 rampTexture: UseRamp ? RampTexture : null,
-                rampUVOffset: new Vector2(0, RampVOffset)
+                rampUVOffset: new Vector2(0, RampVOffset),
+                orientation: orientation
             );
 
             if (false)
@@ -432,16 +458,17 @@ namespace TestGame.Scenes {
                 ir.RasterizeEllipse(vert.Position, Vector2.One * 3, Color.Yellow, layer: 6);
             }
 
-            ir.RasterizeEllipse(a, Vector2.One * 3, Color.Yellow, layer: 6);
-            ir.RasterizeEllipse(b, Vector2.One * 3, Color.Yellow, layer: 6);
-            ir.RasterizeEllipse(c, Vector2.One * 3, Color.Yellow, layer: 6);
+            ir.RasterizeEllipse(a, Vector2.One * 3, Color.Yellow, layer: 6, orientation: orientation);
+            ir.RasterizeEllipse(b, Vector2.One * 3, Color.Yellow, layer: 6, orientation: orientation);
+            ir.RasterizeEllipse(c, Vector2.One * 3, Color.Yellow, layer: 6, orientation: orientation);
 
-            ir.RasterizeRectangle(new Vector2(Width - 256, 0), new Vector2(Width, 256), 0f, Color.Black, layer: 5);
+            ir.RasterizeRectangle(new Vector2(Width - 256, 0), new Vector2(Width, 256), 0f, Color.Black, layer: 5, orientation: orientation);
             ir.RasterizeEllipse(
                 new Vector2(Width - 128, 128), new Vector2(64f), Color.Orange * 1f, Color.Red * 0f, layer: 6,
                 shadow: shadow,
                 blendState: RenderStates.RasterShapeMaxBlend,
-                gradientCenter: ellipseGradientCenter
+                gradientCenter: ellipseGradientCenter,
+                orientation: orientation
             );
 
             var scratchGroup = BatchGroup.ForRenderTarget(

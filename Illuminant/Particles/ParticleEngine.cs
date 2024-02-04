@@ -514,6 +514,7 @@ namespace Squared.Illuminant.Particles {
                     Name = "ParticleEngine.LowPrecisionRandomnessTexture",
                 };
 
+                // FIXME: Use NativeAllocation for this to avoid fragmenting LOH
                 var buffer = new Vector4[RandomnessTextureWidth * RandomnessTextureHeight];
                 int o;
                 unchecked {

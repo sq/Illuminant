@@ -58,8 +58,8 @@ namespace TestGame.Scenes {
             var baseMaterial = ApplyShader 
                 ? (
                     Sepia
-                        ? Game.Materials.ScreenSpaceSepiaBitmap
-                        : Game.Materials.ScreenSpaceHueBitmap 
+                        ? Game.Materials.SepiaBitmap
+                        : Game.Materials.HueBitmap 
                   )
                 : Game.Materials.ScreenSpaceBitmap;
             var m = Game.Materials.Get(baseMaterial, blendState: BlendState.AlphaBlend);

@@ -297,7 +297,7 @@ namespace TestGame.Scenes {
                         ir.Layer += 1;
                         tex1 = new AbstractTextureReference(SpriteAlbedo);
                         tex2 = new AbstractTextureReference(Lightmap);
-                        m = Game.Materials.ScreenSpaceLightmappedBitmap;
+                        m = Game.Materials.LightmappedBitmap;
                         bs = BlendState.NonPremultiplied;
                         break;
                 }

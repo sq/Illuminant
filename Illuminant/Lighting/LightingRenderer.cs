@@ -477,7 +477,7 @@ namespace Squared.Illuminant {
                 Configuration.MaximumRenderSize.Second,
                 false,
                 Configuration.HighQuality
-                    ? SurfaceFormat.Rgba64
+                    ? SurfaceFormat.HalfVector4
                     : SurfaceFormat.Color,
                 Configuration.StencilCulling
                     ? DepthFormat.Depth24Stencil8

@@ -339,7 +339,7 @@ namespace TestGame {
             ParticleMaterials = new ParticleMaterials(Materials);
             RampTexture = TextureLoader.Load("light_ramp");
 
-            TextMaterial = Materials.Get(Font.SDF ? Materials.DistanceFieldText : Materials.ScreenSpaceShadowedBitmap, blendState: RenderStates.PorterDuffOver);
+            TextMaterial = Materials.Get(Font.SDF ? Materials.DistanceFieldText : Materials.ShadowedBitmap, blendState: RenderStates.PorterDuffOver);
             TextMaterial.Parameters.ShadowColor.SetValue(new Vector4(0, 0, 0, 0.5f));
             TextMaterial.Parameters.ShadowOffset.SetValue(Vector2.One * 0.66f);
             if (!Font.SDF)

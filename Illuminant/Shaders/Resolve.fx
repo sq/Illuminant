@@ -71,7 +71,7 @@ void LightingResolvePixelShader (
     out float4 result : COLOR0
 ) {
     if (0) {
-        float2 vpos = GET_VPOS / GetRenderTargetSize();
+        float2 vpos = GET_VPOS_FRAC;
         result = float4(vpos.x, vpos.y, 0, 1);
         return;
     }
@@ -94,7 +94,7 @@ void GammaCompressedLightingResolvePixelShader(
     out float4 result : COLOR0
 ) {
     if (0) {
-        float2 vpos = GET_VPOS / GetRenderTargetSize();
+        float2 vpos = GET_VPOS_FRAC;
         result = float4(vpos.x, vpos.y, 0, 1);
         return;
     }
@@ -116,7 +116,7 @@ void ToneMappedLightingResolvePixelShader(
     out float4 result : COLOR0
 ) {
     if (0) {
-        float2 vpos = GET_VPOS / GetRenderTargetSize();
+        float2 vpos = GET_VPOS_FRAC;
         result = float4(vpos.x, vpos.y, 0, 1);
         return;
     }
@@ -143,7 +143,7 @@ void LightingResolveWithAlbedoPixelShader(
     out float4 result : COLOR0
 ) {
     if (0) {
-        float2 vpos = GET_VPOS / GetRenderTargetSize();
+        float2 vpos = GET_VPOS_FRAC;
         result = float4(vpos.x, vpos.y, 0, 1);
         return;
     }
@@ -169,7 +169,7 @@ void GammaCompressedLightingResolveWithAlbedoPixelShader(
     out float4 result : COLOR0
 ) {
     if (0) {
-        float2 vpos = GET_VPOS / GetRenderTargetSize();
+        float2 vpos = GET_VPOS_FRAC;
         result = float4(vpos.x, vpos.y, 0, 1);
         return;
     }
@@ -193,7 +193,7 @@ void ToneMappedLightingResolveWithAlbedoPixelShader(
     out float4 result : COLOR0
 ) {
     if (0) { 
-        float2 vpos = GET_VPOS / GetRenderTargetSize();
+        float2 vpos = GET_VPOS_FRAC;
         result = float4(vpos.x, vpos.y, 0, 1);
         return;
     }

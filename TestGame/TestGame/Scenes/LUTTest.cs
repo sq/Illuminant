@@ -60,7 +60,7 @@ namespace TestGame.Scenes {
         }
 
         public override void Draw (Squared.Render.Frame frame) {
-            var m = Game.Materials.Get(Game.Materials.ScreenSpaceBitmapWithLUT, blendState: BlendState.Opaque);
+            var m = Game.Materials.Get(Game.Materials.BitmapWithLUT, blendState: BlendState.Opaque);
 
             var lut1 = Game.LUTs[ApplyLUT ? LUT1.Value : "Identity"];
             var lut2 = Game.LUTs[LUT2.Value];

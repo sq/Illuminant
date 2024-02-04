@@ -262,7 +262,7 @@ namespace TestGame.Scenes {
                 if (ShowLightmap) {
                     using (var bb = BitmapBatch.New(
                         group, 1,
-                        Game.Materials.Get(Game.Materials.ScreenSpaceBitmap, blendState: BlendState.Opaque),
+                        Game.Materials.Get(Game.Materials.Bitmap, blendState: BlendState.Opaque),
                         samplerState: SamplerState.LinearClamp
                     ))
                         bb.Add(new BitmapDrawCall(Lightmap, Vector2.Zero));
@@ -271,8 +271,8 @@ namespace TestGame.Scenes {
                         group, 1,
                         Game.Materials.Get(
                             ShowGBuffer
-                                ? Game.Materials.ScreenSpaceBitmap
-                                : Game.Materials.ScreenSpaceLightmappedBitmap,
+                                ? Game.Materials.Bitmap
+                                : Game.Materials.LightmappedBitmap,
                             blendState: BlendState.Opaque
                         ),
                         samplerState: SamplerState.PointClamp

@@ -374,7 +374,7 @@ namespace TestGame.Scenes {
                     case "Composited":
                         tex1 = new AbstractTextureReference(Albedo);
                         tex2 = new AbstractTextureReference(Lightmap);
-                        m = Game.Materials.ScreenSpaceLightmappedBitmap;
+                        m = Game.Materials.LightmappedBitmap;
                         pos = new Vector2(16, 16);
                         break;
                 }
