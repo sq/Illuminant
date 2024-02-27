@@ -734,8 +734,8 @@ namespace Squared.Illuminant {
             if (Configuration.ScaleCompensation)
                 vt.Position += coordOffset;
 
-            // Defer is safe because the first thing we do is Clear
-            Materials.PushViewTransform(ref vt, defer: defer);
+            // FIXME: Defer is *not* safe here.
+            Materials.PushViewTransform(ref vt, defer: false);
         }
 
         private void _BeginLightPass (DeviceManager device, object userData) {

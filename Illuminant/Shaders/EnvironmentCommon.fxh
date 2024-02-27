@@ -40,11 +40,15 @@ float2 encodeNormalSpherical (float3 n) {
 }
 
 float3 decodeNormalSpherical (float2 enc) {
-    float2 ang = enc*2-1;
-    float2 scth;
-    sincos(ang.x * PI, scth.x, scth.y);
-    float2 scphi = float2(sqrt(1.0 - ang.y*ang.y), ang.y);
-    return float3(scth.y*scphi.x, scth.x*scphi.x, scphi.y);
+    if (any(enc))
+    {
+        float2 ang = enc * 2 - 1;
+        float2 scth;
+        sincos(ang.x * PI, scth.x, scth.y);
+        float2 scphi = float2(sqrt(1.0 - ang.y * ang.y), ang.y);
+        return float3(scth.y * scphi.x, scth.x * scphi.x, scphi.y);
+    }
+    return 0;
 }
 
 #endif
