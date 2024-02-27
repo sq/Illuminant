@@ -25,8 +25,7 @@ namespace TestGame.Scenes {
         [Items("Normal")]
         [Items("Shadowed")]
         [Items("Stippled")]
-        [Items("HorizontalBlur")]
-        [Items("VerticalBlur")]
+        [Items("AxialBlur")]
         [Items("RadialBlur")]
         [Items("HighlightColor")]
         [Items("Crossfade")]
@@ -41,7 +40,7 @@ namespace TestGame.Scenes {
         Material ShatterMaterial;
 
         Slider Opacity, Brightness, Offset, DitherGamma, Ratio,
-            BlurSigma, BlurSampleRadius, BlurMeanFactor,
+            BlurSigma, BlurTapCount, Angle, TapSpacing,
             HighlightTolerance, Image2Weight, Scale;
 
         Toggle PreserveAspectRatio, ReverseDirection;
@@ -73,15 +72,18 @@ namespace TestGame.Scenes {
             BlurSigma.Max = 10.0f;
             BlurSigma.Value = 2f;
             BlurSigma.Speed = 0.05f;
-            BlurSampleRadius.Integral = true;
-            BlurSampleRadius.Min = 1;
-            BlurSampleRadius.Max = 9;
-            BlurSampleRadius.Value = 3;
-            BlurSampleRadius.Speed = 1;
-            BlurMeanFactor.Min = 0f;
-            BlurMeanFactor.Max = 1f;
-            BlurMeanFactor.Value = 0f;
-            BlurMeanFactor.Speed = 0.05f;
+            BlurTapCount.Integral = true;
+            BlurTapCount.Min = 1;
+            BlurTapCount.Max = 15;
+            BlurTapCount.Value = 3;
+            BlurTapCount.Speed = 1;
+            Angle.Min = 0f;
+            Angle.Max = 360f;
+            Angle.Speed = 10f;
+            TapSpacing.Min = 0.5f;
+            TapSpacing.Max = 4f;
+            TapSpacing.Value = 1f;
+            TapSpacing.Speed = 0.1f;
             HighlightTolerance.Max = 2;
             HighlightTolerance.Min = 0;
             HighlightTolerance.Value = 0.1f;
@@ -127,11 +129,8 @@ namespace TestGame.Scenes {
                     material = Game.Materials.StippledBitmap;
                     userData = new Vector4(0, DitherGamma, Ratio - 1, 0);
                     break;
-                case "HorizontalBlur":
-                    material = Game.Materials.HorizontalGaussianBlur;
-                    break;
-                case "VerticalBlur":
-                    material = Game.Materials.VerticalGaussianBlur;
+                case "AxialBlur":
+                    material = Game.Materials.AxialGaussianBlur;
                     break;
                 case "RadialBlur":
                     material = Game.Materials.RadialGaussianBlur;
@@ -183,8 +182,11 @@ namespace TestGame.Scenes {
             }
 
             material = Game.Materials.Get(material, blendState: blendState);
-            Game.Materials.SetGaussianBlurParameters(material, BlurSigma, (int)(BlurSampleRadius) * 2 + 1, BlurMeanFactor);
-            ir.Parameters.Add("ShadowOffset", new Vector2(Offset * 0.66f, Offset));
+            var angle = MathHelper.ToRadians(Angle);
+            var axis = new Vector2((float)Math.Cos(angle), (float)Math.Sin(angle));
+            ir.Parameters.SetGaussianBlurParameters(BlurSigma, (int)BlurTapCount, axis);
+            ir.Parameters.Add("ShadowOffset", axis * Offset);
+            ir.Parameters.Add("TapSpacingFactor", TapSpacing);
 
             ir.Clear(layer: 0, color: Color.DeepSkyBlue * 0.33f);
 

@@ -326,9 +326,6 @@ namespace TestGame {
             EffectLoader = new EffectProvider(typeof(TestGame).Assembly, RenderCoordinator);
 
             Font = FontLoader.Load("FiraSans-Medium");
-            Font.DefaultAlignment = new GlyphPixelAlignment(
-                PixelAlignmentMode.Round, PixelAlignmentMode.None
-            );
             Font.MipMapping = true; // FIXME: We're really blurry without this and I'm too lazy to fix it right now
             Font.sRGB = true;
             Font.SizePoints = 16f;

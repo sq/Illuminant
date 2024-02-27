@@ -26,12 +26,12 @@ using Squared.Util;
 namespace TestGame.Scenes {
     // These aren't illuminant specific but who cares
     public class Strokes : Scene {
-        Toggle BlendInLinearSpace, WorldSpace, Textured, PolygonGap;
+        Toggle BlendInLinearSpace, WorldSpace, Textured, PolygonGap, Ramp;
 
         RasterBrush Brush;
 
         [Group("Basic Settings")]
-        Slider Size, Spacing, Seed;
+        Slider Size, Spacing, Seed, Gamma, ShapeFactor;
         [Items("LineSegment")]
         [Items("Rectangle")]
         [Items("Polygon")]
@@ -42,7 +42,7 @@ namespace TestGame.Scenes {
         [Group("Shadow")]
         Slider ShadowOpacity, ShadowOffset, ShadowExpansion, ShadowHardness;
 
-        Texture2D NozzleAtlas;
+        Texture2D NozzleAtlas, RampTexture;
 
         private List<RasterPolygonVertex> Polygon = new List<RasterPolygonVertex>();
         private RasterPolygonVertex[] PolygonArray;
@@ -99,9 +99,23 @@ namespace TestGame.Scenes {
             ShadowOffset.Max = 32f;
             ShadowOffset.Value = 4f;
             ShadowOffset.Speed = 0.25f;
+            Gamma.Min = 0.1f;
+            Gamma.Max = 4f;
+            Gamma.Value = 1f;
+            Gamma.Speed = 0.1f;
+            Gamma.Exponent = 4f;
+            ShapeFactor.Min = 0f;
+            ShapeFactor.Max = 1f;
+            ShapeFactor.Value = 1f;
+            ShapeFactor.Speed = 0.1f;
         }
 
         public override void LoadContent () {
+            RampTexture = Game.TextureLoader.Load(
+                "rainbow_ramp",
+                new TextureLoadOptions { Premultiply = true, GenerateMips = true },
+                cached: true
+            );
             NozzleAtlas = Game.TextureLoader.Load(
                 "isse-chain-link", 
                 new TextureLoadOptions { Premultiply = true, GenerateMips = true }, 
@@ -132,12 +146,15 @@ namespace TestGame.Scenes {
             var now = (float)Time.Seconds;
 
             Brush.NozzleAtlas = Textured ? NozzleAtlas : null;
+            Brush.Ramp = Ramp ? RampTexture : null;
             Brush.Spacing = Spacing.Value;
             Brush.SizePx = Size.Value;
             Brush.ShadowColor = new Color(96, 0, 24) * ShadowOpacity;
             Brush.ShadowOffset = new Vector2(ShadowOffset.Value * 0.1f, ShadowOffset.Value);
             Brush.ShadowExpansion = ShadowExpansion.Value;
             Brush.ShadowHardness = ShadowHardness.Value;
+            Brush.Gamma = Gamma.Value;
+            Brush.ShapeFactor = ShapeFactor.Value;
 
             using (var bg = BatchGroup.New(frame, 1, materialSet: Game.Materials)) {
                 bg.ViewTransform = vt;
@@ -170,13 +187,15 @@ namespace TestGame.Scenes {
                         if (verts.Count >= 2)
                             ir.RasterizeStroke(
                                 verts,
-                                Color.White, Color.Black, Brush,
+                                Color.White, Ramp.Value ? Color.White : Color.Black, Brush,
                                 seed: Seed.Value, taper: taper
                             );
                         ir.Layer += 1;
 
-                        foreach (var vert in verts)
-                            ir.RasterizeEllipse(vert.Position, new Vector2(1.5f), Color.Yellow);
+                        if (false)
+                            foreach (var vert in verts)
+                                ir.RasterizeEllipse(vert.Position, new Vector2(1.5f), Color.Yellow);
+
                         break;
                 } 
             }

@@ -48,7 +48,7 @@ namespace TestGame.Scenes {
         Slider DisplacementScale, RefractionIndex, RefractionMipBias;
 
         [Group("Sprite Settings")]
-        Slider HeightScale, BlurSigma, BlurSampleRadius, BlurMeanFactor, SpriteSize, SpriteBias, SpriteMasking,
+        Slider HeightScale, BlurSigma, BlurTapCount, SpriteSize, SpriteBias, SpriteMasking,
             DistancePower1, DistancePower2;
         [Group("Sprite Settings")]
         Toggle UseDistanceField, UseMips;
@@ -121,15 +121,11 @@ namespace TestGame.Scenes {
             BlurSigma.Max = 10.0f;
             BlurSigma.Value = 2f;
             BlurSigma.Speed = 0.05f;
-            BlurSampleRadius.Integral = true;
-            BlurSampleRadius.Min = 1;
-            BlurSampleRadius.Max = 9;
-            BlurSampleRadius.Value = 3;
-            BlurSampleRadius.Speed = 1;
-            BlurMeanFactor.Min = 0f;
-            BlurMeanFactor.Max = 1f;
-            BlurMeanFactor.Value = 0f;
-            BlurMeanFactor.Speed = 0.05f;
+            BlurTapCount.Integral = true;
+            BlurTapCount.Min = 1;
+            BlurTapCount.Max = 15;
+            BlurTapCount.Value = 3;
+            BlurTapCount.Speed = 1;
             SpriteSize.Min = 0.05f;
             SpriteSize.Max = 1.0f;
             SpriteSize.Value = 0.25f;
@@ -238,7 +234,7 @@ namespace TestGame.Scenes {
                     );
                 } else {
                     var spriteMaterial = Game.Materials.RadialMaskSoftening;
-                    Game.Materials.SetGaussianBlurParameters(spriteMaterial, BlurSigma, (int)(BlurSampleRadius) * 2 + 1, BlurMeanFactor);
+                    ir.Parameters.SetGaussianBlurParameters(BlurSigma, (int)BlurTapCount);
                     ir.Draw(
                         Sprite, new Vector2(64, 64),
                         userData: new Vector4(HeightScale, SpriteBias, SpriteMasking, 0),

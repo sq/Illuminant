@@ -23,8 +23,10 @@ namespace TestGame.Scenes {
     // These aren't illuminant specific but who cares
     public class Shapes : Scene {
         Toggle Animate, WorldSpace, ClosedPolygon, PolygonGap;
-        Slider AnnularRadius, StarPoints;
+        Slider AnnularRadius;
 
+        [Group("Star")]
+        Slider StarPoints, StarTapering, StarThickness, StarTwirling;
         [Group("Arc")]
         Slider ArcStart, ArcLength, ArcSharpness;
         [Group("Orientation")]
@@ -180,6 +182,13 @@ namespace TestGame.Scenes {
             StarPoints.Max = 32;
             StarPoints.Integral = true;
             StarPoints.Value = 5;
+            StarTapering.Min = -16;
+            StarTapering.Max = 16;
+            StarThickness.Min = 0f;
+            StarThickness.Max = 1f;
+            StarThickness.Value = 0.5f;
+            StarTwirling.Min = (float)(-Math.PI * 2f);
+            StarTwirling.Max = (float)(Math.PI * 2f);
             GradientCenterX.Min = GradientCenterY.Min = 0f;
             GradientCenterX.Max = GradientCenterY.Max = 1f;
             GradientCenterX.Value = GradientCenterY.Value = 0.5f;
@@ -375,7 +384,7 @@ namespace TestGame.Scenes {
             ir.RasterizeStar(
                 new Vector2(200, 600),
                 80f, (int)StarPoints.Value, 
-                (float)Arithmetic.Lerp(2, StarPoints.Value, Animate ? (Time.Seconds % 4) / 4f : ArcLength / 360f),
+                (float)Arithmetic.Lerp(2, StarPoints.Value, Animate ? (Time.Seconds % 4) / 4f : StarThickness),
                 OutlineSize,
                 innerColor: Color.White * FillOpacity, 
                 outerColor: Color.Black * FillOpacity, 
@@ -388,7 +397,9 @@ namespace TestGame.Scenes {
                 textureSettings: textureSettings,
                 rampTexture: UseRamp ? RampTexture : null,
                 rampUVOffset: new Vector2(0, RampVOffset),
-                orientation: orientation
+                orientation: orientation,
+                tapering: StarTapering.Value,
+                twirling: StarTwirling.Value
             );
 
             ir.RasterizeArc(
