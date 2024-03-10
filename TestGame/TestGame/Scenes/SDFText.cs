@@ -86,7 +86,7 @@ namespace TestGame.Scenes {
 
         public override void LoadContent () {
             FontSize = new FreeTypeFont.FontSize(Game.Font, BaseSize.Value) {
-                SDF = true
+                OverrideFormat = FreeTypeFontFormat.DistanceField,
             };
             TextMaterial = Game.Materials.Get(Game.Materials.DistanceFieldText, depthStencilState: RenderStates.OutlinedTextDepthStencil, clone: true);
         }
@@ -100,9 +100,8 @@ namespace TestGame.Scenes {
             if (MipMaps.Value != Game.Font.SDFMipMapping) {
                 Game.Font.SDFMipMapping = MipMaps.Value;
                 FontSize.Dispose();
-                // FIXME: Changing that should really invalidate it.
                 FontSize = new FreeTypeFont.FontSize(Game.Font, BaseSize.Value) {
-                    SDF = true
+                    OverrideFormat = FreeTypeFontFormat.DistanceField,
                 };
             } else
                 FontSize.SizePoints = BaseSize.Value;
