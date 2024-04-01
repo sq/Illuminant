@@ -590,6 +590,7 @@ namespace Lumined {
             IBatchContainer container, int layer, 
             Squared.Illuminant.Particles.ParticleSystem.UpdateResult[] results
         ) {
+            // FIXME: This relies on the now-removed suspend feature
             var batches = new List<BitmapBatch>(results.Length);
             for (int i = 0; i < results.Length; i++) {
                 var ur = results[i];
@@ -600,7 +601,6 @@ namespace Lumined {
                         ? SamplerState.LinearClamp
                         : SamplerState.PointClamp
                 );
-                batch.Suspend();
                 batches.Add(batch);
             }
 

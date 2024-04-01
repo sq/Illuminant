@@ -49,6 +49,8 @@ namespace TestGame.Scenes {
 
         public override void LoadContent () {
             Font = Game.FontLoader.Load("seguiemj");
+            // argb glyphs are provided by freetype in premultiplied sRGB
+            Font.Format = FreeTypeFontFormat.SRGB;
             Font.GlyphMargin = 5;
             FontSize = new FreeTypeFont.FontSize(Font, BaseSize.Value) {
             };
