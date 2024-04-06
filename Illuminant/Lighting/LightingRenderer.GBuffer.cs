@@ -48,7 +48,8 @@ namespace Squared.Illuminant {
                         Coordinator, width, height,
                         Configuration.HighQuality
                     );
-                    _GBuffer.Texture.SetName(_Name);
+                    if (!string.IsNullOrWhiteSpace(_Name))
+                        _GBuffer.Texture.SetName(_Name);
                 }
             } else {
                 if (_GBuffer != null) {
