@@ -94,6 +94,7 @@ namespace TestGame {
             typeof(LoadCompiledModel),
 #endif
             typeof(Shapes),
+            typeof(ShapeInsets),
             typeof(Strokes),
             typeof(BitmapShaders),
             typeof(RasterShapeSpeed),

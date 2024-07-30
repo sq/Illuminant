@@ -67,6 +67,7 @@
     <Compile Include="Scenes\Emoji.cs" />
     <Compile Include="Scenes\HLSpritesSolve.cs" />
     <Compile Include="Scenes\HLSpritesHeight.cs" />
+    <Compile Include="Scenes\ShapeInsets.cs" />
     <Compile Include="Scenes\VolumetricLight.cs" />
     <Compile Include="Scenes\SDFText.cs" />
     <Compile Include="Scenes\GenerateMaps.cs" />
