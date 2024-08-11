@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Squared.Illuminant.Particles;
+using Squared.Render;
 using Squared.Util;
 
 namespace Squared.Illuminant.Uniforms {
@@ -17,7 +18,7 @@ namespace Squared.Illuminant.Uniforms {
         // ZToYMultiplier, InvZToYMultiplier, LightOcclusion, unused
         internal Vector4 _ZToY;
 
-        internal void SetIntoParameters (EffectParameterCollection parameters) {
+        internal void SetIntoParameters (MaterialEffectParameters parameters) {
             parameters["EnvironmentZAndScale"]?.SetValue(_ZAndScale);
             parameters["EnvironmentZToY"]?.SetValue(_ZToY);
         }

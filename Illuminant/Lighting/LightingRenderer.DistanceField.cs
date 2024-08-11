@@ -173,7 +173,7 @@ namespace Squared.Illuminant {
         private void _SetupDistanceFieldHeightVolumeDraw (DeviceManager dm, object userData) {
             var cacheData = (HeightVolumeCacheData)userData;
             var hv = cacheData.Volume;
-            var ep = IlluminantMaterials.DistanceToPolygon.Effect.Parameters;
+            var ep = IlluminantMaterials.DistanceToPolygon.Parameters;
             var pb = hv.Bounds;
             var tl = pb.TopLeft;
             var br = pb.BottomRight;
@@ -270,9 +270,9 @@ namespace Squared.Illuminant {
         private void _BeginClearSliceBatch (DeviceManager dm, object userData) {
             var material = IlluminantMaterials.ClearDistanceFieldSlice;
             var clearTexture = (Texture2D)userData;
-            material.Effect.Parameters["ClearTexture"].SetValue(clearTexture ?? _DummyDistanceFieldTexture);
-            material.Effect.Parameters["ClearMultiplier"].SetValue(clearTexture != null ? Vector4.One : Vector4.Zero);
-            material.Effect.Parameters["ClearInverseScale"].SetValue(new Vector2(
+            material.Parameters["ClearTexture"].SetValue(clearTexture ?? _DummyDistanceFieldTexture);
+            material.Parameters["ClearMultiplier"].SetValue(clearTexture != null ? Vector4.One : Vector4.Zero);
+            material.Parameters["ClearInverseScale"].SetValue(new Vector2(
                 1.0f / (_DistanceField.SliceWidth * _DistanceField.ColumnCount), 
                 1.0f / (_DistanceField.SliceHeight * _DistanceField.RowCount)
             ));

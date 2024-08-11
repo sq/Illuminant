@@ -92,7 +92,7 @@ namespace Squared.Illuminant {
         private void _UpdateScaleFactorForGBufferBitmapMaterial (DeviceManager dm, object userData) {
             var scaleFactor = (Vector2)userData;
             var invScaleFactor = new Vector2(1.0f / scaleFactor.X, 1.0f / scaleFactor.Y);
-            IlluminantMaterials.AutoGBufferBitmap.Effect.Parameters["ViewCoordinateScaleFactor"].SetValue(invScaleFactor);
+            IlluminantMaterials.AutoGBufferBitmap.Parameters["ViewCoordinateScaleFactor"].SetValue(invScaleFactor);
         }
 
         private void _AfterRenderGBuffer (DeviceManager dm, object userData) {
@@ -103,19 +103,19 @@ namespace Squared.Illuminant {
         private void _SetupGBufferGroundPlane (DeviceManager dm, object userData) {
             var sohack = ComputeSelfOcclusionHack();
             var zsohack = ComputeZSelfOcclusionHack();
-            var p = IlluminantMaterials.HeightVolumeFace.Effect.Parameters;
+            var p = IlluminantMaterials.HeightVolumeFace.Parameters;
             p["DistanceFieldExtent"].SetValue(Extent3);
             p["SelfOcclusionHack"].SetValue(sohack);
             p["ZSelfOcclusionHack"].SetValue(zsohack);
             EnvironmentUniforms.SetIntoParameters(p);
 
-            p = IlluminantMaterials.GroundPlane.Effect.Parameters;
+            p = IlluminantMaterials.GroundPlane.Parameters;
             p["DistanceFieldExtent"].SetValue(Extent3);
             p["SelfOcclusionHack"].SetValue(sohack);
             p["ZSelfOcclusionHack"].SetValue(zsohack);
             EnvironmentUniforms.SetIntoParameters(p);
 
-            p = IlluminantMaterials.HeightVolume.Effect.Parameters;
+            p = IlluminantMaterials.HeightVolume.Parameters;
             p["DistanceFieldExtent"].SetValue(Extent3);
             p["SelfOcclusionHack"].SetValue(sohack);
             p["ZSelfOcclusionHack"].SetValue(zsohack);
@@ -298,7 +298,7 @@ namespace Squared.Illuminant {
 
         private void _SetTextureForGBufferBillboard (DeviceManager dm, ref PrimitiveDrawCall<BillboardVertex> drawCall, int index) {
             var material = dm.CurrentMaterial;
-            material.Effect.Parameters["Mask"].SetValue((Texture)drawCall.UserData);
+            material.Parameters["Mask"].SetValue((Texture)drawCall.UserData);
             material.Flush(dm);
             // HACK: Filtering causes artifacts so we're disabling it for now
             dm.Device.SamplerStates[0] = SamplerState.PointClamp;
@@ -322,7 +322,7 @@ namespace Squared.Illuminant {
 
         private void _GBufferBillboardBatchSetup (DeviceManager dm, object userData) {
             var m = (Material)userData;
-            var p = m.Effect.Parameters;
+            var p = m.Parameters;
             p["DistanceFieldExtent"].SetValue(Extent3);
             p["SelfOcclusionHack"].SetValue(ComputeSelfOcclusionHack());
             EnvironmentUniforms.SetIntoParameters(p);
@@ -517,7 +517,7 @@ namespace Squared.Illuminant {
                 ?? 1;
         }
 
-        private void SetGBufferParameters (EffectParameterCollection p) {
+        private void SetGBufferParameters (MaterialEffectParameters p) {
             // FIXME: RenderScale?
             if (_GBuffer != null) {
                 p["GBufferViewportRelative"].SetValue(Configuration.GBufferViewportRelative ? 1f : 0f);

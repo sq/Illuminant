@@ -775,7 +775,7 @@ namespace Squared.Illuminant {
                 ltrs.UpdateVertexBuffer();
 
             SetLightShaderParameters(ltrs.Material, ltrs.Key.Quality);
-            var p = ltrs.Material.Effect.Parameters;
+            var p = ltrs.Material.Parameters;
             var rampTexture = p["RampTexture"];
             if (rampTexture != null)
                 rampTexture.SetValue(ltrs.Key.RampTexture);
@@ -785,7 +785,7 @@ namespace Squared.Illuminant {
             var ltrs = (LightTypeRenderState)userData;
             var pls = (ParticleLightSource)ltrs.Key.ParticleLightSource;
             IlluminationBatchSetup (device, ltrs);
-            var p = ltrs.Material.Effect.Parameters;
+            var p = ltrs.Material.Parameters;
             var lightSource = pls.Template;
             p["LightProperties"].SetValue(new Vector4(
                 lightSource.Radius,
@@ -804,8 +804,7 @@ namespace Squared.Illuminant {
         }
 
         private void SetLightShaderParameters (Material material, RendererQualitySettings q) {
-            var effect = material.Effect;
-            var p = effect.Parameters;
+            var p = material.Parameters;
 
             SetGBufferParameters(p);
 
@@ -1479,7 +1478,7 @@ namespace Squared.Illuminant {
 
             private void _Before (DeviceManager dm, object _) {
                 // FIXME: RenderScale?
-                var p = m.Effect.Parameters;
+                var p = m.Parameters;
 
                 Renderer.SetGBufferParameters(p);
                 p["InverseScaleFactor"].SetValue(
@@ -1869,7 +1868,7 @@ namespace Squared.Illuminant {
             using (var batch = PrimitiveBatch<VisualizeDistanceFieldVertex>.New(
                 // FIXME: Create reusable delegate instance + use userData
                 container, layerIndex++, material, (dm, _) => {
-                    var p = material.Effect.Parameters;
+                    var p = material.Parameters;
 
                     SetDistanceFieldParameters(material, true, Configuration.DefaultQuality);
 
@@ -1912,7 +1911,7 @@ namespace Squared.Illuminant {
             RendererQualitySettings q
         ) {
             Uniforms.DistanceField dfu;
-            var p = m.Effect.Parameters;
+            var p = m.Parameters;
 
             EnvironmentUniforms.SetIntoParameters(p);
 
@@ -1927,7 +1926,7 @@ namespace Squared.Illuminant {
                 dfu.MinimumLength = q.MinStepSize;
                 uDistanceField.TrySet(m, ref dfu);
                 p["DistanceFieldPacked1"]?.SetValue(Vector4.Zero);
-                p.ClearTexture("DistanceFieldTexture");
+                p["DistanceFieldTexture"]?.SetValue((Texture2D)null);
                 return;
             }
 

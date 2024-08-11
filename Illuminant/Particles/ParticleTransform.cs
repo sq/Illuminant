@@ -152,7 +152,7 @@ namespace Squared.Illuminant.Particles.Transforms {
                         engine.uDistanceField.Set(m, ref dfu);
                     }
 
-                    m.Effect.Parameters["RotationFromLifeAndIndex"]?.SetValue(new Vector2(
+                    m.Parameters["RotationFromLifeAndIndex"]?.SetValue(new Vector2(
                         MathHelper.ToRadians(system.Configuration.RotationFromLife),
                         MathHelper.ToRadians(system.Configuration.RotationFromIndex)
                     ));
@@ -172,11 +172,10 @@ namespace Squared.Illuminant.Particles.Transforms {
                 var system = up.System;
                 var engine = system.Engine;
                 var m = up.Material;
-                var e = m.Effect;
 
                 // XNA effectparameter gets confused about whether a value is set or not, so we do this
                 //  to ensure it always re-sets the texture parameter
-                e?.Parameters?.ClearTextures(ParticleSystem.ClearTextureList);
+                m?.Parameters?.ClearTextures(ParticleSystem.ClearTextureList);
 
                 Transform?.AfterUpdateChunk(engine);
 

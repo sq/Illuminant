@@ -274,7 +274,7 @@ namespace Squared.Illuminant.Particles {
                 var m = rp?.Material ?? (_rp as Material);
                 if (m == null)
                     return;
-                m.Effect?.Parameters.ClearTextures(ClearTextureList);
+                m?.Parameters.ClearTextures(ClearTextureList);
             }
         }
 
@@ -442,8 +442,6 @@ namespace Squared.Illuminant.Particles {
 
             var device = container.RenderManager.DeviceManager.Device;
 
-            var e = m.Effect;
-
             var li = GetLivenessInfo(chunk);
             // FIXME
             if (li == null)
@@ -463,7 +461,7 @@ namespace Squared.Illuminant.Particles {
                 prev.LastTurnUsed = Engine.CurrentTurn;
             curr.LastTurnUsed = Engine.CurrentTurn;
 
-            if ((e != null) && RenderTrace.EnableTracing) {
+            if ((m != null) && RenderTrace.EnableTracing) {
                 var nameText = (label != null)
                     ? $"{label} {m.Name}"
                     : m.Name;
@@ -499,7 +497,7 @@ namespace Squared.Illuminant.Particles {
                 beforeDraw,
                 afterDraw, up
             ))  {
-                if (e != null)
+                if (m != null)
                     batch.Add(new NativeDrawCall(
                         PrimitiveType.TriangleList, Engine.TriVertexBuffer, 0,
                         Engine.TriIndexBuffer, 0, 0, Engine.TriVertexBuffer.VertexCount, 0, Engine.TriVertexBuffer.VertexCount / 2
@@ -978,11 +976,10 @@ namespace Squared.Illuminant.Particles {
                 material = Engine.Materials.Get(
                     material, blendState: blendState, depthStencilState: Configuration.DepthStencilState
                 );
-            var e = material.Effect;
 
             // HACK: Fix an obscure crash where the last texture we used was disposed, since we won't update it
             //  until later in the draw process but FNA checks it when the material is applied instead of at draw
-            foreach (var p in e.Parameters) {
+            foreach (var p in material.Parameters.AllParameters) {
                 if (p.ParameterType == EffectParameterType.Texture2D)
                     p.SetValue((Texture2D)null);
             }

@@ -26,7 +26,7 @@ namespace Squared.Illuminant {
             device.SetViewport(new Viewport(0, 0, Probes.Count, 1));
             device.Device.BlendState = RenderStates.AdditiveBlend;
 
-            var p = ltrs.ProbeMaterial.Effect.Parameters;
+            var p = ltrs.ProbeMaterial.Parameters;
             SetLightShaderParameters(ltrs.ProbeMaterial, ltrs.Key.Quality);
 
             p["GBuffer"].SetValue(_LightProbePositions);

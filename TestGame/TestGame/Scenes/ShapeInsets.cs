@@ -42,6 +42,11 @@ namespace TestGame.Scenes {
         [Items("Conical")]
         Dropdown<string> FillMode;
 
+        [Items("Ellipse")]
+        [Items("Rectangle")]
+        [Items("Diamond")]
+        Dropdown<string> CompositeType;
+
         [Items("Union")]
         [Items("Subtract")]
         [Items("Xor")]
@@ -141,7 +146,7 @@ namespace TestGame.Scenes {
 
             ir.ClearRasterComposites();
             ir.AddRasterComposite(new RasterShapeComposite {
-                Type = RasterShapeCompositeType.Ellipse,
+                Type = (RasterShapeCompositeType)CompositeType.SelectedIndex,
                 Mode = (RasterShapeCompositeMode)CompositeMode.SelectedIndex,
                 Center = mousePos,
                 Size = new Vector2(160, 128)
@@ -225,8 +230,6 @@ namespace TestGame.Scenes {
                 shadow: shadow,
                 orientation: orientation
             );
-
-            ir.RasterizeEllipse(new Vector2(200, 860), Vector2.One * 3, Color.Yellow, layer: 4);
 
             Vector2 a = new Vector2(1024, 64),
                 b, c = new Vector2(1400, 256);
