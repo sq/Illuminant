@@ -1479,8 +1479,8 @@ namespace Lumined {
                                     } else
                                         cb = new Squared.Illuminant.Uniforms.ClampedBezier4(b);
                                     Game.uBezier.Set(m, ref cb);
-                                    m.Effect.Parameters["CurrentT"].SetValue(currentT.GetValueOrDefault(-99999));
-                                    m.Effect.Parameters["ElementCount"].SetValue(elementCount);
+                                    m.Parameters["CurrentT"].SetValue(currentT.GetValueOrDefault(-99999));
+                                    m.Parameters["ElementCount"].SetValue(elementCount);
                                 }
                             )) {
                                 var tl = new VertexPositionColorTexture(new Vector3(panel.TopLeft, 0), Color.White, Vector2.Zero);
