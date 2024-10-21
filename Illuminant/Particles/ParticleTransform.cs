@@ -175,7 +175,7 @@ namespace Squared.Illuminant.Particles.Transforms {
 
                 // XNA effectparameter gets confused about whether a value is set or not, so we do this
                 //  to ensure it always re-sets the texture parameter
-                m?.Parameters?.ClearTextures(ParticleSystem.ClearTextureList);
+                m?.Parameters?.ClearTextures(engine.Coordinator.Manager, ParticleSystem.ClearTextureList);
 
                 Transform?.AfterUpdateChunk(engine);
 

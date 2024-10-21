@@ -1926,7 +1926,7 @@ namespace Squared.Illuminant {
                 dfu.MinimumLength = q.MinStepSize;
                 uDistanceField.TrySet(m, ref dfu);
                 p["DistanceFieldPacked1"]?.SetValue(Vector4.Zero);
-                p["DistanceFieldTexture"]?.SetValue((Texture2D)null);
+                p["DistanceFieldTexture"]?.SetValue(Coordinator.Manager.DummyTexture);
                 return;
             }
 

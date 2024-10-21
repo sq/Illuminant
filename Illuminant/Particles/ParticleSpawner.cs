@@ -385,7 +385,7 @@ namespace Squared.Illuminant.Particles.Transforms {
                 parameters["PositionConstantTexture"].SetValue(PositionBuffer);
             } else {
                 parameters["InlinePositionConstants"].SetValue(Temp3);
-                parameters["PositionConstantTexture"]?.SetValue((Texture2D)null);
+                parameters["PositionConstantTexture"]?.SetValue(engine.Coordinator.Manager.DummyTexture);
             }
             parameters["PositionConstantCount"].SetValue((float)count);
             parameters["PolygonRate"].SetValue(PolygonRate.GetValueOrDefault(0));

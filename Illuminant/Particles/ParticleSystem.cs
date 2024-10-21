@@ -274,7 +274,7 @@ namespace Squared.Illuminant.Particles {
                 var m = rp?.Material ?? (_rp as Material);
                 if (m == null)
                     return;
-                m?.Parameters.ClearTextures(ClearTextureList);
+                m?.Parameters.ClearTextures(System.Engine.Coordinator.Manager, ClearTextureList);
             }
         }
 
@@ -981,7 +981,7 @@ namespace Squared.Illuminant.Particles {
             //  until later in the draw process but FNA checks it when the material is applied instead of at draw
             foreach (var p in material.Parameters.AllParameters) {
                 if (p.ParameterType == EffectParameterType.Texture2D)
-                    p.SetValue((Texture2D)null);
+                    p.SetValue(Engine.Coordinator.Manager.DummyTexture);
             }
             
             // HACK

@@ -54,12 +54,13 @@ namespace Squared.Illuminant {
                 // FIXME: This is a memory leak
                 if (effects == null)
                     effects = new EffectProvider(System.Reflection.Assembly.GetExecutingAssembly(), coordinator);
-                            
+                
                 var neutralDepthStencilState = new DepthStencilState {
                     StencilEnable = false,
                     DepthBufferEnable = false
                 };
 
+                // FIXME: Stop using MakeDelegate
                 var dBegin = new[] {
                     MaterialUtil.MakeDelegate(
                         depthStencilState: neutralDepthStencilState
@@ -341,6 +342,7 @@ namespace Squared.Illuminant.Particles {
                 if (ParticleMaterials.IsLoaded)
                     return;
 
+                // FIXME: Stop using MakeDelegate
                 var dBegin = new[] {
                     MaterialUtil.MakeDelegate(
                         rasterizerState: RasterizerState.CullNone,

@@ -312,7 +312,7 @@ namespace Squared.Illuminant.Particles {
                 }
 
                 var p = m.Parameters;
-                p["PositionTexture"].SetValue((Texture2D)null);
+                p["PositionTexture"].SetValue(Coordinator.Manager.DummyTexture);
 
                 dm.PushRenderTarget(nextBuffer);
                 dm.Device.Clear(
