@@ -142,7 +142,7 @@ namespace TestGame.Scenes {
                 new RendererConfiguration(
                     1024, 1024, true
                 ) {
-                    MaximumFieldUpdatesPerFrame = 9,
+                    MaximumFieldUpdatesPerFrame = 4,
                     DefaultQuality = {
                         MinStepSize = 1f,
                         LongStepFactor = 0.5f,
@@ -197,7 +197,7 @@ namespace TestGame.Scenes {
                     IsDynamic = true
                 };
                 Obstructions.Add(obs);
-                // Environment.Obstructions.Add(obs);
+                Environment.Obstructions.Add(obs);
             }
         }
 
