@@ -14,7 +14,7 @@ using Squared.Render.Convenience;
 using Squared.Util;
 
 namespace TestGame.Scenes {
-    public class TwoPointFiveDTest : Scene {
+    public class TwoPointFiveD : Scene {
         DistanceField DistanceField;
         LightingEnvironment Environment;
         LightingRenderer Renderer;
@@ -37,7 +37,7 @@ namespace TestGame.Scenes {
             ShowHistogram;
 
         [Group("Lighting")]
-        Toggle TwoPointFiveD,
+        Toggle Enable2Point5D,
             UseRampTexture,
             GroundPlaneShadows,
             TopFaceShadows,
@@ -65,8 +65,7 @@ namespace TestGame.Scenes {
 
         [Group("Resolution")]
         Slider DistanceFieldResolution,
-            LightmapScaleRatio,
-            MaximumEncodedDistance;
+            LightmapScaleRatio;
 
         [Group("LUTs")]
         Dropdown<string> DarkLUT, BrightLUT;
@@ -85,7 +84,7 @@ namespace TestGame.Scenes {
 
         Histogram Histogram;
 
-        public TwoPointFiveDTest (TestGame game, int width, int height)
+        public TwoPointFiveD (TestGame game, int width, int height)
             : base(game, 1024, 1024) {
 
             Histogram = new Histogram(4f, 2f);
@@ -93,11 +92,10 @@ namespace TestGame.Scenes {
             Deterministic.Value = true;
             ShowHistogram.Value = false;
             UseRampTexture.Value = false;
-            TwoPointFiveD.Value = true;
+            Enable2Point5D.Value = true;
             DistanceFieldResolution.Value = 0.25f;
             LightmapScaleRatio.Value = 1.0f;
             MaximumLightStrength.Value = 4f;
-            MaximumEncodedDistance.Value = 128;
             DitherStrength.Value = 1f;
             DitherPower.Value = 8;
             DitherBandSize.Value = 1f;
@@ -108,8 +106,8 @@ namespace TestGame.Scenes {
 
             ShowLightmap.Key = Keys.L;
             ShowGBuffer.Key = Keys.G;
-            TwoPointFiveD.Key = Keys.D2;
-            TwoPointFiveD.Changed += (s, e) => Renderer.InvalidateFields();
+            Enable2Point5D.Key = Keys.D2;
+            Enable2Point5D.Changed += (s, e) => Renderer.InvalidateFields();
             Timelapse.Key = Keys.T;
             ShowDistanceField.Key = Keys.D;
             ShowHistogram.Key = Keys.H;
@@ -133,12 +131,6 @@ namespace TestGame.Scenes {
             MaximumLightStrength.Min = 1.0f;
             MaximumLightStrength.Max = 6.0f;
             MaximumLightStrength.Speed = 0.1f;
-
-            MaximumEncodedDistance.Min = 32;
-            MaximumEncodedDistance.Max = 512;
-            MaximumEncodedDistance.Speed = 16;
-            MaximumEncodedDistance.Integral = true;
-            MaximumEncodedDistance.Changed += (s, e) => CreateDistanceField();
 
             SpecularBrightness.Min = 0f;
             SpecularBrightness.Max = 2f;
@@ -248,7 +240,7 @@ namespace TestGame.Scenes {
 
             DistanceField = new DistanceField(
                 Game.RenderCoordinator, 1024, 1024, Environment.MaximumZ,
-                64, DistanceFieldResolution.Value, (int)MaximumEncodedDistance.Value
+                64, DistanceFieldResolution.Value
             );
             if (Renderer != null) {
                 Renderer.DistanceField = DistanceField;
@@ -355,7 +347,7 @@ namespace TestGame.Scenes {
             m.DefaultDitheringSettings.RangeMin = DitherRangeMin;
             m.DefaultDitheringSettings.RangeMax = DitherRangeMax;
 
-            Renderer.Configuration.TwoPointFiveD = TwoPointFiveD;
+            Renderer.Configuration.TwoPointFiveD = Enable2Point5D;
             Renderer.Configuration.SetScale(LightmapScaleRatio);
 
             Renderer.UpdateFields(frame, -2);

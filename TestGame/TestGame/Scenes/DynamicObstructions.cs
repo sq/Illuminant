@@ -150,7 +150,8 @@ namespace TestGame.Scenes {
                         MaxConeRadius = 24,
                     },
                     EnableGBuffer = true,
-                    TwoPointFiveD = true
+                    TwoPointFiveD = true,
+                    RenderGroundPlane = true,
                 }, Game.IlluminantMaterials
             );
 
@@ -196,7 +197,7 @@ namespace TestGame.Scenes {
                     IsDynamic = true
                 };
                 Obstructions.Add(obs);
-                Environment.Obstructions.Add(obs);
+                // Environment.Obstructions.Add(obs);
             }
         }
 

@@ -78,7 +78,7 @@ namespace TestGame {
 
         public static readonly Type[] SceneTypes = new[] {
             typeof(HeightVolumeTest),
-            typeof(TwoPointFiveDTest),
+            typeof(TwoPointFiveD),
             typeof(SC3),
             typeof(DistanceFieldEditor),
             typeof(ScrollingGeo),

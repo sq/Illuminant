@@ -1,3 +1,6 @@
+// IEEE strictness prevents some math errors with certain polygons' distance fields
+#pragma fxcparams(/O3 /Gis /Ges)
+
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\CompilerWorkarounds.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\TargetInfo.fxh"
 #include "..\..\..\Fracture\Squared\RenderLib\Shaders\ViewTransformCommon.fxh"

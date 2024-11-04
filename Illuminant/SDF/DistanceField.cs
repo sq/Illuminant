@@ -22,16 +22,17 @@ namespace Squared.Illuminant {
         public const int MaxSurfaceSize = 4096;
 #endif
 
-        public const int DefaultMaximumEncodedDistance = 128;
-
-        public const SurfaceFormat Format = SurfaceFormat.Rgba64;
+        public const SurfaceFormat Format = SurfaceFormat.HalfVector4;
+        public Vector4 GetClearValue () => 
+            (Format == SurfaceFormat.Rgba64)
+                ? Vector4.Zero
+                : new Vector4(LightingRenderer.DistanceLimit);
 
         public bool IsDisposed { get; private set; }
 
         public readonly int VirtualWidth, VirtualHeight;
         public readonly float VirtualDepth;
         public readonly double Resolution, RequestedResolution;
-        public readonly int MaximumEncodedDistance;
 
         public readonly RenderCoordinator Coordinator;
         public readonly AutoRenderTarget Texture;
@@ -49,14 +50,12 @@ namespace Squared.Illuminant {
         public DistanceField (
             RenderCoordinator coordinator,
             int virtualWidth, int virtualHeight, float virtualDepth,
-            int requestedSliceCount, double requestedResolution = 1, 
-            int maximumEncodedDistance = DefaultMaximumEncodedDistance
+            int requestedSliceCount, double requestedResolution = 1
         ) {
             Coordinator = coordinator;
             VirtualWidth = virtualWidth;
             VirtualHeight = virtualHeight;
             VirtualDepth = virtualDepth;
-            MaximumEncodedDistance = maximumEncodedDistance;
             RequestedResolution = requestedResolution;
 
             if (requestedResolution < 0.05)
@@ -156,7 +155,7 @@ namespace Squared.Illuminant {
                 VirtualWidth,
                 VirtualHeight,
                 VirtualDepth,
-                MaximumEncodedDistance
+                LightingRenderer.DistanceLimit
             );
         }
 
@@ -266,14 +265,14 @@ namespace Squared.Illuminant {
         public DynamicDistanceField (
             RenderCoordinator coordinator,
             int virtualWidth, int virtualHeight, float virtualDepth,
-            int sliceCount, double requestedResolution = 1, int maximumEncodedDistance = DefaultMaximumEncodedDistance
-        ) : base (coordinator, virtualWidth, virtualHeight, virtualDepth, sliceCount, requestedResolution, maximumEncodedDistance) {
+            int sliceCount, double requestedResolution = 1
+        ) : base (coordinator, virtualWidth, virtualHeight, virtualDepth, sliceCount, requestedResolution) {
             lock (coordinator.CreateResourceLock)
                 StaticTexture = new AutoRenderTarget(
                     coordinator,
                     SliceWidth * ColumnCount, 
                     SliceHeight * RowCount,
-                    false, SurfaceFormat.Rgba64,
+                    false, DistanceField.Format,
                     name: "DynamicDistanceField"
                 );
         }

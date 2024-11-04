@@ -41,8 +41,7 @@ namespace TestGame.Scenes {
 
         [Group("Resolution")]
         Slider DistanceFieldResolution,
-            LightmapScaleRatio,
-            MaximumEncodedDistance;
+            LightmapScaleRatio;
 
         Toggle Deterministic, EnableTreeShadows;
         Slider TreeNormal;
@@ -56,7 +55,6 @@ namespace TestGame.Scenes {
             DistanceFieldResolution.Value = 0.25f;
             LightmapScaleRatio.Value = 1.0f;
             MaximumLightStrength.Value = 2f;
-            MaximumEncodedDistance.Value = 128;
             ShowLightmap.Value = false;
 
             ShowLightmap.Key = Keys.L;
@@ -86,12 +84,6 @@ namespace TestGame.Scenes {
             LightSize.Value = 48;
             LightSize.Max = 1024;
             LightSize.Min = 4;
-
-            MaximumEncodedDistance.Min = 32;
-            MaximumEncodedDistance.Max = 512;
-            MaximumEncodedDistance.Speed = 16;
-            MaximumEncodedDistance.Integral = true;
-            MaximumEncodedDistance.Changed += (s, e) => CreateDistanceField();
 
             DistanceFieldResolution.Changed += (s, e) => CreateDistanceField();
 
@@ -138,7 +130,7 @@ namespace TestGame.Scenes {
 
             DistanceField = new DistanceField(
                 Game.RenderCoordinator, 1024, 1024, Environment.MaximumZ,
-                64, DistanceFieldResolution.Value, (int)MaximumEncodedDistance.Value
+                64, DistanceFieldResolution.Value
             );
             if (Renderer != null) {
                 Renderer.DistanceField = DistanceField;

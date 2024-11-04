@@ -53,10 +53,11 @@ namespace TestGame.Scenes {
 
         public Strokes (TestGame game, int width, int height)
             : base(game, width, height) {
-            Size.Min = 0.5f;
+            Size.Min = 0.05f;
             Size.Max = 400f;
             Size.Speed = 5f;
             Size.Value = 180f;
+            Size.Exponent = 8f;
             Spacing.Min = 0.025f;
             Spacing.Max = 3f;
             Spacing.Value = 0.2f;

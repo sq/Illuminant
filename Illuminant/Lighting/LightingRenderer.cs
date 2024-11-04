@@ -311,10 +311,10 @@ namespace Squared.Illuminant {
             }
         }        
 
-        public const int PackedSliceCount = 3;
-        public const int DistanceFunctionBufferInitialSize = 256;
+        public const int   PackedSliceCount = 3;
+        public const int   DistanceFunctionBufferInitialSize = 256;
 
-        const int        DistanceLimit = 520;
+        internal const int DistanceLimit = 520;
         
         public  readonly RenderCoordinator    Coordinator;
 
@@ -507,6 +507,9 @@ namespace Squared.Illuminant {
                 switch (DistanceField.Format) {
                     case SurfaceFormat.Rgba64:
                         _DummyDistanceFieldTexture.SetData(new Rgba64[1]);
+                        break;
+                    case SurfaceFormat.HalfVector4:
+                        _DummyDistanceFieldTexture.SetData(new HalfVector4[1]);
                         break;
                     default:
                         throw new ArgumentOutOfRangeException("DistanceField.Format");

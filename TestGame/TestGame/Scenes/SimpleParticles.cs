@@ -215,7 +215,7 @@ namespace TestGame.Scenes {
 
             DistanceField = new DistanceField(
                 Game.RenderCoordinator, Width, Height, Environment.MaximumZ,
-                9, 1 / 4f, maximumEncodedDistance: 320
+                9, 1 / 4f
             );
 
             LightingRenderer = new LightingRenderer(

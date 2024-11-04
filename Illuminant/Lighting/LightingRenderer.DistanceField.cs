@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
@@ -16,6 +17,52 @@ using Squared.Util;
 
 namespace Squared.Illuminant {
     public sealed partial class LightingRenderer : IDisposable, INameableGraphicsObject {
+	    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+	    public struct VertexPositionVector4 : IVertexType
+	    {
+
+		    VertexDeclaration IVertexType.VertexDeclaration
+		    {
+			    get
+			    {
+				    return VertexDeclaration;
+			    }
+		    }
+
+		    public Vector3 Position;
+
+		    public Vector4 Color;
+
+		    public static readonly VertexDeclaration VertexDeclaration;
+
+		    static VertexPositionVector4()
+		    {
+			    VertexDeclaration = new VertexDeclaration(
+				    new []
+				    {
+					    new VertexElement(
+						    0,
+						    VertexElementFormat.Vector3,
+						    VertexElementUsage.Position,
+						    0
+					    ),
+					    new VertexElement(
+						    12,
+						    VertexElementFormat.Vector4,
+						    VertexElementUsage.Color,
+						    0
+					    )
+				    }
+			    );
+		    }
+
+		    public VertexPositionVector4(Vector3 position, Vector4 color)
+		    {
+			    Position = position;
+			    Color = color;
+		    }
+	    }
+        
         private void RenderDistanceField (ref int layerIndex, IBatchContainer resultGroup) {
             if (_DistanceField == null)
                 return;
@@ -51,7 +98,7 @@ namespace Squared.Illuminant {
             // FIXME: dynamic/static split
             if (df.NeedClear) {
                 df.NeedClear = false;
-                dm.Device.Clear(Color.Transparent);
+                dm.Device.Clear(ClearOptions.Target, DistanceField.GetClearValue(), 0, 0);
             }
 
             dm.AssertRenderTarget(args.RenderTarget.Get());
@@ -125,12 +172,7 @@ namespace Squared.Illuminant {
                     OnRenderDistanceFieldSlice(
                         this, firstVirtualSliceIndex, group, dynamicFlagFilter,
                         new Rectangle(sliceX, sliceY, df.SliceWidth, df.SliceHeight),
-                        new Vector4(
-                            SliceIndexToZ(firstVirtualSliceIndex),
-                            SliceIndexToZ(firstVirtualSliceIndex + 1),
-                            SliceIndexToZ(firstVirtualSliceIndex + 2),
-                            SliceIndexToZ(firstVirtualSliceIndex + 3)
-                        )
+                        GetSliceVector(firstVirtualSliceIndex)
                     );
 
                 // FIXME: Slow
@@ -182,6 +224,14 @@ namespace Squared.Illuminant {
             ep["VertexDataTexture"].SetValue(cacheData.VertexDataTexture);
         }
 
+        private Vector4 GetSliceVector (int firstVirtualSliceIndex) =>
+            new Vector4(
+                SliceIndexToZ(firstVirtualSliceIndex),
+                SliceIndexToZ(firstVirtualSliceIndex + 1),
+                SliceIndexToZ(firstVirtualSliceIndex + 2),
+                SliceIndexToZ(firstVirtualSliceIndex + 3)
+            );
+
         private void RenderDistanceFieldHeightVolumes (
             int firstVirtualIndex, BatchGroup group, bool? dynamicFlagFilter
         ) {
@@ -191,12 +241,7 @@ namespace Squared.Illuminant {
             int i = 1;
 
             var mat = IlluminantMaterials.DistanceToPolygon;
-            var sliceZ = new Vector4(
-                SliceIndexToZ(firstVirtualIndex),
-                SliceIndexToZ(firstVirtualIndex + 1),
-                SliceIndexToZ(firstVirtualIndex + 2),
-                SliceIndexToZ(firstVirtualIndex + 3)
-            );
+            var sliceZ = GetSliceVector(firstVirtualIndex);
 
             if (SetupDistanceFieldHeightVolume == null)
                 SetupDistanceFieldHeightVolume = _SetupDistanceFieldHeightVolume;
@@ -278,24 +323,39 @@ namespace Squared.Illuminant {
             ));
         }
 
-        private VertexPositionColor[] ClearDistanceFieldSliceVertices = new VertexPositionColor[4];
+        private VertexPositionVector4[] ClearDistanceFieldSliceVertices = new VertexPositionVector4[4];
+
+        private float GetClearValueForSlice (float sliceZ) {
+            if (!Environment.EnableGroundShadows)
+                return DistanceField.GetClearValue().X;
+            return sliceZ - Environment.GroundZ;
+        }
+
+        private Vector4 GetClearValue (Vector4 sliceZ) =>
+            new Vector4(
+                GetClearValueForSlice(sliceZ.X),
+                GetClearValueForSlice(sliceZ.Y),
+                GetClearValueForSlice(sliceZ.Z),
+                GetClearValueForSlice(sliceZ.W)
+            );
 
         private void ClearDistanceFieldSlice (
             short[] indices, IBatchContainer container, int layer, int firstSliceIndex, Texture2D clearTexture
         ) {
             // var color = new Color((firstSliceIndex * 16) % 255, 0, 0, 0);
-            var color = Color.Transparent;
+            var sliceZValues = GetSliceVector(firstSliceIndex);
+            var color = GetClearValue(sliceZValues);
 
             // FIXME: Minor race condition if the distance field's size changes while this buffer is in use
-            ClearDistanceFieldSliceVertices[0] = new VertexPositionColor(new Vector3(0, 0, 0), color);
-            ClearDistanceFieldSliceVertices[1] = new VertexPositionColor(new Vector3(_DistanceField.VirtualWidth, 0, 0), color);
-            ClearDistanceFieldSliceVertices[2] = new VertexPositionColor(new Vector3(_DistanceField.VirtualWidth, _DistanceField.VirtualHeight, 0), color);
-            ClearDistanceFieldSliceVertices[3] = new VertexPositionColor(new Vector3(0, _DistanceField.VirtualHeight, 0), color);
+            ClearDistanceFieldSliceVertices[0] = new VertexPositionVector4(new Vector3(0, 0, 0), color);
+            ClearDistanceFieldSliceVertices[1] = new VertexPositionVector4(new Vector3(_DistanceField.VirtualWidth, 0, 0), color);
+            ClearDistanceFieldSliceVertices[2] = new VertexPositionVector4(new Vector3(_DistanceField.VirtualWidth, _DistanceField.VirtualHeight, 0), color);
+            ClearDistanceFieldSliceVertices[3] = new VertexPositionVector4(new Vector3(0, _DistanceField.VirtualHeight, 0), color);
 
-            using (var batch = PrimitiveBatch<VertexPositionColor>.New(
+            using (var batch = PrimitiveBatch<VertexPositionVector4>.New(
                 container, layer, IlluminantMaterials.ClearDistanceFieldSlice, BeginClearSliceBatch, clearTexture
             ))
-                batch.Add(new PrimitiveDrawCall<VertexPositionColor>(
+                batch.Add(new PrimitiveDrawCall<VertexPositionVector4>(
                     PrimitiveType.TriangleList,
                     ClearDistanceFieldSliceVertices, 0, 4, indices, 0, 2
                 ));
@@ -355,12 +415,7 @@ namespace Squared.Illuminant {
 
             int count = items.Count;
 
-            var sliceZ = new Vector4(
-                SliceIndexToZ(firstVirtualIndex),
-                SliceIndexToZ(firstVirtualIndex + 1),
-                SliceIndexToZ(firstVirtualIndex + 2),
-                SliceIndexToZ(firstVirtualIndex + 3)
-            );
+            var sliceZ = GetSliceVector(firstVirtualIndex);
 
             var numTypes = (int)LightObstruction.MAX_Type + 1;
             var batches  = new NativeBatch[numTypes];

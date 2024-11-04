@@ -24,7 +24,7 @@ namespace TestGame.Scenes {
         public LightSourceReplicator LightReplicator;
 
         Toggle ShowGBuffer, ShowDistanceField, GroundIsOpaque, TwoPointFiveD, Deterministic, Shadows, GroundShadows;
-        Slider LightmapScaleRatio, MaxStepCount, MinStepSize, DistanceFieldResolution, DistanceSliceCount, MaximumEncodedDistance, 
+        Slider LightmapScaleRatio, MaxStepCount, MinStepSize, DistanceFieldResolution, DistanceSliceCount, 
             SpecularBrightness,
             SpecularPower;
 
@@ -44,7 +44,6 @@ namespace TestGame.Scenes {
             MinStepSize.Value = 2f;
             DistanceFieldResolution.Value = 0.5f;
             DistanceSliceCount.Value = 7;
-            MaximumEncodedDistance.Value = 128;
             Shadows.Value = true;
             GroundIsOpaque.Value = false;
             GroundShadows.Value = true;
@@ -71,12 +70,6 @@ namespace TestGame.Scenes {
             LightmapScaleRatio.Max = 1.0f;
             LightmapScaleRatio.Speed = 0.1f;
             LightmapScaleRatio.Changed += (s, e) => Renderer.InvalidateFields();
-
-            MaximumEncodedDistance.Min = 16;
-            MaximumEncodedDistance.Max = 320;
-            MaximumEncodedDistance.Speed = 8;
-            MaximumEncodedDistance.Integral = true;
-            MaximumEncodedDistance.Changed += (s, e) => CreateDistanceField();
 
             MaxStepCount.Max = 128;
             MaxStepCount.Min = 32;
@@ -115,7 +108,7 @@ namespace TestGame.Scenes {
 
             DistanceField = new DistanceField(
                 Game.RenderCoordinator, Width, Height, Environment.MaximumZ,
-                (int)DistanceSliceCount.Value, DistanceFieldResolution.Value, (int)MaximumEncodedDistance.Value
+                (int)DistanceSliceCount.Value, DistanceFieldResolution.Value
             );
             if (Renderer != null) {
                 Renderer.DistanceField = DistanceField;

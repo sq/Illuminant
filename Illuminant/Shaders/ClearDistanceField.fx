@@ -18,6 +18,7 @@ uniform const float4 ClearMultiplier;
 
 void DistanceVertexShader (
     in    float3 position : POSITION0, // x, y, z
+    inout float4 color    : COLOR0,
     out   float4 result   : POSITION0
 ) {
     result = TransformPosition(float4(position.xy - GetViewportPosition(), 0, 1), 0);
@@ -25,7 +26,7 @@ void DistanceVertexShader (
 }
 
 void ClearPixelShader (
-    out float4 color : COLOR0,
+    inout float4 color : COLOR0,
     ACCEPTS_VPOS
 ) {
     PREFER_BRANCH
@@ -33,8 +34,6 @@ void ClearPixelShader (
         float2 vp = (GET_VPOS + 0.5) * ClearInverseScale;
         float4 tex = tex2Dlod(ClearSampler, float4(vp.x, vp.y, 0, 0));
         color = tex * ClearMultiplier;
-    } else {
-        color = float4(0, 0, 0, 0);
     }
 }
 

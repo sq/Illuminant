@@ -50,6 +50,10 @@ namespace Squared.Illuminant {
                 if (IsLoaded)
                     return;
 
+                var distanceBlendState = DistanceField.Format == SurfaceFormat.HalfVector4
+                    ? RenderStates.MinBlendValue
+                    : RenderStates.MaxBlendValue;
+
                 IsLoaded = true;
                 // FIXME: This is a memory leak
                 if (effects == null)
@@ -153,7 +157,7 @@ namespace Squared.Illuminant {
 
                 LoadOneMaterial(effects, out DistanceToPolygon, 
                     "DistanceField", "DistanceToPolygon",
-                    new[] { MaterialUtil.MakeDelegate(blendState: RenderStates.MaxBlendValue) }
+                    new[] { MaterialUtil.MakeDelegate(blendState: distanceBlendState) }
                 );
 
                 LoadOneMaterial(effects, out ClearDistanceFieldSlice,
@@ -170,7 +174,7 @@ namespace Squared.Illuminant {
 
                     LoadOneMaterial(effects, out DistanceFunctionTypes[(short)i],
                         "DistanceFunction", name,
-                            new[] { MaterialUtil.MakeDelegate(blendState: RenderStates.MaxBlendValue) },
+                            new[] { MaterialUtil.MakeDelegate(blendState: distanceBlendState) },
                         addToList: true
                     );
                 }

@@ -262,11 +262,11 @@ float2 getDistanceTexelSize () {
 
 
 float encodeDistance (float distance) {
-    return DISTANCE_ZERO - (distance / getMaximumEncodedDistance());
+    return distance;
 }
 
 float decodeDistance (float encodedDistance) {
-    return (DISTANCE_ZERO - encodedDistance) * getMaximumEncodedDistance();
+    return encodedDistance;
 }
 
 
