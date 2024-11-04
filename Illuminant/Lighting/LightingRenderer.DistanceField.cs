@@ -316,14 +316,10 @@ namespace Squared.Illuminant {
             var material = IlluminantMaterials.ClearDistanceFieldSlice;
             var clearTexture = (Texture2D)userData;
             material.Parameters["ClearTexture"].SetValue(clearTexture ?? _DummyDistanceFieldTexture);
-            material.Parameters["ClearMultiplier"].SetValue(clearTexture != null ? Vector4.One : Vector4.Zero);
-            material.Parameters["ClearInverseScale"].SetValue(new Vector2(
-                1.0f / (_DistanceField.SliceWidth * _DistanceField.ColumnCount), 
-                1.0f / (_DistanceField.SliceHeight * _DistanceField.RowCount)
-            ));
         }
 
-        private VertexPositionVector4[] ClearDistanceFieldSliceVertices = new VertexPositionVector4[4];
+        // HACK: Make sure this is big enough to accommodate the maximum number of slices in a distance field
+        private VertexPositionVector4[] ClearDistanceFieldSliceVertices = new VertexPositionVector4[1024];
 
         private float GetClearValueForSlice (float sliceZ) {
             if (!Environment.EnableGroundShadows)
@@ -346,18 +342,20 @@ namespace Squared.Illuminant {
             var sliceZValues = GetSliceVector(firstSliceIndex);
             var color = GetClearValue(sliceZValues);
 
-            // FIXME: Minor race condition if the distance field's size changes while this buffer is in use
-            ClearDistanceFieldSliceVertices[0] = new VertexPositionVector4(new Vector3(0, 0, 0), color);
-            ClearDistanceFieldSliceVertices[1] = new VertexPositionVector4(new Vector3(_DistanceField.VirtualWidth, 0, 0), color);
-            ClearDistanceFieldSliceVertices[2] = new VertexPositionVector4(new Vector3(_DistanceField.VirtualWidth, _DistanceField.VirtualHeight, 0), color);
-            ClearDistanceFieldSliceVertices[3] = new VertexPositionVector4(new Vector3(0, _DistanceField.VirtualHeight, 0), color);
+            // We do one draw per group of 3 slices, so we need to make sure we don't reuse the same vertices for multiple slices
+            // If we don't do this we get incorrect initial Z values for each slice and everything goes to hell
+            int i = (firstSliceIndex / 3) * 4;
+            ClearDistanceFieldSliceVertices[i + 0] = new VertexPositionVector4(new Vector3(0, 0, 0), color);
+            ClearDistanceFieldSliceVertices[i + 1] = new VertexPositionVector4(new Vector3(_DistanceField.VirtualWidth, 0, 0), color);
+            ClearDistanceFieldSliceVertices[i + 2] = new VertexPositionVector4(new Vector3(_DistanceField.VirtualWidth, _DistanceField.VirtualHeight, 0), color);
+            ClearDistanceFieldSliceVertices[i + 3] = new VertexPositionVector4(new Vector3(0, _DistanceField.VirtualHeight, 0), color);
 
             using (var batch = PrimitiveBatch<VertexPositionVector4>.New(
                 container, layer, IlluminantMaterials.ClearDistanceFieldSlice, BeginClearSliceBatch, clearTexture
             ))
                 batch.Add(new PrimitiveDrawCall<VertexPositionVector4>(
                     PrimitiveType.TriangleList,
-                    ClearDistanceFieldSliceVertices, 0, 4, indices, 0, 2
+                    ClearDistanceFieldSliceVertices, i, 4, indices, 0, 2
                 ));
         }
 

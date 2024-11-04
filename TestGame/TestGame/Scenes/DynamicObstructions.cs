@@ -32,7 +32,8 @@ namespace TestGame.Scenes {
             ShowDistanceField,
             Deterministic,
             EfficientUpdates,
-            Orthographic;
+            Orthographic,
+            GroundShadows;
 
         Slider DistanceFieldResolution;
 
@@ -45,6 +46,7 @@ namespace TestGame.Scenes {
             Deterministic.Value = false;
             DistanceFieldResolution.Value = 0.5f;
             EfficientUpdates.Value = true;
+            GroundShadows.Value = true;
 
             ShowGBuffer.Key = Keys.G;
             ShowDistanceField.Key = Keys.D;
@@ -121,7 +123,7 @@ namespace TestGame.Scenes {
 
             DistanceField = new DynamicDistanceField(
                 Game.RenderCoordinator, 1024, 1024, Environment.MaximumZ,
-                64, DistanceFieldResolution.Value
+                9, DistanceFieldResolution.Value
             );
             if (Renderer != null) {
                 Renderer.DistanceField = DistanceField;
@@ -142,7 +144,7 @@ namespace TestGame.Scenes {
                 new RendererConfiguration(
                     1024, 1024, true
                 ) {
-                    MaximumFieldUpdatesPerFrame = 4,
+                    MaximumFieldUpdatesPerFrame = 6,
                     DefaultQuality = {
                         MinStepSize = 1f,
                         LongStepFactor = 0.5f,
@@ -183,7 +185,7 @@ namespace TestGame.Scenes {
                 Pillar(new Vector2(x, 540 + (x / 24.0f)));
 
             foreach (var o in Environment.Obstructions)
-                o.IsDynamic = false;
+                o.IsDynamic = true;
 
             var count = 1024;
             var size = 16;
@@ -211,6 +213,7 @@ namespace TestGame.Scenes {
 
             var scaleRatio = 1.0f;
 
+            Environment.EnableGroundShadows = GroundShadows;
             Renderer.Configuration.TwoPointFiveD = Orthographic;
             Renderer.Configuration.PerspectiveProjection = !Orthographic;
             Renderer.Configuration.SetScale(scaleRatio);

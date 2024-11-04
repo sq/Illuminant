@@ -12,9 +12,7 @@ sampler   ClearSampler : register(s0) {
     AddressU = CLAMP;
     AddressV = CLAMP;
 };
-
-uniform const float2 ClearInverseScale;
-uniform const float4 ClearMultiplier;
+uniform const float2 ClearTextureSize <string sizeInPixelsOf="ClearTexture"; bool hidden=true;>;
 
 void DistanceVertexShader (
     in    float3 position : POSITION0, // x, y, z
@@ -29,11 +27,11 @@ void ClearPixelShader (
     inout float4 color : COLOR0,
     ACCEPTS_VPOS
 ) {
-    PREFER_BRANCH
-    if (ClearMultiplier.a > 0) {
-        float2 vp = (GET_VPOS + 0.5) * ClearInverseScale;
+    [branch]
+    if (ClearTextureSize.x > 1) {
+        float2 vp = (GET_VPOS + 0.5) / ClearTextureSize;
         float4 tex = tex2Dlod(ClearSampler, float4(vp.x, vp.y, 0, 0));
-        color = tex * ClearMultiplier;
+        color = tex;
     }
 }
 
