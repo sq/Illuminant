@@ -322,9 +322,10 @@ namespace Squared.Illuminant {
         private VertexPositionVector4[] ClearDistanceFieldSliceVertices = new VertexPositionVector4[1024];
 
         private float GetClearValueForSlice (float sliceZ) {
-            if (!Environment.EnableGroundShadows)
-                return DistanceField.GetClearValue().X;
-            return sliceZ - Environment.GroundZ;
+            // HACK: We could generate correct distance values for the ground plane, but it looks better to mathematically
+            //  compute distance-to-ground during actual light rasterization instead - it's more accurate and not that expensive.
+            return DistanceField.GetClearValue().X;
+            // return sliceZ - Environment.GroundZ;
         }
 
         private Vector4 GetClearValue (Vector4 sliceZ) =>
@@ -344,6 +345,8 @@ namespace Squared.Illuminant {
 
             // We do one draw per group of 3 slices, so we need to make sure we don't reuse the same vertices for multiple slices
             // If we don't do this we get incorrect initial Z values for each slice and everything goes to hell
+            // Note that if we update the static and dynamic partitions in the same frame, we'll reuse these same indices for
+            //  both partitions, but that's... probably okay?
             int i = (firstSliceIndex / 3) * 4;
             ClearDistanceFieldSliceVertices[i + 0] = new VertexPositionVector4(new Vector3(0, 0, 0), color);
             ClearDistanceFieldSliceVertices[i + 1] = new VertexPositionVector4(new Vector3(_DistanceField.VirtualWidth, 0, 0), color);
@@ -416,6 +419,7 @@ namespace Squared.Illuminant {
             var sliceZ = GetSliceVector(firstVirtualIndex);
 
             var numTypes = (int)LightObstruction.MAX_Type + 1;
+            // FIXME: Optimize out this allocation
             var batches  = new NativeBatch[numTypes];
 
             if (SetupDistanceFieldDistanceFunction == null)

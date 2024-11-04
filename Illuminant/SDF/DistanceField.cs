@@ -226,12 +226,14 @@ namespace Squared.Illuminant {
         }
 
         public virtual void Invalidate () {
-            for (var i = 0; i < SliceCount; i++) {
-                if (SliceInfo.InvalidSlices.Contains(i))
-                    continue;
+            for (var i = 0; i < SliceCount; i++)
+                InvalidateSlice(i);
+        }
 
-                SliceInfo.InvalidSlices.Add(i);
-            }
+        public virtual void InvalidateSlice (int index) {
+            if (SliceInfo.InvalidSlices.Contains(index))
+                return;
+            SliceInfo.InvalidSlices.Add(index);
         }
 
         public virtual void ValidateSlice (int index) {
@@ -283,10 +285,19 @@ namespace Squared.Illuminant {
 
         public void Invalidate (bool invalidateStatic) {
             for (var i = 0; i < SliceCount; i++) {
-                if (!SliceInfo.InvalidSlices.Contains(i))
-                    SliceInfo.InvalidSlices.Add(i);
-                if (invalidateStatic && !StaticSliceInfo.InvalidSlices.Contains(i))
-                    StaticSliceInfo.InvalidSlices.Add(i);
+                InvalidateSlice(i, true);
+                if (invalidateStatic)
+                    InvalidateSlice(i, false);
+            }
+        }
+
+        public void InvalidateSlice (int index, bool dynamic) {
+            if (dynamic) {
+                if (!SliceInfo.InvalidSlices.Contains(index))
+                    SliceInfo.InvalidSlices.Add(index);
+            } else {
+                if (!StaticSliceInfo.InvalidSlices.Contains(index))
+                    StaticSliceInfo.InvalidSlices.Add(index);
             }
         }
 
@@ -303,6 +314,11 @@ namespace Squared.Illuminant {
                 SliceInfo.ValidSliceCount = Math.Min(Math.Max(SliceInfo.ValidSliceCount, index), StaticSliceInfo.ValidSliceCount);
             else
                 StaticSliceInfo.ValidSliceCount = Math.Max(StaticSliceInfo.ValidSliceCount, index);
+        }
+
+        public override void InvalidateSlice (int index) {
+            InvalidateSlice(index, false);
+            InvalidateSlice(index, true);
         }
 
         public override void ValidateSlice (int index) {

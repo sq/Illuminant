@@ -144,7 +144,7 @@ namespace TestGame.Scenes {
                 new RendererConfiguration(
                     1024, 1024, true
                 ) {
-                    MaximumFieldUpdatesPerFrame = 6,
+                    MaximumFieldUpdatesPerFrame = 9,
                     DefaultQuality = {
                         MinStepSize = 1f,
                         LongStepFactor = 0.5f,
@@ -185,7 +185,7 @@ namespace TestGame.Scenes {
                 Pillar(new Vector2(x, 540 + (x / 24.0f)));
 
             foreach (var o in Environment.Obstructions)
-                o.IsDynamic = true;
+                o.IsDynamic = false;
 
             var count = 1024;
             var size = 16;
@@ -199,7 +199,7 @@ namespace TestGame.Scenes {
                     IsDynamic = true
                 };
                 Obstructions.Add(obs);
-                Environment.Obstructions.Add(obs);
+                // Environment.Obstructions.Add(obs);
             }
         }
 
@@ -292,8 +292,13 @@ namespace TestGame.Scenes {
                 
                 var time = (float)Time.Seconds;
 
+                /*
                 if (!EfficientUpdates)
                     Renderer.DistanceField.Invalidate();
+                */
+                Renderer.DistanceField.InvalidateSlice(0);
+                Renderer.DistanceField.InvalidateSlice(1);
+                Renderer.DistanceField.InvalidateSlice(2);
 
                 if (!Deterministic) {
                     for (int i = 0; i < Centers.Length; i++) {
