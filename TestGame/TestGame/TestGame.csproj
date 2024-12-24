@@ -67,6 +67,7 @@
     <Compile Include="Scenes\Emoji.cs" />
     <Compile Include="Scenes\HLSpritesSolve.cs" />
     <Compile Include="Scenes\HLSpritesHeight.cs" />
+    <Compile Include="Scenes\AV1.cs" />
     <Compile Include="Scenes\ShapeInsets.cs" />
     <Compile Include="Scenes\VolumetricLight.cs" />
     <Compile Include="Scenes\SDFText.cs" />
@@ -101,6 +102,10 @@
       <Project>{36463aee-e309-43a6-bcfa-a69944390aa7}</Project>
       <Name>PRGUI</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\..\Fracture\Squared\Render.AV1\Squared.Render.AV1.csproj">
+      <Project>{cfb603c1-8371-460d-ba60-91e697eae1c7}</Project>
+      <Name>Squared.Render.AV1</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\Illuminant\Illuminant.csproj">
       <Project>{E86544AD-5974-4FEE-B96F-71331EFAB054}</Project>
       <Name>Illuminant</Name>
@@ -129,6 +134,14 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\TestGameContent\Sparks-5994fps-AV1-10bit-1920x1080-2194kbps.obu">
+      <Link>Sparks-5994fps-AV1-10bit-1920x1080-2194kbps.obu</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="..\TestGameContent\test.obu">
+      <Link>test.obu</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="app.config" />
   </ItemGroup>
   <PropertyGroup>

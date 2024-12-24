@@ -132,7 +132,7 @@ namespace TestGame.Scenes {
             if (Running)
                 System.Update(frame, -2);
 
-            Game.RenderCoordinator.BeforePrepare(() => {
+            Game.RenderCoordinator.BeforePrepare((frame) => {
                 Game.IlluminantMaterials.ScreenSpaceVectorWarp.Parameters["FieldIntensity"].SetValue(
                     new Vector3(FieldIntensity)
                 );

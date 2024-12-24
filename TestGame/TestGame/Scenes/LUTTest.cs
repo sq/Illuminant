@@ -68,7 +68,7 @@ namespace TestGame.Scenes {
             LUTIndex2.Max = lut2?.RowCount - 1;
             var l2w = LUT2Weight.Value;
 
-            Game.RenderCoordinator.BeforePrepare(() => {
+            Game.RenderCoordinator.BeforePrepare((frame) => {
                 Game.Materials.SetLUTs(m, lut1, lut2, l2w, (int)LUTIndex1.Value, (int)LUTIndex2.Value);
             });
 

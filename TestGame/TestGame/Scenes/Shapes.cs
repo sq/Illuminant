@@ -59,9 +59,11 @@ namespace TestGame.Scenes {
 
         [Group("Fill")]
         Toggle RepeatFill, UseRamp, Hollow;
+            // DirectionalBevel;
         [Group("Fill")]
         Slider FillOffset, FillRangeStart, FillSize, FillAngle, FillPower, RampVOffset, FillOpacity,
-            GradientCenterX, GradientCenterY;
+            GradientCenterX, GradientCenterY, BevelRadius;
+            // BevelDirection;
 
         [Group("Shadow")]
         Toggle ShadowInside;
@@ -192,6 +194,10 @@ namespace TestGame.Scenes {
             GradientCenterX.Min = GradientCenterY.Min = 0f;
             GradientCenterX.Max = GradientCenterY.Max = 1f;
             GradientCenterX.Value = GradientCenterY.Value = 0.5f;
+            BevelRadius.Min = -64f;
+            BevelRadius.Max = 64f;
+            // BevelDirection.Min = 0f;
+            // BevelDirection.Max = 360f;
         }
 
         public override void LoadContent () {
@@ -222,7 +228,7 @@ namespace TestGame.Scenes {
                 viewTransform: vt
             );
 
-            var ellipseGradientCenter = new Vector2(GradientCenterX, GradientCenterY);
+            var gradientCenter = new Vector2(GradientCenterX, GradientCenterY);
             var fillMode = (RasterFillMode)Enum.Parse(typeof(RasterFillMode), FillMode.Value);
 
             Quaternion? orientation = Quaternion.CreateFromYawPitchRoll(
@@ -280,7 +286,10 @@ namespace TestGame.Scenes {
                 FillRange = new Vector2(FillRangeStart.Value, FillRangeStart.Value + FillSize.Value),
                 Repeat = RepeatFill.Value,
                 Angle = FillAngle,
-                GradientPower = FillPower.Value
+                GradientPower = FillPower.Value,
+                GradientCenter = gradientCenter,
+                BevelRadius = BevelRadius,
+                // BevelDirection = DirectionalBevel ? BevelDirection : (float?)null,
             };
 
             ir.RasterizeEllipse(
@@ -296,7 +305,6 @@ namespace TestGame.Scenes {
                 shadow: shadow,
                 rampTexture: UseRamp ? RampTexture : null,
                 rampUVOffset: new Vector2(0, RampVOffset),
-                gradientCenter: ellipseGradientCenter,
                 orientation: orientation
             );
 
@@ -379,7 +387,7 @@ namespace TestGame.Scenes {
                 orientation: orientation
             );
 
-            ir.RasterizeEllipse(new Vector2(200, 860), Vector2.One * 3, Color.Yellow, layer: 4, gradientCenter: ellipseGradientCenter);
+            ir.RasterizeEllipse(new Vector2(200, 860), Vector2.One * 3, Color.Yellow, layer: 4);
 
             ir.RasterizeStar(
                 new Vector2(200, 600),
@@ -478,7 +486,6 @@ namespace TestGame.Scenes {
                 new Vector2(Width - 128, 128), new Vector2(64f), Color.Orange * 1f, Color.Red * 0f, layer: 6,
                 shadow: shadow,
                 blendState: RenderStates.RasterShapeMaxBlend,
-                gradientCenter: ellipseGradientCenter,
                 orientation: orientation
             );
 
