@@ -546,12 +546,6 @@ namespace Squared.Illuminant.Particles {
         }
 
         private void Coordinator_DeviceReset (object sender, EventArgs e) {
-            ResetCount += 1;
-            foreach (var sys in Systems)
-                sys.NotifyDeviceReset();
-            ResetInternalState();
-            CreateInternalState(Coordinator);
-            // FillIndexBuffer();
         }
 
         private void CreateInternalState (RenderCoordinator coordinator) {

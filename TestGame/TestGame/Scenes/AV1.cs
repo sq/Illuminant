@@ -24,7 +24,7 @@ namespace TestGame.Scenes {
         PausableTimeProvider PlaybackTimer;
 
         Toggle Pause;
-        Slider Framerate;
+        Slider Framerate, Y, Brightness;
         AV1Video Video;
         long NextFrameWhen = 0;
 
@@ -35,10 +35,16 @@ namespace TestGame.Scenes {
             Framerate.Min = 5f;
             Framerate.Max = 120f;
             Framerate.Value = 59.94f;
+            Y.Min = 0.001f;
+            Y.Max = 2.0f;
+            Y.Value = 1f;
+            Brightness.Min = 0.001f;
+            Brightness.Max = 4.0f;
+            Brightness.Value = 1f;
         }
 
         public override void LoadContent () {
-            Video = new AV1Video(Game.RenderCoordinator, "Sparks-5994fps-AV1-10bit-1920x1080-2194kbps.obu", tenBit: true);
+            Video = new AV1Video(Game.RenderCoordinator, "Sparks-5994fps-AV1-10bit-1920x1080-2194kbps.obu");
             PlaybackTimer = new(Time.DefaultTimeProvider, 0);
             NextFrameWhen = 0;
         }
@@ -70,7 +76,7 @@ namespace TestGame.Scenes {
 
             var textures = new TextureSet(Video.YTexture, Video.UTexture);
             ir.Parameters.Add("ThirdTexture", Video.VTexture);
-            ir.Draw(textures, Vector2.Zero, layer: 1, scale: Vector2.One, multiplyColor: mc, material: material);
+            ir.Draw(textures, Vector2.Zero, layer: 1, scale: Vector2.One, multiplyColor: mc, material: material, userData: Video.RescaleFactor * new Vector4(1, Y, Brightness, 1));
         }
 
         public override void Update (GameTime gameTime) {

@@ -115,9 +115,12 @@ namespace TestGame {
         public TestGame () {
             // UniformBinding.ForceCompatibilityMode = true;
 
+            // SDL3.SDL.SDL_SetHint("FNA3D_ENABLE_HDR_COLORSPACE", "1");
+
             Graphics = new GraphicsDeviceManager(this);
             Graphics.GraphicsProfile = GraphicsProfile.HiDef;
             Graphics.PreferredBackBufferFormat = SurfaceFormat.Color;
+            // Graphics.PreferredBackBufferFormat = SurfaceFormat.HdrBlendable;
             Graphics.PreferredDepthStencilFormat = DepthFormat.Depth24Stencil8;
             Graphics.PreferredBackBufferWidth = 1920;
             Graphics.PreferredBackBufferHeight = 1080;
