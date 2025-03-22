@@ -556,8 +556,6 @@ namespace Squared.Illuminant {
 
             Environment = environment;
             Probes = new LightProbeCollection(Configuration.MaximumLightProbeCount);
-
-            Coordinator.DeviceReset += Coordinator_DeviceReset;
         }
 
         private void InitBuffers (RenderCoordinator coordinator) {
@@ -615,10 +613,6 @@ namespace Squared.Illuminant {
                 // FIXME: This would be convenient, but it's possible you'd want to reuse an existing field unmodified? Maybe???
                 // InvalidateFields();
             }
-        }
-
-        private void Coordinator_DeviceReset (object sender, EventArgs e) {
-            InitBuffers(Coordinator);
         }
 
         private void FillIndexBuffer () {
