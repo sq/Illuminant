@@ -28,9 +28,14 @@ namespace Squared.Illuminant {
         public readonly int        MaximumLightProbeCount;
 
         /// <summary>
-        /// Uses a high-precision g-buffer and internal lightmap.
+        /// Uses a high-precision internal lightmap.
         /// </summary>
         public readonly bool       HighQuality;
+
+        /// <summary>
+        /// Uses a high-precision g-buffer.
+        /// </summary>
+        public readonly bool       HighQualityGBuffer;
 
         /// <summary>
         /// Performs a pre-pass to mask out invisible parts of the scene for 
@@ -180,9 +185,11 @@ namespace Squared.Illuminant {
             bool enableBrightnessEstimation = false,
             bool stencilCulling = false,
             int ringBufferSize = 2,
-            int maximumLightProbeCount = 256
+            int maximumLightProbeCount = 256,
+            bool highQualityGBuffer = true
         ) {
             HighQuality = highQuality;
+            HighQualityGBuffer = highQualityGBuffer;
             StencilCulling = stencilCulling;
             AdjustMaximumRenderSize(maxWidth, maxHeight);
             EnableBrightnessEstimation = enableBrightnessEstimation;

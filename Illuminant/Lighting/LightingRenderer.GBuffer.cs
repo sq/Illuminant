@@ -46,7 +46,7 @@ namespace Squared.Illuminant {
                 if (_GBuffer == null) {
                     _GBuffer = new GBuffer(
                         Coordinator, width, height,
-                        Configuration.HighQuality
+                        Configuration.HighQualityGBuffer
                     );
                     if (!string.IsNullOrWhiteSpace(_Name))
                         _GBuffer.Texture.SetName(_Name);
