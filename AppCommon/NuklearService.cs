@@ -204,8 +204,6 @@ namespace Framework {
             TextWidthCache.Clear();
         }
 
-        private bool TextAdvancePending = false;
-
         private void _QueryFontGlyphF (NkHandle handle, float font_height, nk_user_font_glyph* glyph, uint codepoint, uint next_codepoint) {
             *glyph = default(nk_user_font_glyph);
 
@@ -338,9 +336,6 @@ namespace Framework {
             if (color.A <= 0)
                 return;
 
-            if (TextAdvancePending)
-                PendingRenderer.Layer += 1;
-
             CurrentPaintIndex++;
             // color = new Color((CurrentPaintIndex % 16) * 8, (CurrentPaintIndex / 16) * 8, (CurrentPaintIndex / 128) * 8, 255);
 
@@ -359,7 +354,7 @@ namespace Framework {
                     break;
             }
 
-            TextAdvancePending = false;
+            PendingRenderer.Layer += 1;
         }
 
         static int hack = 0;
@@ -389,16 +384,13 @@ namespace Framework {
                         layout.DrawCalls, material: Game.TextMaterial
                     );
                 }
-                TextAdvancePending = true;
             }
         }
 
         private void RenderCommand (nk_command_scissor* c) {
             var rect = new Rectangle(c->x, c->y, c->w, c->h);
-            PendingRenderer.Layer += 1;
             PendingRenderer.SetScissor(rect);
             PendingRenderer.Layer += 1;
-            TextAdvancePending = false;
         }
 
         private void RenderCommand (nk_command_circle_filled* c) {
@@ -443,8 +435,6 @@ namespace Framework {
         }
 
         private void RenderCommand (nk_command_rect_multi_color* c) {
-            if (TextAdvancePending)
-                PendingRenderer.Layer += 1;
             PendingRenderer.GradientFillRectangle(
                 ConvertBounds(c->x, c->y, c->w, c->h),
                 ConvertColor(c->left),
@@ -452,12 +442,15 @@ namespace Framework {
                 ConvertColor(c->bottom),
                 ConvertColor(c->right)
             );
-            TextAdvancePending = false;
         }
 
         private HashSet<string> WarnedCommands = new HashSet<string>();
+        private nk_command_type LastCommandType;
 
         private void HighLevelRenderCommand (nk_command* c) {
+            if (c->ctype != LastCommandType)
+                PendingRenderer.Layer++;
+
             switch (c->ctype) {
                 case nk_command_type.NK_COMMAND_RECT:
                     RenderCommand((nk_command_rect*)c);
@@ -527,6 +520,7 @@ namespace Framework {
                 }
 
                 CurrentPaintIndex = 0;
+                LastCommandType = (nk_command_type)0xFFFFu;
                 NuklearAPI.Render(Context, HighLevelRenderCommand);
             }
         }
