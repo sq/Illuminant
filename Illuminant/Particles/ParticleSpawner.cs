@@ -193,7 +193,7 @@ namespace Squared.Illuminant.Particles.Transforms {
             TotalSpawned += actualSpawnCount;
         }
 
-        internal void AddError (int numUnspawned) {
+        public void AddError (int numUnspawned) {
             RateError += numUnspawned;
         }
 

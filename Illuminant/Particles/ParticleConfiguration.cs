@@ -282,6 +282,11 @@ namespace Squared.Illuminant.Particles {
         public Vector4       ZFormula = Vector4.Zero;
 
         /// <summary>
+        /// Specifies the contribution of a particle's z position element to the size of the particle.
+        /// </summary>
+        public float SizeFromZ = 0f;
+
+        /// <summary>
         /// Specifies a depth/stencil mode to use for rasterizing particles.
         /// You can use this to depth test or stencil test particles.
         /// </summary>

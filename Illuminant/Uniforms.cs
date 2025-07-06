@@ -242,6 +242,7 @@ namespace Squared.Illuminant.Uniforms {
         Vector4 SizeFactorAndPosition;
         Vector4 Scale;
         Vector4 ZFormula;
+        Vector4 ZConfiguration;
 
         public RasterizeParticleSystem (
             Particles.ParticleEngineConfiguration engine,
@@ -284,6 +285,7 @@ namespace Squared.Illuminant.Uniforms {
             GlobalColor = gcolor;
 
             ZFormula = configuration.ZFormula;
+            ZConfiguration = new Vector4(configuration.SizeFromZ, 0, 0, 0);
         }
     }
 }

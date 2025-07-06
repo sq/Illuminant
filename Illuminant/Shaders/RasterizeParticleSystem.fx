@@ -17,6 +17,8 @@ struct RasterizeParticleSystemSettings {
     float4 SizeFactorAndPosition;
     float4 Scale;
     float4 ZFormula;
+    // size from z, unused, unused, unused
+    float4 ZConfiguration;
 };
 
 uniform RasterizeParticleSystemSettings RasterizeSettings;
@@ -82,6 +84,7 @@ void VS_PosVelAttr(
     angle = fmod(angle, 2 * PI);
 
     float2 size = renderData.x * System.TexelAndSize.zw * RasterizeSettings.SizeFactorAndPosition.xy;
+    size *= (1.0 + (position.z * RasterizeSettings.ZConfiguration.x));
     float2 nonRotatedUnitCorner;
     float3 rotatedCorner = ComputeRotatedAndNonRotatedCorner(cornerWeights, angle, size, nonRotatedUnitCorner);
     float2 positionXy = nonRotatedUnitCorner;
