@@ -84,7 +84,7 @@ void VS_PosVelAttr(
     angle = fmod(angle, 2 * PI);
 
     float2 size = renderData.x * System.TexelAndSize.zw * RasterizeSettings.SizeFactorAndPosition.xy;
-    size *= (1.0 + (position.z * RasterizeSettings.ZConfiguration.x));
+    size *= max(0, 1.0 + (position.z * RasterizeSettings.ZConfiguration.x));
     float2 nonRotatedUnitCorner;
     float3 rotatedCorner = ComputeRotatedAndNonRotatedCorner(cornerWeights, angle, size, nonRotatedUnitCorner);
     float2 positionXy = nonRotatedUnitCorner;

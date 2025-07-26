@@ -294,7 +294,7 @@ namespace Squared.Illuminant.Particles {
                 throw new Exception("Too many liveness queries");
             }
 
-            lock (Coordinator.UseResourceLock) {
+            {
                 var wt = LivenessQueryRTs.AcquireWriteTarget();
                 var nextBuffer = wt.Target;
                 var previousBuffer = wt.Previous;
@@ -483,8 +483,6 @@ namespace Squared.Illuminant.Particles {
         }
 
         public void ChangePropertiesAndReset (int newSize) {
-            Coordinator.WaitForActiveDraws();
-
             Configuration.ChunkSize = newSize;
 
             foreach (var s in Systems)
@@ -496,7 +494,7 @@ namespace Squared.Illuminant.Particles {
 
         private void GenerateRandomnessTexture (int? seed = null) {
             var sw = Stopwatch.StartNew();
-            lock (Coordinator.CreateResourceLock) {
+            {
                 // TODO: HalfVector4?
                 RandomnessTexture = new Texture2D(
                     Coordinator.Device,
@@ -549,7 +547,7 @@ namespace Squared.Illuminant.Particles {
         }
 
         private void CreateInternalState (RenderCoordinator coordinator) {
-            lock (coordinator.CreateResourceLock) {
+            {
                 TriIndexBuffer = new IndexBuffer(coordinator.Device, IndexElementSize.SixteenBits, 3, BufferUsage.WriteOnly);
                 TriIndexBuffer.SetData(TriIndices);
 

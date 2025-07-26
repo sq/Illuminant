@@ -16,12 +16,7 @@ namespace Squared.Illuminant {
     }
 
     public class DistanceField : IDisposable {
-#if FNA
         public const int MaxSurfaceSize = 8192;
-#else
-        public const int MaxSurfaceSize = 4096;
-#endif
-
         public const int DefaultMaximumEncodedDistance = 128;
 
         public const SurfaceFormat Format = SurfaceFormat.Rgba64;
@@ -42,7 +37,6 @@ namespace Squared.Illuminant {
         public float ZOffset;
 
         internal bool NeedClear;
-        private readonly object UseLock;
 
         internal readonly SliceInfo SliceInfo = new SliceInfo();
 
@@ -114,15 +108,12 @@ namespace Squared.Illuminant {
                 ColumnCount = newColumnCount;
             }
 
-            UseLock = coordinator.UseResourceLock;
-
-            lock (coordinator.CreateResourceLock)
-                Texture = new AutoRenderTarget(
-                    coordinator,
-                    SliceWidth * ColumnCount,
-                    SliceHeight * RowCount,
-                    false, Format, name: "DistanceField.Texture"
-                );
+            Texture = new AutoRenderTarget(
+                coordinator,
+                SliceWidth * ColumnCount,
+                SliceHeight * RowCount,
+                false, Format, name: "DistanceField.Texture"
+            );
 
             coordinator.DeviceReset += Coordinator_DeviceReset;
             NeedClear = true;
@@ -197,10 +188,7 @@ namespace Squared.Illuminant {
             var data = new byte[size];
 
             var tex = Texture.Get();
-
-            lock (UseLock)
-                tex.GetData(data);
-
+            tex.GetData(data);
             output.Write(data, 0, size);
         }
 
@@ -217,9 +205,7 @@ namespace Squared.Illuminant {
                 throw new Exception("Truncated file");
 
             var tex = Texture.Get();
-
-            lock (UseLock)
-                tex.SetData(data);
+            tex.SetData(data);
 
             SliceInfo.InvalidSlices.Clear();
             // FIXME: Is this right?
@@ -268,14 +254,13 @@ namespace Squared.Illuminant {
             int virtualWidth, int virtualHeight, float virtualDepth,
             int sliceCount, double requestedResolution = 1, int maximumEncodedDistance = DefaultMaximumEncodedDistance
         ) : base (coordinator, virtualWidth, virtualHeight, virtualDepth, sliceCount, requestedResolution, maximumEncodedDistance) {
-            lock (coordinator.CreateResourceLock)
-                StaticTexture = new AutoRenderTarget(
-                    coordinator,
-                    SliceWidth * ColumnCount, 
-                    SliceHeight * RowCount,
-                    false, SurfaceFormat.Rgba64,
-                    name: "DynamicDistanceField"
-                );
+            StaticTexture = new AutoRenderTarget(
+                coordinator,
+                SliceWidth * ColumnCount, 
+                SliceHeight * RowCount,
+                false, SurfaceFormat.Rgba64,
+                name: "DynamicDistanceField"
+            );
         }
 
         public override void Invalidate () {

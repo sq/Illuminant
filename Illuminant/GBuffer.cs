@@ -27,16 +27,15 @@ namespace Squared.Illuminant {
             InverseSize = new Vector2(1.0f / Width, 1.0f / Height);
             Coordinator = coordinator;
 
-            lock (coordinator.CreateResourceLock)
-                Texture = new AutoRenderTarget(
-                    coordinator, 
-                    width, height, false, 
-                    highQuality
-                        ? SurfaceFormat.Vector4
-                        : SurfaceFormat.HalfVector4,
-                    DepthFormat.Depth24, 0,
-                    name: "GBuffer"
-                );
+            Texture = new AutoRenderTarget(
+                coordinator, 
+                width, height, false, 
+                highQuality
+                    ? SurfaceFormat.Vector4
+                    : SurfaceFormat.HalfVector4,
+                DepthFormat.Depth24, 0,
+                name: "GBuffer"
+            );
         }
 
         public void Dispose () {

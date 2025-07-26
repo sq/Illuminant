@@ -251,11 +251,10 @@ namespace Squared.Illuminant {
                     }
 
                     if (LightVertexBuffer == null) {
-                        lock (Parent.Coordinator.CreateResourceLock)
-                            LightVertexBuffer = new DynamicVertexBuffer(
-                                Parent.Coordinator.Device, typeof(LightVertex),
-                                vertexCapacity, BufferUsage.WriteOnly
-                            );
+                        LightVertexBuffer = new DynamicVertexBuffer(
+                            Parent.Coordinator.Device, typeof(LightVertex),
+                            vertexCapacity, BufferUsage.WriteOnly
+                        );
                     }
 
                     return vertexCapacity;
@@ -363,8 +362,7 @@ namespace Squared.Illuminant {
                 }
 
                 if (VertexBuffer == null) {
-                    lock (Renderer.Coordinator.CreateResourceLock)
-                        VertexBuffer = new DynamicVertexBuffer(Renderer.Coordinator.Device, typeof(DistanceFunctionVertex), Vertices.Length, BufferUsage.WriteOnly);
+                    VertexBuffer = new DynamicVertexBuffer(Renderer.Coordinator.Device, typeof(DistanceFunctionVertex), Vertices.Length, BufferUsage.WriteOnly);
 
                     IsDirty = true;
                 }
@@ -486,7 +484,7 @@ namespace Squared.Illuminant {
                 name: "Lightmaps"
             );
 
-            lock (Coordinator.CreateResourceLock) {
+            {
                 _LightProbePositions = new Texture2D(
                     coordinator.Device,
                     Configuration.MaximumLightProbeCount,
@@ -559,26 +557,19 @@ namespace Squared.Illuminant {
         }
 
         private void InitBuffers (RenderCoordinator coordinator) {
-            lock (coordinator.CreateResourceLock) {
-                if (QuadIndexBuffer == null)
-                    QuadIndexBuffer = new IndexBuffer(
-                        coordinator.Device, IndexElementSize.SixteenBits, 6 * 6, BufferUsage.WriteOnly
-                    );
-                if (CornerBuffer == null)
-                    CornerBuffer = new VertexBuffer(
-                        coordinator.Device, typeof(CornerVertex), 4, BufferUsage.WriteOnly
-                    );
-                if (SphereBuffer == null)
-                    SphereBuffer = new VertexBuffer(
-                        coordinator.Device, typeof(CornerVertex), 12, BufferUsage.WriteOnly
-                    );
-            }
+            QuadIndexBuffer = new IndexBuffer(
+                coordinator.Device, IndexElementSize.SixteenBits, 6 * 6, BufferUsage.WriteOnly
+            );
+            CornerBuffer = new VertexBuffer(
+                coordinator.Device, typeof(CornerVertex), 4, BufferUsage.WriteOnly
+            );
+            SphereBuffer = new VertexBuffer(
+                coordinator.Device, typeof(CornerVertex), 12, BufferUsage.WriteOnly
+            );
 
-            lock (coordinator.UseResourceLock) {
-                FillIndexBuffer();
-                FillCornerBuffer();
-                FillSphereBuffer();
-            }
+            FillIndexBuffer();
+            FillCornerBuffer();
+            FillSphereBuffer();
         }
 
         public string Name {

@@ -39,11 +39,10 @@ namespace Squared.Illuminant {
                     if ((buffer == null) || (buffer.Length < count))
                         buffer = Renderer._LuminanceReadbackArray = new float[count];
 
-                    lock (Renderer.Coordinator.UseResourceLock)
-                        Texture.GetDataFast(
-                            LevelIndex, new Rectangle(0, 0, Width, Height),
-                            buffer, 0, count
-                        );
+                    Texture.GetDataFast(
+                        LevelIndex, new Rectangle(0, 0, Width, Height),
+                        buffer, 0, count
+                    );
 
                     Histogram.Lock.EnterWriteLock();
                     try {

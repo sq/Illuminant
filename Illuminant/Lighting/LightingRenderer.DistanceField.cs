@@ -225,12 +225,10 @@ namespace Squared.Illuminant {
                 if (cacheData == null) {
                     cacheData = new HeightVolumeCacheData(hv);
                     
-                    lock (Coordinator.CreateResourceLock)
-                        cacheData.VertexDataTexture = new Texture2D(Coordinator.Device, p.Count, 1, false, SurfaceFormat.Vector4) {
-                            Name = "LightingRenderer.HeightVolumeCacheData.VertexDataTexture",
-                        };
+                    cacheData.VertexDataTexture = new Texture2D(Coordinator.Device, p.Count, 1, false, SurfaceFormat.Vector4) {
+                        Name = "LightingRenderer.HeightVolumeCacheData.VertexDataTexture",
+                    };
 
-                    lock (Coordinator.UseResourceLock)
                     using (var vertices = BufferPool<Vector4>.Allocate(p.Count)) {
                         for (var j = 0; j < p.Count; j++) {
                             var edgeA = p[j];

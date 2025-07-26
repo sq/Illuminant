@@ -93,8 +93,7 @@ namespace Squared.Illuminant {
                 foreach (var probe in Probes)
                     buffer.Data[x++] = new Vector4(probe._Position, 1);
 
-                lock (Coordinator.UseResourceLock)
-                    _LightProbePositions.SetData(buffer.Data, 0, Configuration.MaximumLightProbeCount);
+                _LightProbePositions.SetData(buffer.Data, 0, Configuration.MaximumLightProbeCount);
 
                 x = 0;
 
@@ -106,16 +105,11 @@ namespace Squared.Illuminant {
                         buffer.Data[x++] = new Vector4(0, 0, 0, probe._EnableShadows ? 1 : 0);
                 }
 
-                lock (Coordinator.UseResourceLock)
-                    _LightProbeNormals.SetData(buffer.Data, 0, Configuration.MaximumLightProbeCount);
+                _LightProbeNormals.SetData(buffer.Data, 0, Configuration.MaximumLightProbeCount);
             }
         }
 
-#if FNA
         private struct LightProbeDownloadTask : IMainThreadWorkItem {
-#else
-        private struct LightProbeDownloadTask : IWorkItem {
-#endif
             public LightingRenderer Renderer;
             public RenderTarget2D Texture;
             public long Timestamp;
@@ -130,11 +124,10 @@ namespace Squared.Illuminant {
                     if ((buffer == null) || (buffer.Length < (count)))
                         buffer = Renderer._LightProbeReadbackArray = new HalfVector4[count];
 
-                    lock (Renderer.Coordinator.UseResourceLock)
-                        Texture.GetDataFast(
-                            0, new Rectangle(0, 0, count, 1),
-                            buffer, 0, count
-                        );
+                    Texture.GetDataFast(
+                        0, new Rectangle(0, 0, count, 1),
+                        buffer, 0, count
+                    );
 
                     int i = 0;
 

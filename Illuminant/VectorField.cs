@@ -21,12 +21,11 @@ namespace Squared.Illuminant {
             HighPrecision = highPrecision;
             OwnsTexture = ownsTexture;
 
-            lock (coordinator.CreateResourceLock)
-                Texture = new RenderTarget2D(
-                    coordinator.Device, width, height, false, 
-                    highPrecision ? SurfaceFormat.Vector4 : SurfaceFormat.Color, DepthFormat.None, 
-                    0, RenderTargetUsage.PreserveContents
-                );
+            Texture = new RenderTarget2D(
+                coordinator.Device, width, height, false, 
+                highPrecision ? SurfaceFormat.Vector4 : SurfaceFormat.Color, DepthFormat.None, 
+                0, RenderTargetUsage.PreserveContents
+            );
         }
 
         public VectorField (
@@ -41,8 +40,7 @@ namespace Squared.Illuminant {
         public void Set<T> (T[] data)
             where T : struct
         {
-            lock (Coordinator.UseResourceLock)
-                Texture.SetData(data);
+            Texture.SetData(data);
         }
 
         public void Dispose () {

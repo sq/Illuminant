@@ -52,12 +52,7 @@ namespace Squared.Illuminant.Particles {
             }
         }
 
-#if FNA
-        // FIXME: We should be able to separate out the upload operation, I think?
         internal struct BufferInitializer<TElement> : IMainThreadWorkItem
-#else
-        internal struct BufferInitializer<TElement> : IWorkItem
-#endif
             where TElement : struct
         {
             static ThreadLocal<TElement[]> Scratch = new ThreadLocal<TElement[]>();
@@ -75,8 +70,7 @@ namespace Squared.Illuminant.Particles {
                 var maxLife = Initializer(scratch, Offset);
 
                 try {                    
-                    if (!Parent.Chunk.IsDisposed)
-                    lock (Parent.System.Engine.Coordinator.UseResourceLock) {
+                    if (!Parent.Chunk.IsDisposed) {
                         if (AutoRenderTargetBase.IsRenderTargetValid(Buffer))
                             Buffer.SetData(scratch);
                         if (AutoRenderTargetBase.IsRenderTargetValid(Buffer2))
@@ -101,11 +95,7 @@ namespace Squared.Illuminant.Particles {
 
     public partial class ParticleEngine : IDisposable {
 
-#if FNA
         private struct LivenessDataReadbackWorkItem : Threading.IMainThreadWorkItem {
-#else
-        private struct LivenessDataReadbackWorkItem : Threading.IWorkItem {
-#endif
             public BufferPool<ParticleSystem.Chunk>.Buffer Chunks;
             public RenderTarget2D RenderTarget;
             public ParticleEngine Engine;
@@ -128,18 +118,13 @@ namespace Squared.Illuminant.Particles {
                 // Console.WriteLine("Read liveness data texture");
 
                 var startedWhen = Time.Ticks;
-                using (var buffer = Squared.Util.BufferPool<Rg32>.Allocate(RenderTarget.Width)) {
-                    if (NeedResourceLock)
-                        Monitor.Enter(Engine.Coordinator.UseResourceLock);
-                    try {
+                using (var buffer = BufferPool<Rg32>.Allocate(RenderTarget.Width)) {
+                    {
                         var device = Engine.Coordinator.Device;
                         RenderTrace.ImmediateMarker(device, "Read liveness data from previous frame");
                         RenderTarget.GetDataFast(buffer.Data);
                         var elapsedMs = (Time.Ticks - startedWhen) / (double)Time.MillisecondInTicks;
                         RenderTrace.ImmediateMarker(device, "Readback took {0:000.0}ms", elapsedMs);
-                    } finally {
-                        if (NeedResourceLock)
-                            Monitor.Exit(Engine.Coordinator.UseResourceLock);
                     }
 
                     Engine.ProcessLivenessInfoData(buffer.Data, Chunks.Data);

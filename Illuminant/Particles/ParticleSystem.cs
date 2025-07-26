@@ -383,7 +383,7 @@ namespace Squared.Illuminant.Particles {
         }
 
         private BufferSet CreateBufferSet (GraphicsDevice device) {
-            lock (Engine.Coordinator.CreateResourceLock) {
+            {
                 var result = new BufferSet(Engine.Configuration, device);
                 Engine.AllBuffers.Add(result);
                 return result;
@@ -395,7 +395,7 @@ namespace Squared.Illuminant.Particles {
             if (Chunks.Count >= MaxChunkCount)
                 return null;
 
-            lock (Engine.Coordinator.CreateResourceLock) {
+            {
                 var result = new Chunk(this);
                 result.Current = AcquireOrCreateBufferSet(result.ID, frameIndex, out result.CurrentIsNew);
                 result.GlobalIndexOffset = TotalSpawnCount;

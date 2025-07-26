@@ -77,7 +77,7 @@ namespace Squared.Illuminant {
 
             for (int i = 0; i < RingSize; i++) {
                 RenderTarget2D buffer;
-                lock (Coordinator.CreateResourceLock) {
+                {
                     buffer = new RenderTarget2D(
                         Coordinator.Device, width, height,
                         MipMap, Format, DepthFormat,
