@@ -99,12 +99,10 @@ namespace Squared.Illuminant.Modeling {
                     result = img.CreateTexture(Coordinator, powerOfTwo);
             } else {
                 // HACK: Create placeholder texture
-                lock (Coordinator.CreateResourceLock) {
-                    result = new Texture2D(Coordinator.Device, 2, 2);
-                    result.SetData(new [] {
-                        Color.Black, Color.White, Color.Black, Color.White
-                    });
-                }
+                result = new Texture2D(Coordinator.Device, 2, 2);
+                result.SetData(new [] {
+                    Color.Black, Color.White, Color.Black, Color.White
+                });
             }
 
             LoadedResources.Add(result);

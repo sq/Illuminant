@@ -180,8 +180,6 @@ namespace Lumined {
             Process.GetCurrentProcess().Kill();
             Environment.Exit(0);
 
-            RenderCoordinator.WaitForActiveDraws();
-
             FreeContent();
         }
 
@@ -384,7 +382,6 @@ namespace Lumined {
             if (WasResized) {
                 WasResized = false;
 
-                RenderCoordinator.WaitForActiveDraws();
                 ReleaseView();
 
                 if (!Graphics.IsFullScreen) {

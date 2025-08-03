@@ -447,8 +447,6 @@ namespace TestGame {
         }
 
         private void SetActiveScene (int index) {
-            RenderCoordinator.WaitForActiveDraws();
-
             Scene oldScene = null;
             if (_ActiveSceneIndex >= 0)
                 oldScene = Scenes[_ActiveSceneIndex];

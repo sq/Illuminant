@@ -1,4 +1,3 @@
-// In release FNA the texCoord of particles always has an x of 0
 #pragma fxcparams(/O3 /Zi)
 
 #define ENABLE_STIPPLE 1

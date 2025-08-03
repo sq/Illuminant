@@ -265,7 +265,6 @@ namespace Lumined {
         internal void RunWorkItem (Action workItem) {
             Game.Scheduler.QueueWorkItemForNextStep(() => {
                 using (KeyboardInputHandler.Deactivate()) {
-                    Game.RenderCoordinator.WaitForActiveDraws();
                     workItem();
                 }
             });

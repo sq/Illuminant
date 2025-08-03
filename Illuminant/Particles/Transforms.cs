@@ -477,33 +477,11 @@ namespace Squared.Illuminant.Particles.Transforms {
         }
 
         protected override void BeforeUpdateChunk (ParticleEngine engine) {
-#if FNA
             return;
-#endif
-            OcclusionQuery query;
-
-            lock (Lock) {
-                if (!UnusedQueries.TryPopFront(out query))
-                    query = new OcclusionQuery(engine.Coordinator.Device);
-                UsedQueries.Add(query);
-            }
-
-            var _ = query.IsComplete;
-            query.Begin();
-            ActiveQuery = query;
         }
 
         protected override void AfterUpdateChunk (ParticleEngine engine) {
-#if FNA
             return;
-#endif
-
-            var query = Interlocked.Exchange(ref ActiveQuery, null);
-            if (query == null)
-                return;
-
-            query.End();
-            var _ = query.IsComplete;
         }
     }
 }

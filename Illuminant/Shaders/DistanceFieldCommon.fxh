@@ -335,18 +335,15 @@ float sampleDistanceFieldEx (
     float4 packedSample = tex2Dlod(DistanceFieldTextureSampler, uv);
 
     float maskPatternIndex = fmod(virtualSliceIndex, 3);
-    float subslice = slicePosition - virtualSliceIndex;
+    float subslice = slicePosition - virtualSliceIndex,
+        blendedSample;
 
-    float2 samples =
-        (maskPatternIndex >= 2)
-            ? packedSample.ba
-            : (maskPatternIndex >= 1)
-                ? packedSample.gb
-                : packedSample.rg;
-
-    float blendedSample = lerp(
-        samples.x, samples.y, subslice
-    );
+    if (maskPatternIndex >= 2)
+        blendedSample = lerp(packedSample.b, packedSample.a, subslice);
+    else if (maskPatternIndex >= 1)
+        blendedSample = lerp(packedSample.g, packedSample.b, subslice);
+    else
+        blendedSample = lerp(packedSample.r, packedSample.g, subslice);
 
     float decodedDistance = decodeDistance(blendedSample);
 
