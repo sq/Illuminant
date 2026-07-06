@@ -113,7 +113,7 @@ void ParticleLightPixelShader(
 
     result = float4(
         (lightColor.rgb * lightColor.a * opacity) +
-        (LightSpecularColor.rgb * specularity * opacity), 1
+        (LightSpecularColor.rgb * specularity * lightColor.a * opacity), 1
     );
 }
 
@@ -151,7 +151,7 @@ void ParticleLightWithoutDistanceFieldPixelShader(
 
     result = float4(
         (lightColor.rgb * lightColor.a * opacity) +
-        (LightSpecularColor.rgb * specularity * opacity), 1
+        (LightSpecularColor.rgb * specularity * lightColor.a * opacity), 1
     );
 }
 

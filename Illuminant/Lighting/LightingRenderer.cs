@@ -979,7 +979,7 @@ namespace Squared.Illuminant {
 
             BatchGroup resultGroup;
 
-            var outerGroup = BatchGroup.New(container, layer);
+            var outerGroup = BatchGroup.New(container, layer, name: "Render Lighting");
             {
                 if (RenderTrace.EnableTracing)
                     RenderTrace.Marker(outerGroup, -9999, "LightingRenderer {0} : Begin", this.ToObjectID());

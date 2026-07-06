@@ -610,6 +610,10 @@ namespace Squared.Illuminant {
         public void Clear () => Lights.UnsafeFastClear();
 
         public void Add (ReplicatedLight light) => Lights.Add(ref light);
+        public void Add (Vector3 position) {
+            var light = new ReplicatedLight { Position = position };
+            Lights.Add(ref light);
+        }
     }
 
     public struct ReplicatedLight {

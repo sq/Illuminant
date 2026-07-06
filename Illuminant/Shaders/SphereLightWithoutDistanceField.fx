@@ -35,7 +35,7 @@ void SphereLightWithoutDistanceFieldPixelShader (
 
     result = float4(
         (color.rgb * color.a * opacity) +
-        (specular.rgb * specularity * opacity), 1
+        (specular.rgb * specularity * color.a * opacity), 1
     );
 }
 
