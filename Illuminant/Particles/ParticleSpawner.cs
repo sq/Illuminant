@@ -369,7 +369,10 @@ namespace Squared.Illuminant.Particles.Transforms {
             } else {
                 result.W = TotalSpawned % count;
             }
-            result.AssertFinite();
+#if DEBUG
+            if (!result.IsFinite())
+                throw new ArithmeticException();
+#endif
             return result;
         }
 
